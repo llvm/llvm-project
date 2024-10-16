@@ -13,6 +13,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -670,6 +671,90 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
   }
 
   return nullptr;
+}
+
+// Check legality for transforming
+// x = 1.0/sqrt(a)
+// r1 = x * x;
+// r2 = a/sqrt(a);
+//
+// TO
+//
+// r1 = 1/a
+// r2 = sqrt(a)
+// x = r1 * r2
+// This transform works only when 'a' is known positive.
+static bool isFSqrtDivToFMulLegal(Instruction *X,
+                                  SmallPtrSetImpl<Instruction *> &R1,
+                                  SmallPtrSetImpl<Instruction *> &R2) {
+  BasicBlock *BBx = X->getParent();
+  BasicBlock *BBr1 = (*R1.begin())->getParent();
+  BasicBlock *BBr2 = (*R2.begin())->getParent();
+
+  CallInst *FSqrt = cast<CallInst>(X->getOperand(1));
+  if (!FSqrt->hasAllowReassoc() || !FSqrt->hasNoNaNs() ||
+      !FSqrt->hasNoSignedZeros() || !FSqrt->hasNoInfs())
+    return false;
+
+  // We change x = 1/sqrt(a) to x = sqrt(a) * 1/a . This change isn't allowed
+  // by recip fp as it is strictly meant to transform ops of type a/b to
+  // a * 1/b. So, this can be considered as algebraic rewrite and reassoc flag
+  // has been used(rather abused)in the past for algebraic rewrites.
+  if (!X->hasAllowReassoc() || !X->hasAllowReciprocal() || !X->hasNoInfs())
+    return false;
+
+  // Check the constraints on X, R1 and R2 combined.
+  // fdiv instruction and one of the multiplications must reside in the same
+  // block. If not, the optimized code may execute more ops than before and
+  // this may hamper the performance.
+  if (BBx != BBr1 && BBx != BBr2)
+    return false;
+
+  // Check the constraints on instructions in R1.
+  if (any_of(R1, [BBr1](Instruction *I) {
+        // When you have multiple instructions residing in R1 and R2
+        // respectively, it's difficult to generate combinations of (R1,R2) and
+        // then check if we have the required pattern. So, for now, just be
+        // conservative.
+        return (I->getParent() != BBr1 || !I->hasAllowReassoc());
+      }))
+    return false;
+
+  // Check the constraints on instructions in R2.
+  return all_of(R2, [BBr2](Instruction *I) {
+    // When you have multiple instructions residing in R1 and R2
+    // respectively, it's difficult to generate combination of (R1,R2) and
+    // then check if we have the required pattern. So, for now, just be
+    // conservative.
+    return (I->getParent() == BBr2 && I->hasAllowReassoc());
+  });
+}
+
+// If we have the following pattern,
+// X = 1.0/sqrt(a)
+// R1 = X * X
+// R2 = a/sqrt(a)
+// then this method collects all the instructions that match R1 and R2.
+static bool getFSqrtDivOptPattern(Instruction *Div,
+                                  SmallPtrSetImpl<Instruction *> &R1,
+                                  SmallPtrSetImpl<Instruction *> &R2) {
+  Value *A;
+  if (match(Div, m_FDiv(m_FPOne(), m_Sqrt(m_Value(A)))) ||
+      match(Div, m_FDiv(m_SpecificFP(-1.0), m_Sqrt(m_Value(A))))) {
+    for (User *U : Div->users()) {
+      Instruction *I = cast<Instruction>(U);
+      if (match(I, m_FMul(m_Specific(Div), m_Specific(Div))))
+        R1.insert(I);
+    }
+
+    CallInst *CI = cast<CallInst>(Div->getOperand(1));
+    for (User *U : CI->users()) {
+      Instruction *I = cast<Instruction>(U);
+      if (match(I, m_FDiv(m_Specific(A), m_Sqrt(m_Specific(A)))))
+        R2.insert(I);
+    }
+  }
+  return !R1.empty() && !R2.empty();
 }
 
 Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
@@ -1872,6 +1957,64 @@ static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
   return BinaryOperator::CreateFMulFMF(Op0, NewSqrt, &I);
 }
 
+// Change
+// X = 1/sqrt(a)
+// R1 = X * X
+// R2 = a * X
+//
+// TO
+//
+// FDiv = 1/a
+// FSqrt = sqrt(a)
+// FMul = FDiv * FSqrt
+// Replace Uses Of R1 With FDiv
+// Replace Uses Of R2 With FSqrt
+// Replace Uses Of X With FMul
+static Value *convertFSqrtDivIntoFMul(CallInst *CI, Instruction *X,
+                                      SmallPtrSetImpl<Instruction *> &R1,
+                                      SmallPtrSetImpl<Instruction *> &R2,
+                                      InstCombiner::BuilderTy &B) {
+
+  B.SetInsertPoint(X);
+
+  // Every instance of R1 may have different fpmath metadata and fpmath flags.
+  // We try to preserve them by having seperate fdiv instruction per R1
+  // instance.
+  Value *SqrtOp = CI->getArgOperand(0);
+  Instruction *FDiv;
+
+  for (Instruction *I : R1) {
+    FDiv = cast<Instruction>(
+        B.CreateFDiv(ConstantFP::get((*R1.begin())->getType(), 1.0), SqrtOp));
+    FDiv->copyMetadata(*I);
+    FDiv->copyFastMathFlags(I);
+    I->replaceAllUsesWith(FDiv);
+  }
+
+  // Although, by value, FSqrt = CI , every instance of R2 may have different
+  // fpmath metadata and fpmath flags. We try to preserve them by cloning the
+  // call instruction per R2 instance.
+  CallInst *FSqrt;
+  for (Instruction *I : R2) {
+    FSqrt = cast<CallInst>(CI->clone());
+    FSqrt->insertBefore(CI);
+    FSqrt->copyFastMathFlags(I);
+    FSqrt->copyMetadata(*I);
+    I->replaceAllUsesWith(FSqrt);
+  }
+
+  Instruction *FMul;
+  // If X = -1/sqrt(a) initially,then FMul = -(FDiv * FSqrt)
+  if (match(X, m_FDiv(m_SpecificFP(-1.0), m_Specific(CI)))) {
+    Value *Mul = B.CreateFMul(FDiv, FSqrt);
+    FMul = cast<Instruction>(B.CreateFNegFMF(Mul, X));
+  } else
+    FMul = cast<Instruction>(B.CreateFMulFMF(FDiv, FSqrt, X));
+  FMul->copyMetadata(*X);
+
+  return FMul;
+}
+
 Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   Module *M = I.getModule();
 
@@ -1896,6 +2039,24 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     return R;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  // Convert
+  // x = 1.0/sqrt(a)
+  // r1 = x * x;
+  // r2 = a/sqrt(a);
+  //
+  // TO
+  //
+  // r1 = 1/a
+  // r2 = sqrt(a)
+  // x = r1 * r2
+  SmallPtrSet<Instruction *, 2> R1, R2;
+  if (getFSqrtDivOptPattern(&I, R1, R2) && isFSqrtDivToFMulLegal(&I, R1, R2)) {
+    CallInst *CI = cast<CallInst>(I.getOperand(1));
+    if (Value *D = convertFSqrtDivIntoFMul(CI, &I, R1, R2, Builder))
+      return replaceInstUsesWith(I, D);
+  }
+
   if (isa<Constant>(Op0))
     if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
       if (Instruction *R = FoldOpIntoSelect(I, SI))
