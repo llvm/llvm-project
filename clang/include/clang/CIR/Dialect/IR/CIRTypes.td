@@ -173,6 +173,13 @@ def CIR_FP80 : CIR_FloatType<"FP80", "f80"> {
   }];
 }
 
+def CIR_FP128 : CIR_FloatType<"FP128", "f128"> {
+  let summary = "CIR type that represents IEEEquad 128-bit floating-point format";
+  let description = [{
+    Floating-point type that represents the IEEEquad 128-bit floating-point format.
+  }];
+}
+
 def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
   let summary = "CIR extended-precision float type";
   let description = [{
@@ -195,7 +202,7 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 
 // Constraints
 
-def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_LongDouble]>;
+def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_FP128, CIR_LongDouble]>;
 def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
 
 //===----------------------------------------------------------------------===//

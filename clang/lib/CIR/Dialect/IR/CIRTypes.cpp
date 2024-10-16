@@ -763,6 +763,27 @@ FP80Type::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
   return 16;
 }
 
+const llvm::fltSemantics &FP128Type::getFloatSemantics() const {
+  return llvm::APFloat::IEEEquad();
+}
+
+llvm::TypeSize
+FP128Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                             mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(16);
+}
+
+uint64_t FP128Type::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                    mlir::DataLayoutEntryListRef params) const {
+  return 16;
+}
+
+uint64_t
+FP128Type::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return 16;
+}
+
 const llvm::fltSemantics &LongDoubleType::getFloatSemantics() const {
   return mlir::cast<mlir::cir::CIRFPTypeInterface>(getUnderlying())
       .getFloatSemantics();
@@ -792,7 +813,7 @@ uint64_t LongDoubleType::getPreferredAlignment(
 LogicalResult
 LongDoubleType::verify(function_ref<InFlightDiagnostic()> emitError,
                        mlir::Type underlying) {
-  if (!mlir::isa<DoubleType, FP80Type>(underlying)) {
+  if (!mlir::isa<DoubleType, FP80Type, FP128Type>(underlying)) {
     emitError() << "invalid underlying type for long double";
     return failure();
   }

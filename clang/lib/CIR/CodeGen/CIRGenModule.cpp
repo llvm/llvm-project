@@ -35,6 +35,7 @@
 #include "mlir/IR/Verifier.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/ASTConsumer.h"
@@ -74,8 +75,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <iterator>
 #include <numeric>
@@ -145,6 +146,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   FloatTy = ::mlir::cir::SingleType::get(builder.getContext());
   DoubleTy = ::mlir::cir::DoubleType::get(builder.getContext());
   FP80Ty = ::mlir::cir::FP80Type::get(builder.getContext());
+  FP128Ty = ::mlir::cir::FP128Type::get(builder.getContext());
 
   // TODO: PointerWidthInBits
   PointerAlignInBytes =
@@ -196,8 +198,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   theModule->setAttr("cir.sob",
                      mlir::cir::SignedOverflowBehaviorAttr::get(&context, sob));
   auto lang = SourceLanguageAttr::get(&context, getCIRSourceLanguage());
-  theModule->setAttr(
-      "cir.lang", mlir::cir::LangAttr::get(&context, lang));
+  theModule->setAttr("cir.lang", mlir::cir::LangAttr::get(&context, lang));
   theModule->setAttr("cir.triple", builder.getStringAttr(getTriple().str()));
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
