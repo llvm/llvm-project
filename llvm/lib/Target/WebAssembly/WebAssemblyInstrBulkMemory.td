@@ -50,10 +50,13 @@ def wasm_memset_t : SDTypeProfile<0, 4,
 def wasm_memset : SDNode<"WebAssemblyISD::MEMSET", wasm_memset_t,
                          [SDNPHasChain, SDNPMayStore]>;
 
+// A multiclass for defining Wasm's raw bulk-memory `memory.*` instructions.
+// `memory.copy` and `memory.fill` have Wasm's behavior rather than
+// `memcpy`/`memset` behavior.
 multiclass BulkMemoryOps<WebAssemblyRegClass rc, string B> {
 
 let mayStore = 1, hasSideEffects = 1 in
-defm MEMORY_INIT_A#B :
+defm INIT_A#B :
   BULK_I<(outs),
          (ins i32imm_op:$seg, i32imm_op:$idx, rc:$dest,
               I32:$offset, I32:$size),
@@ -62,89 +65,59 @@ defm MEMORY_INIT_A#B :
          "memory.init\t$seg, $idx, $dest, $offset, $size",
          "memory.init\t$seg, $idx", 0x08>;
 
+let mayLoad = 1, mayStore = 1 in
+defm COPY_A#B :
+  BULK_I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
+                      rc:$dst, rc:$src, rc:$len),
+         (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
+         [(wasm_memcpy (i32 imm:$src_idx), (i32 imm:$dst_idx),
+           rc:$dst, rc:$src, rc:$len
+         )],
+         "memory.copy\t$src_idx, $dst_idx, $dst, $src, $len",
+         "memory.copy\t$src_idx, $dst_idx", 0x0a>;
+
+let mayStore = 1 in
+defm FILL_A#B :
+  BULK_I<(outs), (ins i32imm_op:$idx, rc:$dst, I32:$value, rc:$size),
+         (outs), (ins i32imm_op:$idx),
+         [(wasm_memset (i32 imm:$idx), rc:$dst, I32:$value, rc:$size)],
+         "memory.fill\t$idx, $dst, $value, $size",
+         "memory.fill\t$idx", 0x0b>;
+}
+
+defm MEMORY_ : BulkMemoryOps<I32, "32">;
+defm MEMORY_ : BulkMemoryOps<I64, "64">;
+
+// A multiclass for defining `memcpy`/`memset` pseudo instructions. These have
+// the behavior the rest of LLVM CodeGen expects, and we lower them into code
+// sequences that include the Wasm `memory.fill` and `memory.copy` instructions
+// using custom inserters, because they introduce new control flow.
+multiclass BulkMemOps<WebAssemblyRegClass rc, string B> {
+
+let usesCustomInserter = 1, isCodeGenOnly = 1, mayLoad = 1, mayStore = 1 in
+defm CPY_A#B : I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
+                                 rc:$dst, rc:$src, rc:$len),
+                    (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
+                    [(wasm_memcpy (i32 imm:$src_idx), (i32 imm:$dst_idx),
+                      rc:$dst, rc:$src, rc:$len
+                    )],
+                    "", "", 0>,
+                  Requires<[HasBulkMemory]>;
+
+let usesCustomInserter = 1, isCodeGenOnly = 1, mayStore = 1 in
+defm SET_A#B : I<(outs), (ins i32imm_op:$idx, rc:$dst, I32:$value, rc:$size),
+                    (outs), (ins i32imm_op:$idx),
+                    [(wasm_memset (i32 imm:$idx), rc:$dst, I32:$value, rc:$size)],
+                    "", "", 0>,
+                  Requires<[HasBulkMemory]>;
+
+}
+
+defm MEM : BulkMemOps<I32, "32">;
+defm MEM : BulkMemOps<I64, "64">;
+
 let hasSideEffects = 1 in
 defm DATA_DROP :
   BULK_I<(outs), (ins i32imm_op:$seg), (outs), (ins i32imm_op:$seg),
          [],
          "data.drop\t$seg", "data.drop\t$seg", 0x09>;
-
-}
-
-defm : BulkMemoryOps<I32, "32">;
-defm : BulkMemoryOps<I64, "64">;
-
-// Define copy/fill manually instead of using the `BulkMemoryOps` multiclass
-// because when a multiclass defines opcodes, it gives them anonymous names
-// and we need opcodes with names so that we can handle them with custom code.
-
-let mayLoad = 1, mayStore = 1 in
-defm MEMORY_COPY_A32 :
-  BULK_I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
-                      I32:$dst, I32:$src, I32:$len),
-         (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
-         [(wasm_memory_copy (i32 imm:$src_idx), (i32 imm:$dst_idx),
-           I32:$dst, I32:$src, I32:$len
-         )],
-         "memory.copy\t$src_idx, $dst_idx, $dst, $src, $len",
-         "memory.copy\t$src_idx, $dst_idx", 0x0a>;
-
-let mayStore = 1 in
-defm MEMORY_FILL_A32 :
-  BULK_I<(outs), (ins i32imm_op:$idx, I32:$dst, I32:$value, I32:$size),
-         (outs), (ins i32imm_op:$idx),
-         [(wasm_memory_fill (i32 imm:$idx), I32:$dst, I32:$value, I32:$size)],
-         "memory.fill\t$idx, $dst, $value, $size",
-         "memory.fill\t$idx", 0x0b>;
-
-let mayLoad = 1, mayStore = 1 in
-defm MEMORY_COPY_A64 :
-  BULK_I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
-                      I64:$dst, I64:$src, I64:$len),
-         (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
-         [(wasm_memory_copy (i32 imm:$src_idx), (i32 imm:$dst_idx),
-           I64:$dst, I64:$src, I64:$len
-         )],
-         "memory.copy\t$src_idx, $dst_idx, $dst, $src, $len",
-         "memory.copy\t$src_idx, $dst_idx", 0x0a>;
-
-let mayStore = 1 in
-defm MEMORY_FILL_A64 :
-  BULK_I<(outs), (ins i32imm_op:$idx, I64:$dst, I32:$value, I64:$size),
-         (outs), (ins i32imm_op:$idx),
-         [(wasm_memory_fill (i32 imm:$idx), I64:$dst, I32:$value, I64:$size)],
-         "memory.fill\t$idx, $dst, $value, $size",
-         "memory.fill\t$idx", 0x0b>;
-
-let usesCustomInserter = 1, isCodeGenOnly = 1, mayLoad = 1, mayStore = 1 in
-defm MEMCPY_A32 : I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
-                                 I32:$dst, I32:$src, I32:$len),
-                    (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
-                    [(wasm_memcpy (i32 imm:$src_idx), (i32 imm:$dst_idx),
-                      I32:$dst, I32:$src, I32:$len
-                    )],
-                    "", "", 0>,
-                  Requires<[HasBulkMemory]>;
-
-let usesCustomInserter = 1, isCodeGenOnly = 1, mayStore = 1 in
-defm MEMSET_A32 : I<(outs), (ins i32imm_op:$idx, I32:$dst, I32:$value, I32:$size),
-                    (outs), (ins i32imm_op:$idx),
-                    [(wasm_memset (i32 imm:$idx), I32:$dst, I32:$value, I32:$size)],
-                    "", "", 0>,
-                  Requires<[HasBulkMemory]>;
-
-let usesCustomInserter = 1, isCodeGenOnly = 1, mayLoad = 1, mayStore = 1 in
-defm MEMCPY_A64 : I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
-                                 I64:$dst, I64:$src, I64:$len),
-                    (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
-                    [(wasm_memcpy (i32 imm:$src_idx), (i32 imm:$dst_idx),
-                      I64:$dst, I64:$src, I64:$len
-                    )],
-                    "", "", 0>,
-                  Requires<[HasBulkMemory]>;
-
-let usesCustomInserter = 1, isCodeGenOnly = 1, mayStore = 1 in
-defm MEMSET_A64 : I<(outs), (ins i32imm_op:$idx, I64:$dst, I32:$value, I64:$size),
-                    (outs), (ins i32imm_op:$idx),
-                    [(wasm_memset (i32 imm:$idx), I64:$dst, I32:$value, I64:$size)],
-                    "", "", 0>,
-                  Requires<[HasBulkMemory]>;
