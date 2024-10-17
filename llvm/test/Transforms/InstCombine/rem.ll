@@ -1045,7 +1045,7 @@ define <2 x i32> @PR62401(<2 x i1> %x, <2 x i32> %y) {
 define i16 @rem_pow2_or_zero(i16 %x, i16 %y) {
 ; CHECK-LABEL: @rem_pow2_or_zero(
 ; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i16 1, 17) i16 @llvm.ctpop.i16(i16 [[Y:%.*]])
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i16 [[POPCNT]], 2
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ult i16 [[POPCNT]], 2
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[Y]], -1
 ; CHECK-NEXT:    [[REM:%.*]] = and i16 [[X:%.*]], [[TMP1]]
@@ -1130,7 +1130,7 @@ define i64 @rem_pow2_or_zero_domcond(i64 %a, i64 %b) {
 ; CHECK-LABEL: @rem_pow2_or_zero_domcond(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[CPOP:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[CPOP]], 2
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ult i64 [[CPOP]], 2
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[B]], -1

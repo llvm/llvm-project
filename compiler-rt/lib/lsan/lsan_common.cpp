@@ -399,26 +399,123 @@ static void ProcessThreadRegistry(Frontier *frontier) {
 }
 
 // Scans thread data (stacks and TLS) for heap pointers.
+static void ProcessThread(tid_t os_id, uptr sp,
+                          const InternalMmapVector<uptr> &registers,
+                          InternalMmapVector<Range> &extra_ranges,
+                          Frontier *frontier) {
+  // `extra_ranges` is outside of the function and the loop to reused mapped
+  // memory.
+  CHECK(extra_ranges.empty());
+  LOG_THREADS("Processing thread %llu.\n", os_id);
+  uptr stack_begin, stack_end, tls_begin, tls_end, cache_begin, cache_end;
+  DTLS *dtls;
+  bool thread_found =
+      GetThreadRangesLocked(os_id, &stack_begin, &stack_end, &tls_begin,
+                            &tls_end, &cache_begin, &cache_end, &dtls);
+  if (!thread_found) {
+    // If a thread can't be found in the thread registry, it's probably in the
+    // process of destruction. Log this event and move on.
+    LOG_THREADS("Thread %llu not found in registry.\n", os_id);
+    return;
+  }
+
+  if (!sp)
+    sp = stack_begin;
+
+  if (flags()->use_registers) {
+    uptr registers_begin = reinterpret_cast<uptr>(registers.data());
+    uptr registers_end =
+        reinterpret_cast<uptr>(registers.data() + registers.size());
+    ScanRangeForPointers(registers_begin, registers_end, frontier, "REGISTERS",
+                         kReachable);
+  }
+
+  if (flags()->use_stacks) {
+    LOG_THREADS("Stack at %p-%p (SP = %p).\n", (void *)stack_begin,
+                (void *)stack_end, (void *)sp);
+    if (sp < stack_begin || sp >= stack_end) {
+      // SP is outside the recorded stack range (e.g. the thread is running a
+      // signal handler on alternate stack, or swapcontext was used).
+      // Again, consider the entire stack range to be reachable.
+      LOG_THREADS("WARNING: stack pointer not in stack range.\n");
+      uptr page_size = GetPageSizeCached();
+      int skipped = 0;
+      while (stack_begin < stack_end &&
+             !IsAccessibleMemoryRange(stack_begin, 1)) {
+        skipped++;
+        stack_begin += page_size;
+      }
+      LOG_THREADS("Skipped %d guard page(s) to obtain stack %p-%p.\n", skipped,
+                  (void *)stack_begin, (void *)stack_end);
+    } else {
+      // Shrink the stack range to ignore out-of-scope values.
+      stack_begin = sp;
+    }
+    ScanRangeForPointers(stack_begin, stack_end, frontier, "STACK", kReachable);
+    GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
+    ScanExtraStackRanges(extra_ranges, frontier);
+  }
+
+  if (flags()->use_tls) {
+    if (tls_begin) {
+      LOG_THREADS("TLS at %p-%p.\n", (void *)tls_begin, (void *)tls_end);
+      // If the tls and cache ranges don't overlap, scan full tls range,
+      // otherwise, only scan the non-overlapping portions
+      if (cache_begin == cache_end || tls_end < cache_begin ||
+          tls_begin > cache_end) {
+        ScanRangeForPointers(tls_begin, tls_end, frontier, "TLS", kReachable);
+      } else {
+        if (tls_begin < cache_begin)
+          ScanRangeForPointers(tls_begin, cache_begin, frontier, "TLS",
+                               kReachable);
+        if (tls_end > cache_end)
+          ScanRangeForPointers(cache_end, tls_end, frontier, "TLS", kReachable);
+      }
+    }
+#    if SANITIZER_ANDROID
+    auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
+                   void *arg) -> void {
+      ScanRangeForPointers(
+          reinterpret_cast<uptr>(dtls_begin), reinterpret_cast<uptr>(dtls_end),
+          reinterpret_cast<Frontier *>(arg), "DTLS", kReachable);
+    };
+
+    // FIXME: There might be a race-condition here (and in Bionic) if the
+    // thread is suspended in the middle of updating its DTLS. IOWs, we
+    // could scan already freed memory. (probably fine for now)
+    __libc_iterate_dynamic_tls(os_id, cb, frontier);
+#    else
+    if (dtls && !DTLSInDestruction(dtls)) {
+      ForEachDVT(dtls, [&](const DTLS::DTV &dtv, int id) {
+        uptr dtls_beg = dtv.beg;
+        uptr dtls_end = dtls_beg + dtv.size;
+        if (dtls_beg < dtls_end) {
+          LOG_THREADS("DTLS %d at %p-%p.\n", id, (void *)dtls_beg,
+                      (void *)dtls_end);
+          ScanRangeForPointers(dtls_beg, dtls_end, frontier, "DTLS",
+                               kReachable);
+        }
+      });
+    } else {
+      // We are handling a thread with DTLS under destruction. Log about
+      // this and continue.
+      LOG_THREADS("Thread %llu has DTLS under destruction.\n", os_id);
+    }
+#    endif
+  }
+}
+
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier, tid_t caller_tid,
                            uptr caller_sp) {
   InternalMmapVector<uptr> registers;
   InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
-    tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
-    LOG_THREADS("Processing thread %llu.\n", os_id);
-    uptr stack_begin, stack_end, tls_begin, tls_end, cache_begin, cache_end;
-    DTLS *dtls;
-    bool thread_found =
-        GetThreadRangesLocked(os_id, &stack_begin, &stack_end, &tls_begin,
-                              &tls_end, &cache_begin, &cache_end, &dtls);
-    if (!thread_found) {
-      // If a thread can't be found in the thread registry, it's probably in the
-      // process of destruction. Log this event and move on.
-      LOG_THREADS("Thread %llu not found in registry.\n", os_id);
-      continue;
-    }
-    uptr sp;
+    registers.clear();
+    extra_ranges.clear();
+
+    const tid_t os_id = suspended_threads.GetThreadID(i);
+    uptr sp = 0;
     PtraceRegistersStatus have_registers =
         suspended_threads.GetRegistersAndSP(i, &registers, &sp);
     if (have_registers != REGISTERS_AVAILABLE) {
@@ -427,97 +524,13 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       // GetRegistersAndSP failed with ESRCH.
       if (have_registers == REGISTERS_UNAVAILABLE_FATAL)
         continue;
-      sp = stack_begin;
+      sp = 0;
     }
-    if (suspended_threads.GetThreadID(i) == caller_tid) {
+
+    if (os_id == caller_tid)
       sp = caller_sp;
-    }
 
-    if (flags()->use_registers && have_registers) {
-      uptr registers_begin = reinterpret_cast<uptr>(registers.data());
-      uptr registers_end =
-          reinterpret_cast<uptr>(registers.data() + registers.size());
-      ScanRangeForPointers(registers_begin, registers_end, frontier,
-                           "REGISTERS", kReachable);
-    }
-
-    if (flags()->use_stacks) {
-      LOG_THREADS("Stack at %p-%p (SP = %p).\n", (void *)stack_begin,
-                  (void *)stack_end, (void *)sp);
-      if (sp < stack_begin || sp >= stack_end) {
-        // SP is outside the recorded stack range (e.g. the thread is running a
-        // signal handler on alternate stack, or swapcontext was used).
-        // Again, consider the entire stack range to be reachable.
-        LOG_THREADS("WARNING: stack pointer not in stack range.\n");
-        uptr page_size = GetPageSizeCached();
-        int skipped = 0;
-        while (stack_begin < stack_end &&
-               !IsAccessibleMemoryRange(stack_begin, 1)) {
-          skipped++;
-          stack_begin += page_size;
-        }
-        LOG_THREADS("Skipped %d guard page(s) to obtain stack %p-%p.\n",
-                    skipped, (void *)stack_begin, (void *)stack_end);
-      } else {
-        // Shrink the stack range to ignore out-of-scope values.
-        stack_begin = sp;
-      }
-      ScanRangeForPointers(stack_begin, stack_end, frontier, "STACK",
-                           kReachable);
-      extra_ranges.clear();
-      GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
-      ScanExtraStackRanges(extra_ranges, frontier);
-    }
-
-    if (flags()->use_tls) {
-      if (tls_begin) {
-        LOG_THREADS("TLS at %p-%p.\n", (void *)tls_begin, (void *)tls_end);
-        // If the tls and cache ranges don't overlap, scan full tls range,
-        // otherwise, only scan the non-overlapping portions
-        if (cache_begin == cache_end || tls_end < cache_begin ||
-            tls_begin > cache_end) {
-          ScanRangeForPointers(tls_begin, tls_end, frontier, "TLS", kReachable);
-        } else {
-          if (tls_begin < cache_begin)
-            ScanRangeForPointers(tls_begin, cache_begin, frontier, "TLS",
-                                 kReachable);
-          if (tls_end > cache_end)
-            ScanRangeForPointers(cache_end, tls_end, frontier, "TLS",
-                                 kReachable);
-        }
-      }
-#    if SANITIZER_ANDROID
-      auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
-                     void *arg) -> void {
-        ScanRangeForPointers(reinterpret_cast<uptr>(dtls_begin),
-                             reinterpret_cast<uptr>(dtls_end),
-                             reinterpret_cast<Frontier *>(arg), "DTLS",
-                             kReachable);
-      };
-
-      // FIXME: There might be a race-condition here (and in Bionic) if the
-      // thread is suspended in the middle of updating its DTLS. IOWs, we
-      // could scan already freed memory. (probably fine for now)
-      __libc_iterate_dynamic_tls(os_id, cb, frontier);
-#    else
-      if (dtls && !DTLSInDestruction(dtls)) {
-        ForEachDVT(dtls, [&](const DTLS::DTV &dtv, int id) {
-          uptr dtls_beg = dtv.beg;
-          uptr dtls_end = dtls_beg + dtv.size;
-          if (dtls_beg < dtls_end) {
-            LOG_THREADS("DTLS %d at %p-%p.\n", id, (void *)dtls_beg,
-                        (void *)dtls_end);
-            ScanRangeForPointers(dtls_beg, dtls_end, frontier, "DTLS",
-                                 kReachable);
-          }
-        });
-      } else {
-        // We are handling a thread with DTLS under destruction. Log about
-        // this and continue.
-        LOG_THREADS("Thread %llu has DTLS under destruction.\n", os_id);
-      }
-#    endif
-    }
+    ProcessThread(os_id, sp, registers, extra_ranges, frontier);
   }
 
   // Add pointers reachable from ThreadContexts
