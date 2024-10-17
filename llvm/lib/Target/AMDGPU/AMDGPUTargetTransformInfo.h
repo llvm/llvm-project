@@ -187,9 +187,12 @@ public:
       }
       return false;
     }
-    if ((FromAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
-         ToAS == AMDGPUAS::CONSTANT_ADDRESS) ||
-        (FromAS == AMDGPUAS::CONSTANT_ADDRESS &&
+    if (FromAS != ToAS &&
+        (FromAS == AMDGPUAS::GLOBAL_ADDRESS ||
+         FromAS == AMDGPUAS::CONSTANT_ADDRESS ||
+         FromAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+        (ToAS == AMDGPUAS::GLOBAL_ADDRESS ||
+         ToAS == AMDGPUAS::CONSTANT_ADDRESS ||
          ToAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT))
       return true;
     return false;
