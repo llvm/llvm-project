@@ -36,7 +36,8 @@ class WhitespaceManager {
 public:
   WhitespaceManager(const SourceManager &SourceMgr, const FormatStyle &Style,
                     bool UseCRLF)
-      : SourceMgr(SourceMgr), Style(Style), UseCRLF(UseCRLF) {}
+      : SourceMgr(SourceMgr), Style(Style),
+        LangOpts(getFormattingLangOpts(Style)), UseCRLF(UseCRLF) {}
 
   bool useCRLF() const { return UseCRLF; }
 
@@ -363,6 +364,7 @@ private:
   const SourceManager &SourceMgr;
   tooling::Replacements Replaces;
   const FormatStyle &Style;
+  const LangOptions LangOpts;
   bool UseCRLF;
 };
 
