@@ -85,13 +85,14 @@ define <4 x i8> @bitcast_i32_v4i8(i32 %a, i32 %b){
 ; CHECK-GI-NEXT:    add w8, w0, w1
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    mov b1, v0.b[3]
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    mov v0.h[3], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %c = add i32 %a, %b
@@ -140,8 +141,9 @@ define <2 x i16> @bitcast_i32_v2i16(i32 %a, i32 %b){
 ; CHECK-GI-NEXT:    add w8, w0, w1
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %c = add i32 %a, %b
@@ -422,13 +424,14 @@ define <4 x i8> @bitcast_v2i16_v4i8(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    xtn v0.4h, v1.4s
 ; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    mov b1, v0.b[3]
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    mov v0.h[3], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %c = add <2 x i16> %a, %b
@@ -461,8 +464,10 @@ define <2 x i16> @bitcast_v4i8_v2i16(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
 ; CHECK-GI-NEXT:    xtn v0.8b, v1.8h
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %c = add <4 x i8> %a, %b
