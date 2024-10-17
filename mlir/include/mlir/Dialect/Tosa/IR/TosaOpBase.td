@@ -228,6 +228,7 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
               DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                                         ["inferReturnTypeComponents"]>,
               ResultsBroadcastableShape,
+              SameOperandsAndResultRank,
               TosaElementwiseOperator,
               Pure])> {
   let assemblyFormat =
