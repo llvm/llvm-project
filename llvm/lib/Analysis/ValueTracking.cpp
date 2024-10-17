@@ -9913,11 +9913,17 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     for (auto &AssumeVH : AC->assumptionsFor(V)) {
       if (!AssumeVH)
         continue;
-      CallInst *I = cast<CallInst>(AssumeVH);
+      AssumeInst *I = cast<AssumeInst>(AssumeVH);
       assert(I->getParent()->getParent() == CtxI->getParent()->getParent() &&
              "Got assumption for the wrong function!");
-      assert(I->getIntrinsicID() == Intrinsic::assume &&
-             "must be an assume intrinsic");
+
+      if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
+        if (std::optional<ConstantRange> Range = getRangeFromBundle(
+                *I, I->bundle_op_info_begin()[AssumeVH.Index]))
+          if (isValidAssumeForContext(I, CtxI, DT))
+            CR = CR.intersectWith(*Range);
+        continue;
+      }
 
       if (!isValidAssumeForContext(I, CtxI, DT))
         continue;

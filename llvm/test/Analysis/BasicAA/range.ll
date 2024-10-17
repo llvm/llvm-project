@@ -272,7 +272,7 @@ entry:
 }
 
 ; CHECK-LABEL: Function: range_assume
-; CHECK: MayAlias: i32* %gep1, i32* %gep2
+; CHECK: NoAlias: i32* %gep1, i32* %gep2
 define void @range_assume(ptr %s, ptr %q) {
   %in_array = load i32, ptr %q
   call void @llvm.assume(i1 true) ["range"(i32 %in_array, i32 0, i32 2)]
