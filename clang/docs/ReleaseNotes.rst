@@ -99,17 +99,24 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
-- Clang will now correctly not consider pointers to non classes for covariance.
+- Clang will now correctly not consider pointers to non classes for covariance
+  and disallow changing return type to a type that doesn't have the same or less cv-qualifications.
 
   .. code-block:: c++
 
     struct A {
       virtual const int *f() const;
+      virtual const std::string *g() const;
     };
     struct B : A {
       // Return type has less cv-qualification but doesn't point to a class.
       // Error will be generated.
       int *f() const override;
+
+      // Return type doesn't have more cv-qualification also not the same or
+      // less cv-qualification.
+      // Error will be generated.
+      volatile std::string *g() const override;
     };
 
 - The warning ``-Wdeprecated-literal-operator`` is now on by default, as this is
@@ -611,6 +618,11 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- In the ARM Target, the frame pointer (FP) of a leaf function can be retained
+  by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
+  in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
+  the ``-momit-leaf-frame-pointer`` option.
 
 Android Support
 ^^^^^^^^^^^^^^^

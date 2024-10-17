@@ -195,6 +195,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
   using loop variable in initializer of lambda capture.
 
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static`` keyword
+  before type qualifiers such as ``const`` and ``volatile``.
+
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
   a false positive when only an implicit conversion happened inside an
