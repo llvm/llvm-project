@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Unicode.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -475,6 +477,16 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
   for (diag::kind Diag : AllDiags)
     if (Diags->isBuiltinWarningOrExtension(Diag))
       setSeverity(Diag, Map, Loc);
+}
+
+void DiagnosticsEngine::setDiagSuppressionMapping(
+    decltype(DiagSuppressionMapping) Mapping) {
+  DiagSuppressionMapping = std::move(Mapping);
+}
+
+bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind D,
+                                               llvm::StringRef FilePath) const {
+  return DiagSuppressionMapping && DiagSuppressionMapping(D, FilePath);
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {

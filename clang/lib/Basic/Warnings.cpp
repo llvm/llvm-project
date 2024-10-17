@@ -23,10 +23,21 @@
 // simpler because a remark can't be promoted to an error.
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMapEntry.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cstring>
+#include <memory>
 #include <utility>
+#include <vector>
 using namespace clang;
 
 // EmitUnknownDiagWarning - Emit a warning and typo hint for unknown warning
@@ -41,8 +52,96 @@ static void EmitUnknownDiagWarning(DiagnosticsEngine &Diags,
       << (Prefix.str() += std::string(Suggestion));
 }
 
+namespace {
+class WarningsSpecialCaseList : public llvm::SpecialCaseList {
+public:
+  static std::unique_ptr<WarningsSpecialCaseList>
+  create(const llvm::MemoryBuffer &MB, std::string &Err) {
+    auto SCL = std::make_unique<WarningsSpecialCaseList>();
+    if (SCL->createInternal(&MB, Err))
+      return SCL;
+    return nullptr;
+  }
+
+  // Section names refer to diagnostic groups, which cover multiple individual
+  // diagnostics. Expand diagnostic groups here to individual diagnostics.
+  // A diagnostic can have multiple diagnostic groups associated with it, we let
+  // the last section take precedence in such cases.
+  void processSections(DiagnosticsEngine &Diags) {
+    // Drop the default section introduced by special case list, we only support
+    // exact diagnostic group names.
+    Sections.erase("*");
+    // Make sure we iterate sections by their line numbers.
+    std::vector<std::pair<unsigned, const llvm::StringMapEntry<Section> *>>
+        LineAndSection;
+    for (const auto &Entry : Sections) {
+      LineAndSection.emplace_back(
+          Entry.second.SectionMatcher->Globs.at(Entry.first()).second, &Entry);
+    }
+    llvm::sort(LineAndSection);
+    for (const auto &[_, Entry] : LineAndSection) {
+      SmallVector<diag::kind, 256> GroupDiags;
+      if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
+              clang::diag::Flavor::WarningOrError, Entry->first(),
+              GroupDiags)) {
+        EmitUnknownDiagWarning(Diags, clang::diag::Flavor::WarningOrError, "",
+                               Entry->first());
+        continue;
+      }
+      for (auto D : GroupDiags)
+        DiagToSection[D] = &Entry->getValue();
+    }
+  }
+
+  bool isDiagSuppressed(diag::kind D, llvm::StringRef FilePath) const {
+    auto Section = DiagToSection.find(D);
+    if (Section == DiagToSection.end())
+      return false;
+    auto SrcEntries = Section->second->Entries.find("src");
+    if (SrcEntries == Section->second->Entries.end())
+      return false;
+    // Find the longest glob pattern that matches FilePath. A positive match
+    // implies D should be suppressed for FilePath.
+    llvm::StringRef LongestMatch;
+    bool LongestWasNegative;
+    for (const auto &CatIt : SrcEntries->second) {
+      bool IsNegative = CatIt.first() == "emit";
+      for (const auto &GlobIt : CatIt.second.Globs) {
+        if (GlobIt.getKeyLength() < LongestMatch.size())
+          continue;
+        if (!GlobIt.second.first.match(FilePath))
+          continue;
+        LongestMatch = GlobIt.getKey();
+        LongestWasNegative = IsNegative;
+      }
+    }
+    return !LongestMatch.empty() && !LongestWasNegative;
+  }
+
+private:
+  llvm::DenseMap<diag::kind, const Section *> DiagToSection;
+};
+
+void parseSuppressionMappings(const llvm::MemoryBuffer &MB,
+                              DiagnosticsEngine &Diags) {
+  std::string Err;
+  auto SCL = WarningsSpecialCaseList::create(MB, Err);
+  if (!SCL) {
+    Diags.Report(diag::err_drv_malformed_warning_suppression_mapping)
+        << MB.getBufferIdentifier() << Err;
+    return;
+  }
+  SCL->processSections(Diags);
+  Diags.setDiagSuppressionMapping(
+      [SCL(std::move(SCL))](diag::kind K, llvm::StringRef Path) {
+        return SCL->isDiagSuppressed(K, Path);
+      });
+}
+} // namespace
+
 void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
                                   const DiagnosticOptions &Opts,
+                                  llvm::vfs::FileSystem &VFS,
                                   bool ReportDiags) {
   Diags.setSuppressSystemWarnings(true);  // Default to -Wno-system-headers
   Diags.setIgnoreAllWarnings(Opts.IgnoreWarnings);
@@ -69,6 +168,14 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
     Diags.setExtensionHandlingBehavior(diag::Severity::Warning);
   else
     Diags.setExtensionHandlingBehavior(diag::Severity::Ignored);
+
+  if (!Opts.SuppressionMappingsFile.empty()) {
+    if (auto Buf = VFS.getBufferForFile(Opts.SuppressionMappingsFile)) {
+      parseSuppressionMappings(**Buf, Diags);
+    } else if (ReportDiags) {
+      Diags.Report(diag::err_drv_no_such_file) << Opts.SuppressionMappingsFile;
+    }
+  }
 
   SmallVector<diag::kind, 10> _Diags;
   const IntrusiveRefCntPtr< DiagnosticIDs > DiagIDs =
