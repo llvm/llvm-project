@@ -18,8 +18,8 @@
 /// this.
 //===----------------------------------------------------------------------===//
 // TODO:
-// 1. Before adding omp.map.info, check if in case we already have an
-//    omp.map.info for the variable in question.
+// 1. Before adding omp.map.info, check if we already have an omp.map.info for
+// the variable in question.
 // 2. Generalize this for more than just omp.target ops.
 //===----------------------------------------------------------------------===//
 
