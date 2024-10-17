@@ -8,21 +8,21 @@
 //  CHECK-SAME:   %[[MEMREF4:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[MEMREF5:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[VAL:[a-zA-Z0-9]*]]: index,
+//  CHECK-SAME:   %[[LB:[a-zA-Z0-9]*]]: index,
+//  CHECK-SAME:   %[[UB:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[STEP:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[CMP:[a-zA-Z0-9]*]]: i1
 func.func @hoist_vector_transfer_pairs(
     %memref0: memref<?x?xf32>, %memref1: memref<?x?xf32>, %memref2: memref<?x?xf32>,
     %memref3: memref<?x?xf32>, %memref4: memref<?x?xf32>, %memref5: memref<?x?xf32>,
-    %val: index, %step: index, %cmp: i1) {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 16 : index
+    %val: index, %lb : index, %ub : index, %step: index, %cmp: i1) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
 
 // CHECK: vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<1xf32>
-// CHECK: scf.for %[[I:.*]] = {{.*}} to {{.*}} step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>) {
+// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>) {
 // CHECK:   vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<2xf32>
-// CHECK:   scf.for %[[J:.*]] = {{.*}} to {{.*}} step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>, vector<2xf32>) {
+// CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>, vector<2xf32>) {
 // CHECK:     vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<3xf32>
 // CHECK:     vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<4xf32>
 // CHECK:     "some_crippling_use"(%[[MEMREF4]]) : (memref<?x?xf32>) -> ()
@@ -92,15 +92,15 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:   %[[MEMREF2:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[MEMREF3:[a-zA-Z0-9]*]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[VAL:[a-zA-Z0-9]*]]: index,
+//  CHECK-SAME:   %[[LB:[a-zA-Z0-9]*]]: index,
+//  CHECK-SAME:   %[[UB:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[STEP:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[RANDOM:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[CMP:[a-zA-Z0-9]*]]: i1
 func.func @hoist_vector_transfer_pairs_disjoint(
     %memref0: memref<?x?xf32>, %memref1: memref<?x?xf32>,
-    %memref2: memref<?x?xf32>, %memref3: memref<?x?xf32>, %val: index,
+    %memref2: memref<?x?xf32>, %memref3: memref<?x?xf32>, %val: index, %lb : index, %ub : index,
     %step: index, %random_index : index, %cmp: i1) {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 16 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
@@ -110,9 +110,9 @@ func.func @hoist_vector_transfer_pairs_disjoint(
 // CHECK: vector.transfer_read %[[MEMREF2]]{{.*}} : memref<?x?xf32>, vector<3xf32>
 // CHECK: vector.transfer_read %[[MEMREF3]]{{.*}} : memref<?x?xf32>, vector<4xf32>
 // CHECK: vector.transfer_read %[[MEMREF3]]{{.*}} : memref<?x?xf32>, vector<4xf32>
-// CHECK: scf.for %[[I:.*]] = {{.*}} to {{.*}} step %[[STEP]] iter_args({{.*}}) ->
+// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) ->
 //  CHECK-SAME: (vector<3xf32>, vector<3xf32>, vector<4xf32>, vector<4xf32>) {
-// CHECK:   scf.for %[[J:.*]] = {{.*}} to {{.*}} step %[[STEP]] iter_args({{.*}}) ->
+// CHECK:   scf.for %[[J:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) ->
 //  CHECK-SAME: (vector<3xf32>, vector<3xf32>, vector<4xf32>, vector<4xf32>) {
 // CHECK:     vector.transfer_read %[[MEMREF1]]{{.*}} : memref<?x?xf32>, vector<2xf32>
 // CHECK:     vector.transfer_read %[[MEMREF1]]{{.*}} : memref<?x?xf32>, vector<2xf32>
@@ -309,7 +309,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-LABEL:  func.func @no_hoisting_zero_trip_loop
-func.func @no_hoisting_zero_trip_loop(%arg0: memref<20xi32>, %arg1: memref<20xi32>, %lb: index, %ub: index) {
+func.func @no_hoisting_zero_trip_loop(%arg0: memref<20xi32>, %lb: index, %ub: index) {
   %c0_i32 = arith.constant 0 : i32
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -317,10 +317,10 @@ func.func @no_hoisting_zero_trip_loop(%arg0: memref<20xi32>, %arg1: memref<20xi3
 
   // CHECK:       scf.for {{.*}} {
   // CHECK-NEXT:    vector.transfer_read
-  // CHECK-NEXT:    vector.transfer_write
+  // CHECK-NEXT:    "prevent.dce"
   scf.for %arg2 = %lb to %ub step %c1 {
     %read = vector.transfer_read %arg0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
-    vector.transfer_write %read, %arg1[%c0] {in_bounds = [true]} : vector<4xi32>, memref<20xi32>
+    "prevent.dce"(%read) : (vector<4xi32>) ->()
   }
 
   // %lb_0 is in range [%lb, 8], and %ub_0 is in range [4, %ub].
@@ -330,10 +330,10 @@ func.func @no_hoisting_zero_trip_loop(%arg0: memref<20xi32>, %arg1: memref<20xi3
 
   // CHECK:       scf.for {{.*}} {
   // CHECK-NEXT:    vector.transfer_read
-  // CHECK-NEXT:    vector.transfer_write
+  // CHECK-NEXT:    "prevent.dce"
   scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
     %read = vector.transfer_read %arg0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
-    vector.transfer_write %read, %arg1[%c0] {in_bounds = [true]} : vector<4xi32>, memref<20xi32>
+    "prevent.dce"(%read) : (vector<4xi32>) ->()
   }
 
   // %lb_1 is in range [%lb, 4], and %ub_1 is in range [8, %ub].
@@ -341,13 +341,12 @@ func.func @no_hoisting_zero_trip_loop(%arg0: memref<20xi32>, %arg1: memref<20xi3
   %lb_1 = affine.min affine_map<(d0) -> (d0, 4)>(%lb)
   %ub_1 = affine.max affine_map<(d0) -> (d0, 8)>(%ub)
 
-  // CHECK:    vector.transfer_read
+  // CHECK:       vector.transfer_read
   // CHECK:       scf.for {{.*}} {
   // CHECK-NEXT:    "prevent.dce"
   scf.for %arg2 = %lb_1 to %ub_1 step %c1 {
     %read = vector.transfer_read %arg0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
     "prevent.dce"(%read) : (vector<4xi32>) ->()
-    vector.transfer_write %read, %arg1[%c0] {in_bounds = [true]} : vector<4xi32>, memref<20xi32>
   }
   return
 }
@@ -356,7 +355,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["func.func"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.hoist_redundant_vector_transfers %0
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
       : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
@@ -492,7 +491,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK: #[[$MAP4:.+]] = affine_map<()[s0] -> (s0 + 4)>
 
 //   CHECK-LABEL: func.func @hoist_vector_transfer_pairs_disjoint_dynamic
-//    CHECK-SAME: (%[[BUFFER:.+]]: memref<?x?xf32>, %{{.+}}: index, %[[I0:.+]]: index)
+//    CHECK-SAME: (%[[BUFFER:.+]]: memref<?x?xf32>, %{{.+}}: index, %{{.+}}: index, %{{.+}}: index, %[[I0:.+]]: index)
 
 //         CHECK:   %[[PLUS1:.+]] = affine.apply #[[$MAP1]]()[%[[I0]]]
 //         CHECK:   %[[PLUS4:.+]] = affine.apply #[[$MAP4]]()[%[[I0]]]
@@ -507,9 +506,7 @@ module attributes {transform.with_named_sequence} {
 //         CHECK:   vector.transfer_write %{{.+}}, %[[BUFFER]][%[[I0]], %[[I0]]]
 
 func.func @hoist_vector_transfer_pairs_disjoint_dynamic(
-    %buffer: memref<?x?xf32>, %step: index, %i0 : index) {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 16 : index
+    %buffer: memref<?x?xf32>, %lb : index, %ub : index, %step: index, %i0 : index) {
   %cst = arith.constant 0.0 : f32
   %i1 = affine.apply affine_map<(d0) -> (d0 + 1)>(%i0)
   %i2 = affine.apply affine_map<(d0) -> (d0 + 4)>(%i0)
@@ -552,9 +549,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-COUNT-2:     vector.transfer_write
 
 func.func @hoist_vector_transfer_pairs_overlapping_dynamic(
-    %buffer: memref<?x?xf32>, %step: index, %i0 : index) {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 16 : index
+    %buffer: memref<?x?xf32>, %lb : index, %ub : index, %step: index, %i0 : index) {
   %cst = arith.constant 0.0 : f32
   %i1 = affine.apply affine_map<(d0) -> (d0 + 3)>(%i0)
 
@@ -594,9 +589,7 @@ module attributes {transform.with_named_sequence} {
 //         CHECK:   return
 
 func.func @hoist_vector_transfer_pairs_disjoint_dynamic(
-    %buffer: memref<?x?xf32>, %step: index, %i0 : index, %i1 : index) {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 16 : index
+    %buffer: memref<?x?xf32>, %lb : index, %ub : index, %step: index, %i0 : index, %i1 : index) {
   %cst = arith.constant 0.0 : f32
   %i2 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16)>(%i1)
   %i3 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 8)>(%i1)
@@ -633,7 +626,7 @@ module attributes {transform.with_named_sequence} {
 // Test hoisting of vector.extract/vector.broadcast pairs
 
 // CHECK-LABEL:  func.func @hoist_vector_broadcasts
-//       CHECK-SAME: (%{{.+}}: index, %[[VEC:.+]]: vector<3x4xf32>) -> vector<3x4xf32> {
+//       CHECK-SAME: (%{{.+}}: index, %{{.+}}: index, %{{.+}}: index, %[[VEC:.+]]: vector<3x4xf32>) -> vector<3x4xf32> {
 //       CHECK:        %[[EXTRACT:.+]] = vector.extract %[[VEC]][0] : vector<4xf32> from vector<3x4xf32>
 //       CHECK-NEXT:   %[[LOOP:.+]] = scf.for {{.*}} {
 //       CHECK-NEXT:     %[[USE:.+]] = "some_use"({{.*}}) : (vector<4xf32>) -> vector<4xf32>
@@ -642,9 +635,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK-NEXT:   %[[BCAST:.+]] = vector.broadcast %[[LOOP]] : vector<4xf32> to vector<3x4xf32>
 //       CHECK-NEXT:   return %[[BCAST]] : vector<3x4xf32>
 
-func.func @hoist_vector_broadcasts(%step : index, %vec : vector<3x4xf32>) -> vector<3x4xf32> {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 16 : index
+func.func @hoist_vector_broadcasts(%lb : index, %ub : index, %step : index, %vec : vector<3x4xf32>) -> vector<3x4xf32> {
   %bcast_vec = scf.for %arg0 = %lb to %ub step %step iter_args(%iarg = %vec) -> vector<3x4xf32> {
     %extract = vector.extract %iarg[0] : vector<4xf32> from vector<3x4xf32>
     %use = "some_use"(%extract) : (vector<4xf32>) -> vector<4xf32>
@@ -669,7 +660,7 @@ module attributes {transform.with_named_sequence} {
 // Test hoisting of vector.extract/vector.broadcast pairs with dynamic position
 
 // CHECK-LABEL:  func.func @hoist_vector_broadcasts
-//       CHECK-SAME: (%{{.+}}: index, %[[VEC:.+]]: vector<3x4xf32>, %[[POS:.+]]: index) -> vector<3x4xf32> {
+//       CHECK-SAME: (%{{.+}}: index, %{{.+}}: index, %{{.+}}: index, %[[VEC:.+]]: vector<3x4xf32>, %[[POS:.+]]: index) -> vector<3x4xf32> {
 //       CHECK:        %[[EXTRACT:.+]] = vector.extract %[[VEC]][%[[POS]]] : vector<4xf32> from vector<3x4xf32>
 //       CHECK-NEXT:   %[[LOOP:.+]] = scf.for {{.*}} {
 //       CHECK-NEXT:     %[[USE:.+]] = "some_use"({{.*}}) : (vector<4xf32>) -> vector<4xf32>
@@ -678,9 +669,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK-NEXT:   %[[BCAST:.+]] = vector.broadcast %[[LOOP]] : vector<4xf32> to vector<3x4xf32>
 //       CHECK-NEXT:   return %[[BCAST]] : vector<3x4xf32>
 
-func.func @hoist_vector_broadcasts_dynamic(%step : index, %vec : vector<3x4xf32>, %pos: index) -> vector<3x4xf32> {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 16 : index
+func.func @hoist_vector_broadcasts_dynamic(%lb : index, %ub : index, %step : index, %vec : vector<3x4xf32>, %pos: index) -> vector<3x4xf32> {
   %bcast_vec = scf.for %arg0 = %lb to %ub step %step iter_args(%iarg = %vec) -> vector<3x4xf32> {
     %extract = vector.extract %iarg[%pos] : vector<4xf32> from vector<3x4xf32>
     %use = "some_use"(%extract) : (vector<4xf32>) -> vector<4xf32>
@@ -705,7 +694,7 @@ module attributes {transform.with_named_sequence} {
 // Test hoisting of vector.extract/vector.broadcast pairs with multiple iter_args
 
 // CHECK-LABEL:  func.func @hoist_vector_broadcasts_multiple
-//       CHECK-SAME: (%{{.+}}: index, %[[VEC1:.+]]: vector<3x4xf32>,
+//       CHECK-SAME: (%{{.+}}: index, %{{.+}}: index, %{{.+}}: index, %[[VEC1:.+]]: vector<3x4xf32>,
 //       CHECK-SAME:  %[[VEC2:.+]]: vector<3x5xf32>) -> (vector<3x4xf32>, vector<3x5xf32>) {
 //       CHECK-DAG:     %[[EXTRACT1:.+]] = vector.extract %[[VEC1]][0] : vector<4xf32> from vector<3x4xf32>
 //       CHECK-DAG:     %[[EXTRACT2:.+]] = vector.extract %[[VEC2]][1] : vector<5xf32> from vector<3x5xf32>
@@ -718,9 +707,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK-DAG:     %[[BCAST2:.+]] = vector.broadcast %[[LOOP]]#1 : vector<5xf32> to vector<3x5xf32>
 //       CHECK-NEXT:    return %[[BCAST1]], %[[BCAST2]] : vector<3x4xf32>, vector<3x5xf32>
 
-func.func @hoist_vector_broadcasts_multiple(%step : index, %vec1 : vector<3x4xf32>, %vec2 : vector<3x5xf32>) ->  (vector<3x4xf32>, vector<3x5xf32>) {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 16 : index
+func.func @hoist_vector_broadcasts_multiple(%lb : index, %ub : index, %step : index, %vec1 : vector<3x4xf32>, %vec2 : vector<3x5xf32>) ->  (vector<3x4xf32>, vector<3x5xf32>) {
   %bcast_vec:2 = scf.for %arg0 = %lb to %ub step %step iter_args(%iarg = %vec1, %iarg2 = %vec2) -> (vector<3x4xf32>, vector<3x5xf32>) {
     %extract1 = vector.extract %iarg[0] : vector<4xf32> from vector<3x4xf32>
     %extract2 = vector.extract %iarg2[1] : vector<5xf32> from vector<3x5xf32>
