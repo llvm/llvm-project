@@ -201,6 +201,10 @@ protected:
     ClauseMapTy clauseInfo;
     std::list<C> actualClauses;
     std::list<C> crtGroup;
+    std::set<std::string> usedInScanDirective;
+
+    using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
+    std::map<const std::string, ReductionModifier> reductionMod;
     Symbol *loopIV{nullptr};
   };
 

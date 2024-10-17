@@ -1594,6 +1594,7 @@ bool OmpAttributeVisitor::Pre(
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_scan:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
   case llvm::omp::Directive::OMPD_target_update:
