@@ -249,7 +249,7 @@ namespace Std {
 
 // CHECK-DUMP:      ClassTemplateDecl {{.*}} <{{.*[/\\]}}cxx-templates-common.h:1:1, {{.*}}>  col:{{.*}} in cxx_templates_common SomeTemplate
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} prev {{.*}} SomeTemplate
-// CHECK-DUMP-NEXT:     TemplateArgument type 'char[2]'
+// CHECK-DUMP-NEXT:     TemplateArgument type 'char[1]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} SomeTemplate definition
 // CHECK-DUMP-NEXT:     DefinitionData
 // CHECK-DUMP-NEXT:       DefaultConstructor
@@ -258,9 +258,9 @@ namespace Std {
 // CHECK-DUMP-NEXT:       CopyAssignment
 // CHECK-DUMP-NEXT:       MoveAssignment
 // CHECK-DUMP-NEXT:       Destructor
-// CHECK-DUMP-NEXT:     TemplateArgument type 'char[2]'
+// CHECK-DUMP-NEXT:     TemplateArgument type 'char[1]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} prev {{.*}} SomeTemplate
-// CHECK-DUMP-NEXT:     TemplateArgument type 'char[1]'
+// CHECK-DUMP-NEXT:     TemplateArgument type 'char[2]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} SomeTemplate definition
 // CHECK-DUMP-NEXT:     DefinitionData
 // CHECK-DUMP-NEXT:       DefaultConstructor
@@ -269,4 +269,4 @@ namespace Std {
 // CHECK-DUMP-NEXT:       CopyAssignment
 // CHECK-DUMP-NEXT:       MoveAssignment
 // CHECK-DUMP-NEXT:       Destructor
-// CHECK-DUMP-NEXT:     TemplateArgument type 'char[1]'
+// CHECK-DUMP-NEXT:     TemplateArgument type 'char[2]'
