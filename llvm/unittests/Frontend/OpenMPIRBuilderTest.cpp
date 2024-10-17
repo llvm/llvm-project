@@ -6887,25 +6887,15 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
   OpenMPIRBuilder::TargetDataRTArgs RTArgs;
   OpenMPIRBuilder::TargetDataInfo Info(true, false);
 
-  auto VoidPtrTy = PointerType::getUnqual(Builder.getContext());
   auto VoidPtrPtrTy = PointerType::getUnqual(Builder.getContext());
-  auto Int64Ty = Type::getInt64Ty(Builder.getContext());
   auto Int64PtrTy = PointerType::getUnqual(Builder.getContext());
-  auto Array4VoidPtrTy = ArrayType::get(VoidPtrTy, 4);
-  auto Array4Int64PtrTy = ArrayType::get(Int64Ty, 4);
 
-  Info.RTArgs.BasePointersArray =
-      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo(0));
-  Info.RTArgs.PointersArray =
-      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
-  Info.RTArgs.SizesArray =
-      ConstantPointerNull::get(Array4Int64PtrTy->getPointerTo());
-  Info.RTArgs.MapTypesArray =
-      ConstantPointerNull::get(Array4Int64PtrTy->getPointerTo());
-  Info.RTArgs.MapNamesArray =
-      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
-  Info.RTArgs.MappersArray =
-      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
+  Info.RTArgs.BasePointersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.PointersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.SizesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.MapTypesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.MapNamesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.MappersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
   Info.NumberOfPtrs = 4;
   Info.EmitDebug = false;
   OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info, false);

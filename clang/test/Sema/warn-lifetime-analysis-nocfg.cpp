@@ -164,14 +164,16 @@ template<typename T>
 struct initializer_list {
   const T* ptr; size_t sz;
 };
-template <typename T>
+template<typename T> class allocator {};
+template <typename T, typename Alloc = allocator<T>>
 struct vector {
   typedef __gnu_cxx::basic_iterator<T> iterator;
   iterator begin();
   iterator end();
   const T *data() const;
   vector();
-  vector(initializer_list<T> __l);
+  vector(initializer_list<T> __l,
+         const Alloc& alloc = Alloc());
 
   template<typename InputIterator>
 	vector(InputIterator first, InputIterator __last);
@@ -713,7 +715,7 @@ struct [[gsl::Pointer]] Span {
 // Pointer from Owner<Pointer>
 std::string_view test5() {
   std::string_view a = StatusOr<std::string_view>().valueLB(); // expected-warning {{object backing the pointer will be dest}}
-return StatusOr<std::string_view>().valueLB(); // expected-warning {{returning address of local temporary}}
+  return StatusOr<std::string_view>().valueLB(); // expected-warning {{returning address of local temporary}}
 
   // No dangling diagnostics on non-lifetimebound methods.
   std::string_view b = StatusOr<std::string_view>().valueNoLB();
@@ -724,6 +726,7 @@ return StatusOr<std::string_view>().valueLB(); // expected-warning {{returning a
 // Prevent regression GH108463
 Span<int*> test6(std::vector<int*> v) {
   Span<int *> dangling = std::vector<int*>(); // expected-warning {{object backing the pointer}}
+  dangling = std::vector<int*>(); // expected-warning {{object backing the pointer}}
   return v; // expected-warning {{address of stack memory}}
 }
 

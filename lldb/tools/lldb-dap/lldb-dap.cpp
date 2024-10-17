@@ -53,6 +53,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -610,25 +611,32 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
   std::string sourceMapCommand;
   llvm::raw_string_ostream strm(sourceMapCommand);
   strm << "settings set target.source-map ";
-  auto sourcePath = GetString(arguments, "sourcePath");
+  const auto sourcePath = GetString(arguments, "sourcePath");
 
   // sourceMap is the new, more general form of sourcePath and overrides it.
-  auto sourceMap = arguments.getArray("sourceMap");
-  if (sourceMap) {
-    for (const auto &value : *sourceMap) {
-      auto mapping = value.getAsArray();
+  constexpr llvm::StringRef sourceMapKey = "sourceMap";
+
+  if (const auto *sourceMapArray = arguments.getArray(sourceMapKey)) {
+    for (const auto &value : *sourceMapArray) {
+      const auto *mapping = value.getAsArray();
       if (mapping == nullptr || mapping->size() != 2 ||
           (*mapping)[0].kind() != llvm::json::Value::String ||
           (*mapping)[1].kind() != llvm::json::Value::String) {
         g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
         return;
       }
-      auto mapFrom = GetAsString((*mapping)[0]);
-      auto mapTo = GetAsString((*mapping)[1]);
+      const auto mapFrom = GetAsString((*mapping)[0]);
+      const auto mapTo = GetAsString((*mapping)[1]);
       strm << "\"" << mapFrom << "\" \"" << mapTo << "\" ";
     }
+  } else if (const auto *sourceMapObj = arguments.getObject(sourceMapKey)) {
+    for (const auto &[key, value] : *sourceMapObj) {
+      if (value.kind() == llvm::json::Value::String) {
+        strm << "\"" << key.str() << "\" \"" << GetAsString(value) << "\" ";
+      }
+    }
   } else {
-    if (ObjectContainsKey(arguments, "sourceMap")) {
+    if (ObjectContainsKey(arguments, sourceMapKey)) {
       g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
       return;
     }
@@ -1395,9 +1403,20 @@ void request_completions(const llvm::json::Object &request) {
   }
   llvm::json::Array targets;
 
-  if (!text.empty() &&
-      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
-    text = text.substr(g_dap.command_escape_prefix.size());
+  bool had_escape_prefix =
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix);
+  ReplMode completion_mode = g_dap.DetectReplMode(frame, text, true);
+
+  // Handle the offset change introduced by stripping out the
+  // `command_escape_prefix`.
+  if (had_escape_prefix) {
+    if (offset < static_cast<int64_t>(g_dap.command_escape_prefix.size())) {
+      body.try_emplace("targets", std::move(targets));
+      response.try_emplace("body", std::move(body));
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+    offset -= g_dap.command_escape_prefix.size();
   }
 
   // While the user is typing then we likely have an incomplete input and cannot
@@ -1409,7 +1428,7 @@ void request_completions(const llvm::json::Object &request) {
        std::make_tuple(ReplMode::Variable, expr_prefix + text,
                        offset + expr_prefix.size())}};
   for (const auto &[mode, line, cursor] : exprs) {
-    if (g_dap.repl_mode != ReplMode::Auto && g_dap.repl_mode != mode)
+    if (completion_mode != ReplMode::Auto && completion_mode != mode)
       continue;
 
     lldb::SBStringList matches;
@@ -1542,6 +1561,19 @@ void request_completions(const llvm::json::Object &request) {
 //                              client can use this optional information to
 //                              present the variables in a paged UI and fetch
 //                              them in chunks."
+//            },
+//            "valueLocationReference": {
+//              "type": "integer",
+//              "description": "A reference that allows the client to request
+//                              the location where the returned value is
+//                              declared. For example, if a function pointer is
+//                              returned, the adapter may be able to look up the
+//                              function's location. This should be present only
+//                              if the adapter is likely to be able to resolve
+//                              the location.\n\nThis reference shares the same
+//                              lifetime as the `variablesReference`. See
+//                              'Lifetime of Object References' in the
+//              Overview section for details."
 //            }
 //            "memoryReference": {
 //               "type": "string",
@@ -1571,10 +1603,10 @@ void request_evaluate(const llvm::json::Object &request) {
   bool repeat_last_command =
       expression.empty() && g_dap.last_nonempty_var_expression.empty();
 
-  if (context == "repl" && (repeat_last_command ||
-                            (!expression.empty() &&
-                             g_dap.DetectExpressionContext(frame, expression) ==
-                                 ExpressionContext::Command))) {
+  if (context == "repl" &&
+      (repeat_last_command ||
+       (!expression.empty() &&
+        g_dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
     // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
     g_dap.last_nonempty_var_expression.clear();
@@ -1628,16 +1660,19 @@ void request_evaluate(const llvm::json::Object &request) {
       VariableDescription desc(value);
       EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
-      if (value.MightHaveChildren()) {
-        auto variableReference = g_dap.variables.InsertVariable(
+      int64_t var_ref = 0;
+      if (value.MightHaveChildren() || ValuePointsToCode(value))
+        var_ref = g_dap.variables.InsertVariable(
             value, /*is_permanent=*/context == "repl");
-        body.try_emplace("variablesReference", variableReference);
-      } else {
+      if (value.MightHaveChildren())
+        body.try_emplace("variablesReference", var_ref);
+      else
         body.try_emplace("variablesReference", (int64_t)0);
-      }
       if (lldb::addr_t addr = value.GetLoadAddress();
           addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
+      if (ValuePointsToCode(value))
+        body.try_emplace("valueLocationReference", var_ref);
     }
   }
   response.try_emplace("body", std::move(body));
@@ -1854,13 +1889,15 @@ void request_initialize(const llvm::json::Object &request) {
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", new StartDebuggingRequestHandler(),
+        "start-debugging", new StartDebuggingRequestHandler(),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
       "repl-mode", new ReplModeRequestHandler(),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
+  cmd.AddCommand("send-event", new SendEventRequestHandler(),
+                 "Sends an DAP event to the client.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
@@ -2058,9 +2095,8 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     launch_info.SetArguments(MakeArgv(args).data(), true);
 
   // Pass any environment variables along that the user specified.
-  auto envs = GetStrings(arguments, "env");
-  if (!envs.empty())
-    launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
+  const auto envs = GetEnvironmentFromArguments(*arguments);
+  launch_info.SetEnvironment(envs, true);
 
   auto flags = launch_info.GetLaunchFlags();
 
@@ -3752,6 +3788,17 @@ void request_threads(const llvm::json::Object &request) {
 //             "description": "The number of indexed child variables. The client
 //             can use this optional information to present the variables in a
 //             paged UI and fetch them in chunks."
+//           },
+//           "valueLocationReference": {
+//             "type": "integer",
+//             "description": "A reference that allows the client to request the
+//             location where the new value is declared. For example, if the new
+//             value is function pointer, the adapter may be able to look up the
+//             function's location. This should be present only if the adapter
+//             is likely to be able to resolve the location.\n\nThis reference
+//             shares the same lifetime as the `variablesReference`. See
+//             'Lifetime of Object References' in the Overview section for
+//             details."
 //           }
 //         },
 //         "required": [ "value" ]
@@ -3776,7 +3823,6 @@ void request_setVariable(const llvm::json::Object &request) {
   response.try_emplace("success", false);
 
   lldb::SBValue variable;
-  int64_t newVariablesReference = 0;
 
   // The "id" is the unique integer ID that is unique within the enclosing
   // variablesReference. It is optionally added to any "interface Variable"
@@ -3806,14 +3852,17 @@ void request_setVariable(const llvm::json::Object &request) {
       // so always insert a new one to get its variablesReference.
       // is_permanent is false because debug console does not support
       // setVariable request.
+      int64_t new_var_ref =
+          g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       if (variable.MightHaveChildren())
-        newVariablesReference =
-            g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
-      body.try_emplace("variablesReference", newVariablesReference);
-
+        body.try_emplace("variablesReference", new_var_ref);
+      else
+        body.try_emplace("variablesReference", 0);
       if (lldb::addr_t addr = variable.GetLoadAddress();
           addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
+      if (ValuePointsToCode(variable))
+        body.try_emplace("valueLocationReference", new_var_ref);
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
@@ -4104,10 +4153,13 @@ void request_variables(const llvm::json::Object &request) {
 void request_locations(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  auto *arguments = request.getObject("arguments");
 
-  uint64_t reference_id = GetUnsigned(arguments, "locationReference", 0);
-  lldb::SBValue variable = g_dap.variables.GetVariable(reference_id);
+  uint64_t location_id = GetUnsigned(arguments, "locationReference", 0);
+  // We use the lowest bit to distinguish between value location and declaration
+  // location
+  auto [var_ref, is_value_location] = UnpackLocation(location_id);
+  lldb::SBValue variable = g_dap.variables.GetVariable(var_ref);
   if (!variable.IsValid()) {
     response["success"] = false;
     response["message"] = "Invalid variable reference";
@@ -4115,21 +4167,50 @@ void request_locations(const llvm::json::Object &request) {
     return;
   }
 
-  // Get the declaration location
-  lldb::SBDeclaration decl = variable.GetDeclaration();
-  if (!decl.IsValid()) {
-    response["success"] = false;
-    response["message"] = "No declaration location available";
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
   llvm::json::Object body;
-  body.try_emplace("source", CreateSource(decl.GetFileSpec()));
-  if (int line = decl.GetLine())
-    body.try_emplace("line", line);
-  if (int column = decl.GetColumn())
-    body.try_emplace("column", column);
+  if (is_value_location) {
+    // Get the value location
+    if (!variable.GetType().IsPointerType() &&
+        !variable.GetType().IsReferenceType()) {
+      response["success"] = false;
+      response["message"] =
+          "Value locations are only available for pointers and references";
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    lldb::addr_t addr = variable.GetValueAsAddress();
+    lldb::SBLineEntry line_entry =
+        g_dap.target.ResolveLoadAddress(addr).GetLineEntry();
+
+    if (!line_entry.IsValid()) {
+      response["success"] = false;
+      response["message"] = "Failed to resolve line entry for location";
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    body.try_emplace("source", CreateSource(line_entry.GetFileSpec()));
+    if (int line = line_entry.GetLine())
+      body.try_emplace("line", line);
+    if (int column = line_entry.GetColumn())
+      body.try_emplace("column", column);
+  } else {
+    // Get the declaration location
+    lldb::SBDeclaration decl = variable.GetDeclaration();
+    if (!decl.IsValid()) {
+      response["success"] = false;
+      response["message"] = "No declaration location available";
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    body.try_emplace("source", CreateSource(decl.GetFileSpec()));
+    if (int line = decl.GetLine())
+      body.try_emplace("line", line);
+    if (int column = decl.GetColumn())
+      body.try_emplace("column", column);
+  }
 
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));

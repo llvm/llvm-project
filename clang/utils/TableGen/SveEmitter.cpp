@@ -953,9 +953,20 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
                      SVEEmitter &Emitter, StringRef SVEGuard,
                      StringRef SMEGuard)
     : Name(Name.str()), LLVMName(LLVMName), Proto(Proto.str()),
-      BaseTypeSpec(BT), Class(Class), SVEGuard(SVEGuard.str()),
-      SMEGuard(SMEGuard.str()), MergeSuffix(MergeSuffix.str()),
+      BaseTypeSpec(BT), Class(Class), MergeSuffix(MergeSuffix.str()),
       BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks) {
+
+  auto FormatGuard = [](StringRef Guard, StringRef Base) -> std::string {
+    if (Guard.contains('|'))
+      return Base.str() + ",(" + Guard.str() + ")";
+    if (Guard.empty() || Guard == Base || Guard.starts_with(Base.str() + ","))
+      return Guard.str();
+    return Base.str() + "," + Guard.str();
+  };
+
+  this->SVEGuard = FormatGuard(SVEGuard, "sve");
+  this->SMEGuard = FormatGuard(SMEGuard, "sme");
+
   // Types[0] is the return value.
   for (unsigned I = 0; I < (getNumParams() + 1); ++I) {
     char Mod;
@@ -1161,11 +1172,9 @@ void SVEEmitter::createIntrinsic(
   uint64_t Merge = R->getValueAsInt("Merge");
   StringRef MergeSuffix = R->getValueAsString("MergeSuffix");
   uint64_t MemEltType = R->getValueAsInt("MemEltType");
-  std::vector<Record*> FlagsList = R->getValueAsListOfDefs("Flags");
-  std::vector<Record*> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
 
   int64_t Flags = 0;
-  for (auto FlagRec : FlagsList)
+  for (const Record *FlagRec : R->getValueAsListOfDefs("Flags"))
     Flags |= FlagRec->getValueAsInt("Value");
 
   // Create a dummy TypeSpec for non-overloaded builtins.
@@ -1195,10 +1204,10 @@ void SVEEmitter::createIntrinsic(
   for (auto TS : TypeSpecs) {
     // Collate a list of range/option checks for the immediates.
     SmallVector<ImmCheck, 2> ImmChecks;
-    for (auto *R : ImmCheckList) {
-      int64_t ArgIdx = R->getValueAsInt("ImmArgIdx");
-      int64_t EltSizeArgIdx = R->getValueAsInt("TypeContextArgIdx");
-      int64_t Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
+    for (const Record *ImmR : R->getValueAsListOfDefs("ImmChecks")) {
+      int64_t ArgIdx = ImmR->getValueAsInt("ImmArgIdx");
+      int64_t EltSizeArgIdx = ImmR->getValueAsInt("TypeContextArgIdx");
+      int64_t Kind = ImmR->getValueAsDef("Kind")->getValueAsInt("Value");
       assert(ArgIdx >= 0 && Kind >= 0 &&
              "ImmArgIdx and Kind must be nonnegative");
 

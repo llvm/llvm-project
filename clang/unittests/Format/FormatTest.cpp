@@ -11519,6 +11519,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignLeft);
   verifyFormat("template <typename T> void operator=(T) & {}", AlignLeft);
   verifyFormat("template <typename T> void operator=(T) && {}", AlignLeft);
+  verifyFormat("for (foo<void() &&>& cb : X)", AlignLeft);
 
   FormatStyle AlignMiddle = getLLVMStyle();
   AlignMiddle.PointerAlignment = FormatStyle::PAS_Middle;
@@ -18107,7 +18108,7 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
 
   // Test across comments
   Style.MaxEmptyLinesToKeep = 10;
-  Style.ReflowComments = false;
+  Style.ReflowComments = FormatStyle::RCS_Never;
   Style.AlignConsecutiveMacros.AcrossComments = true;
   verifyFormat("#define a    3\n"
                "// line comment\n"
@@ -18854,7 +18855,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossEmptyLinesAndComments) {
                "y = 1;",
                Alignment);
 
-  Alignment.ReflowComments = true;
+  Alignment.ReflowComments = FormatStyle::RCS_Always;
   Alignment.ColumnLimit = 50;
   verifyFormat("int x   = 0;\n"
                "int yy  = 1; /// specificlennospace\n"
@@ -19252,7 +19253,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "y = 1;",
                Alignment);
 
-  EXPECT_EQ(Alignment.ReflowComments, true);
+  EXPECT_EQ(Alignment.ReflowComments, FormatStyle::RCS_Always);
   Alignment.ColumnLimit = 50;
   verifyFormat("int x   = 0;\n"
                "int yy  = 1; /// specificlennospace\n"
@@ -20021,6 +20022,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  return 0;\n"
                "}() };",
                BracedAlign);
+
+  Alignment.AlignConsecutiveDeclarations.AlignFunctionDeclarations = false;
+  verifyFormat("unsigned int f1(void);\n"
+               "void f2(void);\n"
+               "size_t f3(void);",
+               Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
@@ -20264,9 +20271,16 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
-                 /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                 /*AlignFunctionDeclarations=*/false,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
-            FormatStyle::AlignConsecutiveStyle({}));
+            FormatStyle::AlignConsecutiveStyle(
+                {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
+                 /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AlignFunctionDeclarations=*/true,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"

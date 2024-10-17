@@ -63,3 +63,14 @@ struct base {
 int main() {
     SS<int, base>().f(0);
 }
+
+
+namespace GH11460 {
+template <typename... T>
+requires( ); // expected-error {{expected expression}}
+struct SS {
+    void f( ) {
+        (*p).~T...[](); // expected-error {{use of undeclared identifier 'p'}}
+    }
+};
+}

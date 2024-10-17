@@ -66,8 +66,8 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
                                 bool defaultColor = true) {
   // Color diagnostics default to auto ("on" if terminal supports) in the
-  // compiler driver `flang-new` but default to off in the frontend driver
-  // `flang-new -fc1`, needing an explicit OPT_fdiagnostics_color.
+  // compiler driver `flang` but default to off in the frontend driver
+  // `flang -fc1`, needing an explicit OPT_fdiagnostics_color.
   // Support both clang's -f[no-]color-diagnostics and gcc's
   // -f[no-]diagnostics-colors[=never|always|auto].
   enum {
@@ -348,6 +348,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
+
+  // -record-command-line option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_record_command_line)) {
+    opts.RecordCommandLine = a->getValue();
+  }
 
   // -mlink-builtin-bitcode
   for (auto *a :
@@ -820,6 +826,8 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
             : PPMacrosFlag::Exclude;
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
+  opts.preprocessIncludeLines =
+      args.hasArg(clang::driver::options::OPT_fpreprocess_include_lines);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
   opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
 }
@@ -898,7 +906,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
-  // Default to off for `flang-new -fc1`.
+  // Default to off for `flang -fc1`.
   res.getFrontendOpts().showColors =
       parseShowColorsArgs(args, /*defaultDiagColor=*/false);
 
@@ -1485,6 +1493,10 @@ void CompilerInvocation::setFortranOpts() {
         frontendOptions.fortranForm == FortranForm::FixedForm;
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
+
+  // -E
+  fortranOptions.prescanAndReformat =
+      frontendOptions.programAction == PrintPreprocessedInput;
 
   fortranOptions.features = frontendOptions.features;
   fortranOptions.encoding = frontendOptions.encoding;
