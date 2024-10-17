@@ -2668,8 +2668,8 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(ISD::ADD, DL, VT, N1, N0);
 
   if (areBitwiseNotOfEachother(N0, N1))
@@ -3048,8 +3048,8 @@ SDValue DAGCombiner::visitADDSAT(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(Opcode, DL, VT, N1, N0);
 
   // fold vector ops
@@ -3306,8 +3306,8 @@ SDValue DAGCombiner::visitADDO(SDNode *N) {
                      DAG.getUNDEF(CarryVT));
 
   // canonicalize constant to RHS.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(N->getOpcode(), DL, N->getVTList(), N1, N0);
 
   // fold (addo x, 0) -> x + no carry out
@@ -4381,8 +4381,8 @@ SDValue DAGCombiner::visitMULFIX(SDNode *N) {
     return DAG.getConstant(0, SDLoc(N), VT);
 
   // Canonicalize constant to RHS (vector doesn't have to splat)
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-     !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N1, N0, Scale);
 
   // fold (mulfix x, 0, scale) -> 0
@@ -4410,8 +4410,8 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS (vector doesn't have to splat)
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return Matcher.getNode(ISD::MUL, DL, VT, N1, N0);
 
   bool N1IsConst = false;
@@ -5156,8 +5156,8 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(ISD::MULHS, DL, N->getVTList(), N1, N0);
 
   if (VT.isVector()) {
@@ -5215,8 +5215,8 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(ISD::MULHU, DL, N->getVTList(), N1, N0);
 
   if (VT.isVector()) {
@@ -5293,8 +5293,8 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(Opcode, DL, N->getVTList(), N1, N0);
 
   if (VT.isVector())
@@ -5367,8 +5367,8 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(Opcode, DL, N->getVTList(), N1, N0);
 
   if (VT.isVector())
@@ -5465,8 +5465,8 @@ SDValue DAGCombiner::visitSMUL_LOHI(SDNode *N) {
     return DAG.getNode(ISD::SMUL_LOHI, DL, N->getVTList(), N0, N1);
 
   // canonicalize constant to RHS (vector doesn't have to splat)
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(ISD::SMUL_LOHI, DL, N->getVTList(), N1, N0);
 
   // If the type is twice as wide is legal, transform the mulhu to a wider
@@ -5506,8 +5506,8 @@ SDValue DAGCombiner::visitUMUL_LOHI(SDNode *N) {
     return DAG.getNode(ISD::UMUL_LOHI, DL, N->getVTList(), N0, N1);
 
   // canonicalize constant to RHS (vector doesn't have to splat)
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(ISD::UMUL_LOHI, DL, N->getVTList(), N1, N0);
 
   // (umul_lohi N0, 0) -> (0, 0)
@@ -5570,8 +5570,8 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
   }
 
   // canonicalize constant to RHS.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(N->getOpcode(), DL, N->getVTList(), N1, N0);
 
   // fold (mulo x, 0) -> 0 + no carry out
@@ -5784,8 +5784,8 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
     return N0;
 
   // canonicalize constant to RHS
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(Opcode, DL, VT, N1, N0);
 
   // fold vector ops
@@ -7048,8 +7048,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(ISD::AND, DL, VT, N1, N0);
 
   if (areBitwiseNotOfEachother(N0, N1))
@@ -7945,8 +7945,8 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(ISD::OR, DL, VT, N1, N0);
 
   // fold vector ops
@@ -9501,8 +9501,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     return C;
 
   // canonicalize constant to RHS
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N0)) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1)))
     return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
 
   // fold vector ops
