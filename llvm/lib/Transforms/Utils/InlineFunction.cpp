@@ -3057,8 +3057,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         else
           Builder.CreateRet(NewDeoptCall);
         // Since the ret type is changed, remove the incompatible attributes.
-        NewDeoptCall->removeRetAttrs(
-            AttributeFuncs::typeIncompatible(NewDeoptCall->getType()));
+        NewDeoptCall->removeRetAttrs(AttributeFuncs::typeIncompatible(
+            NewDeoptCall->getType(), NewDeoptCall->getRetAttributes()));
       }
 
       // Leave behind the normal returns so we can merge control flow.
