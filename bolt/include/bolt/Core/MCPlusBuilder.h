@@ -1536,6 +1536,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  virtual bool matchAbsLongVeneer(const BinaryFunction &BF,
+                                  uint64_t &TargetAddress) const {
+    llvm_unreachable("not implemented");
+  }
+
   virtual bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const {
     llvm_unreachable("not implemented");
     return false;
