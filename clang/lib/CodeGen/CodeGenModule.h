@@ -101,6 +101,25 @@ enum ForDefinition_t : bool {
   ForDefinition = true
 };
 
+class CounterPair : public std::pair<uint32_t, uint32_t> {
+private:
+  static constexpr uint32_t None = (1u << 31); /// None is set
+
+public:
+  static constexpr uint32_t Mask = None - 1;
+
+public:
+  CounterPair(unsigned Val = 0) {
+    assert(!(Val & ~Mask));
+    first = Val;
+    second = None;
+  }
+
+  std::pair<bool, bool> getIsCounterPair() const {
+    return {!(first & None), !(second & None)};
+  }
+};
+
 struct OrderGlobalInitsOrStermFinalizers {
   unsigned int priority;
   unsigned int lex_order;
