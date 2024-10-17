@@ -134,6 +134,7 @@ set(BENCHMARK_TESTS
     algorithms/ranges_sort.bench.cpp
     algorithms/ranges_sort_heap.bench.cpp
     algorithms/ranges_stable_sort.bench.cpp
+    algorithms/ranges_starts_with.bench.cpp
     algorithms/set_intersection.bench.cpp
     algorithms/sort.bench.cpp
     algorithms/sort_heap.bench.cpp
