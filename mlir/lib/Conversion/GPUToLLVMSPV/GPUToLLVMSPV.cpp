@@ -118,12 +118,31 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
         lookupOrCreateSPIRVFn(moduleOp, funcName, flagTy, voidTy,
                               /*isMemNone=*/false, /*isConvergent=*/true);
 
-    // Value used by SPIR-V backend to represent `CLK_LOCAL_MEM_FENCE`.
-    // See `llvm/lib/Target/SPIRV/SPIRVBuiltins.td`.
-    constexpr int64_t localMemFenceFlag = 1;
+    // Value used by SPIR-V backend to represent `CLK_LOCAL_MEM_FENCE` and
+    // `CLK_GLOBAL_MEM_FENCE`. See `llvm/lib/Target/SPIRV/SPIRVBuiltins.td`.
+    constexpr int32_t localMemFenceFlag = 1;
+    constexpr int32_t globalMemFenceFlag = 2;
+    int32_t memFenceFlag = 0;
+    std::optional<ArrayAttr> addressSpaces = adaptor.getAddressSpaces();
+    if (addressSpaces) {
+      for (Attribute attr : addressSpaces.value()) {
+        auto addressSpace = cast<gpu::AddressSpaceAttr>(attr).getValue();
+        switch (addressSpace) {
+        case gpu::AddressSpace::Global:
+          memFenceFlag = memFenceFlag | globalMemFenceFlag;
+          break;
+        case gpu::AddressSpace::Workgroup:
+          memFenceFlag = memFenceFlag | localMemFenceFlag;
+          break;
+        case gpu::AddressSpace::Private:
+          break;
+        }
+      }
+    } else {
+      memFenceFlag = localMemFenceFlag | globalMemFenceFlag;
+    }
     Location loc = op->getLoc();
-    Value flag =
-        rewriter.create<LLVM::ConstantOp>(loc, flagTy, localMemFenceFlag);
+    Value flag = rewriter.create<LLVM::ConstantOp>(loc, flagTy, memFenceFlag);
     rewriter.replaceOp(op, createSPIRVBuiltinCall(loc, rewriter, func, flag));
     return success();
   }
