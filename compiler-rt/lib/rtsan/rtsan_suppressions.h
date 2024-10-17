@@ -18,5 +18,6 @@ namespace __rtsan {
 
 void InitializeSuppressions();
 bool IsStackTraceSuppressed(const __sanitizer::StackTrace &stack);
+bool IsFunctionSuppressed(const char *function_name);
 
 } // namespace __rtsan

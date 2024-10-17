@@ -608,7 +608,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   using llvm::orc::shared::SPSExecutorAddr;
   using llvm::orc::shared::SPSString;
   using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-  using SPSDLUpdateSig = int32_t(SPSExecutorAddr, int32_t);
+  using SPSDLUpdateSig = int32_t(SPSExecutorAddr);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -634,8 +634,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
     if (dlupdate) {
       int32_t result;
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
-                                                 result, DSOHandles[&JD],
-                                                 int32_t(ORC_RT_RTLD_LAZY));
+                                                 result, DSOHandles[&JD]);
       if (E)
         return E;
       else if (result)
