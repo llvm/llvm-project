@@ -1576,7 +1576,7 @@ bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
 #else
   LLDB_DEPRECATED_WARNING_DISABLE
   std::codecvt_utf8<wchar_t> cvt;
-  EL_RESTORE_DEPRECATED_DECLARATION_WARNINGS
+  LLDB_DEPRECATED_WARNING_RESTORE
   llvm::SmallString<4> input;
   for (;;) {
     const char *from_next;
