@@ -868,7 +868,7 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
            "operand bundles and tags do not match");
 
     numOpBundleOperands =
-        std::reduce(opBundleSizes.begin(), opBundleSizes.end());
+        std::accumulate(opBundleSizes.begin(), opBundleSizes.end(), size_t(0));
     assert(numOpBundleOperands <= intrOp->getNumOperands() &&
            "operand bundle operands is more than the number of operands");
 
