@@ -110,15 +110,7 @@ DeclBindingInfo *ResourceBindings::addDeclBindingInfo(const VarDecl *VD,
                                                       ResourceClass ResClass) {
   assert(getDeclBindingInfo(VD, ResClass) == nullptr &&
          "DeclBindingInfo already added");
-#ifndef NDEBUG
-  // Verify that existing bindings for this decl are stored sequentially
-  // and at the end of the BindingsList
-  auto I = DeclToBindingListIndex.find(VD);
-  if (I != DeclToBindingListIndex.end()) {
-    for (unsigned Index = I->getSecond(); Index < BindingsList.size(); ++Index)
-      assert(BindingsList[Index].Decl == VD);
-  }
-#endif
+  assert(!hasBindingInfoForDecl(VD) || BindingsList.back().Decl == VD);
   // VarDecl may have multiple entries for different resource classes.
   // DeclToBindingListIndex stores the index of the first binding we saw
   // for this decl. If there are any additional ones then that index
