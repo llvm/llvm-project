@@ -13199,11 +13199,12 @@ bool ShuffleVectorSDNode::isSplatMask(const int *Mask, EVT VT) {
 
 // Returns true if it is a constant integer BuildVector or constant integer,
 // possibly hidden by a bitcast.
-bool SelectionDAG::isConstantIntBuildVectorOrConstantInt(SDValue N) const {
+bool SelectionDAG::isConstantIntBuildVectorOrConstantInt(
+    SDValue N, bool AllowOpaques) const {
   N = peekThroughBitcasts(N);
 
-  if (isa<ConstantSDNode>(N))
-    return true;
+  if (auto *C = dyn_cast<ConstantSDNode>(N))
+    return AllowOpaques || !C->isOpaque();
 
   if (ISD::isBuildVectorOfConstantSDNodes(N.getNode()))
     return true;

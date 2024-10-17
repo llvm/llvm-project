@@ -2301,7 +2301,8 @@ public:
   Align getEVTAlign(EVT MemoryVT) const;
 
   /// Test whether the given value is a constant int or similar node.
-  bool isConstantIntBuildVectorOrConstantInt(SDValue N) const;
+  bool isConstantIntBuildVectorOrConstantInt(SDValue N,
+                                             bool AllowOpaques = true) const;
 
   /// Test whether the given value is a constant FP or similar node.
   bool isConstantFPBuildVectorOrConstantFP(SDValue N) const ;
