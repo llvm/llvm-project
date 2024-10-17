@@ -404,6 +404,15 @@ bool InputSectionDescription::matchesFile(const InputFile *file) const {
   return matchesFileCache->second;
 }
 
+bool MemoryRegion::Attrs::matches(OutputSection *sec) const {
+  return (sec->flags & flags) || (~sec->flags & invFlags) ||
+         (initialized && sec->type != SHT_NOBITS);
+}
+
+bool MemoryRegion::compatibleWith(OutputSection *sec) const {
+  return !negAttrs.matches(sec) && attrs.matches(sec);
+}
+
 bool SectionPattern::excludesFile(const InputFile *file) const {
   if (excludedFilePat.empty())
     return false;
@@ -1109,7 +1118,7 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   // See if a region can be found by matching section flags.
   for (auto &pair : memoryRegions) {
     MemoryRegion *m = pair.second;
-    if (m->compatibleWith(sec->flags))
+    if (m->compatibleWith(sec))
       return {m, nullptr};
   }
 
