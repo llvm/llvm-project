@@ -611,12 +611,6 @@ public:
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
-
-  /// Return true if the target supports a bitwise and-not operation:
-  /// X = ~A & B
-  /// This function checks if the operation can be directly mapped to the
-  /// target's native instructions, potentially simplifying select or other
-  /// related instructions by using more efficient hardware-specific operations.
   bool hasAndNot(SDValue Op) const override;
 };
 
