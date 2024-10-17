@@ -1025,7 +1025,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   }
   if (HasFP) {
     // Offset from the CFA to the saved frame pointer, will be negative.
-    int FPOffset = MFI.getObjectOffset(FramePtrSpillFI);
+    [[maybe_unused]] int FPOffset = MFI.getObjectOffset(FramePtrSpillFI);
     LLVM_DEBUG(dbgs() << "FramePtrSpillFI: " << FramePtrSpillFI
                       << ", FPOffset: " << FPOffset << "\n");
     assert(getMaxFPOffset(STI, *AFI, MF) <= FPOffset &&
