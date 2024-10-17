@@ -503,8 +503,7 @@ define <1 x i64> @bitcast_noshift_vector_wrong_type(<2 x float> %v1, <1 x i64> %
 define i32 @shl_amount_is_known_bogus_range_assum(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus_range_assum(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[B:%.*]], i32 32, i32 64) ]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret i32 [[SHL]]
+; CHECK-NEXT:    ret i32 poison
 ;
   call void @llvm.assume(i1 true) ["range"(i32 %b, i32 32, i32 64)]
   %shl = shl i32 %a, %b
@@ -526,8 +525,7 @@ define i32 @neg_shl_amount_is_known_bogus_range_assum(i32 %a, i32 %b) {
 define <2 x i32> @shl_amount_is_known_bogus_range_assum_vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus_range_assum_vec(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(<2 x i32> [[B:%.*]], i32 32, i32 64) ]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[B]]
-; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   call void @llvm.assume(i1 true) ["range"(<2 x i32> %b, i32 32, i32 64)]
   %shl = shl <2 x i32> %a, %b
