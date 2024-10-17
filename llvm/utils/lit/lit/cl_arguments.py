@@ -179,7 +179,11 @@ def parse_args():
         "--use-unique-output-file-name",
         help="When enabled, lit will not overwrite existing test report files. "
         "Instead it will modify the file name until it finds a file name "
-        "that does not already exist. [Default: Off]",
+        "that does not already exist. An incrementing number starting from 1 "
+        "will be added prior to the file extension, or for files without an "
+        "extension, on the end of the fle name. For example, if 'results.xml' "
+        "already exists, 'results.1.xml' will be used instead, if that exists, "
+        "'results.2.xml' and so on. [Default: Off]",
         action="store_true",
     )
     execution_group.add_argument(
