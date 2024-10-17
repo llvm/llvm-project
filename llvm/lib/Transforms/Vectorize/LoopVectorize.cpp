@@ -5485,10 +5485,14 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     // Scale the total scalar cost by block probability.
     ScalarCost /= getReciprocalPredBlockProb();
 
-    // Compute the discount. A non-negative discount means the vector version
-    // of the instruction costs more, and scalarizing would be beneficial.
-    Discount += VectorCost - ScalarCost;
-    ScalarCosts[I] = ScalarCost;
+    // Compute the discount, unless this instruction must be scalarized due to
+    // tail folding, as then the vector cost is already the scalar cost. A
+    // non-negative discount means the vector version of the instruction costs
+    // more, and scalarizing would be beneficial.
+    if (!foldTailByMasking() || getWideningDecision(I, VF) != CM_Scalarize) {
+      Discount += VectorCost - ScalarCost;
+      ScalarCosts[I] = ScalarCost;
+    }
   }
 
   return Discount;

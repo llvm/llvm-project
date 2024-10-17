@@ -21,7 +21,31 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_INC:%.*]]>
 ; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
+; CHECK-NEXT:   Successor(s): pred.load
+; CHECK-EMPTY:
+; CHECK-NEXT:  <xVFxUF> pred.load: {
+; CHECK-NEXT:    pred.load.entry:
+; CHECK-NEXT:      BRANCH-ON-MASK vp<[[CMP]]>
+; CHECK-NEXT:    Successor(s): pred.load.if, pred.load.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.load.if:
+; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[STEPS]]>
+; CHECK-NEXT:      REPLICATE ir<%0> = load ir<%arrayidx>
+; CHECK-NEXT:      REPLICATE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[STEPS]]>
+; CHECK-NEXT:      REPLICATE ir<%1> = load ir<%arrayidx2>
+; CHECK-NEXT:    Successor(s): pred.load.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.load.continue:
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[LOAD0:%.+]]> = ir<%0>
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[LOAD1:%.+]]> = ir<%1>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): for.body.1
+; CHECK-EMPTY:
+; CHECK-NEXT:   for.body.1:
+; CHECK-NEXT:     WIDEN ir<%add> = add nsw vp<[[LOAD1]]>, vp<[[LOAD0]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <xVFxUF> pred.store: {
@@ -30,13 +54,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[STEPS]]>
-; CHECK-NEXT:      REPLICATE ir<%0> = load ir<%arrayidx>
-; CHECK-NEXT:      REPLICATE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[STEPS]]>
-; CHECK-NEXT:      REPLICATE ir<%1> = load ir<%arrayidx2>
 ; CHECK-NEXT:      REPLICATE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:      REPLICATE ir<%add> = add nsw ir<%1>, ir<%0>
 ; CHECK-NEXT:      REPLICATE store ir<%add>, ir<%arrayidx4>
 ; CHECK-NEXT:    Successor(s): pred.store.continue
 ; CHECK-EMPTY:
