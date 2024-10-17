@@ -105,7 +105,7 @@
 "","","","","",""
 "`P0290R4 <https://wg21.link/P0290R4>`__","``apply()`` for ``synchronized_value<T>``","2023-02 (Issaquah)","","",""
 "`P2770R0 <https://wg21.link/P2770R0>`__","Stashing stashing ``iterators`` for proper flattening","2023-02 (Issaquah)","|Partial|","","``join_with_view`` hasn't been done yet since this type isn't implemented yet"
-"`P2164R9 <https://wg21.link/P2164R9>`__","``views::enumerate``","2023-02 (Issaquah)","","",""
+"`P2164R9 <https://wg21.link/P2164R9>`__","``views::enumerate``","2023-02 (Issaquah)","|Complete|","20.0",""
 "`P2711R1 <https://wg21.link/P2711R1>`__","Making multi-param constructors of ``views`` ``explicit``","2023-02 (Issaquah)","|In Progress|","","``join_with_view`` hasn't been done yet since this type isn't implemented yet"
 "`P2609R3 <https://wg21.link/P2609R3>`__","Relaxing Ranges Just A Smidge","2023-02 (Issaquah)","|Complete|","20.0","Implemented as a DR in C++20. Other implementations will do the same."
 "`P2713R1 <https://wg21.link/P2713R1>`__","Escaping improvements in ``std::format``","2023-02 (Issaquah)","|Complete|","19.0",""

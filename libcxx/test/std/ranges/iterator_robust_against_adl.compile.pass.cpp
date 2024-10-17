@@ -75,4 +75,5 @@ static_assert(!CanFindADLFunc<std::ranges::transform_view<adl::BaseView, adl::Pr
 
 #if TEST_STD_VER >= 23
 static_assert(!CanFindADLFunc<std::ranges::zip_view<adl::BaseView>>);
+static_assert(!CanFindADLFunc<std::ranges::enumerate_view<adl::BaseView>>);
 #endif
