@@ -110,13 +110,13 @@ static void remarkAlloca(OptimizationRemarkEmitter &ORE, const Function &Caller,
                          const AllocaInst &Alloca,
                          TypeSize::ScalarTy StaticSize) {
   ORE.emit([&] {
-    StringRef Name;
+    StringRef DbgName;
     DebugLoc Loc;
     bool Artificial = false;
     auto DVRs = findDVRDeclares(&const_cast<AllocaInst &>(Alloca));
     if (!DVRs.empty()) {
       const DbgVariableRecord &DVR = **DVRs.begin();
-      Name = DVR.getVariable()->getName();
+      DbgName = DVR.getVariable()->getName();
       Loc = DVR.getDebugLoc();
       Artificial = DVR.Variable->isArtificial();
     }
@@ -127,13 +127,14 @@ static void remarkAlloca(OptimizationRemarkEmitter &ORE, const Function &Caller,
     R << ", ";
     if (Artificial)
       R << "artificial ";
-    if (Name.empty()) {
-      R << "unnamed alloca ";
-      if (DVRs.empty())
-        R << "(missing debug metadata) ";
-    } else {
-      R << "alloca '" << Name << "' ";
-    }
+    SmallString<20> ValName;
+    raw_svector_ostream OS(ValName);
+    Alloca.printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
+    R << "alloca ('" << ValName << "') ";
+    if (!DbgName.empty())
+      R << "for '" << DbgName << "' ";
+    else
+      R << "without debug info ";
     R << "with ";
     if (StaticSize)
       R << "static size of " << itostr(StaticSize) << " bytes";
