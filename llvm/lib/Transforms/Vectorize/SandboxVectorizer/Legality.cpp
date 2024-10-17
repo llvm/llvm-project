@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Operator.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/Debug.h"
@@ -42,6 +43,17 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
         return VecUtils::getElementType(Utils::getExpectedType(V)) != ElmTy0;
       }))
     return ResultReason::DiffTypes;
+
+  // TODO: Allow vectorization of instrs with different flags as long as we
+  // change them to the least common one.
+  // For now pack if differnt FastMathFlags.
+  if (isa<FPMathOperator>(I0)) {
+    FastMathFlags FMF0 = cast<Instruction>(Bndl[0])->getFastMathFlags();
+    if (any_of(drop_begin(Bndl), [FMF0](auto *V) {
+          return cast<Instruction>(V)->getFastMathFlags() != FMF0;
+        }))
+      return ResultReason::DiffMathFlags;
+  }
 
   // TODO: Missing checks
 
