@@ -150,6 +150,12 @@ public:
   // Emit the sequence for BRA/BLRA (authenticate + branch/call).
   void emitPtrauthBranch(const MachineInstr *MI);
 
+  void emitPtrauthCheckAuthenticatedValue(Register TestedReg,
+                                          Register ScratchReg,
+                                          AArch64PACKey::ID Key,
+                                          bool ShouldTrap,
+                                          const MCSymbol *OnFailure);
+
   // Emit the sequence for AUT or AUTPAC.
   void emitPtrauthAuthResign(const MachineInstr *MI);
 
@@ -1719,45 +1725,37 @@ unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   return AArch64::X17;
 }
 
-void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
-  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
-
-  // We can expand AUT/AUTPAC into 3 possible sequences:
-  // - unchecked:
-  //      autia x16, x0
-  //      pacib x16, x1 ; if AUTPAC
+/// Emits a code sequence to check an authenticated pointer value.
+///
+/// If OnFailure argument is passed, jump there on check failure instead
+/// of proceeding to the next instruction (only if ShouldTrap is false).
+void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
+    Register TestedReg, Register ScratchReg, AArch64PACKey::ID Key,
+    bool ShouldTrap, const MCSymbol *OnFailure) {
+  // Insert a sequence to check if authentication of TestedReg succeeded,
+  // such as:
   //
   // - checked and clearing:
-  //      mov x17, x0
-  //      movk x17, #disc, lsl #48
-  //      autia x16, x17
+  //      ; x16 is TestedReg, x17 is ScratchReg
   //      mov x17, x16
   //      xpaci x17
   //      cmp x16, x17
   //      b.eq Lsuccess
   //      mov x16, x17
   //      b Lend
-  //     Lsuccess:
-  //      mov x17, x1
-  //      movk x17, #disc, lsl #48
-  //      pacib x16, x17
-  //     Lend:
-  //   Where we only emit the AUT if we started with an AUT.
+  //    Lsuccess:
+  //      ; skipped if authentication failed
+  //    Lend:
+  //      ...
   //
   // - checked and trapping:
-  //      mov x17, x0
-  //      movk x17, #disc, lsl #48
-  //      autia x16, x0
   //      mov x17, x16
   //      xpaci x17
   //      cmp x16, x17
   //      b.eq Lsuccess
   //      brk #<0xc470 + aut key>
-  //     Lsuccess:
-  //      mov x17, x1
-  //      movk x17, #disc, lsl #48
-  //      pacib x16, x17 ; if AUTPAC
-  //   Where the b.eq skips over the trap if the PAC is valid.
+  //    Lsuccess:
+  //      ...
   //
   // This sequence is expensive, but we need more information to be able to
   // do better.
@@ -1769,6 +1767,71 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   // based on that).
   // Either way, we also don't always know whether TBI is enabled or not for
   // the specific target environment.
+
+  unsigned XPACOpc = getXPACOpcodeForKey(Key);
+
+  MCSymbol *SuccessSym = createTempSymbol("auth_success_");
+
+  //  mov Xscratch, Xtested
+  emitMovXReg(ScratchReg, TestedReg);
+
+  //  xpac(i|d) Xscratch
+  EmitToStreamer(MCInstBuilder(XPACOpc).addReg(ScratchReg).addReg(ScratchReg));
+
+  //  cmp Xtested, Xscratch
+  EmitToStreamer(MCInstBuilder(AArch64::SUBSXrs)
+                     .addReg(AArch64::XZR)
+                     .addReg(TestedReg)
+                     .addReg(ScratchReg)
+                     .addImm(0));
+
+  //  b.eq Lsuccess
+  EmitToStreamer(MCInstBuilder(AArch64::Bcc)
+                     .addImm(AArch64CC::EQ)
+                     .addExpr(MCSymbolRefExpr::create(SuccessSym, OutContext)));
+
+  if (ShouldTrap) {
+    assert(!OnFailure && "Cannot specify OnFailure with ShouldTrap");
+    // Trapping sequences do a 'brk'.
+    //  brk #<0xc470 + aut key>
+    EmitToStreamer(MCInstBuilder(AArch64::BRK).addImm(0xc470 | Key));
+  } else {
+    // Non-trapping checked sequences return the stripped result in TestedReg,
+    // skipping over success-only code (such as re-signing the pointer) if
+    // there is one.
+    // Note that this can introduce an authentication oracle (such as based on
+    // the high bits of the re-signed value).
+
+    // FIXME: Can we simply return the AUT result, already in TestedReg?
+    //  mov Xtested, Xscratch
+    emitMovXReg(TestedReg, ScratchReg);
+
+    if (OnFailure) {
+      //  b Lend
+      EmitToStreamer(
+          MCInstBuilder(AArch64::B)
+              .addExpr(MCSymbolRefExpr::create(OnFailure, OutContext)));
+    }
+  }
+
+  // If the auth check succeeds, we can continue.
+  // Lsuccess:
+  OutStreamer->emitLabel(SuccessSym);
+}
+
+void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
+  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
+
+  // We expand AUT/AUTPAC into a sequence of the form
+  //
+  //      ; authenticate x16
+  //      ; check pointer in x16
+  //    Lsuccess:
+  //      ; sign x16 (if AUTPAC)
+  //    Lend:   ; if not trapping on failure
+  //
+  // with the checking sequence chosen depending on whether we should check
+  // the pointer and whether we should trap on failure.
 
   // By default, auth/resign sequences check for auth failures.
   bool ShouldCheck = true;
@@ -1800,8 +1863,6 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   uint64_t AUTDisc = MI->getOperand(1).getImm();
   unsigned AUTAddrDisc = MI->getOperand(2).getReg();
 
-  unsigned XPACOpc = getXPACOpcodeForKey(AUTKey);
-
   // Compute aut discriminator into x17
   assert(isUInt<16>(AUTDisc));
   unsigned AUTDiscReg = emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc);
@@ -1824,59 +1885,12 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
 
   MCSymbol *EndSym = nullptr;
 
-  // Checked sequences do an additional strip-and-compare.
   if (ShouldCheck) {
-    MCSymbol *SuccessSym = createTempSymbol("auth_success_");
+    if (IsAUTPAC && !ShouldTrap)
+      EndSym = createTempSymbol("resign_end_");
 
-    // XPAC has tied src/dst: use x17 as a temporary copy.
-    //  mov x17, x16
-    emitMovXReg(AArch64::X17, AArch64::X16);
-
-    //  xpaci x17
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(XPACOpc).addReg(AArch64::X17).addReg(AArch64::X17));
-
-    //  cmp x16, x17
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::SUBSXrs)
-                                     .addReg(AArch64::XZR)
-                                     .addReg(AArch64::X16)
-                                     .addReg(AArch64::X17)
-                                     .addImm(0));
-
-    //  b.eq Lsuccess
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::Bcc)
-                                     .addImm(AArch64CC::EQ)
-                                     .addExpr(MCSymbolRefExpr::create(
-                                         SuccessSym, OutContext)));
-
-    if (ShouldTrap) {
-      // Trapping sequences do a 'brk'.
-      //  brk #<0xc470 + aut key>
-      EmitToStreamer(*OutStreamer,
-                     MCInstBuilder(AArch64::BRK).addImm(0xc470 | AUTKey));
-    } else {
-      // Non-trapping checked sequences return the stripped result in x16,
-      // skipping over the PAC if there is one.
-
-      // FIXME: can we simply return the AUT result, already in x16? without..
-      //        ..traps this is usable as an oracle anyway, based on high bits
-      //  mov x17, x16
-      emitMovXReg(AArch64::X16, AArch64::X17);
-
-      if (IsAUTPAC) {
-        EndSym = createTempSymbol("resign_end_");
-
-        //  b Lend
-        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::B)
-                                         .addExpr(MCSymbolRefExpr::create(
-                                             EndSym, OutContext)));
-      }
-    }
-
-    // If the auth check succeeds, we can continue.
-    // Lsuccess:
-    OutStreamer->emitLabel(SuccessSym);
+    emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AUTKey,
+                                       ShouldTrap, EndSym);
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
