@@ -140,7 +140,7 @@ else()
   target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
 endif()
 target_link_libraries(unwind_shared_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
-target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
+target_compile_options(unwind_shared_objects PUBLIC ${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS})
 target_link_libraries(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
 set_target_properties(unwind_shared_objects
   PROPERTIES
@@ -181,7 +181,7 @@ else()
   target_compile_options(unwind_static_objects PRIVATE -fno-rtti)
 endif()
 target_link_libraries(unwind_static_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
-target_compile_options(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
+target_compile_options(unwind_static_objects PUBLIC ${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS})
 target_link_libraries(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
 set_target_properties(unwind_static_objects
   PROPERTIES

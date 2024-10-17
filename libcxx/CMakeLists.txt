@@ -460,6 +460,7 @@ set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
     "Additional Compile only flags which can be provided in cache")
+separate_arguments(LIBCXX_ADDITIONAL_COMPILE_FLAGS)
 set(LIBCXX_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libc++ is linked to which can be provided in cache")
 
@@ -549,7 +550,7 @@ function(cxx_add_basic_build_flags target)
       target_compile_definitions(${target} PRIVATE -D_LIBCPP_LINK_RT_LIB)
     endif()
   endif()
-  target_compile_options(${target} PUBLIC "${LIBCXX_ADDITIONAL_COMPILE_FLAGS}")
+  target_compile_options(${target} PUBLIC ${LIBCXX_ADDITIONAL_COMPILE_FLAGS})
 endfunction()
 
 # Exception flags =============================================================
