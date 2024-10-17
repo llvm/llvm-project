@@ -5256,45 +5256,44 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     return;
 
   unsigned Opcode = MI->getOpcode();
-  bool IsNonSignedExtInstrNeedPromoted = false;
+  bool HasNonSignedExtInstrPromoted = false;
   int NewOpcode = -1;
 
-#define MapOpCode(A)                                                           \
-  case A:                                                                      \
-    NewOpcode = A##8;                                                          \
-    IsNonSignedExtInstrNeedPromoted = true;                                    \
-    break
+  std::unordered_map<unsigned, unsigned> OpcodeMap = {
+      {PPC::OR, PPC::OR8},     {PPC::ISEL, PPC::ISEL8},
+      {PPC::ORI, PPC::ORI8},   {PPC::XORI, PPC::XORI8},
+      {PPC::ORIS, PPC::ORIS8}, {PPC::XORIS, PPC::XORIS8},
+      {PPC::AND, PPC::AND8}};
 
-  switch (Opcode) {
-    MapOpCode(PPC::OR);
-    MapOpCode(PPC::ISEL);
-    MapOpCode(PPC::ORI);
-    MapOpCode(PPC::XORI);
-    MapOpCode(PPC::ORIS);
-    MapOpCode(PPC::XORIS);
-    MapOpCode(PPC::AND);
+  // Check if the Opcode is in the map.
+  auto It = OpcodeMap.find(Opcode);
+  if (It != OpcodeMap.end()) {
+    // Set the new opcode to the mapped 64-bit version.
+    NewOpcode = It->second;
+    HasNonSignedExtInstrPromoted = true;
   }
-#undef MapOpCode
 
   switch (Opcode) {
   case PPC::OR:
   case PPC::ISEL:
   case PPC::OR8:
-  case PPC::PHI:
-    if (BinOpDepth < MAX_BINOP_DEPTH) {
-      unsigned OperandEnd = 3, OperandStride = 1;
-      if (Opcode == PPC::PHI) {
-        OperandEnd = MI->getNumOperands();
-        OperandStride = 2;
-      }
-
-      for (unsigned I = 1; I < OperandEnd; I += OperandStride) {
-        assert(MI->getOperand(I).isReg() && "Operand must be register");
-        Register SrcReg = MI->getOperand(I).getReg();
-        promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth + 1, LV);
-      }
+  case PPC::PHI: {
+    if (BinOpDepth >= MAX_BINOP_DEPTH)
+      break;
+    unsigned OperandEnd = 3, OperandStride = 1;
+    if (Opcode == PPC::PHI) {
+      OperandEnd = MI->getNumOperands();
+      OperandStride = 2;
     }
+
+    for (unsigned I = 1; I < OperandEnd; I += OperandStride) {
+      assert(MI->getOperand(I).isReg() && "Operand must be register");
+      promoteInstr32To64ForElimEXTSW(MI->getOperand(I).getReg(), MRI,
+                                     BinOpDepth + 1, LV);
+    }
+
     break;
+  }
   case PPC::COPY: {
     // Refers to the logic of the `case PPC::COPY` statement in the function
     // PPCInstrInfo::isSignOrZeroExtended().
@@ -5326,26 +5325,25 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   case PPC::ORI8:
   case PPC::XORI8:
   case PPC::ORIS8:
-  case PPC::XORIS8: {
-    Register SrcReg = MI->getOperand(1).getReg();
-    promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
+  case PPC::XORIS8:
+    promoteInstr32To64ForElimEXTSW(MI->getOperand(1).getReg(), MRI, BinOpDepth,
+                                   LV);
     break;
-  }
   case PPC::AND:
-  case PPC::AND8: {
-    if (BinOpDepth < MAX_BINOP_DEPTH) {
-      Register SrcReg1 = MI->getOperand(1).getReg();
-      promoteInstr32To64ForElimEXTSW(SrcReg1, MRI, BinOpDepth + 1, LV);
-      Register SrcReg2 = MI->getOperand(2).getReg();
-      promoteInstr32To64ForElimEXTSW(SrcReg2, MRI, BinOpDepth + 1, LV);
-    }
+  case PPC::AND8:
+    if (BinOpDepth >= MAX_BINOP_DEPTH)
+      break;
+
+    promoteInstr32To64ForElimEXTSW(MI->getOperand(1).getReg(), MRI,
+                                   BinOpDepth + 1, LV);
+    promoteInstr32To64ForElimEXTSW(MI->getOperand(2).getReg(), MRI,
+                                   BinOpDepth + 1, LV);
     break;
-  }
   }
 
   const PPCInstrInfo *TII =
       MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
-  if (!TII->isSExt32To64(Opcode) && !IsNonSignedExtInstrNeedPromoted)
+  if (!TII->isSExt32To64(Opcode) && !HasNonSignedExtInstrPromoted)
     return;
 
   const TargetRegisterClass *RC = MRI->getRegClass(Reg);
@@ -5356,7 +5354,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   // The TableGen function `get64BitInstrFromSignedExt32BitInstr` is used to
   // map the 32-bit instruction with the `SExt32To64` flag to the 64-bit
   // instruction with the same opcode.
-  if (!IsNonSignedExtInstrNeedPromoted)
+  if (!HasNonSignedExtInstrPromoted)
     NewOpcode = PPC::get64BitInstrFromSignedExt32BitInstr(Opcode);
 
   assert(NewOpcode != -1 &&
