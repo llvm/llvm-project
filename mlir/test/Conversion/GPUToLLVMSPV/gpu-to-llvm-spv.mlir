@@ -260,7 +260,7 @@ gpu.module @shuffles {
   func.func @gpu_shuffles(%val0: i32, %id: i32,
                           %val1: i64, %mask: i32,
                           %val2: f32, %delta_up: i32,
-                          %val3: f64, %delta_down: i32) attributes {gpu.known_subgroup_size = 32 : i32} {
+                          %val3: f64, %delta_down: i32) attributes { llvm.intel_reqd_sub_group_size = 32 : i32 } {
     %width = arith.constant 32 : i32
     // CHECK:         llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[VAL_0]], %[[VAL_1]]) {
     // CHECK-SAME-DAG:  no_unwind
