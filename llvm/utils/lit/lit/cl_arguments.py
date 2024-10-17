@@ -176,6 +176,17 @@ def parse_args():
         help="Write Chrome tracing compatible JSON to the specified file",
     )
     execution_group.add_argument(
+        "--use-unique-output-file-name",
+        help="When enabled, lit will not overwrite existing test report files. "
+        "Instead it will modify the file name until it finds a file name "
+        "that does not already exist. An incrementing number starting from 1 "
+        "will be added prior to the file extension, or for files without an "
+        "extension, on the end of the fle name. For example, if 'results.xml' "
+        "already exists, 'results.1.xml' will be used instead, if that exists, "
+        "'results.2.xml' and so on. [Default: Off]",
+        action="store_true",
+    )
+    execution_group.add_argument(
         "--timeout",
         dest="maxIndividualTestTime",
         help="Maximum time to spend running a single test (in seconds). "
@@ -332,15 +343,20 @@ def parse_args():
     else:
         opts.shard = None
 
-    opts.reports = filter(
-        None,
-        [
-            opts.output,
-            opts.xunit_xml_output,
-            opts.resultdb_output,
-            opts.time_trace_output,
-        ],
+    opts.reports = list(
+        filter(
+            None,
+            [
+                opts.output,
+                opts.xunit_xml_output,
+                opts.resultdb_output,
+                opts.time_trace_output,
+            ],
+        )
     )
+
+    for report in opts.reports:
+        report.use_unique_output_file_name = opts.use_unique_output_file_name
 
     return opts
 
