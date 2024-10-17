@@ -996,7 +996,7 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
   llvm::json::Object event(CreateEventObject(name));
 
   if (command[1] && !llvm::StringRef(command[1]).empty()) {
-    // See if we have to unused arguments.
+    // See if we have unused arguments.
     if (command[2]) {
       result.SetError(
           "Additional arguments found, expected `lldb-dap send-event "
