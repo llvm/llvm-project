@@ -1,4 +1,5 @@
-// Show that llvm-cxxfilt --quote adds quotes around demangled symbols, unless the symbol is already quoted.
+// Show that llvm-cxxfilt --quote adds quotes around demangled symbols, unless
+// the symbol is already quoted.
 
 RUN: split-file %s %t
 
@@ -9,7 +10,7 @@ CHECK-FILE: log()
 CHECK-FILE: "import thunk for std::future<void>"
 
 // Check it works with CLI symbols too. Since a quoted mangled name is not a
-// mangled name, it should be unchanged
+// mangled name, it should be unchanged.
 RUN: llvm-cxxfilt --quote _Z3firv '"_Z3barv"' 'saw()' | FileCheck --match-full-lines --check-prefix=CHECK-CLI %s
 CHECK-CLI: "fir()"
 CHECK-CLI-NEXT: "_Z3barv"
@@ -18,7 +19,8 @@ CHECK-CLI-NEXT: saw()
 //--- symbols-in-file.test
 _Z3barv "_Z3barv"
 "_Z3barv" _Z3barv
-// This is not mangled, thus it should not be quoted
+// This is not mangled, thus it should not be quoted.
 log()
-// Check that an "import thunk for" prefix can be quoted along the demangled name
+// Check that an "import thunk for" prefix can be quoted along the demangled
+// name.
 __imp__ZSt6futureIvE

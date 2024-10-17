@@ -65,7 +65,7 @@ static void error(const Twine &Message) {
   exit(1);
 }
 
-// Quote Undecorated with "" if asked for and not already followed by a '"'
+// Quote Undecorated with "" if asked for and not already followed by a '"'.
 static std::string optionalQuote(const std::string &Undecorated,
                                  StringRef Delimiters) {
   if (Quote && (Delimiters.empty() || Delimiters[0] != '"'))
