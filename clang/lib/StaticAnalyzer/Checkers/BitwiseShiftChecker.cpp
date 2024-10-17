@@ -177,7 +177,8 @@ BugReportPtr BitwiseShiftValidator::checkOvershift() {
     RightOpStr = formatv(" '{0}'", ConcreteRight->getValue());
   else {
     SValBuilder &SVB = Ctx.getSValBuilder();
-    if (const llvm::APSInt *MinRight = SVB.getMinValue(FoldedState, Right)) {
+    if (const llvm::APSInt *MinRight = SVB.getMinValue(FoldedState, Right);
+        MinRight && *MinRight >= LHSBitWidth) {
       LowerBoundStr = formatv(" >= {0},", MinRight->getExtValue());
     }
   }

@@ -1249,6 +1249,8 @@ public:
         // calculate the effective range set by intersecting the range set
         // for A - B and the negated range set of B - A.
         getRangeForNegatedSymSym(SSE),
+        // If commutative, we may have constaints for the commuted variant.
+        getRangeCommutativeSymSym(SSE),
         // If Sym is a comparison expression (except <=>),
         // find any other comparisons with the same operands.
         // See function description.
@@ -1483,6 +1485,21 @@ private:
                                                            Sym->getType());
         },
         Sym->getType());
+  }
+
+  std::optional<RangeSet> getRangeCommutativeSymSym(const SymSymExpr *SSE) {
+    auto Op = SSE->getOpcode();
+    bool IsCommutative = llvm::is_contained(
+        // ==, !=, |, &, +, *, ^
+        {BO_EQ, BO_NE, BO_Or, BO_And, BO_Add, BO_Mul, BO_Xor}, Op);
+    if (!IsCommutative)
+      return std::nullopt;
+
+    SymbolRef Commuted = State->getSymbolManager().getSymSymExpr(
+        SSE->getRHS(), Op, SSE->getLHS(), SSE->getType());
+    if (const RangeSet *Range = getConstraint(State, Commuted))
+      return *Range;
+    return std::nullopt;
   }
 
   // Returns ranges only for binary comparison operators (except <=>)
@@ -1939,10 +1956,7 @@ private:
   RangeSet::Factory F;
 
   RangeSet getRange(ProgramStateRef State, SymbolRef Sym);
-  RangeSet getRange(ProgramStateRef State, EquivalenceClass Class);
   ProgramStateRef setRange(ProgramStateRef State, SymbolRef Sym,
-                           RangeSet Range);
-  ProgramStateRef setRange(ProgramStateRef State, EquivalenceClass Class,
                            RangeSet Range);
 
   RangeSet getSymLTRange(ProgramStateRef St, SymbolRef Sym,
@@ -2866,24 +2880,22 @@ ConditionTruthVal RangeConstraintManager::checkNull(ProgramStateRef State,
 
 const llvm::APSInt *RangeConstraintManager::getSymVal(ProgramStateRef St,
                                                       SymbolRef Sym) const {
-  const RangeSet *T = getConstraint(St, Sym);
-  return T ? T->getConcreteValue() : nullptr;
+  auto &MutableSelf = const_cast<RangeConstraintManager &>(*this);
+  return MutableSelf.getRange(St, Sym).getConcreteValue();
 }
 
 const llvm::APSInt *RangeConstraintManager::getSymMinVal(ProgramStateRef St,
                                                          SymbolRef Sym) const {
-  const RangeSet *T = getConstraint(St, Sym);
-  if (!T || T->isEmpty())
-    return nullptr;
-  return &T->getMinValue();
+  auto &MutableSelf = const_cast<RangeConstraintManager &>(*this);
+  RangeSet Range = MutableSelf.getRange(St, Sym);
+  return Range.isEmpty() ? nullptr : &Range.getMinValue();
 }
 
 const llvm::APSInt *RangeConstraintManager::getSymMaxVal(ProgramStateRef St,
                                                          SymbolRef Sym) const {
-  const RangeSet *T = getConstraint(St, Sym);
-  if (!T || T->isEmpty())
-    return nullptr;
-  return &T->getMaxValue();
+  auto &MutableSelf = const_cast<RangeConstraintManager &>(*this);
+  RangeSet Range = MutableSelf.getRange(St, Sym);
+  return Range.isEmpty() ? nullptr : &Range.getMaxValue();
 }
 
 //===----------------------------------------------------------------------===//
