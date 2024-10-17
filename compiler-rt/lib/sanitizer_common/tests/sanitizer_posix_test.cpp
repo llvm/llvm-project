@@ -80,6 +80,12 @@ TEST(SanitizerCommon, IsAccessibleMemoryRange) {
   EXPECT_FALSE(IsAccessibleMemoryRange(0x0, 2));
 }
 
+TEST(SanitizerCommon, IsAccessibleMemoryRangeLarge) {
+  InternalMmapVector<char> buffer(10000 * GetPageSize());
+  EXPECT_TRUE(IsAccessibleMemoryRange(reinterpret_cast<uptr>(buffer.data()),
+                                      buffer.size()));
+}
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_POSIX
