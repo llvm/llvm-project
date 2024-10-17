@@ -220,6 +220,22 @@ entry:
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+define dso_local void @memcpy_from_param_noalign (ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) %s) local_unnamed_addr #0 {
+; COMMON-LABEL: define dso_local void @memcpy_from_param_noalign(
+; COMMON-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
+; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
+; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr [[OUT2]], ptr addrspace(101) [[S3]], i64 16, i1 true)
+; COMMON-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %s, i64 16, i1 true)
+  ret void
+}
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local void @memcpy_to_param(ptr nocapture noundef readonly %in, ptr nocapture noundef readnone byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; COMMON-LABEL: define dso_local void @memcpy_to_param(
 ; COMMON-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef readnone byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -426,7 +442,7 @@ attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.module.flags = !{!0, !1, !2, !3}
-!nvvm.annotations = !{!4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19}
+!nvvm.annotations = !{!4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !23}
 !llvm.ident = !{!20, !21}
 
 !0 = !{i32 2, !"SDK Version", [2 x i32] [i32 11, i32 8]}
@@ -451,3 +467,4 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !19 = !{ptr @test_select_write, !"kernel", i32 1}
 !20 = !{!"clang version 20.0.0git"}
 !21 = !{!"clang version 3.8.0 (tags/RELEASE_380/final)"}
+!23 = !{ptr @memcpy_from_param_noalign, !"kernel", i32 1}
