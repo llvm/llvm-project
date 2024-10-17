@@ -596,17 +596,17 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
       if (V->getType()->isPointerTy()) {
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[Elem.Index])) {
-        if (RK.WasOn == V &&
-            (RK.AttrKind == Attribute::NonNull ||
-             (RK.AttrKind == Attribute::Dereferenceable &&
+        if (RetainedKnowledge RK = getKnowledgeFromBundle(
+                *I, I->bundle_op_info_begin()[Elem.Index])) {
+          if (RK.WasOn == V &&
+              (RK.AttrKind == Attribute::NonNull ||
+               (RK.AttrKind == Attribute::Dereferenceable &&
                 !NullPointerIsDefined(
                     Q.CxtI->getFunction(),
-                                    V->getType()->getPointerAddressSpace()))) &&
-            isValidAssumeForContext(I, Q.CxtI, Q.DT))
-          return true;
-      }
+                    V->getType()->getPointerAddressSpace()))) &&
+              isValidAssumeForContext(I, Q.CxtI, Q.DT))
+            return true;
+        }
       } else if (V->getType()->isIntOrIntVectorTy()) {
         if (std::optional<ConstantRange> Range =
                 getRangeFromBundle(*I, I->bundle_op_info_begin()[Elem.Index]))
