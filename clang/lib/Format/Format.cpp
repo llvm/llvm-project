@@ -50,25 +50,33 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*PadOperators=*/true,
+                     /*AlignBlockComments=*/false}));
     IO.enumCase(Value, "AcrossEmptyLines",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/true,
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*PadOperators=*/true,
+                     /*AlignBlockComments=*/false}));
     IO.enumCase(Value, "AcrossComments",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
                      /*AcrossComments=*/true, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*PadOperators=*/true,
+                     /*AlignBlockComments=*/false}));
     IO.enumCase(Value, "AcrossEmptyLinesAndComments",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/true,
                      /*AcrossComments=*/true, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*PadOperators=*/true,
+                     /*AlignBlockComments=*/false}));
 
     // For backward compatibility.
     IO.enumCase(Value, "true",
@@ -76,7 +84,9 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*PadOperators=*/true,
+                     /*AlignBlockComments=*/false}));
     IO.enumCase(Value, "false", FormatStyle::AlignConsecutiveStyle({}));
   }
 
@@ -89,6 +99,7 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                    Value.AlignFunctionDeclarations);
     IO.mapOptional("AlignFunctionPointers", Value.AlignFunctionPointers);
     IO.mapOptional("PadOperators", Value.PadOperators);
+    IO.mapOptional("AlignBlockComments", Value.AlignBlockComments);
   }
 };
 
