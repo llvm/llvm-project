@@ -1326,8 +1326,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_CPA,          AArch64::AEK_PAUTHLR,
       AArch64::AEK_TLBIW,        AArch64::AEK_JSCVT,
       AArch64::AEK_FCMA,         AArch64::AEK_FP8,
-      AArch64::AEK_SVEB16B16,
-  };
+      AArch64::AEK_SVEB16B16,    AArch64::AEK_LSUI,
+      AArch64::AEK_OCCMO,        AArch64::AEK_PCDPHINT};
 
   std::vector<StringRef> Features;
 
@@ -1416,6 +1416,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+tlbiw"));
   EXPECT_TRUE(llvm::is_contained(Features, "+jsconv"));
   EXPECT_TRUE(llvm::is_contained(Features, "+complxnum"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lsui"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1557,6 +1560,9 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sme-lutv2", "nosme-lutv2", "+sme-lutv2", "-sme-lutv2"},
       {"sme-f8f16", "nosme-f8f16", "+sme-f8f16", "-sme-f8f16"},
       {"sme-f8f32", "nosme-f8f32", "+sme-f8f32", "-sme-f8f32"},
+      {"lsui", "nolsui", "+lsui", "-lsui"},
+      {"occmo", "nooccmo", "+occmo", "-occmo"},
+      {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {

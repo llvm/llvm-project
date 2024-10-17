@@ -133,6 +133,13 @@ namespace llvm {
 }
 
 namespace llvm {
+namespace AArch64PHint {
+#define GET_PHINT_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64PHint
+} // namespace llvm
+
+namespace llvm {
   namespace AArch64BTIHint {
 #define GET_BTI_IMPL
 #include "AArch64GenSystemOperands.inc"
