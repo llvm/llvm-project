@@ -592,7 +592,12 @@ bool MeshSharding::equalSplitAndPartialAxes(const MeshSharding &rhs) const {
     return false;
   }
 
-  if (!getPartialAxes().empty() && getPartialType() != rhs.getPartialType()) {
+  if (getPartialAxes().size() != rhs.getPartialAxes().size() ||
+      (!getPartialAxes().empty() && getPartialType() != rhs.getPartialType()) ||
+      !llvm::equal(
+          llvm::make_range(getPartialAxes().begin(), getPartialAxes().end()),
+          llvm::make_range(rhs.getPartialAxes().begin(),
+                           rhs.getPartialAxes().end()))) {
     return false;
   }
 
@@ -774,62 +779,6 @@ void ProcessMultiIndexOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 void ProcessMultiIndexOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResults()[0], "proc_linear_idx");
-}
-
-namespace {
-#ifndef NDEBUG
-static std::vector<int> convertStringToVector(const std::string &str) {
-  std::vector<int> result;
-  std::stringstream ss(str);
-  std::string item;
-  while (std::getline(ss, item, ',')) {
-    result.push_back(std::stoi(item));
-  }
-  return result;
-}
-#endif // NDEBUG
-
-std::optional<SmallVector<Value>> getMyMultiIndex(OpBuilder &b,
-                                                  ::mlir::mesh::MeshOp mesh) {
-#ifndef NDEBUG
-  if (auto envStr = getenv("DEBUG_MESH_INDEX")) {
-    auto myIdx = convertStringToVector(envStr);
-    if (myIdx.size() == mesh.getShape().size()) {
-      SmallVector<Value> idxs;
-      for (auto i : myIdx) {
-        idxs.push_back(b.create<::mlir::arith::ConstantOp>(mesh->getLoc(),
-                                                           b.getIndexAttr(i)));
-      }
-      return idxs;
-    } else {
-      mesh->emitError() << "DEBUG_MESH_INDEX has wrong size";
-    }
-  }
-#endif // NDEBUG
-  return std::nullopt;
-}
-
-class FoldStaticIndex final : public OpRewritePattern<ProcessMultiIndexOp> {
-public:
-  using OpRewritePattern<ProcessMultiIndexOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ProcessMultiIndexOp op,
-                                PatternRewriter &b) const override {
-#ifndef NDEBUG
-    SymbolTableCollection tmp;
-    if (auto idxs = getMyMultiIndex(b, getMesh(op, tmp))) {
-      b.replaceOp(op, idxs.value());
-      return success();
-    }
-#endif // NDEBUG
-    return failure();
-  }
-};
-} // namespace
-
-void ProcessMultiIndexOp::getCanonicalizationPatterns(
-    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
-  results.add<FoldStaticIndex>(context);
 }
 
 //===----------------------------------------------------------------------===//

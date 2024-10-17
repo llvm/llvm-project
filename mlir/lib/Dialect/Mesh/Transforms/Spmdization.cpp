@@ -483,7 +483,9 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
         MeshAxesArrayAttr::get(builder.getContext(),
                                sourceSharding.getSplitAxes()),
         sourceSharding.getDynamicHaloSizes(),
-        sourceSharding.getStaticHaloSizes());
+        sourceSharding.getStaticHaloSizes(),
+        targetSharding.getDynamicHaloSizes(),
+        targetSharding.getStaticHaloSizes());
     return std::make_tuple(
         cast<TypedValue<ShapedType>>(targetShard.getResult()), targetSharding);
   }
@@ -568,10 +570,9 @@ TypedValue<ShapedType> reshard(OpBuilder &builder, MeshOp mesh, ShardOp source,
   auto sourceSharding = source.getSharding();
   auto targetSharding = target.getSharding();
   ImplicitLocOpBuilder implicitLocOpBuilder(target->getLoc(), builder);
-  auto shard =
-      reshard(implicitLocOpBuilder, mesh, sourceSharding, targetSharding,
-              cast<TypedValue<ShapedType>>(source.getSrc()), sourceShardValue);
-  return shard;
+  return reshard(implicitLocOpBuilder, mesh, sourceSharding, targetSharding,
+                 cast<TypedValue<ShapedType>>(source.getSrc()),
+                 sourceShardValue);
 }
 
 TypedValue<ShapedType> reshard(OpBuilder &builder, ShardOp source,

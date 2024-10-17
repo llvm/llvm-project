@@ -132,7 +132,6 @@ def Mesh_ProcessMultiIndexOp : Mesh_Op<"process_multi_index", [
     OpBuilder<(ins "::mlir::mesh::MeshOp":$mesh)>,
     OpBuilder<(ins "StringRef":$mesh, "ArrayRef<MeshAxis>":$axes)>
   ];
-  let hasCanonicalizer = 1;
 }
 
 def Mesh_ProcessLinearIndexOp : Mesh_Op<"process_linear_index", [
@@ -1061,7 +1060,8 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
   TypesMatchWith<
     "result has same type as destination",
     "result", "destination", "$_self">,
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+  AttrSizedOperandSegments
 ]> {
   let summary = "Update halo data.";
   let description = [{
@@ -1071,13 +1071,13 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
     and/or if the new halo regions are larger than the existing ones.
 
     Assumes all devices hold tensors with same-sized halo data as specified
-    by `source_halo_sizes/static_source_halo_sizes`.
+    by `source_halo_sizes/static_source_halo_sizes` and
+    `destination_halo_sizes/static_destination_halo_sizes`
 
     `split_axes` specifies for each tensor axis along which mesh axes its halo
     data is updated.
 
-    The destination halo sizes are allowed differ from the source sizes. The sizes
-    of the inner (local) shard is inferred from the destination shape and source sharding.
+    Source and destination might have different halo sizes.
   }];
   let arguments = (ins
     AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$source,
@@ -1085,7 +1085,9 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
     FlatSymbolRefAttr:$mesh,
     Mesh_MeshAxesArrayAttr:$split_axes,
     Variadic<I64>:$source_halo_sizes,
-    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_source_halo_sizes
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_source_halo_sizes,
+    Variadic<I64>:$destination_halo_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_destination_halo_sizes
   );
   let results = (outs
     AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$result
@@ -1095,6 +1097,7 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
     `on` $mesh
     `split_axes` `=` $split_axes
     (`source_halo_sizes` `=` custom<DynamicIndexList>($source_halo_sizes, $static_source_halo_sizes)^)?
+    (`destination_halo_sizes` `=` custom<DynamicIndexList>($destination_halo_sizes, $static_destination_halo_sizes)^)?
     attr-dict `:` type($source) `->` type($result)
   }];
   let extraClassDeclaration = [{
