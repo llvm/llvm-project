@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -210,6 +211,17 @@ typedef TargetTransformInfo TTI;
 /// for IR-level transformations.
 class TargetTransformInfo {
 public:
+  enum PartialReductionExtendKind { PR_None, PR_SignExtend, PR_ZeroExtend };
+
+  static PartialReductionExtendKind
+  getPartialReductionExtendKind(Instruction *I) {
+    if (isa<SExtInst>(I))
+      return PR_SignExtend;
+    if (isa<ZExtInst>(I))
+      return PR_ZeroExtend;
+    return PR_None;
+  }
+
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
   ///
@@ -1260,6 +1272,12 @@ public:
   /// \return if target want to issue a prefetch in address space \p AS.
   bool shouldPrefetchAddressSpace(unsigned AS) const;
 
+  InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
+                          ElementCount VF, PartialReductionExtendKind OpAExtend,
+                          PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp = std::nullopt) const;
+
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
   /// and the number of execution units in the CPU.
@@ -2063,6 +2081,12 @@ public:
   /// \return if target want to issue a prefetch in address space \p AS.
   virtual bool shouldPrefetchAddressSpace(unsigned AS) const = 0;
 
+  virtual InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
+                          ElementCount VF, PartialReductionExtendKind OpAExtend,
+                          PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp) const = 0;
+
   virtual unsigned getMaxInterleaveFactor(ElementCount VF) = 0;
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -2714,6 +2738,15 @@ public:
   /// \return if target want to issue a prefetch in address space \p AS.
   bool shouldPrefetchAddressSpace(unsigned AS) const override {
     return Impl.shouldPrefetchAddressSpace(AS);
+  }
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputType, Type *AccumType, ElementCount VF,
+      PartialReductionExtendKind OpAExtend,
+      PartialReductionExtendKind OpBExtend,
+      std::optional<unsigned> BinOp = std::nullopt) const override {
+    return Impl.getPartialReductionCost(Opcode, InputType, AccumType, VF,
+                                        OpAExtend, OpBExtend, BinOp);
   }
 
   unsigned getMaxInterleaveFactor(ElementCount VF) override {

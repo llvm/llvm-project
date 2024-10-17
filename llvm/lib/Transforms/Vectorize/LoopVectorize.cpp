@@ -8593,6 +8593,79 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
   return Recipe;
 }
 
+/// Examines reduction operations to see if the target can use a cheaper
+/// operation with a wider per-iteration input VF and narrower PHI VF.
+/// Returns a struct containing the ratio between the two VFs and other cached
+/// information, or null if no scalable reduction was found.
+static std::optional<PartialReductionChain>
+getScaledReduction(PHINode *PHI, const RecurrenceDescriptor &Rdx,
+                   const TargetTransformInfo *TTI, VFRange &Range,
+                   LoopVectorizationCostModel &CM) {
+  // FIXME: Should we move this to VPRecipeBuilder and cache the values needed
+  //        for the TTI query?
+  // TODO: Allow scaling reductions when predicating. The select at
+  // the end of the loop chooses between the phi value and most recent
+  // reduction result, both of which have different VFs to the active lane
+  // mask when scaling.
+
+  auto *Update = dyn_cast<BinaryOperator>(Rdx.getLoopExitInstr());
+  if (!Update)
+    return std::nullopt;
+
+  Value *Op = Update->getOperand(0);
+  if (Op == PHI)
+    Op = Update->getOperand(1);
+
+  // Match dot product pattern
+  auto *BinOp = dyn_cast<BinaryOperator>(Op);
+  if (!BinOp || !BinOp->hasOneUse())
+    return std::nullopt;
+
+  auto IsSextOrZext = [](Instruction *I) {
+    return I && (I->getOpcode() == Instruction::ZExt ||
+                 I->getOpcode() == Instruction::SExt);
+  };
+
+  auto *ExtA = dyn_cast<Instruction>(BinOp->getOperand(0));
+  auto *ExtB = dyn_cast<Instruction>(BinOp->getOperand(1));
+  if (!IsSextOrZext(ExtA) || !IsSextOrZext(ExtB))
+    return std::nullopt;
+
+  Value *A = ExtA->getOperand(0);
+  Value *B = ExtB->getOperand(0);
+  // Check that the extends extend from the same type
+  if (A->getType() != B->getType())
+    return std::nullopt;
+
+  unsigned TargetScaleFactor =
+      PHI->getType()->getPrimitiveSizeInBits().getKnownScalarFactor(
+          A->getType()->getPrimitiveSizeInBits());
+
+  TTI::PartialReductionExtendKind OpAExtend =
+      TargetTransformInfo::getPartialReductionExtendKind(ExtA);
+  TTI::PartialReductionExtendKind OpBExtend =
+      TargetTransformInfo::getPartialReductionExtendKind(ExtB);
+
+  PartialReductionChain Chain;
+  Chain.Reduction = Rdx.getLoopExitInstr();
+  Chain.ExtendA = ExtA;
+  Chain.ExtendB = ExtB;
+  Chain.ScaleFactor = TargetScaleFactor;
+  Chain.BinOp = dyn_cast<Instruction>(Op);
+
+  if (LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) {
+            InstructionCost Cost = TTI->getPartialReductionCost(
+                Update->getOpcode(), A->getType(), PHI->getType(), VF,
+                OpAExtend, OpBExtend, std::make_optional(BinOp->getOpcode()));
+            return Cost.isValid();
+          },
+          Range))
+    return Chain;
+
+  return std::nullopt;
+}
+
 VPRecipeBase *
 VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
                                         ArrayRef<VPValue *> Operands,
@@ -8617,9 +8690,14 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
           Legal->getReductionVars().find(Phi)->second;
       assert(RdxDesc.getRecurrenceStartValue() ==
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
-      PhiRecipe = new VPReductionPHIRecipe(Phi, RdxDesc, *StartV,
-                                           CM.isInLoopReduction(Phi),
-                                           CM.useOrderedReductions(RdxDesc));
+
+      // If the PHI is used by a partial reduction, set the scale factor
+      std::optional<PartialReductionChain> Chain =
+          Plan.getScaledReductionForInstr(RdxDesc.getLoopExitInstr());
+      unsigned ScaleFactor = Chain ? Chain->ScaleFactor : 1;
+      PhiRecipe = new VPReductionPHIRecipe(
+          Phi, RdxDesc, *StartV, CM.isInLoopReduction(Phi),
+          CM.useOrderedReductions(RdxDesc), ScaleFactor);
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
@@ -8651,6 +8729,9 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
+  if (Plan.getScaledReductionForInstr(Instr))
+    return tryToCreatePartialReduction(Instr, Operands);
+
   if (!shouldWiden(Instr, Range))
     return nullptr;
 
@@ -8669,6 +8750,23 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   }
 
   return tryToWiden(Instr, Operands, VPBB);
+}
+
+VPRecipeBase *
+VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
+                                             ArrayRef<VPValue *> Operands) {
+  assert(Operands.size() == 2 &&
+         "Unexpected number of operands for partial reduction");
+
+  VPValue *BinOp = Operands[0];
+  VPValue *Phi = Operands[1];
+  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
+  if (isa<VPReductionPHIRecipe>(BinOpRecipe))
+    std::swap(BinOp, Phi);
+
+  SmallVector<VPValue *, 2> OrderedOperands = {BinOp, Phi};
+  return new VPPartialReductionRecipe(
+      *Reduction, make_range(OrderedOperands.begin(), OrderedOperands.end()));
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8973,7 +9071,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   bool HasNUW = Style == TailFoldingStyle::None;
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW, DL);
 
-  VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, Legal, CM, PSE, Builder);
+  VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
+                                Builder);
 
   // ---------------------------------------------------------------------------
   // Pre-construction: record ingredients whose recipes we'll need to further
@@ -9019,9 +9118,29 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         bool NeedsBlends = BB != HeaderBB && !BB->phis().empty();
         return Legal->blockNeedsPredication(BB) || NeedsBlends;
       });
+
+  // Cache the partial reductions up front so we can remove the invalid ones
+  // before creating the recipes
+  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
+    for (Instruction &I : drop_end(BB->instructionsWithoutDebug(false))) {
+      Instruction *Instr = &I;
+      auto *Phi = dyn_cast<PHINode>(Instr);
+      if (!Phi || !Legal->isReductionVariable(Phi))
+        continue;
+      const RecurrenceDescriptor &RdxDesc =
+          Legal->getReductionVars().find(Phi)->second;
+      std::optional<PartialReductionChain> Chain =
+          getScaledReduction(Phi, RdxDesc, &TTI, Range, CM);
+      if (Chain.has_value())
+        Plan->addScaledReductionExitInstr(*Chain);
+    }
+  }
+  Plan->removeInvalidScaledReductionExitInstrs();
+
   auto *MiddleVPBB =
       cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getSingleSuccessor());
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
+
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.

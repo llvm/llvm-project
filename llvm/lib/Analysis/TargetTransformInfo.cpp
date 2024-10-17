@@ -850,6 +850,14 @@ bool TargetTransformInfo::shouldPrefetchAddressSpace(unsigned AS) const {
   return TTIImpl->shouldPrefetchAddressSpace(AS);
 }
 
+InstructionCost TargetTransformInfo::getPartialReductionCost(
+    unsigned Opcode, Type *InputType, Type *AccumType, ElementCount VF,
+    PartialReductionExtendKind OpAExtend, PartialReductionExtendKind OpBExtend,
+    std::optional<unsigned> BinOp) const {
+  return TTIImpl->getPartialReductionCost(Opcode, InputType, AccumType, VF,
+                                          OpAExtend, OpBExtend, BinOp);
+}
+
 unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
   return TTIImpl->getMaxInterleaveFactor(VF);
 }
