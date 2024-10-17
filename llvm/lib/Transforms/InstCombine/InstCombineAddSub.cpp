@@ -2878,22 +2878,12 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
 
     // -(Cond ? X : C) --> Cond ? -X : -C
     // -(Cond ? C : Y) --> Cond ? -C : -Y
-    Constant *XC = nullptr, *YC = nullptr;
-    if (match(X, m_ImmConstant(XC)) || match(Y, m_ImmConstant(YC))) {
-      Value *NegX = nullptr, *NegY = nullptr;
-      if (XC)
-        NegX = ConstantFoldUnaryOpOperand(Instruction::FNeg, XC, DL);
-      if (YC)
-        NegY = ConstantFoldUnaryOpOperand(Instruction::FNeg, YC, DL);
-      if (NegX || NegY) {
-        if (!NegX)
-          NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
-        if (!NegY)
-          NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
-        SelectInst *NewSel = SelectInst::Create(Cond, NegX, NegY);
-        propagateSelectFMF(NewSel, /*CommonOperand=*/true);
-        return NewSel;
-      }
+    if (match(X, m_ImmConstant()) || match(Y, m_ImmConstant())) {
+      Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
+      Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
+      SelectInst *NewSel = SelectInst::Create(Cond, NegX, NegY);
+      propagateSelectFMF(NewSel, /*CommonOperand=*/true);
+      return NewSel;
     }
   }
 
