@@ -2883,22 +2883,16 @@ const llvm::APSInt *RangeConstraintManager::getSymVal(ProgramStateRef St,
 
 const llvm::APSInt *RangeConstraintManager::getSymMinVal(ProgramStateRef St,
                                                          SymbolRef Sym) const {
-  // TODO: Use `getRange()` like in `getSymVal()`, but that would make some
-  // of the reports of `BitwiseShiftChecker` look awkward.
-  const RangeSet *T = getConstraint(St, Sym);
-  if (!T || T->isEmpty())
-    return nullptr;
-  return &T->getMinValue();
+  auto &MutableSelf = const_cast<RangeConstraintManager &>(*this);
+  RangeSet Range = MutableSelf.getRange(St, Sym);
+  return Range.isEmpty() ? nullptr : &Range.getMinValue();
 }
 
 const llvm::APSInt *RangeConstraintManager::getSymMaxVal(ProgramStateRef St,
                                                          SymbolRef Sym) const {
-  // TODO: Use `getRange()` like in `getSymVal()`, but that would make some
-  // of the reports of `BitwiseShiftChecker` look awkward.
-  const RangeSet *T = getConstraint(St, Sym);
-  if (!T || T->isEmpty())
-    return nullptr;
-  return &T->getMaxValue();
+  auto &MutableSelf = const_cast<RangeConstraintManager &>(*this);
+  RangeSet Range = MutableSelf.getRange(St, Sym);
+  return Range.isEmpty() ? nullptr : &Range.getMaxValue();
 }
 
 //===----------------------------------------------------------------------===//
