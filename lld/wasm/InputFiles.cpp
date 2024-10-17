@@ -248,10 +248,11 @@ static void setRelocs(const std::vector<T *> &chunks,
   }
 }
 
-// An object file can have two approaches to tables.  With the reference-types
-// feature enabled, input files that define or use tables declare the tables
-// using symbols, and record each use with a relocation.  This way when the
-// linker combines inputs, it can collate the tables used by the inputs,
+// An object file can have two approaches to tables.  With the
+// call-indirect-overlong feature enabled (explicitly, or implied by the
+// reference-types feature), input files that define or use tables declare the
+// tables using symbols, and record each use with a relocation.  This way when
+// the linker combines inputs, it can collate the tables used by the inputs,
 // assigning them distinct table numbers, and renumber all the uses as
 // appropriate.  At the same time, the linker has special logic to build the
 // indirect function table if it is needed.
@@ -277,7 +278,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
     return;
 
   // It's possible for an input to define tables and also use the indirect
-  // function table, but forget to compile with -mattr=+reference-types.
+  // function table, but forget to compile with -mattr=+call-indirect-overlong.
   // For these newer files, we require symbols for all tables, and
   // relocations for all of their uses.
   if (tableSymbolCount != 0) {

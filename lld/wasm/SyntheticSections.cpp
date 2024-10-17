@@ -326,7 +326,7 @@ void TableSection::addTable(InputTable *table) {
       // to assign table number 0 to the indirect function table.
       for (const auto *culprit : out.importSec->importedSymbols) {
         if (isa<UndefinedTable>(culprit)) {
-          error("object file not built with 'reference-types' feature "
+          error("object file not built with 'call-indirect-overlong' feature "
                 "conflicts with import of table " +
                 culprit->getName() + " by file " +
                 toString(culprit->getFile()));
