@@ -82,6 +82,17 @@ TEST(SanitizerCommon, IsAccessibleMemoryRange) {
   munmap((void *)mem, 3 * page_size);
 }
 
+TEST(SanitizerCommon, IsAccessibleMemoryRangeLarge) {
+  const int size = GetPageSize() * 10000;
+
+  uptr mem = (uptr)mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON,
+                        -1, 0);
+
+  EXPECT_TRUE(IsAccessibleMemoryRange(mem, size));
+
+  munmap((void *)mem, size);
+}
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_POSIX
