@@ -86,8 +86,8 @@ struct InstRegexOp : public SetTheory::Operator {
     auto Pseudos = Instructions.slice(NumGeneric, NumPseudos);
     auto NonPseudos = Instructions.slice(NumGeneric + NumPseudos);
 
-    for (Init *Arg : Expr->getArgs()) {
-      StringInit *SI = dyn_cast<StringInit>(Arg);
+    for (const Init *Arg : Expr->getArgs()) {
+      const StringInit *SI = dyn_cast<StringInit>(Arg);
       if (!SI)
         PrintFatalError(Loc, "instregex requires pattern string: " +
                                  Expr->getAsString());
@@ -1828,13 +1828,14 @@ void CodeGenSchedModels::collectRegisterFiles() {
 
     ConstRecVec RegisterClasses = RF->getValueAsListOfDefs("RegClasses");
     std::vector<int64_t> RegisterCosts = RF->getValueAsListOfInts("RegCosts");
-    ListInit *MoveElimInfo = RF->getValueAsListInit("AllowMoveElimination");
+    const ListInit *MoveElimInfo =
+        RF->getValueAsListInit("AllowMoveElimination");
     for (unsigned I = 0, E = RegisterClasses.size(); I < E; ++I) {
       int Cost = RegisterCosts.size() > I ? RegisterCosts[I] : 1;
 
       bool AllowMoveElim = false;
       if (MoveElimInfo->size() > I) {
-        BitInit *Val = cast<BitInit>(MoveElimInfo->getElement(I));
+        const BitInit *Val = cast<BitInit>(MoveElimInfo->getElement(I));
         AllowMoveElim = Val->getValue();
       }
 

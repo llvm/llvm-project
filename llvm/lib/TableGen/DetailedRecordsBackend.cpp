@@ -131,7 +131,7 @@ void DetailedRecordsEmitter::printDefms(const Record &Rec, raw_ostream &OS) {
 // Print the template arguments of a class.
 void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
                                                raw_ostream &OS) {
-  ArrayRef<Init *> Args = Rec.getTemplateArgs();
+  ArrayRef<const Init *> Args = Rec.getTemplateArgs();
   if (Args.empty()) {
     OS << "  Template args: (none)\n";
     return;
