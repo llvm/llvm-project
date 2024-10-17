@@ -274,7 +274,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
     // Specify the vector alignment explicitly. For v512x1, the calculated
     // alignment would be 512*alignment(i1), which is 512 bytes, instead of
     // the required minimum of 64 bytes.
-    : LLVMTargetMachine(
+    : CodeGenCommonTMImpl(
           T,
           "e-m:e-p:32:32:32-a:0-n16:32-"
           "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"

@@ -102,12 +102,12 @@ static TargetOptions getTargetOptionsForBogusMachine() {
   return Opts;
 }
 
-class BogusTargetMachine : public LLVMTargetMachine {
+class BogusTargetMachine : public CodeGenCommonTMImpl {
 public:
   BogusTargetMachine()
-      : LLVMTargetMachine(Target(), "", Triple(""), "", "",
-                          getTargetOptionsForBogusMachine(), Reloc::Static,
-                          CodeModel::Small, CodeGenOptLevel::Default),
+      : CodeGenCommonTMImpl(Target(), "", Triple(""), "", "",
+                            getTargetOptionsForBogusMachine(), Reloc::Static,
+                            CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
   ~BogusTargetMachine() override {}

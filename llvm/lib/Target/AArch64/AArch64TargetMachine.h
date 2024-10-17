@@ -15,13 +15,13 @@
 
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 namespace llvm {
 
-class AArch64TargetMachine : public LLVMTargetMachine {
+class AArch64TargetMachine : public CodeGenCommonTMImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<AArch64Subtarget>> SubtargetMap;

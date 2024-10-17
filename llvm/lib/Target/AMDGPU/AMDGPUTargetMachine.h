@@ -15,10 +15,10 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 
 #include "GCNSubtarget.h"
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
-#include "llvm/Target/TargetMachine.h"
 #include <optional>
 #include <utility>
 
@@ -28,7 +28,7 @@ namespace llvm {
 // AMDGPU Target Machine (R600+)
 //===----------------------------------------------------------------------===//
 
-class AMDGPUTargetMachine : public LLVMTargetMachine {
+class AMDGPUTargetMachine : public CodeGenCommonTMImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
@@ -123,7 +123,7 @@ public:
 
 class AMDGPUPassConfig : public TargetPassConfig {
 public:
-  AMDGPUPassConfig(LLVMTargetMachine &TM, PassManagerBase &PM);
+  AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM);
 
   AMDGPUTargetMachine &getAMDGPUTargetMachine() const {
     return getTM<AMDGPUTargetMachine>();
