@@ -16475,10 +16475,9 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
         Builder.CreateShuffleVector(TI->getOperand(0), ShuffleLanes), VecTy));
 
     if (Parts.size() == 4) {
-      auto *F = Intrinsic::getOrInsertDeclaration(
-          TI->getModule(), Intrinsic::aarch64_neon_tbl4, VecTy);
       Parts.push_back(ConstantVector::get(MaskConst));
-      Results.push_back(Builder.CreateCall(F, Parts));
+      Results.push_back(
+          Builder.CreateIntrinsic(Intrinsic::aarch64_neon_tbl4, VecTy, Parts));
       Parts.clear();
     }
 
@@ -16505,9 +16504,8 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
       break;
     }
 
-    auto *F = Intrinsic::getOrInsertDeclaration(TI->getModule(), TblID, VecTy);
     Parts.push_back(ConstantVector::get(MaskConst));
-    Results.push_back(Builder.CreateCall(F, Parts));
+    Results.push_back(Builder.CreateIntrinsic(TblID, VecTy, Parts));
   }
 
   // Extract the destination vector from TBL result(s) after combining them
@@ -27270,9 +27268,9 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
   if (ValueTy->getPrimitiveSizeInBits() == 128) {
     Intrinsic::ID Int =
         IsAcquire ? Intrinsic::aarch64_ldaxp : Intrinsic::aarch64_ldxp;
-    Function *Ldxr = Intrinsic::getOrInsertDeclaration(M, Int);
 
-    Value *LoHi = Builder.CreateCall(Ldxr, Addr, "lohi");
+    Value *LoHi =
+        Builder.CreateIntrinsic(Int, {}, Addr, /*FMFSource=*/nullptr, "lohi");
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
     Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
@@ -27289,11 +27287,10 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
   Type *Tys[] = { Addr->getType() };
   Intrinsic::ID Int =
       IsAcquire ? Intrinsic::aarch64_ldaxr : Intrinsic::aarch64_ldxr;
-  Function *Ldxr = Intrinsic::getOrInsertDeclaration(M, Int, Tys);
 
   const DataLayout &DL = M->getDataLayout();
   IntegerType *IntEltTy = Builder.getIntNTy(DL.getTypeSizeInBits(ValueTy));
-  CallInst *CI = Builder.CreateCall(Ldxr, Addr);
+  CallInst *CI = Builder.CreateIntrinsic(Int, Tys, Addr);
   CI->addParamAttr(0, Attribute::get(Builder.getContext(),
                                      Attribute::ElementType, IntEltTy));
   Value *Trunc = Builder.CreateTrunc(CI, IntEltTy);

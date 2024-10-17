@@ -12180,9 +12180,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 //===----------------------------------------------------------------------===//
 
 static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Function *Func = Intrinsic::getOrInsertDeclaration(M, Id);
-  return Builder.CreateCall(Func, {});
+  return Builder.CreateIntrinsic(Id, {}, {});
 }
 
 // The mappings for emitLeading/TrailingFence is taken from
@@ -19002,13 +19000,13 @@ Value *PPCTargetLowering::emitMaskedAtomicRMWIntrinsic(
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Type *ValTy = Incr->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
-  Function *RMW = Intrinsic::getOrInsertDeclaration(
-      M, getIntrinsicForAtomicRMWBinOp128(AI->getOperation()));
   Type *Int64Ty = Type::getInt64Ty(M->getContext());
   Value *IncrLo = Builder.CreateTrunc(Incr, Int64Ty, "incr_lo");
   Value *IncrHi =
       Builder.CreateTrunc(Builder.CreateLShr(Incr, 64), Int64Ty, "incr_hi");
-  Value *LoHi = Builder.CreateCall(RMW, {AlignedAddr, IncrLo, IncrHi});
+  Value *LoHi = Builder.CreateIntrinsic(
+      getIntrinsicForAtomicRMWBinOp128(AI->getOperation()), {},
+      {AlignedAddr, IncrLo, IncrHi});
   Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
   Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
   Lo = Builder.CreateZExt(Lo, ValTy, "lo64");

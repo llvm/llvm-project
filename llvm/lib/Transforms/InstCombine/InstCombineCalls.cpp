@@ -647,9 +647,8 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   // ctpop(x | -x) -> bitwidth - cttz(x, false)
   if (Op0->hasOneUse() &&
       match(Op0, m_c_Or(m_Value(X), m_Neg(m_Deferred(X))))) {
-    Function *F =
-        Intrinsic::getOrInsertDeclaration(II.getModule(), Intrinsic::cttz, Ty);
-    auto *Cttz = IC.Builder.CreateCall(F, {X, IC.Builder.getFalse()});
+    auto *Cttz = IC.Builder.CreateIntrinsic(Intrinsic::cttz, Ty,
+                                            {X, IC.Builder.getFalse()});
     auto *Bw = ConstantInt::get(Ty, APInt(BitWidth, BitWidth));
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Bw, Cttz));
   }
@@ -1182,11 +1181,9 @@ Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
     return nullptr;
 
   // Finally create and return the sat intrinsic, truncated to the new type
-  Function *F = Intrinsic::getOrInsertDeclaration(MinMax1.getModule(),
-                                                  IntrinsicID, NewTy);
   Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
   Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
-  Value *Sat = Builder.CreateCall(F, {AT, BT});
+  Value *Sat = Builder.CreateIntrinsic(IntrinsicID, NewTy, {AT, BT});
   return CastInst::Create(Instruction::SExt, Sat, Ty);
 }
 

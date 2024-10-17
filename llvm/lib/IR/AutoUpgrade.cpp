@@ -1774,8 +1774,7 @@ static Value *upgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallBase &CI,
   Type *Ty = CI.getType();
   Value *Op0 = CI.getOperand(0);
   Value *Op1 = CI.getOperand(1);
-  Function *Intrin = Intrinsic::getOrInsertDeclaration(CI.getModule(), IID, Ty);
-  Value *Res = Builder.CreateCall(Intrin, {Op0, Op1});
+  Value *Res = Builder.CreateIntrinsic(IID, Ty, {Op0, Op1});
 
   if (CI.arg_size() == 4) { // For masked intrinsics.
     Value *VecSrc = CI.getOperand(2);
@@ -1801,8 +1800,7 @@ static Value *upgradeX86Rotate(IRBuilder<> &Builder, CallBase &CI,
   }
 
   Intrinsic::ID IID = IsRotateRight ? Intrinsic::fshr : Intrinsic::fshl;
-  Function *Intrin = Intrinsic::getOrInsertDeclaration(CI.getModule(), IID, Ty);
-  Value *Res = Builder.CreateCall(Intrin, {Src, Src, Amt});
+  Value *Res = Builder.CreateIntrinsic(IID, Ty, {Src, Src, Amt});
 
   if (CI.arg_size() == 4) { // For masked intrinsics.
     Value *VecSrc = CI.getOperand(2);
@@ -1871,8 +1869,7 @@ static Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallBase &CI,
   }
 
   Intrinsic::ID IID = IsShiftRight ? Intrinsic::fshr : Intrinsic::fshl;
-  Function *Intrin = Intrinsic::getOrInsertDeclaration(CI.getModule(), IID, Ty);
-  Value *Res = Builder.CreateCall(Intrin, {Op0, Op1, Amt});
+  Value *Res = Builder.CreateIntrinsic(IID, Ty, {Op0, Op1, Amt});
 
   unsigned NumArgs = CI.arg_size();
   if (NumArgs >= 4) { // For masked intrinsics.
@@ -1932,9 +1929,8 @@ static Value *upgradeMaskedLoad(IRBuilder<> &Builder, Value *Ptr,
 static Value *upgradeAbs(IRBuilder<> &Builder, CallBase &CI) {
   Type *Ty = CI.getType();
   Value *Op0 = CI.getArgOperand(0);
-  Function *F =
-      Intrinsic::getOrInsertDeclaration(CI.getModule(), Intrinsic::abs, Ty);
-  Value *Res = Builder.CreateCall(F, {Op0, Builder.getInt1(false)});
+  Value *Res = Builder.CreateIntrinsic(Intrinsic::abs, Ty,
+                                       {Op0, Builder.getInt1(false)});
   if (CI.arg_size() == 3)
     Res = emitX86Select(Builder, CI.getArgOperand(2), Res, CI.getArgOperand(1));
   return Res;
@@ -2026,9 +2022,8 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI,
 // Replace a masked intrinsic with an older unmasked intrinsic.
 static Value *upgradeX86MaskedShift(IRBuilder<> &Builder, CallBase &CI,
                                     Intrinsic::ID IID) {
-  Function *Intrin = Intrinsic::getOrInsertDeclaration(CI.getModule(), IID);
-  Value *Rep = Builder.CreateCall(Intrin,
-                                 { CI.getArgOperand(0), CI.getArgOperand(1) });
+  Value *Rep = Builder.CreateIntrinsic(
+      IID, {}, {CI.getArgOperand(0), CI.getArgOperand(1)});
   return emitX86Select(Builder, CI.getArgOperand(3), Rep, CI.getArgOperand(2));
 }
 
@@ -2497,9 +2492,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name == "sse.sqrt.ss" || Name == "sse2.sqrt.sd") {
     Value *Vec = CI->getArgOperand(0);
     Value *Elt0 = Builder.CreateExtractElement(Vec, (uint64_t)0);
-    Function *Intr = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), Intrinsic::sqrt, Elt0->getType());
-    Elt0 = Builder.CreateCall(Intr, Elt0);
+    Elt0 = Builder.CreateIntrinsic(Intrinsic::sqrt, Elt0->getType(), Elt0);
     Rep = Builder.CreateInsertElement(Vec, Elt0, (uint64_t)0);
   } else if (Name.starts_with("avx.sqrt.p") ||
              Name.starts_with("sse2.sqrt.p") ||
@@ -2787,9 +2780,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
               cast<ConstantInt>(CI->getArgOperand(3))->getZExtValue() != 4)) {
       Intrinsic::ID IID = IsUnsigned ? Intrinsic::x86_avx512_uitofp_round
                                      : Intrinsic::x86_avx512_sitofp_round;
-      Function *F = Intrinsic::getOrInsertDeclaration(CI->getModule(), IID,
-                                                      {DstTy, SrcTy});
-      Rep = Builder.CreateCall(F, {Rep, CI->getArgOperand(3)});
+      Rep = Builder.CreateIntrinsic(IID, {DstTy, SrcTy},
+                                    {Rep, CI->getArgOperand(3)});
     } else {
       Rep = IsUnsigned ? Builder.CreateUIToFP(Rep, DstTy, "cvt")
                        : Builder.CreateSIToFP(Rep, DstTy, "cvt");
@@ -2830,9 +2822,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
                                    ResultTy->getNumElements());
 
-    Function *ELd = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), Intrinsic::masked_expandload, ResultTy);
-    Rep = Builder.CreateCall(ELd, {Ptr, MaskVec, CI->getOperand(1)});
+    Rep = Builder.CreateIntrinsic(Intrinsic::masked_expandload, ResultTy,
+                                  {Ptr, MaskVec, CI->getOperand(1)});
   } else if (Name.starts_with("avx512.mask.compress.store.")) {
     auto *ResultTy = cast<VectorType>(CI->getArgOperand(1)->getType());
     Type *PtrTy = ResultTy->getElementType();
@@ -2845,9 +2836,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         getX86MaskVec(Builder, CI->getArgOperand(2),
                       cast<FixedVectorType>(ResultTy)->getNumElements());
 
-    Function *CSt = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), Intrinsic::masked_compressstore, ResultTy);
-    Rep = Builder.CreateCall(CSt, {CI->getArgOperand(1), Ptr, MaskVec});
+    Rep = Builder.CreateIntrinsic(Intrinsic::masked_compressstore, ResultTy,
+                                  {CI->getArgOperand(1), Ptr, MaskVec});
   } else if (Name.starts_with("avx512.mask.compress.") ||
              Name.starts_with("avx512.mask.expand.")) {
     auto *ResultTy = cast<FixedVectorType>(CI->getType());
@@ -2858,10 +2848,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool IsCompress = Name[12] == 'c';
     Intrinsic::ID IID = IsCompress ? Intrinsic::x86_avx512_mask_compress
                                    : Intrinsic::x86_avx512_mask_expand;
-    Function *Intr =
-        Intrinsic::getOrInsertDeclaration(F->getParent(), IID, ResultTy);
-    Rep = Builder.CreateCall(Intr,
-                             {CI->getOperand(0), CI->getOperand(1), MaskVec});
+    Rep = Builder.CreateIntrinsic(
+        IID, ResultTy, {CI->getOperand(0), CI->getOperand(1), MaskVec});
   } else if (Name.starts_with("xop.vpcom")) {
     bool IsSigned;
     if (Name.ends_with("ub") || Name.ends_with("uw") || Name.ends_with("ud") ||
@@ -2922,11 +2910,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     Rep = upgradeX86ConcatShift(Builder, *CI, true, ZeroMask);
   } else if (Name == "sse42.crc32.64.8") {
-    Function *CRC32 = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), Intrinsic::x86_sse42_crc32_32_8);
     Value *Trunc0 =
         Builder.CreateTrunc(CI->getArgOperand(0), Type::getInt32Ty(C));
-    Rep = Builder.CreateCall(CRC32, {Trunc0, CI->getArgOperand(1)});
+    Rep = Builder.CreateIntrinsic(Intrinsic::x86_sse42_crc32_32_8, {},
+                                  {Trunc0, CI->getArgOperand(1)});
     Rep = Builder.CreateZExt(Rep, CI->getType(), "");
   } else if (Name.starts_with("avx.vbroadcast.s") ||
              Name.starts_with("avx512.vbroadcast.s")) {
@@ -3786,12 +3773,9 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = Intrinsic::x86_avx512_vfmadd_f64;
       else
         IID = Intrinsic::x86_avx512_vfmadd_f32;
-      Function *FMA = Intrinsic::getOrInsertDeclaration(CI->getModule(), IID);
-      Rep = Builder.CreateCall(FMA, Ops);
+      Rep = Builder.CreateIntrinsic(IID, {}, Ops);
     } else {
-      Function *FMA = Intrinsic::getOrInsertDeclaration(
-          CI->getModule(), Intrinsic::fma, A->getType());
-      Rep = Builder.CreateCall(FMA, {A, B, C});
+      Rep = Builder.CreateIntrinsic(Intrinsic::fma, A->getType(), {A, B, C});
     }
 
     Value *PassThru = IsMaskZ   ? Constant::getNullValue(Rep->getType())
@@ -3844,9 +3828,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
       Rep = Builder.CreateIntrinsic(IID, {}, {A, B, C, CI->getArgOperand(4)});
     } else {
-      Function *FMA = Intrinsic::getOrInsertDeclaration(
-          CI->getModule(), Intrinsic::fma, A->getType());
-      Rep = Builder.CreateCall(FMA, {A, B, C});
+      Rep = Builder.CreateIntrinsic(Intrinsic::fma, A->getType(), {A, B, C});
     }
 
     Value *PassThru = IsMaskZ   ? llvm::Constant::getNullValue(CI->getType())
@@ -4105,8 +4087,8 @@ static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
   Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
                                     GoodPredTy, Args[1]);
 
-  Function *NewF = Intrinsic::getOrInsertDeclaration(CI->getModule(), NewID);
-  return Builder.CreateCall(NewF, Args, CI->getName());
+  return Builder.CreateIntrinsic(NewID, {}, Args, /*FMFSource=*/nullptr,
+                                 CI->getName());
 }
 
 static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
@@ -4188,8 +4170,8 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       Ops.push_back(Op);
     }
 
-    Function *Fn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
-    return Builder.CreateCall(Fn, Ops, CI->getName());
+    return Builder.CreateIntrinsic(ID, Tys, Ops, /*FMFSource=*/nullptr,
+                                   CI->getName());
   }
   llvm_unreachable("Unknown function for ARM CallBase upgrade.");
 }
