@@ -1,3 +1,4 @@
+import abc
 import base64
 import datetime
 import itertools
@@ -14,11 +15,22 @@ def by_suite_and_test_path(test):
     return (test.suite.name, id(test.suite), test.path_in_suite)
 
 
-class JsonReport(object):
+class Report(object):
     def __init__(self, output_file):
         self.output_file = output_file
 
     def write_results(self, tests, elapsed):
+        with open(self.output_file, "w") as file:
+            self._write_results_to_file(tests, elapsed, file)
+
+    @abc.abstractmethod
+    def _write_results_to_file(self, tests, elapsed, file):
+        """Write test results to the file object "file"."""
+        pass
+
+
+class JsonReport(Report):
+    def _write_results_to_file(self, tests, elapsed, file):
         unexecuted_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED}
         tests = [t for t in tests if t.result.code not in unexecuted_codes]
         # Construct the data we will write.
@@ -67,9 +79,8 @@ class JsonReport(object):
 
             tests_data.append(test_data)
 
-        with open(self.output_file, "w") as file:
-            json.dump(data, file, indent=2, sort_keys=True)
-            file.write("\n")
+        json.dump(data, file, indent=2, sort_keys=True)
+        file.write("\n")
 
 
 _invalid_xml_chars_dict = {
@@ -88,21 +99,18 @@ def remove_invalid_xml_chars(s):
     return s.translate(_invalid_xml_chars_dict)
 
 
-class XunitReport(object):
-    def __init__(self, output_file):
-        self.output_file = output_file
-        self.skipped_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
+class XunitReport(Report):
+    skipped_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
 
-    def write_results(self, tests, elapsed):
+    def _write_results_to_file(self, tests, elapsed, file):
         tests.sort(key=by_suite_and_test_path)
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
 
-        with open(self.output_file, "w") as file:
-            file.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-            file.write('<testsuites time="{time:.2f}">\n'.format(time=elapsed))
-            for suite, test_iter in tests_by_suite:
-                self._write_testsuite(file, suite, list(test_iter))
-            file.write("</testsuites>\n")
+        file.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        file.write('<testsuites time="{time:.2f}">\n'.format(time=elapsed))
+        for suite, test_iter in tests_by_suite:
+            self._write_testsuite(file, suite, list(test_iter))
+        file.write("</testsuites>\n")
 
     def _write_testsuite(self, file, suite, tests):
         skipped = 0
@@ -206,11 +214,8 @@ def gen_resultdb_test_entry(
     return test_data
 
 
-class ResultDBReport(object):
-    def __init__(self, output_file):
-        self.output_file = output_file
-
-    def write_results(self, tests, elapsed):
+class ResultDBReport(Report):
+    def _write_results_to_file(self, tests, elapsed, file):
         unexecuted_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED}
         tests = [t for t in tests if t.result.code not in unexecuted_codes]
         data = {}
@@ -249,17 +254,14 @@ class ResultDBReport(object):
                         )
                     )
 
-        with open(self.output_file, "w") as file:
-            json.dump(data, file, indent=2, sort_keys=True)
-            file.write("\n")
+        json.dump(data, file, indent=2, sort_keys=True)
+        file.write("\n")
 
 
-class TimeTraceReport(object):
-    def __init__(self, output_file):
-        self.output_file = output_file
-        self.skipped_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
+class TimeTraceReport(Report):
+    skipped_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
 
-    def write_results(self, tests, elapsed):
+    def _write_results_to_file(self, tests, elapsed, file):
         # Find when first test started so we can make start times relative.
         first_start_time = min([t.result.start for t in tests])
         events = [
@@ -270,8 +272,7 @@ class TimeTraceReport(object):
 
         json_data = {"traceEvents": events}
 
-        with open(self.output_file, "w") as time_trace_file:
-            json.dump(json_data, time_trace_file, indent=2, sort_keys=True)
+        json.dump(json_data, time_trace_file, indent=2, sort_keys=True)
 
     def _get_test_event(self, test, first_start_time):
         test_name = test.getFullName()
