@@ -1030,7 +1030,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
     Arguments.push_back(V);
   }
 
-  Type *RetTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
+  Type *RetTy = ToWideTy(Ctx.Types.inferScalarType(this), VF);
   SmallVector<Type *> ParamTys;
   for (unsigned I = 0; I != getNumOperands(); ++I)
     ParamTys.push_back(
@@ -1291,6 +1291,15 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     break;
   }
+  case Instruction::ExtractValue: {
+    assert(getNumOperands() == 2 && "expected single level extractvalue");
+    Value *Op = State.get(getOperand(0));
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    unsigned Idx = CI->getZExtValue();
+    Value *Extract = Builder.CreateExtractValue(Op, Idx);
+    State.set(this, Extract);
+    break;
+  }
   case Instruction::Freeze: {
     Value *Op = State.get(getOperand(0));
 
@@ -1393,6 +1402,9 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
   }
+  case Instruction::ExtractValue:
+    return Ctx.TTI.getInstructionCost(cast<Instruction>(getUnderlyingValue()),
+                                      TTI::TCK_RecipThroughput);
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
