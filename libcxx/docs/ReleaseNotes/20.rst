@@ -82,6 +82,9 @@ Deprecations and Removals
   were private but could cause ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in
   LLVM 20.
 
+- The function ``__libcpp_verbose_abort()`` is now ``noexcept``, to match ``std::terminate()``. (The combination of
+  ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.)
+
 Upcoming Deprecations and Removals
 ----------------------------------
 

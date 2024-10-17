@@ -918,13 +918,13 @@ define dso_local void @mul256(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-AVX512-NEXT:    vpandn %ymm3, %ymm4, %ymm3
 ; CHECK-AVX512-NEXT:    vpmaddubsw %ymm3, %ymm1, %ymm1
 ; CHECK-AVX512-NEXT:    vpsllw $8, %ymm1, %ymm1
-; CHECK-AVX512-NEXT:    vpternlogq $248, %ymm4, %ymm5, %ymm1
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm5 & ymm4)
 ; CHECK-AVX512-NEXT:    vpand %ymm2, %ymm4, %ymm3
 ; CHECK-AVX512-NEXT:    vpmaddubsw %ymm3, %ymm0, %ymm3
 ; CHECK-AVX512-NEXT:    vpandn %ymm2, %ymm4, %ymm2
 ; CHECK-AVX512-NEXT:    vpmaddubsw %ymm2, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpsllw $8, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpternlogq $248, %ymm4, %ymm3, %ymm0
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm3 & ymm4)
 ; CHECK-AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
 ; CHECK-AVX512-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-AVX512-NEXT:    vzeroupper
@@ -985,7 +985,7 @@ define dso_local void @mul512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-AVX512-NEXT:    vpandnq %zmm1, %zmm2, %zmm1
 ; CHECK-AVX512-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
 ; CHECK-AVX512-NEXT:    vpsllw $8, %zmm0, %zmm0
-; CHECK-AVX512-NEXT:    vpternlogq $248, %zmm2, %zmm3, %zmm0
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm3 & zmm2)
 ; CHECK-AVX512-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; CHECK-AVX512-NEXT:    vzeroupper
 ; CHECK-AVX512-NEXT:    retq
@@ -1993,21 +1993,21 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-v
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-SKX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
 ; CHECK-SKX-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: splatconstant_rotate_v32i8:
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
 ; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-VBMI1-LABEL: splatconstant_rotate_v32i8:
 ; CHECK-VBMI1:       # %bb.0:
 ; CHECK-VBMI1-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-VBMI1-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-VBMI1-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
 ; CHECK-VBMI1-NEXT:    retq
 ;
 ; CHECK-GFNI-LABEL: splatconstant_rotate_v32i8:
@@ -2025,7 +2025,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-SKX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
 ; CHECK-SKX-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-SKX-NEXT:    retq
 ;
@@ -2033,7 +2033,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    retq
 ;
@@ -2041,7 +2041,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-VBMI1:       # %bb.0:
 ; CHECK-VBMI1-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-VBMI1-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-VBMI1-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
 ; CHECK-VBMI1-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-VBMI1-NEXT:    retq
 ;

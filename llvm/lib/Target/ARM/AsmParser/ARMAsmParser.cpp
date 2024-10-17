@@ -446,8 +446,8 @@ class ARMAsmParser : public MCTargetAsmParser {
   int tryParseShiftRegister(OperandVector &);
   std::optional<ARM_AM::ShiftOpc> tryParseShiftToken();
   bool parseRegisterList(OperandVector &, bool EnforceOrder = true,
-                         bool AllowRAAC = false,
-                         bool AllowOutOfBoundReg = false);
+                         bool AllowRAAC = false, bool IsLazyLoadStore = false,
+                         bool IsVSCCLRM = false);
   bool parseMemory(OperandVector &);
   bool parseOperand(OperandVector &, StringRef Mnemonic);
   bool parseImmExpr(int64_t &Out);
@@ -1158,7 +1158,8 @@ public:
   bool isFPImm() const {
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
+    if (!CE || !isUInt<32>(CE->getValue()))
+      return false;
     int Val = ARM_AM::getFP32Imm(APInt(32, CE->getValue()));
     return Val != -1;
   }
@@ -3810,6 +3811,10 @@ public:
         Kind = k_FPSRegisterListWithVPR;
       else
         Kind = k_SPRRegisterList;
+    } else if (Regs.front().second == ARM::VPR) {
+      assert(Regs.size() == 1 &&
+             "Register list starting with VPR expected to only contain VPR");
+      Kind = k_FPSRegisterListWithVPR;
     }
 
     if (Kind == k_RegisterList && Regs.back().second == ARM::APSR)
@@ -4607,7 +4612,8 @@ insertNoDuplicates(SmallVectorImpl<std::pair<unsigned, MCRegister>> &Regs,
 
 /// Parse a register list.
 bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
-                                     bool AllowRAAC, bool AllowOutOfBoundReg) {
+                                     bool AllowRAAC, bool IsLazyLoadStore,
+                                     bool IsVSCCLRM) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::LCurly))
     return TokError("Token is not a Left Curly Brace");
@@ -4617,15 +4623,23 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
 
   // Check the first register in the list to see what register class
   // this is a list of.
-  MCRegister Reg = tryParseRegister();
+  bool AllowOutOfBoundReg = IsLazyLoadStore || IsVSCCLRM;
+  MCRegister Reg = tryParseRegister(AllowOutOfBoundReg);
   if (!Reg)
     return Error(RegLoc, "register expected");
   if (!AllowRAAC && Reg == ARM::RA_AUTH_CODE)
     return Error(RegLoc, "pseudo-register not allowed");
-  // The reglist instructions have at most 16 registers, so reserve
+  // The reglist instructions have at most 32 registers, so reserve
   // space for that many.
   int EReg = 0;
-  SmallVector<std::pair<unsigned, MCRegister>, 16> Registers;
+  SmallVector<std::pair<unsigned, MCRegister>, 32> Registers;
+
+  // Single-precision VSCCLRM can have double-precision registers in the
+  // register list. When VSCCLRMAdjustEncoding is true then we've switched from
+  // single-precision to double-precision and we pretend that these registers
+  // are encoded as S32 onwards, which we can do by adding 16 to the encoding
+  // value.
+  bool VSCCLRMAdjustEncoding = false;
 
   // Allow Q regs and just interpret them as the two D sub-registers.
   if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
@@ -4644,6 +4658,8 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
     RC = &ARMMCRegisterClasses[ARM::SPRRegClassID];
   else if (ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(Reg))
     RC = &ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID];
+  else if (Reg == ARM::VPR)
+    RC = &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID];
   else
     return Error(RegLoc, "invalid register in register list");
 
@@ -4684,6 +4700,8 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
       while (Reg != EndReg) {
         Reg = getNextRegister(Reg);
         EReg = MRI->getEncodingValue(Reg);
+        if (VSCCLRMAdjustEncoding)
+          EReg += 16;
         if (!insertNoDuplicates(Registers, EReg, Reg)) {
           Warning(AfterMinusLoc, StringRef("duplicated register (") +
                                      ARMInstPrinter::getRegisterName(Reg) +
@@ -4695,6 +4713,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
     Parser.Lex(); // Eat the comma.
     RegLoc = Parser.getTok().getLoc();
     MCRegister OldReg = Reg;
+    int EOldReg = EReg;
     const AsmToken RegTok = Parser.getTok();
     Reg = tryParseRegister(AllowOutOfBoundReg);
     if (!Reg)
@@ -4726,6 +4745,12 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
       }
       continue;
     }
+    // VSCCLRM can switch from single-precision to double-precision only when
+    // S31 is followed by D16.
+    if (IsVSCCLRM && OldReg == ARM::S31 && Reg == ARM::D16) {
+      VSCCLRMAdjustEncoding = true;
+      RC = &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID];
+    }
     // The register must be in the same register class as the first.
     if ((Reg == ARM::RA_AUTH_CODE &&
          RC != &ARMMCRegisterClasses[ARM::GPRRegClassID]) ||
@@ -4735,8 +4760,10 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
     // exception is CLRM, which is order-independent anyway, so
     // there's no potential for confusion if you write clrm {r2,r1}
     // instead of clrm {r1,r2}.
-    if (EnforceOrder &&
-        MRI->getEncodingValue(Reg) < MRI->getEncodingValue(OldReg)) {
+    EReg = MRI->getEncodingValue(Reg);
+    if (VSCCLRMAdjustEncoding)
+      EReg += 16;
+    if (EnforceOrder && EReg < EOldReg) {
       if (ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
         Warning(RegLoc, "register list not in ascending order");
       else if (!ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(Reg))
@@ -4745,9 +4772,9 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
     // VFP register lists must also be contiguous.
     if (RC != &ARMMCRegisterClasses[ARM::GPRRegClassID] &&
         RC != &ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID] &&
-        Reg != OldReg + 1)
+        EReg != EOldReg + 1)
       return Error(RegLoc, "non-contiguous register range");
-    EReg = MRI->getEncodingValue(Reg);
+
     if (!insertNoDuplicates(Registers, EReg, Reg)) {
       Warning(RegLoc, "duplicated register (" + RegTok.getString() +
                           ") in register list");
@@ -6335,9 +6362,10 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   case AsmToken::LBrac:
     return parseMemory(Operands);
   case AsmToken::LCurly: {
-    bool AllowOutOfBoundReg = Mnemonic == "vlldm" || Mnemonic == "vlstm";
+    bool IsLazyLoadStore = Mnemonic == "vlldm" || Mnemonic == "vlstm";
+    bool IsVSCCLRM = Mnemonic == "vscclrm";
     return parseRegisterList(Operands, !Mnemonic.starts_with("clr"), false,
-                             AllowOutOfBoundReg);
+                             IsLazyLoadStore, IsVSCCLRM);
   }
   case AsmToken::Dollar:
   case AsmToken::Hash: {
