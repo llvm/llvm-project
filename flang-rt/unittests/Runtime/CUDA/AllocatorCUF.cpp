@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "cuda_runtime.h"
-#include "flang-rt/flang_rt/allocator-registry.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/CUDA/allocator.h"
+#include "flang-rt/allocator-registry.h"
+#include "flang-rt/descriptor.h"
 #include "gtest/gtest.h"
 #include "../../../lib/flang_rt/terminator.h"
-#include "flang-rt/CufRuntime/allocator.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Support/Fortran.h"

@@ -9,7 +9,7 @@
 #include "namelist.h"
 #include "descriptor-io.h"
 #include "emit-encoded.h"
-#include "flang-rt/flang_rt/io-api-funcs.h"
+#include "flang-rt/io-api-funcs.h"
 #include "io-stmt.h"
 #include <algorithm>
 #include <cstring>

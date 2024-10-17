@@ -21,7 +21,7 @@
 // to use the faster BLAS routines.
 
 #include "flang/Runtime/matmul-transpose.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Common/optional.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_DESCRIPTOR_IO_H_
-#define FORTRAN_FLANG_RT_DESCRIPTOR_IO_H_
+#ifndef FLANGRT_DESCRIPTOR_IO_H_
+#define FLANGRT_DESCRIPTOR_IO_H_
 
 // Implementation of I/O data list item transfers based on descriptors.
 // (All I/O items come through here so that the code is exercised for test;
@@ -16,7 +16,7 @@
 
 #include "edit-input.h"
 #include "edit-output.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "io-stmt.h"
 #include "namelist.h"
 #include "terminator.h"
@@ -608,4 +608,4 @@ static RT_API_ATTRS bool DescriptorIO(IoStatementState &io,
   return false;
 }
 } // namespace Fortran::runtime::io::descr
-#endif /* FORTRAN_FLANG_RT_DESCRIPTOR_IO_H_ */
+#endif /* FLANGRT_DESCRIPTOR_IO_H_ */

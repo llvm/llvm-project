@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_TYPE_INFO_H_
-#define FORTRAN_FLANG_RT_TYPE_INFO_H_
+#ifndef FLANGRT_TYPE_INFO_H_
+#define FLANGRT_TYPE_INFO_H_
 
 // A C++ perspective of the derived type description schemata in
 // flang/module/__fortran_type_info.f90.
 
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "terminator.h"
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/bit-population-count.h"
@@ -321,4 +321,4 @@ private:
 };
 
 } // namespace Fortran::runtime::typeInfo
-#endif /* FORTRAN_FLANG_RT_TYPE_INFO_H_ */
+#endif /* FLANGRT_TYPE_INFO_H_ */

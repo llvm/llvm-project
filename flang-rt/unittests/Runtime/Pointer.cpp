@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/pointer.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "gtest/gtest.h"
 #include "tools.h"
 

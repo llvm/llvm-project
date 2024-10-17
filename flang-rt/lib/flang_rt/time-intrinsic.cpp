@@ -9,7 +9,7 @@
 // Implements time-related intrinsic subroutines.
 
 #include "flang/Runtime/time-intrinsic.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Runtime/cpp-type.h"

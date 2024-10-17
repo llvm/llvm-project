@@ -8,7 +8,7 @@
 
 #include "flang/Runtime/command.h"
 #include "environment.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"

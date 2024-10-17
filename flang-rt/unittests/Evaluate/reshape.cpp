@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "flang/Runtime/transformational.h"
 #include "flang/Testing/testing.h"
 #include <cinttypes>

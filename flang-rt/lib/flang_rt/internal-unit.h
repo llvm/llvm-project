@@ -8,11 +8,11 @@
 
 // Fortran internal I/O "units"
 
-#ifndef FORTRAN_FLANG_RT_INTERNAL_UNIT_H_
-#define FORTRAN_FLANG_RT_INTERNAL_UNIT_H_
+#ifndef FLANGRT_INTERNAL_UNIT_H_
+#define FLANGRT_INTERNAL_UNIT_H_
 
 #include "connection.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include <cinttypes>
 #include <type_traits>
 
@@ -56,4 +56,4 @@ private:
 extern template class InternalDescriptorUnit<Direction::Output>;
 extern template class InternalDescriptorUnit<Direction::Input>;
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_INTERNAL_UNIT_H_ */
+#endif /* FLANGRT_INTERNAL_UNIT_H_ */

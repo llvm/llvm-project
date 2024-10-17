@@ -18,7 +18,7 @@
 
 #include "flang/Runtime/transformational.h"
 #include "copy.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Common/float128.h"

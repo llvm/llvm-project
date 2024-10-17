@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/transformational.h"
-#include "flang-rt/flang_rt/type-code.h"
+#include "flang-rt/type-code.h"
 #include "gtest/gtest.h"
 #include "tools.h"
 #include "flang/Common/float128.h"

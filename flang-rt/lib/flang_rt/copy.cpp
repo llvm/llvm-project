@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "copy.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "stack.h"
 #include "terminator.h"
 #include "type-info.h"

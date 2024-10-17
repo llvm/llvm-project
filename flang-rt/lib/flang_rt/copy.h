@@ -9,10 +9,10 @@
 // Utilities that copy data in a type-aware fashion, allocating & duplicating
 // allocatable/automatic components of derived types along the way.
 
-#ifndef FORTRAN_FLANG_RT_COPY_H_
-#define FORTRAN_FLANG_RT_COPY_H_
+#ifndef FLANGRT_COPY_H_
+#define FLANGRT_COPY_H_
 
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 
 namespace Fortran::runtime {
 
@@ -22,4 +22,4 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     const Descriptor &from, const SubscriptValue fromAt[], Terminator &);
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FLANG_RT_COPY_H_ */
+#endif /* FLANGRT_COPY_H_ */

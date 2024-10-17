@@ -1,4 +1,4 @@
-//===-- include/flang-rt/flang_rt/descriptor.h ------------------*- C++ -*-===//
+//===-- include/flang-rt/descriptor.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_DESCRIPTOR_H_
-#define FORTRAN_FLANG_RT_DESCRIPTOR_H_
+#ifndef FLANGRT_DESCRIPTOR_H_
+#define FLANGRT_DESCRIPTOR_H_
 
 // Defines data structures used during execution of a Fortran program
 // to implement nontrivial dummy arguments, pointers, allocatables,
@@ -18,8 +18,8 @@
 // User C code is welcome to depend on that ISO_Fortran_binding.h file,
 // but should never reference this internal header.
 
-#include "flang-rt/flang_rt/memory.h"
-#include "flang-rt/flang_rt/type-code.h"
+#include "flang-rt/memory.h"
+#include "flang-rt/type-code.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include <algorithm>
@@ -482,4 +482,4 @@ private:
 };
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FLANG_RT_DESCRIPTOR_H_ */
+#endif /* FLANGRT_DESCRIPTOR_H_ */

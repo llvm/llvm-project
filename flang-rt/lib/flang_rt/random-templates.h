@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_RANDOM_TEMPLATES_H_
-#define FORTRAN_FLANG_RT_RANDOM_TEMPLATES_H_
+#ifndef FLANGRT_RANDOM_TEMPLATES_H_
+#define FLANGRT_RANDOM_TEMPLATES_H_
 
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "lock.h"
 #include "numeric-templates.h"
 #include "flang/Common/optional.h"
@@ -85,4 +85,4 @@ inline void Generate(const Descriptor &harvest) {
 
 } // namespace Fortran::runtime::random
 
-#endif /* FORTRAN_FLANG_RT_RANDOM_TEMPLATES_H_ */
+#endif /* FLANGRT_RANDOM_TEMPLATES_H_ */

@@ -8,14 +8,14 @@
 
 // Fortran external I/O units
 
-#ifndef FORTRAN_FLANG_RT_UNIT_H_
-#define FORTRAN_FLANG_RT_UNIT_H_
+#ifndef FLANGRT_UNIT_H_
+#define FLANGRT_UNIT_H_
 
 #include "buffer.h"
 #include "connection.h"
 #include "environment.h"
 #include "file.h"
-#include "flang-rt/flang_rt/memory.h"
+#include "flang-rt/memory.h"
 #include "format.h"
 #include "io-error.h"
 #include "io-stmt.h"
@@ -291,4 +291,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_UNIT_H_ */
+#endif /* FLANGRT_UNIT_H_ */

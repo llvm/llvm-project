@@ -1,4 +1,4 @@
-//===-- include/flang-rt/flang_rt/memory.h ----------------------*- C++ -*-===//
+//===-- include/flang-rt/memory.h -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 // Thin wrapper around malloc()/free() to isolate the dependency,
 // ease porting, and provide an owning pointer.
 
-#ifndef FORTRAN_FLANG_RT_MEMORY_H_
-#define FORTRAN_FLANG_RT_MEMORY_H_
+#ifndef FLANGRT_MEMORY_H_
+#define FLANGRT_MEMORY_H_
 
 #include "flang/Common/api-attrs.h"
 #include <cassert>
@@ -170,4 +170,4 @@ template <typename A> struct Allocator {
 };
 } // namespace Fortran::runtime
 
-#endif /* FORTRAN_FLANG_RT_MEMORY_H_ */
+#endif /* FLANGRT_MEMORY_H_ */

@@ -1,4 +1,4 @@
-//===-- include/flang-rt/flang_rt/array-constructor.h -----------*- C++ -*-===//
+//===-- include/flang-rt/array-constructor.h --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,10 +9,10 @@
 // External APIs to create temporary storage for array constructors when their
 // final extents or length parameters cannot be pre-computed.
 
-#ifndef FORTRAN_FLANG_RT_ARRAY_CONSTRUCTOR_H_
-#define FORTRAN_FLANG_RT_ARRAY_CONSTRUCTOR_H_
+#ifndef FLANGRT_ARRAY_CONSTRUCTOR_H_
+#define FLANGRT_ARRAY_CONSTRUCTOR_H_
 
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "flang/Runtime/array-constructor-consts.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstdint>
@@ -45,4 +45,4 @@ private:
 };
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FLANG_RT_ARRAY_CONSTRUCTOR_H_ */
+#endif /* FLANGRT_ARRAY_CONSTRUCTOR_H_ */

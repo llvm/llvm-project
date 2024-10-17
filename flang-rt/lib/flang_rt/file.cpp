@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "file.h"
-#include "flang-rt/flang_rt/memory.h"
+#include "flang-rt/memory.h"
 #include "tools.h"
 #include "flang/Runtime/magic-numbers.h"
 #include <algorithm>
