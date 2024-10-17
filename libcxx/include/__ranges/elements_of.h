@@ -38,8 +38,8 @@ struct elements_of {
   // This explicit constructor is required because AppleClang 15 hasn't
   // implemented P0960R3.
   template <std::ranges::range _Range2, class _Allocator2 = std::allocator<byte>>
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr elements_of(_Range2&& Range, _Allocator2&& Alloc = _Allocator())
-      : range(std::forward<_Range2>(Range)), allocator(std::forward<_Allocator2>(Alloc)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr elements_of(_Range2&& __range, _Allocator2&& __alloc = _Allocator())
+      : range(std::forward<_Range2>(__range)), allocator(std::forward<_Allocator2>(__alloc)) {}
 #  endif
 };
 

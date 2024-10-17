@@ -27,7 +27,7 @@ struct Range {
 
   Iterator begin() { return Iterator(data_.data()); }
 
-  sentinel_wrapper<Iterator> end() { return Sentinel(Iterator(data_.data() + data_.size())); }
+  Sentinel end() { return Sentinel(Iterator(data_.data() + data_.size())); }
 
 private:
   std::vector<int> data_ = {0, 1, 2, 3};
