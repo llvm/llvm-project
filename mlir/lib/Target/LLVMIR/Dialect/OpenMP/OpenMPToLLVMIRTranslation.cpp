@@ -137,9 +137,9 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
 /// region, and a branch from any block with an successor-less OpenMP terminator
 /// to `continuationBlock`. Populates `continuationBlockPHIs` with the PHI nodes
 /// of the continuation block if provided.
-static llvm::BasicBlock *convertOmpOpRegions(
+static llvm::Expected<llvm::BasicBlock *> convertOmpOpRegions(
     Region &region, StringRef blockName, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation, LogicalResult &bodyGenStatus,
+    LLVM::ModuleTranslation &moduleTranslation,
     SmallVectorImpl<llvm::PHINode *> *continuationBlockPHIs = nullptr) {
   llvm::BasicBlock *continuationBlock =
       splitBB(builder, true, "omp.region.cont");
@@ -215,10 +215,8 @@ static llvm::BasicBlock *convertOmpOpRegions(
 
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     if (failed(
-            moduleTranslation.convertBlock(*bb, bb->isEntryBlock(), builder))) {
-      bodyGenStatus = failure();
-      return continuationBlock;
-    }
+            moduleTranslation.convertBlock(*bb, bb->isEntryBlock(), builder)))
+      return llvm::createStringError("failed region translation");
 
     // Special handling for `omp.yield` and `omp.terminator` (we may have more
     // than one): they return the control to the parent OpenMP dialect operation
@@ -1171,20 +1169,26 @@ static LogicalResult
 convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  LogicalResult bodyGenStatus = success();
-  if (!tgOp.getTaskReductionVars().empty() || !tgOp.getAllocateVars().empty()) {
+  if (!tgOp.getTaskReductionVars().empty() || !tgOp.getAllocateVars().empty())
     return tgOp.emitError("unhandled clauses for translation to LLVM IR");
-  }
+
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
     builder.restoreIP(codegenIP);
-    convertOmpOpRegions(tgOp.getRegion(), "omp.taskgroup.region", builder,
-                        moduleTranslation, bodyGenStatus);
+    return convertOmpOpRegions(tgOp.getRegion(), "omp.taskgroup.region",
+                               builder, moduleTranslation)
+        .takeError();
   };
+
   InsertPointTy allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTaskgroup(
-      ompLoc, allocaIP, bodyCB));
-  return bodyGenStatus;
+  auto result = moduleTranslation.getOpenMPBuilder()->createTaskgroup(
+      ompLoc, allocaIP, bodyCB);
+
+  if (!result)
+    return tgOp.emitError(llvm::toString(result.takeError()));
+
+  builder.restoreIP(*result);
+  return success();
 }
 
 static LogicalResult
