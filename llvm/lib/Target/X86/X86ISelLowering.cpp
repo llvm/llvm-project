@@ -858,6 +858,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FASIN  , MVT::f80, Expand);
     setOperationAction(ISD::FACOS  , MVT::f80, Expand);
     setOperationAction(ISD::FATAN  , MVT::f80, Expand);
+    setOperationAction(ISD::FATAN2 , MVT::f80, Expand);
     setOperationAction(ISD::FSINH  , MVT::f80, Expand);
     setOperationAction(ISD::FCOSH  , MVT::f80, Expand);
     setOperationAction(ISD::FTANH  , MVT::f80, Expand);
@@ -2562,6 +2563,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
          {ISD::FACOS,  ISD::STRICT_FACOS,
           ISD::FASIN,  ISD::STRICT_FASIN,
           ISD::FATAN,  ISD::STRICT_FATAN,
+          ISD::FATAN2, ISD::STRICT_FATAN2,
           ISD::FCEIL,  ISD::STRICT_FCEIL,
           ISD::FCOS,   ISD::STRICT_FCOS,
           ISD::FCOSH,  ISD::STRICT_FCOSH,
@@ -31188,7 +31190,6 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   LLVMContext &Ctx = AI->getContext();
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
                                           PointerType::getUnqual(Ctx));
-  Function *BitTest = nullptr;
   Value *Result = nullptr;
   auto BitTested = FindSingleBitChange(AI->getValOperand());
   assert(BitTested.first != nullptr);
@@ -31196,15 +31197,10 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   if (BitTested.second == ConstantBit || BitTested.second == NotConstantBit) {
     auto *C = cast<ConstantInt>(I->getOperand(I->getOperand(0) == AI ? 1 : 0));
 
-    BitTest = Intrinsic::getOrInsertDeclaration(AI->getModule(), IID_C,
-                                                AI->getType());
-
     unsigned Imm = llvm::countr_zero(C->getZExtValue());
-    Result = Builder.CreateCall(BitTest, {Addr, Builder.getInt8(Imm)});
+    Result = Builder.CreateIntrinsic(IID_C, AI->getType(),
+                                     {Addr, Builder.getInt8(Imm)});
   } else {
-    BitTest = Intrinsic::getOrInsertDeclaration(AI->getModule(), IID_I,
-                                                AI->getType());
-
     assert(BitTested.second == ShiftBit || BitTested.second == NotShiftBit);
 
     Value *SI = BitTested.first;
@@ -31221,7 +31217,7 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
     // << (X % sizeof_bits(X)) we can drop the shift mask and AGEN in
     // favor of just a raw BT{S|R|C}.
 
-    Result = Builder.CreateCall(BitTest, {Addr, BitPos});
+    Result = Builder.CreateIntrinsic(IID_I, AI->getType(), {Addr, BitPos});
     Result = Builder.CreateZExtOrTrunc(Result, AI->getType());
 
     // If the result is only used for zero/non-zero status then we don't need to
@@ -31362,12 +31358,11 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     IID = Intrinsic::x86_atomic_xor_cc;
     break;
   }
-  Function *CmpArith =
-      Intrinsic::getOrInsertDeclaration(AI->getModule(), IID, AI->getType());
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
                                           PointerType::getUnqual(Ctx));
-  Value *Call = Builder.CreateCall(
-      CmpArith, {Addr, AI->getValOperand(), Builder.getInt32((unsigned)CC)});
+  Value *Call = Builder.CreateIntrinsic(
+      IID, AI->getType(),
+      {Addr, AI->getValOperand(), Builder.getInt32((unsigned)CC)});
   Value *Result = Builder.CreateTrunc(Call, Type::getInt1Ty(Ctx));
   ICI->replaceAllUsesWith(Result);
   ICI->eraseFromParent();
@@ -52743,8 +52738,8 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
       if (XOR->getOpcode() == ISD::XOR && XOR.hasOneUse()) {
         KnownBits XORRHS = DAG.computeKnownBits(XOR.getOperand(1));
         if (XORRHS.isConstant()) {
-          APInt ConjugationInt32 = APInt(32, 0x80000000, true);
-          APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL, true);
+          APInt ConjugationInt32 = APInt(32, 0x80000000);
+          APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL);
           if ((XORRHS.getBitWidth() == 32 &&
                XORRHS.getConstant() == ConjugationInt32) ||
               (XORRHS.getBitWidth() == 64 &&
@@ -52783,7 +52778,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
            Flags.hasNoSignedZeros();
   };
   auto IsVectorAllNegativeZero = [&DAG](SDValue Op) {
-    APInt AI = APInt(32, 0x80008000, true);
+    APInt AI = APInt(32, 0x80008000);
     KnownBits Bits = DAG.computeKnownBits(Op);
     return Bits.getBitWidth() == 32 && Bits.isConstant() &&
            Bits.getConstant() == AI;

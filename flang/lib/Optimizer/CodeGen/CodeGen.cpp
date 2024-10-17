@@ -3373,19 +3373,7 @@ struct AbsentOpConversion : public fir::FIROpConversion<fir::AbsentOp> {
   matchAndRewrite(fir::AbsentOp absent, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type ty = convertType(absent.getType());
-    mlir::Location loc = absent.getLoc();
-
-    if (mlir::isa<fir::BoxCharType>(absent.getType())) {
-      auto structTy = mlir::cast<mlir::LLVM::LLVMStructType>(ty);
-      assert(!structTy.isOpaque() && !structTy.getBody().empty());
-      auto undefStruct = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
-      auto nullField =
-          rewriter.create<mlir::LLVM::ZeroOp>(loc, structTy.getBody()[0]);
-      rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
-          absent, undefStruct, nullField, 0);
-    } else {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(absent, ty);
-    }
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(absent, ty);
     return mlir::success();
   }
 };

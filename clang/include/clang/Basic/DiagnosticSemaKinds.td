@@ -2182,10 +2182,10 @@ def err_covariant_return_incomplete : Error<
 def err_covariant_return_type_different_qualifications : Error<
   "return type of virtual function %0 is not covariant with the return type of "
   "the function it overrides (%1 has different qualifiers than %2)">;
-def err_covariant_return_type_class_type_more_qualified : Error<
+def err_covariant_return_type_class_type_not_same_or_less_qualified : Error<
   "return type of virtual function %0 is not covariant with the return type of "
-  "the function it overrides (class type %1 is more qualified than class "
-  "type %2">;
+  "the function it overrides (class type %1 does not have the same "
+  "cv-qualification as or less cv-qualification than class type %2)">;
 
 // C++ implicit special member functions
 def note_in_declaration_of_implicit_special_member : Note<
@@ -9230,6 +9230,8 @@ def err_typecheck_cond_incompatible_operands : Error<
 def err_typecheck_expect_scalar_or_vector : Error<
   "invalid operand of type %0 where %1 or "
   "a vector of such type is required">;
+def err_typecheck_expect_any_scalar_or_vector : Error<
+  "invalid operand of type %0 where a scalar or vector is required">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
@@ -10124,6 +10126,8 @@ def note_lambda_capture_initializer : Note<
   " via initialization of lambda capture %0}1">;
 def note_init_with_default_member_initializer : Note<
   "initializing field %0 with default member initializer">;
+def note_init_with_default_argument : Note<
+  "initializing parameter %0 with default argument">;
 
 // Check for initializing a member variable with the address or a reference to
 // a constructor parameter.

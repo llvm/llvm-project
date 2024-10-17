@@ -52,6 +52,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinpif16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinpif16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinpif16
+)
+
+add_fp_unittest(
   sincosf_test
   SUITE
     libc-math-smoke-tests
@@ -1221,6 +1232,19 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp10f16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
+  exp10m1f16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp10m1f16_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.exp10m1f16
     libc.src.__support.FPUtil.cast
 )
 
