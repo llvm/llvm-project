@@ -346,9 +346,183 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) { return false; }
 
 #ifndef _WIN32
 
+#if defined(_AIX)
+
+#include <stdio.h>
+extern char **p_xargv;
+
+/* Fix missing Dl_info & dladdr in AIX
+ * The code is taken from netbsd.org (src/crypto/external/bsd/openssl/dist/crypto/dso/dso_dlfcn.c)
+ * except strlcpy & strlcat (those are taken from openbsd.org (src/lib/libc/string))
+ */
+/*-
+ * See IBM's AIX Version 7.2, Technical Reference:
+ *  Base Operating System and Extensions, Volume 1 and 2
+ *  https://www.ibm.com/support/knowledgecenter/ssw_aix_72/com.ibm.aix.base/technicalreferences.htm
+ */
+#include <sys/ldr.h>
+#include <errno.h>
+
+/* strlcpy:
+ * Copy string src to buffer dst of size dsize.  At most dsize-1
+ * chars will be copied.  Always NUL terminates (unless dsize == 0).
+ * Returns strlen(src); if retval >= dsize, truncation occurred.
+ */
+size_t strlcpy(char *dst, const char *src, size_t dsize)
+{
+    const char *osrc = src;
+    size_t nleft = dsize;
+
+    /* Copy as many bytes as will fit. */
+    if (nleft != 0) {
+        while (--nleft != 0) {
+            if ((*dst++ = *src++) == '\0') {
+                break;
+            }
+        }
+    }
+
+    /* Not enough room in dst, add NUL and traverse rest of src. */
+    if (nleft == 0) {
+        if (dsize != 0) {
+            *dst = '\0';		/* NUL-terminate dst */
+        }
+        while (*src++) {
+            ;
+        }
+    }
+
+    return src - osrc - 1;	/* count does not include NUL */
+}
+
+/* strlcat:
+ * Appends src to string dst of size dsize (unlike strncat, dsize is the
+ * full size of dst, not space left).  At most dsize-1 characters
+ * will be copied.  Always NUL terminates (unless dsize <= strlen(dst)).
+ * Returns strlen(src) + MIN(dsize, strlen(initial dst)).
+ * If retval >= dsize, truncation occurred.
+ */
+size_t strlcat(char *dst, const char *src, size_t dsize)
+{
+    const char *odst = dst;
+    const char *osrc = src;
+    size_t n = dsize;
+    size_t dlen;
+
+    /* Find the end of dst and adjust bytes left but don't go past end. */
+    while (n-- != 0 && *dst != '\0') {
+        dst++;
+    }
+    dlen = dst - odst;
+    n = dsize - dlen;
+
+    if (n-- == 0) {
+        return dlen + strlen(src);
+    }
+    while (*src != '\0') {
+        if (n != 0) {
+            *dst++ = *src;
+            n--;
+        }
+        src++;
+    }
+    *dst = '\0';
+
+    return dlen + src - osrc;	/* count does not include NUL */
+}
+
+/* ~ 64 * (sizeof(struct ld_info) + _XOPEN_PATH_MAX + _XOPEN_NAME_MAX) */
+#  define DLFCN_LDINFO_SIZE 86976
+typedef struct Dl_info {
+    const char *dli_fname;
+} Dl_info;
+/*
+ * This dladdr()-implementation will also find the ptrgl (Pointer Glue) virtual
+ * address of a function, which is just located in the DATA segment instead of
+ * the TEXT segment.
+ */
+static int dladdr(const void *ptr, Dl_info *dl)
+{
+    uintptr_t addr = (uintptr_t)ptr;
+    struct ld_info *ldinfos;
+    struct ld_info *next_ldi;
+    struct ld_info *this_ldi;
+
+    if ((ldinfos = (struct ld_info *)malloc(DLFCN_LDINFO_SIZE)) == NULL) {
+        dl->dli_fname = NULL;
+        return 0;
+    }
+
+    if ((loadquery(L_GETINFO, (void *)ldinfos, DLFCN_LDINFO_SIZE)) < 0) {
+        /*-
+         * Error handling is done through errno and dlerror() reading errno:
+         *  ENOMEM (ldinfos buffer is too small),
+         *  EINVAL (invalid flags),
+         *  EFAULT (invalid ldinfos ptr)
+         */
+        free((void *)ldinfos);
+        dl->dli_fname = NULL;
+        return 0;
+    }
+    next_ldi = ldinfos;
+
+    do {
+        this_ldi = next_ldi;
+        if (((addr >= (uintptr_t)this_ldi->ldinfo_textorg)
+             && (addr < ((uintptr_t)this_ldi->ldinfo_textorg +
+                         this_ldi->ldinfo_textsize)))
+            || ((addr >= (uintptr_t)this_ldi->ldinfo_dataorg)
+                && (addr < ((uintptr_t)this_ldi->ldinfo_dataorg +
+                            this_ldi->ldinfo_datasize)))) {
+            char *buffer = NULL;
+            char *member = NULL;
+            size_t buffer_sz;
+            size_t member_len;
+
+            buffer_sz = strlen(this_ldi->ldinfo_filename) + 1;
+            member = this_ldi->ldinfo_filename + buffer_sz;
+            if ((member_len = strlen(member)) > 0) {
+                buffer_sz += 1 + member_len + 1;
+            }
+            if ((buffer = (char *)malloc(buffer_sz)) != NULL) {
+                strlcpy(buffer, this_ldi->ldinfo_filename, buffer_sz);
+                if (member_len > 0) {
+                    /*
+                     * Need to respect a possible member name and not just
+                     * returning the path name in this case. See docs:
+                     * sys/ldr.h, loadquery() and dlopen()/RTLD_MEMBER.
+                     */
+                    strlcat(buffer, "(", buffer_sz);
+                    strlcat(buffer, member, buffer_sz);
+                    strlcat(buffer, ")", buffer_sz);
+                }
+                dl->dli_fname = buffer;
+            }
+            break;
+        } else {
+            next_ldi = (struct ld_info *)((uintptr_t)this_ldi +
+                                          this_ldi->ldinfo_next);
+        }
+    } while (this_ldi->ldinfo_next);
+    free((void *)ldinfos);
+    return dl->dli_fname != NULL;
+}
+
+#endif
+
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
 #if !defined(__ANDROID__)
+#ifdef _AIX
+  if (host_addr == reinterpret_cast<void *>(HostInfoBase::ComputeSharedLibraryDirectory)) {
+    // FIXME: AIX dladdr return "lldb" for this case
+    if (p_xargv[0]) {
+      module_filespec.SetFile(p_xargv[0], FileSpec::Style::native);
+      FileSystem::Instance().Resolve(module_filespec);
+      return module_filespec;
+    }
+  }
+#endif
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname) {
@@ -360,12 +534,6 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   return module_filespec;
 }
 
-#endif
-
-#if !defined(__linux__)
-bool Host::FindProcessThreads(const lldb::pid_t pid, TidMap &tids_to_attach) {
-  return false;
-}
 #endif
 
 struct ShellInfo {

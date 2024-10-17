@@ -500,6 +500,8 @@ dw_addr_t DWARFFormValue::Address() const {
       &offset, index_size);
 }
 
+bool UGLY_FLAG_FOR_AIX __attribute__((weak)) = false;
+
 std::pair<DWARFUnit *, uint64_t>
 DWARFFormValue::ReferencedUnitAndOffset() const {
   uint64_t value = m_value.uval;
@@ -512,6 +514,8 @@ DWARFFormValue::ReferencedUnitAndOffset() const {
     assert(m_unit); // Unit must be valid for DW_FORM_ref forms that are compile
                     // unit relative or we will get this wrong
     value += m_unit->GetOffset();
+    if (UGLY_FLAG_FOR_AIX)
+      value -= 8;
     if (!m_unit->ContainsDIEOffset(value)) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
           "DW_FORM_ref* DIE reference {0:x16} is outside of its CU", value);

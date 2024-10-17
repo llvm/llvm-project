@@ -92,6 +92,10 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if defined(_AIX)
+#include <sys/ldr.h>
+#endif
+
 #define DEBUGSERVER_BASENAME "debugserver"
 using namespace lldb;
 using namespace lldb_private;
@@ -2958,6 +2962,13 @@ Status ProcessGDBRemote::DoGetMemoryRegionInfo(addr_t load_addr,
   Status error(m_gdb_comm.GetMemoryRegionInfo(load_addr, region_info));
   return error;
 }
+
+#if defined(_AIX)
+Status ProcessGDBRemote::DoGetLDXINFO(struct ld_xinfo *info_ptr) {
+  Status error(m_gdb_comm.GetLDXINFO(info_ptr));
+  return error;
+}
+#endif
 
 std::optional<uint32_t> ProcessGDBRemote::GetWatchpointSlotCount() {
   return m_gdb_comm.GetWatchpointSlotCount();
