@@ -130,6 +130,10 @@ bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(StringRef name) {
   using namespace swift::Demangle;
   Context ctx;
   NodePointer node = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
+  return IsAnySwiftAsyncFunctionSymbol(node);
+}
+
+bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(NodePointer node) {
   if (!node || node->getKind() != Node::Kind::Global || !node->getNumChildren())
     return false;
   auto marker = node->getFirstChild()->getKind();
