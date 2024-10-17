@@ -1738,7 +1738,7 @@ Instruction *InstCombinerImpl::foldICmpAndShift(ICmpInst &Cmp,
 
     // Compute X & (C2 << Y).
     Value *NewAnd = Builder.CreateAnd(Shift->getOperand(0), NewShift);
-    return replaceOperand(Cmp, 0, NewAnd);
+    return new ICmpInst(Cmp.getPredicate(), NewAnd, Cmp.getOperand(1));
   }
 
   return nullptr;
@@ -1844,7 +1844,7 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                /*HasNUW=*/true),
                              One, Or->getName());
         Value *NewAnd = Builder.CreateAnd(A, NewOr, And->getName());
-        return replaceOperand(Cmp, 0, NewAnd);
+        return new ICmpInst(Cmp.getPredicate(), NewAnd, Cmp.getOperand(1));
       }
     }
   }
@@ -6771,11 +6771,15 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   }
 
   // Turn a signed comparison into an unsigned one if both operands are known to
-  // have the same sign.
-  if (I.isSigned() &&
+  // have the same sign. Set samesign if possible (except for equality
+  // predicates).
+  if ((I.isSigned() || (I.isUnsigned() && !I.hasSameSign())) &&
       ((Op0Known.Zero.isNegative() && Op1Known.Zero.isNegative()) ||
-       (Op0Known.One.isNegative() && Op1Known.One.isNegative())))
-    return new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
+       (Op0Known.One.isNegative() && Op1Known.One.isNegative()))) {
+    I.setPredicate(I.getUnsignedPredicate());
+    I.setSameSign();
+    return &I;
+  }
 
   return nullptr;
 }

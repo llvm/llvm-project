@@ -87,6 +87,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -132,6 +133,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -170,6 +172,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:
+  case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -339,6 +342,10 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   Res.setApproxFunc(FMFs.ApproxFunc);
   return Res;
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPSingleDefRecipe::dump() const { VPDef::dump(); }
+#endif
 
 template <unsigned PartOpIdx>
 VPValue *

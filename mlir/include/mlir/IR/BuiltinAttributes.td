@@ -702,6 +702,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
       }
 
       // TODO: Avoid implicit trunc?
+      // See https://github.com/llvm/llvm-project/issues/112510.
       IntegerType intTy = ::llvm::cast<IntegerType>(type);
       APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger(),
                     /*implicitTrunc=*/true);

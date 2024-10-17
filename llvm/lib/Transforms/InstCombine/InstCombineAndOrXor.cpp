@@ -2722,13 +2722,15 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
   }
 
+  if (Value *Res =
+          foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/true, /*IsLogical=*/false))
+    return replaceInstUsesWith(I, Res);
+
   {
     ICmpInst *LHS = dyn_cast<ICmpInst>(Op0);
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
-    if (LHS && RHS)
-      if (Value *Res = foldAndOrOfICmps(LHS, RHS, I, /* IsAnd */ true))
-        return replaceInstUsesWith(I, Res);
 
+    // TODO: Base this on foldBooleanAndOr instead?
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'and' instructions might have to be created.
     if (LHS && match(Op1, m_OneUse(m_LogicalAnd(m_Value(X), m_Value(Y))))) {
@@ -2766,11 +2768,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                                             : Builder.CreateAnd(X, Res));
     }
   }
-
-  if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
-    if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
-      if (Value *Res = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true))
-        return replaceInstUsesWith(I, Res);
 
   if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))
     return FoldedFCmps;
@@ -3369,8 +3366,14 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // We can convert this case to bitwise and, because both operands are used
   // on the LHS, and as such poison from both will propagate.
   if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd,
-                                             /*IsLogical*/ false, Builder, Q))
+                                             /*IsLogical=*/false, Builder, Q)) {
+    // If RHS is still used, we should drop samesign flag.
+    if (IsLogical && RHS->hasSameSign() && !RHS->use_empty()) {
+      RHS->setSameSign(false);
+      addToWorklist(RHS);
+    }
     return V;
+  }
 
   if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder, *this))
     return V;
@@ -3515,6 +3518,27 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   }
 
   return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
+}
+
+/// If IsLogical is true, then the and/or is in select form and the transform
+/// must be poison-safe.
+Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
+                                          Instruction &I, bool IsAnd,
+                                          bool IsLogical) {
+  if (!LHS->getType()->isIntOrIntVectorTy(1))
+    return nullptr;
+
+  if (auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
+    if (auto *RHSCmp = dyn_cast<ICmpInst>(RHS))
+      if (Value *Res = foldAndOrOfICmps(LHSCmp, RHSCmp, I, IsAnd, IsLogical))
+        return Res;
+
+  if (auto *LHSCmp = dyn_cast<FCmpInst>(LHS))
+    if (auto *RHSCmp = dyn_cast<FCmpInst>(RHS))
+      if (Value *Res = foldLogicOfFCmps(LHSCmp, RHSCmp, IsAnd, IsLogical))
+        return Res;
+
+  return nullptr;
 }
 
 static Value *foldOrOfInversions(BinaryOperator &I,
@@ -3798,13 +3822,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (SwappedForXor)
     std::swap(Op0, Op1);
 
+  if (Value *Res =
+          foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/false, /*IsLogical=*/false))
+    return replaceInstUsesWith(I, Res);
+
   {
     ICmpInst *LHS = dyn_cast<ICmpInst>(Op0);
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
-    if (LHS && RHS)
-      if (Value *Res = foldAndOrOfICmps(LHS, RHS, I, /* IsAnd */ false))
-        return replaceInstUsesWith(I, Res);
 
+    // TODO: Base this on foldBooleanAndOr instead?
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'or' instructions might have to be created.
     Value *X, *Y;
@@ -3843,11 +3869,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                             : Builder.CreateOr(X, Res));
     }
   }
-
-  if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
-    if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
-      if (Value *Res = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false))
-        return replaceInstUsesWith(I, Res);
 
   if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))
     return FoldedFCmps;

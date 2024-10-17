@@ -1434,7 +1434,7 @@ define <16 x i16> @vec256_i16_unsigned_reg_reg(<16 x i16> %a1, <16 x i16> %a2) n
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpminuw %ymm1, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm3
-; AVX512F-NEXT:    vpternlogq $15, %zmm3, %zmm3, %zmm3
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm3 = ~zmm3
 ; AVX512F-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
 ; AVX512F-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm1
 ; AVX512F-NEXT:    vpsubw %ymm2, %ymm1, %ymm1
@@ -1450,7 +1450,7 @@ define <16 x i16> @vec256_i16_unsigned_reg_reg(<16 x i16> %a1, <16 x i16> %a2) n
 ; AVX512VL-FALLBACK-NEXT:    vpsubw %ymm2, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm2
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %ymm2, %ymm2, %ymm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogq {{.*#+}} ymm2 = ~ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpsubw %ymm2, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %ymm0, %ymm1, %ymm0
@@ -2016,7 +2016,7 @@ define <32 x i8> @vec256_i8_signed_reg_reg(<32 x i8> %a1, <32 x i8> %a2) nounwin
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm2, %ymm3, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} ymm2 = ymm1 ^ (ymm2 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm1, %ymm2, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    retq
@@ -2169,7 +2169,7 @@ define <32 x i8> @vec256_i8_unsigned_reg_reg(<32 x i8> %a1, <32 x i8> %a2) nounw
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpminub %ymm1, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm3
-; AVX512F-NEXT:    vpternlogq $15, %zmm3, %zmm3, %zmm3
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm3 = ~zmm3
 ; AVX512F-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
 ; AVX512F-NEXT:    vpmaxub %ymm1, %ymm0, %ymm1
 ; AVX512F-NEXT:    vpsubb %ymm2, %ymm1, %ymm1
@@ -2193,8 +2193,8 @@ define <32 x i8> @vec256_i8_unsigned_reg_reg(<32 x i8> %a1, <32 x i8> %a2) nounw
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm2, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm2
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %ymm2, %ymm2, %ymm2
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpternlogq {{.*#+}} ymm2 = ~ymm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} ymm1 = ymm2 ^ (ymm1 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm2, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    retq
@@ -2372,7 +2372,7 @@ define <32 x i8> @vec256_i8_signed_mem_reg(ptr %a1_addr, <32 x i8> %a2) nounwind
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm2, %ymm3, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} ymm2 = ymm0 ^ (ymm2 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm0, %ymm2, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    retq
@@ -2550,7 +2550,7 @@ define <32 x i8> @vec256_i8_signed_reg_mem(<32 x i8> %a1, ptr %a2_addr) nounwind
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm2, %ymm3, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} ymm2 = ymm1 ^ (ymm2 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm1, %ymm2, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    retq
@@ -2733,7 +2733,7 @@ define <32 x i8> @vec256_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind 
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm2, %ymm3, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} ymm2 = ymm1 ^ (ymm2 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm1, %ymm2, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    retq

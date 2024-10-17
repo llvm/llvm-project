@@ -5657,13 +5657,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
             *Arg3 = EmitScalarExpr(E->getArg(3));
       llvm::FunctionType *FTy = llvm::FunctionType::get(
           Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
+      Value *ACast = Builder.CreateAddrSpaceCast(Arg3, I8PTy);
       // We know the third argument is an integer type, but we may need to cast
       // it to i32.
       if (Arg2->getType() != Int32Ty)
         Arg2 = Builder.CreateZExtOrTrunc(Arg2, Int32Ty);
       return RValue::get(
           EmitRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name),
-                          {Arg0, Arg1, Arg2, Arg3, PacketSize, PacketAlign}));
+                          {Arg0, Arg1, Arg2, ACast, PacketSize, PacketAlign}));
     }
   }
   // OpenCL v2.0 s6.13.16 ,s9.17.3.5 - Built-in pipe reserve read and write
@@ -18904,6 +18905,24 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
+    // Due to the use of variadic arguments we must explicitly retreive them and
+    // create our function type.
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Value *OpIndex = EmitScalarExpr(E->getArg(1));
+    llvm::FunctionType *FT = llvm::FunctionType::get(
+        OpExpr->getType(), ArrayRef{OpExpr->getType(), OpIndex->getType()},
+        false);
+
+    // Get overloaded name
+    std::string Name =
+        Intrinsic::getName(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
+                           ArrayRef{OpExpr->getType()}, &CGM.getModule());
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
+                                                     /*Local=*/false,
+                                                     /*AssumeConvergent=*/true),
+                           ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);

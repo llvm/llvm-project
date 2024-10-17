@@ -1646,8 +1646,9 @@ void VPlanTransforms::createInterleaveGroups(
       // zero.
       assert(IG->getIndex(IRInsertPos) != 0 &&
              "index of insert position shouldn't be zero");
+      auto &DL = IRInsertPos->getDataLayout();
       APInt Offset(32,
-                   getLoadStoreType(IRInsertPos)->getScalarSizeInBits() / 8 *
+                   DL.getTypeAllocSize(getLoadStoreType(IRInsertPos)) *
                        IG->getIndex(IRInsertPos),
                    /*IsSigned=*/true);
       VPValue *OffsetVPV = Plan.getOrAddLiveIn(
