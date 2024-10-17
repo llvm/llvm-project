@@ -6108,11 +6108,3 @@ bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                                Register N0, Register N1) const {
   return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
 }
-
-bool AMDGPUTargetLowering::hasAndNot(SDValue Op) const {
-  if (Op->isDivergent())
-    return false;
-
-  EVT VT = Op.getValueType();
-  return VT == MVT::i32 || VT == MVT::i64;
-}
