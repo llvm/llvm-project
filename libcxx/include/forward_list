@@ -218,6 +218,7 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/container_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_const.h>
@@ -1122,13 +1123,13 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, size_type __n, const
   if (__n > 0) {
     __node_pointer __first = this->__create_node(/* next = */ nullptr, __v);
     __node_pointer __last  = __first;
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       for (--__n; __n != 0; --__n, __last = __last->__next_) {
         __last->__next_ = this->__create_node(/* next = */ nullptr, __v);
       }
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       while (__first != nullptr) {
         __node_pointer __next = __first->__next_;
@@ -1137,7 +1138,7 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, size_type __n, const
       }
       throw;
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     __last->__next_ = __r->__next_;
     __r->__next_    = __first;
     __r             = static_cast<__begin_node_pointer>(__last);
@@ -1162,13 +1163,13 @@ forward_list<_Tp, _Alloc>::__insert_after_with_sentinel(const_iterator __p, _Inp
     __node_pointer __first = this->__create_node(/* next = */ nullptr, *__f);
     __node_pointer __last  = __first;
 
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       for (++__f; __f != __l; ++__f, ((void)(__last = __last->__next_))) {
         __last->__next_ = this->__create_node(/* next = */ nullptr, *__f);
       }
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       while (__first != nullptr) {
         __node_pointer __next = __first->__next_;
@@ -1177,7 +1178,7 @@ forward_list<_Tp, _Alloc>::__insert_after_with_sentinel(const_iterator __p, _Inp
       }
       throw;
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
 
     __last->__next_ = __r->__next_;
     __r->__next_    = __first;
@@ -1543,6 +1544,17 @@ erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v) {
   return std::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
 }
 #endif
+
+template <class _Tp, class _Allocator>
+struct __container_traits<forward_list<_Tp, _Allocator> > {
+  // http://eel.is/c++draft/container.reqmts
+  // Unless otherwise specified (see [associative.reqmts.except], [unord.req.except], [deque.modifiers],
+  // [inplace.vector.modifiers], and [vector.modifiers]) all container types defined in this Clause meet the following
+  // additional requirements:
+  // - If an exception is thrown by an insert() or emplace() function while inserting a single element, that
+  // function has no effects.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

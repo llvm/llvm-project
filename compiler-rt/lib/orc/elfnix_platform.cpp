@@ -15,7 +15,7 @@
 #include "compiler.h"
 #include "error.h"
 #include "jit_dispatch.h"
-#include "sections_tracker.h"
+#include "record_section_tracker.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>
@@ -30,6 +30,7 @@ using namespace orc_rt;
 using namespace orc_rt::elfnix;
 
 // Declare function tags for functions in the JIT process.
+ORC_RT_JIT_DISPATCH_TAG(__orc_rt_reoptimize_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_push_initializers_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_symbol_lookup_tag)
 

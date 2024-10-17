@@ -1006,7 +1006,7 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text)}
+        args_dict = {"text": text, "column": len(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {
@@ -1267,7 +1267,7 @@ def run_vscode(dbg, args, options):
 def main():
     parser = optparse.OptionParser(
         description=(
-            "A testing framework for the Visual Studio Code Debug " "Adaptor protocol"
+            "A testing framework for the Visual Studio Code Debug Adaptor protocol"
         )
     )
 

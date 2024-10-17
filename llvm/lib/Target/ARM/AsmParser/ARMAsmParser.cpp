@@ -1158,7 +1158,8 @@ public:
   bool isFPImm() const {
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
+    if (!CE || !isUInt<32>(CE->getValue()))
+      return false;
     int Val = ARM_AM::getFP32Imm(APInt(32, CE->getValue()));
     return Val != -1;
   }
@@ -2532,14 +2533,14 @@ public:
   void addCondCodeOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(unsigned(getCondCode())));
-    unsigned RegNum = getCondCode() == ARMCC::AL ? 0: ARM::CPSR;
+    unsigned RegNum = getCondCode() == ARMCC::AL ? ARM::NoRegister : ARM::CPSR;
     Inst.addOperand(MCOperand::createReg(RegNum));
   }
 
   void addVPTPredNOperands(MCInst &Inst, unsigned N) const {
     assert(N == 3 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(unsigned(getVPTPred())));
-    unsigned RegNum = getVPTPred() == ARMVCC::None ? 0: ARM::P0;
+    unsigned RegNum = getVPTPred() == ARMVCC::None ? ARM::NoRegister : ARM::P0;
     Inst.addOperand(MCOperand::createReg(RegNum));
     Inst.addOperand(MCOperand::createReg(0));
   }
@@ -7164,8 +7165,8 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // Add the carry setting operand, if necessary.
   if (CanAcceptCarrySet && CarrySetting) {
     SMLoc Loc = SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size());
-    Operands.push_back(
-        ARMOperand::CreateCCOut(CarrySetting ? ARM::CPSR : 0, Loc, *this));
+    Operands.push_back(ARMOperand::CreateCCOut(
+        CarrySetting ? ARM::CPSR : ARM::NoRegister, Loc, *this));
   }
 
   // Add the predication code operand, if necessary.
@@ -10372,7 +10373,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   case ARM::t2ASRri:
     if (isARMLowRegister(Inst.getOperand(0).getReg()) &&
         isARMLowRegister(Inst.getOperand(1).getReg()) &&
-        Inst.getOperand(5).getReg() == (inITBlock() ? 0 : ARM::CPSR) &&
+        Inst.getOperand(5).getReg() ==
+            (inITBlock() ? ARM::NoRegister : ARM::CPSR) &&
         !HasWideQualifier) {
       unsigned NewOpc;
       switch (Inst.getOpcode()) {
@@ -10422,14 +10424,14 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.addOperand(Inst.getOperand(0)); // Rd
     if (isNarrow)
       TmpInst.addOperand(MCOperand::createReg(
-          Inst.getOpcode() == ARM::t2MOVSsr ? ARM::CPSR : 0));
+          Inst.getOpcode() == ARM::t2MOVSsr ? ARM::CPSR : ARM::NoRegister));
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // Rm
     TmpInst.addOperand(Inst.getOperand(4)); // CondCode
     TmpInst.addOperand(Inst.getOperand(5));
     if (!isNarrow)
       TmpInst.addOperand(MCOperand::createReg(
-          Inst.getOpcode() == ARM::t2MOVSsr ? ARM::CPSR : 0));
+          Inst.getOpcode() == ARM::t2MOVSsr ? ARM::CPSR : ARM::NoRegister));
     Inst = TmpInst;
     return true;
   }
@@ -10475,7 +10477,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.addOperand(Inst.getOperand(0)); // Rd
     if (isNarrow && !isMov)
       TmpInst.addOperand(MCOperand::createReg(
-          Inst.getOpcode() == ARM::t2MOVSsi ? ARM::CPSR : 0));
+          Inst.getOpcode() == ARM::t2MOVSsi ? ARM::CPSR : ARM::NoRegister));
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     if (newOpc != ARM::t2RRX && !isMov)
       TmpInst.addOperand(MCOperand::createImm(Amount));
@@ -10483,7 +10485,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.addOperand(Inst.getOperand(4));
     if (!isNarrow)
       TmpInst.addOperand(MCOperand::createReg(
-          Inst.getOpcode() == ARM::t2MOVSsi ? ARM::CPSR : 0));
+          Inst.getOpcode() == ARM::t2MOVSsi ? ARM::CPSR : ARM::NoRegister));
     Inst = TmpInst;
     return true;
   }
@@ -10684,7 +10686,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
         !isARMLowRegister(Inst.getOperand(0).getReg()) ||
         (Inst.getOperand(2).isImm() &&
          (unsigned)Inst.getOperand(2).getImm() > 255) ||
-        Inst.getOperand(5).getReg() != (inITBlock() ? 0 : ARM::CPSR) ||
+        Inst.getOperand(5).getReg() !=
+            (inITBlock() ? ARM::NoRegister : ARM::CPSR) ||
         HasWideQualifier)
       break;
     MCInst TmpInst;
@@ -10852,7 +10855,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     if (isARMLowRegister(Inst.getOperand(0).getReg()) &&
         (Inst.getOperand(1).isImm() &&
          (unsigned)Inst.getOperand(1).getImm() <= 255) &&
-        Inst.getOperand(4).getReg() == (inITBlock() ? 0 : ARM::CPSR) &&
+        Inst.getOperand(4).getReg() ==
+            (inITBlock() ? ARM::NoRegister : ARM::CPSR) &&
         !HasWideQualifier) {
       // The operands aren't in the same order for tMOVi8...
       MCInst TmpInst;
@@ -10993,7 +10997,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     if ((isARMLowRegister(Inst.getOperand(1).getReg()) &&
          isARMLowRegister(Inst.getOperand(2).getReg())) &&
         Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg() &&
-        Inst.getOperand(5).getReg() == (inITBlock() ? 0 : ARM::CPSR) &&
+        Inst.getOperand(5).getReg() ==
+            (inITBlock() ? ARM::NoRegister : ARM::CPSR) &&
         !HasWideQualifier) {
       unsigned NewOpc;
       switch (Inst.getOpcode()) {
@@ -11029,7 +11034,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
          isARMLowRegister(Inst.getOperand(2).getReg())) &&
         (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg() ||
          Inst.getOperand(0).getReg() == Inst.getOperand(2).getReg()) &&
-        Inst.getOperand(5).getReg() == (inITBlock() ? 0 : ARM::CPSR) &&
+        Inst.getOperand(5).getReg() ==
+            (inITBlock() ? ARM::NoRegister : ARM::CPSR) &&
         !HasWideQualifier) {
       unsigned NewOpc;
       switch (Inst.getOpcode()) {

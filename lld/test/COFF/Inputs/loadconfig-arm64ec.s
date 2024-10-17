@@ -69,7 +69,7 @@ __chpe_metadata:
         .rva __os_arm64x_check_call
         .rva __os_arm64x_check_icall
         .rva __os_arm64x_check_icall_cfg
-        .word 0 // __arm64x_native_entrypoint
+        .rva __arm64x_native_entrypoint
         .rva __hybrid_auxiliary_iat
         .word __x64_code_ranges_to_entry_points_count
         .word __arm64x_redirection_metadata_count
@@ -79,9 +79,9 @@ __chpe_metadata:
         .word __arm64x_extra_rfe_table_size
         .rva __os_arm64x_dispatch_fptr
         .rva __hybrid_auxiliary_iat_copy
-        .word 0 // __hybrid_auxiliary_delayload_iat
-        .word 0 // __hybrid_auxiliary_delayload_iat_copy
-        .word 0 // __hybrid_image_info_bitfield
+        .rva __hybrid_auxiliary_delayload_iat
+        .rva __hybrid_auxiliary_delayload_iat_copy
+        .word __hybrid_image_info_bitfield
         .rva __os_arm64x_helper3
         .rva __os_arm64x_helper4
         .rva __os_arm64x_helper5

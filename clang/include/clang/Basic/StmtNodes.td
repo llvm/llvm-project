@@ -308,5 +308,8 @@ def OpenACCAssociatedStmtConstruct
 def OpenACCComputeConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
 def OpenACCLoopConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
 
+// OpenACC Additional Expressions.
+def OpenACCAsteriskSizeExpr : StmtNode<Expr>;
+
 // HLSL Constructs.
 def HLSLOutArgExpr : StmtNode<Expr>;

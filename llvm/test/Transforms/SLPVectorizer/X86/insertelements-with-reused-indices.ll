@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float 0.000000e+00, i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP4]], i32 0
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = fsub float 0.000000e+00, 0.000000e+00
@@ -23,5 +23,5 @@ entry:
   %7 = fsub float 0.000000e+00, %0
   %8 = fsub float %7, %4
   %9 = insertelement <2 x float> zeroinitializer, float %8, i32 0
-  unreachable
+  ret void
 }

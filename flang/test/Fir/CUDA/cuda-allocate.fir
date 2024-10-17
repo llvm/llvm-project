@@ -26,17 +26,6 @@ func.func @_QPsub1() {
 // CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DECL_DESC]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: fir.call @_FortranACUFFreeDesciptor(%[[BOX_NONE]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> none
 
-// Check operations that should not be transformed yet.
-func.func @_QPsub2() {
-  %0 = cuf.alloc !fir.array<10xf32> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QMcuda_varFcuda_alloc_freeEa"} -> !fir.ref<!fir.array<10xf32>>
-  cuf.free %0 : !fir.ref<!fir.array<10xf32>> {data_attr = #cuf.cuda<device>}
-  return
-}
-
-// CHECK-LABEL: func.func @_QPsub2()
-// CHECK: cuf.alloc !fir.array<10xf32>
-// CHECK: cuf.free %{{.*}} : !fir.ref<!fir.array<10xf32>>
-
 fir.global @_QMmod1Ea {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>> {
     %0 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
     %c0 = arith.constant 0 : index
