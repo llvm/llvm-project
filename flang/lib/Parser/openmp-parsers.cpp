@@ -215,7 +215,7 @@ TYPE_PARSER(construct<OmpIfClause>(
         ":"),
     scalarLogicalExpr))
 
-// 2.15.3.6 REDUCTION (reduction-identifier: variable-name-list)
+// OpenMPv5.2 2.15.3.6 REDUCTION (reduction-identifier: variable-name-list)
 TYPE_PARSER(construct<OmpReductionOperator>(Parser<DefinedOperator>{}) ||
     construct<OmpReductionOperator>(Parser<ProcedureDesignator>{}))
 
@@ -297,6 +297,9 @@ TYPE_CONTEXT_PARSER("Omp LINEAR clause"_en_US,
             maybe(":" >> scalarIntConstantExpr))) ||
         construct<OmpLinearClause>(construct<OmpLinearClause::WithoutModifier>(
             nonemptyList(name), maybe(":" >> scalarIntConstantExpr)))))
+
+// 12.5.2 detach-clause -> DETACH (event-handle)
+TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 
 // 2.8.1 ALIGNED (list: alignment)
 TYPE_PARSER(construct<OmpAlignedClause>(
@@ -414,6 +417,8 @@ TYPE_PARSER(
                        parenthesized(Parser<OmpReductionClause>{}))) ||
     "IN_REDUCTION" >> construct<OmpClause>(construct<OmpClause::InReduction>(
                           parenthesized(Parser<OmpInReductionClause>{}))) ||
+    "DETACH" >> construct<OmpClause>(construct<OmpClause::Detach>(
+                    parenthesized(Parser<OmpDetachClause>{}))) ||
     "TASK_REDUCTION" >>
         construct<OmpClause>(construct<OmpClause::TaskReduction>(
             parenthesized(Parser<OmpReductionClause>{}))) ||
