@@ -52745,8 +52745,8 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
       if (XOR->getOpcode() == ISD::XOR && XOR.hasOneUse()) {
         KnownBits XORRHS = DAG.computeKnownBits(XOR.getOperand(1));
         if (XORRHS.isConstant()) {
-          APInt ConjugationInt32 = APInt(32, 0x80000000, true);
-          APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL, true);
+          APInt ConjugationInt32 = APInt(32, 0x80000000);
+          APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL);
           if ((XORRHS.getBitWidth() == 32 &&
                XORRHS.getConstant() == ConjugationInt32) ||
               (XORRHS.getBitWidth() == 64 &&
@@ -52785,7 +52785,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
            Flags.hasNoSignedZeros();
   };
   auto IsVectorAllNegativeZero = [&DAG](SDValue Op) {
-    APInt AI = APInt(32, 0x80008000, true);
+    APInt AI = APInt(32, 0x80008000);
     KnownBits Bits = DAG.computeKnownBits(Op);
     return Bits.getBitWidth() == 32 && Bits.isConstant() &&
            Bits.getConstant() == AI;
