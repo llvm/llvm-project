@@ -690,20 +690,20 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
-  if (hasFP(MF) && !mayReserveScratchForCWSR(MF)) {
-    Register FPReg = MFI->getFrameOffsetReg();
-    assert(FPReg != AMDGPU::FP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
-  }
-
   unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
-  if (requiresStackPointerReference(MF)) {
-    Register SPReg = MFI->getStackPtrOffsetReg();
-    assert(SPReg != AMDGPU::SP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
-  }
+  if (!mayReserveScratchForCWSR(MF)) {
+    if (hasFP(MF)) {
+      Register FPReg = MFI->getFrameOffsetReg();
+      assert(FPReg != AMDGPU::FP_REG);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+    }
 
-  if (mayReserveScratchForCWSR(MF)) {
+    if (requiresStackPointerReference(MF)) {
+      Register SPReg = MFI->getStackPtrOffsetReg();
+      assert(SPReg != AMDGPU::SP_REG);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
+    }
+  } else {
     // We need to check if we're on a compute queue - if we are, then the CWSR
     // trap handler may need to store some VGPRs on the stack. The first VGPR
     // block is saved separately, so we only need to allocate space for any
@@ -729,13 +729,22 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
     // SCC, so we need to check for 0 manually.
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(FPReg);
-    // For the FP, we could use a s_cselect, since it's always 0 or VGPRSize.
-    // But for SP, the Offset could be anything, and we can't use 2 literal
-    // constants with s_cselect. For symmetry, we use s_cmovk for both.
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), FPReg).addImm(VGPRSize);
-    if (requiresStackPointerReference(MF))
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), SPReg)
-          .addImm(Offset + VGPRSize);
+    if (requiresStackPointerReference(MF)) {
+      // If at least one of the constants can be inlined, then we can use
+      // s_cselect. Otherwise, use a mov and cmovk.
+      if (AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm()) ||
+          AMDGPU::isInlinableLiteral32(Offset + VGPRSize,
+                                       ST.hasInv2PiInlineImm())) {
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CSELECT_B32), SPReg)
+            .addImm(Offset + VGPRSize)
+            .addImm(Offset);
+      } else {
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), SPReg)
+            .addImm(Offset + VGPRSize);
+      }
+    }
   }
 
   bool NeedsFlatScratchInit =

@@ -3917,3 +3917,12 @@ SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
   }
   return 0;
 }
+
+unsigned
+SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
+                                   const TargetRegisterClass &RC) const {
+  for (MCPhysReg Reg : reverse(RC.getRegisters()))
+    if (MRI.isPhysRegUsed(Reg))
+      return getHWRegIndex(Reg) + 1;
+  return 0;
+}
