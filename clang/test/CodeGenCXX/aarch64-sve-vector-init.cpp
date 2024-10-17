@@ -12,6 +12,7 @@
 // CHECK-NEXT:    [[U16:%.*]] = alloca <vscale x 8 x i16>, align 16
 // CHECK-NEXT:    [[U32:%.*]] = alloca <vscale x 4 x i32>, align 16
 // CHECK-NEXT:    [[U64:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    [[MF8:%.*]] = alloca <vscale x 16 x i8>, align 16
 // CHECK-NEXT:    [[F16:%.*]] = alloca <vscale x 8 x half>, align 16
 // CHECK-NEXT:    [[F32:%.*]] = alloca <vscale x 4 x float>, align 16
 // CHECK-NEXT:    [[F64:%.*]] = alloca <vscale x 2 x double>, align 16
@@ -64,6 +65,7 @@
 // CHECK-NEXT:    store <vscale x 8 x i16> zeroinitializer, ptr [[U16]], align 16
 // CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[U32]], align 16
 // CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[U64]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[MF8]], align 16
 // CHECK-NEXT:    store <vscale x 8 x half> zeroinitializer, ptr [[F16]], align 16
 // CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[F32]], align 16
 // CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[F64]], align 16
@@ -119,6 +121,7 @@ void test_locals(void) {
   __SVUint16_t u16{};
   __SVUint32_t u32{};
   __SVUint64_t u64{};
+  __SVMfloat8_t mf8{};
   __SVFloat16_t f16{};
   __SVFloat32_t f32{};
   __SVFloat64_t f64{};
@@ -280,6 +283,20 @@ void test_copy_u32(__SVUint32_t a) {
 //
 void test_copy_u64(__SVUint64_t a) {
   __SVUint64_t b{a};
+}
+
+// CHECK-LABEL: define dso_local void @_Z13test_copy_mf8u13__SVMfloat8_t
+// CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[A]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_copy_mf8(__SVMfloat8_t a) {
+  __SVMfloat8_t b{a};
 }
 
 // CHECK-LABEL: define dso_local void @_Z13test_copy_f16u13__SVFloat16_t
