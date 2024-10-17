@@ -139,7 +139,10 @@ class LLDB_API SBUnixSignals;
 typedef bool (*SBBreakpointHitCallback)(void *baton, lldb::SBProcess &process,
                                         lldb::SBThread &thread,
                                         lldb::SBBreakpointLocation &location);
-
+typedef void (*SBNotificationCallback)(lldb::NotificationType type,
+                                       lldb::SBDebugger &,
+                                       lldb::SBExecutionContext &exe_ctx,
+                                       void *baton);
 typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
                                           void *baton);
 
