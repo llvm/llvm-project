@@ -1318,6 +1318,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   Tokens = annotate("bool x = t && requires(Foo<C1 || C2> x) { x.foo(); };");
   ASSERT_EQ(Tokens.size(), 25u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
+
+  // Second function definition is required due to lookahead
+  Tokens = annotate("void f() & requires(n == 1) {}\nvoid g();");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("void f() & requires(n || h) {}\nvoid g();");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("bool x = t && requires(F<n == 1> x) { x.foo(); };");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
