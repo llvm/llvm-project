@@ -887,6 +887,9 @@ struct CounterCoverageMappingBuilder
   /// The map of statements to count values.
   llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
 
+  CounterExpressionBuilder::ReplaceMap MapToExpand;
+  unsigned NextCounterNum;
+
   MCDC::State &MCDCState;
 
   /// A stack of currently live regions.
@@ -922,15 +925,11 @@ struct CounterCoverageMappingBuilder
 
   /// Return a counter for the sum of \c LHS and \c RHS.
   Counter addCounters(Counter LHS, Counter RHS, bool Simplify = true) {
-    assert(!llvm::EnableSingleByteCoverage &&
-           "cannot add counters when single byte coverage mode is enabled");
     return Builder.add(LHS, RHS, Simplify);
   }
 
   Counter addCounters(Counter C1, Counter C2, Counter C3,
                       bool Simplify = true) {
-    assert(!llvm::EnableSingleByteCoverage &&
-           "cannot add counters when single byte coverage mode is enabled");
     return addCounters(addCounters(C1, C2, Simplify), C3, Simplify);
   }
 
@@ -943,12 +942,29 @@ struct CounterCoverageMappingBuilder
 
   std::pair<Counter, Counter> getBranchCounterPair(const Stmt *S,
                                                    Counter ParentCnt) {
-    Counter ExecCnt = getRegionCounter(S);
-    return {ExecCnt, Builder.subtract(ParentCnt, ExecCnt)};
+    auto &TheMap = CounterMap[S];
+    auto ExecCnt = Counter::getCounter(TheMap.first);
+    auto SkipExpr = Builder.subtract(ParentCnt, ExecCnt);
+
+    if (!llvm::EnableSingleByteCoverage)
+      return {ExecCnt, SkipExpr};
+
+    // Assign second if second is not assigned yet.
+    if (!TheMap.getIsCounterPair().second)
+      TheMap.second = NextCounterNum++;
+
+    Counter SkipCnt = Counter::getCounter(TheMap.second);
+    MapToExpand[SkipCnt] = SkipExpr;
+    return {ExecCnt, SkipCnt};
   }
 
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
     if (OutCount == ParentCount)
+      return true;
+
+    // Try comaparison with pre-replaced expressions.
+    if (Builder.replace(Builder.subtract(OutCount, ParentCount), MapToExpand)
+            .isZero())
       return true;
 
     return false;
@@ -1437,7 +1453,8 @@ struct CounterCoverageMappingBuilder
       llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
       MCDC::State &MCDCState, SourceManager &SM, const LangOptions &LangOpts)
       : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap),
-        MCDCState(MCDCState), MCDCBuilder(CVM.getCodeGenModule(), MCDCState) {}
+        NextCounterNum(CounterMap.size()), MCDCState(MCDCState),
+        MCDCBuilder(CVM.getCodeGenModule(), MCDCState) {}
 
   /// Write the mapping data to the output stream
   void write(llvm::raw_ostream &OS) {
