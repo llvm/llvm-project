@@ -1438,6 +1438,48 @@ TEST(SignatureHelpTest, Overloads) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, ShowLambdaNameInsteadOfOperatorParens) {
+  const auto Results = signatures(R"cpp(
+    auto foo = [](int x, int y){};
+    int main() { foo(^); }
+  )cpp");
+  EXPECT_THAT(Results.signatures,
+              UnorderedElementsAre(sig("foo([[int x]], [[int y]]) -> void")));
+}
+
+TEST(SignatureHelpTest, ShowOperatorParensForImmediatelyInvokedLambda) {
+  const auto Results = signatures(R"cpp(
+    auto foo = [](int x, int y){}(^);
+  )cpp");
+  EXPECT_THAT(
+      Results.signatures,
+      UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
+}
+
+TEST(SignatureHelpTest, ShowOperatorParensForLambdaReturnedFromFunction) {
+  const auto Results = signatures(R"cpp(
+    auto returnsLambda() {
+      return [](int x, int y){};
+    }
+    int main() { returnsLambda()(^); }
+  )cpp");
+  EXPECT_THAT(
+      Results.signatures,
+      UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
+}
+
+TEST(SignatureHelpTest, ShowOperatorParensForLambdaInParameterPack) {
+  const auto Results = signatures(R"cpp(
+    template <typename... Types>
+    auto foo(Types... args) {}
+    
+    foo([](int x, int y){}(^))
+  )cpp");
+  EXPECT_THAT(
+      Results.signatures,
+      UnorderedElementsAre(sig("operator()([[int x]], [[int y]]) -> void")));
+}
+
 TEST(SignatureHelpTest, FunctionPointers) {
   llvm::StringLiteral Tests[] = {
       // Variable of function pointer type
