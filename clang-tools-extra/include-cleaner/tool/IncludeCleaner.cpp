@@ -299,7 +299,7 @@ mapInputsToAbsPaths(clang::tooling::CompilationDatabase &CDB,
     if (auto Err = VFS->makeAbsolute(AbsPath)) {
       llvm::errs() << "Failed to get absolute path for " << Source << " : "
                    << Err.message() << '\n';
-      return std::move(llvm::errorCodeToError(Err));
+      return llvm::errorCodeToError(Err);
     }
     std::vector<clang::tooling::CompileCommand> Cmds =
         CDB.getCompileCommands(AbsPath);
