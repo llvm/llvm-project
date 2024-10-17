@@ -258,6 +258,7 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   let verify = [{
     return ::llvm::cast<::mlir::omp::LoopWrapperInterface>($_op).verifyImpl();
   }];
+  let verifyWithRegions = 1;
 }
 
 def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
