@@ -385,7 +385,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
-  if (!TypeToken || TypeToken->isPointerOrReference() ||
+  if (!TypeToken || TypeToken->isPointerOrReference(LangOpts) ||
       TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
 
     // Don't sort past a non-configured qualifier token.
