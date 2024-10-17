@@ -134,6 +134,12 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       (!Args.hasArgNoClaim(clang::driver::options::OPT_march_EQ)))
     Features.push_back("+lsx");
 
+  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true)) {
+    Features.push_back("+relax");
+  } else {
+    Features.push_back("-relax");
+  }
+
   std::string ArchName;
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
     ArchName = A->getValue();
