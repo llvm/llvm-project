@@ -315,14 +315,10 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
     int write_errno;
     uptr w = internal_write(fds[1], reinterpret_cast<char *>(beg), size);
     if (internal_iserror(w, &write_errno)) {
-      switch (write_errno) {
-        case EINTR:
-        case EAGAIN:
-          continue;
-        default:
-          CHECK_EQ(EFAULT, write_errno);
-          return false;
-      }
+      if (write_errno == EINTR)
+        continue;
+      CHECK_EQ(EFAULT, write_errno);
+      return false;
     }
     size -= w;
     beg += w;
