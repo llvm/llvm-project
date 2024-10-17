@@ -36,23 +36,49 @@
 /* Verify that the correct vector library is passed to LTO flags. */
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=LIBMVEC -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC %s
-// CHECK-LTO-LIBMVEC: "-fmath-errno"
 // CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC-X86"
 
 // RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-MASSV %s
-// CHECK-LTO-MASSV: "-fmath-errno"
 // CHECK-LTO-MASSV: "-plugin-opt=-vector-library=MASSV"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=SVML -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-SVML %s
-// CHECK-LTO-SVML: "-fmath-errno"
 // CHECK-LTO-SVML: "-plugin-opt=-vector-library=SVML"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-SLEEF %s
-// CHECK-LTO-SLEEF-NOT: "-fmath-errno"
 // CHECK-LTO-SLEEF: "-plugin-opt=-vector-library=sleefgnuabi"
-// CHECK-LTO-SLEEF-NOT: "-fmath-errno"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-ARMPL %s
-// CHECK-LTO-ARMPL-NOT: "-fmath-errno"
 // CHECK-LTO-ARMPL: "-plugin-opt=-vector-library=ArmPL"
-// CHECK-LTO-ARMPL-NOT: "-fmath-errno"
+
+
+/* Verify that -fmath-errno is set correctly for the vector library. */
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=LIBMVEC %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LIBMVEC %s
+// CHECK-ERRNO-LIBMVEC: "-fveclib=LIBMVEC"
+// CHECK-ERRNO-LIBMVEC-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-MASSV %s
+// CHECK-ERRNO-MASSV: "-fveclib=MASSV"
+// CHECK-ERRNO-MASSV-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=SVML %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-SVML %s
+// CHECK-ERRNO-SVML: "-fveclib=SVML"
+// CHECK-ERRNO-SVML-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-SLEEF %s
+// CHECK-ERRNO-SLEEF-NOT: "-fmath-errno"
+// CHECK-ERRNO-SLEEF: "-fveclib=SLEEF"
+// CHECK-ERRNO-SLEEF-NOT: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-ARMPL %s
+// CHECK-ERRNO-ARMPL-NOT: "-fmath-errno"
+// CHECK-ERRNO-ARMPL: "-fveclib=ArmPL"
+// CHECK-ERRNO-ARMPL-NOT: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-FORCE-ERRNO-ARMPL %s
+// CHECK-FORCE-ERRNO-ARMPL: "-fveclib=ArmPL"
+// CHECK-FORCE-ERRNO-ARMPL-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-FORCE-ERRNO-SLEEF %s
+// CHECK-FORCE-ERRNO-SLEEF: "-fveclib=SLEEF"
+// CHECK-FORCE-ERRNO-SLEEF-SAME: "-fmath-errno"
