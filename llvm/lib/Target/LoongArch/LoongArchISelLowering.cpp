@@ -5807,10 +5807,8 @@ Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
   Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
   Type *Tys[] = {AlignedAddr->getType()};
-  Function *MaskedCmpXchg =
-      Intrinsic::getOrInsertDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
-  Value *Result = Builder.CreateCall(
-      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
+  Value *Result = Builder.CreateIntrinsic(
+      CmpXchgIntrID, Tys, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
   Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }

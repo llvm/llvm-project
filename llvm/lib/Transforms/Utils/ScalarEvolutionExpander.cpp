@@ -2139,10 +2139,9 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
       MulV = TruncTripCount;
       OfMul = ConstantInt::getFalse(MulV->getContext());
     } else {
-      auto *MulF = Intrinsic::getOrInsertDeclaration(
-          Loc->getModule(), Intrinsic::umul_with_overflow, Ty);
-      CallInst *Mul =
-          Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
+      CallInst *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
+                                              {AbsStep, TruncTripCount},
+                                              /*FMFSource=*/nullptr, "mul");
       MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
       OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
     }
