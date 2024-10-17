@@ -1,6 +1,7 @@
 set(SWIFT_SOURCES
   TestSwiftASTContext.cpp
   TestTypeSystemSwiftTypeRef.cpp
+  TestSwiftDemangler.cpp
 )
 set(SWIFT_LIBS
   lldbPluginTypeSystemSwift
