@@ -247,11 +247,11 @@ typename MyMatrix<EltTy2, R2, C2>::matrix_t multiply(inout MyMatrix<EltTy0, R0, 
   // expected-error@-2 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<unsigned int, 3, 2>') and 'matrix_t' (aka 'matrix<unsigned int, 3, 3>'))}}
   // expected-error@-3 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<float, 2, 2>') and 'matrix_t' (aka 'matrix<unsigned int, 2, 2>'))}}
 
-  MyMatrix<int, 5, 6> m;
+  MyMatrix<int, 3, 4> m;
   B.value = m.value * A.value;
-  // expected-error@-1 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<int, 5, 6>') and 'matrix_t' (aka 'matrix<unsigned int, 2, 2>'))}}
-  // expected-error@-2 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<int, 5, 6>') and 'matrix_t' (aka 'matrix<unsigned int, 3, 2>'))}}
-  // expected-error@-3 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<int, 5, 6>') and 'matrix_t' (aka 'matrix<float, 2, 2>'))}}
+  // expected-error@-1 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<int, 3, 4>') and 'matrix_t' (aka 'matrix<unsigned int, 2, 2>'))}}
+  // expected-error@-2 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<int, 3, 4>') and 'matrix_t' (aka 'matrix<unsigned int, 3, 2>'))}}
+  // expected-error@-3 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<int, 3, 4>') and 'matrix_t' (aka 'matrix<float, 2, 2>'))}}
 
   return A.value * B.value;
   // expected-error@-1 {{invalid operands to binary expression ('matrix_t' (aka 'matrix<unsigned int, 3, 2>') and 'matrix_t' (aka 'matrix<unsigned int, 3, 3>'))}}
