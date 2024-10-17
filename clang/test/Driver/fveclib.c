@@ -76,21 +76,25 @@
 // CHECK-ERRNO-ARMPL-NOT: "-fmath-errno"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-ARMPL %s
-// CHECK-REENABLE-ERRNO-ARMPL: math errno re-enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=ArmPL', this may prevent vectorization with the specified vector library
+// CHECK-REENABLE-ERRNO-ARMPL: math errno re-enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=ArmPL', this may prevent vectorization with the specified vector library [-Wmath-errno-enabled-with-veclib]
+
 // CHECK-REENABLE-ERRNO-ARMPL: "-fveclib=ArmPL"
 // CHECK-REENABLE-ERRNO-ARMPL-SAME: "-fmath-errno"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-SLEEF %s
-// CHECK-REENABLE-ERRNO-SLEEF: math errno re-enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=SLEEF', this may prevent vectorization with the specified vector library
+// CHECK-REENABLE-ERRNO-SLEEF: math errno re-enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=SLEEF', this may prevent vectorization with the specified vector library [-Wmath-errno-enabled-with-veclib]
+
 // CHECK-REENABLE-ERRNO-SLEEF: "-fveclib=SLEEF"
 // CHECK-REENABLE-ERRNO-SLEEF-SAME: "-fmath-errno"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fno-fast-math %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-NFM %s
-// CHECK-REENABLE-ERRNO-NFM: math errno re-enabled by '-fno-fast-math' after it was implicitly disabled by '-fveclib=ArmPL', this may prevent vectorization with the specified vector library
+// CHECK-REENABLE-ERRNO-NFM: math errno re-enabled by '-fno-fast-math' after it was implicitly disabled by '-fveclib=ArmPL', this may prevent vectorization with the specified vector library [-Wmath-errno-enabled-with-veclib]
+
 // CHECK-REENABLE-ERRNO-NFM: "-fveclib=ArmPL"
 // CHECK-REENABLE-ERRNO-NFM-SAME: "-fmath-errno"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -ffp-model=strict %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-FP-MODEL %s
-// CHECK-REENABLE-ERRNO-FP-MODEL: math errno re-enabled by '-ffp-model=strict' after it was implicitly disabled by '-fveclib=ArmPL', this may prevent vectorization with the specified vector library
+// CHECK-REENABLE-ERRNO-FP-MODEL: math errno re-enabled by '-ffp-model=strict' after it was implicitly disabled by '-fveclib=ArmPL', this may prevent vectorization with the specified vector library [-Wmath-errno-enabled-with-veclib]
+
 // CHECK-REENABLE-ERRNO-FP-MODEL: "-fveclib=ArmPL"
 // CHECK-REENABLE-ERRNO-FP-MODEL-SAME: "-fmath-errno"
