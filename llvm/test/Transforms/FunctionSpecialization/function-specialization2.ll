@@ -64,27 +64,27 @@ define i32 @main(ptr %0, i32 %1) {
 ; CHECK-LABEL: define i32 @main(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    call void @func.specialized.2(ptr [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    call void @func.specialized.1(ptr [[TMP0]], i32 0)
+; CHECK-NEXT:    call void @func.specialized.1(ptr [[TMP0]])
 ; CHECK-NEXT:    ret i32 0
 ;
 ;
 ; CHECK-LABEL: define internal void @func.specialized.1(
-; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP3]], 1
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[BB12:.*]], label %[[BB6:.*]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[BB11:.*]], label %[[BB5:.*]]
+; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[TMP7]]
 ; CHECK-NEXT:    call void @decrement(ptr [[TMP8]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], -1
-; CHECK-NEXT:    call void @func.specialized.1(ptr [[TMP0]], i32 [[TMP10]])
-; CHECK-NEXT:    br label %[[BB12]]
-; CHECK:       [[BB12]]:
+; CHECK-NEXT:    call void @func.specialized.3(ptr [[TMP0]], i32 [[TMP10]])
+; CHECK-NEXT:    br label %[[BB11]]
+; CHECK:       [[BB11]]:
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -108,6 +108,46 @@ define i32 @main(ptr %0, i32 %1) {
 ; CHECK-NEXT:    ret void
 ;
 ;
+; CHECK-LABEL: define internal void @func.specialized.3(
+; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; CHECK-NEXT:    [[TMP3:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP4]], 1
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[BB12:.*]], label %[[BB6:.*]]
+; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[TMP8]]
+; CHECK-NEXT:    call void @decrement(ptr [[TMP9]])
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP10]], -1
+; CHECK-NEXT:    call void @func.specialized.3(ptr [[TMP0]], i32 [[TMP11]])
+; CHECK-NEXT:    br label %[[BB12]]
+; CHECK:       [[BB12]]:
+; CHECK-NEXT:    ret void
+;
+;
+; ONE-ITER-LABEL: define internal void @func(
+; ONE-ITER-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], ptr nocapture [[TMP2:%.*]]) {
+; ONE-ITER-NEXT:    [[TMP4:%.*]] = alloca i32, align 4
+; ONE-ITER-NEXT:    store i32 [[TMP1]], ptr [[TMP4]], align 4
+; ONE-ITER-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
+; ONE-ITER-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[TMP5]], 1
+; ONE-ITER-NEXT:    br i1 [[TMP6]], label %[[BB13:.*]], label %[[BB7:.*]]
+; ONE-ITER:       [[BB7]]:
+; ONE-ITER-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 4
+; ONE-ITER-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
+; ONE-ITER-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[TMP9]]
+; ONE-ITER-NEXT:    call void [[TMP2]](ptr [[TMP10]])
+; ONE-ITER-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP4]], align 4
+; ONE-ITER-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP11]], -1
+; ONE-ITER-NEXT:    call void @func(ptr [[TMP0]], i32 [[TMP12]], ptr [[TMP2]])
+; ONE-ITER-NEXT:    br label %[[BB13]]
+; ONE-ITER:       [[BB13]]:
+; ONE-ITER-NEXT:    ret void
+;
+;
 ; ONE-ITER-LABEL: define internal void @increment(
 ; ONE-ITER-SAME: ptr nocapture [[TMP0:%.*]]) {
 ; ONE-ITER-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -127,27 +167,27 @@ define i32 @main(ptr %0, i32 %1) {
 ; ONE-ITER-LABEL: define i32 @main(
 ; ONE-ITER-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; ONE-ITER-NEXT:    call void @func.specialized.2(ptr [[TMP0]], i32 [[TMP1]])
-; ONE-ITER-NEXT:    call void @func.specialized.1(ptr [[TMP0]], i32 0)
+; ONE-ITER-NEXT:    call void @func.specialized.1(ptr [[TMP0]])
 ; ONE-ITER-NEXT:    ret i32 0
 ;
 ;
 ; ONE-ITER-LABEL: define internal void @func.specialized.1(
-; ONE-ITER-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; ONE-ITER-SAME: ptr [[TMP0:%.*]]) {
 ; ONE-ITER-NEXT:    [[TMP2:%.*]] = alloca i32, align 4
-; ONE-ITER-NEXT:    store i32 [[TMP1]], ptr [[TMP2]], align 4
+; ONE-ITER-NEXT:    store i32 0, ptr [[TMP2]], align 4
 ; ONE-ITER-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 ; ONE-ITER-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP3]], 1
-; ONE-ITER-NEXT:    br i1 [[TMP4]], label %[[BB12:.*]], label %[[BB6:.*]]
-; ONE-ITER:       [[BB6]]:
+; ONE-ITER-NEXT:    br i1 [[TMP4]], label %[[BB11:.*]], label %[[BB5:.*]]
+; ONE-ITER:       [[BB5]]:
 ; ONE-ITER-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP2]], align 4
 ; ONE-ITER-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
 ; ONE-ITER-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[TMP7]]
 ; ONE-ITER-NEXT:    call void @decrement(ptr [[TMP8]])
 ; ONE-ITER-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP2]], align 4
 ; ONE-ITER-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], -1
-; ONE-ITER-NEXT:    call void @func.specialized.1(ptr [[TMP0]], i32 [[TMP10]])
-; ONE-ITER-NEXT:    br label %[[BB12]]
-; ONE-ITER:       [[BB12]]:
+; ONE-ITER-NEXT:    call void @func(ptr [[TMP0]], i32 [[TMP10]], ptr @decrement)
+; ONE-ITER-NEXT:    br label %[[BB11]]
+; ONE-ITER:       [[BB11]]:
 ; ONE-ITER-NEXT:    ret void
 ;
 ;
