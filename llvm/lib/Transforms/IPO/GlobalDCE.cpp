@@ -67,16 +67,11 @@ void GlobalDCEPass::ComputeDependencies(Value *V,
     Deps.insert(GV);
   } else if (auto *CE = dyn_cast<Constant>(V)) {
     // Avoid walking the whole tree of a big ConstantExprs multiple times.
-    auto Where = ConstantDependenciesCache.find(CE);
-    if (Where != ConstantDependenciesCache.end()) {
-      auto const &K = Where->second;
-      Deps.insert(K.begin(), K.end());
-    } else {
-      SmallPtrSetImpl<GlobalValue *> &LocalDeps = ConstantDependenciesCache[CE];
+    auto [It, Inserted] = ConstantDependenciesCache.try_emplace(CE);
+    if (Inserted)
       for (User *CEUser : CE->users())
-        ComputeDependencies(CEUser, LocalDeps);
-      Deps.insert(LocalDeps.begin(), LocalDeps.end());
-    }
+        ComputeDependencies(CEUser, It->second);
+    Deps.insert(It->second.begin(), It->second.end());
   }
 }
 
