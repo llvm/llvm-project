@@ -297,7 +297,7 @@ struct LinalgPaddingOptions {
   /// A flag for every operand to mark the PadOp as nofold which enables
   /// packing for statically shaped operands.
   SmallVector<bool> nofoldFlags;
-  LinalgPaddingOptions &setPackPaddings(ArrayRef<bool> pp) {
+  LinalgPaddingOptions &setNofoldFlags(ArrayRef<bool> pp) {
     nofoldFlags.assign(pp.begin(), pp.end());
     return *this;
   }
