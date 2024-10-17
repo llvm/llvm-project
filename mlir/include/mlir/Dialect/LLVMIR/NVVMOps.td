@@ -397,7 +397,7 @@ def NVVM_MBarrierTryWaitParitySharedOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.p
   }];
 }
 
-def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
+def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test_wait">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_AnyPointer:$addr, LLVM_Type:$state)> {
   string llvmBuilder = [{
@@ -406,7 +406,7 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
   let assemblyFormat = "$addr `,` $state attr-dict `:` type(operands) `->` type($res)";
 }
 
-def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
+def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test_wait.shared">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_PointerShared:$addr, LLVM_Type:$state)> {
   string llvmBuilder = [{
