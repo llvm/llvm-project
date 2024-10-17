@@ -28,6 +28,19 @@ class StructuralHashImpl {
 
   bool DetailedHash;
 
+  /// IgnoreOp is a function that returns true if the operand should be ignored.
+  IgnoreOperandFunc IgnoreOp = nullptr;
+  /// A mapping from instruction indices to instruction pointers.
+  /// The index represents the position of an instruction based on the order in
+  /// which it is first encountered.
+  std::unique_ptr<IndexInstrMap> IndexInstruction = nullptr;
+  /// A mapping from pairs of instruction indices and operand indices
+  /// to the hashes of the operands.
+  std::unique_ptr<IndexOperandHashMapType> IndexOperandHashMap = nullptr;
+
+  /// Assign a unique ID to each Value in the order they are first seen.
+  DenseMap<const Value *, int> ValueToId;
+
   // This will produce different values on 32-bit and 64-bit systens as
   // hash_combine returns a size_t. However, this is only used for
   // detailed hashing which, in-tree, only needs to distinguish between
@@ -47,22 +60,138 @@ class StructuralHashImpl {
 
 public:
   StructuralHashImpl() = delete;
-  explicit StructuralHashImpl(bool DetailedHash) : DetailedHash(DetailedHash) {}
+  explicit StructuralHashImpl(bool DetailedHash,
+                              IgnoreOperandFunc IgnoreOp = nullptr)
+      : DetailedHash(DetailedHash), IgnoreOp(IgnoreOp) {
+    if (IgnoreOp) {
+      IndexInstruction = std::make_unique<IndexInstrMap>();
+      IndexOperandHashMap = std::make_unique<IndexOperandHashMapType>();
+    }
+  }
 
+  stable_hash hashAPInt(const APInt &I) {
+    SmallVector<stable_hash> Hashes;
+    Hashes.emplace_back(I.getBitWidth());
+    for (unsigned J = 0; J < I.getNumWords(); ++J)
+      Hashes.emplace_back((I.getRawData())[J]);
+    return stable_hash_combine(Hashes);
+  }
+
+  stable_hash hashAPFloat(const APFloat &F) {
+    SmallVector<stable_hash> Hashes;
+    const fltSemantics &S = F.getSemantics();
+    Hashes.emplace_back(APFloat::semanticsPrecision(S));
+    Hashes.emplace_back(APFloat::semanticsMaxExponent(S));
+    Hashes.emplace_back(APFloat::semanticsMinExponent(S));
+    Hashes.emplace_back(APFloat::semanticsSizeInBits(S));
+    Hashes.emplace_back(hashAPInt(F.bitcastToAPInt()));
+    return stable_hash_combine(Hashes);
+  }
+
+  stable_hash hashGlobalValue(const GlobalValue *GV) {
+    if (!GV->hasName())
+      return 0;
+    return stable_hash_name(GV->getName());
+  }
+
+  // Compute a hash for a Constant. This function is logically similar to
+  // FunctionComparator::cmpConstants() in FunctionComparator.cpp, but here
+  // we're interested in computing a hash rather than comparing two Constants.
+  // Some of the logic is simplified, e.g, we don't expand GEPOperator.
   stable_hash hashConstant(Constant *C) {
     SmallVector<stable_hash> Hashes;
-    // TODO: hashArbitaryType() is not stable.
-    if (ConstantInt *ConstInt = dyn_cast<ConstantInt>(C)) {
-      Hashes.emplace_back(hashArbitaryType(ConstInt->getValue()));
-    } else if (ConstantFP *ConstFP = dyn_cast<ConstantFP>(C)) {
-      Hashes.emplace_back(hashArbitaryType(ConstFP->getValue()));
-    } else if (Function *Func = dyn_cast<Function>(C))
-      // Hashing the name will be deterministic as LLVM's hashing infrastructure
-      // has explicit support for hashing strings and will not simply hash
-      // the pointer.
-      Hashes.emplace_back(hashArbitaryType(Func->getName()));
 
-    return stable_hash_combine(Hashes);
+    Type *Ty = C->getType();
+    Hashes.emplace_back(hashType(Ty));
+
+    if (C->isNullValue()) {
+      Hashes.emplace_back(static_cast<stable_hash>('N'));
+      return stable_hash_combine(Hashes);
+    }
+
+    auto *G = dyn_cast<GlobalValue>(C);
+    if (G) {
+      Hashes.emplace_back(hashGlobalValue(G));
+      return stable_hash_combine(Hashes);
+    }
+
+    if (const auto *Seq = dyn_cast<ConstantDataSequential>(C)) {
+      Hashes.emplace_back(xxh3_64bits(Seq->getRawDataValues()));
+      return stable_hash_combine(Hashes);
+    }
+
+    switch (C->getValueID()) {
+    case Value::UndefValueVal:
+    case Value::PoisonValueVal:
+    case Value::ConstantTokenNoneVal: {
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantIntVal: {
+      const APInt &Int = cast<ConstantInt>(C)->getValue();
+      Hashes.emplace_back(hashAPInt(Int));
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantFPVal: {
+      const APFloat &APF = cast<ConstantFP>(C)->getValueAPF();
+      Hashes.emplace_back(hashAPFloat(APF));
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantArrayVal: {
+      const ConstantArray *A = cast<ConstantArray>(C);
+      uint64_t NumElements = cast<ArrayType>(Ty)->getNumElements();
+      Hashes.emplace_back(NumElements);
+      for (auto &Op : A->operands()) {
+        auto H = hashConstant(cast<Constant>(Op));
+        Hashes.emplace_back(H);
+      }
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantStructVal: {
+      const ConstantStruct *S = cast<ConstantStruct>(C);
+      unsigned NumElements = cast<StructType>(Ty)->getNumElements();
+      Hashes.emplace_back(NumElements);
+      for (auto &Op : S->operands()) {
+        auto H = hashConstant(cast<Constant>(Op));
+        Hashes.emplace_back(H);
+      }
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantVectorVal: {
+      const ConstantVector *V = cast<ConstantVector>(C);
+      unsigned NumElements = cast<FixedVectorType>(Ty)->getNumElements();
+      Hashes.emplace_back(NumElements);
+      for (auto &Op : V->operands()) {
+        auto H = hashConstant(cast<Constant>(Op));
+        Hashes.emplace_back(H);
+      }
+      return stable_hash_combine(Hashes);
+    }
+    case Value::ConstantExprVal: {
+      const ConstantExpr *E = cast<ConstantExpr>(C);
+      unsigned NumOperands = E->getNumOperands();
+      Hashes.emplace_back(NumOperands);
+      for (auto &Op : E->operands()) {
+        auto H = hashConstant(cast<Constant>(Op));
+        Hashes.emplace_back(H);
+      }
+      return stable_hash_combine(Hashes);
+    }
+    case Value::BlockAddressVal: {
+      const BlockAddress *BA = cast<BlockAddress>(C);
+      auto H = hashGlobalValue(BA->getFunction());
+      Hashes.emplace_back(H);
+      return stable_hash_combine(Hashes);
+    }
+    case Value::DSOLocalEquivalentVal: {
+      const auto *Equiv = cast<DSOLocalEquivalent>(C);
+      auto H = hashGlobalValue(Equiv->getGlobalValue());
+      Hashes.emplace_back(H);
+      return stable_hash_combine(Hashes);
+    }
+    default: // Unknown constant, abort.
+      llvm_unreachable("Constant ValueID not recognized.");
+    }
+    return Hash;
   }
 
   stable_hash hashValue(Value *V) {
@@ -75,6 +204,10 @@ public:
     SmallVector<stable_hash> Hashes;
     if (Argument *Arg = dyn_cast<Argument>(V))
       Hashes.emplace_back(Arg->getArgNo());
+
+    // Get an index (an insertion order) for the non-constant value.
+    auto I = ValueToId.insert({V, ValueToId.size()});
+    Hashes.emplace_back(I.first->second);
 
     return stable_hash_combine(Hashes);
   }
@@ -100,8 +233,20 @@ public:
     if (const auto *ComparisonInstruction = dyn_cast<CmpInst>(&Inst))
       Hashes.emplace_back(ComparisonInstruction->getPredicate());
 
-    for (const auto &Op : Inst.operands())
-      Hashes.emplace_back(hashOperand(Op));
+    unsigned InstIdx = 0;
+    if (IndexInstruction) {
+      InstIdx = IndexInstruction->size();
+      IndexInstruction->insert({InstIdx, const_cast<Instruction *>(&Inst)});
+    }
+
+    for (const auto [OpndIdx, Op] : enumerate(Inst.operands())) {
+      auto OpndHash = hashOperand(Op);
+      if (IgnoreOp && IgnoreOp(&Inst, OpndIdx)) {
+        assert(IndexOperandHashMap);
+        IndexOperandHashMap->insert({{InstIdx, OpndIdx}, OpndHash});
+      } else
+        Hashes.emplace_back(OpndHash);
+    }
 
     return stable_hash_combine(Hashes);
   }
@@ -184,6 +329,12 @@ public:
   }
 
   uint64_t getHash() const { return Hash; }
+  std::unique_ptr<IndexInstrMap> getIndexInstrMap() {
+    return std::move(IndexInstruction);
+  }
+  std::unique_ptr<IndexOperandHashMapType> getIndexPairOpndHashMap() {
+    return std::move(IndexOperandHashMap);
+  }
 };
 
 } // namespace
@@ -198,4 +349,13 @@ IRHash llvm::StructuralHash(const Module &M, bool DetailedHash) {
   StructuralHashImpl H(DetailedHash);
   H.update(M);
   return H.getHash();
+}
+
+FunctionHashInfo
+llvm::StructuralHashWithDifferences(const Function &F,
+                                    IgnoreOperandFunc IgnoreOp) {
+  StructuralHashImpl H(/*DetailedHash=*/true, IgnoreOp);
+  H.update(F);
+  return FunctionHashInfo(H.getHash(), H.getIndexInstrMap(),
+                          H.getIndexPairOpndHashMap());
 }
