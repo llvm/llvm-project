@@ -445,9 +445,6 @@ struct TemplateParameterListBuilder {
     QualType T = Builder.Template->getInjectedClassNameSpecialization();
     T = S.Context.getInjectedClassNameType(Builder.Record, T);
 
-    ArrayRef<TemplateArgument> TempArgs =
-        Builder.Template->getInjectedTemplateArgs();
-
     return Builder;
   }
 };
@@ -734,7 +731,9 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
   T->setReferenced();
 
   // Create and Attach Template Parameter List to ConceptDecl
-  llvm::ArrayRef<NamedDecl *> TemplateParams = {T};
+  std::vector<NamedDecl *> TemplateParamsVec = {T};
+  llvm::ArrayRef<NamedDecl *> TemplateParams(TemplateParamsVec);
+
   clang::TemplateParameterList *ConceptParams =
       clang::TemplateParameterList::Create(context, DeclLoc, DeclLoc,
                                            TemplateParams, DeclLoc, nullptr);
