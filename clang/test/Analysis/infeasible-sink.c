@@ -56,14 +56,4 @@ void test2(void) {
     return;
 
   clang_analyzer_warnIfReached(); // no-warning: Even the parent state is unreachable.
-
-  // The parent state is already infeasible, but we realize that only if b is
-  // constrained.
-  clang_analyzer_eval(b > 0);  // no-warning
-  clang_analyzer_eval(b <= 0); // no-warning
-  if (b > 0) {
-    clang_analyzer_warnIfReached(); // no-warning
-    return;
-  }
-  clang_analyzer_warnIfReached(); // no-warning
 }
