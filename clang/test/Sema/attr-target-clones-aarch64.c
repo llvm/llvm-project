@@ -22,7 +22,7 @@ int __attribute__((target_clones("rng", "fp16fml+fp", "default"))) redecl4(void)
 // expected-error@+3 {{'target_clones' attribute does not match previous declaration}}
 // expected-note@-2 {{previous declaration is here}}
 // expected-warning@+1 {{version list contains entries that don't impact code generation}}
-int __attribute__((target_clones("dgh+memtag+rpres", "ebf16+dpb", "default"))) redecl4(void) { return 1; }
+int __attribute__((target_clones("dgh+rpres", "ebf16+dpb", "default"))) redecl4(void) { return 1; }
 
 int __attribute__((target_version("flagm2"))) redef2(void) { return 1; }
 // expected-error@+2 {{multiversioned function redeclarations require identical target attributes}}

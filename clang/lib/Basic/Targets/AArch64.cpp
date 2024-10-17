@@ -784,7 +784,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sme-fa64", HasSMEFA64)
       .Case("sme-f16f16", HasSMEF16F16)
       .Case("sme-b16b16", HasSMEB16B16)
-      .Cases("memtag", "memtag2", HasMTE)
+      .Case("memtag", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
       .Cases("ssbs", "ssbs2", HasSSBS)
