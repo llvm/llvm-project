@@ -642,7 +642,8 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       Scheduler.enterRegion(&*MBB, I, RegionEnd, NumRegionInstrs);
 
       // Skip empty scheduling regions (0 or 1 schedulable instructions).
-      if (I == RegionEnd || I == std::prev(RegionEnd)) {
+      if (I == RegionEnd || I == std::prev(RegionEnd) ||
+          Scheduler.disableForRegion(&*MBB, I, RegionEnd, NumRegionInstrs)) {
         // Close the current region. Bundle the terminator if needed.
         // This invalidates 'RegionEnd' and 'I'.
         Scheduler.exitRegion();
@@ -1251,6 +1252,23 @@ void ScheduleDAGMILive::enterRegion(MachineBasicBlock *bb,
 
   assert((!ShouldTrackLaneMasks || ShouldTrackPressure) &&
          "ShouldTrackLaneMasks requires ShouldTrackPressure");
+}
+
+// EXPERIMENTAL: It seems that GenericScheduler currently often increases
+// spilling heavily with huge regions (like >350 instructions). This option
+// makes any sched region bigger than its value have pre-ra scheduling
+// skipped.
+cl::opt<unsigned> NoSchedAbove("nosched-above", cl::init(~0U));
+bool ScheduleDAGMILive::disableForRegion(MachineBasicBlock *bb,
+                                         MachineBasicBlock::iterator begin,
+                                         MachineBasicBlock::iterator end,
+                                         unsigned regioninstrs) const {
+  if (NumRegionInstrs > NoSchedAbove) {
+    LLVM_DEBUG(dbgs() << "Disabling pre-ra mischeduling of region with "
+                      << NumRegionInstrs << " instructions\n";);
+    return true;
+  }
+  return false;
 }
 
 // Setup the register pressure trackers for the top scheduled and bottom
@@ -2455,7 +2473,53 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
 /// can dispatch per cycle.
 ///
 /// TODO: Also check whether the SU must start a new group.
+
+// EXPERIMENTAL: General switch for experimental OOO heuristics.
+// Note: This will (currently) enforce bottom-up only scheduling for affected
+// regions.
+cl::opt<bool> OOOSCHED("misched-ooo", cl::init(false));
+
+// EXPERIMENTAL: Similar to NoSchedAbove. Disables OOO heuristics for smaller
+// regions below the limit.
+cl::opt<unsigned> NoOOOSchedBelow("no-ooosched-below", cl::init(0));
+
+// EXPERIMENTAL: Disable cycle hazards for OOO target.
+cl::opt<bool> NOHAZARDS("misched-nohazards", cl::init(true));
+
+// EXPERIMENTAL: Used for verification purposes (disabling rescheduling).
+cl::opt<bool> INPUTORDER("misched-inputorder", cl::init(false));
+
+// EXPERIMENTAL: Enable regpressure heuristics for OOO scheduling.
+cl::opt<bool> REGPRESS("misched-regpress", cl::init(true));
+
+// EXPERIMENTAL: Use DFSResult for regpressure heuristics with OOO scheduling.
+cl::opt<bool> DFS("misched-dfs", cl::init(true));
+
+// EXPERIMENTAL: The size limit of subtrees to schedule as a unit.
+cl::opt<unsigned> DFSSIZE("dfs-size", cl::init(4));
+
+// EXPERIMENTAL: Enable height heuristic for OOO scheduling.
+cl::opt<bool> HEIGHTHEUR("misched-heightheur", cl::init(true));
+
+// EXPERIMENTAL: Rough differentiator for height heuristic: If the DAG size /
+// height is greater/eq than this value, then it is too "wide" to enable the
+// height heuristic.
+cl::opt<unsigned> HEIGHTIFWFAC("misched-heightifwfac", cl::init(3));
+
+static bool doOOOSchedForRegion(unsigned NumRegionInstrs) {
+  return OOOSCHED && NumRegionInstrs > NoOOOSchedBelow;
+}
+
+static bool doHeightHeurForRegion(const ScheduleDAGMI *DAG, unsigned DAGHeight) {
+  return HEIGHTHEUR &&
+         DAGHeight != 0 && (DAG->SUnits.size() / DAGHeight) < HEIGHTIFWFAC;
+}
+
 bool SchedBoundary::checkHazard(SUnit *SU) {
+  // Better to make SU available and potentially reduce register pressure.
+  if ((doOOOSchedForRegion(DAG->SUnits.size()) && NOHAZARDS) || INPUTORDER)
+    return false;
+
   if (HazardRec->isEnabled()
       && HazardRec->getHazardType(SU) != ScheduleHazardRecognizer::NoHazard) {
     return true;
@@ -2692,9 +2756,9 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   // exceed the issue width.
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
   unsigned IncMOps = SchedModel->getNumMicroOps(SU->getInstr());
-  assert(
-      (CurrMOps == 0 || (CurrMOps + IncMOps) <= SchedModel->getIssueWidth()) &&
-      "Cannot schedule this instruction's MicroOps in the current cycle.");
+  assert((doOOOSchedForRegion(DAG->SUnits.size()) || INPUTORDER ||
+       (CurrMOps == 0 || (CurrMOps + IncMOps) <= SchedModel->getIssueWidth())) &&
+       "Cannot schedule this instruction's MicroOps in the current cycle.");
 
   unsigned ReadyCycle = (isTop() ? SU->TopReadyCycle : SU->BotReadyCycle);
   LLVM_DEBUG(dbgs() << "  Ready @" << ReadyCycle << "c\n");
@@ -3109,6 +3173,7 @@ const char *GenericSchedulerBase::getReasonStr(
   case BotHeightReduce:return "BOT-HEIGHT";
   case BotPathReduce:  return "BOT-PATH  ";
   case NextDefUse:     return "DEF-USE   ";
+  case RegPressure:    return "REG-PRESS ";
   case NodeOrder:      return "ORDER     ";
   };
   llvm_unreachable("Unknown reason!");
@@ -3246,6 +3311,20 @@ static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand) {
   tracePick(Cand.Reason, Cand.AtTop);
 }
 
+// Skip all operands that are not interesting registers from a scheduling
+// register pressure persepctive.
+bool skipOp(const MachineOperand &Op, const MachineRegisterInfo *MRI,
+            bool SkipPhysRegs = true) {
+  if (!Op.isReg() || !Op.getReg() || Op.isImplicit() ||
+      (Op.isUse() && Op.isUndef()) || Op.isDead())
+    return true;
+
+  if (Register::isPhysicalRegister(Op.getReg()))
+    return SkipPhysRegs ? true : !MRI->isAllocatable(Op.getReg());
+
+  return false;
+}
+
 void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   assert(dag->hasVRegLiveness() &&
          "(PreRA)GenericScheduler needs vreg liveness");
@@ -3256,9 +3335,58 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   if (RegionPolicy.ComputeDFSResult)
     DAG->computeDFSResult();
 
+  if (DFS) {
+    DAG->computeDFSResult();
+    const SchedDFSResult *DFSResult = DAG->getDFSResult();
+    TreeDefs  = std::vector<std::set<Register> >     (DAG->SUnits.size());
+    TreeUses  = std::vector<std::set<Register> >     (DAG->SUnits.size());
+    TreeSUs   = std::vector<std::set<const SUnit *> >(DAG->SUnits.size());
+    assert(NextSubtreeSU == nullptr);
+
+    for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+      const SUnit *SU = &DAG->SUnits[Idx];
+      TreeSUs[Idx].insert(SU);
+      if (SU->getInstr()->getNumOperands()) {
+        const MachineOperand &MO = SU->getInstr()->getOperand(0);
+        if (!skipOp(MO, &DAG->MRI) && MO.isDef())
+          TreeDefs[Idx].insert(MO.getReg());
+      }
+
+      // Propagate from above in subtree.
+      unsigned SUTree = DFSResult->getSubtreeID(SU);
+      for (const SDep &Pred : SU->Preds) {
+        const SUnit *PredSU = Pred.getSUnit();
+        if (PredSU->isBoundaryNode())
+          continue;
+        unsigned PI = PredSU->NodeNum;
+        if (DFSResult->getSubtreeID(PredSU) == SUTree) {
+          TreeSUs[Idx].insert(TreeSUs[PI].begin(), TreeSUs[PI].end());
+          TreeDefs[Idx].insert(TreeDefs[PI].begin(), TreeDefs[PI].end());
+          TreeUses[Idx].insert(TreeUses[PI].begin(), TreeUses[PI].end());
+        }
+      }
+
+      // Virtual register uses not defined in subtree.  Avoid involvement
+      // with physregs.
+      for (auto &MO : SU->getInstr()->explicit_operands())
+        if (!skipOp(MO, &DAG->MRI, /*SkipPhysRegs=*/false) && MO.isUse() &&
+            !TreeDefs[Idx].count(MO.getReg()))
+          TreeUses[Idx].insert(MO.getReg());
+    }
+  }
+
   Rem.init(DAG, SchedModel);
   Top.init(DAG, SchedModel, &Rem);
   Bot.init(DAG, SchedModel, &Rem);
+
+  DAGHeight = 0;
+  DAGDepth = 0;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
+    DAGDepth = std::max(DAGDepth, DAG->SUnits[Idx].getDepth());
+  }
+  NumScheduled = 0;
+  initLiveRegs(DAG);
 
   // Initialize resource counts.
 
@@ -3273,6 +3401,23 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   }
   TopCand.SU = nullptr;
   BotCand.SU = nullptr;
+}
+
+void GenericScheduler::initLiveRegs(ScheduleDAGMILive *DAG) {
+  LiveRegs.clear();
+  // TODO: Is this slow...?
+  for (unsigned I = 0, E = DAG->MRI.getNumVirtRegs(); I != E; ++I) {
+    Register VirtReg = Register::index2VirtReg(I);
+    const LiveInterval &LI = DAG->getLIS()->getInterval(VirtReg);
+    LiveQueryResult LRQ = LI.Query(DAG->getLIS()->
+                            getInstructionIndex(*DAG->SUnits.back().getInstr()));
+    if (LRQ.valueOut())
+      LiveRegs.insert(VirtReg);
+  }
+  LLVM_DEBUG( dbgs() << " Live outs: ";
+              for (auto Reg : LiveRegs)
+                dbgs() << "%" << Register::virtReg2Index(Reg) << ", ";
+              dbgs() << "\n";);
 }
 
 /// Initialize the per-region scheduling policy.
@@ -3323,6 +3468,11 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyTopDown = ForceTopDown;
     if (RegionPolicy.OnlyTopDown)
       RegionPolicy.OnlyBottomUp = false;
+  }
+
+  if (doOOOSchedForRegion(NumRegionInstrs)) {
+    RegionPolicy.OnlyBottomUp = true;
+    RegionPolicy.OnlyTopDown = false;
   }
 }
 
@@ -3479,6 +3629,76 @@ int biasPhysReg(const SUnit *SU, bool isTop) {
 
   return 0;
 }
+
+// Compute the current PressureDiff for MI and return it in PDiff.
+void GenericScheduler::getMIPDiff(const MachineInstr *MI, PressureDiff &PDiff) const {
+  std::set<Register> Kills, Defs;
+
+  for (auto &MO : MI->explicit_operands()) {
+    if (skipOp(MO, &DAG->MRI))
+      continue;
+    const LiveInterval &LI = DAG->getLIS()->getInterval(MO.getReg());
+    LiveQueryResult LRQ = LI.Query(DAG->getLIS()->getInstructionIndex(*MI));
+    if (MO.isUse() && !LiveRegs.count(MO.getReg()))
+      Kills.insert(MO.getReg());
+    else if (MO.isDef() && LRQ.valueOut() != nullptr && LRQ.valueIn() == nullptr)
+      Defs.insert(MO.getReg());
+  }
+
+  for (auto &Kill : Kills)
+    PDiff.addPressureChange(Kill, false/*IsDec*/, &DAG->MRI);
+  for (auto &Def : Defs)
+    PDiff.addPressureChange(Def, true/*IsDec*/, &DAG->MRI);
+}
+
+// Compute the current PressureDiff for a subtree beginning at the NodeNum SU.
+void GenericScheduler::getTreePDiff(unsigned NodeNum,
+                                    PressureDiff &PDiff) const {
+  // Only consider relatively small subtrees.
+  if (TreeSUs[NodeNum].size() <= 1 || TreeSUs[NodeNum].size() > DFSSIZE)
+    return;
+
+  // Don't schedule a subtree if it would cause a register to become live.
+  for (auto &Reg : TreeUses[NodeNum])
+    if (!LiveRegs.count(Reg))
+      return;
+
+  // Check that this is a subtree that can be scheduled as a unit.
+  for (auto *TreeSU : TreeSUs[NodeNum])
+    for (const SDep &Succ : TreeSU->Succs)
+      if (!Succ.getSUnit()->isScheduled &&
+          !TreeSUs[NodeNum].count(Succ.getSUnit()))
+        return;
+
+  // Return the PressureDiff counting the currently live registers that this
+  // subtree defines (and are not redefining).
+  for (auto R : TreeDefs[NodeNum])
+    if (LiveRegs.count(R) && !TreeUses[NodeNum].count(R))
+      PDiff.addPressureChange(R, true/*IsDec*/, &DAG->MRI);
+}
+
+// Compare two pressure diffs and retun a non-zero value only in cases where
+// one is increasing while the other is decreasing the same pressure set. The
+// returned value will reflect PDiff2 as in being negative if it decreases
+// pressure.
+int GenericScheduler::comparePDiffs(PressureDiff &PDiff1,
+                                    PressureDiff &PDiff2) const {
+  int RPScore = 0;
+  for (const PressureChange &PC1 : PDiff1) {
+    if (!PC1.isValid())
+      break;
+    for (const PressureChange &PC2 : PDiff2) {
+      if (!PC2.isValid())
+        break;
+      if (PC1.getPSet() == PC2.getPSet() &&
+          (PC2.getUnitInc() < 0) != (PC1.getUnitInc() < 0)) {
+        RPScore += PC2.getUnitInc() < 0 ? -1 : 1;
+        break;
+      }
+    }
+  }
+  return RPScore;
+}
 } // end namespace llvm
 
 void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -3518,6 +3738,18 @@ void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
              << Cand.RPDelta.Excess.getUnitInc() << "\n");
 }
 
+#ifndef NDEBUG
+// Dump PressureDiffs for SU and Subtree.
+void dumpPDiffs_SU_STree(unsigned SUNodeNum, unsigned SubtreeNodeNum,
+                         PressureDiff &SUPDiff, PressureDiff &SubtreePDiff,
+                         const TargetRegisterInfo *TRI) {
+  dbgs() << "SU(" << SUNodeNum << ") PDiff: \t";
+  SUPDiff.dump(*TRI);
+  dbgs() << "Subtree starting with SU(" << SubtreeNodeNum << ") PDiff: \t";
+  SubtreePDiff.dump(*TRI);
+}
+#endif
+
 /// Apply a set of heuristics to a new candidate. Heuristics are currently
 /// hierarchical. This may be more efficient than a graduated cost model because
 /// we don't need to evaluate all aspects of the model for each node in the
@@ -3538,10 +3770,119 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
     return true;
   }
 
+  // Experimental: produce the same output order as in the input.
+  if (INPUTORDER) {
+    if (TryCand.SU->NodeNum > Cand.SU->NodeNum) {
+      TryCand.Reason = NodeOrder;
+      return true;
+    }
+    return false;
+  }
+
   // Bias PhysReg Defs and copies to their uses and defined respectively.
   if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
                  biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
     return TryCand.Reason != NoCand;
+
+  // Experimental scheduling for OOO target.
+  if (doOOOSchedForRegion(DAG->SUnits.size())) {
+
+    bool SkipPhysRegs = biasPhysReg(TryCand.SU, TryCand.AtTop) &&
+      biasPhysReg(Cand.SU, TryCand.AtTop);
+
+    if (REGPRESS && !SkipPhysRegs) {
+      // Schedule from NextQueue until it's empty.
+      if (DFS && !NextQueue.empty() &&
+          tryGreater(NextQueue.count(TryCand.SU), NextQueue.count(Cand.SU),
+                     TryCand, Cand, GenericSchedulerBase::RegPressure))
+        return TryCand.Reason != NoCand;
+
+      // Compare pressure diffs between the candidates and schedule an
+      // instruction that decreases register pressure such as an immediate
+      // load below the other.
+      PressureDiff CandMIPDiff;
+      PressureDiff TryCandMIPDiff;
+      getMIPDiff(Cand.SU->getInstr(), CandMIPDiff);
+      getMIPDiff(TryCand.SU->getInstr(), TryCandMIPDiff);
+      if (int TryCandRPScore = comparePDiffs(CandMIPDiff, TryCandMIPDiff)) {
+        LLVM_DEBUG(dbgs() << "SU(" << Cand.SU->NodeNum << ") PDiff: \t";
+                   CandMIPDiff.dump(*TRI);
+                   dbgs() << "SU(" << TryCand.SU->NodeNum << ") PDiff: \t";
+                   TryCandMIPDiff.dump(*TRI););
+        tryLess(TryCandRPScore, 0, TryCand, Cand, GenericSchedulerBase::RegPressure);
+        return TryCand.Reason != NoCand;
+      }
+
+      // See if there is a subtree that would reduce register pressure if
+      // scheduled.
+      if (DFS && NextQueue.empty()) {
+        PressureDiff TryCandTreePDiff;
+        getTreePDiff(TryCand.SU->NodeNum, TryCandTreePDiff);
+        if (comparePDiffs(CandMIPDiff, TryCandTreePDiff) < 0) {
+          LLVM_DEBUG(dumpPDiffs_SU_STree(Cand.SU->NodeNum, TryCand.SU->NodeNum,
+                                         CandMIPDiff, TryCandTreePDiff, TRI););
+          TryCand.Reason = GenericSchedulerBase::RegPressure;
+          NextSubtreeSU = TryCand.SU;
+          return true;
+        }
+        PressureDiff CandTreePDiff;
+        getTreePDiff(Cand.SU->NodeNum, CandTreePDiff);
+        if (comparePDiffs(TryCandMIPDiff, CandTreePDiff) < 0) {
+          LLVM_DEBUG(dumpPDiffs_SU_STree(TryCand.SU->NodeNum, Cand.SU->NodeNum,
+                                         TryCandMIPDiff, CandTreePDiff, TRI););
+          Cand.Reason = GenericSchedulerBase::RegPressure;
+          NextSubtreeSU = Cand.SU;
+          return false;
+        }
+      }
+
+      // An SU that only increments register pressure (bottom-up) would help
+      // register pressure if scheduled higher (e.g. a store). Don't push all
+      // it's predecessor further up, but at least make sure that the SU is
+      // scheduled immediately after its predecessor in the input order.
+      auto onlyIncreases = [&](PressureDiff &PDiff) -> bool {
+        bool Incr = false;
+        bool Decr = false;
+        for (const PressureChange &PC : PDiff) {
+          if (!PC.isValid())
+            break;
+          (PC.getUnitInc() > 0 ? Incr : Decr) = true;
+        }
+        return Incr && !Decr;
+      };
+      auto maxPredNum = [&](const SUnit *SU) -> unsigned {
+        unsigned MaxPredNodeNum = 0;
+        for (const SDep &Pred : SU->Preds)
+          if (Pred.getSUnit() != &DAG->EntrySU &&
+              Pred.getSUnit()->NodeNum > MaxPredNodeNum)
+            MaxPredNodeNum = Pred.getSUnit()->NodeNum;
+        return MaxPredNodeNum;
+      };
+      bool TryCandIncr = onlyIncreases(TryCandMIPDiff);
+      bool CandIncr    = onlyIncreases(CandMIPDiff);
+      if (TryCandIncr != CandIncr) {
+        bool TryCandHeur = (TryCandIncr &&
+                            maxPredNum(TryCand.SU) < Cand.SU->NodeNum);
+        bool CandHeur = (CandIncr &&
+                         maxPredNum(Cand.SU) < TryCand.SU->NodeNum);
+        if (tryLess(TryCandHeur, CandHeur, TryCand, Cand,
+                    GenericSchedulerBase::RegPressure))
+          return TryCand.Reason != NoCand;
+      }
+    }
+
+    if (!SkipPhysRegs && doHeightHeurForRegion(DAG, DAGHeight) &&
+        tryLatency(TryCand, Cand, *Zone))
+        return TryCand.Reason != NoCand;
+
+    // Fall through to original instruction order.
+    if (TryCand.SU->NodeNum > Cand.SU->NodeNum) {
+      TryCand.Reason = NodeOrder;
+      return true;
+    }
+
+    return false;
+  }
 
   // Avoid exceeding the target's limit.
   if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.Excess,
@@ -3646,6 +3987,11 @@ void GenericScheduler::pickNodeFromQueue(SchedBoundary &Zone,
                                          SchedCandidate &Cand) {
   // getMaxPressureDelta temporarily modifies the tracker.
   RegPressureTracker &TempTracker = const_cast<RegPressureTracker&>(RPTracker);
+
+  LLVM_DEBUG( dbgs() << "Live regs: ";
+              for (auto R : LiveRegs)
+                dbgs() << "%" << Register::virtReg2Index(R) << ", ";
+              dbgs() << "\n";);
 
   ReadyQueue &Q = Zone.Available;
   for (SUnit *SU : Q) {
@@ -3845,6 +4191,59 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
     Bot.bumpNode(SU);
     if (SU->hasPhysRegDefs)
       reschedulePhysReg(SU, false);
+  }
+
+  MachineInstr *MI = SU->getInstr();
+  for (auto &MO : MI->explicit_operands())
+    if (!skipOp(MO, &DAG->MRI)) {
+      if (MO.isDef()) {
+        assert(LiveRegs.count(MO.getReg()) || MO.isDead());
+        if (!MO.getSubReg()) {
+          LiveRegs.erase(MO.getReg());
+        } else {
+          const LiveInterval &LI = DAG->getLIS()->getInterval(MO.getReg());
+          LiveQueryResult LRQ =
+            LI.Query(DAG->getLIS()->getInstructionIndex(*MI));
+          if(!LRQ.valueIn())
+            LiveRegs.erase(MO.getReg());
+        }
+      }
+      else if (MO.readsReg())
+        LiveRegs.insert(MO.getReg());
+    }
+  ++NumScheduled;
+
+  if (NextSubtreeSU) {
+    assert(NextQueue.empty());
+    if (NextSubtreeSU == SU) {
+      for (auto *TSU : TreeSUs[SU->NodeNum])
+        if (!TSU->isScheduled)
+          NextQueue.insert(TSU);
+      LLVM_DEBUG(dbgs() << "Scheduling subtree: ";
+                 for (auto *NxSU : NextQueue)
+                   dbgs() << NxSU->NodeNum << " ";
+                 dbgs() << "\n";);
+    }
+    NextSubtreeSU = nullptr;
+  }
+
+  if (!NextQueue.empty()) {
+    assert (NextQueue.count(SU) && "Failed to schedule planned SU.");
+    NextQueue.erase(SU);
+#ifndef NDEBUG
+    const SchedDFSResult *DFSResult = DAG->getDFSResult();
+    unsigned SUTree = DFSResult->getSubtreeID(SU);
+    for (const SDep &Pred : SU->Preds) {
+      const SUnit *PredSU = Pred.getSUnit();
+      assert((PredSU->isBoundaryNode() ||
+              Pred.getKind() != SDep::Data ||
+              (DFSResult->getSubtreeID(PredSU) == SUTree &&
+               NextQueue.count(PredSU)) ||
+              LiveRegs.count(Pred.getReg()) ||
+              Register::isPhysicalRegister(Pred.getReg())) &&
+             "Expected no data edges exiting the subtree.");
+    }
+#endif
   }
 }
 
