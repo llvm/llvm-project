@@ -702,7 +702,10 @@ void AArch64FrameLowering::resetCFIToInitialState(
 
   // Flip the RA sign state.
   if (MFI.shouldSignReturnAddress(MF)) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+    auto CFIInst = MFI.branchProtectionPAuthLR()
+                       ? MCCFIInstruction::createNegateRAStateWithPC(nullptr)
+                       : MCCFIInstruction::createNegateRAState(nullptr);
+    CFIIndex = MF.addFrameInst(CFIInst);
     BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
   }
 
