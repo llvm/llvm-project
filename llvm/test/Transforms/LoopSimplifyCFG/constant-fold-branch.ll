@@ -280,6 +280,72 @@ exit:
   ret i32 %i.1
 }
 
+; Check that we can handle indirectbranch.
+define i32 @dead_exit_test_indirectbranch_loop(i32 %end) {
+; CHECK-LABEL: @dead_exit_test_indirectbranch_loop(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 10, [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[PREBB1:%.*]], label [[PREBB2:%.*]]
+; CHECK:       preBB1:
+; CHECK-NEXT:    indirectbr ptr blockaddress(@dead_exit_test_indirectbranch_loop, [[HEADER:%.*]]), [label [[HEADER]], label %exit]
+; CHECK:       preBB2:
+; CHECK-NEXT:    indirectbr ptr blockaddress(@dead_exit_test_indirectbranch_loop, [[EXIT:%.*]]), [label [[HEADER]], label %exit]
+; CHECK:       header:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREBB1]] ], [ 1, [[PREBB2]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[DEAD:%.*]]
+; CHECK:       dead:
+; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[HEADER]] ]
+; CHECK-NEXT:    br label [[DUMMY:%.*]]
+; CHECK:       dummy:
+; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[LOOP_EXIT_LOOPEXIT:%.*]]
+; CHECK:       loop.exit.loopexit:
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    br label [[LOOP_EXIT]]
+; CHECK:       loop.exit:
+; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[I_LCSSA]], [[DUMMY]] ], [ [[I_INC_LCSSA]], [[LOOP_EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[I_1]], [[LOOP_EXIT]] ], [ -1, [[PREBB1]] ], [ -1, [[PREBB2]] ]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+start:
+  %cond = icmp slt i32 10, %end
+  br i1 %cond, label %preBB1, label %preBB2
+
+preBB1:
+  indirectbr ptr blockaddress(@dead_exit_test_indirectbranch_loop, %header), [label %header, label %exit]
+
+preBB2:
+  indirectbr ptr blockaddress(@dead_exit_test_indirectbranch_loop, %exit), [label %header, label %exit]
+
+header:
+  %i = phi i32 [0, %preBB1], [1, %preBB2], [%i.inc, %backedge]
+  br i1 true, label %backedge, label %dead
+
+dead:
+  br label %dummy
+
+dummy:
+  br label %loop.exit
+
+backedge:
+  %i.inc = add i32 %i, 1
+  %cmp = icmp slt i32 %i.inc, %end
+  br i1 %cmp, label %header, label %loop.exit
+
+loop.exit:
+  %i.1 = phi i32 [%i.inc, %backedge], [%i, %dummy]
+  br label %exit
+
+exit:
+  %ret = phi i32 [%i.1, %loop.exit], [-1, %preBB1], [-1, %preBB2]
+  ret i32 %ret
+}
+
 ; Check that we preserve static reachibility of a dead exit block while deleting
 ; a switch.
 define i32 @dead_exit_test_switch_loop(i32 %end) {
