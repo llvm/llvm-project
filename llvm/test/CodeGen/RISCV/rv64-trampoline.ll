@@ -16,18 +16,18 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV64-NEXT:    ld a0, %lo(.LCPI0_0)(a0)
-; RV64-NEXT:    lui a2, %hi(f)
-; RV64-NEXT:    addi a2, a2, %lo(f)
-; RV64-NEXT:    sd a2, 32(sp)
+; RV64-NEXT:    lui a0, %hi(f)
+; RV64-NEXT:    addi a0, a0, %lo(f)
+; RV64-NEXT:    sd a0, 32(sp)
+; RV64-NEXT:    li a0, 919
+; RV64-NEXT:    lui a2, %hi(.LCPI0_0)
+; RV64-NEXT:    ld a2, %lo(.LCPI0_0)(a2)
+; RV64-NEXT:    lui a3, 6203
+; RV64-NEXT:    addi a3, a3, 643
+; RV64-NEXT:    sw a0, 8(sp)
+; RV64-NEXT:    sw a3, 12(sp)
+; RV64-NEXT:    sd a2, 16(sp)
 ; RV64-NEXT:    sd a1, 24(sp)
-; RV64-NEXT:    sd a0, 16(sp)
-; RV64-NEXT:    lui a0, 6203
-; RV64-NEXT:    addi a0, a0, 643
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    addi a0, a0, 919
-; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    addi a1, sp, 24
 ; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    addi s1, sp, 8
@@ -47,18 +47,18 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-LINUX-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; RV64-LINUX-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; RV64-LINUX-NEXT:    mv s0, a0
-; RV64-LINUX-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV64-LINUX-NEXT:    ld a0, %lo(.LCPI0_0)(a0)
-; RV64-LINUX-NEXT:    lui a2, %hi(f)
-; RV64-LINUX-NEXT:    addi a2, a2, %lo(f)
-; RV64-LINUX-NEXT:    sd a2, 32(sp)
+; RV64-LINUX-NEXT:    lui a0, %hi(f)
+; RV64-LINUX-NEXT:    addi a0, a0, %lo(f)
+; RV64-LINUX-NEXT:    sd a0, 32(sp)
+; RV64-LINUX-NEXT:    li a0, 919
+; RV64-LINUX-NEXT:    lui a2, %hi(.LCPI0_0)
+; RV64-LINUX-NEXT:    ld a2, %lo(.LCPI0_0)(a2)
+; RV64-LINUX-NEXT:    lui a3, 6203
+; RV64-LINUX-NEXT:    addi a3, a3, 643
+; RV64-LINUX-NEXT:    sw a0, 8(sp)
+; RV64-LINUX-NEXT:    sw a3, 12(sp)
+; RV64-LINUX-NEXT:    sd a2, 16(sp)
 ; RV64-LINUX-NEXT:    sd a1, 24(sp)
-; RV64-LINUX-NEXT:    sd a0, 16(sp)
-; RV64-LINUX-NEXT:    lui a0, 6203
-; RV64-LINUX-NEXT:    addi a0, a0, 643
-; RV64-LINUX-NEXT:    slli a0, a0, 32
-; RV64-LINUX-NEXT:    addi a0, a0, 919
-; RV64-LINUX-NEXT:    sd a0, 8(sp)
 ; RV64-LINUX-NEXT:    addi a1, sp, 24
 ; RV64-LINUX-NEXT:    addi a0, sp, 8
 ; RV64-LINUX-NEXT:    addi s1, sp, 8
