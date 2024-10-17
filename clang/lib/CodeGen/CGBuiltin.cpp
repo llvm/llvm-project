@@ -1020,7 +1020,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     //     1) sizeof(struct S) + count * sizeof(typeof(fam))
     //     2) offsetof(struct S, fam) + count * sizeof(typeof(fam))
     //
-    // The first will add any remaining whitespace that might exist after
+    // The first will add additional padding after the end of the array,
     // allocation while the second method is more precise, but not quite
     // expected from programmers. See
     // https://lore.kernel.org/lkml/ZvV6X5FPBBW7CO1f@archlinux/ for a
