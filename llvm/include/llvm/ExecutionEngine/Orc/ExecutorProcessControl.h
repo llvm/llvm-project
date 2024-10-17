@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/AutoLoadDylibUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -302,6 +303,9 @@ public:
   using SymbolLookupCompleteFn =
       unique_function<void(Expected<std::vector<tpctypes::LookupResult>>)>;
 
+  using ResolveSymbolsCompleteFn =
+      unique_function<void(Expected<std::vector<ResolveResult>>)>;
+
   /// Search for symbols in the target process.
   ///
   /// The result of the lookup is a 2-dimensional array of target addresses
@@ -310,6 +314,9 @@ public:
   /// symbol is not found then it be assigned a '0' value.
   virtual void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
                                   SymbolLookupCompleteFn F) = 0;
+
+  virtual void resolveSymbolsAsync(ArrayRef<SymbolLookupSet> Request,
+                                   ResolveSymbolsCompleteFn F) = 0;
 
   /// Run function with a main-like signature.
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
@@ -485,6 +492,11 @@ public:
     llvm_unreachable("Unsupported");
   }
 
+  void resolveSymbolsAsync(ArrayRef<SymbolLookupSet> Request,
+                           ResolveSymbolsCompleteFn F) override {
+    llvm_unreachable("Unsupported");
+  }
+
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override {
     llvm_unreachable("Unsupported");
@@ -530,6 +542,9 @@ public:
 
   void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
                           SymbolLookupCompleteFn F) override;
+
+  void resolveSymbolsAsync(ArrayRef<SymbolLookupSet> Request,
+                           ResolveSymbolsCompleteFn F) override;
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;

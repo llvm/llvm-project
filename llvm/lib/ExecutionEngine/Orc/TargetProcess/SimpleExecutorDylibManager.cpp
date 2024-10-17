@@ -11,6 +11,8 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <dlfcn.h>
+
 #define DEBUG_TYPE "orc"
 
 namespace llvm {
@@ -78,6 +80,74 @@ SimpleExecutorDylibManager::lookup(tpctypes::DylibHandle H,
   return Result;
 }
 
+Expected<ResolveResult>
+SimpleExecutorDylibManager::resolve(const RemoteSymbolLookupSet &L) {
+  if (!DylibLookup.has_value()) {
+    DylibLookup.emplace();
+    DylibLookup->initializeDynamicLoader([](llvm::StringRef) { /*ignore*/
+                                                               return false;
+    });
+  }
+
+  BloomFilter Filter;
+  std::vector<ExecutorSymbolDef> Result;
+  for (auto &E : L) {
+
+    if (E.Name.empty()) {
+      if (E.Required)
+        return make_error<StringError>("Required address for empty symbol \"\"",
+                                       inconvertibleErrorCode());
+      else
+        Result.push_back(ExecutorSymbolDef());
+    } else {
+      const char *DemangledSymName = E.Name.c_str();
+#ifdef __APPLE__
+      if (E.Name.front() != '_')
+        return make_error<StringError>(Twine("MachO symbol \"") + E.Name +
+                                           "\" missing leading '_'",
+                                       inconvertibleErrorCode());
+      ++DemangledSymName;
+#endif
+
+      void *Addr =
+          sys::DynamicLibrary::SearchForAddressOfSymbol(DemangledSymName);
+
+      if (Addr) {
+        Result.push_back(
+            {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
+        continue;
+      }
+
+      auto lib = DylibLookup->searchLibrariesForSymbol(E.Name);
+      auto canonicalLoadedLib = DylibLookup->lookupLibrary(lib);
+      if (canonicalLoadedLib.empty()) {
+        if (!Filter.IsInitialized())
+          DylibLookup->BuildGlobalBloomFilter(Filter);
+        Result.push_back(ExecutorSymbolDef());
+      } else {
+        auto H = open(canonicalLoadedLib, 0);
+        if (!H)
+          return H.takeError();
+
+        DylibLookup->addLoadedLib(canonicalLoadedLib);
+        void *Addr = dlsym(H.get().toPtr<void *>(), DemangledSymName);
+        if (!Addr)
+          return make_error<StringError>(Twine("Missing definition for ") +
+                                             DemangledSymName,
+                                         inconvertibleErrorCode());
+        Result.push_back(
+            {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
+      }
+    }
+  }
+
+  ResolveResult Res;
+  if (Filter.IsInitialized())
+    Res.Filter.emplace(std::move(Filter));
+  Res.SymbolDef = std::move(Result);
+  return Res;
+}
+
 Error SimpleExecutorDylibManager::shutdown() {
 
   DylibSet DS;
@@ -97,6 +167,8 @@ void SimpleExecutorDylibManager::addBootstrapSymbols(
       ExecutorAddr::fromPtr(&openWrapper);
   M[rt::SimpleExecutorDylibManagerLookupWrapperName] =
       ExecutorAddr::fromPtr(&lookupWrapper);
+  M[rt::SimpleExecutorDylibManagerResolveWrapperName] =
+      ExecutorAddr::fromPtr(&resolveWrapper);
 }
 
 llvm::orc::shared::CWrapperFunctionResult
@@ -116,6 +188,17 @@ SimpleExecutorDylibManager::lookupWrapper(const char *ArgData, size_t ArgSize) {
              ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorDylibManager::lookup))
+          .release();
+}
+
+llvm::orc::shared::CWrapperFunctionResult
+SimpleExecutorDylibManager::resolveWrapper(const char *ArgData,
+                                           size_t ArgSize) {
+  return shared::WrapperFunction<
+             rt::SPSSimpleExecutorDylibManagerResolveSignature>::
+      handle(ArgData, ArgSize,
+             shared::makeMethodWrapperHandler(
+                 &SimpleExecutorDylibManager::resolve))
           .release();
 }
 
