@@ -102,6 +102,7 @@ static ResourceClass getResourceClass(RegisterType RT) {
     return ResourceClass::Sampler;
   case RegisterType::C:
   case RegisterType::I:
+  default:
     llvm_unreachable("unexpected RegisterType value");
   }
 }
