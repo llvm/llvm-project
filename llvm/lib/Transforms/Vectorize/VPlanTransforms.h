@@ -36,11 +36,13 @@ struct VPlanTransforms {
                                 GetIntOrFpInductionDescriptor,
                             ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
-  /// Sink users of fixed-order recurrences after the recipe defining their
-  /// previous value. Then introduce FirstOrderRecurrenceSplice VPInstructions
-  /// to combine the value from the recurrence phis and previous values. The
-  /// current implementation assumes all users can be sunk after the previous
-  /// value, which is enforced by earlier legality checks.
+  /// Try to move users of fixed-order recurrences after the recipe defining
+  /// their previous value, either by sinking them or hoisting the recipe
+  /// defining their previous value (and its operands). Then introduce
+  /// FirstOrderRecurrenceSplice VPInstructions to combine the value from the
+  /// recurrence phis and previous values. The current implementation assumes
+  /// all users can be sunk after the previous value, which is enforced by
+  /// earlier legality checks.
   /// \returns true if all users of fixed-order recurrences could be re-arranged
   /// as needed or false if it is not possible. In the latter case, \p Plan is
   /// not valid.
