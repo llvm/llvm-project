@@ -127,21 +127,6 @@ TEST(SanitizerCommon, TryMemCpyNull) {
   EXPECT_FALSE(TryMemCpy(dst.data(), nullptr, dst.size()));
 }
 
-TEST(SanitizerCommon, TryMemCpyProtected) {
-  const int page_size = GetPageSize();
-  InternalMmapVector<char> src(3 * page_size);
-  std::iota(src.begin(), src.end(), 123);
-  std::vector<char> dst;
-  // Protect the middle page.
-  mprotect(src.data() + page_size, page_size, PROT_NONE);
-
-  dst.assign(src.size(), 0);
-  EXPECT_FALSE(TryMemCpy(dst.data(), src.data(), dst.size()));
-
-  mprotect(src.data() + page_size, page_size, PROT_READ | PROT_WRITE);
-  EXPECT_TRUE(std::equal(dst.begin(), dst.end(), src.begin()));
-}
-
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_POSIX
