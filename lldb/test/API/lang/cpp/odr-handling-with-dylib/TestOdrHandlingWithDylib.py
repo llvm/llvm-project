@@ -5,7 +5,9 @@ from lldbsuite.test import lldbutil
 
 
 class OdrHandlingWithDylibTestCase(TestBase):
-    @skipIf(bugnumber="https://github.com/llvm/llvm-project/issues/50375, rdar://135551810")
+    @skipIf(
+        bugnumber="https://github.com/llvm/llvm-project/issues/50375, rdar://135551810"
+    )
     def test(self):
         """
         Tests that the expression evaluator is able to deal with types
