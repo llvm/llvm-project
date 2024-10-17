@@ -16,6 +16,7 @@
 #  include <pthread.h>
 #  include <sys/mman.h>
 
+#  include <algorithm>
 #  include <numeric>
 
 #  include "gtest/gtest.h"

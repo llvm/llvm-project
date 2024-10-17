@@ -327,6 +327,8 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
 }
 
 bool TryMemCpy(void *dest, const void *src, uptr n) {
+  if (!n)
+    return true;
   int fds[2];
   CHECK_EQ(0, pipe(fds));
 
