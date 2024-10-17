@@ -1493,7 +1493,7 @@ private:
       return std::nullopt;
 
     SymbolRef Commuted = State->getSymbolManager().getSymSymExpr(
-        SSE->getRHS(), BO_Add, SSE->getLHS(), SSE->getType());
+        SSE->getRHS(), SSE->getOpcode(), SSE->getLHS(), SSE->getType());
     if (const RangeSet *Range = getConstraint(State, Commuted))
       return *Range;
     return std::nullopt;
