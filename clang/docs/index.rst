@@ -25,6 +25,7 @@ Using Clang as a Compiler
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
+   SafeBuffers
    DataFlowAnalysisIntro
    AddressSanitizer
    ThreadSanitizer
