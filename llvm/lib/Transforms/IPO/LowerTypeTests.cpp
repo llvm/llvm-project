@@ -122,6 +122,10 @@ static cl::opt<bool>
     ClDropTypeTests("lowertypetests-drop-type-tests",
                     cl::desc("Simply drop type test assume sequences"),
                     cl::Hidden, cl::init(false));
+static cl::opt<bool>
+    ClForceDropTypeTests("lowertypetests-force-drop-type-tests",
+                         cl::desc("Always drop all type test sequences"),
+                         cl::Hidden, cl::init(false));
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -400,6 +404,7 @@ class LowerTypeTestsModule {
   // Set when the client has invoked this to simply drop all type test assume
   // sequences.
   bool DropTypeTests;
+  bool AlwaysDropTests;
 
   Triple::ArchType Arch;
   Triple::OSType OS;
@@ -542,7 +547,7 @@ public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
                        ModuleSummaryIndex *ExportSummary,
                        const ModuleSummaryIndex *ImportSummary,
-                       bool DropTypeTests);
+                       bool DropTypeTests, bool AlwaysDropTests);
 
   bool lower();
 
@@ -1828,9 +1833,11 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 /// Lower all type tests in this module.
 LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleAnalysisManager &AM, ModuleSummaryIndex *ExportSummary,
-    const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
+    const ModuleSummaryIndex *ImportSummary, bool DropTypeTests,
+    bool AlwaysDropTests)
     : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-      DropTypeTests(DropTypeTests || ClDropTypeTests) {
+      DropTypeTests(DropTypeTests || ClDropTypeTests),
+      AlwaysDropTests(AlwaysDropTests || ClForceDropTypeTests) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
@@ -1882,7 +1889,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
           M, AM,
           ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
           ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr,
-          /*DropTypeTests*/ false)
+          /*DropTypeTests*/ false, /*AlwaysDropTests=*/false)
           .lower();
 
   if (!ClWriteSummary.empty()) {
@@ -1949,7 +1956,7 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
   Old->replaceUsesWithIf(New, isDirectCall);
 }
 
-static void dropTypeTests(Module &M, Function &TypeTestFunc) {
+static void dropTypeTests(Module &M, Function &TypeTestFunc, bool AlwaysDrop) {
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
     auto *CI = cast<CallInst>(U.getUser());
     // Find and erase llvm.assume intrinsics for this llvm.type.test call.
@@ -1960,8 +1967,9 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc) {
     // phi (which will feed the assume). Simply replace the use on the phi
     // with "true" and leave the merged assume.
     if (!CI->use_empty()) {
-      assert(
-          all_of(CI->users(), [](User *U) -> bool { return isa<PHINode>(U); }));
+      assert(AlwaysDrop || all_of(CI->users(), [](User *U) -> bool {
+               return isa<PHINode>(U);
+             }));
       CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
     }
     CI->eraseFromParent();
@@ -1974,14 +1982,14 @@ bool LowerTypeTestsModule::lower() {
 
   if (DropTypeTests) {
     if (TypeTestFunc)
-      dropTypeTests(M, *TypeTestFunc);
+      dropTypeTests(M, *TypeTestFunc, AlwaysDropTests);
     // Normally we'd have already removed all @llvm.public.type.test calls,
     // except for in the case where we originally were performing ThinLTO but
     // decided not to in the backend.
     Function *PublicTypeTestFunc =
         M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
     if (PublicTypeTestFunc)
-      dropTypeTests(M, *PublicTypeTestFunc);
+      dropTypeTests(M, *PublicTypeTestFunc, AlwaysDropTests);
     if (TypeTestFunc || PublicTypeTestFunc) {
       // We have deleted the type intrinsics, so we no longer have enough
       // information to reason about the liveness of virtual function pointers
@@ -2449,9 +2457,9 @@ PreservedAnalyses LowerTypeTestsPass::run(Module &M,
   if (UseCommandLine)
     Changed = LowerTypeTestsModule::runForTesting(M, AM);
   else
-    Changed =
-        LowerTypeTestsModule(M, AM, ExportSummary, ImportSummary, DropTypeTests)
-            .lower();
+    Changed = LowerTypeTestsModule(M, AM, ExportSummary, ImportSummary,
+                                   DropTypeTests, AlwaysDropTests)
+                  .lower();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
