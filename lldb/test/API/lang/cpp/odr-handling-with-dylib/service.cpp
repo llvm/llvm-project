@@ -1,3 +1,4 @@
+#define HIDE_FROM_PLUGIN 1
 #include "service.h"
 
 struct ServiceAux {

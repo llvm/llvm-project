@@ -7,7 +7,7 @@ struct Service {
   struct State;
   bool start(State *) { return true; }
 
-#if HIDE_FROM_PLUGIN
+#ifdef HIDE_FROM_PLUGIN
   int __resv1;
 #endif // !HIDE_FROM_PLUGIN
 
