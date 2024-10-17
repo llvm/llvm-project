@@ -85,6 +85,7 @@ namespace std {
     char &operator[](size_t) const [[clang::lifetimebound]];
   };
   using string =  basic_string<char>;
+
   string operator""s(const char *, size_t); // expected-warning {{user-defined literal suffixes not starting with '_' are reserved}}
 
   template<typename T>
@@ -94,6 +95,7 @@ namespace std {
     basic_string_view(const string &s [[clang::lifetimebound]]);
   };
   using string_view = basic_string_view<char>;
+
   string_view operator""sv(const char *, size_t); // expected-warning {{user-defined literal suffixes not starting with '_' are reserved}}
 
   struct vector {

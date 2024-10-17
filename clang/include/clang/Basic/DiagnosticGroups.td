@@ -452,6 +452,7 @@ def ShiftOpParentheses: DiagGroup<"shift-op-parentheses">;
 def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
 def DanglingAssignment: DiagGroup<"dangling-assignment">;
 def DanglingAssignmentGsl : DiagGroup<"dangling-assignment-gsl">;
+def DanglingCapture : DiagGroup<"dangling-capture">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
