@@ -337,9 +337,6 @@ public:
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;
-
-  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const;
-
   /// @}
 };
 
