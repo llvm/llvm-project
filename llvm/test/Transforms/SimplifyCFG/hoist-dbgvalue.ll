@@ -7,19 +7,10 @@ define i32 @foo(i32 %i) nounwind ssp !dbg !0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:      #dbg_value(i32 [[I:%.*]], [[META7:![0-9]+]], !DIExpression(), [[META8:![0-9]+]])
 ; CHECK-NEXT:      #dbg_value(i32 0, [[META9:![0-9]+]], !DIExpression(), [[META11:![0-9]+]])
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I]], 0, !dbg [[DBG12:![0-9]+]]
-; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]], !dbg [[DBG12]]
-; CHECK:       then:
-; CHECK-NEXT:    [[CALL_1:%.*]] = call i32 (...) @bar(), !dbg [[DBG13:![0-9]+]]
-; CHECK-NEXT:      #dbg_value(i32 [[CALL_1]], [[META9]], !DIExpression(), [[DBG13]])
-; CHECK-NEXT:    br label [[EXIT:%.*]], !dbg [[DBG15:![0-9]+]]
-; CHECK:       else:
-; CHECK-NEXT:    [[CALL_2:%.*]] = call i32 (...) @bar(), !dbg [[DBG16:![0-9]+]]
-; CHECK-NEXT:      #dbg_value(i32 [[CALL_2]], [[META9]], !DIExpression(), [[DBG16]])
-; CHECK-NEXT:    br label [[EXIT]], !dbg [[DBG18:![0-9]+]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[K_0:%.*]] = phi i32 [ [[CALL_1]], [[THEN]] ], [ [[CALL_2]], [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[K_0]], !dbg [[DBG19:![0-9]+]]
+; CHECK-NEXT:    [[CALL_1:%.*]] = call i32 (...) @bar(), !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i32 [[CALL_1]], [[META9]], !DIExpression(), [[META13:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 [[CALL_1]], [[META9]], !DIExpression(), [[META15:![0-9]+]])
+; CHECK-NEXT:    ret i32 [[CALL_1]], !dbg [[DBG17:![0-9]+]]
 ;
 entry:
   call void @llvm.dbg.value(metadata i32 %i, metadata !6, metadata !DIExpression()), !dbg !7
@@ -46,8 +37,8 @@ define i1 @hoist_with_debug2(i32 %x) !dbg !22 {
 ; CHECK-LABEL: @hoist_with_debug2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ugt i32 [[X:%.*]], 2
-; CHECK-NEXT:      #dbg_value(i32 [[X]], [[META21:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
-; CHECK-NEXT:      #dbg_value(i32 [[X]], [[META21]], !DIExpression(), [[META23]])
+; CHECK-NEXT:      #dbg_value(i32 [[X]], [[META19:![0-9]+]], !DIExpression(), [[META21:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 [[X]], [[META19]], !DIExpression(), [[META21]])
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL_NOT]], i1 false, i1 true
 ; CHECK-NEXT:    ret i1 [[DOT]]
 ;

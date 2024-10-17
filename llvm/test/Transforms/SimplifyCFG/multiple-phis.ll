@@ -265,28 +265,24 @@ define i8 @merge1_unfoldable_all_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define i8 @merge1_unfoldable_all_block
 ; CHECK-SAME: (i8 noundef [[ARG:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    switch i8 [[ARG]], label [[UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i8 -123, label [[CASE0:%.*]]
-; CHECK-NEXT:      i8 66, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 66, label [[SUCC:%.*]]
 ; CHECK-NEXT:      i8 123, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       case0:
-; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    br i1 [[C1]], label [[COMMONPRED:%.*]], label [[SUCC:%.*]]
-; CHECK:       case1:
-; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    br label [[SUCC]]
+; CHECK-NEXT:    br i1 [[C1]], label [[COMMONPRED:%.*]], label [[SUCC]]
 ; CHECK:       case2:
-; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       CommonPred:
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2]], i8 4, i8 3
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 0, [[CASE0]] ], [ 1, [[CASE1]] ], [ 2, [[CASE2]] ], [ [[SPEC_SELECT]], [[COMMONPRED]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 0, [[CASE0]] ], [ 2, [[CASE2]] ], [ 1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[COMMONPRED]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:
