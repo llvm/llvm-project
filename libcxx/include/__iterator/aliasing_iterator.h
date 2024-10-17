@@ -102,7 +102,7 @@ struct __aliasing_iterator_wrapper {
 
     _LIBCPP_HIDE_FROM_ABI _Alias operator*() const _NOEXCEPT {
       _Alias __val;
-      __builtin_memcpy(&__val, std::__to_address(__base_), sizeof(value_type));
+      __builtin_memcpy(&__val, static_cast<const void*>(std::__to_address(__base_)), sizeof(value_type));
       return __val;
     }
 

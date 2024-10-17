@@ -442,7 +442,8 @@ protected:
     const size_t NumBuckets = getNumBuckets();
     if constexpr (std::is_trivially_copyable_v<KeyT> &&
                   std::is_trivially_copyable_v<ValueT>) {
-      memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
+      memcpy(reinterpret_cast<void *>(Buckets),
+             reinterpret_cast<const void *>(OtherBuckets),
              NumBuckets * sizeof(BucketT));
     } else {
       const KeyT EmptyKey = getEmptyKey();

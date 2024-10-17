@@ -603,12 +603,16 @@ namespace MemcpyEtc {
   };
   constexpr bool test_nontrivial_memcpy() { // expected-error {{never produces a constant}}
     NonTrivial arr[3] = {};
+    // expected-warning@+2 {{source of call to '__builtin_memcpy' is a pointer to non-trivially copyable type 'NonTrivial'}}
+    // expected-note@+1 {{explicitly cast the pointer to silence this warning}}
     __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note 2{{non-trivially-copyable}}
     return true;
   }
   static_assert(test_nontrivial_memcpy()); // expected-error {{constant}} expected-note {{in call}}
   constexpr bool test_nontrivial_memmove() { // expected-error {{never produces a constant}}
     NonTrivial arr[3] = {};
+    // expected-warning@+2 {{source of call to '__builtin_memcpy' is a pointer to non-trivially copyable type 'NonTrivial'}}
+    // expected-note@+1 {{explicitly cast the pointer to silence this warning}}
     __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note 2{{non-trivially-copyable}}
     return true;
   }
@@ -670,6 +674,8 @@ namespace MemcpyEtc {
   constexpr bool test_address_of_incomplete_struct_type() { // expected-error {{never produces a constant}}
     struct Incomplete;
     extern Incomplete x, y;
+    // expected-warning@+2 {{destination for call to '__builtin_memcpy' is a pointer to non-trivially copyable type 'Incomplete'}}
+    // expected-note@+1 {{explicitly cast the pointer to silence this warning}}
     __builtin_memcpy(&x, &x, 4);
     // expected-note@-1 2{{cannot constant evaluate 'memcpy' between objects of incomplete type 'Incomplete'}}
     return true;
