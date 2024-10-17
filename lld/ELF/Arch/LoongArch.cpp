@@ -22,6 +22,40 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
+#define LARCH_GET_RD(insn) (insn & 0x1f)
+#define LARCH_GET_RJ(insn) ((insn >> 5) & 0x1f)
+#define LARCH_MK_ADDI_D 0xffc00000
+#define LARCH_OP_ADDI_D 0x02c00000
+#define LARCH_MK_PCADDI 0xfe000000
+#define LARCH_OP_PCADDI 0x18000000
+#define LARCH_MK_PCALAU12I 0xfe000000
+#define LARCH_OP_PCALAU12I 0x1a000000
+#define LARCH_MK_LD_D 0xffc00000
+#define LARCH_OP_LD_D 0x28c00000
+#define LARCH_MK_LD_W 0xffc00000
+#define LARCH_OP_LD_W 0x28800000
+#define LARCH_MK_LU12I_W 0xfe000000
+#define LARCH_OP_LU12I_W 0x14000000
+#define LARCH_MK_ORI 0xffc00000
+#define LARCH_OP_ORI 0x03800000
+#define LARCH_MK_B 0xfc000000
+#define LARCH_OP_B 0x50000000
+#define LARCH_MK_BL 0xfc000000
+#define LARCH_OP_BL 0x54000000
+#define LARCH_MK_JIRL 0xfc000000
+#define LARCH_OP_JIRL 0x4c000000
+#define LARCH_INSN_OPS(insn, op) ((insn & LARCH_MK_##op) == LARCH_OP_##op)
+#define LARCH_INSN_ADDI_D(insn) LARCH_INSN_OPS((insn), ADDI_D)
+#define LARCH_INSN_PCADDI(insn) LARCH_INSN_OPS((insn), PCADDI)
+#define LARCH_INSN_PCALAU12I(insn) LARCH_INSN_OPS((insn), PCALAU12I)
+#define LARCH_INSN_LD_D(insn) LARCH_INSN_OPS((insn), LD_D)
+#define LARCH_INSN_LD_W(insn) LARCH_INSN_OPS((insn), LD_W)
+#define LARCH_INSN_LU12I_W(insn) LARCH_INSN_OPS((insn), LU12I_W)
+#define LARCH_INSN_ORI(insn) LARCH_INSN_OPS((insn), ORI)
+#define LARCH_INSN_B(insn) LARCH_INSN_OPS((insn), B)
+#define LARCH_INSN_BL(insn) LARCH_INSN_OPS((insn), BL)
+#define LARCH_INSN_JIRL(insn) LARCH_INSN_OPS((insn), JIRL)
+
 class LoongArch final : public TargetInfo {
 public:
   LoongArch(Ctx &);
@@ -63,6 +97,7 @@ enum Reg {
   R_ZERO = 0,
   R_RA = 1,
   R_TP = 2,
+  R_A0 = 4,
   R_T0 = 12,
   R_T1 = 13,
   R_T2 = 14,
