@@ -733,7 +733,9 @@ define signext i32 @ctpop_i32(i32 signext %a) nounwind {
 ;
 ; RV64ZBB-LABEL: ctpop_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    cpopw a0, a0
+; RV64ZBB-NEXT:    slli a0, a0, 32
+; RV64ZBB-NEXT:    srli a0, a0, 32
+; RV64ZBB-NEXT:    cpop a0, a0
 ; RV64ZBB-NEXT:    ret
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1
@@ -779,9 +781,9 @@ define i1 @ctpop_i32_ult_two(i32 signext %a) nounwind {
 ; RV64ZBB-LABEL: ctpop_i32_ult_two:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    li a1, 2
-; RV64ZBB-NEXT:    cpopw a0, a0
 ; RV64ZBB-NEXT:    slli a0, a0, 32
 ; RV64ZBB-NEXT:    srli a0, a0, 32
+; RV64ZBB-NEXT:    cpop a0, a0
 ; RV64ZBB-NEXT:    slli a1, a1, 32
 ; RV64ZBB-NEXT:    srli a1, a1, 32
 ; RV64ZBB-NEXT:    sltu a0, a0, a1
@@ -824,7 +826,9 @@ define signext i32 @ctpop_i32_load(ptr %p) nounwind {
 ; RV64ZBB-LABEL: ctpop_i32_load:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    lw a0, 0(a0)
-; RV64ZBB-NEXT:    cpopw a0, a0
+; RV64ZBB-NEXT:    slli a0, a0, 32
+; RV64ZBB-NEXT:    srli a0, a0, 32
+; RV64ZBB-NEXT:    cpop a0, a0
 ; RV64ZBB-NEXT:    ret
   %a = load i32, ptr %p
   %1 = call i32 @llvm.ctpop.i32(i32 %a)

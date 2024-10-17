@@ -224,7 +224,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   auto &CountZerosUndefActions =
       getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF});
   if (ST.hasStdExtZbb()) {
-    CountZerosActions.legalFor({{s32, s32}, {sXLen, sXLen}})
+    CountZerosActions.legalFor({{sXLen, sXLen}})
+        .customFor({{s32, s32}})
         .clampScalar(0, s32, sXLen)
         .widenScalarToNextPow2(0)
         .scalarSameSizeAs(1, 0);
@@ -236,9 +237,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
   if (ST.hasStdExtZbb()) {
-    CTPOPActions.legalFor({{s32, s32}, {sXLen, sXLen}})
-        .clampScalar(0, s32, sXLen)
-        .widenScalarToNextPow2(0)
+    CTPOPActions.legalFor({{sXLen, sXLen}})
+        .clampScalar(0, sXLen, sXLen)
         .scalarSameSizeAs(1, 0);
   } else {
     CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
@@ -1154,6 +1154,17 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   return true;
 }
 
+static unsigned getRISCVWOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case TargetOpcode::G_CTLZ:
+    return RISCV::G_CLZW;
+  case TargetOpcode::G_CTTZ:
+    return RISCV::G_CTZW;
+  }
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -1189,6 +1200,15 @@ bool RISCVLegalizerInfo::legalizeCustom(
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
+  }
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ: {
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    Helper.Observer.changedInstr(MI);
+    return true;
   }
   case TargetOpcode::G_IS_FPCLASS: {
     Register GISFPCLASS = MI.getOperand(0).getReg();
