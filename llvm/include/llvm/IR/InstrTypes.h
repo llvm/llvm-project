@@ -1454,21 +1454,17 @@ public:
   ///@{
 
   /// Return the attributes for this call.
-  ///
   AttributeList getAttributes() const { return Attrs; }
 
   /// Set the attributes for this call.
-  ///
   void setAttributes(AttributeList A) { Attrs = A; }
 
   /// Return the return attributes for this call.
-  ///
   AttributeSet getRetAttributes() const {
     return getAttributes().getRetAttrs();
   }
 
   /// Return the param attributes for this call.
-  ///
   AttributeSet getParamAttributes(unsigned ArgNo) const {
     return getAttributes().getParamAttrs(ArgNo);
   }
