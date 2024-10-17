@@ -298,7 +298,7 @@ static void SetNonBlock(int fd) {
 }
 
 bool IsAccessibleMemoryRange(uptr beg, uptr size) {
-  for (uptr to_write = size; to_write;) {
+  while (size) {
     // `read` from `sock_pair[0]` into a dummy buffer to free up the pipe buffer
     // for more `write` is slower than just recreating a pipe.
     int sock_pair[2];
@@ -313,14 +313,13 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
     SetNonBlock(sock_pair[1]);
 
     int write_errno;
-    uptr bytes_written =
-        internal_write(sock_pair[1], reinterpret_cast<char *>(beg), to_write);
-    if (internal_iserror(bytes_written, &write_errno)) {
+    uptr w = internal_write(sock_pair[1], reinterpret_cast<char *>(beg), size);
+    if (internal_iserror(w, &write_errno)) {
       CHECK_EQ(EFAULT, write_errno);
       return false;
     }
-    beg += bytes_written;
-    to_write -= bytes_written;
+    size -= w;
+    beg += w;
   }
 
   return true;
