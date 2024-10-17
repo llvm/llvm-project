@@ -1291,11 +1291,17 @@ enum AttributeSafetyKind : uint8_t {
 /// follows the same type rules as FPMathOperator.
 bool isNoFPClassCompatibleType(Type *Ty);
 
-/// Which attributes cannot be applied to a type. The argument \p ASK indicates,
-/// if only attributes that are known to be safely droppable are contained in
-/// the mask; only attributes that might be unsafe to drop (e.g., ABI-related
-/// attributes) are in the mask; or both.
-AttributeMask typeIncompatible(Type *Ty, AttributeSafetyKind ASK = ASK_ALL);
+/// Which attributes cannot be applied to a type. The argument \p AS
+/// is used as a hint for the attributes whose compatibility is being
+/// checked against \p Ty. This does not mean the return will be a
+/// subset of \p AS, just that attributes that have specific dynamic
+/// type compatibilities (i.e `range`) will be checked against what is
+/// contained in \p AS. The argument \p ASK indicates, if only
+/// attributes that are known to be safely droppable are contained in
+/// the mask; only attributes that might be unsafe to drop (e.g.,
+/// ABI-related attributes) are in the mask; or both.
+AttributeMask typeIncompatible(Type *Ty, AttributeSet AS,
+                               AttributeSafetyKind ASK = ASK_ALL);
 
 /// Get param/return attributes which imply immediate undefined behavior if an
 /// invalid value is passed. For example, this includes noundef (where undef

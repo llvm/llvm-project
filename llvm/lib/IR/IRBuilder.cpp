@@ -90,10 +90,8 @@ Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
   assert(isa<ConstantInt>(Scaling) && "Expected constant integer");
   if (cast<ConstantInt>(Scaling)->isZero())
     return Scaling;
-  Module *M = GetInsertBlock()->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::vscale,
-                                                      {Scaling->getType()});
-  CallInst *CI = CreateCall(TheFn, {}, {}, Name);
+  CallInst *CI =
+      CreateIntrinsic(Intrinsic::vscale, {Scaling->getType()}, {}, {}, Name);
   return cast<ConstantInt>(Scaling)->isOne() ? CI : CreateMul(CI, Scaling);
 }
 
@@ -140,12 +138,9 @@ CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
                                       MDNode *TBAATag, MDNode *ScopeTag,
                                       MDNode *NoAliasTag) {
   Value *Ops[] = {Ptr, Val, Size, getInt1(isVolatile)};
-  Type *Tys[] = { Ptr->getType(), Size->getType() };
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::memset, Tys);
+  Type *Tys[] = {Ptr->getType(), Size->getType()};
 
-  CallInst *CI = CreateCall(TheFn, Ops);
+  CallInst *CI = CreateIntrinsic(Intrinsic::memset, Tys, Ops);
 
   if (Align)
     cast<MemSetInst>(CI)->setDestAlignment(*Align);
@@ -170,11 +165,8 @@ CallInst *IRBuilderBase::CreateMemSetInline(Value *Dst, MaybeAlign DstAlign,
                                             MDNode *NoAliasTag) {
   Value *Ops[] = {Dst, Val, Size, getInt1(IsVolatile)};
   Type *Tys[] = {Dst->getType(), Size->getType()};
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::memset_inline, Tys);
 
-  CallInst *CI = CreateCall(TheFn, Ops);
+  CallInst *CI = CreateIntrinsic(Intrinsic::memset_inline, Tys, Ops);
 
   if (DstAlign)
     cast<MemSetInlineInst>(CI)->setDestAlignment(*DstAlign);
@@ -198,11 +190,9 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
 
   Value *Ops[] = {Ptr, Val, Size, getInt32(ElementSize)};
   Type *Tys[] = {Ptr->getType(), Size->getType()};
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::memset_element_unordered_atomic, Tys);
 
-  CallInst *CI = CreateCall(TheFn, Ops);
+  CallInst *CI =
+      CreateIntrinsic(Intrinsic::memset_element_unordered_atomic, Tys, Ops);
 
   cast<AtomicMemSetInst>(CI)->setDestAlignment(Alignment);
 
@@ -227,11 +217,9 @@ CallInst *IRBuilderBase::CreateMemTransferInst(
           IntrID == Intrinsic::memmove) &&
          "Unexpected intrinsic ID");
   Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
-  Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(M, IntrID, Tys);
+  Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
 
-  CallInst *CI = CreateCall(TheFn, Ops);
+  CallInst *CI = CreateIntrinsic(IntrID, Tys, Ops);
 
   auto* MCI = cast<MemTransferInst>(CI);
   if (DstAlign)
@@ -266,11 +254,9 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
          "Pointer alignment must be at least element size");
   Value *Ops[] = {Dst, Src, Size, getInt32(ElementSize)};
   Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::memcpy_element_unordered_atomic, Tys);
 
-  CallInst *CI = CreateCall(TheFn, Ops);
+  CallInst *CI =
+      CreateIntrinsic(Intrinsic::memcpy_element_unordered_atomic, Tys, Ops);
 
   // Set the alignment of the pointer args.
   auto *AMCI = cast<AtomicMemCpyInst>(CI);
@@ -382,11 +368,9 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
          "Pointer alignment must be at least element size");
   Value *Ops[] = {Dst, Src, Size, getInt32(ElementSize)};
   Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::memmove_element_unordered_atomic, Tys);
 
-  CallInst *CI = CreateCall(TheFn, Ops);
+  CallInst *CI =
+      CreateIntrinsic(Intrinsic::memmove_element_unordered_atomic, Tys, Ops);
 
   // Set the alignment of the pointer args.
   CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), DstAlign));
@@ -410,27 +394,19 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
 }
 
 CallInst *IRBuilderBase::getReductionIntrinsic(Intrinsic::ID ID, Value *Src) {
-  Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Src};
   Type *Tys[] = { Src->getType() };
-  auto Decl = Intrinsic::getOrInsertDeclaration(M, ID, Tys);
-  return CreateCall(Decl, Ops);
+  return CreateIntrinsic(ID, Tys, Ops);
 }
 
 CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
-  Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Acc, Src};
-  auto Decl = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::vector_reduce_fadd, {Src->getType()});
-  return CreateCall(Decl, Ops);
+  return CreateIntrinsic(Intrinsic::vector_reduce_fadd, {Src->getType()}, Ops);
 }
 
 CallInst *IRBuilderBase::CreateFMulReduce(Value *Acc, Value *Src) {
-  Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Acc, Src};
-  auto Decl = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::vector_reduce_fmul, {Src->getType()});
-  return CreateCall(Decl, Ops);
+  return CreateIntrinsic(Intrinsic::vector_reduce_fmul, {Src->getType()}, Ops);
 }
 
 CallInst *IRBuilderBase::CreateAddReduce(Value *Src) {
@@ -490,10 +466,7 @@ CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
     assert(Size->getType() == getInt64Ty() &&
            "lifetime.start requires the size to be an i64");
   Value *Ops[] = { Size, Ptr };
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::lifetime_start, {Ptr->getType()});
-  return CreateCall(TheFn, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, Ops);
 }
 
 CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr, ConstantInt *Size) {
@@ -505,10 +478,7 @@ CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr, ConstantInt *Size) {
     assert(Size->getType() == getInt64Ty() &&
            "lifetime.end requires the size to be an i64");
   Value *Ops[] = { Size, Ptr };
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::lifetime_end, {Ptr->getType()});
-  return CreateCall(TheFn, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, Ops);
 }
 
 CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
@@ -524,10 +494,7 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
   Value *Ops[] = {Size, Ptr};
   // Fill in the single overloaded type: memory object type.
   Type *ObjectPtr[1] = {Ptr->getType()};
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::invariant_start, ObjectPtr);
-  return CreateCall(TheFn, Ops);
+  return CreateIntrinsic(Intrinsic::invariant_start, ObjectPtr, Ops);
 }
 
 static MaybeAlign getAlign(Value *Ptr) {
@@ -563,10 +530,8 @@ IRBuilderBase::CreateAssumption(Value *Cond,
 }
 
 Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
-  Module *M = BB->getModule();
-  auto *FnIntrinsic = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::experimental_noalias_scope_decl, {});
-  return CreateCall(FnIntrinsic, {Scope});
+  return CreateIntrinsic(Intrinsic::experimental_noalias_scope_decl, {},
+                         {Scope});
 }
 
 /// Create a call to a Masked Load intrinsic.
@@ -616,9 +581,7 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
                                                ArrayRef<Value *> Ops,
                                                ArrayRef<Type *> OverloadedTypes,
                                                const Twine &Name) {
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getOrInsertDeclaration(M, Id, OverloadedTypes);
-  return CreateCall(TheFn, Ops, {}, Name);
+  return CreateIntrinsic(Id, OverloadedTypes, Ops, {}, Name);
 }
 
 /// Create a call to a Masked Gather intrinsic.
@@ -875,42 +838,34 @@ InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
 CallInst *IRBuilderBase::CreateGCResult(Instruction *Statepoint,
                                         Type *ResultType, const Twine &Name) {
   Intrinsic::ID ID = Intrinsic::experimental_gc_result;
-  Module *M = BB->getParent()->getParent();
   Type *Types[] = {ResultType};
-  Function *FnGCResult = Intrinsic::getOrInsertDeclaration(M, ID, Types);
 
   Value *Args[] = {Statepoint};
-  return CreateCall(FnGCResult, Args, {}, Name);
+  return CreateIntrinsic(ID, Types, Args, {}, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCRelocate(Instruction *Statepoint,
                                           int BaseOffset, int DerivedOffset,
                                           Type *ResultType, const Twine &Name) {
-  Module *M = BB->getParent()->getParent();
   Type *Types[] = {ResultType};
-  Function *FnGCRelocate = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::experimental_gc_relocate, Types);
 
   Value *Args[] = {Statepoint, getInt32(BaseOffset), getInt32(DerivedOffset)};
-  return CreateCall(FnGCRelocate, Args, {}, Name);
+  return CreateIntrinsic(Intrinsic::experimental_gc_relocate, Types, Args, {},
+                         Name);
 }
 
 CallInst *IRBuilderBase::CreateGCGetPointerBase(Value *DerivedPtr,
                                                 const Twine &Name) {
-  Module *M = BB->getParent()->getParent();
   Type *PtrTy = DerivedPtr->getType();
-  Function *FnGCFindBase = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::experimental_gc_get_pointer_base, {PtrTy, PtrTy});
-  return CreateCall(FnGCFindBase, {DerivedPtr}, {}, Name);
+  return CreateIntrinsic(Intrinsic::experimental_gc_get_pointer_base,
+                         {PtrTy, PtrTy}, {DerivedPtr}, {}, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,
                                                   const Twine &Name) {
-  Module *M = BB->getParent()->getParent();
   Type *PtrTy = DerivedPtr->getType();
-  Function *FnGCGetOffset = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::experimental_gc_get_pointer_offset, {PtrTy});
-  return CreateCall(FnGCGetOffset, {DerivedPtr}, {}, Name);
+  return CreateIntrinsic(Intrinsic::experimental_gc_get_pointer_offset, {PtrTy},
+                         {DerivedPtr}, {}, Name);
 }
 
 CallInst *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
@@ -1228,13 +1183,10 @@ Value *IRBuilderBase::CreatePreserveArrayAccessIndex(
 
   Type *ResultType = GetElementPtrInst::getGEPReturnType(Base, IdxList);
 
-  Module *M = BB->getParent()->getParent();
-  Function *FnPreserveArrayAccessIndex = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::preserve_array_access_index, {ResultType, BaseType});
-
   Value *DimV = getInt32(Dimension);
   CallInst *Fn =
-      CreateCall(FnPreserveArrayAccessIndex, {Base, DimV, LastIndexV});
+      CreateIntrinsic(Intrinsic::preserve_array_access_index,
+                      {ResultType, BaseType}, {Base, DimV, LastIndexV});
   Fn->addParamAttr(
       0, Attribute::get(Fn->getContext(), Attribute::ElementType, ElTy));
   if (DbgInfo)
@@ -1249,13 +1201,9 @@ Value *IRBuilderBase::CreatePreserveUnionAccessIndex(
          "Invalid Base ptr type for preserve.union.access.index.");
   auto *BaseType = Base->getType();
 
-  Module *M = BB->getParent()->getParent();
-  Function *FnPreserveUnionAccessIndex = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::preserve_union_access_index, {BaseType, BaseType});
-
   Value *DIIndex = getInt32(FieldIndex);
-  CallInst *Fn =
-      CreateCall(FnPreserveUnionAccessIndex, {Base, DIIndex});
+  CallInst *Fn = CreateIntrinsic(Intrinsic::preserve_union_access_index,
+                                 {BaseType, BaseType}, {Base, DIIndex});
   if (DbgInfo)
     Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
 
@@ -1274,13 +1222,10 @@ Value *IRBuilderBase::CreatePreserveStructAccessIndex(
   Type *ResultType =
       GetElementPtrInst::getGEPReturnType(Base, {Zero, GEPIndex});
 
-  Module *M = BB->getParent()->getParent();
-  Function *FnPreserveStructAccessIndex = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::preserve_struct_access_index, {ResultType, BaseType});
-
   Value *DIIndex = getInt32(FieldIndex);
-  CallInst *Fn = CreateCall(FnPreserveStructAccessIndex,
-                            {Base, GEPIndex, DIIndex});
+  CallInst *Fn =
+      CreateIntrinsic(Intrinsic::preserve_struct_access_index,
+                      {ResultType, BaseType}, {Base, GEPIndex, DIIndex});
   Fn->addParamAttr(
       0, Attribute::get(Fn->getContext(), Attribute::ElementType, ElTy));
   if (DbgInfo)
@@ -1291,10 +1236,8 @@ Value *IRBuilderBase::CreatePreserveStructAccessIndex(
 
 Value *IRBuilderBase::createIsFPClass(Value *FPNum, unsigned Test) {
   ConstantInt *TestV = getInt32(Test);
-  Module *M = BB->getParent()->getParent();
-  Function *FnIsFPClass = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::is_fpclass, {FPNum->getType()});
-  return CreateCall(FnIsFPClass, {FPNum, TestV});
+  return CreateIntrinsic(Intrinsic::is_fpclass, {FPNum->getType()},
+                         {FPNum, TestV});
 }
 
 CallInst *IRBuilderBase::CreateAlignmentAssumptionHelper(const DataLayout &DL,
