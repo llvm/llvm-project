@@ -1474,10 +1474,10 @@ public:
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
   friend DoubleAPFloat;
+  // Since Storage is private, friend class APFloatEBOChecker is added to allow
+  // access to it in APFloat.cpp.
+  friend class APFloatEBOChecker;
 };
-
-static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
-              "Empty base class optimization is not performed.");
 
 /// See friend declarations above.
 ///

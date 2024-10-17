@@ -99,6 +99,11 @@ enum class fltNanEncoding {
   NegativeZero,
 };
 
+class APFloatEBOChecker {
+  static_assert(sizeof(APFloat) == sizeof(APFloat::U),
+                "Empty base class optimization is not performed.");
+};
+
 /* Represents floating point arithmetic semantics.  */
 struct fltSemantics {
   /* The largest E such that 2^E is representable; this matches the
