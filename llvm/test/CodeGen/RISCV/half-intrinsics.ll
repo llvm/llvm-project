@@ -3020,7 +3020,12 @@ define half @maximumnum_half(half %x, half %y) {
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: maximumnum_half:
@@ -3051,7 +3056,12 @@ define half @maximumnum_half(half %x, half %y) {
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    .cfi_restore s2
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: maximumnum_half:
@@ -3114,7 +3124,12 @@ define half @minimumnum_half(half %x, half %y) {
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: minimumnum_half:
@@ -3145,7 +3160,12 @@ define half @minimumnum_half(half %x, half %y) {
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    .cfi_restore s2
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: minimumnum_half:

@@ -763,6 +763,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; NOREMAT-NEXT:    li a1, 6
 ; NOREMAT-NEXT:    mul a0, a0, a1
 ; NOREMAT-NEXT:    add sp, sp, a0
+; NOREMAT-NEXT:    .cfi_def_cfa sp, 400
 ; NOREMAT-NEXT:    ld ra, 392(sp) # 8-byte Folded Reload
 ; NOREMAT-NEXT:    ld s0, 384(sp) # 8-byte Folded Reload
 ; NOREMAT-NEXT:    ld s1, 376(sp) # 8-byte Folded Reload
@@ -776,7 +777,21 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; NOREMAT-NEXT:    ld s9, 312(sp) # 8-byte Folded Reload
 ; NOREMAT-NEXT:    ld s10, 304(sp) # 8-byte Folded Reload
 ; NOREMAT-NEXT:    ld s11, 296(sp) # 8-byte Folded Reload
+; NOREMAT-NEXT:    .cfi_restore ra
+; NOREMAT-NEXT:    .cfi_restore s0
+; NOREMAT-NEXT:    .cfi_restore s1
+; NOREMAT-NEXT:    .cfi_restore s2
+; NOREMAT-NEXT:    .cfi_restore s3
+; NOREMAT-NEXT:    .cfi_restore s4
+; NOREMAT-NEXT:    .cfi_restore s5
+; NOREMAT-NEXT:    .cfi_restore s6
+; NOREMAT-NEXT:    .cfi_restore s7
+; NOREMAT-NEXT:    .cfi_restore s8
+; NOREMAT-NEXT:    .cfi_restore s9
+; NOREMAT-NEXT:    .cfi_restore s10
+; NOREMAT-NEXT:    .cfi_restore s11
 ; NOREMAT-NEXT:    addi sp, sp, 400
+; NOREMAT-NEXT:    .cfi_def_cfa_offset 0
 ; NOREMAT-NEXT:    ret
 ;
 ; REMAT-LABEL: test:
@@ -1533,7 +1548,21 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
 ; REMAT-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
 ; REMAT-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; REMAT-NEXT:    .cfi_restore ra
+; REMAT-NEXT:    .cfi_restore s0
+; REMAT-NEXT:    .cfi_restore s1
+; REMAT-NEXT:    .cfi_restore s2
+; REMAT-NEXT:    .cfi_restore s3
+; REMAT-NEXT:    .cfi_restore s4
+; REMAT-NEXT:    .cfi_restore s5
+; REMAT-NEXT:    .cfi_restore s6
+; REMAT-NEXT:    .cfi_restore s7
+; REMAT-NEXT:    .cfi_restore s8
+; REMAT-NEXT:    .cfi_restore s9
+; REMAT-NEXT:    .cfi_restore s10
+; REMAT-NEXT:    .cfi_restore s11
 ; REMAT-NEXT:    addi sp, sp, 112
+; REMAT-NEXT:    .cfi_def_cfa_offset 0
 ; REMAT-NEXT:    ret
   %4 = tail call i64 @llvm.riscv.vsetvli.i64(i64 32, i64 2, i64 1)
   %5 = tail call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32> poison, ptr %0, i64 %4)

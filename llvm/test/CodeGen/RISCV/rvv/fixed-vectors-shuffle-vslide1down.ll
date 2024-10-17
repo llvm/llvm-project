@@ -94,6 +94,7 @@ define <2 x i64> @vslide1down_2xi64(<2 x i64> %v, i64 %b) {
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vslide1down_2xi64:
@@ -119,6 +120,7 @@ define <4 x i64> @vslide1down_4xi64(<4 x i64> %v, i64 %b) {
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    vslideup.vi v8, v10, 3
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vslide1down_4xi64:

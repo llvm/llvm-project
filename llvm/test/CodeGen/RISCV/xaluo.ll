@@ -1374,7 +1374,10 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulo.i64:
@@ -1445,7 +1448,10 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32ZBA-NEXT:    mv a0, a1
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    .cfi_restore s0
+; RV32ZBA-NEXT:    .cfi_restore s1
 ; RV32ZBA-NEXT:    addi sp, sp, 16
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: smulo.i64:
@@ -1516,7 +1522,10 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32ZICOND-NEXT:    mv a0, a1
 ; RV32ZICOND-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZICOND-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZICOND-NEXT:    .cfi_restore s0
+; RV32ZICOND-NEXT:    .cfi_restore s1
 ; RV32ZICOND-NEXT:    addi sp, sp, 16
+; RV32ZICOND-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: smulo.i64:
@@ -3378,7 +3387,9 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    mv a1, a3
 ; RV32-NEXT:  .LBB46_2: # %entry
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulo.select.i64:
@@ -3447,7 +3458,9 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    mv a1, a3
 ; RV32ZBA-NEXT:  .LBB46_2: # %entry
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    .cfi_restore s0
 ; RV32ZBA-NEXT:    addi sp, sp, 16
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: smulo.select.i64:
@@ -3517,7 +3530,9 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    czero.eqz a1, a1, a4
 ; RV32ZICOND-NEXT:    or a1, a1, a2
 ; RV32ZICOND-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZICOND-NEXT:    .cfi_restore s0
 ; RV32ZICOND-NEXT:    addi sp, sp, 16
+; RV32ZICOND-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: smulo.select.i64:
@@ -3589,7 +3604,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulo.not.i64:
@@ -3652,7 +3669,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    or a0, a1, a0
 ; RV32ZBA-NEXT:    seqz a0, a0
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    .cfi_restore s0
 ; RV32ZBA-NEXT:    addi sp, sp, 16
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: smulo.not.i64:
@@ -3715,7 +3734,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    or a0, a1, a0
 ; RV32ZICOND-NEXT:    seqz a0, a0
 ; RV32ZICOND-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZICOND-NEXT:    .cfi_restore s0
 ; RV32ZICOND-NEXT:    addi sp, sp, 16
+; RV32ZICOND-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: smulo.not.i64:
@@ -4950,7 +4971,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:  .LBB61_3: # %overflow
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulo.br.i64:
@@ -5023,7 +5046,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    li a0, 1
 ; RV32ZBA-NEXT:  .LBB61_3: # %overflow
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    .cfi_restore s0
 ; RV32ZBA-NEXT:    addi sp, sp, 16
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: smulo.br.i64:
@@ -5096,7 +5121,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    li a0, 1
 ; RV32ZICOND-NEXT:  .LBB61_3: # %overflow
 ; RV32ZICOND-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZICOND-NEXT:    .cfi_restore s0
 ; RV32ZICOND-NEXT:    addi sp, sp, 16
+; RV32ZICOND-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: smulo.br.i64:

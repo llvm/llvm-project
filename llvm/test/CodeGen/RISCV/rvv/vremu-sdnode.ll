@@ -685,6 +685,7 @@ define <vscale x 1 x i64> @vremu_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b) {
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vremu.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vremu_vx_nxv1i64:
@@ -716,6 +717,7 @@ define <vscale x 1 x i64> @vremu_vi_nxv1i64_0(<vscale x 1 x i64> %va) {
 ; RV32-V-NEXT:    li a0, -7
 ; RV32-V-NEXT:    vnmsac.vx v8, a0, v9
 ; RV32-V-NEXT:    addi sp, sp, 16
+; RV32-V-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-V-NEXT:    ret
 ;
 ; ZVE64X-LABEL: vremu_vi_nxv1i64_0:
@@ -790,6 +792,7 @@ define <vscale x 2 x i64> @vremu_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b) {
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vremu.vv v8, v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vremu_vx_nxv2i64:
@@ -821,6 +824,7 @@ define <vscale x 2 x i64> @vremu_vi_nxv2i64_0(<vscale x 2 x i64> %va) {
 ; RV32-V-NEXT:    li a0, -7
 ; RV32-V-NEXT:    vnmsac.vx v8, a0, v10
 ; RV32-V-NEXT:    addi sp, sp, 16
+; RV32-V-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-V-NEXT:    ret
 ;
 ; ZVE64X-LABEL: vremu_vi_nxv2i64_0:
@@ -895,6 +899,7 @@ define <vscale x 4 x i64> @vremu_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b) {
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vremu.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vremu_vx_nxv4i64:
@@ -926,6 +931,7 @@ define <vscale x 4 x i64> @vremu_vi_nxv4i64_0(<vscale x 4 x i64> %va) {
 ; RV32-V-NEXT:    li a0, -7
 ; RV32-V-NEXT:    vnmsac.vx v8, a0, v12
 ; RV32-V-NEXT:    addi sp, sp, 16
+; RV32-V-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-V-NEXT:    ret
 ;
 ; ZVE64X-LABEL: vremu_vi_nxv4i64_0:
@@ -1000,6 +1006,7 @@ define <vscale x 8 x i64> @vremu_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vremu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vremu_vx_nxv8i64:
@@ -1031,6 +1038,7 @@ define <vscale x 8 x i64> @vremu_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; RV32-V-NEXT:    li a0, -7
 ; RV32-V-NEXT:    vnmsac.vx v8, a0, v16
 ; RV32-V-NEXT:    addi sp, sp, 16
+; RV32-V-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-V-NEXT:    ret
 ;
 ; ZVE64X-LABEL: vremu_vi_nxv8i64_0:

@@ -171,7 +171,9 @@ define <vscale x 32 x bfloat> @nearbyint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %a = call <vscale x 32 x bfloat> @llvm.nearbyint.nxv32bf16(<vscale x 32 x bfloat> %x)
   ret <vscale x 32 x bfloat> %a
@@ -431,7 +433,9 @@ define <vscale x 32 x half> @nearbyint_nxv32f16(<vscale x 32 x half> %x) {
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFHMIN-NEXT:    ret
   %a = call <vscale x 32 x half> @llvm.nearbyint.nxv32f16(<vscale x 32 x half> %x)
   ret <vscale x 32 x half> %a

@@ -46,7 +46,9 @@ define void @vid(ptr %p) {
 ; PRERA-NEXT:    csrr a0, vlenb
 ; PRERA-NEXT:    slli a0, a0, 3
 ; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    .cfi_def_cfa sp, 16
 ; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    .cfi_def_cfa_offset 0
 ; PRERA-NEXT:    ret
   %vid = call <vscale x 8 x i64> @llvm.riscv.vid.nxv8i64(<vscale x 8 x i64> poison, i64 -1)
   store volatile <vscale x 8 x i64> %vid, ptr %p
@@ -92,7 +94,9 @@ define void @vid_passthru(ptr %p, <vscale x 8 x i64> %v) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vid = call <vscale x 8 x i64> @llvm.riscv.vid.nxv8i64(<vscale x 8 x i64> %v, i64 1)
   store volatile <vscale x 8 x i64> %vid, ptr %p
@@ -154,7 +158,9 @@ define void @vmv.v.i(ptr %p) {
 ; PRERA-NEXT:    csrr a0, vlenb
 ; PRERA-NEXT:    slli a0, a0, 3
 ; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    .cfi_def_cfa sp, 16
 ; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    .cfi_def_cfa_offset 0
 ; PRERA-NEXT:    ret
   %vmv.v.i = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(<vscale x 8 x i64> poison, i64 1, i64 -1)
   store volatile <vscale x 8 x i64> %vmv.v.i, ptr %p
@@ -201,7 +207,9 @@ define void @vmv.v.x_needs_extended(ptr %p, i64 %x) {
 ; POSTRA-NEXT:    csrr a0, vlenb
 ; POSTRA-NEXT:    slli a0, a0, 3
 ; POSTRA-NEXT:    add sp, sp, a0
+; POSTRA-NEXT:    .cfi_def_cfa sp, 16
 ; POSTRA-NEXT:    addi sp, sp, 16
+; POSTRA-NEXT:    .cfi_def_cfa_offset 0
 ; POSTRA-NEXT:    ret
 ;
 ; PRERA-LABEL: vmv.v.x_needs_extended:
@@ -230,7 +238,9 @@ define void @vmv.v.x_needs_extended(ptr %p, i64 %x) {
 ; PRERA-NEXT:    csrr a0, vlenb
 ; PRERA-NEXT:    slli a0, a0, 3
 ; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    .cfi_def_cfa sp, 16
 ; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    .cfi_def_cfa_offset 0
 ; PRERA-NEXT:    ret
   %vmv.v.x = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(<vscale x 8 x i64> poison, i64 %x, i64 -1)
   store volatile <vscale x 8 x i64> %vmv.v.x, ptr %p
@@ -294,7 +304,9 @@ define void @vmv.v.x_live(ptr %p, i64 %x) {
 ; PRERA-NEXT:    csrr a0, vlenb
 ; PRERA-NEXT:    slli a0, a0, 3
 ; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    .cfi_def_cfa sp, 16
 ; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    .cfi_def_cfa_offset 0
 ; PRERA-NEXT:    ret
   %vmv.v.x = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(<vscale x 8 x i64> poison, i64 %x, i64 -1)
   store volatile <vscale x 8 x i64> %vmv.v.x, ptr %p
@@ -359,7 +371,9 @@ define void @vfmv.v.f(ptr %p, double %x) {
 ; PRERA-NEXT:    csrr a0, vlenb
 ; PRERA-NEXT:    slli a0, a0, 3
 ; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    .cfi_def_cfa sp, 16
 ; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    .cfi_def_cfa_offset 0
 ; PRERA-NEXT:    ret
   %vfmv.v.f = call <vscale x 8 x double> @llvm.riscv.vfmv.v.f.nxv8f64(<vscale x 8 x double> poison, double %x, i64 -1)
   store volatile <vscale x 8 x double> %vfmv.v.f, ptr %p
@@ -424,7 +438,9 @@ define void @vmv.s.x(ptr %p, i64 %x) {
 ; PRERA-NEXT:    csrr a0, vlenb
 ; PRERA-NEXT:    slli a0, a0, 3
 ; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    .cfi_def_cfa sp, 16
 ; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    .cfi_def_cfa_offset 0
 ; PRERA-NEXT:    ret
   %vmv.s.x = call <vscale x 8 x i64> @llvm.riscv.vmv.s.x.nxv8i64(<vscale x 8 x i64> poison, i64 %x, i64 -1)
   store volatile <vscale x 8 x i64> %vmv.s.x, ptr %p
@@ -489,7 +505,9 @@ define void @vfmv.s.f(ptr %p, double %x) {
 ; PRERA-NEXT:    csrr a0, vlenb
 ; PRERA-NEXT:    slli a0, a0, 3
 ; PRERA-NEXT:    add sp, sp, a0
+; PRERA-NEXT:    .cfi_def_cfa sp, 16
 ; PRERA-NEXT:    addi sp, sp, 16
+; PRERA-NEXT:    .cfi_def_cfa_offset 0
 ; PRERA-NEXT:    ret
   %vfmv.s.f = call <vscale x 8 x double> @llvm.riscv.vfmv.s.f.nxv8f64(<vscale x 8 x double> poison, double %x, i64 -1)
   store volatile <vscale x 8 x double> %vfmv.s.f, ptr %p

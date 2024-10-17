@@ -60,9 +60,13 @@ define <vscale x 64 x i8> @caller() {
 ; RV64IV-NEXT:    vs8r.v v24, (a1)
 ; RV64IV-NEXT:    call callee
 ; RV64IV-NEXT:    addi sp, s0, -80
+; RV64IV-NEXT:    .cfi_def_cfa sp, 80
 ; RV64IV-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64IV-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    .cfi_restore ra
+; RV64IV-NEXT:    .cfi_restore s0
 ; RV64IV-NEXT:    addi sp, sp, 80
+; RV64IV-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IV-NEXT:    ret
   %local0 = alloca <vscale x 64 x i8>
   %local1 = alloca <vscale x 64 x i8>

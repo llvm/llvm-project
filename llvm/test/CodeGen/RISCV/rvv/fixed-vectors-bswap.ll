@@ -104,6 +104,7 @@ define void @bswap_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vor.vv v8, v8, v9
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bswap_v2i64:
@@ -256,6 +257,7 @@ define void @bswap_v4i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bswap_v4i64:

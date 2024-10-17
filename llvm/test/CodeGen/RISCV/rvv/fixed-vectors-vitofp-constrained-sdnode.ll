@@ -422,6 +422,7 @@ define <1 x half> @vsitofp_v1i7_v1f16(<1 x i7> %va) strictfp {
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; RV32-NEXT:    vle16.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsitofp_v1i7_v1f16:
@@ -436,6 +437,7 @@ define <1 x half> @vsitofp_v1i7_v1f16(<1 x i7> %va) strictfp {
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; RV64-NEXT:    vle16.v v8, (a0)
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %evec = call <1 x half> @llvm.experimental.constrained.sitofp.v1f16.v1i7(<1 x i7> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <1 x half> %evec
@@ -454,6 +456,7 @@ define <1 x half> @vuitofp_v1i7_v1f16(<1 x i7> %va) strictfp {
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %evec = call <1 x half> @llvm.experimental.constrained.uitofp.v1f16.v1i7(<1 x i7> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <1 x half> %evec
