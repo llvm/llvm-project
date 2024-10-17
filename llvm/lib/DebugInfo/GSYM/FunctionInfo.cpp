@@ -218,9 +218,9 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
     // writing the CallSites out with the number of bytes that were written.
     Out.writeU32(0);
     const auto StartOffset = Out.tell();
-    llvm::Error err = CallSites->encode(Out);
-    if (err)
-      return std::move(err);
+    Error Err = CallSites->encode(Out);
+    if (Err)
+      return std::move(Err);
     const auto Length = Out.tell() - StartOffset;
     if (Length > UINT32_MAX)
       return createStringError(std::errc::invalid_argument,

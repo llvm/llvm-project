@@ -159,9 +159,9 @@ Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
   std::unique_ptr<MemoryBuffer> Buffer = std::move(*BufferOrError);
 
   // Step 2: Parse YAML content
-  yaml::FunctionsYAML functionsYAML;
+  yaml::FunctionsYAML FuncsYAML;
   yaml::Input yin(Buffer->getMemBufferRef());
-  yin >> functionsYAML;
+  yin >> FuncsYAML;
   if (yin.error())
     return createStringError(yin.error(), "Error parsing YAML file: %s\n",
                              Buffer->getBufferIdentifier().str().c_str());
@@ -170,7 +170,7 @@ Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
   auto FuncMap = buildFunctionMap(Funcs);
 
   // Step 4: Process parsed YAML functions and update FuncMap
-  return processYAMLFunctions(functionsYAML, FuncMap);
+  return processYAMLFunctions(FuncsYAML, FuncMap);
 }
 
 StringMap<FunctionInfo *>

@@ -9,24 +9,17 @@
 #ifndef LLVM_DEBUGINFO_GSYM_CALLSITEINFO_H
 #define LLVM_DEBUGINFO_GSYM_CALLSITEINFO_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
-#include "llvm/Support/YAMLParser.h"
-#include <string>
-#include <unordered_map>
+#include "llvm/Support/Error.h"
 #include <vector>
 
 namespace llvm {
 class DataExtractor;
 class raw_ostream;
-class StringTableBuilder;
-class CachedHashStringRef;
 
 namespace yaml {
-struct CallSiteYAML;
-struct FunctionYAML;
 struct FunctionsYAML;
 } // namespace yaml
 
@@ -43,6 +36,8 @@ struct CallSiteInfo {
     // This flag specifies that the call site can only call a function outside
     // the link unit that the call site is in.
     ExternalCall = 1 << 1,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ ExternalCall),
   };
 
   /// The return address of the call site.
@@ -90,11 +85,7 @@ public:
   /// Constructor that initializes the CallSiteInfoLoader with necessary data
   /// structures.
   ///
-  /// \param StringOffsetMap A reference to a DenseMap that maps existing string
-  /// offsets to CachedHashStringRef.
-  /// \param StrTab A reference to a StringTableBuilder used for managing
-  /// looking up and creating new strings. \param StringStorage A reference to a
-  /// StringSet for storing the data for generated strings.
+  /// \param GCreator A reference to the GsymCreator.
   CallSiteInfoLoader(GsymCreator &GCreator) : GCreator(GCreator) {}
 
   /// This method reads the specified YAML file, parses its content, and updates
