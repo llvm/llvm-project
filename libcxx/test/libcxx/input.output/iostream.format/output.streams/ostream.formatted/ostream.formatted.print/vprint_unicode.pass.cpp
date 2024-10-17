@@ -16,10 +16,10 @@
 // When std::print is unavailable, we don't rely on an implementation of
 // std::__is_terminal and we always assume a non-unicode and non-terminal
 // output.
-// XFAIL: availability-print-missing
+// XFAIL: availability-print-missing && target={{.*}}-windows{{.*}}
 
 // Clang modules do not work with the definiton of _LIBCPP_TESTING_PRINT_IS_TERMINAL
-// XFAIL: clang-modules-build
+// XFAIL: clang-modules-build && target={{.*}}-windows{{.*}}
 // <ostream>
 
 // Tests the implementation of
@@ -81,14 +81,22 @@ static void test_is_terminal_file_stream() {
     assert(stream.is_open());
     assert(stream.good());
     std::print(stream, "test");
+#ifdef _WIN32
     assert(is_terminal_calls == 1);
+#else
+    assert(is_terminal_calls == 0);
+#endif
   }
   {
     std::ofstream stream(filename);
     assert(stream.is_open());
     assert(stream.good());
     std::print(stream, "test");
+#ifdef _WIN32
     assert(is_terminal_calls == 2);
+#else
+    assert(is_terminal_calls == 0);
+#endif
   }
 }
 
@@ -105,7 +113,11 @@ static void test_is_terminal_rdbuf_derived_from_filebuf() {
 
   std::ostream stream(&buf);
   std::print(stream, "test");
+#ifdef _WIN32
   assert(is_terminal_calls == 1);
+#else
+  assert(is_terminal_calls == 0);
+#endif
 }
 
 // When the stream is cout, clog, or cerr, its FILE* may be a terminal. Validate
@@ -115,15 +127,27 @@ static void test_is_terminal_std_cout_cerr_clog() {
   is_terminal_result      = false;
   {
     std::print(std::cout, "test");
+#ifdef _WIN32
     assert(is_terminal_calls == 1);
+#else
+    assert(is_terminal_calls == 0);
+#endif
   }
   {
     std::print(std::cerr, "test");
+#ifdef _WIN32
     assert(is_terminal_calls == 2);
+#else
+    assert(is_terminal_calls == 0);
+#endif
   }
   {
     std::print(std::clog, "test");
+#ifdef _WIN32
     assert(is_terminal_calls == 3);
+#else
+    assert(is_terminal_calls == 0);
+#endif
   }
 }
 
@@ -156,7 +180,11 @@ static void test_is_terminal_is_flushed() {
   // A terminal sync is called.
   is_terminal_result = true;
   std::print(stream, "");
+#ifdef _WIN32
   assert(buf.sync_calls == 1); // only called from the destructor of the sentry
+#else
+  assert(buf.sync_calls == 0);
+#endif
 }
 
 int main(int, char**) {
