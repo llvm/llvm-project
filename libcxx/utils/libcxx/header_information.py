@@ -143,7 +143,6 @@ class Header:
 # Commonly-used sets of headers
 all_headers = [Header(p.relative_to(libcxx_include).as_posix()) for p in libcxx_include.rglob("[_a-z]*") if _is_header_file(p)]
 all_headers += [Header("__config_site"), Header("__assertion_handler")] # Headers generated during the build process
-experimental_headers = [h for h in all_headers if h.is_experimental()]
 public_headers = [h for h in all_headers if h.is_public()]
 module_headers = [h for h in all_headers if h.has_cxx20_module()]
 module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd()]
