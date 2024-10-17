@@ -6816,6 +6816,16 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
             : UsualArithmeticConversions(LHS, RHS, QuestionLoc,
                                          ACK_Conditional);
 
+    if (ResultElementTy.isNull()) {
+      Diag(QuestionLoc, diag::err_conditional_vector_mismatched)
+          << LHSType << RHSType;
+      return {};
+    }
+    if (ResultElementTy->isPointerType()) {
+      Diag(QuestionLoc, diag::err_conditional_vector_result_pointer_type)
+          << ResultElementTy;
+      return {};
+    }
     if (ResultElementTy->isEnumeralType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
           << ResultElementTy;
