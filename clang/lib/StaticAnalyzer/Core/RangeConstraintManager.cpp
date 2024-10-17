@@ -1488,12 +1488,15 @@ private:
   }
 
   std::optional<RangeSet> getRangeCommutativeSymSym(const SymSymExpr *SSE) {
-    bool IsCommutative = llvm::is_contained({BO_Add, BO_Mul}, SSE->getOpcode());
+    auto Op = SSE->getOpcode();
+    bool IsCommutative = llvm::is_contained(
+        // ==, !=, |, &, +, *, ^
+        {BO_EQ, BO_NE, BO_Or, BO_And, BO_Add, BO_Mul, BO_Xor}, Op);
     if (!IsCommutative)
       return std::nullopt;
 
     SymbolRef Commuted = State->getSymbolManager().getSymSymExpr(
-        SSE->getRHS(), SSE->getOpcode(), SSE->getLHS(), SSE->getType());
+        SSE->getRHS(), Op, SSE->getLHS(), SSE->getType());
     if (const RangeSet *Range = getConstraint(State, Commuted))
       return *Range;
     return std::nullopt;
