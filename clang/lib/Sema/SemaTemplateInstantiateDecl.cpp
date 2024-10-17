@@ -5227,8 +5227,26 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-        Function, Function->getLexicalDeclContext());
+    DeclContext *DC = Function;
+    MultiLevelTemplateArgumentList TemplateArgs;
+    if (auto *Primary = Function->getPrimaryTemplate();
+        Primary &&
+        !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function)) {
+      auto It = llvm::find_if(Primary->redecls(),
+                              [](const RedeclarableTemplateDecl *RTD) {
+                                return cast<FunctionTemplateDecl>(RTD)
+                                    ->isCompatibleWithDefinition();
+                              });
+      assert(It != Primary->redecls().end() &&
+             "Should't get here without a definition");
+      DC = (*It)->getLexicalDeclContext();
+      if (Function->getTemplateSpecializationKind() !=
+          TSK_ExplicitSpecialization)
+        TemplateArgs.addOuterTemplateArguments(
+            Function, Function->getTemplateSpecializationArgs()->asArray(),
+            /*Final=*/false);
+    }
+    getTemplateInstantiationArgs(TemplateArgs, /*D=*/nullptr, DC);
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.
