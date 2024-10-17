@@ -368,13 +368,15 @@ struct TemplateParameterListBuilder {
 
     TemplateArgument ConceptTA = TemplateArgument(ConceptTType);
 
-    ArrayRef<TemplateArgument> ConceptConvertedArgs = {ConceptTA};
+    std::vector<TemplateArgument> ConceptConvertedArgsVec = {ConceptTA};
+    ArrayRef<TemplateArgument> ConceptConvertedArgs = ConceptConvertedArgsVec;
 
     clang::QualType CSETType = context.getTypeDeclType(T);
 
     TemplateArgument CSETA = TemplateArgument(CSETType);
 
-    ArrayRef<TemplateArgument> CSEConvertedArgs = {CSETA};
+    std::vector<TemplateArgument> CSEConvertedArgsVec = {CSETA};
+    ArrayRef<TemplateArgument> CSEConvertedArgs = CSEConvertedArgsVec;
 
     ImplicitConceptSpecializationDecl *ImplicitCSEDecl =
         ImplicitConceptSpecializationDecl::Create(
@@ -425,9 +427,6 @@ struct TemplateParameterListBuilder {
 
     QualType T = Builder.Template->getInjectedClassNameSpecialization();
     T = S.Context.getInjectedClassNameType(Builder.Record, T);
-
-    ArrayRef<TemplateArgument> TempArgs =
-        Builder.Template->getInjectedTemplateArgs();
 
     return Builder;
   }
@@ -626,7 +625,9 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
   T->setReferenced();
 
   // Create and Attach Template Parameter List to ConceptDecl
-  llvm::ArrayRef<NamedDecl *> TemplateParams = {T};
+  std::vector<NamedDecl *> TemplateParamsVec = {T};
+  llvm::ArrayRef<NamedDecl *> TemplateParams(TemplateParamsVec);
+
   clang::TemplateParameterList *ConceptParams =
       clang::TemplateParameterList::Create(context, DeclLoc, DeclLoc,
                                            TemplateParams, DeclLoc, nullptr);
