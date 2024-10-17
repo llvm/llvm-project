@@ -69,7 +69,7 @@ private:
       const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
       mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl);
   mlir::LLVM::DICommonBlockAttr
-  getOrCreateCommonBlockAttr(const std::string &name,
+  getOrCreateCommonBlockAttr(llvm::StringRef name,
                              mlir::LLVM::DIFileAttr fileAttr,
                              mlir::LLVM::DIScopeAttr scope, unsigned line);
 
@@ -112,7 +112,7 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
   std::optional<std::int64_t> optint;
-  auto op = declOp.getMemref().getDefiningOp();
+  mlir::Operation *op = declOp.getMemref().getDefiningOp();
 
   if (auto conOp = mlir::dyn_cast_if_present<fir::ConvertOp>(op))
     op = conOp.getValue().getDefiningOp();
@@ -126,12 +126,12 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
       op = conOp2.getValue().getDefiningOp();
 
     if (auto addrOfOp = mlir::dyn_cast_if_present<fir::AddrOfOp>(op)) {
-      auto sym = addrOfOp.getSymbol();
+      mlir::SymbolRefAttr sym = addrOfOp.getSymbol();
       if (auto global =
               symbolTable->lookup<fir::GlobalOp>(sym.getRootReference())) {
 
         unsigned line = getLineFromLoc(global.getLoc());
-        std::string commonName(sym.getRootReference().str());
+        llvm::StringRef commonName(sym.getRootReference().str());
         // FIXME: We are trying to extract the name of the common block from the
         // name of the global. As part of mangling, GetCommonBlockObjectName can
         // add a trailing _ in the name of that global. The demangle function
@@ -139,7 +139,7 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
         // remove the trailing '_'.
         if (commonName != Fortran::common::blankCommonObjectName &&
             commonName.back() == '_')
-          commonName.pop_back();
+          commonName = commonName.drop_back();
         mlir::LLVM::DICommonBlockAttr commonBlock =
             getOrCreateCommonBlockAttr(commonName, fileAttr, scopeAttr, line);
         mlir::LLVM::DITypeAttr diType = typeGen.convertType(
@@ -218,7 +218,7 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
 }
 
 mlir::LLVM::DICommonBlockAttr AddDebugInfoPass::getOrCreateCommonBlockAttr(
-    const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
+    llvm::StringRef name, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, unsigned line) {
   mlir::MLIRContext *context = &getContext();
   mlir::LLVM::DICommonBlockAttr cbAttr;
