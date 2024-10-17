@@ -91,8 +91,6 @@ define amdgpu_kernel void @fshr_i32(ptr addrspace(1) %in, i32 %x, i32 %y, i32 %z
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s5, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %z)
@@ -163,8 +161,6 @@ define amdgpu_kernel void @fshr_i32_imm(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_alignbit_b32 v1, s2, s3, 7
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 7)
@@ -265,8 +261,6 @@ define amdgpu_kernel void @fshr_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, s7, v0
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s6, v2
 ; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[2:3]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z)
@@ -352,8 +346,6 @@ define amdgpu_kernel void @fshr_v2i32_imm(ptr addrspace(1) %in, <2 x i32> %x, <2
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, s7, 9
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s6, 7
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 7, i32 9>)
@@ -484,8 +476,6 @@ define amdgpu_kernel void @fshr_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, s9, v4
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s8, v5
 ; GFX11-NEXT:    global_store_b128 v6, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z)
@@ -589,8 +579,6 @@ define amdgpu_kernel void @fshr_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4
 ; GFX11-NEXT:    v_alignbit_b32 v1, s5, s9, 7
 ; GFX11-NEXT:    v_alignbit_b32 v0, s4, s8, 1
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 1, i32 7, i32 9, i32 33>)

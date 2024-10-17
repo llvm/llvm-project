@@ -147,8 +147,6 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fpmode = call i32 @llvm.get.fpmode.i32()
   store i32 %fpmode, ptr addrspace(1) %ptr

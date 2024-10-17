@@ -23054,8 +23054,6 @@ define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #1 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_atomic_add_f32 v0, v1, s[2:3] scope:SCOPE_DEV
 ; GFX12-NEXT:  .LBB92_2:
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: infer_as_before_atomic:
@@ -23096,8 +23094,6 @@ define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #1 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_add_f32 v0, v1, s[2:3]
 ; GFX11-NEXT:  .LBB92_2:
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: infer_as_before_atomic:

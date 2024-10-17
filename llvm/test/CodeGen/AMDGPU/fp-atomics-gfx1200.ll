@@ -11,15 +11,11 @@ define amdgpu_ps void @raw_buffer_atomic_add_v2f16_noret_offset(<2 x half> %val,
 ; GFX12-SDAG-LABEL: raw_buffer_atomic_add_v2f16_noret_offset:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    buffer_atomic_pk_add_f16 v0, off, s[0:3], s4 offset:92
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: raw_buffer_atomic_add_v2f16_noret_offset:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s4 offset:92
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
   %ret = call <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 92, i32 %soffset, i32 0)
   ret void
@@ -29,15 +25,11 @@ define amdgpu_ps void @raw_buffer_atomic_add_v2f16_noret(<2 x half> %val, <4 x i
 ; GFX12-SDAG-LABEL: raw_buffer_atomic_add_v2f16_noret:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    buffer_atomic_pk_add_f16 v0, v1, s[0:3], s4 offen
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: raw_buffer_atomic_add_v2f16_noret:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s4 offen
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
   %ret = call <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -96,15 +88,11 @@ define amdgpu_ps void @struct_buffer_atomic_add_v2f16_noret(<2 x half> %val, <4 
 ; GFX12-SDAG-LABEL: struct_buffer_atomic_add_v2f16_noret:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    buffer_atomic_pk_add_f16 v0, v[1:2], s[0:3], s4 idxen offen
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: struct_buffer_atomic_add_v2f16_noret:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s4 idxen offen
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
   %orig = call <2 x half> @llvm.amdgcn.struct.buffer.atomic.fadd.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -141,15 +129,11 @@ define amdgpu_ps void @struct_buffer_atomic_add_v2bf16_noret(<2 x bfloat> %val, 
 ; GFX12-SDAG-LABEL: struct_buffer_atomic_add_v2bf16_noret:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s4 idxen offen
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: struct_buffer_atomic_add_v2bf16_noret:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s4 idxen offen
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
   %orig = call <2 x bfloat> @llvm.amdgcn.struct.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -159,15 +143,11 @@ define amdgpu_ps void @raw_buffer_atomic_add_v2bf16(<2 x bfloat> %val, <4 x i32>
 ; GFX12-SDAG-LABEL: raw_buffer_atomic_add_v2bf16:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s4 offen
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: raw_buffer_atomic_add_v2bf16:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s4 offen
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
   %ret = call <2 x bfloat> @llvm.amdgcn.raw.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void

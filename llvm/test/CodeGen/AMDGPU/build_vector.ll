@@ -46,8 +46,6 @@ define amdgpu_kernel void @build_vector2 (ptr addrspace(1) %out) {
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 6
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: build_vector2:
@@ -113,8 +111,6 @@ define amdgpu_kernel void @build_vector4 (ptr addrspace(1) %out) {
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 8
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: build_vector4:
@@ -170,8 +166,6 @@ define amdgpu_kernel void @build_vector_v2i16 (ptr addrspace(1) %out) {
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0x60005
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: build_vector_v2i16:
@@ -236,8 +230,6 @@ define amdgpu_kernel void @build_vector_v2i16_trunc (ptr addrspace(1) %out, i32 
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: build_vector_v2i16_trunc:
@@ -310,8 +302,6 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: build_v2i32_from_v4i16_shuffle:
