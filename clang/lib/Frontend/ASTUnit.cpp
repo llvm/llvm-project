@@ -1702,7 +1702,8 @@ bool ASTUnit::LoadFromCompilerInvocation(
   Invocation->getPreprocessorOpts().RetainRemappedFileBuffers = true;
   Invocation->getFrontendOpts().DisableFree = false;
   getDiagnostics().Reset();
-  ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(), *VFS);
+  ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
+                        *VFS);
 
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
   if (PrecompilePreambleAfterNParses > 0) {
@@ -1710,7 +1711,8 @@ bool ASTUnit::LoadFromCompilerInvocation(
     OverrideMainBuffer =
         getMainBufferWithPrecompiledPreamble(PCHContainerOps, *Invocation, VFS);
     getDiagnostics().Reset();
-    ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(), *VFS);
+    ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
+                          *VFS);
   }
 
   SimpleTimer ParsingTimer(WantTiming);

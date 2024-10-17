@@ -195,7 +195,7 @@ protected:
 private:
   class CaptureDiagnosticConsumer : public DiagnosticConsumer {
   public:
-   std::vector<StoredDiagnostic> StoredDiags;
+    std::vector<StoredDiagnostic> StoredDiags;
 
     void HandleDiagnostic(DiagnosticsEngine::Level level,
                           const Diagnostic &Info) override {

@@ -98,7 +98,7 @@ public:
     if (Section == DiagToSection.end())
       return false;
     auto SrcEntries = Section->second->Entries.find("src");
-    if(SrcEntries == Section->second->Entries.end())
+    if (SrcEntries == Section->second->Entries.end())
       return false;
     // Find the longest glob pattern that matches FilePath. A positive match
     // implies D should be suppressed for FilePath.
@@ -119,7 +119,7 @@ public:
   }
 
 private:
-  llvm::DenseMap<diag::kind, const Section*> DiagToSection;
+  llvm::DenseMap<diag::kind, const Section *> DiagToSection;
 };
 
 void parseSuppressionMappings(const llvm::MemoryBuffer &MB,
@@ -141,7 +141,7 @@ void parseSuppressionMappings(const llvm::MemoryBuffer &MB,
 
 void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
                                   const DiagnosticOptions &Opts,
-                                  llvm::vfs::FileSystem& VFS,
+                                  llvm::vfs::FileSystem &VFS,
                                   bool ReportDiags) {
   Diags.setSuppressSystemWarnings(true);  // Default to -Wno-system-headers
   Diags.setIgnoreAllWarnings(Opts.IgnoreWarnings);
