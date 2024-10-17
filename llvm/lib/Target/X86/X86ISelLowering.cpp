@@ -56552,8 +56552,8 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
 
   // TODO: Add NoOpaque handling to isConstantIntBuildVectorOrConstantInt.
   auto IsNonOpaqueConstant = [&](SDValue Op) {
-    if (SDNode *C = DAG.isConstantIntBuildVectorOrConstantInt(Op)) {
-      if (auto *Cst = dyn_cast<ConstantSDNode>(C))
+    if (DAG.isConstantIntBuildVectorOrConstantInt(Op)) {
+      if (auto *Cst = dyn_cast<ConstantSDNode>(Op))
         return !Cst->isOpaque();
       return true;
     }
