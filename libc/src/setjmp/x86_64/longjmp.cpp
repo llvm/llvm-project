@@ -8,8 +8,11 @@
 
 #include "src/setjmp/longjmp.h"
 #include "include/llvm-libc-macros/offsetof-macro.h"
+#include "src/__support/OSUtil/io.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/setjmp/checksum.h"
+#include "src/stdlib/abort.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid file include"
@@ -17,49 +20,71 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#ifdef __i386__
-[[gnu::naked]]
-LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
-  asm(R"(
-      mov 0x4(%%esp), %%ecx
-      mov 0x8(%%esp), %%eax
-      cmpl $0x1, %%eax
-      adcl $0x0, %%eax
-
-      mov %c[ebx](%%ecx), %%ebx
-      mov %c[esi](%%ecx), %%esi
-      mov %c[edi](%%ecx), %%edi
-      mov %c[ebp](%%ecx), %%ebp
-      mov %c[esp](%%ecx), %%esp
-
-      jmp *%c[eip](%%ecx)
-      )" ::[ebx] "i"(offsetof(__jmp_buf, ebx)),
-      [esi] "i"(offsetof(__jmp_buf, esi)), [edi] "i"(offsetof(__jmp_buf, edi)),
-      [ebp] "i"(offsetof(__jmp_buf, ebp)), [esp] "i"(offsetof(__jmp_buf, esp)),
-      [eip] "i"(offsetof(__jmp_buf, eip)));
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+extern "C" [[gnu::cold, noreturn]] void __libc_jmpbuf_corruption() {
+  write_to_stderr("invalid checksum detected in longjmp\n");
+  abort();
 }
+#define LOAD_CHKSUM_STATE_REGISTERS()                                          \
+  asm("mov %0, %%rcx\n\t" ::"m"(jmpbuf::value_mask) : "rcx");                  \
+  asm("mov %0, %%rdx\n\t" ::"m"(jmpbuf::checksum_cookie) : "rdx");
+
+#define RESTORE_REG(DST)                                                       \
+  "movq %c[" #DST "](%%rdi), %%rax\n\t"                                        \
+  "movq %%rax, %%" #DST "\n\t"                                                 \
+  "xor %%rcx, %%" #DST "\n\t"                                                  \
+  "mul %%rdx\n\t"                                                              \
+  "xor %%rax, %%rdx\n\t"                                                       \
+  "rol $%c[rotation], %%rdx\n\t"
+
+#define RESTORE_RIP()                                                          \
+  "movq %c[rip](%%rdi), %%rax\n\t"                                             \
+  "xor %%rax, %%rcx\n\t"                                                       \
+  "mul %%rdx\n\t"                                                              \
+  "xor %%rax, %%rdx\n\t"                                                       \
+  "rol $%c[rotation], %%rdx\n\t"                                               \
+  "cmp %c[chksum](%%rdi), %%rdx\n\t"                                           \
+  "jne __libc_jmpbuf_corruption\n\t"                                           \
+  "cmpl $0x1, %%esi\n\t"                                                       \
+  "adcl $0x0, %%esi\n\t"                                                       \
+  "movq %%rsi, %%rax\n\t"                                                      \
+  "jmp *%%rcx\n\t"
 #else
+#define LOAD_CHKSUM_STATE_REGISTERS()
+#define RESTORE_REG(DST) "movq %c[" #DST "](%%rdi), %%" #DST "\n\t"
+#define RESTORE_RIP()                                                          \
+  "cmpl $0x1, %%esi\n\t"                                                       \
+  "adcl $0x0, %%esi\n\t"                                                       \
+  "movq %%rsi, %%rax\n\t"                                                      \
+  "jmpq *%c[rip](%%rdi)\n\t"
+#endif
+
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
-  asm(R"(
-      cmpl $0x1, %%esi
-      adcl $0x0, %%esi
-      movq %%rsi, %%rax
-
-      movq %c[rbx](%%rdi), %%rbx
-      movq %c[rbp](%%rdi), %%rbp
-      movq %c[r12](%%rdi), %%r12
-      movq %c[r13](%%rdi), %%r13
-      movq %c[r14](%%rdi), %%r14
-      movq %c[r15](%%rdi), %%r15
-      movq %c[rsp](%%rdi), %%rsp
-      jmpq *%c[rip](%%rdi)
-      )" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
+  LOAD_CHKSUM_STATE_REGISTERS()
+  asm(
+      // clang-format off
+      RESTORE_REG(rbx)
+      RESTORE_REG(rbp)
+      RESTORE_REG(r12)
+      RESTORE_REG(r13)
+      RESTORE_REG(r14)
+      RESTORE_REG(r15)
+      RESTORE_REG(rsp)
+      RESTORE_RIP()
+      // clang-format on
+      ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
       [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
       [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
       [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
-      [rip] "i"(offsetof(__jmp_buf, rip)));
-}
+      [rip] "i"(offsetof(__jmp_buf, rip))
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+      // clang-format off
+      ,[rotation] "i"(jmpbuf::ROTATION)
+      , [chksum] "i"(offsetof(__jmp_buf, __chksum))
+  // clang-format on
 #endif
+      : "rax", "rdx", "rcx", "rsi");
+}
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -104,6 +104,7 @@ add_object_library(
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.unistd.environ
+    libc.src.setjmp.checksum
   COMPILE_OPTIONS
     -ffreestanding       # To avoid compiler warnings about calling the main function.
     -fno-builtin         # avoid emit unexpected calls

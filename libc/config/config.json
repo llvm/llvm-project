@@ -103,6 +103,10 @@
     "LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER": {
       "value": true,
       "doc": "Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved."
+    },
+    "LIBC_CONF_SETJMP_ENABLE_FORTIFICATION": {
+      "value": true,
+      "doc": "Enable fortification for setjmp and longjmp."
     }
   },
   "time": {
