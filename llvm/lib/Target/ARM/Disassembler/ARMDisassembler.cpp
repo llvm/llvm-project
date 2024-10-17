@@ -1541,7 +1541,7 @@ static bool PermitsD32(const MCInst &Inst, const MCDisassembler *Decoder) {
 static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  if (RegNo > (PermitsD32(Inst, Decoder) ? 31 : 15))
+  if (RegNo > (PermitsD32(Inst, Decoder) ? 31u : 15u))
     return MCDisassembler::Fail;
 
   unsigned Register = DPRDecoderTable[RegNo];
