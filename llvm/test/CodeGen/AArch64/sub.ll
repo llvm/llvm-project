@@ -171,11 +171,7 @@ define void @v4i8(ptr %p1, ptr %p2) {
 ; CHECK-GI-NEXT:    ushll v0.8h, v3.8b, #0
 ; CHECK-GI-NEXT:    ushll v1.8h, v5.8b, #0
 ; CHECK-GI-NEXT:    sub v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-NEXT:    xtn v0.8b, v1.8h
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    str w8, [x0]
 ; CHECK-GI-NEXT:    ret

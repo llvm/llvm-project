@@ -314,9 +314,9 @@ def AArch64PostLegalizerLowering
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
-                       [copy_prop, combines_for_extload,
-                        combine_indexed_load_store,
-                        sext_trunc_sextload, mutate_anyext_to_zext,
+                       [copy_prop, cast_of_cast_combines, buildvector_of_truncate,
+                        integer_of_truncate, mutate_anyext_to_zext,
+                        combines_for_extload, combine_indexed_load_store, sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,

@@ -60,11 +60,7 @@ define i32 @bitcast_v4i8_i32(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-GI-LABEL: bitcast_v4i8_i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-NEXT:    xtn v0.8b, v1.8h
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
   %c = add <4 x i8> %a, %b
@@ -116,9 +112,7 @@ define i32 @bitcast_v2i16_i32(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-GI-LABEL: bitcast_v2i16_i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-GI-NEXT:    xtn v0.4h, v1.4s
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
   %c = add <2 x i16> %a, %b
@@ -418,9 +412,7 @@ define <4 x i8> @bitcast_v2i16_v4i8(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-GI-LABEL: bitcast_v2i16_v4i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-GI-NEXT:    xtn v0.4h, v1.4s
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    mov b1, v0.b[1]
 ; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
 ; CHECK-GI-NEXT:    mov b3, v0.b[2]
@@ -455,11 +447,7 @@ define <2 x i16> @bitcast_v4i8_v2i16(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-GI-LABEL: bitcast_v4i8_v2i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-NEXT:    xtn v0.8b, v1.8h
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
