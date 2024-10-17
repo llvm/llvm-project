@@ -72,10 +72,15 @@ public:
   bool usesOnlyLowPageBits(RelType type) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
   void finalizeRelax(int passes) const override;
 };
 } // end anonymous namespace
+
+// The internal relocation number for local got relaxation which isn't part
+// of the psABI spec.
+#define INTERNAL_R_LARCH_PCALA_LO12 256
 
 namespace {
 enum Op {
@@ -779,6 +784,69 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
+static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
+  return i + 1 != relocs.size() && relocs[i + 1].type == R_LARCH_RELAX;
+}
+
+// Returns true if the two instructions corresponding to the i-th reloc
+// entry and the i+2-th reloc entry can apply relaxation. For scenarios
+// with fewer than four reloc entries, e.g., R_ALRCH_CALL36, this function
+// should not be used to make a judgment.
+static bool isPair(ArrayRef<Relocation> relocs, size_t i) {
+  return relaxable(relocs, i) && relaxable(relocs, i + 2) &&
+         relocs[i].offset + 4 == relocs[i + 2].offset;
+}
+
+void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  const unsigned bits = ctx.arg.is64 ? 64 : 32;
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
+  const ArrayRef<Relocation> relocs = sec.relocs();
+  for (size_t i = 0, size = relocs.size(); i != size; ++i) {
+    const Relocation &rel = relocs[i];
+    uint8_t *loc = buf + rel.offset;
+    uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
+
+    switch (rel.expr) {
+    case R_RELAX_HINT:
+      continue;
+    default:
+      break;
+    }
+    relocate(loc, rel, val);
+  }
+}
+
+// Relax pcalau12i,addi.d => pcaddi.
+static void relaxPcalaAddi(const InputSection &sec, size_t i, uint64_t loc,
+        Relocation &r_hi, uint32_t &remove) {
+  const uint64_t symval =
+      (r_hi.expr == R_LOONGARCH_PLT_PAGE_PC ? r_hi.sym->getPltVA(ctx) : r_hi.sym->getVA()) + r_hi.addend;
+  const int64_t dist = symval - loc;
+  uint32_t pca = read32le(sec.content().data() + r_hi.offset);
+  uint32_t add = read32le(sec.content().data() + r_hi.offset + 4);
+  uint32_t rd = LARCH_GET_RD(pca);
+
+  if (!LARCH_INSN_ADDI_D(add)
+      // Is pcalau12i $rd + addi.d $rd, $rd?
+      || LARCH_GET_RD(add) != rd
+      || LARCH_GET_RJ(add) != rd
+      // 4 bytes align
+      || symval & 0x3
+      || !isInt<22>(dist))
+    return;
+
+  // remove the first insn
+  sec.relaxAux->relocTypes[i] = R_LARCH_RELAX;
+  sec.relaxAux->relocTypes[i + 2] = R_LARCH_PCREL20_S2;
+  sec.relaxAux->writes.push_back(LARCH_OP_PCADDI | rd); // pcaddi
+  remove = 4;
+}
+
 static bool relax(Ctx &ctx, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
@@ -817,6 +885,11 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       }
       break;
     }
+    case R_LARCH_PCALA_HI20:
+      if (isPair(relocs, i)
+          && relocs[i + 2].type == R_LARCH_PCALA_LO12)
+        relaxPcalaAddi(sec, i, loc, r, remove);
+      break;
     }
 
     // For all anchors whose offsets are <= r.offset, they are preceded by
@@ -887,6 +960,7 @@ void LoongArch::finalizeRelax(int passes) const {
       MutableArrayRef<Relocation> rels = sec->relocs();
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
+      size_t writesIdx = 0;
       uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
@@ -907,7 +981,24 @@ void LoongArch::finalizeRelax(int passes) const {
         uint64_t size = r.offset - offset;
         memcpy(p, old.data() + offset, size);
         p += size;
-        offset = r.offset + remove;
+
+        int64_t skip = 0;
+        if (r.type != R_LARCH_ALIGN) {
+          RelType newType = aux.relocTypes[i];
+          switch (newType) {
+          case R_LARCH_RELAX:
+            break;
+          case R_LARCH_PCREL20_S2:
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            break;
+          default:
+            llvm_unreachable("unsupported type");
+          }
+        }
+
+        p += skip;
+        offset = r.offset + remove + skip;
       }
       memcpy(p, old.data() + offset, old.size() - offset);
 
