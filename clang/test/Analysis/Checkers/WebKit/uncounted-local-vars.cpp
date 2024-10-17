@@ -302,6 +302,8 @@ struct TreeNode {
   }
 
   int recursiveCost();
+  int recursiveWeight();
+  int weight();
 
   int cost { 0 };
   mutable unsigned refCount { 0 };
@@ -314,6 +316,14 @@ int TreeNode::recursiveCost() {
   unsigned totalCost = cost;
   for (TreeNode* node = firstChild; node; node = node->nextSibling)
     totalCost += recursiveCost();
+  return totalCost;
+}
+
+int TreeNode::recursiveWeight() {
+  unsigned totalCost = weight();
+  for (TreeNode* node = firstChild; node; node = node->nextSibling)
+    // expected-warning@-1{{Local variable 'node' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    totalCost += recursiveWeight();
   return totalCost;
 }
 
