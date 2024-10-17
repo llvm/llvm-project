@@ -1487,25 +1487,20 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
 
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
   // For Trunc, the context is the only user, which must be a
-  // VPWidenStoreRecipe, a VPInterleaveRecipe ,a VPReplicateRecipe or a live-out
-  // value.
+  // VPWidenStoreRecipe, a VPInterleaveRecipe ,or a VPReplicateRecipe.
   if ((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
       !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
-    auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin());
-    if (isa<VPLiveOut>(*user_begin()))
-      CCH = TTI::CastContextHint::Normal;
-    else if (StoreRecipe)
+    if (auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin()))
       CCH = ComputeCCH(StoreRecipe);
   }
   // For Z/Sext, the context is the operand, which must be a VPWidenLoadRecipe,
   // a VPInterleaveRecipe, a VPReplicateRecipe or a live-in value.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
            Opcode == Instruction::FPExt) {
-    const VPRecipeBase *LoadRecipe = getOperand(0)->getDefiningRecipe();
     if (getOperand(0)->isLiveIn())
       CCH = TTI::CastContextHint::Normal;
-    else if (LoadRecipe)
-      CCH = ComputeCCH(LoadRecipe);
+    else if (getOperand(0)->getDefiningRecipe())
+      CCH = ComputeCCH(getOperand(0)->getDefiningRecipe());
   }
 
   auto *SrcTy = cast<VectorType>(
