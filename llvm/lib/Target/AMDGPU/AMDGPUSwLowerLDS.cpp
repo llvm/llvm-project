@@ -921,9 +921,8 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
       StringRef("__asan_free_impl"),
       FunctionType::get(IRB.getVoidTy(), {Int64Ty, Int64Ty}, false));
-  Value *ReturnAddr = IRB.CreateCall(
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::returnaddress),
-      IRB.getInt32(0));
+  Value *ReturnAddr =
+      IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
   Value *RAPToInt = IRB.CreatePtrToInt(ReturnAddr, Int64Ty);
   Value *MallocPtrToInt = IRB.CreatePtrToInt(LoadMallocPtr, Int64Ty);
   IRB.CreateCall(AsanFreeFunc, {MallocPtrToInt, RAPToInt});
