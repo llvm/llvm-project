@@ -1,5 +1,4 @@
-//===-- RegisterContextPOSIXCore_loongarch64.cpp
-//------------------------------===//
+//===-- RegisterContextPOSIXCore_loongarch64.cpp ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,16 +30,14 @@ RegisterContextCorePOSIX_loongarch64::RegisterContextCorePOSIX_loongarch64(
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_loongarch64(thread, std::move(register_info)) {
 
-  m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
-                                                  gpregset.GetByteSize());
-  m_gpr.SetData(m_gpr_buffer);
+  m_gpr.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
+                                                  gpregset.GetByteSize()));
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
   ArchSpec arch = m_register_info_up->GetTargetArchitecture();
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
-  m_fpr_buffer = std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
-                                                  fpregset.GetByteSize());
-  m_fpr.SetData(m_fpr_buffer);
+  m_fpr.SetData(std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
+                                                  fpregset.GetByteSize()));
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 }
 
