@@ -301,22 +301,28 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   while (size) {
     // `read` from `sock_pair[0]` into a dummy buffer to free up the pipe buffer
     // for more `write` is slower than just recreating a pipe.
-    int sock_pair[2];
-    if (pipe(sock_pair))
+    int fds[2];
+    if (pipe(fds))
       return false;
 
     auto cleanup = at_scope_exit([&]() {
-      internal_close(sock_pair[0]);
-      internal_close(sock_pair[1]);
+      internal_close(fds[0]);
+      internal_close(fds[1]);
     });
 
-    SetNonBlock(sock_pair[1]);
+    SetNonBlock(fds[1]);
 
     int write_errno;
-    uptr w = internal_write(sock_pair[1], reinterpret_cast<char *>(beg), size);
+    uptr w = internal_write(fds[1], reinterpret_cast<char *>(beg), size);
     if (internal_iserror(w, &write_errno)) {
-      CHECK_EQ(EFAULT, write_errno);
-      return false;
+      switch (write_errno) {
+        case EINTR:
+        case EAGAIN:
+          continue;
+        default:
+          CHECK_EQ(EFAULT, write_errno);
+          return false;
+      }
     }
     size -= w;
     beg += w;

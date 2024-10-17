@@ -1290,9 +1290,8 @@ public:
       if (AllowContraction) {
         // Use fmuladd for floating point operations and let the backend decide
         // if that's profitable.
-        Function *FMulAdd = Intrinsic::getOrInsertDeclaration(
-            Func.getParent(), Intrinsic::fmuladd, A->getType());
-        return Builder.CreateCall(FMulAdd, {A, B, Sum});
+        return Builder.CreateIntrinsic(Intrinsic::fmuladd, A->getType(),
+                                       {A, B, Sum});
       }
       NumComputeOps += getNumOps(A->getType());
       Value *Mul = Builder.CreateFMul(A, B);

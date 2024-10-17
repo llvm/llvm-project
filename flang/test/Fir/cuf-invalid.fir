@@ -175,3 +175,18 @@ module attributes {gpu.container_module} {
     llvm.return
   }
 }
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    llvm.func @_QPsub_device1() {
+      llvm.return
+    }
+  }
+  llvm.func internal @__cudaFortranConstructor() {
+    // expected-error@+1{{'cuf.register_kernel' op only gpu.kernel llvm.func can be registered}}
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device1
+    llvm.return
+  }
+}
