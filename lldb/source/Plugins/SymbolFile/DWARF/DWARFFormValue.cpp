@@ -306,6 +306,11 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
       *offset_ptr += 8;
       return true;
 
+    // 16 byte values
+    case DW_FORM_data16:
+      *offset_ptr += 16;
+      return true;
+
     // signed or unsigned LEB 128 values
     case DW_FORM_addrx:
     case DW_FORM_loclistx:
@@ -578,6 +583,7 @@ bool DWARFFormValue::IsBlockForm(const dw_form_t form) {
   case DW_FORM_block1:
   case DW_FORM_block2:
   case DW_FORM_block4:
+  case DW_FORM_data16:
     return true;
   default:
     return false;
@@ -611,6 +617,7 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
     case DW_FORM_data2:
     case DW_FORM_data4:
     case DW_FORM_data8:
+    case DW_FORM_data16:
     case DW_FORM_string:
     case DW_FORM_block:
     case DW_FORM_block1:
