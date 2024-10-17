@@ -108,8 +108,8 @@ LIBC_INLINE ExpRangeReduction exp2_range_reduction(float16 x) {
   float xf = x;
   float kf = fputil::nearest_integer(xf * 0x1.0p+3f);
   int x_hi_mid = static_cast<int>(kf);
-  int x_hi = x_hi_mid >> 3;
-  int x_mid = x_hi_mid & 0x7;
+  unsigned x_hi = static_cast<unsigned>(x_hi_mid) >> 3;
+  unsigned x_mid = static_cast<unsigned>(x_hi_mid) & 0x7;
   // lo = x - (hi + mid) = round(x * 2^3) * (-2^(-3)) + x
   float lo = fputil::multiply_add(kf, -0x1.0p-3f, xf);
 
@@ -155,8 +155,8 @@ LIBC_INLINE ExpRangeReduction exp10_range_reduction(float16 x) {
   float xf = x;
   float kf = fputil::nearest_integer(xf * (LOG2F_10 * 0x1.0p+3f));
   int x_hi_mid = static_cast<int>(kf);
-  int x_hi = x_hi_mid >> 3;
-  int x_mid = x_hi_mid & 0x7;
+  unsigned x_hi = static_cast<unsigned>(x_hi_mid) >> 3;
+  unsigned x_mid = static_cast<unsigned>(x_hi_mid) & 0x7;
   // lo = x - (hi + mid) = round(x * 2^3 * log2(10)) * log10(2) * (-2^(-3)) + x
   float lo = fputil::multiply_add(kf, LOG10F_2 * -0x1.0p-3f, xf);
 
