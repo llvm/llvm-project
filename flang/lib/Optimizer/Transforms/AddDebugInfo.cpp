@@ -131,7 +131,7 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
               symbolTable->lookup<fir::GlobalOp>(sym.getRootReference())) {
 
         unsigned line = getLineFromLoc(global.getLoc());
-        llvm::StringRef commonName(sym.getRootReference().str());
+        llvm::StringRef commonName(sym.getRootReference());
         // FIXME: We are trying to extract the name of the common block from the
         // name of the global. As part of mangling, GetCommonBlockObjectName can
         // add a trailing _ in the name of that global. The demangle function
