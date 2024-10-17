@@ -11,6 +11,39 @@ static constexpr auto IsAnySwiftAsyncFunctionSymbol = [](StringRef name) {
   return SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(name);
 };
 
+using FuncletComparisonResult = SwiftLanguageRuntime::FuncletComparisonResult;
+static constexpr auto AreFuncletsOfSameAsyncFunction =
+    SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction;
+
+/// Checks that all names in \c funclets belong to the same function.
+static void CheckGroupOfFuncletsFromSameFunction(ArrayRef<StringRef> funclets) {
+  for (StringRef funclet1 : funclets)
+    for (StringRef funclet2 : funclets) {
+      EXPECT_EQ(FuncletComparisonResult::SameAsyncFunction,
+                AreFuncletsOfSameAsyncFunction(funclet1, funclet2))
+          << funclet1 << " -- " << funclet2;
+      EXPECT_EQ(FuncletComparisonResult::SameAsyncFunction,
+                AreFuncletsOfSameAsyncFunction(funclet2, funclet1))
+          << funclet1 << " -- " << funclet2;
+    }
+}
+
+/// Checks that all pairs of combinations of names from \c funclets1 and \c
+/// funclets2 belong to different functions.
+static void
+CheckGroupOfFuncletsFromDifferentFunctions(ArrayRef<StringRef> funclets1,
+                                           ArrayRef<StringRef> funclets2) {
+  for (StringRef funclet1 : funclets1)
+    for (StringRef funclet2 : funclets2) {
+      EXPECT_EQ(FuncletComparisonResult::DifferentAsyncFunctions,
+                AreFuncletsOfSameAsyncFunction(funclet1, funclet2))
+          << funclet1 << " -- " << funclet2;
+      EXPECT_EQ(FuncletComparisonResult::DifferentAsyncFunctions,
+                AreFuncletsOfSameAsyncFunction(funclet2, funclet1))
+          << funclet1 << " -- " << funclet2;
+    }
+}
+
 TEST(TestSwiftDemangleAsyncNames, BasicAsync) {
   // "sayBasic" == a basic async function
   // "sayGeneric" == a generic async function
@@ -31,6 +64,10 @@ TEST(TestSwiftDemangleAsyncNames, BasicAsync) {
     EXPECT_TRUE(IsSwiftMangledName(async_name)) << async_name;
     EXPECT_TRUE(IsAnySwiftAsyncFunctionSymbol(async_name)) << async_name;
   }
+
+  CheckGroupOfFuncletsFromSameFunction(basic_funclets);
+  CheckGroupOfFuncletsFromSameFunction(generic_funclets);
+  CheckGroupOfFuncletsFromDifferentFunctions(basic_funclets, generic_funclets);
 }
 
 TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
@@ -69,19 +106,48 @@ TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
     EXPECT_TRUE(IsSwiftMangledName(async_name)) << async_name;
     EXPECT_TRUE(IsAnySwiftAsyncFunctionSymbol(async_name)) << async_name;
   }
+
+  CheckGroupOfFuncletsFromSameFunction(nested1_funclets);
+  CheckGroupOfFuncletsFromSameFunction(nested2_funclets1);
+  CheckGroupOfFuncletsFromSameFunction(nested2_funclets2);
+  CheckGroupOfFuncletsFromSameFunction(nested2_funclets_top_not_async);
+
+  CheckGroupOfFuncletsFromDifferentFunctions(nested1_funclets,
+                                             nested2_funclets1);
+  CheckGroupOfFuncletsFromDifferentFunctions(nested1_funclets,
+                                             nested2_funclets2);
+  CheckGroupOfFuncletsFromDifferentFunctions(nested1_funclets,
+                                             nested2_funclets_top_not_async);
+  CheckGroupOfFuncletsFromDifferentFunctions(nested2_funclets1,
+                                             nested2_funclets2);
+  CheckGroupOfFuncletsFromDifferentFunctions(nested2_funclets1,
+                                             nested2_funclets_top_not_async);
+  CheckGroupOfFuncletsFromDifferentFunctions(nested2_funclets2,
+                                             nested2_funclets_top_not_async);
 }
 
 TEST(TestSwiftDemangleAsyncNames, StaticAsync) {
   // static async functions
-  SmallVector<StringRef> async_names = {
-      "$s1a6StructV9sayStaticyySSYaFZ"
+  SmallVector<StringRef> static_async_funclets = {
+      "$s1a6StructV9sayStaticyySSYaFZ",
       "$s1a6StructV9sayStaticyySSYaFZTY0_",
       "$s1a6StructV9sayStaticyySSYaFZTQ1_",
       "$s1a6StructV9sayStaticyySSYaFZTY2_",
   };
 
-  for (StringRef async_name : async_names) {
+  for (StringRef async_name : static_async_funclets) {
     EXPECT_TRUE(IsSwiftMangledName(async_name)) << async_name;
     EXPECT_TRUE(IsAnySwiftAsyncFunctionSymbol(async_name)) << async_name;
   }
+
+  CheckGroupOfFuncletsFromSameFunction(static_async_funclets);
+
+  // Make sure we can compare static funclets to other kinds of funclets
+  SmallVector<StringRef> other_funclets = {
+      // Nested funclets:
+      "$s1a8sayHelloyyYaFyypYacfU_", "$s1a8sayHelloyyYaFyypYacfU_TY0_",
+      // "Normal" funclets:
+      "$s1a8sayBasicyySSYaF", "$s1a8sayBasicyySSYaFTY0_"};
+  CheckGroupOfFuncletsFromDifferentFunctions(static_async_funclets,
+                                             other_funclets);
 }
