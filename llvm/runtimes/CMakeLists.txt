@@ -137,7 +137,6 @@ function(builtin_register_target compiler_rt_path name)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
-                                      -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                       ${COMMON_CMAKE_ARGS}
@@ -232,7 +231,7 @@ foreach(entry ${runtimes})
 endforeach()
 
 function(runtime_default_target)
-  cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES" ${ARGN})
+  cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES;EXTRA_ARGS" ${ARGN})
 
   include(${LLVM_BINARY_DIR}/runtimes/Components.cmake OPTIONAL)
   set(SUB_CHECK_TARGETS ${SUB_CHECK_TARGETS} PARENT_SCOPE)
@@ -263,7 +262,6 @@ function(runtime_default_target)
   llvm_ExternalProject_Add(runtimes
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${ARG_DEPENDS}
-                           ${enable_fortran}
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -291,7 +289,7 @@ function(runtime_default_target)
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
                            FOLDER "Runtimes"
-                           ${EXTRA_ARGS})
+                           ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 endfunction()
 
 # runtime_register_target(name)
@@ -401,7 +399,6 @@ function(runtime_register_target name)
   llvm_ExternalProject_Add(runtimes-${name}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${ARG_DEPENDS}
-                           ${enable_fortran}
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=OFF
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -469,7 +466,7 @@ if(build_runtimes)
   # together in a single CMake invocation.
   set(extra_deps "")
   set(extra_cmake_args "")
-  set(enable_fortran "")
+  set(extra_args "")
 
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
@@ -574,21 +571,23 @@ if(build_runtimes)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
   if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    set(enable_fortran ENABLE_FORTRAN)
+    list(APPEND extra_args ENABLE_FORTRAN)
   endif ()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
       CMAKE_ARGS ${extra_cmake_args}
-      PREFIXES ${prefixes})
+      PREFIXES ${prefixes}
+      EXTRA_ARGS ${extra_args})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
         CMAKE_ARGS ${extra_cmake_args}
-        PREFIXES ${prefixes})
+        PREFIXES ${prefixes}
+        EXTRA_ARGS ${extra_args})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
       add_custom_target(runtimes)
@@ -635,7 +634,7 @@ if(build_runtimes)
       runtime_register_target(${name}
         DEPENDS ${builtins_dep_name} ${extra_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
-        EXTRA_ARGS TARGET_TRIPLE ${name})
+        EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
     endforeach()
 
     foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
@@ -646,7 +645,7 @@ if(build_runtimes)
                      -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
           BASE_NAME ${name}
-          EXTRA_ARGS TARGET_TRIPLE ${name})
+          EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
       endforeach()
     endforeach()
   endif()
