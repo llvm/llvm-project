@@ -2421,6 +2421,42 @@ let Predicates = [HasSVEorSME] in {
   defm FSQRT_ZPmZ  : sve_fp_2op_p_zd_HSD<0b01101, "fsqrt",  AArch64fsqrt_mt>;
 } // End HasSVEorSME
 
+// Helper for creating scalar fp -> int -> fp conversions using SVE.
+class sve_scalar_fp_int_fp_cvt
+  <Instruction PTRUE, Instruction FROM_INT, Instruction TO_INT, SubRegIndex sub>
+  : OutPatFrag<(ops node: $Rn),
+    (EXTRACT_SUBREG
+      (FROM_INT (IMPLICIT_DEF), (PTRUE 1),
+        (TO_INT (IMPLICIT_DEF), (PTRUE 1),
+          (INSERT_SUBREG (IMPLICIT_DEF), $Rn, sub))), sub)>;
+
+// Some scalar float -> int -> float conversion patterns where we want to keep
+// the int values in FP registers to avoid costly GPR <-> FPR register
+// transfers using SVE instructions. Only used when NEON is not available (e.g.
+// in streaming functions).
+// TODO: When +sme2p2 is available Neon single-element vectors should be preferred.
+def HasNoNEON : Predicate<"!Subtarget->isNeonAvailable()">;
+let Predicates = [HasSVEorSME, HasNoNEON] in {
+def : Pat<
+  (f64 (sint_to_fp (i64 (fp_to_sint f64:$Rn)))),
+  (sve_scalar_fp_int_fp_cvt<PTRUE_D, SCVTF_ZPmZ_DtoD, FCVTZS_ZPmZ_DtoD, dsub> $Rn)>;
+def : Pat<
+  (f64 (uint_to_fp (i64 (fp_to_uint f64:$Rn)))),
+  (sve_scalar_fp_int_fp_cvt<PTRUE_D, UCVTF_ZPmZ_DtoD, FCVTZU_ZPmZ_DtoD, dsub> $Rn)>;
+def : Pat<
+  (f32 (sint_to_fp (i32 (fp_to_sint f32:$Rn)))),
+  (sve_scalar_fp_int_fp_cvt<PTRUE_S, SCVTF_ZPmZ_StoS, FCVTZS_ZPmZ_StoS, ssub> $Rn)>;
+def : Pat<
+  (f32 (uint_to_fp (i32 (fp_to_uint f32:$Rn)))),
+  (sve_scalar_fp_int_fp_cvt<PTRUE_S, UCVTF_ZPmZ_StoS, FCVTZU_ZPmZ_StoS, ssub> $Rn)>;
+def : Pat<
+  (f16 (sint_to_fp (i32 (fp_to_sint f16:$Rn)))),
+  (sve_scalar_fp_int_fp_cvt<PTRUE_H, SCVTF_ZPmZ_HtoH, FCVTZS_ZPmZ_HtoH, hsub> $Rn)>;
+def : Pat<
+  (f16 (uint_to_fp (i32 (fp_to_uint f16:$Rn)))),
+  (sve_scalar_fp_int_fp_cvt<PTRUE_H, UCVTF_ZPmZ_HtoH, FCVTZU_ZPmZ_HtoH, hsub> $Rn)>;
+} // End HasSVEorSME, HasNoNEON
+
 let Predicates = [HasBF16, HasSVEorSME] in {
   defm BFDOT_ZZZ    : sve_float_dot<0b1, 0b0, ZPR32, ZPR16, "bfdot", nxv8bf16, int_aarch64_sve_bfdot>;
   defm BFDOT_ZZI    : sve_float_dot_indexed<0b1, 0b00, ZPR16, ZPR3b16, "bfdot", nxv8bf16, int_aarch64_sve_bfdot_lane_v2>;
