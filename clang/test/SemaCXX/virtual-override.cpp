@@ -19,10 +19,12 @@ struct b { };
   
 class A {
   virtual a* f(); // expected-note{{overridden virtual function is here}}
+  virtual int *g(); // expected-note{{overridden virtual function is here}}
 };
 
 class B : A {
   virtual b* f(); // expected-error{{return type of virtual function 'f' is not covariant with the return type of the function it overrides ('b *' is not derived from 'a *')}}
+  virtual char *g(); // expected-error{{virtual function 'g' has a different return type ('char *') than the function it overrides (which has return type 'int *')}}
 };
 
 }
@@ -83,11 +85,15 @@ struct a { };
 class A {
   virtual const a* f(); 
   virtual a* g(); // expected-note{{overridden virtual function is here}}
+  virtual const int* h(); // expected-note{{overridden virtual function is here}}
+  virtual int* i(); // expected-note{{overridden virtual function is here}}
 };
 
 class B : A {
   virtual a* f(); 
   virtual const a* g(); // expected-error{{return type of virtual function 'g' is not covariant with the return type of the function it overrides (class type 'const a *' is more qualified than class type 'a *'}}
+  virtual int* h();  // expected-error{{virtual function 'h' has a different return type ('int *') than the function it overrides (which has return type 'const int *')}}
+  virtual const int* i(); // expected-error{{virtual function 'i' has a different return type ('const int *') than the function it overrides (which has return type 'int *')}}
 };
 
 }
