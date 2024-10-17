@@ -818,27 +818,23 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   // Search the producer slices accessed within the containing operation.
   // TODO: Generalize to more extract/insert/parallel_insert triples, maybe
   // evolve into an interface.
-  auto itBBArgUsers = llvm::find_if(bbArg.getUsers(), [&](Operation *user) {
-    auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(user);
-    return sliceOp && containingOp->isProperAncestor(sliceOp);
-  });
-
-  // Find a fusion opportunity.
-  if (itBBArgUsers == bbArg.getUsers().end()) {
+  if (bbArg.getUsers().empty()) {
     diag.attachNote(containingOp->getLoc())
         << "could not find fusion opportunity for bbArg: " << bbArg;
     return {};
   }
-  auto sliceOpToTile = cast<tensor::ExtractSliceOp>(*itBBArgUsers);
-
-  // Try to fuse the producer in-place.
+  auto itBBArgUsers = llvm::find_if(bbArg.getUsers(), [&](Operation *user) {
+    auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(user);
+    return sliceOp && containingOp->isProperAncestor(sliceOp);
+  });
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(sliceOpToTile);
-
-  // Replace the use in the tileableProducer before tiling: clone, replace and
-  // then tile.
-  int64_t resultNumber = cast<OpResult>(pUse->get()).getResultNumber();
-  LLVM_DEBUG(DBGS() << "resultNumber: " << resultNumber << "\n");
+  tensor::ExtractSliceOp sliceOpToTile;
+  if (itBBArgUsers == bbArg.getUsers().end()) {
+    rewriter.setInsertionPoint(&bbArg.getOwner()->front());
+  } else {
+    sliceOpToTile = llvm::cast<tensor::ExtractSliceOp>(*itBBArgUsers);
+    rewriter.setInsertionPoint(sliceOpToTile);
+  }
 
   // Gather destination tensors.
   SmallVector<Value> destinationTensors;
@@ -850,14 +846,38 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
     return {};
   }
 
+  // Replace the use in the tileableProducer before tiling: clone, replace and
+  // then tile.
+  SmallVector<Operation *> oldBbArgUsers(bbArg.getUsers());
+  int64_t resultNumber = cast<OpResult>(pUse->get()).getResultNumber();
+  LLVM_DEBUG(DBGS() << "resultNumber: " << resultNumber << "\n");
   IRMapping bvm;
   bvm.map(destinationTensors[resultNumber], bbArg);
   auto tileableProducerClone =
       cast<TilingInterface>(rewriter.clone(*tileableProducer, bvm));
-  auto scopeGuard =
-      llvm::make_scope_exit([&]() { rewriter.eraseOp(tileableProducerClone); });
+
+  // If there was no extract_slice user, then no need to tile.
+  if (!sliceOpToTile) {
+    LLVM_DEBUG(DBGS() << "No extract_slice user. No need to tile cloned op.\n");
+    // Replace the old uses of bbArg with the cloned op, except for any parallel
+    // insert ops.
+    rewriter.replaceUsesWithIf(
+        bbArg, tileableProducerClone->getResult(resultNumber),
+        [&](OpOperand &operand) {
+          return !isa<tensor::ParallelInsertSliceOp>(operand.getOwner()) &&
+                 operand.getOwner() != tileableProducerClone.getOperation();
+        });
+    // Replace the use in containingOp.
+    rewriter.modifyOpInPlace(containingOp, [&]() {
+      containingOp->setOperand(pUse->getOperandNumber(),
+                               destinationTensors.front());
+    });
+    return {tileableProducerClone};
+  }
 
   // Tile the producer.
+  auto scopeGuard =
+      llvm::make_scope_exit([&]() { rewriter.eraseOp(tileableProducerClone); });
   FailureOr<TilingResult> tileAndFuseResult =
       tileableProducerClone.generateResultTileValue(
           rewriter, resultNumber, sliceOpToTile.getMixedOffsets(),
