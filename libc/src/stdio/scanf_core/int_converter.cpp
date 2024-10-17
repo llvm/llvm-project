@@ -141,7 +141,6 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
           --max_width;
           cur_char = reader->getc();
         } else {
-          // write_int_with_length(0, to_conv);
           return MATCHING_FAILURE;
         }
 
