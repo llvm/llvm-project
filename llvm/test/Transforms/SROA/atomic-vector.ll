@@ -37,16 +37,15 @@ define i32 @atomic_vector_int() {
 
 define ptr @atomic_vector_ptr() {
 ; CHECK-LABEL: define ptr @atomic_vector_ptr() {
-; CHECK-NEXT:    [[SRC_SROA_0:%.*]] = alloca [4 x i8], align 8
-; CHECK-NEXT:    [[VAL_SROA_0:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[VAL_SROA_0]], ptr align 8 [[SRC_SROA_0]], i64 4, i1 false)
+; CHECK-NEXT:    [[VAL_SROA_0:%.*]] = alloca <1 x ptr>, align 8
+; CHECK-NEXT:    store <1 x ptr> undef, ptr [[VAL_SROA_0]], align 8
 ; CHECK-NEXT:    [[VAL_SROA_0_0_VAL_SROA_0_0_RET:%.*]] = load atomic volatile ptr, ptr [[VAL_SROA_0]] acquire, align 4
 ; CHECK-NEXT:    ret ptr [[VAL_SROA_0_0_VAL_SROA_0_0_RET]]
 ;
   %src = alloca <1 x ptr>
   %val = alloca <1 x ptr>
   %direct = alloca ptr
-  call void @llvm.memcpy.p0.p0.i64(ptr %val, ptr %src, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %val, ptr %src, i64 8, i1 false)
   store ptr %val, ptr %direct
   %indirect = load ptr, ptr %direct
   %ret = load atomic volatile ptr, ptr %indirect acquire, align 4
