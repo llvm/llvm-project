@@ -3,6 +3,7 @@ import base64
 import datetime
 import itertools
 import json
+import os
 
 from xml.sax.saxutils import quoteattr as quo
 
@@ -18,10 +19,31 @@ def by_suite_and_test_path(test):
 class Report(object):
     def __init__(self, output_file):
         self.output_file = output_file
+        # Set by the option parser later.
+        self.use_unique_output_file_name = False
 
     def write_results(self, tests, elapsed):
-        with open(self.output_file, "w") as file:
-            self._write_results_to_file(tests, elapsed, file)
+        if self.use_unique_output_file_name:
+            file = None
+            filepath = self.output_file
+            attempt = 0
+            while file is None:
+                try:
+                    file = open(filepath, "x")
+                except FileExistsError:
+                    attempt += 1
+                    # If there is an extension insert before that because most
+                    # glob patterns for these will be '*.extension'. Otherwise
+                    # add to the end of the path.
+                    path, ext = os.path.splitext(self.output_file)
+                    filepath = path + f".{attempt}" + ext
+
+            with file:
+                self._write_results_to_file(tests, elapsed, file)
+        else:
+            # Overwrite if the results already exist.
+            with open(self.output_file, "w") as file:
+                self._write_results_to_file(tests, elapsed, file)
 
     @abc.abstractmethod
     def _write_results_to_file(self, tests, elapsed, file):
