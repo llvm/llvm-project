@@ -330,6 +330,10 @@ bool ARMFrameLowering::hasFP(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
+  // Check to see if the target want to forcibly keep frame pointer.
+  if (keepFramePointer(MF))
+    return true;
+
   // ABI-required frame pointer.
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;
@@ -2403,7 +2407,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // to take advantage the eliminateFrameIndex machinery. This also ensures it
   // is spilled in the order specified by getCalleeSavedRegs() to make it easier
   // to combine multiple loads / stores.
-  bool CanEliminateFrame = !(requiresAAPCSFrameRecord(MF) && hasFP(MF));
+  bool CanEliminateFrame = !(requiresAAPCSFrameRecord(MF) && hasFP(MF)) &&
+                           !MF.getTarget().Options.DisableFramePointerElim(MF);
   bool CS1Spilled = false;
   bool LRSpilled = false;
   unsigned NumGPRSpills = 0;
