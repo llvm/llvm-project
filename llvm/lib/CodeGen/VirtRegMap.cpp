@@ -202,6 +202,9 @@ class VirtRegRewriter : public MachineFunctionPass {
   bool needLiveOutUndefSubregDef(const LiveInterval &LI,
                                  const MachineBasicBlock &MBB, unsigned SubReg,
                                  MCPhysReg PhysReg) const;
+  LaneBitmask liveOutUndefPhiLanesForUndefSubregDef(
+      const LiveInterval &LI, const MachineBasicBlock &MBB, unsigned SubReg,
+      MCPhysReg PhysReg, const MachineInstr &MI) const;
 
 public:
   static char ID;
@@ -555,6 +558,41 @@ bool VirtRegRewriter::needLiveOutUndefSubregDef(const LiveInterval &LI,
   return false;
 }
 
+/// Compute a lanemask for undef lanes which need to be preserved out of the
+/// defining block for a register assignment.
+LaneBitmask VirtRegRewriter::liveOutUndefPhiLanesForUndefSubregDef(
+    const LiveInterval &LI, const MachineBasicBlock &MBB, unsigned SubReg,
+    MCPhysReg PhysReg, const MachineInstr &MI) const {
+  LaneBitmask UndefMask = ~TRI->getSubRegIndexLaneMask(SubReg);
+  LaneBitmask LiveOutUndefLanes;
+
+  for (const LiveInterval::SubRange &SR : LI.subranges()) {
+    LaneBitmask NeedImpDefLanes = UndefMask & SR.LaneMask;
+    if (NeedImpDefLanes.any() && !LIS->isLiveOutOfMBB(SR, &MBB)) {
+      for (const MachineBasicBlock *Succ : MBB.successors()) {
+        if (LIS->isLiveInToMBB(SR, Succ))
+          LiveOutUndefLanes |= NeedImpDefLanes;
+      }
+    }
+  }
+  if (LiveOutUndefLanes.none())
+    return LiveOutUndefLanes;
+
+  SlotIndex MIIndex = LIS->getInstructionIndex(MI);
+  SlotIndex BeforeMIUses = MIIndex.getBaseIndex();
+  SlotIndex AfterMIDefs = MIIndex.getBoundaryIndex();
+
+  for (MCRegUnitMaskIterator MCRU(PhysReg, TRI); MCRU.isValid(); ++MCRU) {
+    auto [RU, PhysRegMask] = *MCRU;
+
+    const LiveRange &UnitRange = LIS->getRegUnit(RU);
+    if (UnitRange.liveAt(AfterMIDefs) && UnitRange.liveAt(BeforeMIUses))
+      LiveOutUndefLanes &= ~PhysRegMask;
+  }
+
+  return LiveOutUndefLanes;
+}
+
 void VirtRegRewriter::rewrite() {
   bool NoSubRegLiveness = !MRI->subRegLivenessEnabled();
   SmallVector<Register, 8> SuperDeads;
@@ -611,8 +649,41 @@ void VirtRegRewriter::rewrite() {
               assert(MO.isDef());
               if (MO.isUndef()) {
                 const LiveInterval &LI = LIS->getInterval(VirtReg);
-                if (needLiveOutUndefSubregDef(LI, *MBBI, SubReg, PhysReg))
+
+                LaneBitmask LiveOutUndefLanes =
+                    liveOutUndefPhiLanesForUndefSubregDef(LI, *MBBI, SubReg,
+                                                          PhysReg, MI);
+                if (LiveOutUndefLanes.any()) {
+                  SmallVector<unsigned, 16> CoveringIndexes;
+
+                  // TODO: Just use the super register if
+                  if (TRI->getCoveringSubRegIndexes(
+                          *MRI, MRI->getRegClass(VirtReg), LiveOutUndefLanes,
+                          CoveringIndexes)) {
+                    // Try to represent the minimum needed live out def as a
+                    // sequence of subregister defs.
+                    //
+                    // FIXME: It would be better if we could directly represent
+                    // liveness with a lanemask instead of spamming operands.
+                    for (unsigned SubIdx : CoveringIndexes)
+                      SuperDefs.push_back(TRI->getSubReg(PhysReg, SubIdx));
+                  } else {
+                    // If we could not represent this as a sequence of
+                    // subregisters, it's safe to replace all the lanes with a
+                    // full def of the super register.
+                    SuperDefs.push_back(PhysReg);
+                  }
+                }
+
+                if (false &&
+                    needLiveOutUndefSubregDef(LI, *MBBI, SubReg, PhysReg)) {
                   SuperDefs.push_back(PhysReg);
+
+                  for (MCRegister AssignedSubReg : TRI->subregs(PhysReg)) {
+                    if (subRegLiveThrough(MI, AssignedSubReg))
+                      SuperKills.push_back(AssignedSubReg);
+                  }
+                }
               }
             }
           }
