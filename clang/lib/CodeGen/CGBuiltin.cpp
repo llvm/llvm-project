@@ -919,8 +919,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   //   2) bdos of the whole struct, including the flexible array:
   //
   //     __builtin_dynamic_object_size(p, 1) ==
-  //        max(sizeof(struct s),
-  //            offsetof(struct s, array) + p->count * sizeof(*p->array))
+  //        sizeof(struct s) + p->count * sizeof(*p->array))
   //
   ASTContext &Ctx = getContext();
   const Expr *Base = E->IgnoreParenImpCasts();
@@ -1052,22 +1051,12 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     // The whole struct is specificed in the __bdos.
     const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
 
-    // Get the offset of the FAM.
-    llvm::Constant *FAMOffset = ConstantInt::get(ResType, Offset, IsSigned);
-    Value *OffsetAndFAMSize =
-        Builder.CreateAdd(FAMOffset, Res, "", !IsSigned, IsSigned);
-
     // Get the full size of the struct.
     llvm::Constant *SizeofStruct =
         ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
 
-    // max(sizeof(struct s),
-    //     offsetof(struct s, array) + p->count * sizeof(*p->array))
-    Res = IsSigned
-              ? Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax,
-                                              OffsetAndFAMSize, SizeofStruct)
-              : Builder.CreateBinaryIntrinsic(llvm::Intrinsic::umax,
-                                              OffsetAndFAMSize, SizeofStruct);
+    // Add full size of struct and fam size
+    Res = Builder.CreateAdd(SizeofStruct, Res, "", !IsSigned, IsSigned);
   }
 
   // A negative \p IdxInst or \p CountedByInst means that the index lands
