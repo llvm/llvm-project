@@ -254,8 +254,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
 }
 } // namespace Fortran::parser
 
-template <typename C>
-static llvm::omp::Clause getClauseIdForClass(C &&) {
+template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {
   using namespace Fortran;
   using A = llvm::remove_cvref_t<C>; // A is referenced in OMP.inc
   // The code included below contains a sequence of checks like the following
