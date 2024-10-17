@@ -2620,7 +2620,9 @@ bool VarDecl::hasICEInitializer(const ASTContext &Context) const {
 }
 
 bool VarDecl::hasConstantInitialization() const {
-  // In C, all globals (and only globals) have constant initialization.
+  // In C, all globals and constexpr variables should have constant
+  // initialization. For constexpr variables in C check that initializer is a
+  // constant initializer because they can be used in constant expressions.
   if (hasGlobalStorage() && !getASTContext().getLangOpts().CPlusPlus &&
       !isConstexpr())
     return true;
