@@ -973,20 +973,28 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
     // Loop through all attributes in both this and Other in sorted order. If
     // the attribute is only present in one of the sets, it will be set in
     // Attr0. If it is present in both sets both Attr0 and Attr1 will be set.
+    // If the attr is only present in one of the sets, WithoutCur will point to
+    // the set that doesn't contain Attr0.
     Attribute Attr0, Attr1;
-    if (ItBegin1 == ItEnd1)
+    const AttributeSet *WithoutCur = nullptr;
+    if (ItBegin1 == ItEnd1) {
+      WithoutCur = &Other;
       Attr0 = *ItBegin0++;
-    else if (ItBegin0 == ItEnd0)
+    } else if (ItBegin0 == ItEnd0) {
+      WithoutCur = this;
       Attr0 = *ItBegin1++;
-    else {
+    } else {
       int Cmp = ItBegin0->cmpKind(*ItBegin1);
       if (Cmp == 0) {
         Attr0 = *ItBegin0++;
         Attr1 = *ItBegin1++;
-      } else if (Cmp < 0)
+      } else if (Cmp < 0) {
+        WithoutCur = &Other;
         Attr0 = *ItBegin0++;
-      else
+      } else {
+        WithoutCur = this;
         Attr0 = *ItBegin1++;
+      }
     }
     assert(Attr0.isValid() && "Iteration should always yield a valid attr");
 
@@ -1011,14 +1019,51 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
     // If we don't have both attributes, then fail if the attribute is
     // must-preserve or drop it otherwise.
     if (!Attr1.isValid()) {
+      assert(WithoutCur != nullptr &&
+             "Iteration with only one valid attr didn't set WithoutCur");
       if (Attribute::intersectMustPreserve(Kind))
         return std::nullopt;
+
+      // We can preserve some attributes without it being present in both this
+      // and Other. For example the intersection between ReadOnly and ReadNone
+      // is ReadOnly.
+      // NB: MemoryEffects don't need this extra logic. The `&` operator already
+      // does this type of intersection and missing memory effects implies
+      // unknown which we can't union.
+      switch (Kind) {
+        // ReadOnly + ReadNone -> ReadOnly
+      case Attribute::ReadOnly:
+        if (WithoutCur->hasAttribute(Attribute::ReadNone))
+          Intersected.addAttribute(Attr0);
+        break;
+        // ReadNone + ReadOnly -> ReadNone
+      case Attribute::ReadNone:
+        if (WithoutCur->hasAttribute(Attribute::ReadOnly))
+          Intersected.addAttribute(Attribute::ReadOnly);
+        break;
+        // Dereferenceable + DereferenceableOrNull -> DereferenceableOrNull
+      case Attribute::DereferenceableOrNull:
+      case Attribute::Dereferenceable: {
+        Attribute::AttrKind OtherKind = Kind == Attribute::Dereferenceable
+                                            ? Attribute::DereferenceableOrNull
+                                            : Attribute::Dereferenceable;
+        Attr1 = WithoutCur->getAttribute(OtherKind);
+        if (Attr1.isValid()) {
+          uint64_t NewVal =
+              std::min(Attr0.getValueAsInt(), Attr1.getValueAsInt());
+          Intersected.addRawIntAttr(Attribute::DereferenceableOrNull, NewVal);
+        }
+      } break;
+      default:
+        break;
+      }
       continue;
     }
 
     // We have both attributes so apply the intersection rule.
     assert(Attr1.hasKindAsEnum() && Kind == Attr1.getKindAsEnum() &&
            "Iterator picked up two different attributes in the same iteration");
+    assert(WithoutCur == nullptr && "Iteration two valid attrs set WithoutCur");
 
     // Attribute we can intersect with "and"
     if (Attribute::intersectWithAnd(Kind)) {
