@@ -343,6 +343,10 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   return Res;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPSingleDefRecipe::dump() const { VPDef::dump(); }
+#endif
+
 template <unsigned PartOpIdx>
 VPValue *
 VPUnrollPartAccessor<PartOpIdx>::getUnrollPartOperand(VPUser &U) const {
