@@ -3437,7 +3437,7 @@ class ItaniumRTTIBuilder {
   llvm::Constant *GetAddrOfExternalRTTIDescriptor(QualType Ty);
 
   /// BuildVTablePointer - Build the vtable pointer for the given type.
-  void BuildVTablePointer(const Type *Ty);
+  void BuildVTablePointer(const Type *Ty, llvm::Constant *StorageAddress);
 
   /// BuildSIClassTypeInfo - Build an abi::__si_class_type_info, used for single
   /// inheritance, according to the Itanium C++ ABI, 2.9.5p6b.
@@ -3834,7 +3834,8 @@ static bool CanUseSingleInheritance(const CXXRecordDecl *RD) {
   return true;
 }
 
-void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
+void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
+                                            llvm::Constant *StorageAddress) {
   // abi::__class_type_info.
   static const char * const ClassTypeInfo =
     "_ZTVN10__cxxabiv117__class_type_infoE";
@@ -3982,13 +3983,11 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
   }
 
   if (const auto &Schema =
-          CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer) {
-    // If address discrimination is enabled, we'll re-write that to actual
-    // storage address later in ItaniumRTTIBuilder::BuildTypeInfo.
-    llvm::Constant *StorageAddress = nullptr;
-    VTable = CGM.getConstantSignedPointer(VTable, Schema, StorageAddress,
-                                          GlobalDecl(), QualType(Ty, 0));
-  }
+          CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer)
+    VTable = CGM.getConstantSignedPointer(
+        VTable, Schema,
+        Schema.isAddressDiscriminated() ? StorageAddress : nullptr,
+        GlobalDecl(), QualType(Ty, 0));
 
   Fields.push_back(VTable);
 }
@@ -4104,10 +4103,18 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
       llvm::GlobalVariable::LinkageTypes Linkage,
       llvm::GlobalValue::VisibilityTypes Visibility,
       llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
+  SmallString<256> Name;
+  llvm::raw_svector_ostream Out(Name);
+  CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty, Out);
+  llvm::Module &M = CGM.getModule();
+  llvm::GlobalVariable *OldGV = M.getNamedGlobal(Name);
+  // int8 is an arbitrary type to be replaced later with replaceInitializer.
+  llvm::GlobalVariable *GV =
+      new llvm::GlobalVariable(M, CGM.Int8Ty, /*isConstant=*/true, Linkage,
+                               /*Initializer=*/nullptr, Name);
+
   // Add the vtable pointer.
-  BuildVTablePointer(cast<Type>(Ty));
-  assert(Fields.size() == 1);
-  size_t VTablePointerIdx = 0;
+  BuildVTablePointer(cast<Type>(Ty), GV);
 
   // And the name.
   llvm::GlobalVariable *TypeName = GetAddrOfTypeName(Ty, Linkage);
@@ -4225,30 +4232,6 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     llvm_unreachable("HLSL doesn't support RTTI");
   }
 
-  SmallString<256> Name;
-  llvm::raw_svector_ostream Out(Name);
-  CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty, Out);
-  llvm::Module &M = CGM.getModule();
-  llvm::GlobalVariable *OldGV = M.getNamedGlobal(Name);
-  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
-      M, llvm::ConstantStruct::getTypeForElements(Fields),
-      /*isConstant=*/true, Linkage, /*Initializer=*/nullptr, Name);
-  if (const auto &Schema =
-          CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer) {
-    if (Schema.isAddressDiscriminated()) {
-      // If type info vtable pointer is signed with address discrimination
-      // enabled, we need to place actual storage address (which was unknown
-      // during construction in ItaniumRTTIBuilder::BuildVTablePointer) in the
-      // corresponding field.
-      llvm::Constant *UnsignedVtablePointer =
-          cast<llvm::ConstantPtrAuth>(Fields[VTablePointerIdx])->getPointer();
-      assert(VTablePointerIdx == 0 && "Expected 0 offset for StorageAddress");
-      llvm::Constant *StorageAddress = GV;
-      Fields[VTablePointerIdx] = CGM.getConstantSignedPointer(
-          UnsignedVtablePointer, Schema, StorageAddress, GlobalDecl(),
-          QualType(cast<Type>(Ty), 0));
-    }
-  }
   GV->replaceInitializer(llvm::ConstantStruct::getAnon(Fields));
 
   // Export the typeinfo in the same circumstances as the vtable is exported.
