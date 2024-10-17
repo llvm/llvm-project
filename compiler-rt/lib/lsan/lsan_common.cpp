@@ -405,7 +405,22 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   InternalMmapVector<uptr> registers;
   InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
-    tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
+    registers.clear();
+    extra_ranges.clear();
+
+    const tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
+    uptr sp = 0;
+    PtraceRegistersStatus have_registers =
+        suspended_threads.GetRegistersAndSP(i, &registers, &sp);
+    if (have_registers != REGISTERS_AVAILABLE) {
+      Report("Unable to get registers from thread %llu.\n", os_id);
+      // If unable to get SP, consider the entire stack to be reachable unless
+      // GetRegistersAndSP failed with ESRCH.
+      if (have_registers == REGISTERS_UNAVAILABLE_FATAL)
+        continue;
+      sp = 0;
+    }
+
     LOG_THREADS("Processing thread %llu.\n", os_id);
     uptr stack_begin, stack_end, tls_begin, tls_end, cache_begin, cache_end;
     DTLS *dtls;
@@ -418,20 +433,12 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       LOG_THREADS("Thread %llu not found in registry.\n", os_id);
       continue;
     }
-    uptr sp;
-    PtraceRegistersStatus have_registers =
-        suspended_threads.GetRegistersAndSP(i, &registers, &sp);
-    if (have_registers != REGISTERS_AVAILABLE) {
-      Report("Unable to get registers from thread %llu.\n", os_id);
-      // If unable to get SP, consider the entire stack to be reachable unless
-      // GetRegistersAndSP failed with ESRCH.
-      if (have_registers == REGISTERS_UNAVAILABLE_FATAL)
-        continue;
-      sp = stack_begin;
-    }
-    if (suspended_threads.GetThreadID(i) == caller_tid) {
+
+    if (os_id == caller_tid)
       sp = caller_sp;
-    }
+
+    if (!sp)
+      sp = stack_begin;
 
     if (flags()->use_registers && have_registers) {
       uptr registers_begin = reinterpret_cast<uptr>(registers.data());
@@ -464,7 +471,6 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       }
       ScanRangeForPointers(stack_begin, stack_end, frontier, "STACK",
                            kReachable);
-      extra_ranges.clear();
       GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
       ScanExtraStackRanges(extra_ranges, frontier);
     }
@@ -712,11 +718,11 @@ static bool ReportUnsuspendedThreads(
 
   Sort(threads.data(), threads.size());
 
-  InternalMmapVector<tid_t> unsuspended;
-  GetRunningThreadsLocked(&unsuspended);
+  InternalMmapVector<tid_t> known_threads;
+  GetRunningThreadsLocked(&known_threads);
 
   bool succeded = true;
-  for (auto os_id : unsuspended) {
+  for (auto os_id : known_threads) {
     uptr i = InternalLowerBound(threads, os_id);
     if (i >= threads.size() || threads[i] != os_id) {
       succeded = false;
@@ -771,19 +777,20 @@ static bool PrintResults(LeakReport &report) {
   }
   if (common_flags()->print_suppressions)
     GetSuppressionContext()->PrintMatchedSuppressions();
-  if (unsuppressed_count > 0) {
+  if (unsuppressed_count)
     report.PrintSummary();
-    return true;
-  }
-  return false;
+  if ((unsuppressed_count && common_flags()->verbosity >= 2) ||
+      flags()->log_threads)
+    PrintThreads();
+  return unsuppressed_count;
 }
 
-static bool CheckForLeaks() {
+static bool CheckForLeaksOnce() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off()) {
-    VReport(1, "LeakSanitizer is disabled");
+    VReport(1, "LeakSanitizer is disabled\n");
     return false;
   }
-  VReport(1, "LeakSanitizer: checking for leaks");
+  VReport(1, "LeakSanitizer: checking for leaks\n");
   // Inside LockStuffAndStopTheWorld we can't run symbolizer, so we can't match
   // suppressions. However if a stack id was previously suppressed, it should be
   // suppressed in future checks as well.
@@ -828,6 +835,12 @@ static bool CheckForLeaks() {
     VReport(1, "Rerun with %zu suppressed stacks.",
             GetSuppressionContext()->GetSortedSuppressedStacks().size());
   }
+}
+
+static bool CheckForLeaks() {
+  int leaking_tries = 0;
+  for (int i = 0; i < flags()->tries; ++i) leaking_tries += CheckForLeaksOnce();
+  return leaking_tries == flags()->tries;
 }
 
 static bool has_reported_leaks = false;

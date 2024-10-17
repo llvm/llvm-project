@@ -40,14 +40,23 @@ void g() {
 
   template_param_kinds_1<0>(); // ok, from cxx-templates-a.h
   template_param_kinds_1<int>(); // ok, from cxx-templates-b.h
-  template_param_kinds_2<Tmpl_T_C>(); // ok, from cxx-templates-b.h
+
+  template_param_kinds_2<Tmpl_T_C>(); // expected-error {{no matching function}}
+  // expected-note@Inputs/cxx-templates-a.h:11 {{invalid explicitly-specified argument}}
+  // expected-note@Inputs/cxx-templates-b.h:11 {{invalid explicitly-specified argument}}
 
   template_param_kinds_2<Tmpl_T_I_I>(); // expected-error {{ambiguous}}
   // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
   // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 
-  template_param_kinds_3<Tmpl_T_T_A>();
-  template_param_kinds_3<Tmpl_T_T_B>();
+  // FIXME: This should be valid, but we incorrectly match the template template
+  // argument against both template template parameters.
+  template_param_kinds_3<Tmpl_T_T_A>(); // expected-error {{ambiguous}}
+  // expected-note@Inputs/cxx-templates-a.h:12 {{candidate}}
+  // expected-note@Inputs/cxx-templates-b.h:12 {{candidate}}
+  template_param_kinds_3<Tmpl_T_T_B>(); // expected-error {{ambiguous}}
+  // expected-note@Inputs/cxx-templates-a.h:12 {{candidate}}
+  // expected-note@Inputs/cxx-templates-b.h:12 {{candidate}}
 
   // Trigger the instantiation of a template in 'a' that uses a type defined in
   // 'common'. That type is not visible here.
@@ -190,9 +199,7 @@ namespace hidden_specializations {
     cls<char*> uk4; // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls unk1; // expected-error 1+{{explicit specialization of 'nested_cls' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls_t<int> unk2; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}} expected-error 1+{{definition of}}
-    // expected-error@cxx-templates-unimported.h:29 {{explicit specialization of 'nested_cls_t' must be imported}}
-    // expected-note@-2 {{in evaluation of exception specification}}
-    cls<void>::nested_cls_t<char> unk3; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}}
+    cls<void>::nested_cls_t<char> unk3; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}} expected-error 1+{{definition of}}
 
     // For enums, uses that would trigger instantiations of definitions are not
     // allowed.

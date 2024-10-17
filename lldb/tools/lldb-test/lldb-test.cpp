@@ -439,7 +439,7 @@ int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
     CommandReturnObject Result(/*colors*/ false);
     if (!Dbg.GetCommandInterpreter().HandleCommand(
             Command.c_str(), /*add_to_history*/ eLazyBoolNo, Result)) {
-      P.formatLine("Failed: {0}", Result.GetErrorData());
+      P.formatLine("Failed: {0}", Result.GetErrorString());
       HadErrors = 1;
       continue;
     }
@@ -1161,7 +1161,7 @@ int opts::irmemorymap::evaluateMemoryMapCommands(Debugger &Dbg) {
     return CI.HandleCommand(Cmd, eLazyBoolNo, Result);
   };
   if (!IssueCmd("b main") || !IssueCmd("run")) {
-    outs() << formatv("Failed: {0}\n", Result.GetErrorData());
+    outs() << formatv("Failed: {0}\n", Result.GetErrorString());
     exit(1);
   }
 

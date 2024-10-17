@@ -178,8 +178,6 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
 /// ]
 ///
 /// #trait = {
-///   args_in = 2,
-///   args_out = 1,
 ///   indexing_maps = #accesses,
 ///   iterator_types = ["parallel", "parallel"],
 ///   library_call = "some_external_fn"
@@ -210,8 +208,6 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
 /// ]
 ///
 /// #trait = {
-///   args_in = 2,
-///   args_out = 1,
 ///   indexing_maps = #accesses,
 ///   iterator_types = ["parallel", "parallel"],
 ///   library_call = "some_external_fn"

@@ -88,6 +88,8 @@ Changes to the LLVM IR
   * `llvm.nvvm.ptr.shared.to.gen`
   * `llvm.nvvm.ptr.constant.to.gen`
   * `llvm.nvvm.ptr.local.to.gen`
+  
+* Operand bundle values can now be metadata strings.
 
 Changes to LLVM infrastructure
 ------------------------------

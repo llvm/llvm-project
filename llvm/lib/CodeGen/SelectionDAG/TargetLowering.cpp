@@ -8364,11 +8364,10 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
 }
 
 bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
-                                      SDValue &Chain,
-                                      SelectionDAG &DAG) const {
+                                      SDValue &Chain, SelectionDAG &DAG) const {
   // This transform is not correct for converting 0 when rounding mode is set
-  // to round toward negative infinity which will produce -0.0. So disable under
-  // strictfp.
+  // to round toward negative infinity which will produce -0.0. So disable
+  // under strictfp.
   if (Node->isStrictFPOpcode())
     return false;
 
@@ -8376,10 +8375,20 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
 
+  // If the input is known to be non-negative and SINT_TO_FP is legal then use
+  // it.
+  if (Node->getFlags().hasNonNeg() &&
+      isOperationLegalOrCustom(ISD::SINT_TO_FP, SrcVT)) {
+    Result =
+        DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Node->getOperand(0));
+    return true;
+  }
+
   if (SrcVT.getScalarType() != MVT::i64 || DstVT.getScalarType() != MVT::f64)
     return false;
 
-  // Only expand vector types if we have the appropriate vector bit operations.
+  // Only expand vector types if we have the appropriate vector bit
+  // operations.
   if (SrcVT.isVector() && (!isOperationLegalOrCustom(ISD::SRL, SrcVT) ||
                            !isOperationLegalOrCustom(ISD::FADD, DstVT) ||
                            !isOperationLegalOrCustom(ISD::FSUB, DstVT) ||
@@ -8393,8 +8402,9 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   // Implementation of unsigned i64 to f64 following the algorithm in
   // __floatundidf in compiler_rt.  This implementation performs rounding
   // correctly in all rounding modes with the exception of converting 0
-  // when rounding toward negative infinity. In that case the fsub will produce
-  // -0.0. This will be added to +0.0 and produce -0.0 which is incorrect.
+  // when rounding toward negative infinity. In that case the fsub will
+  // produce -0.0. This will be added to +0.0 and produce -0.0 which is
+  // incorrect.
   SDValue TwoP52 = DAG.getConstant(UINT64_C(0x4330000000000000), dl, SrcVT);
   SDValue TwoP84PlusTwoP52 = DAG.getConstantFP(
       llvm::bit_cast<double>(UINT64_C(0x4530000000100000)), dl, DstVT);
@@ -8408,8 +8418,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
   SDValue LoFlt = DAG.getBitcast(DstVT, LoOr);
   SDValue HiFlt = DAG.getBitcast(DstVT, HiOr);
-  SDValue HiSub =
-      DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
+  SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
   Result = DAG.getNode(ISD::FADD, dl, DstVT, LoFlt, HiSub);
   return true;
 }
@@ -8424,6 +8433,11 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
 
   if (Node->getFlags().hasNoNaNs()) {
     ISD::CondCode Pred = Opcode == ISD::FMINNUM ? ISD::SETLT : ISD::SETGT;
+    EVT VT = Node->getValueType(0);
+    if ((!isCondCodeLegal(Pred, VT.getSimpleVT()) ||
+         !isOperationLegalOrCustom(ISD::VSELECT, VT)) &&
+        VT.isVector())
+      return SDValue();
     SDValue Op1 = Node->getOperand(0);
     SDValue Op2 = Node->getOperand(1);
     SDValue SelCC = DAG.getSelectCC(SDLoc(Node), Op1, Op2, Op1, Op2, Pred);

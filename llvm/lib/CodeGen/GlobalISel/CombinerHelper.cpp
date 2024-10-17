@@ -178,7 +178,7 @@ void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
   if (MRI.constrainRegAttrs(ToReg, FromReg))
     MRI.replaceRegWith(FromReg, ToReg);
   else
-    Builder.buildCopy(ToReg, FromReg);
+    Builder.buildCopy(FromReg, ToReg);
 
   Observer.finishedChangingAllUsesOfReg();
 }
@@ -229,8 +229,8 @@ bool CombinerHelper::matchCombineCopy(MachineInstr &MI) {
 void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
-  MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, SrcReg);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
@@ -379,8 +379,8 @@ void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
     Builder.buildUndef(NewDstReg);
   else
     Builder.buildBuildVector(NewDstReg, Ops);
-  MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
@@ -559,8 +559,8 @@ void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
   else
     Builder.buildMergeLikeInstr(NewDstReg, Ops);
 
-  MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchShuffleToExtract(MachineInstr &MI) {
@@ -2825,8 +2825,8 @@ void CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
   Register OldReg = MI.getOperand(0).getReg();
   Register Replacement = MI.getOperand(OpIdx).getReg();
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
-  MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
+  MI.eraseFromParent();
 }
 
 void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
@@ -2834,8 +2834,8 @@ void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
   Register OldReg = MI.getOperand(0).getReg();
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
-  MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchConstantLargerBitWidth(MachineInstr &MI,

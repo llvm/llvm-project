@@ -2503,7 +2503,8 @@ void OpEmitter::genSeparateArgParamBuilder() {
                       {1}.regions, inferredReturnTypes)))
           {1}.addTypes(inferredReturnTypes);
         else
-          ::llvm::report_fatal_error("Failed to infer result type(s).");)",
+          ::mlir::detail::reportFatalInferReturnTypesError({1});
+        )",
                       opClass.getClassName(), builderOpState);
       return;
     }
@@ -4280,6 +4281,19 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                                          "Properties{}, "
                                          "{}");
     }
+  }
+
+  // Create a constructor that creates a new generic adaptor by copying
+  // everything from another adaptor, except for the values.
+  {
+    SmallVector<MethodParameter> paramList;
+    paramList.emplace_back("RangeT", "values");
+    paramList.emplace_back("const " + op.getGenericAdaptorName() + "Base &",
+                           "base");
+    auto *constructor =
+        genericAdaptor.addConstructor<Method::Inline>(paramList);
+    constructor->addMemberInitializer("Base", "base");
+    constructor->addMemberInitializer("odsOperands", "values");
   }
 
   // Create constructors constructing the adaptor from an instance of the op.
