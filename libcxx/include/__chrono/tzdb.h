@@ -25,7 +25,7 @@
 #  include <stdexcept>
 #  include <string>
 #  include <string_view>
-#  include <vector>
+#  include <__vector/vector.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
