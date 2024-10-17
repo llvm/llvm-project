@@ -84,8 +84,7 @@ set(BOLT_ENABLE_RUNTIME_default OFF)
 if ((CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
     OR CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"
-      OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    AND (NOT CMAKE_CROSSCOMPILING))
+      OR CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
   set(BOLT_ENABLE_RUNTIME_default ON)
 endif()
 option(BOLT_ENABLE_RUNTIME "Enable BOLT runtime" ${BOLT_ENABLE_RUNTIME_default})
@@ -135,36 +134,168 @@ if (LLVM_INCLUDE_TESTS)
   endif()
 endif()
 
-if (BOLT_ENABLE_RUNTIME)
-  message(STATUS "Building BOLT runtime libraries for X86")
-  set(extra_args "")
-  if(CMAKE_SYSROOT)
-    list(APPEND extra_args -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
+set(AARCH64_GNU_C_COMPILER aarch64-linux-gnu-gcc)
+set(AARCH64_GNU_CXX_COMPILER aarch64-linux-gnu-g++)
+set(X86_64_GNU_C_COMPILER x86_64-linux-gnu-gcc)
+set(X86_64_GNU_CXX_COMPILER x86_64-linux-gnu-g++)
+set(RISCV_GNU_C_COMPILER riscv64-linux-gnu-gcc)
+set(RISCV_GNU_CXX_COMPILER riscv64-linux-gnu-g++)
+
+function(bolt_rt_target_supported_clang target supported)
+
+    if(${target} STREQUAL ${HOST_NAME})
+      set(${supported} TRUE PARENT_SCOPE)
+      return()
+    elseif(${target} STREQUAL "X86")
+      set(CMAKE_CXX_FLAGS "--target=x86_64-linux-gnu")
+    elseif(${target} STREQUAL "AArch64")
+      set(CMAKE_CXX_FLAGS "--target=aarch64-linux-gnu")
+    elseif(${target} STREQUAL "RISCV")
+      set(CMAKE_CXX_FLAGS "--target=riscv64-linux-gnu")
+    endif()
+
+    try_compile(CROSS_COMP
+      ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeScratch
+      SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/test/test.cpp
+      CMAKE_FLAGS ${CMAKE_CXX_FLAGS}
+      TRY_COMP_OUTPUT)
+
+  if(CROSS_COMP)
+    message(STATUS "cross compilation test for ${target} was successful")
+    set(${supported} TRUE PARENT_SCOPE)
+  else()
+    message(STATUS "cross compilation test for ${target} was NOT successful")
+    set(${supported} FALSE PARENT_SCOPE)
   endif()
 
-  include(ExternalProject)
-  ExternalProject_Add(bolt_rt
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/runtime"
-    STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-stamps
-    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins
-    CMAKE_ARGS -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-               -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-               -DCMAKE_BUILD_TYPE=Release
-               -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
-               -DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}
-               -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
-               -DBOLT_BUILT_STANDALONE=${BOLT_BUILT_STANDALONE}
-               ${extra_args}
-    INSTALL_COMMAND ""
-    BUILD_ALWAYS True
+endfunction()
+
+
+function(bolt_rt_target_supported_gnu target supported)
+
+    if(${target} STREQUAL ${HOST_NAME})
+      set(${supported} TRUE PARENT_SCOPE)
+      return()
+    elseif(${target} STREQUAL "X86")
+      find_program(CC_EXECUTABLE  NAMES ${X86_64_GNU_C_COMPILER} NO_CACHE)
+      find_program(CXX_EXECUTABLE NAMES ${X86_64_GNU_CXX_COMPILER} NO_CACHE)
+    elseif(${target} STREQUAL "AArch64")
+      find_program(CC_EXECUTABLE  NAMES ${AARCH64_GNU_C_COMPILER} NO_CACHE)
+      find_program(CXX_EXECUTABLE NAMES ${AARCH64_GNU_CXX_COMPILER} NO_CACHE)
+    elseif(${target} STREQUAL "RISCV")
+      find_program(CC_EXECUTABLE  NAMES ${RISCV_GNU_C_COMPILER} NO_CACHE)
+      find_program(CXX_EXECUTABLE NAMES ${RISCV_GNU_CXX_COMPILER} NO_CACHE)
+    endif()
+
+    if(CC_EXECUTABLE AND CXX_EXECUTABLE)
+      set(${supported} TRUE PARENT_SCOPE)
+    else()
+      set(${supported} FALSE PARENT_SCOPE)
+    endif()
+
+endfunction()
+
+
+if(BOLT_ENABLE_RUNTIME)
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    set(HOST_NAME "X86")
+  elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    set(HOST_NAME "AArch64")
+  elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv64")
+    set(HOST_NAME "RISCV")
+  endif()
+
+  # Further filter BOLT runtime targets: check if the runtime can be compiled
+  set(BOLT_RT_TARGETS_TO_BUILD)
+  foreach(tgt ${BOLT_TARGETS_TO_BUILD})
+
+    if(CMAKE_C_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*")
+      bolt_rt_target_supported_clang(${tgt} supported)
+
+    elseif(CMAKE_C_COMPILER_ID MATCHES ".*GNU.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*GNU.*")
+      bolt_rt_target_supported_gnu(${tgt} supported)
+    endif()
+
+    if(${supported})
+      list(APPEND BOLT_RT_TARGETS_TO_BUILD ${tgt})
+    endif()
+
+  endforeach()
+endif()
+
+if(BOLT_ENABLE_RUNTIME)
+
+  foreach(tgt ${BOLT_RT_TARGETS_TO_BUILD})
+    message(STATUS "Building BOLT runtime libraries for ${tgt}")
+    set(extra_args "")
+    if(CMAKE_SYSROOT)
+      list(APPEND extra_args -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
+    endif()
+
+    # set up paths: target-specific libs will be generated under lib/Target/${tgt}/
+    set(BOLT_RT_LIBRARY_DIR "${LLVM_LIBRARY_DIR}")
+    set(SUBDIR "${tgt}")
+    cmake_path(APPEND BOLT_RT_LIBRARY_DIR ${BOLT_RT_LIBRARY_DIR} "Target" ${SUBDIR})
+
+    # set up compilers and flags
+    if(CMAKE_C_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*")
+      set(BOLT_RT_C_COMPILER ${CMAKE_C_COMPILER})
+      set(BOLT_RT_CXX_COMPILER ${CMAKE_CXX_COMPILER})
+
+      if(${tgt} STREQUAL ${HOST_NAME})
+          set(BOLT_RT_FLAGS)
+      elseif(${tgt} STREQUAL "AArch64")
+          set(BOLT_RT_FLAGS "--target=aarch64-linux-gnu")
+      elseif(${tgt} STREQUAL "X86")
+          set(BOLT_RT_FLAGS "--target=x86_64-linux-gnu")
+      elseif(${tgt} STREQUAL "RISCV")
+          set(BOLT_RT_FLAGS "--target=riscv64-linux-gnu")
+      endif()
+
+    elseif(CMAKE_C_COMPILER_ID MATCHES ".*GNU.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*GNU.*")
+        set(BOLT_RT_FLAGS)
+      if(${tgt} STREQUAL ${HOST_NAME})
+        set(BOLT_RT_C_COMPILER ${CMAKE_C_COMPILER})
+        set(BOLT_RT_CXX_COMPILER ${CMAKE_CXX_COMPILER})
+      elseif(${tgt} STREQUAL "AArch64")
+        set(BOLT_RT_C_COMPILER ${AARCH64_GNU_C_COMPILER})
+        set(BOLT_RT_CXX_COMPILER ${AARCH64_GNU_CXX_COMPILER})
+      elseif(${tgt} STREQUAL "X86")
+        set(BOLT_RT_C_COMPILER ${X86_64_GNU_C_COMPILER})
+        set(BOLT_RT_CXX_COMPILER ${X86_64_GNU_CXX_COMPILER})
+      elseif(${tgt} STREQUAL "RISCV")
+        set(BOLT_RT_C_COMPILER ${RISCV_GNU_C_COMPILER})
+        set(BOLT_RT_CXX_COMPILER ${RISCV_GNU_CXX_COMPILER})
+      endif()
+    endif()
+
+
+    include(ExternalProject)
+    ExternalProject_Add(bolt_rt_${tgt}
+      SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/runtime"
+      STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-stamps
+      BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-bins
+      CMAKE_ARGS
+      -DCMAKE_C_COMPILER=${BOLT_RT_C_COMPILER}
+      -DCMAKE_CXX_COMPILER=${BOLT_RT_CXX_COMPILER}
+      -DCMAKE_BUILD_TYPE=Release
+      -DBOLT_RT_FLAGS=${BOLT_RT_FLAGS}
+      -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+      -DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}
+      -DLLVM_LIBRARY_DIR=${BOLT_RT_LIBRARY_DIR}
+      -DBOLT_BUILT_STANDALONE=${BOLT_BUILT_STANDALONE}
+      ${extra_args}
+      INSTALL_COMMAND ""
+      BUILD_ALWAYS True
     )
-  install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/cmake_install.cmake \)"
-    COMPONENT bolt)
-  add_llvm_install_targets(install-bolt_rt
-    DEPENDS bolt_rt bolt
-    COMPONENT bolt)
-  set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_instr.a")
-  set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_hugify.a")
+    install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-bins/cmake_install.cmake \)"
+      COMPONENT bolt)
+    add_llvm_install_targets(install-bolt_rt_${tgt}
+      DEPENDS bolt_rt_${tgt} bolt
+      COMPONENT bolt)
+    set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-bins/lib/libbolt_rt_instr.a")
+    set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-bins/lib/libbolt_rt_hugify.a")
+  endforeach()
 endif()
 
 find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")

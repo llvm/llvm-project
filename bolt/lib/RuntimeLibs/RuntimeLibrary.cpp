@@ -27,6 +27,7 @@ using namespace bolt;
 void RuntimeLibrary::anchor() {}
 
 std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
+                                                 StringRef ToolSubPath,
                                                  StringRef LibFileName) {
   StringRef Dir = llvm::sys::path::parent_path(ToolPath);
   SmallString<128> LibPath = llvm::sys::path::parent_path(Dir);
@@ -37,8 +38,24 @@ std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
     LibPath = llvm::sys::path::parent_path(llvm::sys::path::parent_path(Dir));
     llvm::sys::path::append(LibPath, "lib" LLVM_LIBDIR_SUFFIX);
   }
+  llvm::sys::path::append(LibPath, ToolSubPath);
+
   llvm::sys::path::append(LibPath, LibFileName);
   return std::string(LibPath);
+}
+
+std::string RuntimeLibrary::createToolSubPath(StringRef ArchName) {
+  std::string ToolSubPath = "";
+  if (ArchName == "x86_64")
+    ToolSubPath = "Target/X86";
+  else if (ArchName == "aarch64")
+    ToolSubPath = "Target/AArch64";
+  else if (ArchName == "riscv64")
+    ToolSubPath = "Target/RISCV";
+  else
+    llvm_unreachable("Unsupported architecture");
+
+  return ToolSubPath;
 }
 
 std::string RuntimeLibrary::getLibPathByInstalled(StringRef LibFileName) {
@@ -48,12 +65,13 @@ std::string RuntimeLibrary::getLibPathByInstalled(StringRef LibFileName) {
 }
 
 std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
+                                       StringRef ToolSubPath,
                                        StringRef LibFileName) {
   if (llvm::sys::fs::exists(LibFileName)) {
     return std::string(LibFileName);
   }
 
-  std::string ByTool = getLibPathByToolPath(ToolPath, LibFileName);
+  std::string ByTool = getLibPathByToolPath(ToolPath, ToolSubPath, LibFileName);
   if (llvm::sys::fs::exists(ByTool)) {
     return ByTool;
   }

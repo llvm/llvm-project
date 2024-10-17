@@ -61,14 +61,19 @@ protected:
   /// Get the full path to a runtime library specified by \p LibFileName and \p
   /// ToolPath.
   static std::string getLibPathByToolPath(StringRef ToolPath,
+                                          StringRef ToolSubPath,
                                           StringRef LibFileName);
+
+  /// Create architecture-specific ToolSubPath to be used in the full path
+  static std::string createToolSubPath(StringRef ArchName);
 
   /// Get the full path to a runtime library by the install directory.
   static std::string getLibPathByInstalled(StringRef LibFileName);
 
   /// Gets the full path to a runtime library based on whether it exists
   /// in the install libdir or runtime libdir.
-  static std::string getLibPath(StringRef ToolPath, StringRef LibFileName);
+  static std::string getLibPath(StringRef ToolPath, StringRef ToolSubPath,
+                                StringRef LibFileName);
 
   /// Load a static runtime library specified by \p LibPath.
   static void loadLibrary(StringRef LibPath, BOLTLinker &Linker,

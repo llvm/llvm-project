@@ -29,23 +29,24 @@ if(NOT BOLT_BUILT_STANDALONE)
   add_custom_command(TARGET bolt_rt_hugify POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib/libbolt_rt_hugify.a" "${LLVM_LIBRARY_DIR}")
 endif()
-
-set(BOLT_RT_FLAGS
+# In case of compiling with clang, the '--target' option is passed in BOLT_RT_FLAGS.
+set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS}
   -ffreestanding
   -fno-exceptions
   -fno-rtti
   -fno-stack-protector
   -fPIC
   -mgeneral-regs-only)
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+if(CMAKE_TARGET_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-sse")
 endif()
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+if(CMAKE_TARGET_SYSTEM_PROCESSOR STREQUAL "aarch64")
   check_cxx_compiler_flag("-mno-outline-atomics" CXX_SUPPORTS_OUTLINE_ATOMICS)
   if (CXX_SUPPORTS_OUTLINE_ATOMICS)
     set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-outline-atomics")
   endif()
 endif()
+
 
 # Don't let the compiler think it can create calls to standard libs
 target_compile_options(bolt_rt_instr PRIVATE ${BOLT_RT_FLAGS})
