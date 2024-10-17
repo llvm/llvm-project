@@ -119,6 +119,34 @@ bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
          RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI);
 }
 
+// Returns true if this is a copy from physical reg to VCC.
+// The parameter IsValid further indicates if the copy is valid.
+bool AMDGPUInstructionSelector::isCopyPhysicalToVCC(
+    Register DstReg, Register SrcReg, const MachineRegisterInfo &MRI,
+    bool &IsValid) const {
+  if (DstReg.isPhysical())
+    return false;
+  if (!SrcReg.isPhysical() || SrcReg == AMDGPU::SCC)
+    return false;
+
+  auto &RegClassOrBank = MRI.getRegClassOrRegBank(DstReg);
+  const TargetRegisterClass *RC =
+      RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+  if (RC) {
+    const LLT Ty = MRI.getType(DstReg);
+    if (!Ty.isValid() || Ty.getSizeInBits() != 1)
+      return false;
+    // G_TRUNC s1 result is never vcc.
+    if (MRI.getVRegDef(DstReg)->getOpcode() == AMDGPU::G_TRUNC ||
+        !RC->hasSuperClassEq(TRI.getBoolRC()))
+      return false;
+    IsValid = RC->contains(SrcReg);
+    return true;
+  }
+
+  return false;
+}
+
 bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   MachineBasicBlock *BB = I.getParent();
@@ -128,6 +156,10 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   MachineOperand &Dst = I.getOperand(0);
   Register DstReg = Dst.getReg();
   Register SrcReg = Src.getReg();
+
+  bool validPhyToRCC = false;
+  if (isCopyPhysicalToVCC(DstReg, SrcReg, *MRI, validPhyToRCC))
+    return validPhyToRCC;
 
   if (isVCC(DstReg, *MRI)) {
     if (SrcReg == AMDGPU::SCC) {
