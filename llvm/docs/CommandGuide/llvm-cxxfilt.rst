@@ -52,6 +52,11 @@ OPTIONS
 
   Do not demangle function parameters or return types.
 
+.. option:: --quote
+
+  Add `"` `"` around demangled function symbols. Do not quote already quoted
+  symbols.
+
 .. option:: --no-strip-underscore, -n
 
   Do not strip a leading underscore. This is the default for all platforms
