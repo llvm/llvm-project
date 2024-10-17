@@ -77,6 +77,13 @@ static bool isLambdaParameterList(const FormatToken *Left) {
          Left->Previous->MatchingParen->is(TT_LambdaLSquare);
 }
 
+/// Returns \c true if the token is the right square bracket of a lambda
+/// introducer.
+static bool isLambdaRightIntroducerBracket(const FormatToken &Tok) {
+  return Tok.is(tok::r_square) && Tok.MatchingParen &&
+    Tok.MatchingParen->is(TT_LambdaLSquare);
+}
+
 /// Returns \c true if the token is followed by a boolean condition, \c false
 /// otherwise.
 static bool isKeywordWithCondition(const FormatToken &Tok) {
@@ -4747,6 +4754,23 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Left.is(TT_AttributeRParen) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare))) {
       return true;
+    }
+    if (Left.is(tok::identifier) && Left.Previous &&
+        isLambdaRightIntroducerBracket(*Left.Previous)) {
+      // Check if Right is part of a macro call
+      if (Right.MatchingParen && Right.MatchingParen->Next &&
+          Right.MatchingParen->Next->is(tok::l_paren)) {
+        return false;
+      }
+      return true;
+    }
+    if (Left.is(tok::r_paren) && Left.MatchingParen &&
+        Left.MatchingParen->Previous) {
+      auto const *LeftParenPrev = Left.MatchingParen->Previous;
+      if (LeftParenPrev->is(tok::identifier) && LeftParenPrev->Previous &&
+          isLambdaRightIntroducerBracket(*LeftParenPrev->Previous)) {
+        return true;
+      }
     }
     if (Left.is(TT_ForEachMacro)) {
       return Style.SpaceBeforeParensOptions.AfterForeachMacros ||
