@@ -580,7 +580,9 @@ Sema::ActOnDependentMemberExpr(Expr *BaseExpr, QualType BaseType,
     }
   }
 
-  assert(BaseType->isDependentType() || NameInfo.getName().isDependentName() ||
+  assert(BaseType->isDependentType() ||
+         (BaseExpr && BaseExpr->isTypeDependent()) ||
+         NameInfo.getName().isDependentName() ||
          isDependentScopeSpecifier(SS) ||
          (TemplateArgs && llvm::any_of(TemplateArgs->arguments(),
                                        [](const TemplateArgumentLoc &Arg) {
@@ -1313,7 +1315,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
       BaseType = Ptr->getPointeeType();
     else if (BaseType->isFunctionType())
       goto fail;
-    else if (BaseType->isDependentType())
+    else if (BaseExpr.get()->isTypeDependent())
       BaseType = S.Context.DependentTy;
     else if (BaseType->isRecordType()) {
       // Recover from arrow accesses to records, e.g.:
