@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++1z -verify %s
 
 namespace std_example {
-  struct [[nodiscard]] error_info{
+  struct [[nodiscard]] error_info{ // expected-note {{'error_info' has been explicitly marked nodiscard here}}
     // ...
   };
 

@@ -5939,8 +5939,8 @@ def warn_unavailable_fwdclass_message : Warning<
     "%0 may be unavailable because the receiver type is unknown">,
     InGroup<UnavailableDeclarations>;
 def note_availability_specified_here : Note<
-  "%0 has been explicitly marked "
-  "%select{unavailable|deleted|deprecated}1 here">;
+  "%select{|%1 }0has been explicitly marked "
+  "%select{unavailable|deleted|deprecated|nodiscard|warn_unused_result|pure|const}2 here">;
 def note_partial_availability_specified_here : Note<
   "%0 has been marked as being introduced in %1 %2 %select{|in %5 environment }4here, "
   "but the deployment target is %1 %3%select{| %6 environment }4">;
@@ -9265,7 +9265,7 @@ def warn_unused_container_subscript_expr : Warning<
  "container access result unused - container access should not be used for side effects">,
   InGroup<UnusedValue>;
 def warn_unused_call : Warning<
-  "ignoring return value of function declared with %0 attribute">,
+  "ignoring return value of function declared with %select{pure|const}0 attribute">,
   InGroup<UnusedValue>;
 def warn_unused_constructor : Warning<
   "ignoring temporary created by a constructor declared with %0 attribute">,
