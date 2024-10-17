@@ -19949,7 +19949,7 @@ static bool isReductionCandidate(Instruction *I) {
 }
 
 bool SLPVectorizerPass::vectorizeHorReduction(
-    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R, TargetTransformInfo *TTI,
+    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
     SmallVectorImpl<WeakTrackingVH> &PostponedInsts) {
   if (!ShouldVectorizeHor)
     return false;
@@ -19982,7 +19982,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   Stack.emplace(SelectRoot(), 0);
   SmallPtrSet<Value *, 8> VisitedInstrs;
   bool Res = false;
-  auto &&TryToReduce = [this, TTI, &R](Instruction *Inst) -> Value * {
+  auto &&TryToReduce = [this, &R](Instruction *Inst) -> Value * {
     if (R.isAnalyzedReductionRoot(Inst))
       return nullptr;
     if (!isReductionCandidate(Inst))
@@ -20049,10 +20049,9 @@ bool SLPVectorizerPass::vectorizeHorReduction(
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Instruction *Root,
-                                                 BasicBlock *BB, BoUpSLP &R,
-                                                 TargetTransformInfo *TTI) {
+                                                 BasicBlock *BB, BoUpSLP &R) {
   SmallVector<WeakTrackingVH> PostponedInsts;
-  bool Res = vectorizeHorReduction(P, Root, BB, R, TTI, PostponedInsts);
+  bool Res = vectorizeHorReduction(P, Root, BB, R, PostponedInsts);
   Res |= tryToVectorize(PostponedInsts, R);
   return Res;
 }
@@ -20317,7 +20316,7 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
       continue;
     for (Value *Op : I->operands())
       if (auto *RootOp = dyn_cast<Instruction>(Op))
-        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
+        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R);
   }
   // Try to vectorize operands as vector bundles.
   for (CmpInst *I : CmpInsts) {
@@ -20384,7 +20383,7 @@ bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
     // pass2 - try to vectorize reductions only
     if (R.isDeleted(I))
       continue;
-    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, PostponedInsts);
     if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     // pass3 - try to match and vectorize a buildvector sequence.
@@ -20644,7 +20643,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (P->getNumIncomingValues() == 2) {
         // Try to match and vectorize a horizontal reduction.
         Instruction *Root = getReductionInstr(DT, P, BB, LI);
-        if (Root && vectorizeRootInstruction(P, Root, BB, R, TTI)) {
+        if (Root && vectorizeRootInstruction(P, Root, BB, R)) {
           Changed = true;
           It = BB->begin();
           E = BB->end();
@@ -20666,8 +20665,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         // vectorization.
         if (auto *PI = dyn_cast<Instruction>(P->getIncomingValue(I));
             PI && !IsInPostProcessInstrs(PI)) {
-          bool Res = vectorizeRootInstruction(nullptr, PI,
-                                              P->getIncomingBlock(I), R, TTI);
+          bool Res =
+              vectorizeRootInstruction(nullptr, PI, P->getIncomingBlock(I), R);
           Changed |= Res;
           if (Res && R.isDeleted(P)) {
             It = BB->begin();
@@ -20701,7 +20700,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (auto *VI = dyn_cast<Instruction>(V);
               VI && !IsInPostProcessInstrs(VI))
             // Try to match and vectorize a horizontal reduction.
-            OpsChanged |= vectorizeRootInstruction(nullptr, VI, BB, R, TTI);
+            OpsChanged |= vectorizeRootInstruction(nullptr, VI, BB, R);
         }
       }
       // Start vectorization of post-process list of instructions from the

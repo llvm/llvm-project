@@ -2695,7 +2695,7 @@ ConditionBRVisitor::VisitNodeImpl(const ExplodedNode *N,
                                   PathSensitiveBugReport &BR) {
   ProgramPoint ProgPoint = N->getLocation();
   const std::pair<const ProgramPointTag *, const ProgramPointTag *> &Tags =
-      ExprEngine::geteagerlyAssumeBinOpBifurcationTags();
+      ExprEngine::getEagerlyAssumeBifurcationTags();
 
   // If an assumption was made on a branch, it should be caught
   // here by looking at the state transition.

@@ -60,7 +60,7 @@
 "`P1642R11 <https://wg21.link/P1642R11>`__","Freestanding ``[utilities]``, ``[ranges]``, and ``[iterators]``","2022-07 (Virtual)","","",""
 "`P1899R3 <https://wg21.link/P1899R3>`__","``stride_view``","2022-07 (Virtual)","","",""
 "`P2093R14 <https://wg21.link/P2093R14>`__","Formatted output","2022-07 (Virtual)","|Complete|","18.0",""
-"`P2165R4 <https://wg21.link/P2165R4>`__","Compatibility between ``tuple``, ``pair`` and ``tuple-like`` objects","2022-07 (Virtual)","","",""
+"`P2165R4 <https://wg21.link/P2165R4>`__","Compatibility between ``tuple``, ``pair`` and ``tuple-like`` objects","2022-07 (Virtual)","|Partial|","","Only the part for ``zip_view`` is implemented."
 "`P2278R4 <https://wg21.link/P2278R4>`__","``cbegin`` should always return a constant iterator","2022-07 (Virtual)","","",""
 "`P2286R8 <https://wg21.link/P2286R8>`__","Formatting Ranges","2022-07 (Virtual)","|Complete|","16.0",""
 "`P2291R3 <https://wg21.link/P2291R3>`__","Add Constexpr Modifiers to Functions ``to_chars`` and ``from_chars`` for Integral Types in ``<charconv>`` Header","2022-07 (Virtual)","|Complete|","16.0",""
