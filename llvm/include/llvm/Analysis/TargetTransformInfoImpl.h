@@ -399,6 +399,12 @@ public:
     return 0;
   }
 
+  bool
+  hasScalarizationOverhead(ArrayRef<Value *> VL, FixedVectorType *VTy,
+                           std::pair<bool, bool> &ScalarizationKind) const {
+    return false;
+  }
+
   InstructionCost
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                    ArrayRef<Type *> Tys,

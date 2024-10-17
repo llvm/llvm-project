@@ -306,6 +306,18 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
+unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
+  if (auto VTy = dyn_cast<FixedVectorType>(Tp)) {
+    if (DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
+      auto ElCount = VTy->getElementCount().getFixedValue();
+      return ElCount / 4;
+    }
+  }
+
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  return LT.first.isValid() ? *LT.first.getValue() : 0;
+}
+
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
   // registers. See getRegisterClassForType for the implementation.
@@ -337,9 +349,11 @@ unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
-  return (ElemWidth == 16 && ST->has16BitInsts()) ? 2
-       : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-       : 1;
+
+  return (ElemWidth == 8)                              ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
+         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+                                                       : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -1387,6 +1401,29 @@ int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
              ? getFullRateInstrCost()
              : ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
                                       : getQuarterRateInstrCost(CostKind);
+}
+
+bool GCNTTIImpl::hasScalarizationOverhead(
+    ArrayRef<Value *> VL, FixedVectorType *VTy,
+    std::pair<bool, bool> &ScalarizationKind) const {
+  if (DL.getTypeSizeInBits(VTy->getElementType()) != 8)
+    return false;
+
+  for (Value *V : VL) {
+    Instruction *Inst = dyn_cast<Instruction>(V);
+    if (!V)
+      continue;
+    for (User *IU : Inst->users()) {
+      Instruction *UseInst = cast<Instruction>(IU);
+      if (UseInst->getOpcode() == Instruction::PHI ||
+          UseInst->getParent() != Inst->getParent()) {
+        ScalarizationKind = {true, true};
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 std::pair<InstructionCost, MVT>

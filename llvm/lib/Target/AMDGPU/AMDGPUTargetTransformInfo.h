@@ -117,6 +117,7 @@ public:
     return TTI::PSK_FastHardware;
   }
 
+  unsigned getNumberOfParts(Type *Tp) const;
   unsigned getNumberOfRegisters(unsigned RCID) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
@@ -259,6 +260,9 @@ public:
   InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                          FastMathFlags FMF,
                                          TTI::TargetCostKind CostKind);
+
+  bool hasScalarizationOverhead(ArrayRef<Value *> VL, FixedVectorType *VTy,
+                                std::pair<bool, bool> &ScalarizationKind) const;
 
   /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
   unsigned getCacheLineSize() const override { return 128; }

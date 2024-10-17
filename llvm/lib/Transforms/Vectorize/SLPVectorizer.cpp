@@ -10541,6 +10541,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         E, ScalarTy, *TTI, VectorizedVals, *this, CheckedExtracts);
   }
   InstructionCost CommonCost = 0;
+  std::pair<bool, bool> ScalarizationKind(false, false);
+  if (TTI->hasScalarizationOverhead(VL, FinalVecTy, ScalarizationKind)) {
+    APInt DemandedElts = APInt::getAllOnes(VL.size());
+    CommonCost -= TTI->getScalarizationOverhead(
+        VecTy, DemandedElts,
+        /*Insert*/ ScalarizationKind.first,
+        /*Extract*/ ScalarizationKind.second, CostKind);
+  }
   SmallVector<int> Mask;
   bool IsReverseOrder = isReverseOrder(E->ReorderIndices);
   if (!E->ReorderIndices.empty() &&
