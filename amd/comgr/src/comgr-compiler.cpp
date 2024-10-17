@@ -877,11 +877,7 @@ amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
 
 amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
                                                const char *OutputFilePath) {
-  SmallVector<const char *, 128> Argv;
-
-  for (auto &Arg : Args) {
-    Argv.push_back(Arg);
-  }
+  SmallVector<const char *, 128> Argv = Args;
 
   for (auto &Option : ActionInfo->getOptions()) {
     Argv.push_back(Option.c_str());
