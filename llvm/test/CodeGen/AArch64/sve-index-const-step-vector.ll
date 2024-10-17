@@ -6,8 +6,8 @@
 define <16 x i8> @v16i8() #0 {
 ; CHECK-LABEL: v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    index z0.b, #0, #1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
 }
@@ -15,8 +15,8 @@ define <16 x i8> @v16i8() #0 {
 define <8 x i16> @v8i16() #0 {
 ; CHECK-LABEL: v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
+; CHECK-NEXT:    index z0.h, #0, #1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
 }
@@ -24,8 +24,8 @@ define <8 x i16> @v8i16() #0 {
 define <4 x i32> @v4i32() #0 {
 ; CHECK-LABEL: v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 }
@@ -33,8 +33,8 @@ define <4 x i32> @v4i32() #0 {
 define <2 x i64> @v2i64() #0 {
 ; CHECK-LABEL: v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <2 x i64> <i64 0, i64 1>
 }
@@ -44,8 +44,8 @@ define <2 x i64> @v2i64() #0 {
 define <8 x i8> @v8i8() #0 {
 ; CHECK-LABEL: v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    index z0.b, #0, #1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   ret <8 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>
 }
@@ -53,8 +53,8 @@ define <8 x i8> @v8i8() #0 {
 define <4 x i16> @v4i16() #0 {
 ; CHECK-LABEL: v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI5_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI5_0]
+; CHECK-NEXT:    index z0.h, #0, #1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   ret <4 x i16> <i16 0, i16 1, i16 2, i16 3>
 }
@@ -62,8 +62,8 @@ define <4 x i16> @v4i16() #0 {
 define <2 x i32> @v2i32() #0 {
 ; CHECK-LABEL: v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   ret <2 x i32> <i32 0, i32 1>
 }
@@ -73,8 +73,9 @@ define <2 x i32> @v2i32() #0 {
 define <4 x i32> @v4i32_non_zero_non_one() #0 {
 ; CHECK-LABEL: v4i32_non_zero_non_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    index z0.s, #0, #2
+; CHECK-NEXT:    orr z0.s, z0.s, #0x1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 }
@@ -83,8 +84,8 @@ define <4 x i32> @v4i32_non_zero_non_one() #0 {
 define <4 x i32> @v4i32_neg_immediates() #0 {
 ; CHECK-LABEL: v4i32_neg_immediates:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    index z0.s, #-1, #-2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 -1, i32 -3, i32 -5, i32 -7>
 }
@@ -93,8 +94,9 @@ define <4 x i32> @v4i32_neg_immediates() #0 {
 define <4 x i32> @v4i32_out_range_start() #0 {
 ; CHECK-LABEL: v4i32_out_range_start:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI9_0]
+; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    add z0.s, z0.s, #16 // =0x10
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 16, i32 17, i32 18, i32 19>
 }
@@ -103,8 +105,9 @@ define <4 x i32> @v4i32_out_range_start() #0 {
 define <4 x i32> @v4i32_out_range_step() #0 {
 ; CHECK-LABEL: v4i32_out_range_step:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI10_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    index z0.s, #0, w8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 0, i32 16, i32 32, i32 48>
 }
@@ -113,8 +116,10 @@ define <4 x i32> @v4i32_out_range_step() #0 {
 define <4 x i32> @v4i32_out_range_start_step() #0 {
 ; CHECK-LABEL: v4i32_out_range_start_step:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI11_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI11_0]
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    index z0.s, #0, w8
+; CHECK-NEXT:    add z0.s, z0.s, #16 // =0x10
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 16, i32 32, i32 48, i32 64>
 }
