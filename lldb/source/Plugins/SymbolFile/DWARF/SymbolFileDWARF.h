@@ -408,6 +408,9 @@ protected:
   bool ParseSupportFiles(DWARFUnit &dwarf_cu, const lldb::ModuleSP &module,
                          SupportFileList &support_files);
 
+  lldb::VariableSP ParseStaticConstMemberDIE(const SymbolContext &sc,
+                                             const DWARFDIE &die);
+
   lldb::VariableSP ParseVariableDIE(const SymbolContext &sc,
                                     const DWARFDIE &die,
                                     const lldb::addr_t func_low_pc);
