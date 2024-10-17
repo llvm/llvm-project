@@ -584,7 +584,8 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
     } while (con.IncrementSubscripts(subscripts));
   } else if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
     do {
-      mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+      mlir::Type eleTy =
+          mlir::cast<fir::SequenceType>(arrayTy).getElementType();
       mlir::Value elementVal =
           genScalarLit(converter, loc, con.At(subscripts), eleTy,
                        /*outlineInReadOnlyMemory=*/false);
@@ -594,7 +595,7 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
   } else {
     llvm::SmallVector<mlir::Attribute> rangeStartIdx;
     uint64_t rangeSize = 0;
-    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
     do {
       auto getElementVal = [&]() {
         return builder.createConvert(loc, eleTy,
@@ -643,7 +644,7 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
                    mlir::Location loc, mlir::Type arrayTy,
                    const Fortran::evaluate::Constant<T> &constant) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
   llvm::StringRef globalName = converter.getUniqueLitName(
       loc, std::make_unique<Fortran::lower::SomeExpr>(toEvExpr(constant)),
       eleTy);

@@ -365,11 +365,11 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto boxATy = matrixABox.getType();
   auto arrATy = fir::dyn_cast_ptrOrBoxEleTy(boxATy);
-  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getEleTy();
+  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getElementType();
   auto [aCat, aKind] = fir::mlirTypeToCategoryKind(loc, arrAEleTy);
   auto boxBTy = matrixBBox.getType();
   auto arrBTy = fir::dyn_cast_ptrOrBoxEleTy(boxBTy);
-  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getEleTy();
+  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getElementType();
   auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
 
 #define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
@@ -417,11 +417,11 @@ void fir::runtime::genMatmulTranspose(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func;
   auto boxATy = matrixABox.getType();
   auto arrATy = fir::dyn_cast_ptrOrBoxEleTy(boxATy);
-  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getEleTy();
+  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getElementType();
   auto [aCat, aKind] = fir::mlirTypeToCategoryKind(loc, arrAEleTy);
   auto boxBTy = matrixBBox.getType();
   auto arrBTy = fir::dyn_cast_ptrOrBoxEleTy(boxBTy);
-  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getEleTy();
+  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getElementType();
   auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
 
 #define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \

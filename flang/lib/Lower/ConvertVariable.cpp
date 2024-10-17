@@ -518,7 +518,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   // type does not support nested structures.
   if (mlir::isa<fir::SequenceType>(symTy) &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
-    mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getEleTy();
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getElementType();
     if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
                   fir::LogicalType>(eleTy)) {
       const auto *details =
