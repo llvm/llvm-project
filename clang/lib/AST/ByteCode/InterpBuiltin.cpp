@@ -568,7 +568,8 @@ static bool interp__builtin_abs(InterpState &S, CodePtr OpPC,
                                 const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
-  if (Val == APSInt(APSInt::getSignedMinValue(Val.getBitWidth()), false))
+  if (Val ==
+      APSInt(APInt::getSignedMinValue(Val.getBitWidth()), /*IsUnsigned=*/false))
     return false;
   if (Val.isNegative())
     Val.negate();

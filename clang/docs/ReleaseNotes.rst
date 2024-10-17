@@ -252,6 +252,7 @@ Non-comprehensive list of changes in this release
   ``__builtin_signbit`` can now be used in constant expressions.
 - Plugins can now define custom attributes that apply to statements
   as well as declarations.
+- ``__builtin_abs`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------

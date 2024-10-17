@@ -266,12 +266,12 @@ namespace fpclassify {
 }
 
 namespace abs {
-static_assert(__builtin_abs(14) == 14, "");
-static_assert(__builtin_labs(14L) == 14L, "");
-static_assert(__builtin_llabs(14LL) == 14LL, "");
-static_assert(__builtin_abs(-14) == 14, "");
-static_assert(__builtin_labs(-0x14L) == 0x14L, "");
-static_assert(__builtin_llabs(-0x141414141414LL) == 0x141414141414LL, "");
+  static_assert(__builtin_abs(14) == 14, "");
+  static_assert(__builtin_labs(14L) == 14L, "");
+  static_assert(__builtin_llabs(14LL) == 14LL, "");
+  static_assert(__builtin_abs(-14) == 14, "");
+  static_assert(__builtin_labs(-0x14L) == 0x14L, "");
+  static_assert(__builtin_llabs(-0x141414141414LL) == 0x141414141414LL, "");
 } // namespace abs
 
 namespace fabs {
