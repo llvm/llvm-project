@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "lldb/SourceLanguageNames.h"
+
 #ifndef SWIG
 // Macro to enable bitmask operations on an enum.  Without this, Enum | Enum
 // gets promoted to an int, so you have to say Enum a = Enum(eFoo | eBar).  If

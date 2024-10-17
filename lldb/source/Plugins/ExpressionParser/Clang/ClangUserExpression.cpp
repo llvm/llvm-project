@@ -71,14 +71,19 @@ ClangUserExpression::ClangUserExpression(
       m_type_system_helper(*m_target_wp.lock(), options.GetExecutionPolicy() ==
                                                     eExecutionPolicyTopLevel),
       m_result_delegate(exe_scope.CalculateTarget()), m_ctx_obj(ctx_obj) {
-  switch (m_language.name) {
-  case llvm::dwarf::DW_LNAME_C_plus_plus:
+  if (!m_language.name) {
+    m_allow_cxx = true;
+    m_allow_objc = true;
+    return;
+  }
+  switch (*m_language.name) {
+  case lldb::SourceLanguageName::eLanguageNameC_plus_plus:
     m_allow_cxx = true;
     break;
-  case llvm::dwarf::DW_LNAME_ObjC:
+  case lldb::SourceLanguageName::eLanguageNameObjC:
     m_allow_objc = true;
     break;
-  case llvm::dwarf::DW_LNAME_ObjC_plus_plus:
+  case lldb::SourceLanguageName::eLanguageNameObjC_plus_plus:
   default:
     m_allow_cxx = true;
     m_allow_objc = true;

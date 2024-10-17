@@ -136,6 +136,8 @@ class LLDB_API SBWatchpoint;
 class LLDB_API SBWatchpointOptions;
 class LLDB_API SBUnixSignals;
 
+typedef SourceLanguageName SBSourceLanguageName;
+
 typedef bool (*SBBreakpointHitCallback)(void *baton, lldb::SBProcess &process,
                                         lldb::SBThread &thread,
                                         lldb::SBBreakpointLocation &location);

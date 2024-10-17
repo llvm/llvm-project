@@ -195,7 +195,7 @@ py_binary(
 genrule(
     name = "lldb-sbapi-dwarf-enums",
     srcs = ["//llvm:include/llvm/BinaryFormat/Dwarf.def"],
-    outs = ["include/lldb/API/SBLanguages.h"],
+    outs = ["include/lldb/SourceLanguageNames.h"],
     cmd = "$(location :generate-sbapi-dwarf-enum) $(location //llvm:include/llvm/BinaryFormat/Dwarf.def) --output $@",
     tools = [":generate-sbapi-dwarf-enum"],
 )

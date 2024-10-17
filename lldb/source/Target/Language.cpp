@@ -535,19 +535,22 @@ Language::Language() = default;
 Language::~Language() = default;
 
 SourceLanguage::SourceLanguage(lldb::LanguageType language_type) {
-  auto lname =
-      llvm::dwarf::toDW_LNAME((llvm::dwarf::SourceLanguage)language_type);
+  auto lname = llvm::dwarf::toDW_LNAME(
+      static_cast<llvm::dwarf::SourceLanguage>(language_type));
   if (!lname)
     return;
-  name = lname->first;
+  name.emplace(static_cast<SourceLanguageName>(lname->first));
   version = lname->second;
 }
 
 lldb::LanguageType SourceLanguage::AsLanguageType() const {
-  if (auto lang = llvm::dwarf::toDW_LANG((llvm::dwarf::SourceLanguageName)name,
-                                         version))
-    return (lldb::LanguageType)*lang;
-  return lldb::eLanguageTypeUnknown;
+  if (!name)
+    return lldb::eLanguageTypeUnknown;
+  auto lang = llvm::dwarf::toDW_LANG(
+      static_cast<llvm::dwarf::SourceLanguageName>(*name), version);
+  if (!lang)
+    return lldb::eLanguageTypeUnknown;
+  return static_cast<lldb::LanguageType>(*lang);
 }
 
 llvm::StringRef SourceLanguage::GetDescription() const {
@@ -555,7 +558,7 @@ llvm::StringRef SourceLanguage::GetDescription() const {
   if (type)
     return Language::GetNameForLanguageType(type);
   return llvm::dwarf::LanguageDescription(
-      (llvm::dwarf::SourceLanguageName)name);
+      static_cast<llvm::dwarf::SourceLanguageName>(name ? *name : 0));
 }
 bool SourceLanguage::IsC() const { return name == llvm::dwarf::DW_LNAME_C; }
 
