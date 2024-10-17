@@ -311,7 +311,6 @@ loop.end:
 }
 
 
-
 define i64 @same_exit_block_post_inc_use() {
 ; CHECK-LABEL: define i64 @same_exit_block_post_inc_use() {
 ; CHECK-NEXT:  entry:
@@ -860,8 +859,8 @@ loop.end:
 
 ; There are multiple exit blocks - two of them have an exact representation for the
 ; exit-not-taken counts and the other is unknown, i.e. the "early exit".
-define i64 @multiple_exits_one_early() {
-; CHECK-LABEL: define i64 @multiple_exits_one_early() {
+define i64 @multiple_exiting_one_early_same_exit() {
+; CHECK-LABEL: define i64 @multiple_exiting_one_early_same_exit() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
 ; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
@@ -915,6 +914,189 @@ loop.inc:
 loop.end:
   %retval = phi i64 [ 64, %loop ], [ %index, %search ], [ 128, %loop.inc ]
   ret i64 %retval
+}
+
+
+define i64 @multiple_exiting_one_early_same_exit_phi_of_consts() {
+; CHECK-LABEL: define i64 @multiple_exiting_one_early_same_exit_phi_of_consts() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[INDEX]], 64
+; CHECK-NEXT:    br i1 [[CMP1]], label [[SEARCH:%.*]], label [[LOOP_END:%.*]]
+; CHECK:       search:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_END]], label [[LOOP_INC]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 0, [[LOOP]] ], [ 1, [[SEARCH]] ], [ 0, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %cmp1 = icmp ne i64 %index, 64
+  br i1 %cmp1, label %search, label %loop.end
+
+search:
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.end, label %loop.inc
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 128
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ 0, %loop ], [ 1, %search ], [ 0, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @multiple_exiting_one_early_diff_exit() {
+; CHECK-LABEL: define i64 @multiple_exiting_one_early_diff_exit() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[INDEX]], 64
+; CHECK-NEXT:    br i1 [[CMP1]], label [[SEARCH:%.*]], label [[LOOP_END:%.*]]
+; CHECK:       search:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_END_EARLY:%.*]], label [[LOOP_INC]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end.early:
+; CHECK-NEXT:    [[RET_EARLY:%.*]] = phi i64 [ [[INDEX]], [[SEARCH]] ]
+; CHECK-NEXT:    ret i64 [[RET_EARLY]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 64, [[LOOP]] ], [ 128, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %cmp1 = icmp ne i64 %index, 64
+  br i1 %cmp1, label %search, label %loop.end
+
+search:
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.end.early, label %loop.inc
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 128
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end.early:
+  %ret.early = phi i64 [ %index, %search ]
+  ret i64 %ret.early
+
+loop.end:
+  %retval = phi i64 [ 64, %loop ], [ 128, %loop.inc ]
+  ret i64 %retval
+}
+
+define i64 @multiple_exiting_one_early_diff_exit_no_phis() {
+; CHECK-LABEL: define i64 @multiple_exiting_one_early_diff_exit_no_phis() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[INDEX]], 64
+; CHECK-NEXT:    br i1 [[CMP1]], label [[SEARCH:%.*]], label [[LOOP_END:%.*]]
+; CHECK:       search:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_END_EARLY:%.*]], label [[LOOP_INC]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end.early:
+; CHECK-NEXT:    ret i64 1
+; CHECK:       loop.end:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %cmp1 = icmp ne i64 %index, 64
+  br i1 %cmp1, label %search, label %loop.end
+
+search:
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.end.early, label %loop.inc
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 128
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end.early:
+  ret i64 1
+
+loop.end:
+  ret i64 0
 }
 
 
