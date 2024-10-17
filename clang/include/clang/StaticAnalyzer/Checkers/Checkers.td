@@ -775,6 +775,11 @@ def VirtualCallChecker : Checker<"VirtualCall">,
 
 let ParentPackage = CplusplusAlpha in {
 
+def BoundsInformationChecker : Checker<"BoundsInformation">,
+  HelpText<"Confirms that view objects such as std::span are constructed "
+           "within the bounds of the source buffer">,
+  Documentation<NotDocumented>;
+
 def ContainerModeling : Checker<"ContainerModeling">,
   HelpText<"Models C++ containers">,
   Documentation<NotDocumented>,
