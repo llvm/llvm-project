@@ -240,10 +240,10 @@ template <bool IsSinh> LIBC_INLINE float16 eval_sinh_or_cosh(float16 x) {
   int x_hi_mid_p = static_cast<int>(kf);
   int x_hi_mid_m = -x_hi_mid_p;
 
-  int x_hi_p = x_hi_mid_p >> 5;
-  int x_hi_m = x_hi_mid_m >> 5;
-  int x_mid_p = x_hi_mid_p & 0x1f;
-  int x_mid_m = x_hi_mid_m & 0x1f;
+  unsigned x_hi_p = static_cast<unsigned>(x_hi_mid_p) >> 5;
+  unsigned x_hi_m = static_cast<unsigned>(x_hi_mid_m) >> 5;
+  unsigned x_mid_p = static_cast<unsigned>(x_hi_mid_p) & 0x1f;
+  unsigned x_mid_m = static_cast<unsigned>(x_hi_mid_m) & 0x1f;
 
   uint32_t exp2_hi_mid_bits_p =
       EXP2_MID_5_BITS[x_mid_p] +
