@@ -5505,6 +5505,31 @@ the configuration (without a prefix: ``Auto``).
       }
     }
 
+.. _RemoveEmptyLinesInUnwrappedLines:
+
+**RemoveEmptyLinesInUnwrappedLines** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <RemoveEmptyLinesInUnwrappedLines>`
+  Remove empty lines within unwrapped lines.
+
+  .. code-block:: c++
+
+    false:                            true:
+
+    int c                  vs.        int c = a + b;
+
+        = a + b;
+
+    enum : unsigned        vs.        enum : unsigned {
+                                        AA = 0,
+    {                                   BB
+      AA = 0,                         } myEnum;
+      BB
+    } myEnum;
+
+    while (                vs.        while (true) {
+                                      }
+        true) {
+    }
+
 .. _RemoveParentheses:
 
 **RemoveParentheses** (``RemoveParenthesesStyle``) :versionbadge:`clang-format 17` :ref:`¶ <RemoveParentheses>`
