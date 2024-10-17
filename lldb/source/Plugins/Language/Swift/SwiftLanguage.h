@@ -75,6 +75,12 @@ public:
   ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const override;
 
+  /// Returns whether two SymbolContexts correspond to funclets of the same
+  /// async function.
+  /// If either SymbolContext is not a funclet, nullopt is returned.
+  std::optional<bool>
+  AreEqualForFrameComparison(const SymbolContext &sc1,
+                             const SymbolContext &sc2) const override;
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------

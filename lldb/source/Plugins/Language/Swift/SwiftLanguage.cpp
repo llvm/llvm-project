@@ -1847,6 +1847,23 @@ bool SwiftLanguage::IgnoreForLineBreakpoints(const SymbolContext &sc) const {
       name);
 }
 
+std::optional<bool>
+SwiftLanguage::AreEqualForFrameComparison(const SymbolContext &sc1,
+                                          const SymbolContext &sc2) const {
+  auto result = SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(
+      sc1.GetFunctionName(Mangled::ePreferMangled),
+      sc2.GetFunctionName(Mangled::ePreferMangled));
+  switch (result) {
+  case SwiftLanguageRuntime::FuncletComparisonResult::NotBothFunclets:
+    return {};
+  case SwiftLanguageRuntime::FuncletComparisonResult::SameAsyncFunction:
+    return true;
+  case SwiftLanguageRuntime::FuncletComparisonResult::DifferentAsyncFunctions:
+    return false;
+  }
+  llvm_unreachable("unhandled enumeration in AreEquivalentFunctions");
+}
+
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
