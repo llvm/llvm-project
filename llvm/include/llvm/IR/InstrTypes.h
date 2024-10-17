@@ -1463,7 +1463,9 @@ public:
 
   /// Return the return attributes for this call.
   ///
-  AttributeSet getRetAttributes() const { return getAttributes().getRetAttrs(); }
+  AttributeSet getRetAttributes() const {
+    return getAttributes().getRetAttrs();
+  }
 
   /// Return the param attributes for this call.
   ///
