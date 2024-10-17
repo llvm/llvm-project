@@ -13,6 +13,13 @@
 # the building of the a.out executable program.  For example,
 # DYLIB_ONLY := YES
 #
+# When specifying one of the DYLIB_*_SOURCES variables, DYLIB_NAME
+# controls the name of the produced dylib. E.g., if set to "foo",
+# the generated dylib will be called "foo.<platform-specific-extension>",
+# which on Darwin will be "foo.dylib".
+#
+# DYLIB_NAME := foo
+#
 # Specifying FRAMEWORK and its variants has the effect of building a NeXT-style
 # framework.
 # FRAMEWORK := "Foo"
