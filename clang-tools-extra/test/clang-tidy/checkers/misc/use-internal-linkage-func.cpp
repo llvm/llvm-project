@@ -37,6 +37,20 @@ volatile const int* func_cpp_inc_return_volatile_const_ptr();
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: function 'func_cpp_inc_return_volatile_const_ptr'
 // CHECK-FIXES: static volatile const int* func_cpp_inc_return_volatile_const_ptr();
 
+[[nodiscard]] void func_nodiscard();
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: function 'func_nodiscard'
+// CHECK-FIXES: {{\[\[nodiscard\]\]}} static void func_nodiscard();
+
+#define NDS [[nodiscard]]
+#define NNDS
+
+NDS void func_nds();
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'func_nds'
+// CHECK-FIXES: NDS static void func_nds();
+
+NNDS void func_nnds();
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: function 'func_nnds'
+// CHECK-FIXES: NNDS static void func_nnds();
 
 #include "func_cpp.inc"
 
