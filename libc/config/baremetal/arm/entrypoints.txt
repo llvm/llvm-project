@@ -205,6 +205,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.asctime_r
     libc.src.time.ctime
     libc.src.time.ctime_r
+    libc.src.time.ctime_s
     libc.src.time.difftime
     libc.src.time.gmtime
     libc.src.time.gmtime_r
