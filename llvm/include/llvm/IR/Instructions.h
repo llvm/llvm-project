@@ -4952,6 +4952,16 @@ inline Align getLoadStoreAlignment(const Value *I) {
   return cast<StoreInst>(I)->getAlign();
 }
 
+/// A helper function that set the alignment of load or store instruction.
+inline void setLoadStoreAlignment(Value *I, Align NewAlign) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    LI->setAlignment(NewAlign);
+  else
+    cast<StoreInst>(I)->setAlignment(NewAlign);
+}
+
 /// A helper function that returns the address space of the pointer operand of
 /// load or store instruction.
 inline unsigned getLoadStoreAddressSpace(const Value *I) {
