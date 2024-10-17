@@ -2305,7 +2305,7 @@ public:
                                              bool AllowOpaques = true) const;
 
   /// Test whether the given value is a constant FP or similar node.
-  bool isConstantFPBuildVectorOrConstantFP(SDValue N) const ;
+  bool isConstantFPBuildVectorOrConstantFP(SDValue N) const;
 
   /// \returns true if \p N is any kind of constant or build_vector of
   /// constants, int or float. If a vector, it may not necessarily be a splat.
