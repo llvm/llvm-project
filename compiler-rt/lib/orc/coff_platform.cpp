@@ -168,6 +168,7 @@ COFFPlatformRuntimeState *COFFPlatformRuntimeState::CPS = nullptr;
 
 COFFPlatformRuntimeState::JITDylibState *
 COFFPlatformRuntimeState::getJITDylibStateByHeader(void *Header) {
+  std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
   auto I = JDStates.find(Header);
   if (I == JDStates.end())
     return nullptr;
@@ -176,6 +177,7 @@ COFFPlatformRuntimeState::getJITDylibStateByHeader(void *Header) {
 
 COFFPlatformRuntimeState::JITDylibState *
 COFFPlatformRuntimeState::getJITDylibStateByName(std::string_view Name) {
+  std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
   // FIXME: Avoid creating string copy here.
   auto I = JDNameToHeader.find(std::string(Name.data(), Name.size()));
   if (I == JDNameToHeader.end())
