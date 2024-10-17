@@ -14812,14 +14812,15 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   EVT ExtVT = cast<VTSDNode>(N1)->getVT();
   unsigned VTBits = VT.getScalarSizeInBits();
   unsigned ExtVTBits = ExtVT.getScalarSizeInBits();
+  SDLoc DL(N);
 
   // sext_vector_inreg(undef) = 0 because the top bit will all be the same.
   if (N0.isUndef())
-    return DAG.getConstant(0, SDLoc(N), VT);
+    return DAG.getConstant(0, DL, VT);
 
   // fold (sext_in_reg c1) -> c1
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT, N0, N1);
+    return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N0, N1);
 
   // If the input is already sign extended, just drop the extension.
   if (ExtVTBits >= DAG.ComputeMaxSignificantBits(N0))
@@ -14828,8 +14829,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   // fold (sext_in_reg (sext_in_reg x, VT2), VT1) -> (sext_in_reg x, minVT) pt2
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG &&
       ExtVT.bitsLT(cast<VTSDNode>(N0.getOperand(1))->getVT()))
-    return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT, N0.getOperand(0),
-                       N1);
+    return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N0.getOperand(0), N1);
 
   // fold (sext_in_reg (sext x)) -> (sext x)
   // fold (sext_in_reg (aext x)) -> (sext x)
@@ -14841,7 +14841,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
     if ((N00Bits <= ExtVTBits ||
          DAG.ComputeMaxSignificantBits(N00) <= ExtVTBits) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)))
-      return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, N00);
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N00);
   }
 
   // fold (sext_in_reg (*_extend_vector_inreg x)) -> (sext_vector_inreg x)
@@ -14859,7 +14859,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
                       DAG.ComputeMaxSignificantBits(N00) <= ExtVTBits))) &&
         (!LegalOperations ||
          TLI.isOperationLegal(ISD::SIGN_EXTEND_VECTOR_INREG, VT)))
-      return DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, SDLoc(N), VT, N00);
+      return DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, DL, VT, N00);
   }
 
   // fold (sext_in_reg (zext x)) -> (sext x)
@@ -14868,12 +14868,12 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
     SDValue N00 = N0.getOperand(0);
     if (N00.getScalarValueSizeInBits() == ExtVTBits &&
         (!LegalOperations || TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)))
-      return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, N00);
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N00);
   }
 
   // fold (sext_in_reg x) -> (zext_in_reg x) if the sign bit is known zero.
   if (DAG.MaskedValueIsZero(N0, APInt::getOneBitSet(VTBits, ExtVTBits - 1)))
-    return DAG.getZeroExtendInReg(N0, SDLoc(N), ExtVT);
+    return DAG.getZeroExtendInReg(N0, DL, ExtVT);
 
   // fold operands of sext_in_reg based on knowledge that the top bits are not
   // demanded.
@@ -14895,7 +14895,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
         // extended enough.
         unsigned InSignBits = DAG.ComputeNumSignBits(N0.getOperand(0));
         if (((VTBits - ExtVTBits) - ShAmt->getZExtValue()) < InSignBits)
-          return DAG.getNode(ISD::SRA, SDLoc(N), VT, N0.getOperand(0),
+          return DAG.getNode(ISD::SRA, DL, VT, N0.getOperand(0),
                              N0.getOperand(1));
       }
   }
@@ -14904,37 +14904,33 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   // If sextload is not supported by target, we can only do the combine when
   // load has one use. Doing otherwise can block folding the extload with other
   // extends that the target does support.
-  if (ISD::isEXTLoad(N0.getNode()) &&
-      ISD::isUNINDEXEDLoad(N0.getNode()) &&
+  if (ISD::isEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
       ExtVT == cast<LoadSDNode>(N0)->getMemoryVT() &&
       ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple() &&
         N0.hasOneUse()) ||
        TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, ExtVT))) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, SDLoc(N), VT,
-                                     LN0->getChain(),
-                                     LN0->getBasePtr(), ExtVT,
-                                     LN0->getMemOperand());
+    auto *LN0 = cast<LoadSDNode>(N0);
+    SDValue ExtLoad =
+        DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
+                       LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
     CombineTo(N, ExtLoad);
     CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
     AddToWorklist(ExtLoad.getNode());
-    return SDValue(N, 0);   // Return N so it doesn't get rechecked!
+    return SDValue(N, 0); // Return N so it doesn't get rechecked!
   }
 
   // fold (sext_inreg (zextload x)) -> (sextload x) iff load has one use
   if (ISD::isZEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
-      N0.hasOneUse() &&
-      ExtVT == cast<LoadSDNode>(N0)->getMemoryVT() &&
+      N0.hasOneUse() && ExtVT == cast<LoadSDNode>(N0)->getMemoryVT() &&
       ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple()) &&
        TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, ExtVT))) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, SDLoc(N), VT,
-                                     LN0->getChain(),
-                                     LN0->getBasePtr(), ExtVT,
-                                     LN0->getMemOperand());
+    auto *LN0 = cast<LoadSDNode>(N0);
+    SDValue ExtLoad =
+        DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
+                       LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
     CombineTo(N, ExtLoad);
     CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
-    return SDValue(N, 0);   // Return N so it doesn't get rechecked!
+    return SDValue(N, 0); // Return N so it doesn't get rechecked!
   }
 
   // fold (sext_inreg (masked_load x)) -> (sext_masked_load x)
@@ -14944,7 +14940,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
         Ld->getExtensionType() != ISD::LoadExtType::NON_EXTLOAD &&
         TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, ExtVT)) {
       SDValue ExtMaskedLoad = DAG.getMaskedLoad(
-          VT, SDLoc(N), Ld->getChain(), Ld->getBasePtr(), Ld->getOffset(),
+          VT, DL, Ld->getChain(), Ld->getBasePtr(), Ld->getOffset(),
           Ld->getMask(), Ld->getPassThru(), ExtVT, Ld->getMemOperand(),
           Ld->getAddressingMode(), ISD::SEXTLOAD, Ld->isExpandingLoad());
       CombineTo(N, ExtMaskedLoad);
@@ -14955,15 +14951,14 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
 
   // fold (sext_inreg (masked_gather x)) -> (sext_masked_gather x)
   if (auto *GN0 = dyn_cast<MaskedGatherSDNode>(N0)) {
-    if (SDValue(GN0, 0).hasOneUse() &&
-        ExtVT == GN0->getMemoryVT() &&
+    if (SDValue(GN0, 0).hasOneUse() && ExtVT == GN0->getMemoryVT() &&
         TLI.isVectorLoadExtDesirable(SDValue(SDValue(GN0, 0)))) {
       SDValue Ops[] = {GN0->getChain(),   GN0->getPassThru(), GN0->getMask(),
                        GN0->getBasePtr(), GN0->getIndex(),    GN0->getScale()};
 
       SDValue ExtLoad = DAG.getMaskedGather(
-          DAG.getVTList(VT, MVT::Other), ExtVT, SDLoc(N), Ops,
-          GN0->getMemOperand(), GN0->getIndexType(), ISD::SEXTLOAD);
+          DAG.getVTList(VT, MVT::Other), ExtVT, DL, Ops, GN0->getMemOperand(),
+          GN0->getIndexType(), ISD::SEXTLOAD);
 
       CombineTo(N, ExtLoad);
       CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
@@ -14976,7 +14971,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   if (ExtVTBits <= 16 && N0.getOpcode() == ISD::OR) {
     if (SDValue BSwap = MatchBSwapHWordLow(N0.getNode(), N0.getOperand(0),
                                            N0.getOperand(1), false))
-      return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT, BSwap, N1);
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, BSwap, N1);
   }
 
   // Fold (iM_signext_inreg
@@ -14993,8 +14988,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
         (!LegalOperations ||
          TLI.isOperationLegal(ISD::SIGN_EXTEND, InnerExtVT))) {
       SDValue SignExtExtendee =
-          DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), InnerExtVT, Extendee);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), VT, SignExtExtendee,
+          DAG.getNode(ISD::SIGN_EXTEND, DL, InnerExtVT, Extendee);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SignExtExtendee,
                          N0.getOperand(1));
     }
   }
