@@ -188,6 +188,8 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
   return getSubtargetImpl(CPU, FS);
 }
 
+void WebAssemblyTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+
 namespace {
 
 class CoalesceFeaturesAndStripAtomics final : public ModulePass {
