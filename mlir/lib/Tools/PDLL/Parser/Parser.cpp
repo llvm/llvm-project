@@ -432,8 +432,8 @@ private:
                                          std::optional<StringRef> name,
                                          const ods::Operation *odsOp,
                                          SmallVectorImpl<ast::Expr *> &results);
-  void checkOperationResultTypeInferrence(SMRange loc, StringRef name,
-                                          const ods::Operation *odsOp);
+  void checkOperationResultTypeInference(SMRange loc, StringRef name,
+                                         const ods::Operation *odsOp);
   LogicalResult validateOperationOperandsOrResults(
       StringRef groupName, SMRange loc, std::optional<SMRange> odsOpLoc,
       std::optional<StringRef> name, SmallVectorImpl<ast::Expr *> &values,
@@ -889,14 +889,14 @@ void Parser::processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
   for (const llvm::Record *def : tdRecords.getAllDerivedDefinitions("Op")) {
     tblgen::Operator op(def);
 
-    // Check to see if this operation is known to support type inferrence.
-    bool supportsResultTypeInferrence =
+    // Check to see if this operation is known to support type inference.
+    bool supportsResultTypeInference =
         op.getTrait("::mlir::InferTypeOpInterface::Trait");
 
     auto [odsOp, inserted] = odsContext.insertOperation(
         op.getOperationName(), processDoc(op.getSummary()),
         processAndFormatDoc(op.getDescription()), op.getQualCppClassName(),
-        supportsResultTypeInferrence, op.getLoc().front());
+        supportsResultTypeInference, op.getLoc().front());
 
     // Ignore operations that have already been added.
     if (!inserted)
@@ -2111,7 +2111,7 @@ Parser::parseOperationExpr(OpResultTypeContext inputResultTypeContext) {
       return failure();
 
     // If result types are provided, initially assume that the operation does
-    // not rely on type inferrence. We don't assert that it isn't, because we
+    // not rely on type inference. We don't assert that it isn't, because we
     // may be inferring the value of some type/type range variables, but given
     // that these variables may be defined in calls we can't always discern when
     // this is the case.
@@ -2414,7 +2414,7 @@ FailureOr<ast::ReplaceStmt *> Parser::parseReplaceStmt() {
       return failure();
   } else {
     // Handle replacement with an operation uniquely, as the replacement
-    // operation supports type inferrence from the root operation.
+    // operation supports type inference from the root operation.
     FailureOr<ast::Expr *> replExpr;
     if (curToken.is(Token::kw_op))
       replExpr = parseOperationExpr(OpResultTypeContext::Replacement);
@@ -2852,19 +2852,19 @@ FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
 
   assert(
       (resultTypeContext == OpResultTypeContext::Explicit || results.empty()) &&
-      "unexpected inferrence when results were explicitly specified");
+      "unexpected inference when results were explicitly specified");
 
-  // If we aren't relying on type inferrence, or explicit results were provided,
+  // If we aren't relying on type inference, or explicit results were provided,
   // validate them.
   if (resultTypeContext == OpResultTypeContext::Explicit) {
     if (failed(validateOperationResults(loc, opNameRef, odsOp, results)))
       return failure();
 
-    // Validate the use of interface based type inferrence for this operation.
+    // Validate the use of interface based type inference for this operation.
   } else if (resultTypeContext == OpResultTypeContext::Interface) {
     assert(opNameRef &&
            "expected valid operation name when inferring operation results");
-    checkOperationResultTypeInferrence(loc, *opNameRef, odsOp);
+    checkOperationResultTypeInference(loc, *opNameRef, odsOp);
   }
 
   return ast::OperationExpr::create(ctx, loc, odsOp, name, operands, results,
@@ -2890,14 +2890,14 @@ Parser::validateOperationResults(SMRange loc, std::optional<StringRef> name,
       results, odsOp ? odsOp->getResults() : std::nullopt, typeTy, typeRangeTy);
 }
 
-void Parser::checkOperationResultTypeInferrence(SMRange loc, StringRef opName,
-                                                const ods::Operation *odsOp) {
-  // If the operation might not have inferrence support, emit a warning to the
+void Parser::checkOperationResultTypeInference(SMRange loc, StringRef opName,
+                                               const ods::Operation *odsOp) {
+  // If the operation might not have inference support, emit a warning to the
   // user. We don't emit an error because the interface might be added to the
   // operation at runtime. It's rare, but it could still happen. We emit a
   // warning here instead.
 
-  // Handle inferrence warnings for unknown operations.
+  // Handle inference warnings for unknown operations.
   if (!odsOp) {
     ctx.getDiagEngine().emitWarning(
         loc, llvm::formatv(
@@ -2909,15 +2909,15 @@ void Parser::checkOperationResultTypeInferrence(SMRange loc, StringRef opName,
     return;
   }
 
-  // Handle inferrence warnings for known operations that expected at least one
+  // Handle inference warnings for known operations that expected at least one
   // result, but don't have inference support. An elided results list can mean
   // "zero-results", and we don't want to warn when that is the expected
   // behavior.
-  bool requiresInferrence =
+  bool requiresInference =
       llvm::any_of(odsOp->getResults(), [](const ods::OperandOrResult &result) {
         return !result.isVariableLength();
       });
-  if (requiresInferrence && !odsOp->hasResultTypeInferrence()) {
+  if (requiresInference && !odsOp->hasResultTypeInference()) {
     ast::InFlightDiagnostic diag = ctx.getDiagEngine().emitWarning(
         loc,
         llvm::formatv("operation result types are marked to be inferred, but "

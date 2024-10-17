@@ -326,7 +326,7 @@ static Value collapseValue(
 /// Compute the modified metadata for an operands of operation
 /// whose unit dims are being dropped. Return the new indexing map
 /// to use, the shape of the operand in the replacement op
-/// and the `reassocation` to use to go from original operand shape
+/// and the `reassociation` to use to go from original operand shape
 /// to modified operand shape.
 struct UnitExtentReplacementInfo {
   AffineMap indexMap;

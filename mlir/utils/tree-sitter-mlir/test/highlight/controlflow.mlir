@@ -3,7 +3,7 @@ func.func @simple(i64, i1) -> i64 {
 //        ^ function
 //               ^ punctuation.bracket
 //                ^ type.builtin
-//                   ^ punctuation.delimeter
+//                   ^ punctuation.delimiter
 //                     ^ type.builtin
 //                       ^ punctuation.bracket
 //                         ^ operator

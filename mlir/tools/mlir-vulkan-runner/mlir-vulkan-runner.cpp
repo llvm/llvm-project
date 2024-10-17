@@ -48,7 +48,7 @@ struct VulkanRunnerOptions {
   llvm::cl::OptionCategory category{"mlir-vulkan-runner options"};
   llvm::cl::opt<bool> spirvWebGPUPrepare{
       "vulkan-runner-spirv-webgpu-prepare",
-      llvm::cl::desc("Run MLIR transforms used when targetting WebGPU"),
+      llvm::cl::desc("Run MLIR transforms used when targeting WebGPU"),
       llvm::cl::cat(category)};
 };
 } // namespace
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
   llvm::InitializeNativeTargetAsmPrinter();
 
   // Initialize runner-specific CLI options. These will be parsed and
-  // initialzied in `JitRunnerMain`.
+  // initialized in `JitRunnerMain`.
   VulkanRunnerOptions options;
   auto runPassesWithOptions = [&options](Operation *op, JitRunnerOptions &) {
     return runMLIRPasses(op, options);

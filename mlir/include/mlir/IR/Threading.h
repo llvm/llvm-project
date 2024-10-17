@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines various utilies for multithreaded processing within MLIR.
+// This file defines various utilities for multithreaded processing within MLIR.
 // These utilities automatically handle many of the necessary threading
 // conditions, such as properly ordering diagnostics, observing if threading is
 // disabled, etc. These utilities should be used over other threading utilities
