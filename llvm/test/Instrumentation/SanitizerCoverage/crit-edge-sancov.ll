@@ -17,12 +17,11 @@ define void @update_shadow(i1 %c) !dbg !3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR0:[0-9]+]], !dbg [[DBG6:![0-9]+]]
 ; CHECK:       entry.for.inc.i_crit_edge:
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR0]], !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR0]], !dbg [[DBG6]]
 ; CHECK:       if.end22.i:
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR0]], !dbg [[DBG8:![0-9]+]]
-; CHECK:       [[DBG6]] = !DILocation(line: 192, scope: !3)
-; CHECK:       [[DBG7]] = !DILocation(line: 0, scope: !3)
-; CHECK:       [[DBG8]] = !DILocation(line: 129, column: 2, scope: !3)
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR0]], !dbg [[DBG7:![0-9]+]]
+; CHECK:       [[DBG6]] = !DILocation(line: 0, scope: !3)
+; CHECK:       [[DBG7]] = !DILocation(line: 129, column: 2, scope: !3)
 entry:
   br i1 %c, label %for.inc.i, label %if.end22.i
 

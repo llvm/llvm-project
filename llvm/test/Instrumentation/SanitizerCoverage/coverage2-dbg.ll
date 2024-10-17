@@ -20,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: call void @__sanitizer_cov{{.*}}(ptr{{.*}}) #{{.*}}, !dbg [[A:!.*]]
 ; CHECK: call void @__sanitizer_cov{{.*}}(ptr{{.*}}) #{{.*}}, !dbg [[B:!.*]]
 ; CHECK: ret void
-; CHECK: [[A]] = !DILocation(line: 1, scope: !{{.*}})
+; CHECK: [[A]] = !DILocation(line: 0, scope: !{{.*}})
 ; CHECK: [[B]] = !DILocation(line: 3, column: 5, scope: !{{.*}})
 
 define void @_Z3fooPi(ptr %a) #0 !dbg !4 {
