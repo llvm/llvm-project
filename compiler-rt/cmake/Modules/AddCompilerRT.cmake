@@ -690,7 +690,6 @@ macro(add_custom_libcxx name prefix)
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
-               -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
                -DLIBCXXABI_USE_LLVM_UNWINDER=OFF
                -DLIBCXXABI_ENABLE_SHARED=OFF
