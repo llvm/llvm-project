@@ -1094,7 +1094,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   unsigned Index = EVI.getIndices()[0];
   for (unsigned OpIdx = 0; OpIdx < Op0.size(); ++OpIdx) {
     Value *ResElem = Builder.CreateExtractValue(
-        Op0[OpIdx], Index, EVI.getName() + ".elem" + std::to_string(Index));
+        Op0[OpIdx], Index, EVI.getName() + ".elem" + Twine(Index));
     Res.push_back(ResElem);
   }
 
