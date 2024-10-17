@@ -29,7 +29,7 @@ struct _LIBCPP_TEMPLATE_VIS is_destructible : _BoolConstant<__is_destructible(_T
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_destructible_v = __is_destructible(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_destructible_v = __is_destructible(_Tp);
 #  endif
 
 #else // __has_builtin(__is_destructible)
@@ -87,7 +87,7 @@ struct is_destructible<void> : public false_type {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_destructible_v = is_destructible<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_destructible_v = is_destructible<_Tp>::value;
 #  endif
 
 #endif // __has_builtin(__is_destructible)

@@ -23,7 +23,7 @@ struct _LIBCPP_TEMPLATE_VIS is_convertible : public integral_constant<bool, __is
 
 #if _LIBCPP_STD_VER >= 17
 template <class _From, class _To>
-inline constexpr bool is_convertible_v = __is_convertible(_From, _To);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_convertible_v = __is_convertible(_From, _To);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

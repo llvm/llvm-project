@@ -54,7 +54,7 @@ struct _LIBCPP_TEMPLATE_VIS is_integral : _BoolConstant<__is_integral(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_integral_v = __is_integral(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_integral_v = __is_integral(_Tp);
 #  endif
 
 #else
