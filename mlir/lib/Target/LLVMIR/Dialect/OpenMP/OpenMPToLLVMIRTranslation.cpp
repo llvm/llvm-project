@@ -1788,11 +1788,19 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
   llvm::omp::OrderKind order = convertOrderKind(simdOp.getOrder());
+
+  llvm::SmallVector<llvm::Value *> nontemporalVars;
+  mlir::OperandRange nontemporals = simdOp.getNontemporalVars();
+  for (mlir::Value nontemporal : nontemporals) {
+    llvm::Value *nt = moduleTranslation.lookupValue(nontemporal);
+    nontemporalVars.push_back(nt);
+  }
+
   ompBuilder->applySimd(loopInfo, alignedVars,
                         simdOp.getIfExpr()
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
                             : nullptr,
-                        order, simdlen, safelen);
+                        order, simdlen, safelen, nontemporalVars);
 
   builder.restoreIP(afterIP);
   return success();

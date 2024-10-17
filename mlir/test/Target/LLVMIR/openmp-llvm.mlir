@@ -847,6 +847,28 @@ llvm.func @simd_order() {
 // CHECK-NEXT: llvm.loop.vectorize.width{{.*}}i64 2
 // -----
 
+// CHECK-LABEL: @simd_nontemporal
+llvm.func @simd_nontemporal() {
+  %0 = llvm.mlir.constant(10 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i64) : i64
+  %2 = llvm.alloca %1 x i64 : (i64) -> !llvm.ptr
+  %3 = llvm.alloca %1 x i64 : (i64) -> !llvm.ptr
+  //CHECK: %[[A_ADDR:.*]] = alloca i64, i64 1, align 8
+  //CHECK: %[[B_ADDR:.*]] = alloca i64, i64 1, align 8
+  //CHECK: %[[B:.*]] = load i64, ptr %[[B_ADDR]], align 4, !nontemporal !1, !llvm.access.group !2
+  //CHECK: store i64 %[[B]], ptr %[[A_ADDR]], align 4, !nontemporal !1, !llvm.access.group !2
+  omp.simd nontemporal(%2, %3 : !llvm.ptr, !llvm.ptr) {
+    omp.loop_nest (%arg0) : i64 = (%1) to (%0) inclusive step (%1) {
+      %4 = llvm.load %3 : !llvm.ptr -> i64
+      llvm.store %4, %2 : i64, !llvm.ptr
+      omp.yield
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+// -----
+
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
