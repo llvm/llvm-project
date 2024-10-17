@@ -1,6 +1,6 @@
 ; Reduced from https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=65323 by @RKSimon
 ;
-; RUN: opt -S -passes=loop-reduce %s
+; RUN: opt -S -passes=loop-reduce %s | FileCheck %s
 ;
 ; Make sure we don't trigger an assertion.
 
@@ -10,6 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @G = external global i32
 
 define void @foo() {
+; CHECK-LABEL: foo
 bb8:
   br label %bb30
 
