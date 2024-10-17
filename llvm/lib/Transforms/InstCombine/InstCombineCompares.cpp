@@ -6563,10 +6563,7 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   KnownBits Op1Known(BitWidth);
 
   {
-    // Don't use dominating conditions when folding icmp using known bits. This
-    // may convert signed into unsigned predicates in ways that other passes
-    // (especially IndVarSimplify) may not be able to reliably undo.
-    SimplifyQuery Q = SQ.getWithoutDomCondCache().getWithInstruction(&I);
+    SimplifyQuery Q = SQ.getWithInstruction(&I);
     if (SimplifyDemandedBits(&I, 0, getDemandedBitsLHSMask(I, BitWidth),
                              Op0Known, /*Depth=*/0, Q))
       return &I;

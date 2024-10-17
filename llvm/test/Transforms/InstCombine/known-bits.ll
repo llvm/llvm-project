@@ -1617,9 +1617,7 @@ define i1 @test_simplify_icmp2(double %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq double [[ABS]], 0x7FF0000000000000
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast double [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[CAST]], 3458764513820540928
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;

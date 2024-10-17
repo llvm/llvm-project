@@ -385,7 +385,7 @@ define i8 @PR48900_alt(i8 %i, ptr %p) {
 ; CHECK-NEXT:    [[I4:%.*]] = icmp ugt i8 [[SMAX]], -128
 ; CHECK-NEXT:    br i1 [[I4]], label [[TRUELABEL:%.*]], label [[FALSELABEL:%.*]]
 ; CHECK:       truelabel:
-; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[SMAX]], i8 -126)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[SMAX]], i8 -126)
 ; CHECK-NEXT:    ret i8 [[UMIN]]
 ; CHECK:       falselabel:
 ; CHECK-NEXT:    ret i8 0

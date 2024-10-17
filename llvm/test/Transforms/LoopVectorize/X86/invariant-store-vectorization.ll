@@ -23,7 +23,7 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp slt i64 [[N]], 64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp samesign ult i64 [[N]], 64
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775744
@@ -137,7 +137,7 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp slt i64 [[N]], 16
+; CHECK-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp samesign ult i64 [[N]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775792
@@ -279,7 +279,7 @@ define void @variant_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT8]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK11:%.*]] = icmp slt i64 [[N]], 16
+; CHECK-NEXT:    [[MIN_ITERS_CHECK11:%.*]] = icmp samesign ult i64 [[N]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK11]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX10]], 9223372036854775792

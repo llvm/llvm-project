@@ -8,7 +8,7 @@ define i32 @reduction_sum(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       .lr.ph.preheader:
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 2147483644
@@ -89,7 +89,7 @@ define i32 @reduction_prod(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       .lr.ph.preheader:
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 2147483644
@@ -170,7 +170,7 @@ define i32 @reduction_mix(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       .lr.ph.preheader:
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 2147483644
@@ -251,7 +251,7 @@ define i32 @reduction_mul(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       .lr.ph.preheader:
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 2147483644
@@ -333,7 +333,7 @@ define i32 @start_at_non_zero(ptr %in, ptr %coeff, ptr %out, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 2147483644
@@ -409,7 +409,7 @@ define i32 @reduction_and(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 2147483644
@@ -485,7 +485,7 @@ define i32 @reduction_or(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 2147483644
@@ -561,7 +561,7 @@ define i32 @reduction_xor(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 2147483644
@@ -684,7 +684,7 @@ define i32 @reduction_sub_lhs(i32 %n, ptr %A) {
 ; CHECK-NEXT:    br i1 [[CMP4]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 2147483644
@@ -1042,7 +1042,7 @@ define i32 @reduction_sum_multiuse(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOTLR_PH_PREHEADER:%.*]], label [[END:%.*]]
 ; CHECK:       .lr.ph.preheader:
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 2147483644

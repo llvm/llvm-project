@@ -23,7 +23,7 @@ define void @vector_reverse_mask_v4i1(ptr noalias %a, ptr noalias %cond, i64 %N)
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i64 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], 9223372036854775800
