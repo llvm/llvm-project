@@ -9595,6 +9595,13 @@ TypeSystemClang::DeclContextGetLanguage(void *opaque_decl_ctx) {
   return eLanguageTypeUnknown;
 }
 
+CompilerDecl TypeSystemClang::DeclContextGetDecl(void *opaque_decl_ctx) {
+  if (auto *decl_ctx = (clang::DeclContext *)opaque_decl_ctx)
+    if (auto* decl = dyn_cast_or_null<clang::Decl>(decl_ctx))
+      return CompilerDecl(this, decl);
+  return CompilerDecl();
+}
+
 static bool IsClangDeclContext(const CompilerDeclContext &dc) {
   return dc.IsValid() && isa<TypeSystemClang>(dc.GetTypeSystem());
 }
