@@ -918,8 +918,8 @@ void FunctionInstrumenter::instrument() {
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
-    Builder.CreateCall(
-        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_cover),
+    Builder.CreateIntrinsic(
+        Intrinsic::instrprof_cover, {},
         {NormalizedNamePtr, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
     return;
   }
@@ -971,10 +971,10 @@ void FunctionInstrumenter::instrument() {
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
-    Builder.CreateCall(
-        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_timestamp),
-        {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
-         Builder.getInt32(I)});
+    Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp, {},
+                            {NormalizedNamePtr, CFGHash,
+                             Builder.getInt32(NumCounters),
+                             Builder.getInt32(I)});
     I += PGOBlockCoverage ? 8 : 1;
   }
 
@@ -984,12 +984,12 @@ void FunctionInstrumenter::instrument() {
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
-    Builder.CreateCall(Intrinsic::getOrInsertDeclaration(
-                           &M, PGOBlockCoverage
-                                   ? Intrinsic::instrprof_cover
-                                   : Intrinsic::instrprof_increment),
-                       {NormalizedNamePtr, CFGHash,
-                        Builder.getInt32(NumCounters), Builder.getInt32(I++)});
+    Builder.CreateIntrinsic(PGOBlockCoverage ? Intrinsic::instrprof_cover
+                                             : Intrinsic::instrprof_increment,
+                            {},
+                            {NormalizedNamePtr, CFGHash,
+                             Builder.getInt32(NumCounters),
+                             Builder.getInt32(I++)});
   }
 
   // Now instrument select instructions:
@@ -1726,10 +1726,10 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   auto *NormalizedFuncNameVarPtr =
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(
           FuncNameVar, PointerType::get(M->getContext(), 0));
-  Builder.CreateCall(
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::instrprof_increment_step),
-      {NormalizedFuncNameVarPtr, Builder.getInt64(FuncHash),
-       Builder.getInt32(TotalNumCtrs), Builder.getInt32(*CurCtrIdx), Step});
+  Builder.CreateIntrinsic(Intrinsic::instrprof_increment_step, {},
+                          {NormalizedFuncNameVarPtr, Builder.getInt64(FuncHash),
+                           Builder.getInt32(TotalNumCtrs),
+                           Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);
 }
 

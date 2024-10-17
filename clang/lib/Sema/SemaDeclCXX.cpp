@@ -18273,7 +18273,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
   }
 
   // The return types aren't either both pointers or references to a class type.
-  if (NewClassTy.isNull()) {
+  if (NewClassTy.isNull() || !NewClassTy->isStructureOrClassType()) {
     Diag(New->getLocation(),
          diag::err_different_return_type_for_overriding_virtual_function)
         << New->getDeclName() << NewTy << OldTy
