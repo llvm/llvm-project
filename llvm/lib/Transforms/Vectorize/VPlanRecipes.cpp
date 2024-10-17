@@ -90,6 +90,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
+  case VPWidenCastEVLSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenLoadEVLSC:
@@ -136,6 +137,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
+  case VPWidenCastEVLSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
@@ -175,6 +177,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
+  case VPWidenCastEVLSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
@@ -1472,6 +1475,25 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
+void VPWidenCastEVLRecipe::execute(VPTransformState &State) {
+  unsigned Opcode = getOpcode();
+  State.setDebugLocFrom(getDebugLoc());
+  Value *SrcVal = State.get(getOperand(0));
+  VectorType *DsType = VectorType::get(getResultType(), State.VF);
+
+  IRBuilderBase &BuilderIR = State.Builder;
+  VectorBuilder Builder(BuilderIR);
+  Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
+  Builder.setMask(Mask).setEVL(State.get(getEVL(), /*NeedsScalar=*/true));
+
+  Value *VPInst =
+      Builder.createVectorInstruction(Opcode, DsType, {SrcVal}, "vp.cast");
+
+  State.set(this, VPInst, 0);
+  State.addMetadata(VPInst,
+                    dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
@@ -1481,6 +1503,15 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
   printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
+}
+
+void VPWidenCastEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                                 VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-CAST ";
+  printAsOperand(O, SlotTracker);
+  O << " = vp." << Instruction::getOpcodeName(getOpcode());
+  printFlags(O);
+  printOperands(O, SlotTracker);
 }
 #endif
 
