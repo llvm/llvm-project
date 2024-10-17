@@ -65,8 +65,8 @@ TEST(SanitizerCommon, PthreadDestructorIterations) {
 
 TEST(SanitizerCommon, IsAccessibleMemoryRange) {
   const int page_size = GetPageSize();
-  uptr mem = (uptr)mmap(0, 3 * page_size, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANON, -1, 0);
+  InternalMmapVector<char> buffer(3 * page_size);
+  uptr mem = reinterpret_cast<uptr>(buffer.data());
   // Protect the middle page.
   mprotect((void *)(mem + page_size), page_size, PROT_NONE);
   EXPECT_TRUE(IsAccessibleMemoryRange(mem, page_size - 1));
@@ -78,19 +78,12 @@ TEST(SanitizerCommon, IsAccessibleMemoryRange) {
   EXPECT_TRUE(IsAccessibleMemoryRange(mem + 2 * page_size, page_size));
   EXPECT_FALSE(IsAccessibleMemoryRange(mem, 3 * page_size));
   EXPECT_FALSE(IsAccessibleMemoryRange(0x0, 2));
-
-  munmap((void *)mem, 3 * page_size);
 }
 
 TEST(SanitizerCommon, IsAccessibleMemoryRangeLarge) {
-  const int size = GetPageSize() * 10000;
-
-  uptr mem = (uptr)mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON,
-                        -1, 0);
-
-  EXPECT_TRUE(IsAccessibleMemoryRange(mem, size));
-
-  munmap((void *)mem, size);
+  InternalMmapVector<char> buffer(10000 * GetPageSize());
+  EXPECT_TRUE(IsAccessibleMemoryRange(reinterpret_cast<uptr>(buffer.data()),
+                                      buffer.size()));
 }
 
 }  // namespace __sanitizer

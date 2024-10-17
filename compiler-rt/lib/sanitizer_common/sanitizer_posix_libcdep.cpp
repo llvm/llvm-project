@@ -302,8 +302,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
     // `read` from `fds[0]` into a dummy buffer to free up the pipe buffer for
     // more `write` is slower than just recreating a pipe.
     int fds[2];
-    if (pipe(fds))
-      return false;
+    CHECK_EQ(0, pipe(fds));
 
     auto cleanup = at_scope_exit([&]() {
       internal_close(fds[0]);
