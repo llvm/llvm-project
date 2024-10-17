@@ -313,7 +313,7 @@ struct TemplateParameterListBuilder {
   TemplateParameterListBuilder(Sema &S, BuiltinTypeDeclBuilder &RB)
       : Builder(RB), S(S) {}
 
-  ~TemplateParameterListBuilder() { finalizeTemplateArgs(nullptr); }
+  ~TemplateParameterListBuilder() { finalizeTemplateArgs(); }
 
   TemplateParameterListBuilder &
   addTypeParameter(StringRef Name, QualType DefaultValue = QualType()) {
@@ -399,7 +399,7 @@ struct TemplateParameterListBuilder {
     return CSE;
   }
 
-  BuiltinTypeDeclBuilder &finalizeTemplateArgs(ConceptDecl *CD) {
+  BuiltinTypeDeclBuilder &finalizeTemplateArgs(ConceptDecl *CD = nullptr) {
     if (Params.empty())
       return Builder;
     ConceptSpecializationExpr *CSE =
@@ -636,13 +636,8 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
 
   // Create a ConceptDecl
   clang::ConceptDecl *conceptDecl = clang::ConceptDecl::Create(
-      context,
-      context.getTranslationUnitDecl(), // DeclContext
-      DeclLoc,                          // Source location of start of concept
-      DeclName,                         // Source location of end of concept
-      ConceptParams,                    // Template type parameter
-      ConstraintExpr                    // Expression defining the concept
-  );
+      context, context.getTranslationUnitDecl(), DeclLoc, DeclName,
+      ConceptParams, ConstraintExpr);
 
   // Attach the template parameter list to the ConceptDecl
   conceptDecl->setTemplateParameters(ConceptParams);
