@@ -1029,6 +1029,10 @@ private:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __add_alignment_assumption(pointer __p) const _NOEXCEPT {
+    return static_cast<pointer>(__builtin_assume_aligned(__p, alignof(decltype(*__p))));
+  }
 };
 
 #if _LIBCPP_STD_VER >= 17
@@ -1420,25 +1424,25 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::assign(size_type __n
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::begin() _NOEXCEPT {
-  return __make_iter(this->__begin_);
+  return __make_iter(__add_alignment_assumption(this->__begin_));
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::const_iterator
 vector<_Tp, _Allocator>::begin() const _NOEXCEPT {
-  return __make_iter(this->__begin_);
+  return __make_iter(__add_alignment_assumption(this->__begin_));
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::end() _NOEXCEPT {
-  return __make_iter(this->__end_);
+  return __make_iter(__add_alignment_assumption(this->__end_));
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::const_iterator
 vector<_Tp, _Allocator>::end() const _NOEXCEPT {
-  return __make_iter(this->__end_);
+  return __make_iter(__add_alignment_assumption(this->__end_));
 }
 
 template <class _Tp, class _Allocator>
