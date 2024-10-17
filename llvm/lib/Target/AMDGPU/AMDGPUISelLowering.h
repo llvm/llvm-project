@@ -102,7 +102,7 @@ protected:
 
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
-  bool hasAndNot(SDValue Y) const override;
+  bool hasAndNot(SDValue Op) const override;
 
 protected:
   bool shouldCombineMemoryType(EVT VT) const;
