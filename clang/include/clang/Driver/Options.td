@@ -3410,7 +3410,8 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
   Alias<fno_global_isel>;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-    HelpText<"Use the given vector functions library">,
+    HelpText<"Use the given vector functions library."
+             "Note: In clang -fveclib={ArmPL,SLEEF} implies -fno-math-errno">,
     Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM,none">,
     NormalizedValuesScope<"llvm::driver::VectorLibrary">,
     NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
