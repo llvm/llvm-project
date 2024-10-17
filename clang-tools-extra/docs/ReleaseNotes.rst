@@ -166,6 +166,10 @@ Changes in existing checks
   <https://github.com/bloomberg/bde>_.
 
 - Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` by adding ``ctime`` and
+  ``localtime`` functions.
+
+- Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional functions to match.
 

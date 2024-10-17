@@ -3058,6 +3058,14 @@ libc/src/threads/linux/thrd_join.cpp
 libc/src/threads/linux/Thread.h
 libc/src/time/asctime.cpp
 libc/src/time/asctime.h
+libc/src/time/ctime.cpp
+libc/src/time/ctime.h
+libc/src/time/ctime_r.cpp
+libc/src/time/ctime_r.h
+libc/src/time/localtime.cpp
+libc/src/time/localtime.h
+libc/src/time/localtime_r.cpp
+libc/src/time/localtime_r.h
 libc/src/time/asctime_r.cpp
 libc/src/time/asctime_r.h
 libc/src/time/gmtime.cpp
