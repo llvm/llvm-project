@@ -147,6 +147,17 @@ void Dex::buildIndex() {
   for (DocID SymbolRank = 0; SymbolRank < Symbols.size(); ++SymbolRank)
     Builder.add(*Symbols[SymbolRank], SymbolRank);
   InvertedIndex = std::move(Builder).build();
+
+  // Build RevRefs
+  for (const auto &[ID, RefList] : Refs)
+    for (const auto &R : RefList)
+      if ((R.Kind & ContainedRefsRequest::SupportedRefKinds) !=
+          RefKind::Unknown)
+        RevRefs.emplace_back(R, ID);
+  // Sort by container ID so we can use binary search for lookup.
+  llvm::sort(RevRefs, [](const RevRef &A, const RevRef &B) {
+    return A.ref().Container < B.ref().Container;
+  });
 }
 
 std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
@@ -314,6 +325,36 @@ bool Dex::refs(const RefsRequest &Req,
   return false; // We reported all refs.
 }
 
+llvm::iterator_range<std::vector<Dex::RevRef>::const_iterator>
+Dex::lookupRevRefs(const SymbolID &Container) const {
+  // equal_range() requires an element of the same type as the elements of the
+  // range, so construct a dummy RevRef with the container of interest.
+  Ref QueryRef;
+  QueryRef.Container = Container;
+  RevRef Query(QueryRef, SymbolID{});
+
+  auto ItPair = std::equal_range(RevRefs.cbegin(), RevRefs.cend(), Query,
+                                 [](const RevRef &A, const RevRef &B) {
+                                   return A.ref().Container < B.ref().Container;
+                                 });
+  return {ItPair.first, ItPair.second};
+}
+
+bool Dex::containedRefs(
+    const ContainedRefsRequest &Req,
+    llvm::function_ref<void(const ContainedRefsResult &)> Callback) const {
+  trace::Span Tracer("Dex reversed refs");
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
+  for (const auto &Rev : lookupRevRefs(Req.ID)) {
+    // RevRefs are already filtered to ContainedRefsRequest::SupportedRefKinds
+    if (Remaining == 0)
+      return true; // More refs were available.
+    --Remaining;
+    Callback(Rev.containedRefsResult());
+  }
+  return false; // We reported all refs.
+}
+
 void Dex::relations(
     const RelationsRequest &Req,
     llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
@@ -350,6 +391,7 @@ size_t Dex::estimateMemoryUsage() const {
   for (const auto &TokenToPostingList : InvertedIndex)
     Bytes += TokenToPostingList.second.bytes();
   Bytes += Refs.getMemorySize();
+  Bytes += RevRefs.size() * sizeof(RevRef);
   Bytes += Relations.getMemorySize();
   return Bytes + BackingDataSize;
 }

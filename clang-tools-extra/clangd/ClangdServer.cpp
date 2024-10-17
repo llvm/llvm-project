@@ -912,6 +912,15 @@ void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
   WorkScheduler->runWithAST("InlayHints", File, std::move(Action), Transient);
 }
 
+void ClangdServer::outgoingCalls(
+    const CallHierarchyItem &Item,
+    Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
+  WorkScheduler->run("Outgoing Calls", "",
+                     [CB = std::move(CB), Item, this]() mutable {
+                       CB(clangd::outgoingCalls(Item, Index));
+                     });
+}
+
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
   // FIXME: Do nothing for now. This will be used for indexing and potentially
   // invalidating other caches.
