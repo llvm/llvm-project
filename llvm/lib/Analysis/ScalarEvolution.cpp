@@ -6883,7 +6883,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
       bool CanBeNull, CanBeFreed;
       uint64_t DerefBytes =
           V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-      if (DerefBytes > 1) {
+      if (DerefBytes > 1 && isUIntN(BitWidth, DerefBytes)) {
         // The highest address the object can start is DerefBytes bytes before
         // the end (unsigned max value). If this value is not a multiple of the
         // alignment, the last possible start value is the next lowest multiple
