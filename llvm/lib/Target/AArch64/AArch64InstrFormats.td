@@ -1802,7 +1802,7 @@ class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
   bits<3> policy;
-  let Inst{20-12} = 0b000110010;
+  let Inst{20-12} = 0b000011001;
   let Inst{11-8} = 0b0110;
   let Inst{7-5} = policy;
 }
@@ -4967,7 +4967,7 @@ class BaseLoadUnprivilegedLSUI<bits<2> sz, dag oops, dag iops, string asm>
 }
 
 multiclass LoadUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> {
-  def i : BaseLoadUnprivilegedLSUI<sz, (outs regtype:$Rt),
+  def r : BaseLoadUnprivilegedLSUI<sz, (outs regtype:$Rt),
                                     (ins GPR64sp0:$Rn), asm>,
           Sched<[WriteLD]>;
 
@@ -4992,7 +4992,7 @@ class BaseStoreUnprivilegedLSUI<bits<2> sz, dag oops, dag iops, string asm>
 }
 
 multiclass StoreUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> {
-  def i : BaseStoreUnprivilegedLSUI<sz, (outs GPR32: $Ws),
+  def r : BaseStoreUnprivilegedLSUI<sz, (outs GPR32: $Ws),
                                  (ins regtype:$Rt, GPR64sp0:$Rn),
                                  asm>,
           Sched<[WriteSTX]>;

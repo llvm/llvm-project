@@ -3806,6 +3806,7 @@ static const struct Extension {
     {"sve-f16f32mm", {AArch64::FeatureSVE_F16F32MM}},
     {"lsui", {AArch64::FeatureLSUI}},
     {"occmo", {AArch64::FeatureOCCMO}},
+    {"pcdphint", {AArch64::FeaturePCDPHINT}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
