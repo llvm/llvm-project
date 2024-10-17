@@ -273,7 +273,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size);
 // Returns true if we can read a memory range starting at `src`, and copies
 // content into `dest`.
 bool TryMemCpy(void *dest, const void *src, uptr n);
-// Copies accesible memory, and zero fill the rest.
+// Copies accessible memory, and zero fill the rest.
 void MemCpyAccessible(void *dest, const void *src, uptr n);
 
 // Error report formatting.

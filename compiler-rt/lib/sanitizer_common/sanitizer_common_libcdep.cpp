@@ -230,18 +230,18 @@ void MemCpyAccessible(void *dest, const void *src, uptr n) {
   uptr e = reinterpret_cast<uptr>(src) + n;
   uptr e_down = RoundDownTo(e, page_size);
 
-  auto copy_or_zero = [dest, src](uptr b, uptr e) {
-    uptr d = reinterpret_cast<uptr>(dest) + (b - reinterpret_cast<uptr>(src));
-    if (!TryMemCpy(reinterpret_cast<void *>(d), reinterpret_cast<void *>(b),
-                   e - b))
-      internal_memset(reinterpret_cast<void *>(d), 0, e - b);
+  const uptr off = reinterpret_cast<uptr>(dest) - b;
+
+  auto copy_or_zero = [off](uptr beg, uptr end) {
+    void *d = reinterpret_cast<void *>(beg + off);
+    const uptr size = end - beg;
+    if (!TryMemCpy(d, reinterpret_cast<void *>(beg), size))
+      internal_memset(d, 0, size);
   };
 
   copy_or_zero(b, b_up);
-
   for (uptr p = b_up; p < e_down; p += page_size)
     copy_or_zero(p, p + page_size);
-
   copy_or_zero(e_down, e);
 }
 
