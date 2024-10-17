@@ -11,7 +11,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <string.h>
+#include <cstring>
 #include <unordered_map>
 
 #include "lldb/Core/Module.h"
@@ -20,11 +20,8 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Host/LZMA.h"
-#include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -34,16 +31,9 @@
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/Utility/Timer.h"
-#include "llvm/ADT/IntervalMap.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
-#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/XCOFFObjectFile.h"
-#include "llvm/Support/CRC.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -64,8 +54,6 @@ void ObjectFileXCOFF::Initialize() {
 void ObjectFileXCOFF::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-bool UGLY_FLAG_FOR_AIX __attribute__((weak)) = false;
 
 ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
                                             DataBufferSP data_sp,
@@ -95,7 +83,6 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!objfile_up)
     return nullptr;
 
-  UGLY_FLAG_FOR_AIX = true;
   return objfile_up.release();
 }
 
@@ -158,11 +145,6 @@ bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const { return 8; }
 
-lldb::SymbolType
-ObjectFileXCOFF::MapSymbolType(llvm::object::SymbolRef::Type sym_type) {
-  return lldb::eSymbolTypeInvalid;
-}
-
 void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
 
 bool ObjectFileXCOFF::IsStripped() { return false; }
@@ -179,40 +161,7 @@ ArchSpec ObjectFileXCOFF::GetArchitecture() {
 
 UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 
-uint32_t ObjectFileXCOFF::ParseDependentModules() {
-  ModuleSP module_sp(GetModule());
-  if (!module_sp)
-    return 0;
-
-  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-  if (m_deps_filespec)
-    return m_deps_filespec->GetSize();
-
-  Log *log = GetLog(LLDBLog::Object);
-  LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
-           this, GetModule().get(), GetModule()->GetSpecificationDescription(),
-           m_file.GetPath(), m_binary.get());
-
-  m_deps_filespec = FileSpecList();
-
-  auto ImportFilesOrError = m_binary->getImportFileTable();
-  if (!ImportFilesOrError) {
-    consumeError(ImportFilesOrError.takeError());
-    return 0;
-  }
-
-  return m_deps_filespec->GetSize();
-}
-
-uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) {
-  auto num_modules = ParseDependentModules();
-  auto original_size = files.GetSize();
-
-  for (unsigned i = 0; i < num_modules; ++i)
-    files.AppendIfUnique(m_deps_filespec->GetFileSpecAtIndex(i));
-
-  return files.GetSize() - original_size;
-}
+uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() { return eTypeExecutable; }
 

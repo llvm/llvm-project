@@ -58,8 +58,6 @@ public:
   static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
                               lldb::addr_t length);
 
-  static lldb::SymbolType MapSymbolType(llvm::object::SymbolRef::Type sym_type);
-
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
@@ -103,14 +101,6 @@ protected:
   static lldb::WritableDataBufferSP
   MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
                       uint64_t Offset);
-
-  uint32_t ParseDependentModules();
-
-private:
-  std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
-  lldb_private::Address m_entry_point_address;
-  std::optional<lldb_private::FileSpecList> m_deps_filespec;
-  std::map<std::string, std::vector<std::string>> m_deps_base_members;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILE_H
