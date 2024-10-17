@@ -13,11 +13,14 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_POSIX
 
-#include "sanitizer_common/sanitizer_common.h"
-#include "gtest/gtest.h"
+#  include <pthread.h>
+#  include <sys/mman.h>
 
-#include <pthread.h>
-#include <sys/mman.h>
+#  include <numeric>
+
+#  include "gmock/gmock.h"
+#  include "gtest/gtest.h"
+#  include "sanitizer_common/sanitizer_common.h"
 
 namespace __sanitizer {
 
@@ -80,6 +83,51 @@ TEST(SanitizerCommon, IsAccessibleMemoryRange) {
   EXPECT_FALSE(IsAccessibleMemoryRange(0x0, 2));
 
   munmap((void *)mem, 3 * page_size);
+}
+
+TEST(SanitizerCommon, IsAccessibleMemoryRangeLarge) {
+  const int size = GetPageSize() * 10000;
+
+  uptr mem = (uptr)mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON,
+                        -1, 0);
+
+  EXPECT_TRUE(IsAccessibleMemoryRange(mem, size));
+
+  munmap((void *)mem, size);
+}
+
+TEST(SanitizerCommon, TryMemCpy) {
+  std::vector<char> src(10000000);
+  std::iota(src.begin(), src.end(), 123);
+  std::vector<char> dst;
+
+  using ::testing::ElementsAreArray;
+
+  dst.assign(1, 0);
+  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+
+  dst.assign(100, 0);
+  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+
+  dst.assign(534, 0);
+  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+
+  dst.assign(GetPageSize(), 0);
+  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+
+  dst.assign(src.size(), 0);
+  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+
+  dst.assign(src.size() - 1, 0);
+  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+
+  EXPECT_FALSE(TryMemCpy(dst.data(), nullptr, dst.size()));
 }
 
 }  // namespace __sanitizer

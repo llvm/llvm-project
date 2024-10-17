@@ -288,26 +288,79 @@ bool SignalContext::IsStackOverflow() const {
 
 #endif  // SANITIZER_GO
 
+static void SetNonBlock(int fd) {
+  int res = fcntl(fd, F_GETFL, 0);
+  CHECK(!internal_iserror(res, nullptr));
+
+  res |= O_NONBLOCK;
+  res = fcntl(fd, F_SETFL, res);
+  CHECK(!internal_iserror(res, nullptr));
+}
+
 bool IsAccessibleMemoryRange(uptr beg, uptr size) {
-  uptr page_size = GetPageSizeCached();
-  // Checking too large memory ranges is slow.
-  CHECK_LT(size, page_size * 10);
+  while (size) {
+    // `read` from `sock_pair[0]` into a dummy buffer to free up the pipe buffer
+    // for more `write` is slower than just recreating a pipe.
+    int sock_pair[2];
+    if (pipe(sock_pair))
+      return false;
+
+    auto cleanup = at_scope_exit([&]() {
+      internal_close(sock_pair[0]);
+      internal_close(sock_pair[1]);
+    });
+
+    SetNonBlock(sock_pair[1]);
+
+    int write_errno;
+    uptr w = internal_write(sock_pair[1], reinterpret_cast<char *>(beg), size);
+    if (internal_iserror(w, &write_errno)) {
+      CHECK_EQ(EFAULT, write_errno);
+      return false;
+    }
+    size -= w;
+    beg += w;
+  }
+
+  return true;
+}
+
+bool TryMemCpy(void *dest, const void *src, uptr n) {
   int sock_pair[2];
   if (pipe(sock_pair))
     return false;
-  uptr bytes_written =
-      internal_write(sock_pair[1], reinterpret_cast<void *>(beg), size);
-  int write_errno;
-  bool result;
-  if (internal_iserror(bytes_written, &write_errno)) {
-    CHECK_EQ(EFAULT, write_errno);
-    result = false;
-  } else {
-    result = (bytes_written == size);
+
+  auto cleanup = at_scope_exit([&]() {
+    internal_close(sock_pair[0]);
+    internal_close(sock_pair[1]);
+  });
+
+  SetNonBlock(sock_pair[0]);
+  SetNonBlock(sock_pair[1]);
+
+  char *d = static_cast<char *>(dest);
+  const char *s = static_cast<const char *>(src);
+
+  while (n) {
+    int e;
+    uptr w = internal_write(sock_pair[1], s, n);
+    if (internal_iserror(w, &e)) {
+      CHECK_EQ(EFAULT, e);
+      return false;
+    }
+    s += w;
+    n -= w;
+
+    while (w) {
+      uptr r = internal_read(sock_pair[0], d, w);
+      CHECK(!internal_iserror(r, &e));
+
+      d += r;
+      w -= r;
+    }
   }
-  internal_close(sock_pair[0]);
-  internal_close(sock_pair[1]);
-  return result;
+
+  return true;
 }
 
 void PlatformPrepareForSandboxing(void *args) {
