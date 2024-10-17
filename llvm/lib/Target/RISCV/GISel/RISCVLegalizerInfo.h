@@ -38,7 +38,7 @@ public:
                          MachineInstr &MI) const override;
 
 private:
-  bool shouldBeInConstantPool(APInt APImm, bool ShouldOptForSize) const;
+  bool shouldBeInConstantPool(const APInt &APImm, bool ShouldOptForSize) const;
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
 
