@@ -29,4 +29,6 @@ add_lldb_library(lldbHostMacOSXObjCXX ${PLUGIN_DEPENDENCY_ARG}
     TargetParser
   )
 
-target_compile_options(lldbHostMacOSXObjCXX PRIVATE -fno-objc-exceptions)
+target_compile_options(lldbHostMacOSXObjCXX PRIVATE
+  -fno-objc-exceptions
+  -Wno-deprecated-declarations)
