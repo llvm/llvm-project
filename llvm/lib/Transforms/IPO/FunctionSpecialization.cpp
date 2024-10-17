@@ -643,7 +643,7 @@ bool FunctionSpecializer::run() {
 
     // When specializing literal constants is enabled, always require functions
     // to be larger than MinFunctionSize, to prevent excessive specialization.
-    bool RequireMinSize =
+    const bool RequireMinSize =
         !ForceSpecialization &&
         (SpecializeLiteralConstant || !F.hasFnAttribute(Attribute::NoInline));
 
