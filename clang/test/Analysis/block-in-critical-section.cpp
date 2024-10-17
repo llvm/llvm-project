@@ -41,8 +41,9 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex);
 int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
 struct mtx_t;
+struct timespec;
 int mtx_lock(mtx_t *mutex);
-int mtx_timedlock(mtx_t *mutex);
+int mtx_timedlock(mtx_t *mutex, const struct timespec *ts);
 int mtx_trylock(mtx_t *mutex);
 int mtx_unlock(mtx_t *mutex);
 
@@ -100,7 +101,7 @@ void testBlockInCriticalSectionWithPthreadMutex(pthread_mutex_t *mutex) {
   pthread_mutex_unlock(mutex);
 }
 
-void testBlockInCriticalSectionC11Locks(mtx_t *mutex) {
+void testBlockInCriticalSectionC11Locks(mtx_t *mutex, timespec *ts) {
   mtx_lock(mutex); // expected-note 5{{Entering critical section here}}
   sleep(3); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
             // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
@@ -114,7 +115,7 @@ void testBlockInCriticalSectionC11Locks(mtx_t *mutex) {
           // expected-note@-1 {{Call to blocking function 'recv' inside of critical section}}
   mtx_unlock(mutex);
 
-  mtx_timedlock(mutex); // expected-note 5{{Entering critical section here}}
+  mtx_timedlock(mutex, ts); // expected-note 5{{Entering critical section here}}
   sleep(3); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
             // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
   getc(stream); // expected-warning {{Call to blocking function 'getc' inside of critical section}}
@@ -293,19 +294,13 @@ void testBlockInCriticalSectionUniqueLockNested() {
   sleep(1); // no-warning
 }
 
-void testTrylockCurrentlyFalsePositive(pthread_mutex_t *m) {
-                                       // expected-note@+4 {{Assuming the condition is true}}
-                                       // expected-note@+3 {{Taking true branch}}
-                                       // expected-note@+2 {{Assuming the condition is false}}
-                                       // expected-note@+1 {{Taking false branch}}
-  if (pthread_mutex_trylock(m) == 0) { // expected-note 2 {{Entering critical section here}}
-                                       // FIXME: we are entering the critical section only in the true branch
+void testTrylockStateSplitting(pthread_mutex_t *m) {
+                                       // expected-note@+1 {{Taking true branch}}
+  if (pthread_mutex_trylock(m) == 0) { // expected-note {{Entering critical section here}}
     sleep(10); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
                // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
     pthread_mutex_unlock(m);
   } else {
-    sleep(10); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
-               // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
-               // FIXME: this is a false positive, the lock was not acquired
+    sleep(10); // no-warning
   }
 }

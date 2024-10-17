@@ -15,24 +15,49 @@ void test(void) {
   pthread_mutex_init(&mtx, NULL);
   clang_analyzer_printState();
   // CHECK:    { "checker": "alpha.core.PthreadLockBase", "messages": [
-  // CHECK-NEXT:      "Mutex states:",
-  // CHECK-NEXT:      "mtx: unlocked",
+  // CHECK-NEXT:      "Mutex event:", 
+  // CHECK-NEXT:      "Kind: : Init", 
+  // CHECK-NEXT:      "Semantics: NotApplicable", 
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
+  // CHECK-NEXT:      "Mutex states:", 
+  // CHECK-NEXT:      "mtx: unlocked", 
   // CHECK-NEXT:      ""
   // CHECK-NEXT:    ]}
 
   pthread_mutex_lock(&mtx);
   clang_analyzer_printState();
   // CHECK:    { "checker": "alpha.core.PthreadLockBase", "messages": [
+  // CHECK-NEXT:      "Mutex event:", 
+  // CHECK-NEXT:      "Kind: : Acquire", 
+  // CHECK-NEXT:      "Semantics: PthreadSemantics", 
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
+  // CHECK-NEXT:      "Kind: : Init", 
+  // CHECK-NEXT:      "Semantics: NotApplicable", 
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
   // CHECK-NEXT:      "Mutex states:",
   // CHECK-NEXT:      "mtx: locked",
-  // CHECK-NEXT:      "Mutex lock order:",
-  // CHECK-NEXT:      "mtx",
   // CHECK-NEXT:      ""
   // CHECK-NEXT:    ]}
 
   pthread_mutex_unlock(&mtx);
   clang_analyzer_printState();
   // CHECK:    { "checker": "alpha.core.PthreadLockBase", "messages": [
+  // CHECK-NEXT:      "Mutex event:", 
+  // CHECK-NEXT:      "Kind: : Release", 
+  // CHECK-NEXT:      "Semantics: NotApplicable",
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
+  // CHECK-NEXT:      "Kind: : Acquire", 
+  // CHECK-NEXT:      "Semantics: PthreadSemantics", 
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
+  // CHECK-NEXT:      "Kind: : Init", 
+  // CHECK-NEXT:      "Semantics: NotApplicable", 
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
   // CHECK-NEXT:      "Mutex states:",
   // CHECK-NEXT:      "mtx: unlocked",
   // CHECK-NEXT:      ""
@@ -41,6 +66,23 @@ void test(void) {
   int ret = pthread_mutex_destroy(&mtx);
   clang_analyzer_printState();
   // CHECK:    { "checker": "alpha.core.PthreadLockBase", "messages": [
+  // CHECK-NEXT:      "Mutex event:", 
+  // CHECK-NEXT:      "Kind: : Destroy", 
+  // CHECK-NEXT:      "Semantics: PthreadSemantics",
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
+  // CHECK-NEXT:      "Kind: : Release", 
+  // CHECK-NEXT:      "Semantics: NotApplicable",
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
+  // CHECK-NEXT:      "Kind: : Acquire", 
+  // CHECK-NEXT:      "Semantics: PthreadSemantics", 
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
+  // CHECK-NEXT:      "Kind: : Init", 
+  // CHECK-NEXT:      "Semantics: NotApplicable", 
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: mtx", 
   // CHECK-NEXT:      "Mutex states:",
   // CHECK-NEXT:      "mtx: unlocked, possibly destroyed",
   // CHECK-NEXT:      "Mutexes in unresolved possibly destroyed state:",
@@ -51,9 +93,10 @@ void test(void) {
   if (ret)
     return;
 
+  // Assert that the 'possibly destroyed' state is now resolved to 'destroyed'.
   clang_analyzer_printState();
   // CHECK:    { "checker": "alpha.core.PthreadLockBase", "messages": [
-  // CHECK-NEXT:      "Mutex states:",
+  // CHECK:           "Mutex states:",
   // CHECK-NEXT:      "mtx: destroyed",
   // CHECK-NEXT:      ""
   // CHECK-NEXT:    ]}
