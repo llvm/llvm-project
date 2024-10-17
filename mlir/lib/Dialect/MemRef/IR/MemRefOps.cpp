@@ -2517,6 +2517,42 @@ MemRefType CollapseShapeOp::computeCollapsedType(
                          srcType.getMemorySpace());
 }
 
+static bool isDynamicInGroup(ReassociationIndices group,
+                             ArrayRef<int64_t> sourceShape) {
+  return llvm::any_of(group, [sourceShape](int64_t dim) {
+    return ShapedType::isDynamic(sourceShape[dim]);
+  });
+}
+
+// This method supports following cases only:
+// - There is dynamic dimension in reassociation groups with single element.
+LogicalResult CollapseShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedResultShapes) {
+  SmallVector<ReassociationIndices, 4> reassociationArray =
+      getReassociationIndices();
+  Value source = getSrc();
+  auto sourceShape = cast<MemRefType>(source.getType()).getShape();
+  if (!ShapedType::isDynamicShape(sourceShape))
+    return failure();
+  for (auto group : enumerate(reassociationArray)) {
+    bool isDynInGroup = isDynamicInGroup(group.value(), sourceShape);
+    if (isDynInGroup && group.value().size() > 1)
+      return failure();
+  }
+  auto resultShape = cast<ShapedType>(getResultType()).getShape();
+
+  SmallVector<Value> dynamicValues;
+  for (int64_t i = 0; i < resultShape.size(); ++i) {
+    if (ShapedType::isDynamic(resultShape[i]))
+      dynamicValues.push_back(builder.create<DimOp>(
+          source.getLoc(), source,
+          builder.create<arith::ConstantIndexOp>(source.getLoc(), i)));
+  }
+  reifiedResultShapes = {getMixedValues(resultShape, dynamicValues, builder)};
+
+  return success();
+}
+
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<NamedAttribute> attrs) {
