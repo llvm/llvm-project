@@ -1540,11 +1540,9 @@ define i1 @phi_knownnonzero_eq_multiuse_oricmp(i32 %n, i32 %s, ptr %P, i32 %val)
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[ORPHI]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[CLEANUP:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[BOOL2:%.*]] = icmp eq i32 [[PHI]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ false, [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
-; CHECK-NEXT:    ret i1 [[FINAL]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
 entry:
   %tobool = icmp slt  i32 %n, %s
