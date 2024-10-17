@@ -4329,13 +4329,12 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     DC->setHasExternalVisibleStorage(true);
   }
 
-  // Load any pending lambdas for the function.
-  if (auto *FD = dyn_cast<FunctionDecl>(D); FD && FD->isCanonicalDecl()) {
-    if (auto IT = FunctionToLambdasMap.find(ID);
-        IT != FunctionToLambdasMap.end()) {
+  // Load any pending related decls.
+  if (D->isCanonicalDecl()) {
+    if (auto IT = RelatedDeclsMap.find(ID); IT != RelatedDeclsMap.end()) {
       for (auto LID : IT->second)
         GetDecl(LID);
-      FunctionToLambdasMap.erase(IT);
+      RelatedDeclsMap.erase(IT);
     }
   }
 
