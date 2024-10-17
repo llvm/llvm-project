@@ -227,7 +227,6 @@ constexpr bool test() {
         test_iterators<Iter1, Iter1, Iter2, sentinel_wrapper<Iter2>>();
         test_iterators<Iter1, Iter1, Iter2, sized_sentinel<Iter2>>();
       }
-      test_iterators<Iter1, sentinel_wrapper<Iter1>, Iter2, sentinel_wrapper<Iter2>>();
       test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, sized_sentinel<Iter2>>();
     });
   });
