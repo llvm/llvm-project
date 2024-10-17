@@ -3025,8 +3025,8 @@ private:
       unsigned NumParts, bool ForOrder = false);
 
   /// \returns the scalarization cost for this list of values. Assuming that
-  /// this subtree gets vectorized, we may need to extract the values from the
-  /// roots. This method calculates the cost of extracting the values.
+  /// this subtree gets vectorized, we may need to insert the values from the
+  /// roots. This method calculates the cost of inserting the values.
   /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
@@ -12897,7 +12897,15 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
               TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
               I * ScalarTyNumElements, cast<FixedVectorType>(ScalarTy));
     } else {
-      Cost = TTI->getScalarizationOverhead(VecTy, ~ShuffledElements,
+      // Add insertion costs for all elements, but not for loads that can be
+      // loaded directly into a vector element for free.
+      APInt FreeEltLoads = APInt::getZero(VL.size());
+      if (TTI->supportsEfficientVectorElementLoadStore())
+        for (unsigned I = 0, E = VL.size(); I < E; ++I)
+          if (VL[I]->hasOneUse() && isa<LoadInst>(VL[I]))
+            FreeEltLoads.setBit(I);
+      APInt DemandedElts = ~ShuffledElements & ~FreeEltLoads;
+      Cost = TTI->getScalarizationOverhead(VecTy, DemandedElts,
                                            /*Insert*/ true,
                                            /*Extract*/ false, CostKind);
     }
