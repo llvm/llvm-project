@@ -407,7 +407,20 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     registers.clear();
     extra_ranges.clear();
+
     const tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
+    uptr sp = 0;
+    PtraceRegistersStatus have_registers =
+        suspended_threads.GetRegistersAndSP(i, &registers, &sp);
+    if (have_registers != REGISTERS_AVAILABLE) {
+      Report("Unable to get registers from thread %llu.\n", os_id);
+      // If unable to get SP, consider the entire stack to be reachable unless
+      // GetRegistersAndSP failed with ESRCH.
+      if (have_registers == REGISTERS_UNAVAILABLE_FATAL)
+        continue;
+      sp = 0;
+    }
+
     LOG_THREADS("Processing thread %llu.\n", os_id);
     uptr stack_begin, stack_end, tls_begin, tls_end, cache_begin, cache_end;
     DTLS *dtls;
@@ -420,19 +433,12 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       LOG_THREADS("Thread %llu not found in registry.\n", os_id);
       continue;
     }
-    uptr sp;
-    PtraceRegistersStatus have_registers =
-        suspended_threads.GetRegistersAndSP(i, &registers, &sp);
-    if (have_registers != REGISTERS_AVAILABLE) {
-      Report("Unable to get registers from thread %llu.\n", os_id);
-      // If unable to get SP, consider the entire stack to be reachable unless
-      // GetRegistersAndSP failed with ESRCH.
-      if (have_registers == REGISTERS_UNAVAILABLE_FATAL)
-        continue;
-      sp = stack_begin;
-    }
+
     if (os_id == caller_tid)
       sp = caller_sp;
+
+    if (!sp)
+      sp = stack_begin;
 
     if (flags()->use_registers && have_registers) {
       uptr registers_begin = reinterpret_cast<uptr>(registers.data());
