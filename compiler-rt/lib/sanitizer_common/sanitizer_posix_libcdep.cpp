@@ -357,7 +357,10 @@ bool TryMemCpy(void *dest, const void *src, uptr n) {
 
     while (w) {
       uptr r = internal_read(fds[0], d, w);
-      CHECK(!internal_iserror(r, &e));
+      if(internal_iserror(r, &e)) {
+        CHECK_EQ(EINTR, e);
+        continue;
+      }
 
       d += r;
       w -= r;
