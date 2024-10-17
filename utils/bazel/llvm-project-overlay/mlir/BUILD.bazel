@@ -12017,21 +12017,21 @@ gentbl_cc_library(
         (
             [
                 "-gen-pass-decls",
-                "-name=TosaOpt",
+                "-name=Tosa",
             ],
             "include/mlir/Dialect/Tosa/Transforms/Passes.h.inc",
         ),
         (
             [
                 "-gen-enum-decls",
-                "-name=TosaOpt",
+                "-name=Tosa",
             ],
             "include/mlir/Dialect/Tosa/Transforms/PassesEnums.h.inc",
         ),
         (
             [
                 "-gen-enum-defs",
-                "-name=TosaOpt",
+                "-name=Tosa",
             ],
             "include/mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc",
         ),

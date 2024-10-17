@@ -1,4 +1,4 @@
-//===-- mlir-c/Dialect/SCF.h - C API for SCF dialect --------------*- C -*-===//
+//===-- mlir-c/Dialect/MPI.h - C API for MPI Dialect --------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_DIALECT_SCF_H
-#define MLIR_C_DIALECT_SCF_H
+#ifndef MLIR_C_DIALECT_MPI_H
+#define MLIR_C_DIALECT_MPI_H
 
 #include "mlir-c/IR.h"
 
@@ -16,12 +16,10 @@
 extern "C" {
 #endif
 
-MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(SCF, scf);
+MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(MPI, mpi);
 
 #ifdef __cplusplus
 }
 #endif
 
-#include "mlir/Dialect/SCF/Transforms/Passes.capi.h.inc"
-
-#endif // MLIR_C_DIALECT_SCF_H
+#endif // MLIR_C_DIALECT_MPI_H
