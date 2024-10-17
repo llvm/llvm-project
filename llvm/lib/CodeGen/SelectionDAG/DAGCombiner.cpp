@@ -17964,7 +17964,7 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
   return SDValue();
 }
 
-static SDValue foldFPToIntToFP(SDNode *N, SelectionDAG &DAG,
+static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                const TargetLowering &TLI) {
   // We only do this if the target has legal ftrunc. Otherwise, we'd likely be
   // replacing casts with a libcall. We also must be allowed to ignore -0.0
@@ -17982,11 +17982,11 @@ static SDValue foldFPToIntToFP(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   if (N->getOpcode() == ISD::SINT_TO_FP && N0.getOpcode() == ISD::FP_TO_SINT &&
       N0.getOperand(0).getValueType() == VT)
-    return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0.getOperand(0));
+    return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
 
   if (N->getOpcode() == ISD::UINT_TO_FP && N0.getOpcode() == ISD::FP_TO_UINT &&
       N0.getOperand(0).getValueType() == VT)
-    return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0.getOperand(0));
+    return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
 
   return SDValue();
 }
@@ -17995,17 +17995,17 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
+  SDLoc DL(N);
 
   // [us]itofp(undef) = 0, because the result value is bounded.
   if (N0.isUndef())
-    return DAG.getConstantFP(0.0, SDLoc(N), VT);
+    return DAG.getConstantFP(0.0, DL, VT);
 
   // fold (sint_to_fp c1) -> c1fp
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       // ...but only if the target supports immediate floating-point values
-      (!LegalOperations ||
-       TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
-    return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, N0);
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
+    return DAG.getNode(ISD::SINT_TO_FP, DL, VT, N0);
 
   // If the input is a legal type, and SINT_TO_FP is not legal on this target,
   // but UINT_TO_FP is legal on this target, try to convert.
@@ -18013,31 +18013,27 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
       hasOperation(ISD::UINT_TO_FP, OpVT)) {
     // If the sign bit is known to be zero, we can change this to UINT_TO_FP.
     if (DAG.SignBitIsZero(N0))
-      return DAG.getNode(ISD::UINT_TO_FP, SDLoc(N), VT, N0);
+      return DAG.getNode(ISD::UINT_TO_FP, DL, VT, N0);
   }
 
   // The next optimizations are desirable only if SELECT_CC can be lowered.
   // fold (sint_to_fp (setcc x, y, cc)) -> (select (setcc x, y, cc), -1.0, 0.0)
   if (N0.getOpcode() == ISD::SETCC && N0.getValueType() == MVT::i1 &&
       !VT.isVector() &&
-      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-    SDLoc DL(N);
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
     return DAG.getSelect(DL, VT, N0, DAG.getConstantFP(-1.0, DL, VT),
                          DAG.getConstantFP(0.0, DL, VT));
-  }
 
   // fold (sint_to_fp (zext (setcc x, y, cc))) ->
   //      (select (setcc x, y, cc), 1.0, 0.0)
   if (N0.getOpcode() == ISD::ZERO_EXTEND &&
       N0.getOperand(0).getOpcode() == ISD::SETCC && !VT.isVector() &&
-      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-    SDLoc DL(N);
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
     return DAG.getSelect(DL, VT, N0.getOperand(0),
                          DAG.getConstantFP(1.0, DL, VT),
                          DAG.getConstantFP(0.0, DL, VT));
-  }
 
-  if (SDValue FTrunc = foldFPToIntToFP(N, DAG, TLI))
+  if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
 
   return SDValue();
@@ -18047,17 +18043,17 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
+  SDLoc DL(N);
 
   // [us]itofp(undef) = 0, because the result value is bounded.
   if (N0.isUndef())
-    return DAG.getConstantFP(0.0, SDLoc(N), VT);
+    return DAG.getConstantFP(0.0, DL, VT);
 
   // fold (uint_to_fp c1) -> c1fp
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       // ...but only if the target supports immediate floating-point values
-      (!LegalOperations ||
-       TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
-    return DAG.getNode(ISD::UINT_TO_FP, SDLoc(N), VT, N0);
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
+    return DAG.getNode(ISD::UINT_TO_FP, DL, VT, N0);
 
   // If the input is a legal type, and UINT_TO_FP is not legal on this target,
   // but SINT_TO_FP is legal on this target, try to convert.
@@ -18065,25 +18061,23 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
       hasOperation(ISD::SINT_TO_FP, OpVT)) {
     // If the sign bit is known to be zero, we can change this to SINT_TO_FP.
     if (DAG.SignBitIsZero(N0))
-      return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, N0);
+      return DAG.getNode(ISD::SINT_TO_FP, DL, VT, N0);
   }
 
   // fold (uint_to_fp (setcc x, y, cc)) -> (select (setcc x, y, cc), 1.0, 0.0)
   if (N0.getOpcode() == ISD::SETCC && !VT.isVector() &&
-      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-    SDLoc DL(N);
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
     return DAG.getSelect(DL, VT, N0, DAG.getConstantFP(1.0, DL, VT),
                          DAG.getConstantFP(0.0, DL, VT));
-  }
 
-  if (SDValue FTrunc = foldFPToIntToFP(N, DAG, TLI))
+  if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
 
   return SDValue();
 }
 
 // Fold (fp_to_{s/u}int ({s/u}int_to_fpx)) -> zext x, sext x, trunc x, or x
-static SDValue FoldIntToFPToInt(SDNode *N, SelectionDAG &DAG) {
+static SDValue FoldIntToFPToInt(SDNode *N, const SDLoc &DL, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
@@ -18113,12 +18107,12 @@ static SDValue FoldIntToFPToInt(SDNode *N, SelectionDAG &DAG) {
   // represented exactly in the float range.
   if (APFloat::semanticsPrecision(Sem) >= ActualSize) {
     if (VT.getScalarSizeInBits() > SrcVT.getScalarSizeInBits()) {
-      unsigned ExtOp = IsInputSigned && IsOutputSigned ? ISD::SIGN_EXTEND
-                                                       : ISD::ZERO_EXTEND;
-      return DAG.getNode(ExtOp, SDLoc(N), VT, Src);
+      unsigned ExtOp =
+          IsInputSigned && IsOutputSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      return DAG.getNode(ExtOp, DL, VT, Src);
     }
     if (VT.getScalarSizeInBits() < SrcVT.getScalarSizeInBits())
-      return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Src);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Src);
     return DAG.getBitcast(VT, Src);
   }
   return SDValue();
@@ -18127,6 +18121,7 @@ static SDValue FoldIntToFPToInt(SDNode *N, SelectionDAG &DAG) {
 SDValue DAGCombiner::visitFP_TO_SINT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (fp_to_sint undef) -> undef
   if (N0.isUndef())
@@ -18134,14 +18129,15 @@ SDValue DAGCombiner::visitFP_TO_SINT(SDNode *N) {
 
   // fold (fp_to_sint c1fp) -> c1
   if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
-    return DAG.getNode(ISD::FP_TO_SINT, SDLoc(N), VT, N0);
+    return DAG.getNode(ISD::FP_TO_SINT, DL, VT, N0);
 
-  return FoldIntToFPToInt(N, DAG);
+  return FoldIntToFPToInt(N, DL, DAG);
 }
 
 SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (fp_to_uint undef) -> undef
   if (N0.isUndef())
@@ -18149,9 +18145,9 @@ SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
 
   // fold (fp_to_uint c1fp) -> c1
   if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
-    return DAG.getNode(ISD::FP_TO_UINT, SDLoc(N), VT, N0);
+    return DAG.getNode(ISD::FP_TO_UINT, DL, VT, N0);
 
-  return FoldIntToFPToInt(N, DAG);
+  return FoldIntToFPToInt(N, DL, DAG);
 }
 
 SDValue DAGCombiner::visitXROUND(SDNode *N) {
