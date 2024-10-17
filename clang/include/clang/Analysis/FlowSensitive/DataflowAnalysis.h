@@ -28,11 +28,23 @@
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+
+namespace clang {
+namespace dataflow {
+class NoopLattice;
+}
+}
+
+namespace llvm {
+extern template struct CLANG_TEMPLATE_ABI
+    Any::TypeId<clang::dataflow::NoopLattice>;
+};
 
 namespace clang {
 namespace dataflow {
