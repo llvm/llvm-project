@@ -393,8 +393,6 @@ void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
 void ParallelLoopGeneratorKMP::createCallStaticFini(Value *GlobalThreadID) {
   const std::string Name = "__kmpc_for_static_fini";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy =
-      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
@@ -457,8 +455,6 @@ Value *ParallelLoopGeneratorKMP::createCallDispatchNext(Value *GlobalThreadID,
   const std::string Name =
       is64BitArch() ? "__kmpc_dispatch_next_8" : "__kmpc_dispatch_next_4";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy =
-      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
