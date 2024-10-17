@@ -171,6 +171,12 @@ public:
     return IntegralAP<false>(Copy);
   }
 
+  void bitcastToMemory(std::byte *Dest) const { assert(false); }
+
+  static IntegralAP bitcastFromMemory(const std::byte *Src, unsigned BitWidth) {
+    return IntegralAP();
+  }
+
   ComparisonCategoryResult compare(const IntegralAP &RHS) const {
     assert(Signed == RHS.isSigned());
     assert(bitWidth() == RHS.bitWidth());
