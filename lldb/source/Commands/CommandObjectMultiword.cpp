@@ -102,11 +102,9 @@ llvm::Error CommandObjectMultiword::LoadUserSubcommand(
 
   std::string str_name(name);
 
-  auto pos = m_subcommand_dict.find(str_name);
-  if (pos == m_subcommand_dict.end()) {
-    m_subcommand_dict[str_name] = cmd_obj_sp;
+  auto [pos, inserted] = m_subcommand_dict.try_emplace(str_name, cmd_obj_sp);
+  if (inserted)
     return llvm::Error::success();
-  }
 
   const char *error_str = nullptr;
   if (!can_replace)
