@@ -308,6 +308,61 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL:  func.func @no_hoisting_zero_trip_loop
+func.func @no_hoisting_zero_trip_loop(%arg0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // %lb and %ub are unbounded, so do not hoist.
+
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "prevent.dce"
+  scf.for %arg2 = %lb to %ub step %c1 {
+    %read = vector.transfer_read %arg0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "prevent.dce"(%read) : (vector<4xi32>) ->()
+  }
+
+  // %lb_0 is in range [%lb, 8], and %ub_0 is in range [4, %ub].
+  // Since %lb_0 could be greater than %ub_0, do not hoist.
+  %lb_0 = affine.min affine_map<(d0) -> (d0, 8)>(%lb)
+  %ub_0 = affine.max affine_map<(d0) -> (d0, 4)>(%ub)
+
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "prevent.dce"
+  scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
+    %read = vector.transfer_read %arg0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "prevent.dce"(%read) : (vector<4xi32>) ->()
+  }
+
+  // %lb_1 is in range [%lb, 4], and %ub_1 is in range [8, %ub].
+  // Since %lb_1 is guaranteed to be less than %ub_1, hoisting is possible.
+  %lb_1 = affine.min affine_map<(d0) -> (d0, 4)>(%lb)
+  %ub_1 = affine.max affine_map<(d0) -> (d0, 8)>(%ub)
+
+  // CHECK:       vector.transfer_read
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    "prevent.dce"
+  scf.for %arg2 = %lb_1 to %ub_1 step %c1 {
+    %read = vector.transfer_read %arg0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "prevent.dce"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // Regression test - `vector.transfer_read` below should not be hoisted.
 // Indeed, %collapse_shape (written to by `vector.transfer_write`) and %alloca
 // (read by `vector.transfer_read`) alias.
