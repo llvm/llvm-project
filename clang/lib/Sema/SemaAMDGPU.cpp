@@ -68,7 +68,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return true;
     Expr *ValArg = TheCall->getArg(0);
     QualType Ty = ValArg->getType();
-    if (!Ty->isArithmeticType()) {
+    // TODO: Vectors can also be supported.
+    if (!Ty->isArithmeticType() || Ty->isAnyComplexType()) {
       SemaRef.Diag(ValArg->getBeginLoc(),
                    diag::err_typecheck_cond_expect_int_float)
           << Ty << ValArg->getSourceRange();
@@ -82,7 +83,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     for (unsigned I = 0; I != 2; ++I) {
       Expr *ValArg = TheCall->getArg(I);
       QualType Ty = ValArg->getType();
-      if (!Ty->isArithmeticType()) {
+      // TODO: Vectors can also be supported.
+      if (!Ty->isArithmeticType() || Ty->isAnyComplexType()) {
         SemaRef.Diag(ValArg->getBeginLoc(),
                      diag::err_typecheck_cond_expect_int_float)
             << Ty << ValArg->getSourceRange();
