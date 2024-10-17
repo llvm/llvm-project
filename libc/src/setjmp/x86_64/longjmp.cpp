@@ -81,7 +81,7 @@ LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
 #if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
       // clang-format off
       ,[rotation] "i"(jmpbuf::ROTATION)
-      , [chksum] "i"(offsetof(__jmp_buf, __chksum))
+      ,[chksum] "i"(offsetof(__jmp_buf, __chksum))
   // clang-format on
 #endif
       : "rax", "rdx", "rcx", "rsi");
