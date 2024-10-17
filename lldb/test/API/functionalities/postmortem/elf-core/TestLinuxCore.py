@@ -847,7 +847,7 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIfLLVMTargetMissing("LoongArch")
     def test_loongarch64_regs(self):
-        # check registers using 64 bit LoongArch64 core file containing GP-registers only
+        # check registers using 64 bit LoongArch core file containing GP and FP registers
         target = self.dbg.CreateTarget(None)
         self.assertTrue(target, VALID_TARGET)
         process = target.LoadCore("linux-loongarch64.core")
@@ -929,7 +929,7 @@ class LinuxCoreTestCase(TestBase):
         fpr_values["fcc5"] = "0x01"
         fpr_values["fcc6"] = "0x00"
         fpr_values["fcc7"] = "0x01"
-        fpr_values["fcsr"] = "0x00"
+        fpr_values["fcsr"] = "0x0000"
 
         for regname, value in values.items():
             self.expect(
