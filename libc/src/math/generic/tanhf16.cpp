@@ -40,8 +40,7 @@ LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) {
 
   // When -2^(-14) <= x <= -2^(-9), or |x| <= 0x1.d2p-4,
   // or |x| >= atanh(1 - 2^(-11)), or x is NaN.
-  if (LIBC_UNLIKELY((x_u >= 0x8400U && x_u <= 0x9800U) || x_abs <= 0x2f48U ||
-                    x_abs >= 0x4429U)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x2f48U || x_abs >= 0x4429U)) {
     // tanh(NaN) = NaN
     if (x_bits.is_nan()) {
       if (x_bits.is_signaling_nan()) {
