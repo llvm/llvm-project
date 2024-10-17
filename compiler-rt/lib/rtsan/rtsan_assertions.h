@@ -28,6 +28,9 @@ void ExpectNotRealtime(Context &context, const DiagnosticsInfo &info,
   if (context.InRealtimeContext() && !context.IsBypassed()) {
     ScopedBypass sb{context};
 
+    if (IsFunctionSuppressed(info.func_name))
+      return;
+
     __sanitizer::BufferedStackTrace stack;
 
     // We use the unwind_on_fatal flag here because of precedent with other
