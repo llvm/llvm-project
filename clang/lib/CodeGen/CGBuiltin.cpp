@@ -19044,8 +19044,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     assert(Error == ASTContext::GE_None && "Should not codegen an error");
     llvm::Type *DataTy = ConvertType(E->getArg(0)->getType());
     unsigned Size = DataTy->getPrimitiveSizeInBits();
-    llvm::Type *IntTy = llvm::IntegerType::get(
-        Builder.getContext(), std::max(Size, 32u));
+    llvm::Type *IntTy =
+        llvm::IntegerType::get(Builder.getContext(), std::max(Size, 32u));
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, IntTy);
     assert(E->getNumArgs() == 5 || E->getNumArgs() == 6);
     bool InsertOld = E->getNumArgs() == 5;
