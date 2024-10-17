@@ -26,6 +26,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cinttypes>
 #include <list>
@@ -3660,6 +3661,7 @@ struct OmpLastprivateClause {
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
+  llvm::omp::Clause Id() const;
 
 #define GEN_FLANG_CLAUSE_PARSER_CLASSES
 #include "llvm/Frontend/OpenMP/OMP.inc"
