@@ -2,12 +2,12 @@
 # --use-unique-output-file-name.
 
 # Files are overwritten without the option.
-# RUN: rm -rf %t.xunit*.xml
+# RUN: rm -f %t.xunit*.xml
 # RUN: echo "test" > %t.xunit.xml
 # RUN: not %{lit} --xunit-xml-output %t.xunit.xml %{inputs}/xunit-output
 # RUN: FileCheck < %t.xunit.xml %s --check-prefix=NEW
 
-# RUN: rm -rf %t.xunit*.xml
+# RUN: rm -f %t.xunit*.xml
 # RUN: echo "test" > %t.xunit.xml
 # Files should not be overwritten with the option.
 # RUN: not %{lit} --xunit-xml-output %t.xunit.xml --use-unique-output-file-name %{inputs}/xunit-output
