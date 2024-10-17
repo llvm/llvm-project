@@ -22,32 +22,27 @@ multiclass BULK_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
 
 // Bespoke types and nodes for bulk memory ops
 
-// memory.copy (may trap on empty ranges)
-def wasm_memory_copy_t : SDTypeProfile<0, 5,
+def wasm_memcpylike_t : SDTypeProfile<0, 5,
   [SDTCisInt<0>, SDTCisInt<1>, SDTCisPtrTy<2>, SDTCisPtrTy<3>, SDTCisInt<4>]
 >;
-def wasm_memory_copy : SDNode<"WebAssemblyISD::MEMORY_COPY", wasm_memory_copy_t,
+def wasm_memsetlike_t : SDTypeProfile<0, 4,
+  [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>, SDTCisInt<3>]
+>;
+
+// memory.copy (may trap on empty ranges)
+def wasm_memory_copy : SDNode<"WebAssemblyISD::MEMORY_COPY", wasm_memcpylike_t,
                               [SDNPHasChain, SDNPMayLoad, SDNPMayStore]>;
 
 // memory.copy with a branch to avoid trapping
-def wasm_memcpy_t : SDTypeProfile<0, 5,
-  [SDTCisInt<0>, SDTCisInt<1>, SDTCisPtrTy<2>, SDTCisPtrTy<3>, SDTCisInt<4>]
->;
-def wasm_memcpy : SDNode<"WebAssemblyISD::MEMCPY", wasm_memcpy_t,
+def wasm_memcpy : SDNode<"WebAssemblyISD::MEMCPY", wasm_memcpylike_t,
                          [SDNPHasChain, SDNPMayLoad, SDNPMayStore]>;
 
 // memory.fill (may trap on empty ranges)
-def wasm_memory_fill_t : SDTypeProfile<0, 4,
-  [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>, SDTCisInt<3>]
->;
-def wasm_memory_fill : SDNode<"WebAssemblyISD::MEMORY_FILL", wasm_memory_fill_t,
+def wasm_memory_fill : SDNode<"WebAssemblyISD::MEMORY_FILL", wasm_memsetlike_t,
                               [SDNPHasChain, SDNPMayStore]>;
 
 // memory.fill with a branch to avoid trapping
-def wasm_memset_t : SDTypeProfile<0, 4,
-  [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>, SDTCisInt<3>]
->;
-def wasm_memset : SDNode<"WebAssemblyISD::MEMSET", wasm_memset_t,
+def wasm_memset : SDNode<"WebAssemblyISD::MEMSET", wasm_memsetlike_t,
                          [SDNPHasChain, SDNPMayStore]>;
 
 // A multiclass for defining Wasm's raw bulk-memory `memory.*` instructions.
