@@ -10941,6 +10941,40 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
   return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
 }
 
+bool ScalarEvolution::isURemWithKnownMultiplier(const SCEV *Expr,
+                                                const SCEV *Multiplier,
+                                                const SCEV *&LHS,
+                                                const SCEV *&RHS) {
+  // Case with Multiplier == 1: just match URem expr.
+  if (Multiplier->isOne())
+    return matchURem(Expr, LHS, RHS);
+  // In case of Multiplier != 1, try to match Expr in form of:
+  // (-Multiplier * (Dividend /u Divisor) * Divisor) + (Multiplier * Dividend).
+  const auto *Add = dyn_cast<SCEVAddExpr>(Expr);
+  if (!Add || Add->getNumOperands() != 2)
+    return false;
+  const auto *Mul = dyn_cast<SCEVMulExpr>(Add->getOperand(0));
+  if (!Mul || Mul->getNumOperands() != 3 ||
+      Mul->getOperand(0) != getNegativeSCEV(Multiplier))
+    return false;
+  const auto *A = Add->getOperand(1);
+
+  const auto MatchDividend = [&](const SCEV *Expr, const SCEV *Divisor) {
+    const auto *UDiv = dyn_cast<SCEVUDivExpr>(Expr);
+    if (!UDiv || UDiv->getRHS() != Divisor)
+      return false;
+    const auto *Dividend = UDiv->getLHS();
+    if (getMulExpr(Dividend, Multiplier) != A)
+      return false;
+    LHS = Dividend;
+    RHS = Divisor;
+    return true;
+  };
+
+  return MatchDividend(Mul->getOperand(1), Mul->getOperand(2)) ||
+         MatchDividend(Mul->getOperand(2), Mul->getOperand(1));
+}
+
 std::pair<const SCEV *, const SCEV *>
 ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
   // Compute SCEV on entry of loop L.
