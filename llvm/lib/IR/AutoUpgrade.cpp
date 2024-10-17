@@ -5396,9 +5396,11 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   }
 
   // Remove all incompatibile attributes from function.
-  F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
+  F.removeRetAttrs(AttributeFuncs::typeIncompatible(
+      F.getReturnType(), F.getAttributes().getRetAttrs()));
   for (auto &Arg : F.args())
-    Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
+    Arg.removeAttrs(
+        AttributeFuncs::typeIncompatible(Arg.getType(), Arg.getAttributes()));
 
   // Older versions of LLVM treated an "implicit-section-name" attribute
   // similarly to directly setting the section on a Function.

@@ -1292,7 +1292,8 @@ bool isNoFPClassCompatibleType(Type *Ty);
 /// if only attributes that are known to be safely droppable are contained in
 /// the mask; only attributes that might be unsafe to drop (e.g., ABI-related
 /// attributes) are in the mask; or both.
-AttributeMask typeIncompatible(Type *Ty, AttributeSafetyKind ASK = ASK_ALL);
+AttributeMask typeIncompatible(Type *Ty, AttributeSet AS,
+                               AttributeSafetyKind ASK = ASK_ALL);
 
 /// Get param/return attributes which imply immediate undefined behavior if an
 /// invalid value is passed. For example, this includes noundef (where undef
