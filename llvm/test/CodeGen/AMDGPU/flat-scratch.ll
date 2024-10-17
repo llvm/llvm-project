@@ -4705,8 +4705,7 @@ define amdgpu_ps void @large_offset() {
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_movk_i32 s0, 0x810
-; GFX10-NEXT:    s_addk_i32 s0, 0x3c0
+; GFX10-NEXT:    s_movk_i32 s0, 0xbd0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v0
@@ -4823,8 +4822,7 @@ define amdgpu_ps void @large_offset() {
 ; GFX10-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
 ; GFX10-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-PAL-NEXT:    s_movk_i32 s0, 0x810
-; GFX10-PAL-NEXT:    s_addk_i32 s0, 0x3c0
+; GFX10-PAL-NEXT:    s_movk_i32 s0, 0xbd0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v3, v0
