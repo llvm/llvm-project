@@ -33,6 +33,22 @@ void constant_idx_safe0(unsigned idx) {
   buffer[0] = 0;
 }
 
+int array[10]; // expected-warning{{'array' is an unsafe buffer that does not perform bounds checks}}
+
+void masked_idx(unsigned long long idx) {
+  array[idx & 5] = 10; // no warning
+  array[idx & 11 & 5] = 3; // no warning
+  array[idx & 11] = 20; // expected-note{{used in buffer access here}} 
+}
+
+int array2[5];
+
+void mased_idx_false(unsigned long long idx) {
+  array2[6 & 5]; // no warning
+  array2[6 & idx & (idx + 1) & 5]; // no warning
+  array2[6 & idx & 5 & (idx + 1) | 4]; 
+}
+
 void constant_idx_unsafe(unsigned idx) {
   int buffer[10];       // expected-warning{{'buffer' is an unsafe buffer that does not perform bounds checks}}
                         // expected-note@-1{{change type of 'buffer' to 'std::array' to label it for hardening}}

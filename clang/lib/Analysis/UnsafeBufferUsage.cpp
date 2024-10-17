@@ -427,6 +427,48 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   //    -  e. g. "Try harder to find a NamedDecl to point at in the note."
   //    already duplicated
   //  - call both from Sema and from here
+  std::function<llvm::APInt(const Expr *exp, unsigned int limit)>
+      SafeMaskedAccess;
+  unsigned int RecLimit = 5;
+
+  SafeMaskedAccess = [&](const Expr *exp, unsigned int RecLimit) -> llvm::APInt {
+    llvm::APInt Max = llvm::APInt::getMaxValue(Finder->getASTContext().getIntWidth(exp->getType()));
+    Max.setAllBits();
+
+    if (RecLimit == 0)
+      return Max;
+
+    //RecLimit--;
+
+    if (const auto *IntLit = dyn_cast<IntegerLiteral>(exp)) {
+      const APInt ArrIdx = IntLit->getValue();
+      return ArrIdx;
+    }
+
+    if (const auto *BinEx = dyn_cast<BinaryOperator>(exp)) {
+      llvm::APInt LHS = SafeMaskedAccess(BinEx->getLHS()->IgnoreParenCasts(), RecLimit);
+      llvm::APInt RHS = SafeMaskedAccess(BinEx->getRHS()->IgnoreParenCasts(), RecLimit);
+      
+      switch(BinEx->getOpcode()) {
+        case BO_And:
+          LHS = LHS & RHS.getLimitedValue();
+          return LHS;
+        case BO_Or:
+          LHS = LHS | RHS.getLimitedValue();
+          return LHS;
+        case BO_Shl:
+          LHS = LHS << RHS.getLimitedValue();
+          return LHS;
+        case BO_Xor:
+          LHS = LHS ^ RHS.getLimitedValue();
+          return LHS;
+        default:
+          return Max;
+      }
+    }
+
+    return Max;
+  };
 
   const auto *BaseDRE =
       dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
@@ -445,6 +487,10 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     // bug
     if (ArrIdx.isNonNegative() &&
         ArrIdx.getLimitedValue() < CATy->getLimitedSize())
+      return true;
+  } else if (const auto *BinEx = dyn_cast<BinaryOperator>(Node.getIdx())) {
+    APInt result = SafeMaskedAccess(Node.getIdx(), RecLimit);
+    if (result.isNonNegative() && result.getLimitedValue() < CATy->getLimitedSize())
       return true;
   }
 
@@ -1152,7 +1198,7 @@ public:
     Handler.handleUnsafeOperation(ASE, IsRelatedToDecl, Ctx);
   }
   SourceLocation getSourceLoc() const override { return ASE->getBeginLoc(); }
-
+  
   DeclUseList getClaimedVarUseSites() const override {
     if (const auto *DRE =
             dyn_cast<DeclRefExpr>(ASE->getBase()->IgnoreParenImpCasts())) {
