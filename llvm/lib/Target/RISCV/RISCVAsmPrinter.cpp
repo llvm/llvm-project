@@ -19,6 +19,7 @@
 #include "RISCV.h"
 #include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVRegisterInfo.h"
 #include "RISCVTargetMachine.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/APInt.h"
@@ -347,6 +348,13 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'i': // Literal 'i' if operand is not a register.
       if (!MO.isReg())
         OS << 'i';
+      return false;
+    case 'N': // Print the register encoding as an integer (0-31)
+      if (!MO.isReg())
+        return true;
+
+      const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
+      OS << TRI->getEncodingValue(MO.getReg());
       return false;
     }
   }
