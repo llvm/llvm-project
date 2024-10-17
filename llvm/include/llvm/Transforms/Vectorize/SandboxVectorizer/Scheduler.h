@@ -100,7 +100,9 @@ class Scheduler {
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
   /// Schedule nodes until we can schedule \p Instrs back-to-back.
   bool tryScheduleUntil(ArrayRef<Instruction *> Instrs);
-
+  /// Schedules all nodes in \p Bndl, marks them as scheduled, updates the
+  /// UnscheduledSuccs counter of all dependency predecessors, and adds any of
+  /// them that become ready to the ready list.
   void scheduleAndUpdateReadyList(SchedBundle &Bndl);
 
   /// Disable copies.

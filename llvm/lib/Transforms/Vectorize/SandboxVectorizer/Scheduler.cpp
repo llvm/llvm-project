@@ -10,6 +10,7 @@
 
 namespace llvm::sandboxir {
 
+// TODO: Check if we can cache top/bottom to reduce compile-time.
 DGNode *SchedBundle::getTop() const {
   DGNode *TopN = Nodes.front();
   for (auto *N : drop_begin(Nodes)) {
