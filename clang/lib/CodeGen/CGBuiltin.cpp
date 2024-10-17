@@ -5641,10 +5641,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       llvm::Type *ArgTys[] = {Arg0->getType(), I8PTy, Int32Ty, Int32Ty};
       llvm::FunctionType *FTy = llvm::FunctionType::get(
           Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
-      Value *BCast = Builder.CreatePointerCast(Arg1, I8PTy);
+      Value *ACast = Builder.CreateAddrSpaceCast(Arg1, I8PTy);
       return RValue::get(
           EmitRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name),
-                          {Arg0, BCast, PacketSize, PacketAlign}));
+                          {Arg0, ACast, PacketSize, PacketAlign}));
     } else {
       assert(4 == E->getNumArgs() &&
              "Illegal number of parameters to pipe function");
