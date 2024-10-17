@@ -289,7 +289,7 @@ func.func @fastmath(%f: f32, %i: i32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) 
   // CHECK: math.trunc %[[F]] fastmath<fast> : f32
   %0 = math.trunc %f fastmath<fast> : f32
   // CHECK: math.powf %[[V]], %[[V]] fastmath<fast> : vector<4xf32>
-  %1 = math.powf %v, %v fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : vector<4xf32>
+  %1 = math.powf %v, %v fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn,ftz> : vector<4xf32>
   // CHECK: math.fma %[[T]], %[[T]], %[[T]] : tensor<4x4x?xf32>
   %2 = math.fma %t, %t, %t fastmath<none> : tensor<4x4x?xf32>
   // CHECK: math.absf %[[F]] fastmath<ninf> : f32

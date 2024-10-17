@@ -108,12 +108,13 @@ def FASTMATH_NO_SIGNED_ZEROS : I32BitEnumAttrCaseBit<"nsz",      3>;
 def FASTMATH_ALLOW_RECIP     : I32BitEnumAttrCaseBit<"arcp",     4>;
 def FASTMATH_ALLOW_CONTRACT  : I32BitEnumAttrCaseBit<"contract", 5>;
 def FASTMATH_APPROX_FUNC     : I32BitEnumAttrCaseBit<"afn",      6>;
+def FASTMATH_FTZ             : I32BitEnumAttrCaseBit<"ftz",      7>;
 def FASTMATH_FAST            : I32BitEnumAttrCaseGroup<
     "fast",
     [
       FASTMATH_REASSOC,         FASTMATH_NO_NANS,     FASTMATH_NO_INFS,
       FASTMATH_NO_SIGNED_ZEROS, FASTMATH_ALLOW_RECIP, FASTMATH_ALLOW_CONTRACT,
-      FASTMATH_APPROX_FUNC]>;
+      FASTMATH_APPROX_FUNC, FASTMATH_FTZ]>;
 
 def FastMathFlags : I32BitEnumAttr<
     "FastMathFlags",
@@ -121,7 +122,8 @@ def FastMathFlags : I32BitEnumAttr<
     [
       FASTMATH_NONE,           FASTMATH_REASSOC,         FASTMATH_NO_NANS,
       FASTMATH_NO_INFS,        FASTMATH_NO_SIGNED_ZEROS, FASTMATH_ALLOW_RECIP,
-      FASTMATH_ALLOW_CONTRACT, FASTMATH_APPROX_FUNC,     FASTMATH_FAST]> {
+      FASTMATH_ALLOW_CONTRACT, FASTMATH_APPROX_FUNC,     FASTMATH_FTZ,
+      FASTMATH_FAST]> {
   let separator = ",";
   let cppNamespace = "::mlir::arith";
   let genSpecializedAttr = 0;
