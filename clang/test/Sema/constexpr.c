@@ -357,3 +357,10 @@ void infsNaNs() {
   constexpr double db5 = LD_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const double'}}
   constexpr double db6 = INF;
 }
+
+void constexprif() {
+  if constexpr (300) {} //expected-error {{expected '(' after 'if'}}
+}
+void constevalif() {
+  if consteval (300) {} //expected-error {{expected '(' after 'if'}}
+}
