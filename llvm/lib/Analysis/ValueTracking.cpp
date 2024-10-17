@@ -834,12 +834,13 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       if (V->getType()->isPointerTy()) {
         if (RetainedKnowledge RK = getKnowledgeFromBundle(
                 *I, I->bundle_op_info_begin()[Elem.Index])) {
-        // Allow AllowEphemerals in isValidAssumeForContext, as the CxtI might
-        // be the producer of the pointer in the bundle. At the moment, align
-        // assumptions aren't optimized away.
+          // Allow AllowEphemerals in isValidAssumeForContext, as the CxtI might
+          // be the producer of the pointer in the bundle. At the moment, align
+          // assumptions aren't optimized away.
           if (RK.WasOn == V && RK.AttrKind == Attribute::Alignment &&
               isPowerOf2_64(RK.ArgValue) &&
-              isValidAssumeForContext(I, Q.CxtI, Q.DT, /*AllowEphemerals*/ true))
+              isValidAssumeForContext(I, Q.CxtI, Q.DT,
+                                      /*AllowEphemerals*/ true))
             Known.Zero.setLowBits(Log2_64(RK.ArgValue));
         }
       } else if (V->getType()->isIntOrIntVectorTy()) {
