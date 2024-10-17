@@ -704,10 +704,12 @@ struct zip_common : public zip_traits<ZipType, ReferenceTupleType, Iters...> {
   using value_type = typename Base::value_type;
 
   std::tuple<Iters...> iterators;
+  mutable std::optional<value_type> value;
 
 protected:
-  template <size_t... Ns> value_type deref(std::index_sequence<Ns...>) const {
-    return value_type(*std::get<Ns>(iterators)...);
+  template <size_t... Ns> const value_type &deref(std::index_sequence<Ns...>) const {
+    value.emplace(*std::get<Ns>(iterators)...);
+    return *value;
   }
 
   template <size_t... Ns> void tup_inc(std::index_sequence<Ns...>) {
@@ -728,7 +730,7 @@ protected:
 public:
   zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
 
-  value_type operator*() const { return deref(IndexSequence{}); }
+  const value_type &operator*() const { return deref(IndexSequence{}); }
 
   ZipType &operator++() {
     tup_inc(IndexSequence{});

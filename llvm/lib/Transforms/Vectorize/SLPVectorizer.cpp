@@ -9991,7 +9991,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       if (!E->ReorderIndices.empty() && CommonVF == E->ReorderIndices.size() &&
           CommonVF == CommonMask.size() &&
           any_of(enumerate(CommonMask),
-                 [](const auto &&P) {
+                 [](const auto &P) {
                    return P.value() != PoisonMaskElem &&
                           static_cast<unsigned>(P.value()) != P.index();
                  }) &&
