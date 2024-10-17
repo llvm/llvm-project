@@ -299,7 +299,7 @@ static void SetNonBlock(int fd) {
 
 bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   while (size) {
-    // `read` from `sock_pair[0]` into a dummy buffer to free up the pipe buffer
+    // `read` from `fds[0]` into a dummy buffer to free up the pipe buffer
     // for more `write` is slower than just recreating a pipe.
     int fds[2];
     if (pipe(fds))
