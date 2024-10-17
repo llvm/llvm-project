@@ -132,6 +132,7 @@ def Mesh_ProcessMultiIndexOp : Mesh_Op<"process_multi_index", [
     OpBuilder<(ins "::mlir::mesh::MeshOp":$mesh)>,
     OpBuilder<(ins "StringRef":$mesh, "ArrayRef<MeshAxis>":$axes)>
   ];
+  let hasCanonicalizer = 1;
 }
 
 def Mesh_ProcessLinearIndexOp : Mesh_Op<"process_linear_index", [
@@ -198,7 +199,7 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     `?` indicates dynamic halo sizes.
     
     6. [Optional] Offsets for each shard and sharded tensor dimension.
-    `sharded_dims_offsets`is provided as a flattened 1d array of i64s:
+    `sharded_dims_offsets` is provided as a flattened 1d array of i64s:
     For each sharded tensor dimension the offsets (starting index) of all shards in that dimension.
     The offset of each first shard is omitted and is implicitly assumed to be 0.
     The last value per dimension denotes the end of the last shard.
@@ -285,6 +286,7 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     OpBuilder<(ins "mlir::mesh::MeshSharding":$from)>
   ];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Mesh_ShardShapeOp : Mesh_Op<"shard_shape", [Pure]> {

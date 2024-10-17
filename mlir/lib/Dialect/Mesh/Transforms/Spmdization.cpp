@@ -443,22 +443,27 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
       !sourceSharding.equalHaloSizes(targetSharding)) {
     auto srcHaloSizes = sourceSharding.getStaticHaloSizes();
     auto tgtHaloSizes = targetSharding.getStaticHaloSizes();
+    assert(srcHaloSizes.empty() || srcHaloSizes.size() == tgtHaloSizes.size());
     assert(
         ((srcHaloSizes.empty() || !ShapedType::isDynamicShape(srcHaloSizes)) &&
          !ShapedType::isDynamicShape(tgtHaloSizes) &&
          sourceShard.getType().hasStaticShape()) &&
         "dynamic shapes/halos are not supported yet for mesh-spmdization");
     auto rank = sourceShard.getType().getRank();
-    SmallVector<int64_t> outShape, srcCoreOffs(rank, 0), tgtCoreOffs,
-        strides(rank, 1), coreShape(sourceShard.getType().getShape());
+    auto splitAxes = sourceSharding.getSplitAxes();
+    SmallVector<int64_t> srcCoreOffs(rank, 0), tgtCoreOffs(rank, 0),
+        strides(rank, 1), outShape(sourceShard.getType().getShape()),
+        coreShape(sourceShard.getType().getShape());
     for (auto i = 0u; i < rank; ++i) {
-      if (!srcHaloSizes.empty()) {
-        coreShape[i] -= srcHaloSizes[i * 2] + srcHaloSizes[i * 2 + 1];
-        srcCoreOffs[i] = srcHaloSizes[i * 2];
+      if (i < splitAxes.size() && !splitAxes[i].empty()) {
+        if (!srcHaloSizes.empty()) {
+          coreShape[i] -= srcHaloSizes[i * 2] + srcHaloSizes[i * 2 + 1];
+          srcCoreOffs[i] = srcHaloSizes[i * 2];
+        }
+        tgtCoreOffs[i] = tgtHaloSizes[i * 2];
+        outShape[i] =
+            coreShape[i] + tgtHaloSizes[i * 2] + tgtHaloSizes[i * 2 + 1];
       }
-      tgtCoreOffs.emplace_back(tgtHaloSizes[i * 2]);
-      outShape.emplace_back(coreShape[i] + tgtHaloSizes[i * 2] +
-                            tgtHaloSizes[i * 2 + 1]);
     }
     auto noVals = ValueRange{};
     auto initVal = builder.create<tensor::EmptyOp>(
@@ -539,6 +544,10 @@ TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, MeshOp mesh,
                                MeshSharding targetSharding,
                                TypedValue<ShapedType> sourceUnshardedValue,
                                TypedValue<ShapedType> sourceShard) {
+  if (sourceSharding == targetSharding) {
+    return sourceShard;
+  }
+
   if (auto tryRes = tryUpdateHaloInResharding(
           builder, mesh, sourceSharding, targetSharding,
           sourceUnshardedValue.getType(), sourceShard)) {

@@ -547,6 +547,42 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return success();
 }
 
+namespace {
+class FoldDynamicLists final : public OpRewritePattern<ShardingOp> {
+public:
+  using OpRewritePattern<ShardingOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShardingOp op,
+                                PatternRewriter &b) const override {
+    auto mixedHalos =
+        getMixedValues(op.getStaticHaloSizes(), op.getDynamicHaloSizes(), b);
+    auto mixedOffs = getMixedValues(op.getStaticShardedDimsOffsets(),
+                                    op.getDynamicShardedDimsOffsets(), b);
+
+    // No constant operands were folded, just return;
+    if (failed(foldDynamicIndexList(mixedHalos, /*onlyNonNegative=*/true)) &&
+        failed(foldDynamicIndexList(mixedOffs, /*onlyNonNegative=*/true))) {
+      return failure();
+    }
+
+    auto halos = decomposeMixedValues(mixedHalos);
+    auto offs = decomposeMixedValues(mixedOffs);
+
+    op.setStaticHaloSizes(halos.first);
+    op.getDynamicHaloSizesMutable().assign(halos.second);
+    op.setStaticShardedDimsOffsets(offs.first);
+    op.getDynamicShardedDimsOffsetsMutable().assign(offs.second);
+
+    return success();
+  }
+};
+} // namespace
+
+void ShardingOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
+                                             mlir::MLIRContext *context) {
+  results.add<FoldDynamicLists>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // MeshSharding
 //===----------------------------------------------------------------------===//
@@ -738,6 +774,62 @@ void ProcessMultiIndexOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 void ProcessMultiIndexOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResults()[0], "proc_linear_idx");
+}
+
+namespace {
+#ifndef NDEBUG
+static std::vector<int> convertStringToVector(const std::string &str) {
+  std::vector<int> result;
+  std::stringstream ss(str);
+  std::string item;
+  while (std::getline(ss, item, ',')) {
+    result.push_back(std::stoi(item));
+  }
+  return result;
+}
+#endif // NDEBUG
+
+std::optional<SmallVector<Value>> getMyMultiIndex(OpBuilder &b,
+                                                  ::mlir::mesh::MeshOp mesh) {
+#ifndef NDEBUG
+  if (auto envStr = getenv("DEBUG_MESH_INDEX")) {
+    auto myIdx = convertStringToVector(envStr);
+    if (myIdx.size() == mesh.getShape().size()) {
+      SmallVector<Value> idxs;
+      for (auto i : myIdx) {
+        idxs.push_back(b.create<::mlir::arith::ConstantOp>(mesh->getLoc(),
+                                                           b.getIndexAttr(i)));
+      }
+      return idxs;
+    } else {
+      mesh->emitError() << "DEBUG_MESH_INDEX has wrong size";
+    }
+  }
+#endif // NDEBUG
+  return std::nullopt;
+}
+
+class FoldStaticIndex final : public OpRewritePattern<ProcessMultiIndexOp> {
+public:
+  using OpRewritePattern<ProcessMultiIndexOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ProcessMultiIndexOp op,
+                                PatternRewriter &b) const override {
+#ifndef NDEBUG
+    SymbolTableCollection tmp;
+    if (auto idxs = getMyMultiIndex(b, getMesh(op, tmp))) {
+      b.replaceOp(op, idxs.value());
+      return success();
+    }
+#endif // NDEBUG
+    return failure();
+  }
+};
+} // namespace
+
+void ProcessMultiIndexOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.add<FoldStaticIndex>(context);
 }
 
 //===----------------------------------------------------------------------===//
