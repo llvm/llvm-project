@@ -193,9 +193,8 @@ StorageLocation *
 CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
     const RecordStorageLocation &RecordLoc, const CallExpr *CE,
     Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
-  QualType Type = CE->getType();
-  assert(!Type.isNull());
-  assert(CE->isGLValue() || Type->isRecordType());
+  assert(!CE->getType().isNull());
+  assert(CE->isGLValue() || CE->getType()->isRecordType());
   auto &ObjMap = ConstMethodReturnStorageLocations[&RecordLoc];
   const FunctionDecl *DirectCallee = CE->getDirectCallee();
   if (DirectCallee == nullptr)
