@@ -40,6 +40,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
 using namespace clang;
@@ -4132,87 +4133,6 @@ static bool isProvablyNonNull(Address Addr, CodeGenFunction &CGF) {
   return llvm::isKnownNonZero(Addr.getBasePointer(), CGF.CGM.getDataLayout());
 }
 
-/// Emit the actual writing-back of a writeback.
-static void emitWriteback(CodeGenFunction &CGF,
-                          const CallArgList::Writeback &writeback) {
-  const LValue &srcLV = writeback.Source;
-  Address srcAddr = srcLV.getAddress();
-  assert(!isProvablyNull(srcAddr.getBasePointer()) &&
-         "shouldn't have writeback for provably null argument");
-
-  if (writeback.WritebackExpr) {
-    CGF.EmitIgnoredExpr(writeback.WritebackExpr);
-
-    if (writeback.LifetimeSz)
-      CGF.EmitLifetimeEnd(writeback.LifetimeSz,
-                          writeback.Temporary.getBasePointer());
-    return;
-  }
-
-  llvm::BasicBlock *contBB = nullptr;
-
-  // If the argument wasn't provably non-null, we need to null check
-  // before doing the store.
-  bool provablyNonNull = isProvablyNonNull(srcAddr, CGF);
-
-  if (!provablyNonNull) {
-    llvm::BasicBlock *writebackBB = CGF.createBasicBlock("icr.writeback");
-    contBB = CGF.createBasicBlock("icr.done");
-
-    llvm::Value *isNull = CGF.Builder.CreateIsNull(srcAddr, "icr.isnull");
-    CGF.Builder.CreateCondBr(isNull, contBB, writebackBB);
-    CGF.EmitBlock(writebackBB);
-  }
-
-  // Load the value to writeback.
-  llvm::Value *value = CGF.Builder.CreateLoad(writeback.Temporary);
-
-  // Cast it back, in case we're writing an id to a Foo* or something.
-  value = CGF.Builder.CreateBitCast(value, srcAddr.getElementType(),
-                                    "icr.writeback-cast");
-
-  // Perform the writeback.
-
-  // If we have a "to use" value, it's something we need to emit a use
-  // of.  This has to be carefully threaded in: if it's done after the
-  // release it's potentially undefined behavior (and the optimizer
-  // will ignore it), and if it happens before the retain then the
-  // optimizer could move the release there.
-  if (writeback.ToUse) {
-    assert(srcLV.getObjCLifetime() == Qualifiers::OCL_Strong);
-
-    // Retain the new value.  No need to block-copy here:  the block's
-    // being passed up the stack.
-    value = CGF.EmitARCRetainNonBlock(value);
-
-    // Emit the intrinsic use here.
-    CGF.EmitARCIntrinsicUse(writeback.ToUse);
-
-    // Load the old value (primitively).
-    llvm::Value *oldValue = CGF.EmitLoadOfScalar(srcLV, SourceLocation());
-
-    // Put the new value in place (primitively).
-    CGF.EmitStoreOfScalar(value, srcLV, /*init*/ false);
-
-    // Release the old value.
-    CGF.EmitARCRelease(oldValue, srcLV.isARCPreciseLifetime());
-
-  // Otherwise, we can just do a normal lvalue store.
-  } else {
-    CGF.EmitStoreThroughLValue(RValue::get(value), srcLV);
-  }
-
-  // Jump to the continuation block.
-  if (!provablyNonNull)
-    CGF.EmitBlock(contBB);
-}
-
-static void emitWritebacks(CodeGenFunction &CGF,
-                           const CallArgList &args) {
-  for (const auto &I : args.writebacks())
-    emitWriteback(CGF, I);
-}
-
 static void deactivateArgCleanupsBeforeCall(CodeGenFunction &CGF,
                                             const CallArgList &CallArgs) {
   ArrayRef<CallArgList::CallArgCleanup> Cleanups =
@@ -4679,6 +4599,87 @@ void CallArg::copyInto(CodeGenFunction &CGF, Address Addr) const {
                                 : RV.isVolatileQualified());
   }
   IsUsed = true;
+}
+
+/// Emit the actual writing-back of a writeback.
+void CodeGenFunction::EmitWriteback(CodeGenFunction &CGF,
+                                    const CallArgList::Writeback &writeback) {
+  const LValue &srcLV = writeback.Source;
+  Address srcAddr = srcLV.getAddress();
+  assert(!isProvablyNull(srcAddr.getBasePointer()) &&
+         "shouldn't have writeback for provably null argument");
+
+  if (writeback.WritebackExpr) {
+    CGF.EmitIgnoredExpr(writeback.WritebackExpr);
+
+    if (writeback.LifetimeSz)
+      CGF.EmitLifetimeEnd(writeback.LifetimeSz,
+                          writeback.Temporary.getBasePointer());
+    return;
+  }
+
+  llvm::BasicBlock *contBB = nullptr;
+
+  // If the argument wasn't provably non-null, we need to null check
+  // before doing the store.
+  bool provablyNonNull = isProvablyNonNull(srcAddr, CGF);
+
+  if (!provablyNonNull) {
+    llvm::BasicBlock *writebackBB = CGF.createBasicBlock("icr.writeback");
+    contBB = CGF.createBasicBlock("icr.done");
+
+    llvm::Value *isNull = CGF.Builder.CreateIsNull(srcAddr, "icr.isnull");
+    CGF.Builder.CreateCondBr(isNull, contBB, writebackBB);
+    CGF.EmitBlock(writebackBB);
+  }
+
+  // Load the value to writeback.
+  llvm::Value *value = CGF.Builder.CreateLoad(writeback.Temporary);
+
+  // Cast it back, in case we're writing an id to a Foo* or something.
+  value = CGF.Builder.CreateBitCast(value, srcAddr.getElementType(),
+                                    "icr.writeback-cast");
+
+  // Perform the writeback.
+
+  // If we have a "to use" value, it's something we need to emit a use
+  // of.  This has to be carefully threaded in: if it's done after the
+  // release it's potentially undefined behavior (and the optimizer
+  // will ignore it), and if it happens before the retain then the
+  // optimizer could move the release there.
+  if (writeback.ToUse) {
+    assert(srcLV.getObjCLifetime() == Qualifiers::OCL_Strong);
+
+    // Retain the new value.  No need to block-copy here:  the block's
+    // being passed up the stack.
+    value = CGF.EmitARCRetainNonBlock(value);
+
+    // Emit the intrinsic use here.
+    CGF.EmitARCIntrinsicUse(writeback.ToUse);
+
+    // Load the old value (primitively).
+    llvm::Value *oldValue = CGF.EmitLoadOfScalar(srcLV, SourceLocation());
+
+    // Put the new value in place (primitively).
+    CGF.EmitStoreOfScalar(value, srcLV, /*init*/ false);
+
+    // Release the old value.
+    CGF.EmitARCRelease(oldValue, srcLV.isARCPreciseLifetime());
+
+    // Otherwise, we can just do a normal lvalue store.
+  } else {
+    CGF.EmitStoreThroughLValue(RValue::get(value), srcLV);
+  }
+
+  // Jump to the continuation block.
+  if (!provablyNonNull)
+    CGF.EmitBlock(contBB);
+}
+
+void CodeGenFunction::EmitWritebacks(CodeGenFunction &CGF,
+                                     const CallArgList &args) {
+  for (const auto &I : args.writebacks())
+    EmitWriteback(CGF, I);
 }
 
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
@@ -5893,7 +5894,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Emit any call-associated writebacks immediately.  Arguably this
   // should happen after any return-value munging.
   if (CallArgs.hasWritebacks())
-    emitWritebacks(*this, CallArgs);
+    CodeGenFunction::EmitWritebacks(*this, CallArgs);
 
   // The stack cleanup for inalloca arguments has to run out of the normal
   // lexical order, so deactivate it and run it manually here.
