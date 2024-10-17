@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILIntrinsicExpansion.h"
-#include "DXILConstants.h"
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -68,7 +67,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
-  case Intrinsic::dx_group_memory_barrier_with_group_sync:
     return true;
   }
   return false;
@@ -602,9 +600,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
-    break;
-  case Intrinsic::dx_group_memory_barrier_with_group_sync:
-    Result = expandMemoryBarrier(Orig, IntrinsicId);
     break;
   }
   if (Result) {
