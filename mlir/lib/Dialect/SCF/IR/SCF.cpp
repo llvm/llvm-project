@@ -1775,7 +1775,7 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
     // Replace all induction vars with a single trip count with their lower
     // bound.
     Location loc = op.getLoc();
-    bool replacedIv = false;
+    bool changed = false;
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
@@ -1787,9 +1787,9 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
       }
       rewriter.replaceAllUsesWith(
           iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
-      return success();
+      changed = true;
     }
-    return failure();
+    return success(changed);
   }
 };
 
