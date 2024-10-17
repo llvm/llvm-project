@@ -9,3 +9,21 @@ add_entrypoint_object(
     libc.src.signal.raise
     libc.src.stdlib._Exit
 )
+
+add_object_library(
+    cprng
+  HDRS
+    cprng.h
+  SRCS
+    cprng.cpp
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.vdso
+    libc.src.__support.threads.callonce
+    libc.src.__support.threads.linux.raw_mutex
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.new
+    libc.src.__support.threads.thread
+    libc.src.sys.auxv.getauxval
+    libc.src.stdlib.atexit
+)
