@@ -316,12 +316,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe>(Copy) ||
+            VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(Copy) ||
         match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                         m_VPValue())))
       Copy->addOperand(getConstantVPV(Part));
 
-    if (isa<VPVectorPointerRecipe>(R))
+    if (isa<VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
