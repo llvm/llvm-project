@@ -495,12 +495,6 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   }
 }
 
-// Returns handle type from a resource, if the type is a resource
-static const HLSLAttributedResourceType *
-findHandleTypeOnResource(const clang::Type *Ty) {
-  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
-}
-
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   // If the global variable has resource binding, add it to the list of globals
@@ -509,7 +503,8 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
   if (!RBA)
     return;
 
-  if (!findHandleTypeOnResource(VD->getType().getTypePtr()))
+  if (!HLSLAttributedResourceType::findHandleTypeOnResource(
+          VD->getType().getTypePtr()))
     // FIXME: Only simple declarations of resources are supported for now.
     // Arrays of resources or resources in user defined classes are
     // not implemented yet.
@@ -547,7 +542,8 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
         continue;
 
       const HLSLAttributedResourceType *AttrResType =
-          findHandleTypeOnResource(VD->getType().getTypePtr());
+          HLSLAttributedResourceType::findHandleTypeOnResource(
+              VD->getType().getTypePtr());
 
       // FIXME: Only simple declarations of resources are supported for now.
       // Arrays of resources or resources in user defined classes are

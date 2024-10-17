@@ -5338,7 +5338,7 @@ std::string FunctionEffectWithCondition::description() const {
 
 const HLSLAttributedResourceType *
 HLSLAttributedResourceType::findHandleTypeOnResource(const Type *RT) {
-  // If the type T is an HLSL resource class, the first field must
+  // If the type RT is an HLSL resource class, the first field must
   // be the resource handle of type HLSLAttributedResourceType
   const clang::Type *Ty = RT->getUnqualifiedDesugaredType();
   if (const RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
