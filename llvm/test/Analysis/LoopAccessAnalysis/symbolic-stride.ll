@@ -23,7 +23,7 @@ define void @single_stride(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride) 
 ; CHECK-NEXT:      Equal predicate: %stride == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul:
+; CHECK-NEXT:      [PSE] %gep.A = getelementptr nusw i32, ptr %A, i64 %mul:
 ; CHECK-NEXT:        {%A,+,(4 * %stride)}<%loop>
 ; CHECK-NEXT:        --> {%A,+,4}<%loop>
 ;
@@ -33,13 +33,13 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %mul = mul i64 %iv, %stride
-  %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul
+  %gep.A = getelementptr nusw i32, ptr %A, i64 %mul
   %load = load i32, ptr %gep.A, align 4
-  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %gep.B = getelementptr nusw i32, ptr %B, i64 %iv
   %load_1 = load i32, ptr %gep.B, align 4
   %add = add i32 %load_1, %load
   %iv.next = add nuw nsw i64 %iv, 1
-  %gep.A.next = getelementptr inbounds i32, ptr %A, i64 %iv.next
+  %gep.A.next = getelementptr nusw i32, ptr %A, i64 %iv.next
   store i32 %add, ptr %gep.A.next, align 4
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %exit, label %loop
@@ -67,7 +67,7 @@ define void @single_stride_struct(ptr noalias %A, ptr noalias %B, i64 %N, i64 %s
 ; CHECK-NEXT:      Equal predicate: %stride == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds { i32, i8 }, ptr %A, i64 %mul:
+; CHECK-NEXT:      [PSE] %gep.A = getelementptr nusw { i32, i8 }, ptr %A, i64 %mul:
 ; CHECK-NEXT:        {%A,+,(8 * %stride)}<%loop>
 ; CHECK-NEXT:        --> {%A,+,8}<%loop>
 ;
@@ -77,16 +77,16 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %mul = mul i64 %iv, %stride
-  %gep.A = getelementptr inbounds { i32, i8 }, ptr %A, i64 %mul
+  %gep.A = getelementptr nusw { i32, i8 }, ptr %A, i64 %mul
   %load = load { i32, i8 }, ptr %gep.A, align 4
-  %gep.B = getelementptr inbounds { i32, i8 }, ptr %B, i64 %iv
+  %gep.B = getelementptr nusw { i32, i8 }, ptr %B, i64 %iv
   %load_1 = load { i32, i8 }, ptr %gep.B, align 4
   %v1 = extractvalue { i32, i8 } %load, 0
   %v2 = extractvalue { i32, i8} %load_1, 0
   %add = add i32 %v1, %v2
   %ins = insertvalue { i32, i8 } undef, i32 %add, 0
   %iv.next = add nuw nsw i64 %iv, 1
-  %gep.A.next = getelementptr inbounds { i32, i8 }, ptr %A, i64 %iv.next
+  %gep.A.next = getelementptr nusw { i32, i8 }, ptr %A, i64 %iv.next
   store { i32, i8 } %ins, ptr %gep.A.next, align 4
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %exit, label %loop
@@ -105,7 +105,7 @@ define void @single_stride_castexpr(i32 %offset, ptr %src, ptr %dst, i1 %cond) {
 ; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
 ; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv.3
+; CHECK-NEXT:          %gep.src = getelementptr nusw i32, ptr %src, i32 %iv.3
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP1]]:
 ; CHECK-NEXT:          (Low: ((4 * %iv.1) + %dst) High: (804 + (4 * %iv.1) + %dst))
@@ -144,7 +144,7 @@ outer.header:
 inner.loop:
   %iv.2 = phi i64 [ %iv.1, %outer.header ], [ %iv.2.next, %inner.loop ]
   %iv.3 = phi i32 [ 0, %outer.header ], [ %iv.3.next, %inner.loop ]
-  %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv.3
+  %gep.src = getelementptr nusw i32, ptr %src, i32 %iv.3
   %load = load i32, ptr %gep.src, align 8
   %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
   store i32 %load, ptr %gep.dst, align 8
@@ -167,7 +167,7 @@ define void @single_stride_castexpr_multiuse(i32 %offset, ptr %src, ptr %dst, i1
 ; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
 ; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3
+; CHECK-NEXT:          %gep.src = getelementptr nusw i32, ptr %src, i64 %iv.3
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP3]]:
 ; CHECK-NEXT:          (Low: ((4 * %iv.1) + %dst) High: (804 + (4 * %iv.1) + (-4 * (zext i32 %offset to i64))<nsw> + %dst))
@@ -181,7 +181,7 @@ define void @single_stride_castexpr_multiuse(i32 %offset, ptr %src, ptr %dst, i1
 ; CHECK-NEXT:      Equal predicate: %offset == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3:
+; CHECK-NEXT:      [PSE] %gep.src = getelementptr nusw i32, ptr %src, i64 %iv.3:
 ; CHECK-NEXT:        {((4 * (zext i32 %offset to i64))<nuw><nsw> + %src),+,4}<%inner.loop>
 ; CHECK-NEXT:        --> {(4 + %src),+,4}<%inner.loop>
 ; CHECK-NEXT:      [PSE] %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2:
@@ -210,7 +210,7 @@ outer.header:
 inner.loop:
   %iv.2 = phi i64 [ %iv.1, %outer.header ], [ %iv.2.next, %inner.loop ]
   %iv.3 = phi i64 [ %offset.zext, %outer.header ], [ %iv.3.next, %inner.loop ]
-  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3
+  %gep.src = getelementptr nusw i32, ptr %src, i64 %iv.3
   %load = load i32, ptr %gep.src, align 8
   %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
   store i32 %load, ptr %gep.dst, align 8
@@ -291,10 +291,10 @@ define void @two_strides(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride.1, 
 ; CHECK-NEXT:      Equal predicate: %stride.1 == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul:
+; CHECK-NEXT:      [PSE] %gep.A = getelementptr nusw i32, ptr %A, i64 %mul:
 ; CHECK-NEXT:        {%A,+,(4 * %stride.1)}<%loop>
 ; CHECK-NEXT:        --> {%A,+,4}<%loop>
-; CHECK-NEXT:      [PSE] %gep.A.next = getelementptr inbounds i32, ptr %A, i64 %mul.2:
+; CHECK-NEXT:      [PSE] %gep.A.next = getelementptr nusw i32, ptr %A, i64 %mul.2:
 ; CHECK-NEXT:        {((4 * %stride.2) + %A),+,(4 * %stride.2)}<%loop>
 ; CHECK-NEXT:        --> {(4 + %A),+,4}<%loop>
 ;
@@ -304,14 +304,14 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %mul = mul i64 %iv, %stride.1
-  %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul
+  %gep.A = getelementptr nusw i32, ptr %A, i64 %mul
   %load = load i32, ptr %gep.A, align 4
-  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %gep.B = getelementptr nusw i32, ptr %B, i64 %iv
   %load_1 = load i32, ptr %gep.B, align 4
   %add = add i32 %load_1, %load
   %iv.next = add nuw nsw i64 %iv, 1
   %mul.2 = mul i64 %iv.next, %stride.2
-  %gep.A.next = getelementptr inbounds i32, ptr %A, i64 %mul.2
+  %gep.A.next = getelementptr nusw i32, ptr %A, i64 %mul.2
   store i32 %add, ptr %gep.A.next, align 4
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %exit, label %loop
@@ -344,13 +344,13 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %mul = mul i64 %iv, %stride
-  %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul
+  %gep.A = getelementptr nusw i32, ptr %A, i64 %mul
   %load = load i32, ptr %gep.A, align 4
-  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %gep.B = getelementptr nusw i32, ptr %B, i64 %iv
   %load_1 = load i32, ptr %gep.B, align 4
   %add = add i32 %load_1, %load
   %iv.next = add nuw nsw i64 %iv, 1
-  %gep.A.next = getelementptr inbounds i32, ptr %A, i64 %iv.next
+  %gep.A.next = getelementptr nusw i32, ptr %A, i64 %iv.next
   store i32 %add, ptr %gep.A.next, align 4
   %exitcond = icmp eq i64 %iv.next, %stride
   br i1 %exitcond, label %exit, label %loop
@@ -372,7 +372,7 @@ define void @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %j)  {
 ; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+; CHECK-NEXT:          %arrayidx = getelementptr nusw i16, ptr %B, i32 %add
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP5]]:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
@@ -386,7 +386,7 @@ define void @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %j)  {
 ; CHECK-NEXT:      {%j,+,%N}<%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
+; CHECK-NEXT:      [PSE] %arrayidx = getelementptr nusw i16, ptr %B, i32 %add:
 ; CHECK-NEXT:        ((2 * (sext i32 {%j,+,%N}<%loop> to i64))<nsw> + %B)
 ; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 %N to i64))<nsw>}<%loop>
 ;
@@ -398,7 +398,7 @@ loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %mul = mul i32 %iv, %N
   %add = add i32 %mul, %j
-  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %arrayidx = getelementptr nusw i16, ptr %B, i32 %add
   %load = load i16, ptr %arrayidx
   %sext = sext i16 %load to i32
   store i32 %sext, ptr %A
@@ -423,7 +423,7 @@ define void @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 
 ; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+; CHECK-NEXT:          %arrayidx = getelementptr nusw i16, ptr %B, i32 %add
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP7]]:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
@@ -437,7 +437,7 @@ define void @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 
 ; CHECK-NEXT:      {%j,+,(zext i16 %N to i32)}<nw><%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
+; CHECK-NEXT:      [PSE] %arrayidx = getelementptr nusw i16, ptr %B, i32 %add:
 ; CHECK-NEXT:        ((2 * (sext i32 {%j,+,(zext i16 %N to i32)}<nw><%loop> to i64))<nsw> + %B)
 ; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i16 %N to i64))<nuw><nsw>}<%loop>
 ;
@@ -450,7 +450,7 @@ loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %mul = mul nuw i32 %iv, %N.ext
   %add = add i32 %mul, %j
-  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %arrayidx = getelementptr nusw i16, ptr %B, i32 %add
   %load = load i16, ptr %arrayidx
   %sext = sext i16 %load to i32
   store i32 %sext, ptr %A
@@ -474,7 +474,7 @@ define void @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+; CHECK-NEXT:          %arrayidx = getelementptr nusw i16, ptr %B, i32 %add
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP9]]:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
@@ -488,7 +488,7 @@ define void @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-NEXT:      {%j,+,(sext i16 %N to i32)}<nw><%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
+; CHECK-NEXT:      [PSE] %arrayidx = getelementptr nusw i16, ptr %B, i32 %add:
 ; CHECK-NEXT:        ((2 * (sext i32 {%j,+,(sext i16 %N to i32)}<nw><%loop> to i64))<nsw> + %B)
 ; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i16 %N to i64))<nsw>}<%loop>
 ;
@@ -501,7 +501,7 @@ loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %mul = mul nuw i32 %iv, %N.ext
   %add = add i32 %mul, %j
-  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %arrayidx = getelementptr nusw i16, ptr %B, i32 %add
   %load = load i16, ptr %arrayidx
   %sext = sext i16 %load to i32
   store i32 %sext, ptr %A
@@ -525,7 +525,7 @@ define void @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-NEXT:        Comparing group ([[GRP11:0x[0-9a-f]+]]):
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+; CHECK-NEXT:          %arrayidx = getelementptr nusw i16, ptr %B, i32 %add
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP11]]:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
@@ -539,7 +539,7 @@ define void @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-NEXT:      {%j,+,(trunc i64 %N to i32)}<nw><%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
+; CHECK-NEXT:      [PSE] %arrayidx = getelementptr nusw i16, ptr %B, i32 %add:
 ; CHECK-NEXT:        ((2 * (sext i32 {%j,+,(trunc i64 %N to i32)}<nw><%loop> to i64))<nsw> + %B)
 ; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 (trunc i64 %N to i32) to i64))<nsw>}<%loop>
 ;
@@ -552,7 +552,7 @@ loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %mul = mul nuw i32 %iv, %N.trunc
   %add = add i32 %mul, %j
-  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %arrayidx = getelementptr nusw i16, ptr %B, i32 %add
   %load = load i16, ptr %arrayidx
   %sext = sext i16 %load to i32
   store i32 %sext, ptr %A
