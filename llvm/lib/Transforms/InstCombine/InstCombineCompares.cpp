@@ -6774,8 +6774,11 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   // have the same sign.
   if (I.isSigned() &&
       ((Op0Known.Zero.isNegative() && Op1Known.Zero.isNegative()) ||
-       (Op0Known.One.isNegative() && Op1Known.One.isNegative())))
-    return new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
+       (Op0Known.One.isNegative() && Op1Known.One.isNegative()))) {
+    ICmpInst *NewICmp = new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
+    NewICmp->setSameSign();
+    return NewICmp;
+  }
 
   return nullptr;
 }

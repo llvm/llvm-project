@@ -1457,7 +1457,7 @@ define <2 x i1> @test67vecinverse(<2 x i32> %x) {
 define i1 @test68(i32 %x) {
 ; CHECK-LABEL: @test68(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 127
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[AND]], 30
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[AND]], 30
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %x, 127
