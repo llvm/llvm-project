@@ -17,7 +17,6 @@ func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!
         fir.store %3 to %6 : !fir.ref<i32>
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -43,7 +42,6 @@ func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!
 // CHECK:   llvm.store %[[I1]], %[[ARR_I_REF]] : i32, !llvm.ptr
 // CHECK: omp.yield
 // CHECK: }
-// CHECK: omp.terminator
 // CHECK: }
 // CHECK: omp.terminator
 // CHECK: }
@@ -93,7 +91,6 @@ func.func @_QPsb(%arr: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
         fir.store %indx to %3 : !fir.ref<i32>
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -110,7 +107,6 @@ func.func @_QPsb(%arr: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
 // CHECK-NEXT:   omp.loop_nest (%[[INDX:.*]]) : i32 = (%[[C1]]) to (%[[C50]]) inclusive step (%[[C1]]) {
 // CHECK:          llvm.store %[[INDX]], %{{.*}} : i32, !llvm.ptr
 // CHECK:          omp.yield
-// CHECK:        omp.terminator
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
 
@@ -200,7 +196,6 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
         fir.store %3 to %6 : !fir.ref<i32>
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -226,7 +221,6 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // CHECK:   llvm.store %[[I1]], %[[ARR_I_REF]] : i32, !llvm.ptr
 // CHECK: omp.yield
 // CHECK: }
-// CHECK: omp.terminator
 // CHECK: }
 // CHECK: omp.terminator
 // CHECK: }
@@ -519,7 +513,6 @@ func.func @_QPsimd_with_nested_loop() {
       fir.store %7 to %3 : !fir.ref<i32>
       omp.yield
     }
-    omp.terminator
   }
   return
 }
@@ -540,7 +533,6 @@ func.func @_QPsimd_with_nested_loop() {
 // CHECK:             ^bb3:
 // CHECK:               omp.yield
 // CHECK:             }
-// CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           llvm.return
 // CHECK:         }
@@ -736,7 +728,6 @@ func.func @_QPsb() {
 // CHECK:          %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32
 // CHECK:          llvm.store %[[RES_EXT]], %[[PRV]] : i32, !llvm.ptr
 // CHECK:          omp.yield
-// CHECK:        omp.terminator
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
 
@@ -781,7 +772,6 @@ func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> 
         fir.store %11 to %prv : !fir.ref<!fir.logical<4>>
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }

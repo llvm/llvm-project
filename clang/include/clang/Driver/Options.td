@@ -2002,16 +2002,18 @@ def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Grou
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
 def frecord_command_line : Flag<["-"], "frecord-command-line">,
-  DocBrief<[{Generate a section named ".GCC.command.line" containing the clang
+  DocBrief<[{Generate a section named ".GCC.command.line" containing the
 driver command-line. After linking, the section may contain multiple command
 lines, which will be individually terminated by null bytes. Separate arguments
 within a command line are combined with spaces; spaces and backslashes within an
 argument are escaped with backslashes. This format differs from the format of
 the equivalent section produced by GCC with the -frecord-gcc-switches flag.
 This option is currently only supported on ELF targets.}]>,
-  Group<f_clang_Group>;
+  Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def fno_record_command_line : Flag<["-"], "fno-record-command-line">,
-  Group<f_clang_Group>;
+  Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def : Flag<["-"], "frecord-gcc-switches">, Alias<frecord_command_line>;
 def : Flag<["-"], "fno-record-gcc-switches">, Alias<fno_record_command_line>;
 def fcommon : Flag<["-"], "fcommon">, Group<f_Group>,
@@ -2996,7 +2998,7 @@ defm clangir : BoolFOption<"clangir",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
-def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
 /// ClangIR-specific options - END
 
@@ -5382,9 +5384,14 @@ def mlasx : Flag<["-"], "mlasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable Loongson Advanced SIMD Extension (LASX).">;
 def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable Loongson Advanced SIMD Extension (LASX).">;
+let Flags = [TargetSpecific] in {
 def msimd_EQ : Joined<["-"], "msimd=">, Group<m_loongarch_Features_Group>,
-  Flags<[TargetSpecific]>,
   HelpText<"Select the SIMD extension(s) to be enabled in LoongArch either 'none', 'lsx', 'lasx'.">;
+def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
+def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable annotate table jump instruction to correlate it with the jump table.">;
+} // let Flags = [TargetSpecific]
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;
@@ -6077,7 +6084,7 @@ def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOpti
 def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
 
 //===----------------------------------------------------------------------===//
-// pie/pic options (clang + flang-new)
+// pie/pic options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Visibility = [ClangOption, FlangOption] in {
 
@@ -6093,7 +6100,7 @@ def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
 } // let Vis = [Default, FlangOption]
 
 //===----------------------------------------------------------------------===//
-// Target Options (clang + flang-new)
+// Target Options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Flags = [TargetSpecific] in {
 let Visibility = [ClangOption, FlangOption] in {
@@ -7166,6 +7173,9 @@ def mrelocation_model : Separate<["-"], "mrelocation-model">,
   NormalizedValues<["Static", "PIC_", "ROPI", "RWPI", "ROPI_RWPI", "DynamicNoPIC"]>,
   MarshallingInfoEnum<CodeGenOpts<"RelocationModel">, "PIC_">;
 def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">;
+def record_command_line : Separate<["-"], "record-command-line">,
+  HelpText<"The string to embed in the .LLVM.command.line section.">,
+  MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
 
 } // let Visibility = [CC1Option, CC1AsOption, FC1Option]
 
@@ -7186,9 +7196,6 @@ def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
 def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
   HelpText<"The string to embed in the Dwarf debug flags record.">,
   MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
-def record_command_line : Separate<["-"], "record-command-line">,
-  HelpText<"The string to embed in the .LLVM.command.line section.">,
-  MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zstd">,
     NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Zlib", "Zstd"]>,
@@ -8524,7 +8531,7 @@ def _SLASH_execution_charset : CLCompileJoined<"execution-charset:">,
   HelpText<"Set runtime encoding, supports only UTF-8">,
   Alias<fexec_charset_EQ>;
 def _SLASH_std : CLCompileJoined<"std:">,
-  HelpText<"Set language version (c++14,c++17,c++20,c++latest,c11,c17)">;
+  HelpText<"Set language version (c++14,c++17,c++20,c++23preview,c++latest,c11,c17)">;
 def _SLASH_U : CLJoinedOrSeparate<"U">, HelpText<"Undefine macro">,
   MetaVarName<"<macro>">, Alias<U>;
 def _SLASH_validate_charset : CLFlag<"validate-charset">,

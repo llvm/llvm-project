@@ -774,6 +774,13 @@ mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
                        mlir::FunctionType libFuncType,
                        llvm::ArrayRef<mlir::Value> args) {
   llvm::StringRef libFuncName = mathOp.runtimeFunc;
+
+  // On AIX, __clog is used in libm.
+  if (fir::getTargetTriple(builder.getModule()).isOSAIX() &&
+      libFuncName == "clog") {
+    libFuncName = "__clog";
+  }
+
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << libFuncName
                           << "' call with type ";
              libFuncType.dump(); llvm::dbgs() << "\n");

@@ -82,8 +82,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
-          NewRecipe = new VPWidenCallRecipe(
-              CI, Ingredient.operands(), getVectorIntrinsicIDForCall(CI, &TLI),
+          NewRecipe = new VPWidenIntrinsicRecipe(
+              *CI, getVectorIntrinsicIDForCall(CI, &TLI),
+              {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
               CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
@@ -1352,6 +1353,7 @@ void VPlanTransforms::addActiveLaneMask(
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
@@ -1383,6 +1385,14 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
+              .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
+                SmallVector<VPValue *> Ops(Sel->operands());
+                Ops.push_back(&EVL);
+                return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
+                                                  TypeInfo.inferScalarType(Sel),
+                                                  false, false, false);
+              })
+
               .Default([&](VPRecipeBase *R) { return nullptr; });
 
       if (!NewRecipe)
@@ -1636,8 +1646,9 @@ void VPlanTransforms::createInterleaveGroups(
       // zero.
       assert(IG->getIndex(IRInsertPos) != 0 &&
              "index of insert position shouldn't be zero");
+      auto &DL = IRInsertPos->getDataLayout();
       APInt Offset(32,
-                   getLoadStoreType(IRInsertPos)->getScalarSizeInBits() / 8 *
+                   DL.getTypeAllocSize(getLoadStoreType(IRInsertPos)) *
                        IG->getIndex(IRInsertPos),
                    /*IsSigned=*/true);
       VPValue *OffsetVPV = Plan.getOrAddLiveIn(

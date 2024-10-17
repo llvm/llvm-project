@@ -357,6 +357,7 @@ def AArch64fcvtr_mt  : SDNode<"AArch64ISD::FP_ROUND_MERGE_PASSTHRU", SDT_AArch64
 def AArch64fcvte_mt  : SDNode<"AArch64ISD::FP_EXTEND_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64ucvtf_mt  : SDNode<"AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64scvtf_mt  : SDNode<"AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+def AArch64fcvtx_mt  : SDNode<"AArch64ISD::FCVTX_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64fcvtzu_mt : SDNode<"AArch64ISD::FCVTZU_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64fcvtzs_mt : SDNode<"AArch64ISD::FCVTZS_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 
@@ -3788,7 +3789,7 @@ let Predicates = [HasSVE2orSME, UseExperimentalZeroingPseudos] in {
 let Predicates = [HasSVE2orSME] in {
   // SVE2 floating-point convert precision
   defm FCVTXNT_ZPmZ : sve2_fp_convert_down_odd_rounding_top<"fcvtxnt", "int_aarch64_sve_fcvtxnt">;
-  defm FCVTX_ZPmZ   : sve2_fp_convert_down_odd_rounding<"fcvtx",       "int_aarch64_sve_fcvtx">;
+  defm FCVTX_ZPmZ   : sve2_fp_convert_down_odd_rounding<"fcvtx",       "int_aarch64_sve_fcvtx", AArch64fcvtx_mt>;
   defm FCVTNT_ZPmZ  : sve2_fp_convert_down_narrow<"fcvtnt",            "int_aarch64_sve_fcvtnt">;
   defm FCVTLT_ZPmZ  : sve2_fp_convert_up_long<"fcvtlt",                "int_aarch64_sve_fcvtlt">;
 

@@ -2997,6 +2997,10 @@ void ItaniumCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
   if (D.isNoDestroy(CGM.getContext()))
     return;
 
+  // HLSL doesn't support atexit.
+  if (CGM.getLangOpts().HLSL)
+    return CGM.AddCXXDtorEntry(dtor, addr);
+
   // OpenMP offloading supports C++ constructors and destructors but we do not
   // always have 'atexit' available. Instead lower these to use the LLVM global
   // destructors which we can handle directly in the runtime. Note that this is
@@ -3943,6 +3947,9 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     // abi::__pointer_to_member_type_info.
     VTableName = "_ZTVN10__cxxabiv129__pointer_to_member_type_infoE";
     break;
+
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("HLSL doesn't support virtual functions");
   }
 
   llvm::Constant *VTable = nullptr;
@@ -4205,6 +4212,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   case Type::Atomic:
     // No fields, at least for the moment.
     break;
+
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("HLSL doesn't support RTTI");
   }
 
   llvm::Constant *Init = llvm::ConstantStruct::getAnon(Fields);

@@ -166,8 +166,8 @@ public:
     stOther = (stOther & ~3) | visibility;
   }
 
-  bool includeInDynsym() const;
-  uint8_t computeBinding() const;
+  bool includeInDynsym(Ctx &) const;
+  uint8_t computeBinding(Ctx &) const;
   bool isGlobal() const { return binding == llvm::ELF::STB_GLOBAL; }
   bool isWeak() const { return binding == llvm::ELF::STB_WEAK; }
 
@@ -192,12 +192,12 @@ public:
     nameSize = s.size();
   }
 
-  void parseSymbolVersion();
+  void parseSymbolVersion(Ctx &);
 
   // Get the NUL-terminated version suffix ("", "@...", or "@@...").
   //
   // For @@, the name has been truncated by insert(). For @, the name has been
-  // truncated by Symbol::parseSymbolVersion().
+  // truncated by Symbol::parseSymbolVersion(ctx).
   const char *getVersionSuffix() const { return nameData + nameSize; }
 
   uint32_t getGotIdx(Ctx &ctx) const { return ctx.symAux[auxIdx].gotIdx; }
@@ -234,21 +234,21 @@ public:
   // For example, if "this" is an undefined symbol and a new symbol is
   // a defined symbol, "this" is replaced with the new symbol.
   void mergeProperties(const Symbol &other);
-  void resolve(const Undefined &other);
-  void resolve(const CommonSymbol &other);
-  void resolve(const Defined &other);
-  void resolve(const LazySymbol &other);
-  void resolve(const SharedSymbol &other);
+  void resolve(Ctx &, const Undefined &other);
+  void resolve(Ctx &, const CommonSymbol &other);
+  void resolve(Ctx &, const Defined &other);
+  void resolve(Ctx &, const LazySymbol &other);
+  void resolve(Ctx &, const SharedSymbol &other);
 
   // If this is a lazy symbol, extract an input file and add the symbol
   // in the file to the symbol table. Calling this function on
   // non-lazy object causes a runtime error.
-  void extract() const;
+  void extract(Ctx &) const;
 
-  void checkDuplicate(const Defined &other) const;
+  void checkDuplicate(Ctx &, const Defined &other) const;
 
 private:
-  bool shouldReplace(const Defined &other) const;
+  bool shouldReplace(Ctx &, const Defined &other) const;
 
 protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
@@ -527,7 +527,7 @@ template <typename... T> Defined *makeDefined(T &&...args) {
 
 void reportDuplicate(Ctx &, const Symbol &sym, const InputFile *newFile,
                      InputSectionBase *errSec, uint64_t errOffset);
-void maybeWarnUnorderableSymbol(const Symbol *sym);
+void maybeWarnUnorderableSymbol(Ctx &, const Symbol *sym);
 bool computeIsPreemptible(Ctx &, const Symbol &sym);
 
 } // namespace elf

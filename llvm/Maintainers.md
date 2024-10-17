@@ -16,8 +16,8 @@ assistance.
 
 The lead maintainer is responsible for all parts of LLVM not covered by somebody else.
 
-Chris Lattner \
-sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattner (Discourse)
+Nikita Popov \
+llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (GitHub), nikic (Discourse)
 
 ### Transforms and analyses
 
@@ -354,10 +354,10 @@ martin@martin.st (email), [mstrorsjo](https://github.com/mstrorsjo) (GitHub)
 Michael Spencer \
 bigcheesegs@gmail.com (email), [Bigcheese](https://github.com/Bigcheese) (GitHub)
 
-#### Sony PlayStation®4 support
+#### Sony PlayStation support
 
-Paul Robinson \
-paul.robinson@sony.com (email), [pogo59](https://github.com/pogo59) (GitHub)
+Jeremy Morse \
+jeremy.morse@sony.com (email), [jmorse](https://github.com/jmorse) (GitHub)
 
 #### Inline assembly
 
@@ -425,6 +425,9 @@ responsibilities but are no longer active in that role. Thank you for all your
 help with the success of the project!
 
 ### Emeritus lead maintainers
+
+Chris Lattner \
+sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattner (Discourse)
 
 ### Inactive or former component maintainers
 

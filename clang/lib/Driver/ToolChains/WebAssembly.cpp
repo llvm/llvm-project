@@ -163,6 +163,8 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
   }
 
+  ToolChain.addProfileRTLibs(Args, CmdArgs);
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 

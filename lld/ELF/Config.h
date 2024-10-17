@@ -545,7 +545,7 @@ struct Ctx {
   Config arg;
   LinkerDriver driver;
   LinkerScript *script;
-  TargetInfo *target;
+  std::unique_ptr<TargetInfo> target;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
