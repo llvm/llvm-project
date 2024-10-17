@@ -570,7 +570,15 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
     // initialized it.
     if (!Var->hasInitializer()) {
       Var->setInitializer(CGM.EmitNullConstant(E->getType()));
-      EmitAnyExprToMem(E, Object, Qualifiers(), /*IsInit*/true);
+      QualType RefType = M->getType().withoutLocalFastQualifiers();
+      if (RefType.getPointerAuth()) {
+        // Use the qualifier of the reference temporary to sign the pointer.
+        auto LV = MakeRawAddrLValue(Object.getPointer(), RefType,
+                                    Object.getAlignment());
+        EmitScalarInit(E, M->getExtendingDecl(), LV, false);
+      } else {
+        EmitAnyExprToMem(E, Object, Qualifiers(), /*IsInit*/ true);
+      }
     }
   } else {
     switch (M->getStorageDuration()) {
@@ -1757,16 +1765,16 @@ static ConstantEmissionKind checkVarTypeForConstantEmission(QualType type) {
 /// for instance if a block or lambda or a member of a local class uses a
 /// const int variable or constexpr variable from an enclosing function.
 CodeGenFunction::ConstantEmission
-CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
-  ValueDecl *value = refExpr->getDecl();
+CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
+  const ValueDecl *Value = RefExpr->getDecl();
 
   // The value needs to be an enum constant or a constant variable.
   ConstantEmissionKind CEK;
-  if (isa<ParmVarDecl>(value)) {
+  if (isa<ParmVarDecl>(Value)) {
     CEK = CEK_None;
-  } else if (auto *var = dyn_cast<VarDecl>(value)) {
+  } else if (auto *var = dyn_cast<VarDecl>(Value)) {
     CEK = checkVarTypeForConstantEmission(var->getType());
-  } else if (isa<EnumConstantDecl>(value)) {
+  } else if (isa<EnumConstantDecl>(Value)) {
     CEK = CEK_AsValueOnly;
   } else {
     CEK = CEK_None;
@@ -1779,15 +1787,15 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
 
   // It's best to evaluate all the way as an r-value if that's permitted.
   if (CEK != CEK_AsReferenceOnly &&
-      refExpr->EvaluateAsRValue(result, getContext())) {
+      RefExpr->EvaluateAsRValue(result, getContext())) {
     resultIsReference = false;
-    resultType = refExpr->getType();
+    resultType = RefExpr->getType().getUnqualifiedType();
 
   // Otherwise, try to evaluate as an l-value.
   } else if (CEK != CEK_AsValueOnly &&
-             refExpr->EvaluateAsLValue(result, getContext())) {
+             RefExpr->EvaluateAsLValue(result, getContext())) {
     resultIsReference = true;
-    resultType = value->getType();
+    resultType = Value->getType();
 
   // Failure.
   } else {
@@ -1806,7 +1814,7 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   // accessible on device. The DRE of the captured reference variable has to be
   // loaded from captures.
   if (CGM.getLangOpts().CUDAIsDevice && result.Val.isLValue() &&
-      refExpr->refersToEnclosingVariableOrCapture()) {
+      RefExpr->refersToEnclosingVariableOrCapture()) {
     auto *MD = dyn_cast_or_null<CXXMethodDecl>(CurCodeDecl);
     if (MD && MD->getParent()->isLambda() &&
         MD->getOverloadedOperator() == OO_Call) {
@@ -1822,17 +1830,17 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   }
 
   // Emit as a constant.
-  auto C = ConstantEmitter(*this).emitAbstract(refExpr->getLocation(),
+  auto C = ConstantEmitter(*this).emitAbstract(RefExpr->getLocation(),
                                                result.Val, resultType);
 
   // Make sure we emit a debug reference to the global variable.
   // This should probably fire even for
-  if (isa<VarDecl>(value)) {
-    if (!getContext().DeclMustBeEmitted(cast<VarDecl>(value)))
-      EmitDeclRefExprDbgValue(refExpr, result.Val);
+  if (isa<VarDecl>(Value)) {
+    if (!getContext().DeclMustBeEmitted(cast<VarDecl>(Value)))
+      EmitDeclRefExprDbgValue(RefExpr, result.Val);
   } else {
-    assert(isa<EnumConstantDecl>(value));
-    EmitDeclRefExprDbgValue(refExpr, result.Val);
+    assert(isa<EnumConstantDecl>(Value));
+    EmitDeclRefExprDbgValue(RefExpr, result.Val);
   }
 
   // If we emitted a reference constant, we need to dereference that.
@@ -2221,6 +2229,15 @@ RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
+  // Load from __ptrauth.
+  if (PointerAuthQualifier PtrAuth = LV.getQuals().getPointerAuth()) {
+    LV.getQuals().removePointerAuth();
+    auto Value = EmitLoadOfLValue(LV, Loc).getScalarVal();
+    return RValue::get(EmitPointerAuthUnqualify(PtrAuth, Value, LV.getType(),
+                                                LV.getAddress(),
+                                                /*known nonnull*/ false));
+  }
+
   if (LV.isObjCWeak()) {
     // load of a __weak object.
     Address AddrWeakObj = LV.getAddress();
@@ -2446,6 +2463,13 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
     assert(Dst.isBitField() && "Unknown LValue type");
     return EmitStoreThroughBitfieldLValue(Src, Dst);
+  }
+
+  // Handle __ptrauth qualification by re-signing the value.
+  if (PointerAuthQualifier PointerAuth = Dst.getQuals().getPointerAuth()) {
+    Src = RValue::get(EmitPointerAuthQualify(PointerAuth, Src.getScalarVal(),
+                                             Dst.getType(), Dst.getAddress(),
+                                             /*known nonnull*/ false));
   }
 
   // There's special magic for assigning into an ARC-qualified l-value.
@@ -5676,6 +5700,27 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
       return EmitCallee(ICE->getSubExpr());
     }
 
+    // Try to remember the original __ptrauth qualifier for loads of
+    // function pointers.
+    if (ICE->getCastKind() == CK_LValueToRValue) {
+      const auto *SubExpr = ICE->getSubExpr();
+      if (const auto *PtrType = SubExpr->getType()->getAs<PointerType>()) {
+        auto Result = EmitOrigPointerRValue(E);
+
+        QualType FunctionType = PtrType->getPointeeType();
+        assert(FunctionType->isFunctionType());
+
+        GlobalDecl GD;
+        if (const auto *VD =
+                dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee())) {
+          GD = GlobalDecl(VD);
+        }
+        CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
+        CGCallee Callee(CalleeInfo, Result.first, Result.second);
+        return Callee;
+      }
+    }
+
   // Resolve direct calls.
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
@@ -5738,6 +5783,18 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 
   switch (getEvaluationKind(E->getType())) {
   case TEK_Scalar: {
+    if (PointerAuthQualifier PtrAuth =
+            E->getLHS()->getType().getPointerAuth()) {
+      LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
+      LValue CopiedLV = LV;
+      CopiedLV.getQuals().removePointerAuth();
+      llvm::Value *RV =
+          EmitPointerAuthQualify(PtrAuth, E->getRHS(), CopiedLV.getAddress());
+      EmitNullabilityCheck(CopiedLV, RV, E->getExprLoc());
+      EmitStoreThroughLValue(RValue::get(RV), CopiedLV);
+      return LV;
+    }
+
     switch (E->getLHS()->getType().getObjCLifetime()) {
     case Qualifiers::OCL_Strong:
       return EmitARCStoreStrong(E, /*ignored*/ false).first;
