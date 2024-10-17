@@ -628,6 +628,8 @@ private:
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic, bool IsInlineAsm);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
+  void verifyX86ABI(FunctionType *FT, AttributeList Attrs, const Value *V,
+                    unsigned MaxParameterWidth);
 
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
@@ -2096,6 +2098,45 @@ void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
   }
 }
 
+void Verifier::verifyX86ABI(FunctionType *FT, AttributeList Attrs,
+                            const Value *V, unsigned MaxParameterWidth) {
+  if (!Attrs.hasFnAttr("target-features"))
+    return;
+
+  bool HasSSE = true;
+  bool HasSSE2 = true;
+  bool HasAVX512 = false;
+  bool HasEVEX512 = true;
+
+  StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
+  for (StringRef F : split(TF, ",")) {
+    StringRef S = F.substr(1);
+    bool Positive = F[0] == '+';
+    if (S == "sse")
+      HasSSE = Positive;
+    else if (S == "sse2")
+      HasSSE2 = Positive;
+    else if (S == "evex512")
+      HasEVEX512 = Positive;
+    else if (F == "-avx512f")
+      HasAVX512 = false;
+    else if (F.starts_with("+avx512"))
+      HasAVX512 = true;
+  }
+  // Check SSE feature.
+  Check(HasSSE || !TT.isArch64Bit() || !FT->getReturnType()->isFloatTy(),
+        "SSE register return with SSE disabled", V);
+  // Check SSE2 feature.
+  Check(HasSSE2 || !TT.isArch64Bit() ||
+            (!FT->getReturnType()->isDoubleTy() &&
+             !FT->getReturnType()->is16bitFPTy()),
+        "SSE2 register return with SSE2 disabled", V);
+  // Check EVEX512 feature.
+  if (MaxParameterWidth >= 512)
+    Check(!HasAVX512 || HasEVEX512,
+          "512-bit vector arguments require 'evex512' for AVX512", V);
+}
+
 // Check parameter attributes against a function type.
 // The value V is printed in error messages.
 void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
@@ -2345,13 +2386,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
-  // Check EVEX512 feature.
-  if (MaxParameterWidth >= 512 && Attrs.hasFnAttr("target-features") &&
-      TT.isX86()) {
-    StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
-    Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
-          "512-bit vector arguments require 'evex512' for AVX512", V);
-  }
+  if (TT.isX86())
+    verifyX86ABI(FT, Attrs, V, MaxParameterWidth);
 
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
