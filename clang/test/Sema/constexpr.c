@@ -367,3 +367,10 @@ struct S10 {
 constexpr struct S10 c = { 255 };
 // FIXME-expected-error@-1 {{constexpr initializer evaluates to 255 which is not exactly representable in 'long long' bit-field with width 8}}
 // See: GH#101299
+
+void constexprif() {
+  if constexpr (300) {} //expected-error {{expected '(' after 'if'}}
+}
+void constevalif() {
+  if consteval (300) {} //expected-error {{expected '(' after 'if'}}
+}

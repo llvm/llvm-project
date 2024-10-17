@@ -78,6 +78,8 @@ TEST(SanitizerCommon, IsAccessibleMemoryRange) {
   EXPECT_TRUE(IsAccessibleMemoryRange(mem + 2 * page_size, page_size));
   EXPECT_FALSE(IsAccessibleMemoryRange(mem, 3 * page_size));
   EXPECT_FALSE(IsAccessibleMemoryRange(0x0, 2));
+
+  munmap((void *)mem, 3 * page_size);
 }
 
 }  // namespace __sanitizer

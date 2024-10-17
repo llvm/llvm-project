@@ -1641,7 +1641,11 @@ SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
   assert((EltVT.getSizeInBits() >= 64 ||
           (uint64_t)((int64_t)Val >> EltVT.getSizeInBits()) + 1 < 2) &&
          "getConstant with a uint64_t value that doesn't fit in the type!");
-  return getConstant(APInt(EltVT.getSizeInBits(), Val), DL, VT, isT, isO);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return getConstant(APInt(EltVT.getSizeInBits(), Val, /*isSigned=*/false,
+                           /*implicitTrunc=*/true),
+                     DL, VT, isT, isO);
 }
 
 SDValue SelectionDAG::getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
@@ -5471,6 +5475,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FASIN:
   case ISD::FACOS:
   case ISD::FATAN:
+  case ISD::FATAN2:
   case ISD::FSINH:
   case ISD::FCOSH:
   case ISD::FTANH:
