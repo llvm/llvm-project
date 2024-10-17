@@ -212,7 +212,11 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
 TEST_F(MainLoopTest, ManyPendingCallbacks) {
   MainLoop loop;
   Status error;
-  // Try to fill up the pipe buffer and make sure bad things don't happen.
+  // Try to fill up the pipe buffer and make sure bad things don't happen. This
+  // is a regression test for the case where writing to the interrupt pipe
+  // caused a deadlock when the pipe filled up (either because the main loop was
+  // not running, because it was slow, or because it was busy/blocked doing
+  // something else).
   for (int i = 0; i < 65536; ++i)
     loop.AddPendingCallback(
         [&](MainLoopBase &loop) { loop.RequestTermination(); });
