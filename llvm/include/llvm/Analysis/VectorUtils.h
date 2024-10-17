@@ -160,6 +160,11 @@ bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
 Intrinsic::ID getVectorIntrinsicIDForCall(const CallInst *CI,
                                           const TargetLibraryInfo *TLI);
 
+/// Returns VP intrinsic ID for call.
+/// For the input call instruction it finds mapping intrinsic and returns
+/// its intrinsic ID, in case it does not found it return not_intrinsic.
+Intrinsic::ID getVPIntrinsicIDForCall(const CallInst *CI);
+
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.

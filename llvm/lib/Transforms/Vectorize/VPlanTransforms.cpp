@@ -1381,6 +1381,17 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                   return nullptr;
                 return new VPWidenEVLRecipe(*W, EVL);
               })
+              .Case<VPWidenIntrinsicRecipe>(
+                  [&](VPWidenIntrinsicRecipe *CInst) -> VPRecipeBase * {
+                    auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
+                    SmallVector<VPValue *> Ops(CInst->operands());
+                    Ops.push_back(&EVL);
+                    Intrinsic::ID VPID = getVPIntrinsicIDForCall(CI);
+                    if (VPID == Intrinsic::not_intrinsic)
+                      return nullptr;
+                    return new VPWidenIntrinsicRecipe(
+                        *CI, VPID, Ops, CI->getType(), CI->getDebugLoc());
+                  })
               .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
