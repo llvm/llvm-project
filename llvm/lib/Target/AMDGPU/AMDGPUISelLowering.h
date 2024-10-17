@@ -102,8 +102,6 @@ protected:
 
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
-  bool hasAndNot(SDValue Op) const override;
-
 protected:
   bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -390,6 +388,13 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
+
+  /// Return true if the target supports a bitwise and-not operation:
+  /// X = ~A & B
+  /// This function checks if the operation can be directly mapped to the
+  /// target's native instructions, potentially simplifying select or other
+  /// related instructions by using more efficient hardware-specific operations.
+  bool hasAndNot(SDValue Op) const override;
 };
 
 namespace AMDGPUISD {
