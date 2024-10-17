@@ -319,6 +319,29 @@ static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
     cl::desc("Do not instrument functions with the number of critical edges "
              " greater than this threshold."));
 
+static cl::opt<uint64_t> ColdFuncCoverageMaxEntryCount(
+    "cold-function-coverage-max-entry-count", cl::init(0), cl::Hidden,
+    cl::desc("When enabling cold function coverage instrumentation, skip "
+             "instrumenting the function whose entry count is above the given "
+             "value"));
+
+static cl::opt<InstrColdFuncCovMode> InstrumentColdFunctionCoverageMode(
+    "instrument-cold-function-coverage-mode",
+    cl::init(InstrColdFuncCovMode::Conservative), cl::Hidden,
+    cl::desc("Control whether to instrument unprofiled functions for cold "
+             "function coverage."),
+    cl::values(
+        clEnumValN(InstrColdFuncCovMode::Conservative, "conservative",
+                   "Assume unprofiled functions are not cold, skip "
+                   "instrumenting them."),
+        clEnumValN(InstrColdFuncCovMode::Optimistic, "optimistic",
+                   "Treat unprofiled functions as cold and instrument them.")));
+
+cl::opt<bool> InstrumentColdFunctionCoverage(
+    "instrument-cold-function-coverage", cl::init(false), cl::Hidden,
+    cl::desc("Enable cold function coverage instrumentation (currently only "
+             "used under sampling PGO pipeline)"));
+
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
 namespace llvm {
@@ -1892,6 +1915,12 @@ static bool skipPGOGen(const Function &F) {
     return true;
   if (F.getInstructionCount() < PGOFunctionSizeThreshold)
     return true;
+  if (InstrumentColdFunctionCoverage) {
+    if (auto EntryCount = F.getEntryCount())
+      return EntryCount->getCount() > ColdFuncCoverageMaxEntryCount;
+    return InstrumentColdFunctionCoverageMode ==
+           InstrColdFuncCovMode::Conservative;
+  }
   return false;
 }
 
