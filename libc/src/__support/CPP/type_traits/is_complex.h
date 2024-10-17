@@ -10,6 +10,10 @@
 
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
+// LIBC_TYPES_HAS_CFLOAT16 && LIBC_TYPES_HAS_CFLOAT128
+#include "src/__support/macros/properties/complex_types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -25,7 +29,16 @@ private:
 public:
   LIBC_INLINE_VAR static constexpr bool value =
       __is_unqualified_any_of<T, _Complex float, _Complex double,
-                              _Complex long double>();
+                              _Complex long double
+#ifdef LIBC_TYPES_HAS_CFLOAT16
+                              ,
+                              cfloat16
+#endif
+#ifdef LIBC_TYPES_HAS_CFLOAT128
+                              ,
+                              cfloat128
+#endif
+                              >();
 };
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_complex_v = is_complex<T>::value;
