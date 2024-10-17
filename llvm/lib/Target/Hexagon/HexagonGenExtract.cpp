@@ -171,7 +171,7 @@ bool HexagonGenExtract::convert(Instruction *In) {
     // this value.
     if (!LogicalSR && (SR > SL))
       return false;
-    APInt A = APInt(BW, ~0ULL).lshr(SR).shl(SL);
+    APInt A = APInt(BW, ~0ULL, true).lshr(SR).shl(SL);
     CM = ConstantInt::get(Ctx, A);
   }
 

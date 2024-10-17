@@ -92,3 +92,16 @@ bool __rtsan::IsStackTraceSuppressed(const StackTrace &stack) {
   }
   return false;
 }
+
+bool __rtsan::IsFunctionSuppressed(const char *function_name) {
+  if (suppression_ctx == nullptr)
+    return false;
+
+  const char *flag_name = ConvertTypeToFlagName(ErrorType::FunctionNameMatches);
+
+  if (!suppression_ctx->HasSuppressionType(flag_name))
+    return false;
+
+  Suppression *s;
+  return suppression_ctx->Match(function_name, flag_name, &s);
+}

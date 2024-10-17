@@ -1,5 +1,23 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
 
+// NOTE: The type name number and whether the struct is packed or not will mostly
+// likely change once subscript operators are properly implemented (llvm/llvm-project#95956) 
+// and theinterim field of the contained type is removed.
+
+// CHECK: %"class.hlsl::RWBuffer" = type <{ target("dx.TypedBuffer", i16, 1, 0, 1)
+// CHECK: %"class.hlsl::RWBuffer.0" = type <{ target("dx.TypedBuffer", i16, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.2" = type { target("dx.TypedBuffer", i32, 1, 0, 1)
+// CHECK: %"class.hlsl::RWBuffer.3" = type { target("dx.TypedBuffer", i32, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.4" = type { target("dx.TypedBuffer", i64, 1, 0, 1)
+// CHECK: %"class.hlsl::RWBuffer.5" = type { target("dx.TypedBuffer", i64, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.6" = type <{ target("dx.TypedBuffer", half, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.8" = type { target("dx.TypedBuffer", float, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.9" = type { target("dx.TypedBuffer", double, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.10" = type { target("dx.TypedBuffer", <4 x i16>, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.11" = type { target("dx.TypedBuffer", <3 x i32>, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.12" = type { target("dx.TypedBuffer", <2 x half>, 1, 0, 0)
+// CHECK: %"class.hlsl::RWBuffer.13" = type { target("dx.TypedBuffer", <3 x float>, 1, 0, 0)
+
 RWBuffer<int16_t> BufI16;
 RWBuffer<uint16_t> BufU16;
 RWBuffer<int> BufI32;

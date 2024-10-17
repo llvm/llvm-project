@@ -154,7 +154,6 @@ endprogram
 ! CHECK:                 hlfir.assign %[[VAL_44]] to %[[VAL_48]] : f64, !fir.ref<f64>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

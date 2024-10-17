@@ -333,8 +333,10 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
-  return (K == TargetTransformInfo::RGK_FixedWidthVector &&
-          ST->isNeonAvailable());
+  return ((K == TargetTransformInfo::RGK_FixedWidthVector &&
+           ST->isNeonAvailable()) ||
+          (K == TargetTransformInfo::RGK_ScalableVector &&
+           ST->isSVEorStreamingSVEAvailable()));
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -3743,7 +3745,7 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   assert(Factor >= 2 && "Invalid interleave factor");
   auto *VecVTy = cast<VectorType>(VecTy);
 
-  if (VecTy->isScalableTy() && (!ST->hasSVE() || Factor != 2))
+  if (VecTy->isScalableTy() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
   // Vectorization for masked interleaved accesses is only enabled for scalable
