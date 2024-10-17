@@ -1200,22 +1200,29 @@ void CodeGenModule::Release() {
                               "tag-stack-memory-buildattr", 1);
 
   if (T.isARM() || T.isThumb() || T.isAArch64()) {
+    // Previously 1 is used and meant for the backed to derive the function
+    // attribute form it. 2 now means function attributes already set for all
+    // functions in this module, so no need to propagate those from the module
+    // flag. Value is only used in case of LTO module merge because the backend
+    // will see all required function attribute set already. Value is used
+    // before modules got merged. Any posive value means the feature is active
+    // and required binary markings need to be emit accordingly.
     if (LangOpts.BranchTargetEnforcement)
       getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
-                                1);
+                                2);
     if (LangOpts.BranchProtectionPAuthLR)
       getModule().addModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr",
-                                1);
+                                2);
     if (LangOpts.GuardedControlStack)
-      getModule().addModuleFlag(llvm::Module::Min, "guarded-control-stack", 1);
+      getModule().addModuleFlag(llvm::Module::Min, "guarded-control-stack", 2);
     if (LangOpts.hasSignReturnAddress())
-      getModule().addModuleFlag(llvm::Module::Min, "sign-return-address", 1);
+      getModule().addModuleFlag(llvm::Module::Min, "sign-return-address", 2);
     if (LangOpts.isSignReturnAddressScopeAll())
       getModule().addModuleFlag(llvm::Module::Min, "sign-return-address-all",
-                                1);
+                                2);
     if (!LangOpts.isSignReturnAddressWithAKey())
       getModule().addModuleFlag(llvm::Module::Min,
-                                "sign-return-address-with-bkey", 1);
+                                "sign-return-address-with-bkey", 2);
 
     if (getTriple().isOSLinux()) {
       assert(getTriple().isOSBinFormatELF());
