@@ -1040,7 +1040,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
         return nullptr;
       };
 
-      AllocType->dump();
       if (const FunctionDecl *VirtualDelete =
               getVirtualOperatorDelete(AllocType);
           VirtualDelete &&
