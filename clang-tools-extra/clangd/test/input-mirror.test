@@ -1,5 +1,3 @@
-# REQUIRES: rdar107853608
-
 # RUN: clangd -pretty -sync -input-mirror-file %t < %s
 # Note that we have to use '-b' as -input-mirror-file does not have a newline at the end of file.
 # RUN: diff -b %t %s
