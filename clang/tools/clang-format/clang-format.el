@@ -146,18 +146,97 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
     (lambda (byte &optional _quality _coding-system)
       (byte-to-position (1+ byte)))))
 
-;;;###autoload
-(defun clang-format-region (start end &optional style assume-file-name)
-  "Use clang-format to format the code between START and END according to STYLE.
-If called interactively uses the region or the current statement if there is no
-no active region. If no STYLE is given uses `clang-format-style'. Use
-ASSUME-FILE-NAME to locate a style config file, if no ASSUME-FILE-NAME is given
-uses the function `buffer-file-name'."
-  (interactive
-   (if (use-region-p)
-       (list (region-beginning) (region-end))
-     (list (point) (point))))
+(defun clang-format--git-diffs-get-diff-lines (file-orig file-new)
+  "Return all line regions that contain diffs between FILE-ORIG and
+FILE-NEW.  If there is no diff 'nil' is returned. Otherwise the
+return is a 'list' of lines in the format '--lines=<start>:<end>'
+which can be passed directly to 'clang-format'"
+  ;; Temporary buffer for output of diff.
+  (with-temp-buffer
+    (let ((status (call-process
+                   "diff"
+                   nil
+                   (current-buffer)
+                   nil
+                   ;; Binary diff has different behaviors that we
+                   ;; aren't interested in.
+                   "-a"
+                   ;; Printout changes as only the line groups.
+                   "--changed-group-format=--lines=%dF:%dL "
+                   ;; Ignore unchanged content.
+                   "--unchanged-group-format="
+                   file-orig
+                   file-new
+                   )
+                  )
+          (stderr (concat (if (zerop (buffer-size)) "" ": ")
+                          (buffer-substring-no-properties
+                           (point-min) (line-end-position)))))
+      (when (stringp status)
+        (error "(diff killed by signal %s%s)" status stderr))
+      (unless (= status 0)
+        (unless (= status 1)
+          (error "(diff returned unsuccessfully %s%s)" status stderr)))
 
+
+      (if (= status 0)
+          ;; Status == 0 -> no Diff.
+          nil
+        (progn
+          ;; Split "--lines=<S0>:<E0>... --lines=<SN>:<SN>" output to
+          ;; a list for return.
+          (s-split
+           " "
+           (string-trim
+            (buffer-substring-no-properties
+             (point-min) (point-max)))))))))
+
+(defun clang-format--git-diffs-get-git-head-file ()
+  "Returns a temporary file with the content of 'buffer-file-name' at
+git revision HEAD. If the current buffer is either not a file or not
+in a git repo, this results in an error"
+  ;; Needs current buffer to be a file
+  (unless (buffer-file-name)
+    (error "Buffer is not visiting a file"))
+  ;; Need to be able to find version control (git) root
+  (unless (vc-root-dir)
+    (error "File not known to git"))
+  ;; Need version control to in fact be git
+  (unless (string-equal (vc-backend (buffer-file-name)) "Git")
+    (error "Not using git"))
+
+  (let ((tmpfile-git-head (make-temp-file "clang-format-tmp-git-head-content")))
+    ;; Get filename relative to git root
+    (let ((git-file-name (substring
+                          (expand-file-name (buffer-file-name))
+                          (string-width (expand-file-name (vc-root-dir)))
+                          nil)))
+      (let ((status (call-process
+                     "git"
+                     nil
+                     `(:file, tmpfile-git-head)
+                     nil
+                     "show" (concat "HEAD:" git-file-name)))
+            (stderr (with-temp-buffer
+                      (unless (zerop (cadr (insert-file-contents tmpfile-git-head)))
+                        (insert ": "))
+                      (buffer-substring-no-properties
+                       (point-min) (line-end-position)))))
+        (when (stringp status)
+          (error "(git show HEAD:%s killed by signal %s%s)"
+                 git-file-name status stderr))
+        (unless (zerop status)
+          (error "(git show HEAD:%s returned unsuccessfully %s%s)"
+                 git-file-name status stderr))))
+    ;; Return temporary file so we can diff it.
+    tmpfile-git-head))
+
+(defun clang-format--region-impl (start end &optional style assume-file-name lines)
+  "Common implementation for 'clang-format-buffer',
+'clang-format-region', and 'clang-format-git-diffs'. START and END
+refer to the region to be formatter. STYLE and ASSUME-FILE-NAME are
+used for configuring the clang-format. And LINES is used to pass
+specific locations for reformatting (i.e diff locations)."
   (unless style
     (setq style clang-format-style))
 
@@ -190,8 +269,12 @@ uses the function `buffer-file-name'."
                                       (list "--assume-filename" assume-file-name))
                                ,@(and style (list "--style" style))
                                "--fallback-style" ,clang-format-fallback-style
-                               "--offset" ,(number-to-string file-start)
-                               "--length" ,(number-to-string (- file-end file-start))
+                               ,@(and lines lines)
+                               ,@(and (not lines)
+                                      (list
+                                       "--offset" (number-to-string file-start)
+                                       "--length" (number-to-string
+                                                   (- file-end file-start))))
                                "--cursor" ,(number-to-string cursor))))
               (stderr (with-temp-buffer
                         (unless (zerop (cadr (insert-file-contents temp-file)))
@@ -220,13 +303,59 @@ uses the function `buffer-file-name'."
       (when (buffer-name temp-buffer) (kill-buffer temp-buffer)))))
 
 ;;;###autoload
+(defun clang-format-git-diffs (&optional style assume-file-name)
+  "The same as 'clang-format-buffer' but only operates on the git
+diffs from HEAD in the buffer. If no STYLE is given uses
+`clang-format-style'. Use ASSUME-FILE-NAME to locate a style config
+file. If no ASSUME-FILE-NAME is given uses the function
+`buffer-file-name'."
+  (interactive)
+  (let ((tmpfile-git-head
+         (clang-format--git-diffs-get-git-head-file))
+        (tmpfile-curbuf (make-temp-file "clang-format-git-tmp")))
+    ;; Move current buffer to a temporary file to take a diff. Even if
+    ;; current-buffer is backed by a file, we want to diff the buffer
+    ;; contents which might not be saved.
+    (write-region nil nil tmpfile-curbuf nil 'nomessage)
+    ;; Git list of lines with a diff.
+    (let ((diff-lines
+           (clang-format--git-diffs-get-diff-lines
+            tmpfile-git-head tmpfile-curbuf)))
+      ;; If we have any diffs, format them.
+      (when diff-lines
+        (clang-format--region-impl
+         (point-min)
+         (point-max)
+         style
+         assume-file-name
+         diff-lines)))))
+
+;;;###autoload
+(defun clang-format-region (start end &optional style assume-file-name)
+  "Use clang-format to format the code between START and END according
+to STYLE.  If called interactively uses the region or the current
+statement if there is no no active region. If no STYLE is given uses
+`clang-format-style'. Use ASSUME-FILE-NAME to locate a style config
+file, if no ASSUME-FILE-NAME is given uses the function
+`buffer-file-name'."
+  (interactive
+   (if (use-region-p)
+       (list (region-beginning) (region-end))
+     (list (point) (point))))
+  (clang-format--region-impl start end style assume-file-name))
+
+;;;###autoload
 (defun clang-format-buffer (&optional style assume-file-name)
   "Use clang-format to format the current buffer according to STYLE.
 If no STYLE is given uses `clang-format-style'. Use ASSUME-FILE-NAME
 to locate a style config file. If no ASSUME-FILE-NAME is given uses
 the function `buffer-file-name'."
   (interactive)
-  (clang-format-region (point-min) (point-max) style assume-file-name))
+  (clang-format--region-impl
+   (point-min)
+   (point-max)
+   style
+   assume-file-name))
 
 ;;;###autoload
 (defalias 'clang-format 'clang-format-region)
