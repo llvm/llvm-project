@@ -1703,6 +1703,7 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
+    SDNodeFlags Flags = Op.getNode()->getFlags();
     ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
     // If (1) we only need the sign-bit, (2) the setcc operands are the same
     // width as the setcc result, and (3) the result of a setcc conforms to 0 or
@@ -1716,8 +1717,13 @@ bool TargetLowering::SimplifyDemandedBits(
       // if we don't care about FP signed-zero. The use of SETLT with FP means
       // that we don't care about NaNs.
       if (CC == ISD::SETLT && Op1.getValueType().isInteger() &&
-          (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1.getNode())))
+          (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1.getNode()))) {
+        if (Flags.hasSameSign()) {
+          Flags.setSameSign(false);
+          Op->setFlags(Flags);
+        }
         return TLO.CombineTo(Op, Op0);
+      }
 
       // TODO: Should we check for other forms of sign-bit comparisons?
       // Examples: X <= -1, X >= 0

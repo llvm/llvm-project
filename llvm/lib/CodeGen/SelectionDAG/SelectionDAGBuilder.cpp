@@ -3640,6 +3640,10 @@ void SelectionDAGBuilder::visitICmp(const ICmpInst &I) {
   SDValue Op2 = getValue(I.getOperand(1));
   ISD::CondCode Opcode = getICmpCondCode(predicate);
 
+  SDNodeFlags Flags;
+  Flags.setSameSign(I.hasSameSign());
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
+
   auto &TLI = DAG.getTargetLoweringInfo();
   EVT MemVT =
       TLI.getMemValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
