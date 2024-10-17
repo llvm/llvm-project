@@ -74,19 +74,25 @@ std::string lld::toString(const coff::InputFile *file) {
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
 static void checkAndSetWeakAlias(COFFLinkerContext &ctx, InputFile *f,
-                                 Symbol *source, Symbol *target) {
+                                 Symbol *source, Symbol *target,
+                                 bool isAntiDep) {
   if (auto *u = dyn_cast<Undefined>(source)) {
     if (u->weakAlias && u->weakAlias != target) {
-      // Weak aliases as produced by GCC are named in the form
-      // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
-      // of another symbol emitted near the weak symbol.
-      // Just use the definition from the first object file that defined
-      // this weak symbol.
-      if (ctx.config.allowDuplicateWeak)
+      // Ignore duplicated anti-dependency symbols.
+      if (isAntiDep)
         return;
-      ctx.symtab.reportDuplicate(source, f);
+      if (!u->isAntiDep) {
+        // Weak aliases as produced by GCC are named in the form
+        // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
+        // of another symbol emitted near the weak symbol.
+        // Just use the definition from the first object file that defined
+        // this weak symbol.
+        if (ctx.config.allowDuplicateWeak)
+          return;
+        ctx.symtab.reportDuplicate(source, f);
+      }
     }
-    u->weakAlias = target;
+    u->setWeakAlias(target, isAntiDep);
   }
 }
 
@@ -436,7 +442,8 @@ void ObjFile::initializeSymbols() {
   uint32_t numSymbols = coffObj->getNumberOfSymbols();
   symbols.resize(numSymbols);
 
-  SmallVector<std::pair<Symbol *, uint32_t>, 8> weakAliases;
+  SmallVector<std::pair<Symbol *, const coff_aux_weak_external *>, 8>
+      weakAliases;
   std::vector<uint32_t> pendingIndexes;
   pendingIndexes.reserve(numSymbols);
 
@@ -451,8 +458,8 @@ void ObjFile::initializeSymbols() {
       symbols[i] = createUndefined(coffSym);
     } else if (coffSym.isWeakExternal()) {
       symbols[i] = createUndefined(coffSym);
-      uint32_t tagIndex = coffSym.getAux<coff_aux_weak_external>()->TagIndex;
-      weakAliases.emplace_back(symbols[i], tagIndex);
+      weakAliases.emplace_back(symbols[i],
+                               coffSym.getAux<coff_aux_weak_external>());
     } else if (std::optional<Symbol *> optSym =
                    createDefined(coffSym, comdatDefs, prevailingComdat)) {
       symbols[i] = *optSym;
@@ -491,8 +498,10 @@ void ObjFile::initializeSymbols() {
 
   for (auto &kv : weakAliases) {
     Symbol *sym = kv.first;
-    uint32_t idx = kv.second;
-    checkAndSetWeakAlias(ctx, this, sym, symbols[idx]);
+    const coff_aux_weak_external *aux = kv.second;
+    checkAndSetWeakAlias(ctx, this, sym, symbols[aux->TagIndex],
+                         aux->Characteristics ==
+                             IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY);
   }
 
   // Free the memory used by sparseChunks now that symbol loading is finished.
@@ -1202,7 +1211,7 @@ void BitcodeFile::parse() {
       sym = ctx.symtab.addUndefined(symName, this, true);
       std::string fallback = std::string(objSym.getCOFFWeakExternalFallback());
       Symbol *alias = ctx.symtab.addUndefined(saver.save(fallback));
-      checkAndSetWeakAlias(ctx, this, sym, alias);
+      checkAndSetWeakAlias(ctx, this, sym, alias, false);
     } else if (comdatIndex != -1) {
       if (symName == obj->getComdatTable()[comdatIndex].first) {
         sym = comdat[comdatIndex].first;

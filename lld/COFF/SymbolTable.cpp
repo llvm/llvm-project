@@ -315,7 +315,7 @@ void SymbolTable::loadMinGWSymbols() {
             warn("Resolving " + origName + " by linking to " + newName);
           else
             log("Resolving " + origName + " by linking to " + newName);
-          undef->weakAlias = l;
+          undef->setWeakAlias(l);
           continue;
         }
       }
