@@ -502,6 +502,9 @@ def err_sls_hardening_arm_not_supported : Error<
 def warn_drv_large_data_threshold_invalid_code_model: Warning<
   "'%0' only applies to medium and large code models">,
   InGroup<UnusedCommandLineArgument>;
+def warn_drv_math_errno_reenabled_after_veclib: Warning<
+  "math errno re-enabled by '%0' after it was implicitly disabled by '%1',"
+  " this may prevent vectorization with the specified vector library">;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
