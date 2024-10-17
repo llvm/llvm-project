@@ -1,4 +1,5 @@
-//===-- ObjectFileXCOFF.h --------------------------------------- -*- C++ -*-===//
+//===-- ObjectFileXCOFF.h --------------------------------------- -*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -90,15 +91,15 @@ public:
   ObjectFile::Strata CalculateStrata() override;
 
   ObjectFileXCOFF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                lldb::offset_t data_offset, const lldb_private::FileSpec *file,
-                lldb::offset_t offset, lldb::offset_t length);
+                  lldb::offset_t data_offset,
+                  const lldb_private::FileSpec *file, lldb::offset_t offset,
+                  lldb::offset_t length);
 
   ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
-                lldb::DataBufferSP header_data_sp,
-                const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
+                  lldb::DataBufferSP header_data_sp,
+                  const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
 protected:
-
   static lldb::WritableDataBufferSP
   MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
                       uint64_t Offset);
@@ -106,7 +107,6 @@ protected:
   uint32_t ParseDependentModules();
 
 private:
-
   std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
   lldb_private::Address m_entry_point_address;
   std::optional<lldb_private::FileSpecList> m_deps_filespec;
