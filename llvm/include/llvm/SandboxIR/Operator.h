@@ -55,6 +55,45 @@ public:
     return llvm::OverflowingBinaryOperator::classof(From->Val);
   }
 };
+
+class FPMathOperator : public Operator {
+public:
+  bool isFast() const { return cast<llvm::FPMathOperator>(Val)->isFast(); }
+  bool hasAllowReassoc() const {
+    return cast<llvm::FPMathOperator>(Val)->hasAllowReassoc();
+  }
+  bool hasNoNaNs() const {
+    return cast<llvm::FPMathOperator>(Val)->hasNoNaNs();
+  }
+  bool hasNoInfs() const {
+    return cast<llvm::FPMathOperator>(Val)->hasNoInfs();
+  }
+  bool hasNoSignedZeros() const {
+    return cast<llvm::FPMathOperator>(Val)->hasNoSignedZeros();
+  }
+  bool hasAllowReciprocal() const {
+    return cast<llvm::FPMathOperator>(Val)->hasAllowReciprocal();
+  }
+  bool hasAllowContract() const {
+    return cast<llvm::FPMathOperator>(Val)->hasAllowContract();
+  }
+  bool hasApproxFunc() const {
+    return cast<llvm::FPMathOperator>(Val)->hasApproxFunc();
+  }
+  FastMathFlags getFastMathFlags() const {
+    return cast<llvm::FPMathOperator>(Val)->getFastMathFlags();
+  }
+  float getFPAccuracy() const {
+    return cast<llvm::FPMathOperator>(Val)->getFPAccuracy();
+  }
+  static bool isSupportedFloatingPointType(Type *Ty) {
+    return llvm::FPMathOperator::isSupportedFloatingPointType(Ty->LLVMTy);
+  }
+  static bool classof(const Value *V) {
+    return llvm::FPMathOperator::classof(V->Val);
+  }
+};
+
 } // namespace llvm::sandboxir
 
 #endif // LLVM_SANDBOXIR_OPERATOR_H
