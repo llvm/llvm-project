@@ -847,8 +847,8 @@ bool operator<(const InterchangeableInstruction &LHS,
 
 } // end anonymous namespace
 
-/// \returns a list of interchangeable instructions which \p I can be converted
-/// to.
+/// \returns a sorted list of interchangeable instructions by instruction opcode
+/// that \p I can be converted to.
 /// e.g.,
 /// x << y -> x * (2^y)
 /// x << 1 -> x *   2
@@ -1179,15 +1179,14 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   }
 
   if (IsBinOp) {
-    auto FindOp =
-        [&](const SmallVector<InterchangeableInstruction> &CandidateOp) {
-          for (Value *V : VL)
-            for (const InterchangeableInstruction &I : CandidateOp)
-              if (cast<Instruction>(V)->getOpcode() == I.Opcode)
-                return cast<Instruction>(V);
-          llvm_unreachable(
-              "Cannot find the candidate instruction for InstructionsState.");
-        };
+    auto FindOp = [&](ArrayRef<InterchangeableInstruction> CandidateOp) {
+      for (Value *V : VL)
+        for (const InterchangeableInstruction &I : CandidateOp)
+          if (cast<Instruction>(V)->getOpcode() == I.Opcode)
+            return cast<Instruction>(V);
+      llvm_unreachable(
+          "Cannot find the candidate instruction for InstructionsState.");
+    };
     Instruction *MainOp = FindOp(InterchangeableOpcode);
     Instruction *AltOp = AlternateInterchangeableOpcode.empty()
                              ? MainOp
