@@ -651,6 +651,7 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"log", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"logf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          GuardedFunctionSpec<"logf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 
           FunctionSpec<"logb", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"logbf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
