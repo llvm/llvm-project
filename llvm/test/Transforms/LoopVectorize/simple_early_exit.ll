@@ -7,10 +7,9 @@ declare void @init_mem(ptr, i64);
 
 define i64 @same_exit_block_pre_inc_use1() {
 ; DEBUG-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
-; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops is not yet supported.
+; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i64 @same_exit_block_pre_inc_use1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
@@ -310,7 +309,6 @@ loop.end:
   %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
   ret i64 %retval
 }
-
 
 
 define i64 @same_exit_block_post_inc_use() {
@@ -861,8 +859,8 @@ loop.end:
 
 ; There are multiple exit blocks - two of them have an exact representation for the
 ; exit-not-taken counts and the other is unknown, i.e. the "early exit".
-define i64 @multiple_exits_one_early() {
-; CHECK-LABEL: define i64 @multiple_exits_one_early() {
+define i64 @multiple_exiting_one_early_same_exit() {
+; CHECK-LABEL: define i64 @multiple_exiting_one_early_same_exit() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
 ; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
@@ -916,6 +914,189 @@ loop.inc:
 loop.end:
   %retval = phi i64 [ 64, %loop ], [ %index, %search ], [ 128, %loop.inc ]
   ret i64 %retval
+}
+
+
+define i64 @multiple_exiting_one_early_same_exit_phi_of_consts() {
+; CHECK-LABEL: define i64 @multiple_exiting_one_early_same_exit_phi_of_consts() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[INDEX]], 64
+; CHECK-NEXT:    br i1 [[CMP1]], label [[SEARCH:%.*]], label [[LOOP_END:%.*]]
+; CHECK:       search:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_END]], label [[LOOP_INC]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 0, [[LOOP]] ], [ 1, [[SEARCH]] ], [ 0, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %cmp1 = icmp ne i64 %index, 64
+  br i1 %cmp1, label %search, label %loop.end
+
+search:
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.end, label %loop.inc
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 128
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ 0, %loop ], [ 1, %search ], [ 0, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @multiple_exiting_one_early_diff_exit() {
+; CHECK-LABEL: define i64 @multiple_exiting_one_early_diff_exit() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[INDEX]], 64
+; CHECK-NEXT:    br i1 [[CMP1]], label [[SEARCH:%.*]], label [[LOOP_END:%.*]]
+; CHECK:       search:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_END_EARLY:%.*]], label [[LOOP_INC]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end.early:
+; CHECK-NEXT:    [[RET_EARLY:%.*]] = phi i64 [ [[INDEX]], [[SEARCH]] ]
+; CHECK-NEXT:    ret i64 [[RET_EARLY]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 64, [[LOOP]] ], [ 128, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %cmp1 = icmp ne i64 %index, 64
+  br i1 %cmp1, label %search, label %loop.end
+
+search:
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.end.early, label %loop.inc
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 128
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end.early:
+  %ret.early = phi i64 [ %index, %search ]
+  ret i64 %ret.early
+
+loop.end:
+  %retval = phi i64 [ 64, %loop ], [ 128, %loop.inc ]
+  ret i64 %retval
+}
+
+define i64 @multiple_exiting_one_early_diff_exit_no_phis() {
+; CHECK-LABEL: define i64 @multiple_exiting_one_early_diff_exit_no_phis() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[INDEX]], 64
+; CHECK-NEXT:    br i1 [[CMP1]], label [[SEARCH:%.*]], label [[LOOP_END:%.*]]
+; CHECK:       search:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_END_EARLY:%.*]], label [[LOOP_INC]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end.early:
+; CHECK-NEXT:    ret i64 1
+; CHECK:       loop.end:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %cmp1 = icmp ne i64 %index, 64
+  br i1 %cmp1, label %search, label %loop.end
+
+search:
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.end.early, label %loop.inc
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 128
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end.early:
+  ret i64 1
+
+loop.end:
+  ret i64 0
 }
 
 
@@ -1089,8 +1270,7 @@ loop.end:
 
 define i64 @loop_contains_safe_call() {
 ; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_safe_call'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
 ; CHECK-LABEL: define i64 @loop_contains_safe_call() {
 ; CHECK-NEXT:  entry:
@@ -1193,8 +1373,7 @@ loop.end:
 
 define i64 @loop_contains_safe_div() {
 ; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_safe_div'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
 ; CHECK-LABEL: define i64 @loop_contains_safe_div() {
 ; CHECK-NEXT:  entry:
@@ -1347,10 +1526,9 @@ loop.end:
 
 define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(8) %p2) {
 ; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_load_after_early_exit'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
-; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops is not yet supported.
+; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i64 @loop_contains_load_after_early_exit(
 ; CHECK-SAME: ptr align 8 dereferenceable(1024) [[P2:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -1621,12 +1799,11 @@ loop.end:
 
 
 ; The form of the induction variables requires SCEV predicates.
-; TODO: We should fix isDereferenceableAndAlignedInLoop and
-; getSmallConstantMaxTripCount to cope with SCEV predicates when
-; requesting the small constant max trip count.
 define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; DEBUG-LABEL: LV: Checking a loop in 'diff_exit_block_needs_scev_check'
-; DEBUG:       LV: Not vectorizing: Loop may fault.
+; DEBUG:       Found an early exit loop with symbolic max backedge taken count: (-1 + (1 umax (zext i10 (trunc i32 %end to i10) to i32)))<nsw>
+; DEBUG-NEXT:  LV: We can vectorize this loop!
+; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i32 @diff_exit_block_needs_scev_check(
 ; CHECK-SAME: i32 [[END:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -1695,9 +1872,8 @@ declare void @abort()
 ; early is loop invariant.
 define i32 @diff_blocks_invariant_early_exit_cond(ptr %s) {
 ; DEBUG-LABEL: LV: Checking a loop in 'diff_blocks_invariant_early_exit_cond'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 275
-; DEBUG:       LV: Not vectorizing: Auto-vectorization of early exit loops is not yet supported.
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 275
+; DEBUG:       LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i32 @diff_blocks_invariant_early_exit_cond(
 ; CHECK-SAME: ptr [[S:%.*]]) {
 ; CHECK-NEXT:  entry:

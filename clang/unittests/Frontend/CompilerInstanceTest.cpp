@@ -71,7 +71,7 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 
   // Check if the virtual file exists which means that our VFS is used by the
   // CompilerInstance.
-  ASSERT_TRUE(Instance.getFileManager().getFile("vfs-virtual.file"));
+  ASSERT_TRUE(Instance.getFileManager().getOptionalFileRef("vfs-virtual.file"));
 }
 
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {

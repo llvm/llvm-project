@@ -15,6 +15,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 
 #include <deque>
 
@@ -153,6 +154,11 @@ struct SCFTileAndFuseOptions {
     fusionControlFn = controlFn;
     return *this;
   }
+
+  /// An optional set of rewrite patterns to apply to the results of tiling
+  /// before fusion. This will track deleted and newly inserted
+  /// `tensor.extract_slice` ops and update the worklist.
+  std::optional<FrozenRewritePatternSet> cleanupPatterns = std::nullopt;
 };
 
 /// Fuse the producer of the source of `candidateSliceOp` by computing the

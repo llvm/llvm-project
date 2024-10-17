@@ -9,6 +9,8 @@ add_flang_library(FIRTransforms
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
+  CUFAddConstructor.cpp
+  CufImplicitDeviceGlobal.cpp
   CufOpConversion.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
@@ -47,6 +49,7 @@ add_flang_library(FIRTransforms
   HLFIRDialect
   MLIRAffineUtils
   MLIRFuncDialect
+  MLIRGPUDialect
   MLIRLLVMDialect
   MLIRLLVMCommonConversion
   MLIRMathTransforms

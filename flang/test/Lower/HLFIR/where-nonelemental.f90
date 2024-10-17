@@ -125,7 +125,7 @@ end subroutine
 ! CHECK:             hlfir.where {
 ! CHECK:               %[[VAL_21:.*]] = llvm.intr.stacksave : !llvm.ptr
 ! CHECK-NOT: hlfir.exactly_once
-! CHECK:               %[[VAL_23:.*]] = fir.call @_QPpure_logical_func1() fastmath<contract> : () -> !fir.array<100x!fir.logical<4>>
+! CHECK:               %[[VAL_23:.*]] = fir.call @_QPpure_logical_func1() proc_attrs<pure> fastmath<contract> : () -> !fir.array<100x!fir.logical<4>>
 ! CHECK:               hlfir.yield %{{.*}} : !hlfir.expr<100x!fir.logical<4>> cleanup {
 ! CHECK:                 llvm.intr.stackrestore %[[VAL_21]] : !llvm.ptr
 ! CHECK:               }
@@ -173,7 +173,7 @@ end subroutine
 ! CHECK:               hlfir.elsewhere mask {
 ! CHECK:                 %[[VAL_129:.*]] = hlfir.exactly_once : !hlfir.expr<100x!fir.logical<4>> {
 ! CHECK:                   %[[VAL_139:.*]] = llvm.intr.stacksave : !llvm.ptr
-! CHECK:                   %[[VAL_141:.*]] = fir.call @_QPpure_logical_func2() fastmath<contract> : () -> !fir.array<100x!fir.logical<4>>
+! CHECK:                   %[[VAL_141:.*]] = fir.call @_QPpure_logical_func2() proc_attrs<pure> fastmath<contract> : () -> !fir.array<100x!fir.logical<4>>
 ! CHECK:                   hlfir.yield %{{.*}} : !hlfir.expr<100x!fir.logical<4>> cleanup {
 ! CHECK:                     llvm.intr.stackrestore %[[VAL_139]] : !llvm.ptr
 ! CHECK:                   }
@@ -185,7 +185,7 @@ end subroutine
 ! CHECK:                   hlfir.yield %{{.*}} : !fir.box<!fir.array<?xf32>>
 ! CHECK:                 } to {
 ! CHECK:                   %[[VAL_165:.*]] = hlfir.exactly_once : i32 {
-! CHECK:                     %[[VAL_166:.*]] = fir.call @_QPpure_ifoo() fastmath<contract> : () -> i32
+! CHECK:                     %[[VAL_166:.*]] = fir.call @_QPpure_ifoo() proc_attrs<pure> fastmath<contract> : () -> i32
 ! CHECK:                     hlfir.yield %[[VAL_166]] : i32
 ! CHECK:                   }
 ! CHECK:                   hlfir.designate

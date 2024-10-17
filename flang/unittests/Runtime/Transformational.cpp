@@ -111,7 +111,7 @@ static void testBesselJn() {
 #if HAS_FLOAT80
   testBesselJn<10>(RTNAME(BesselJn_10));
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
   testBesselJn<16>(RTNAME(BesselJn_16));
 #endif
 
@@ -120,7 +120,7 @@ static void testBesselJn() {
 #if HAS_FLOAT80
   testBesselJnX0<10>(RTNAME(BesselJnX0_10));
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
   testBesselJnX0<16>(RTNAME(BesselJnX0_16));
 #endif
 }
@@ -204,7 +204,7 @@ static void testBesselYn() {
 #if HAS_FLOAT80
   testBesselYn<10>(RTNAME(BesselYn_10));
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
   testBesselYn<16>(RTNAME(BesselYn_16));
 #endif
 
@@ -213,7 +213,7 @@ static void testBesselYn() {
 #if HAS_FLOAT80
   testBesselYnX0<10>(RTNAME(BesselYnX0_10));
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
   testBesselYnX0<16>(RTNAME(BesselYnX0_16));
 #endif
 }

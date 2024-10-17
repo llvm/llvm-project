@@ -8,6 +8,7 @@
 
 #include "InterpStack.h"
 #include "Boolean.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Integral.h"
 #include "MemberPointer.h"

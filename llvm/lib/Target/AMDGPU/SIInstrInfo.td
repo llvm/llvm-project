@@ -2149,6 +2149,8 @@ class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
   string ret = dst#", "#src0#src1#src2#opsel#mods#clamp;
 }
 
+// FIXME-TRUE16 AsmVOP3OpSel will be deprecated after all
+// VOP3 16 bit instructions are replaced to true16 format
 class getAsmVOP3OpSel <int NumSrcArgs,
                        bit HasClamp,
                        bit HasOMod,
@@ -2237,8 +2239,9 @@ class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
 
-  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#bytesel#3PMods#clamp#omod, "");
-
+  string ret = dst#!if(!eq(NumSrcArgs,0),
+                       "",
+                       !if(HasDst,", ", "")#src0#src1#src2#opsel#bytesel#3PMods#clamp#omod);
 }
 
 class getAsmVOP3DPP<string base> {
@@ -2409,8 +2412,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
   field bit IsRealTrue16 = 0;
-  field bit IsInvalidSingleUseConsumer = 0;
-  field bit IsInvalidSingleUseProducer = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];
@@ -2735,6 +2736,7 @@ def VOP_F32_F32_F16_F16 : VOPProfile <[f32, f32, f16, f16]>;
 def VOP_F32_F32_F32_F32 : VOPProfile <[f32, f32, f32, f32]>;
 def VOP_F64_F64_F64_F64 : VOPProfile <[f64, f64, f64, f64]>;
 def VOP_I32_I32_I32_I32 : VOPProfile <[i32, i32, i32, i32]>;
+def VOP_I32_I32_I32_I16 : VOPProfile <[i32, i32, i32, i16]>;
 def VOP_I64_I32_I32_I64 : VOPProfile <[i64, i32, i32, i64]>;
 def VOP_I32_F32_I32_I32 : VOPProfile <[i32, f32, i32, i32]>;
 def VOP_I64_I64_I32_I64 : VOPProfile <[i64, i64, i32, i64]>;

@@ -278,6 +278,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:Object",
         "//llvm:Option",
+        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",

@@ -3246,7 +3246,6 @@ static std::string convertToSinitPriority(int Priority) {
   std::string PrioritySuffix;
   llvm::raw_string_ostream os(PrioritySuffix);
   os << llvm::format_hex_no_prefix(P, 8);
-  os.flush();
   return PrioritySuffix;
 }
 

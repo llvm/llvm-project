@@ -213,12 +213,35 @@ def HasSMEF8F16     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF8
 def HasSMEF8F32     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF8F32()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF8F32), "sme-f8f32">;
 
+def HasCMPBR        : Predicate<"Subtarget->hasCMPBR()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureCMPBR), "cmpbr">;
+def HasF8F32MM      : Predicate<"Subtarget->hasF8F32MM()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureF8F32MM), "f8f32mm">;
+def HasF8F16MM      : Predicate<"Subtarget->hasF8F16MM()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureF8F16MM), "f8f16mm">;
+def HasFPRCVT       : Predicate<"Subtarget->hasFPRCVT()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFPRCVT), "fprcvt">;
+def HasLSFE         : Predicate<"Subtarget->hasLSFE()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLSFE), "lsfe">;
+def HasSME2p2       : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME2p2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSME2p2), "sme2p2">;
+def HasSVEAES2      : Predicate<"Subtarget->hasSVEAES2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVEAES2), "sve-aes2">;
+def HasSVEBFSCALE   : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVEBFSCALE()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVEBFSCALE), "sve-bfscale">;
+def HasSVE_F16F32MM : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_F16F32MM()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE_F16F32MM), "sve-f16f32mm">;
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
     : Predicate<"Subtarget->hasSVE() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
+def HasSVEorSME2p2
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2p2),
+                "sve or sme2p2">;
 def HasSVE2orSME
     : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME),
@@ -227,6 +250,10 @@ def HasSVE2orSME2
     : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME2),
                 "sve2 or sme2">;
+def HasSVE2orSSVE_AES
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_AES), "sve2 or ssve-aes">;
 def HasSVE2p1_or_HasSME
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME, FeatureSVE2p1), "sme or sve2p1">;
@@ -236,7 +263,13 @@ def HasSVE2p1_or_HasSME2
 def HasSVE2p1_or_HasSME2p1
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME2p1())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
-
+def HasSVE2p2orSME2p2
+    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())">,
+                 AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2), "sme2p2 or sve2p2">;
+def HasSVE2p1orSSVE_AES
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE2p1, FeatureSSVE_AES), "sve2p1 or ssve-aes">;
 def HasSMEF16F16orSMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
@@ -5050,6 +5083,27 @@ def : Pat<(v1f64 (fmaxnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
 def : Pat<(v1f64 (fminnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMINNMDrr FPR64:$Rn, FPR64:$Rm)>;
 
+def : Pat<(fminnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
+          (FMINNMDrr FPR64:$a, FPR64:$b)>;
+def : Pat<(fmaxnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
+          (FMAXNMDrr FPR64:$a, FPR64:$b)>;
+def : Pat<(f64 (fcanonicalize f64:$a)),
+          (FMINNMDrr   f64:$a, f64:$a)>;
+def : Pat<(fminnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
+          (FMINNMSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(fmaxnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
+          (FMAXNMSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(f32 (fcanonicalize f32:$a)),
+          (FMINNMSrr   f32:$a, f32:$a)>;
+
+let Predicates = [HasFullFP16] in {
+def : Pat<(fminnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
+          (FMINNMHrr FPR16:$a, FPR16:$b)>;
+def : Pat<(fmaxnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
+          (FMAXNMHrr FPR16:$a, FPR16:$b)>;
+def : Pat<(f16 (fcanonicalize f16:$a)),
+          (FMINNMHrr   f16:$a, f16:$a)>;
+}
 //===----------------------------------------------------------------------===//
 // Floating point three operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5553,6 +5607,42 @@ defm FMINNMP : SIMDThreeSameVectorFP<1,1,0b000,"fminnmp", int_aarch64_neon_fminn
 defm FMINNM  : SIMDThreeSameVectorFP<0,1,0b000,"fminnm", any_fminnum>;
 defm FMINP   : SIMDThreeSameVectorFP<1,1,0b110,"fminp", int_aarch64_neon_fminp>;
 defm FMIN    : SIMDThreeSameVectorFP<0,1,0b110,"fmin", any_fminimum>;
+
+let Predicates = [HasNEON] in {
+def : Pat<(v2f64 (fminnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
+          (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
+def : Pat<(v2f64 (fmaxnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
+          (v2f64 (FMAXNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
+def : Pat<(v2f64 (fcanonicalize (v2f64 V128:$Rn))),
+          (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rn)))>;
+def : Pat<(v4f32 (fminnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+          (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
+def : Pat<(v4f32 (fmaxnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+          (v4f32 (FMAXNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
+def : Pat<(v4f32 (fcanonicalize (v4f32 V128:$Rn))),
+          (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rn)))>;
+def : Pat<(v2f32 (fminnum_ieee (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
+          (v2f32 (FMINNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rm)))>;
+def : Pat<(v2f32 (fmaxnum_ieee (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
+          (v2f32 (FMAXNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rm)))>;
+def : Pat<(v2f32 (fcanonicalize (v2f32 V64:$Rn))),
+          (v2f32 (FMINNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rn)))>;
+}
+
+let Predicates = [HasNEON, HasFullFP16] in {
+def : Pat<(v8f16 (fminnum_ieee (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+          (v8f16 (FMINNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rm)))>;
+def : Pat<(v8f16 (fmaxnum_ieee (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+          (v8f16 (FMAXNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rm)))>;
+def : Pat<(v8f16 (fcanonicalize (v8f16 V128:$Rn))),
+          (v8f16 (FMINNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rn)))>;
+def : Pat<(v4f16 (fminnum_ieee (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+          (v4f16 (FMINNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rm)))>;
+def : Pat<(v4f16 (fmaxnum_ieee (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+          (v4f16 (FMAXNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rm)))>;
+def : Pat<(v4f16 (fcanonicalize (v4f16 V64:$Rn))),
+          (v4f16 (FMINNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rn)))>;
+}
 
 // NOTE: The operands of the PatFrag are reordered on FMLA/FMLS because the
 // instruction expects the addend first, while the fma intrinsic puts it last.
@@ -6180,7 +6270,8 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
-let Predicates = [HasNEONandIsStreamingSafe] in {
+// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
+let Predicates = [HasNEON] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
@@ -6190,7 +6281,8 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
+// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
+let Predicates = [HasNEON, HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
@@ -6213,9 +6305,10 @@ def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 
 // fp16: integer extraction from vector must be at least 32-bits to be legal.
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
-let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
-def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract 
-                (v8i16 FPR128:$Rn), (i64 0))), i16)))), 
+// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
+let Predicates = [HasNEON, HasFullFP16] in {
+def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract
+                (v8i16 FPR128:$Rn), (i64 0))), i16)))),
           (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
 
 // unsigned 32-bit extracted element is truncated to 16-bits using AND
@@ -6310,7 +6403,7 @@ def : Pat <(f64 (uint_to_fp (i32
                           (LDURSi GPR64sp:$Rn, simm9:$offset), ssub))>;
 // 64-bits -> double are handled in target specific dag combine:
 // performIntToFpCombine.
-} // let Predicates = [HasNEONandIsStreamingSafe]
+} // let Predicates = [HasNEON]
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three different-sized vector instructions.
@@ -9697,6 +9790,7 @@ def : Pat<(AArch64tcret tglobaladdr:$dst, (i32 timm:$FPDiff)),
 def : Pat<(AArch64tcret texternalsym:$dst, (i32 timm:$FPDiff)),
           (TCRETURNdi texternalsym:$dst, imm:$FPDiff)>;
 
+let Size = 8 in
 def MOVMCSym : Pseudo<(outs GPR64:$dst), (ins i64imm:$sym), []>, Sched<[]>;
 def : Pat<(i64 (AArch64LocalRecover mcsym:$sym)), (MOVMCSym mcsym:$sym)>;
 
@@ -10136,7 +10230,7 @@ let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
   defm BF2CVTL : SIMDMixedTwoVectorFP8<0b11, "bf2cvtl">;
   defm FCVTN_F16_F8 : SIMDThreeSameSizeVectorCvt<"fcvtn">;
   defm FCVTN_F32_F8 : SIMDThreeVectorCvt<"fcvtn">;
-  defm FSCALE : SIMDThreeSameVectorFP<0b1, 0b1, 0b111, "fscale", null_frag>;
+  defm FSCALE : SIMDThreeVectorFscale<0b1, 0b1, 0b111, "fscale", int_aarch64_neon_fp8_fscale>;
 } // End let Predicates = [HasFP8]
 
 // fminimum(abs(a), abs(b)) -> famin(a, b)

@@ -34,23 +34,30 @@
 // PIXEL: #define __SHADER_TARGET_STAGE 0
 // VERTEX: #define __SHADER_TARGET_STAGE 1
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2015 | FileCheck -match-full-lines %s --check-prefixes=STD2015
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -E -dM -o - -x hlsl -std=hlsl2015 2>&1 | FileCheck -match-full-lines %s --check-prefixes=STD2015
+// STD2015: warning: support for HLSL language version hlsl2015 is incomplete, recommend using hlsl202x instead
 // STD2015: #define __HLSL_VERSION 2015
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2016 | FileCheck -match-full-lines %s --check-prefixes=STD2016
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -E -dM -o - -x hlsl -std=hlsl2016 2>&1 | FileCheck -match-full-lines %s --check-prefixes=STD2016
+// STD2016: warning: support for HLSL language version hlsl2016 is incomplete, recommend using hlsl202x instead
 // STD2016: #define __HLSL_VERSION 2016
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2017 | FileCheck -match-full-lines %s --check-prefixes=STD2017
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -E -dM -o - -x hlsl -std=hlsl2017 2>&1 | FileCheck -match-full-lines %s --check-prefixes=STD2017
+// STD2017: warning: support for HLSL language version hlsl2017 is incomplete, recommend using hlsl202x instead
 // STD2017: #define __HLSL_VERSION 2017
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2018 | FileCheck -match-full-lines %s --check-prefixes=STD2018
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -E -dM -o - -x hlsl -std=hlsl2018 2>&1 | FileCheck -match-full-lines %s --check-prefixes=STD2018
+// STD2018: warning: support for HLSL language version hlsl2018 is incomplete, recommend using hlsl202x instead
 // STD2018: #define __HLSL_VERSION 2018
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2021 | FileCheck -match-full-lines %s --check-prefixes=STD2021
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -E -dM -o - -x hlsl -std=hlsl2021 2>&1 | FileCheck -match-full-lines %s --check-prefixes=STD2021
+// STD2021: warning: support for HLSL language version hlsl2021 is incomplete, recommend using hlsl202x instead
 // STD2021: #define __HLSL_VERSION 2021
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl202x | FileCheck -match-full-lines %s --check-prefixes=STD202x
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -E -dM -o - -x hlsl -std=hlsl202x | FileCheck -match-full-lines %s --check-prefixes=STD202x
+// STD202x-NOT: warning
 // STD202x: #define __HLSL_VERSION 2028
 
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl202y | FileCheck -match-full-lines %s --check-prefixes=STD202y
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -E -dM -o - -x hlsl -std=hlsl202y | FileCheck -match-full-lines %s --check-prefixes=STD202y
+// STD202y-NOT: warning
 // STD202y: #define __HLSL_VERSION 2029

@@ -87,7 +87,7 @@ LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
         meet(operand, *r);
       foundLiveResult = true;
     }
-    addDependency(const_cast<Liveness *>(r), op);
+    addDependency(const_cast<Liveness *>(r), getProgramPointAfter(op));
   }
   return success();
 }

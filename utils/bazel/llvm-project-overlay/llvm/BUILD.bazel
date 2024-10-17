@@ -956,6 +956,9 @@ cc_library(
     ) + [
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
+        "include/llvm/Analysis/SimplifyQuery.h",
+        "include/llvm/Analysis/ValueTracking.h",
+        "include/llvm/Analysis/WithCache.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     textual_hdrs = glob(["include/llvm/IR/*.def"]),
@@ -1155,6 +1158,7 @@ cc_library(
     hdrs = glob(["include/llvm/ProfileData/Coverage/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -1452,8 +1456,9 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
     copts = llvm_copts,
-    textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
+    textual_hdrs = ["include/llvm/SandboxIR/Values.def"],
     deps = [
+        ":Analysis",
         ":Core",
         ":Support",
     ],
@@ -1492,6 +1497,9 @@ cc_library(
         "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
+    textual_hdrs = [
+        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/PassRegistry.def",
+    ],
     deps = [
         ":Analysis",
         ":Core",
@@ -1595,6 +1603,18 @@ gentbl(
 )
 
 cc_library(
+    name = "FrontendAtomic",
+    hdrs = glob([
+        "include/llvm/Frontend/Atomic/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+        ":ir_headers",
+    ],
+)
+
+cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
@@ -1614,6 +1634,7 @@ cc_library(
         ":BitReader",
         ":Core",
         ":Demangle",
+        ":FrontendAtomic",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -2362,7 +2383,6 @@ gentbl(
         ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
         ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
         ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
-        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerLowering", "lib/Target/RISCV/RISCVGenPostLegalizeGILowering.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
@@ -2723,6 +2743,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":BitWriter",
+        ":CGData",
         ":CodeGen",
         ":CodeGenTypes",
         ":Core",

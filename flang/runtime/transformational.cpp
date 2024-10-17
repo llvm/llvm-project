@@ -353,7 +353,7 @@ void RTDEF(BesselJn_10)(Descriptor &result, int32_t n1, int32_t n2,
 }
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(BesselJn_16)(Descriptor &result, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, 16> x,
     CppTypeFor<TypeCategory::Real, 16> bn2,
@@ -382,7 +382,7 @@ void RTDEF(BesselJnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
 }
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(BesselJnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile, int line) {
   DoBesselJnX0<TypeCategory::Real, 16>(result, n1, n2, sourceFile, line);
@@ -416,7 +416,7 @@ void RTDEF(BesselYn_10)(Descriptor &result, int32_t n1, int32_t n2,
 }
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(BesselYn_16)(Descriptor &result, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, 16> x,
     CppTypeFor<TypeCategory::Real, 16> bn1,
@@ -445,7 +445,7 @@ void RTDEF(BesselYnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
 }
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(BesselYnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile, int line) {
   DoBesselYnX0<TypeCategory::Real, 16>(result, n1, n2, sourceFile, line);

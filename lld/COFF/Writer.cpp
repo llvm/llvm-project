@@ -472,9 +472,15 @@ bool Writer::createThunks(OutputSection *os, int margin) {
   // Recheck Chunks.size() each iteration, since we can insert more
   // elements into it.
   for (size_t i = 0; i != os->chunks.size(); ++i) {
-    SectionChunk *sc = dyn_cast_or_null<SectionChunk>(os->chunks[i]);
-    if (!sc)
+    SectionChunk *sc = dyn_cast<SectionChunk>(os->chunks[i]);
+    if (!sc) {
+      auto chunk = cast<NonSectionChunk>(os->chunks[i]);
+      if (uint32_t size = chunk->extendRanges()) {
+        thunksSize += size;
+        addressesChanged = true;
+      }
       continue;
+    }
     MachineTypes machine = sc->getMachine();
     size_t thunkInsertionSpot = i + 1;
 
@@ -606,9 +612,12 @@ void Writer::createECCodeMap() {
 // Verify that all relocations are in range, with no extra margin requirements.
 bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
   for (Chunk *c : chunks) {
-    SectionChunk *sc = dyn_cast_or_null<SectionChunk>(c);
-    if (!sc)
+    SectionChunk *sc = dyn_cast<SectionChunk>(c);
+    if (!sc) {
+      if (!cast<NonSectionChunk>(c)->verifyRanges())
+        return false;
       continue;
+    }
     MachineTypes machine = sc->getMachine();
 
     ArrayRef<coff_relocation> relocs = sc->getRelocs();
@@ -872,8 +881,8 @@ bool Writer::fixGnuImportChunks() {
     if (!pSec->chunks.empty())
       hasIdata = true;
     llvm::stable_sort(pSec->chunks, [&](Chunk *s, Chunk *t) {
-      SectionChunk *sc1 = dyn_cast_or_null<SectionChunk>(s);
-      SectionChunk *sc2 = dyn_cast_or_null<SectionChunk>(t);
+      SectionChunk *sc1 = dyn_cast<SectionChunk>(s);
+      SectionChunk *sc2 = dyn_cast<SectionChunk>(t);
       if (!sc1 || !sc2) {
         // if SC1, order them ascending. If SC2 or both null,
         // S is not less than T.
@@ -948,6 +957,13 @@ void Writer::appendECImportTables() {
     rdataSec->chunks.insert(rdataSec->chunks.end(), auxIat->chunks.begin(),
                             auxIat->chunks.end());
     rdataSec->addContributingPartialSection(auxIat);
+  }
+
+  if (!delayIdata.getAuxIat().empty()) {
+    delayIdata.getAuxIat().front()->setAlignment(0x1000);
+    rdataSec->chunks.insert(rdataSec->chunks.end(),
+                            delayIdata.getAuxIat().begin(),
+                            delayIdata.getAuxIat().end());
   }
 }
 
@@ -1285,6 +1301,8 @@ void Writer::appendImportThunks() {
       textSec->addChunk(c);
     for (Chunk *c : delayIdata.getCodePData())
       pdataSec->addChunk(c);
+    for (Chunk *c : delayIdata.getAuxIatCopy())
+      rdataSec->addChunk(c);
     for (Chunk *c : delayIdata.getCodeUnwindInfo())
       rdataSec->addChunk(c);
   }
@@ -2286,6 +2304,20 @@ void Writer::setECSymbols() {
   replaceSymbol<DefinedSynthetic>(
       iatCopySym, "__hybrid_auxiliary_iat_copy",
       idata.auxIatCopy.empty() ? nullptr : idata.auxIatCopy.front());
+
+  Symbol *delayIatSym =
+      ctx.symtab.findUnderscore("__hybrid_auxiliary_delayload_iat");
+  replaceSymbol<DefinedSynthetic>(
+      delayIatSym, "__hybrid_auxiliary_delayload_iat",
+      delayIdata.getAuxIat().empty() ? nullptr
+                                     : delayIdata.getAuxIat().front());
+
+  Symbol *delayIatCopySym =
+      ctx.symtab.findUnderscore("__hybrid_auxiliary_delayload_iat_copy");
+  replaceSymbol<DefinedSynthetic>(
+      delayIatCopySym, "__hybrid_auxiliary_delayload_iat_copy",
+      delayIdata.getAuxIatCopy().empty() ? nullptr
+                                         : delayIdata.getAuxIatCopy().front());
 }
 
 // Write section contents to a mmap'ed file.

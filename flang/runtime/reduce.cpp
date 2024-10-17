@@ -443,7 +443,7 @@ void RTDEF(ReduceReal10DimValue)(Descriptor &result, const Descriptor &array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppFloat128Type RTDEF(ReduceReal16Ref)(const Descriptor &array,
     ReferenceReductionOperation<CppFloat128Type> operation, const char *source,
     int line, int dim, const Descriptor *mask, const CppFloat128Type *identity,
@@ -634,7 +634,7 @@ void RTDEF(CppReduceComplex10DimValue)(Descriptor &result,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(CppReduceComplex16Ref)(CppTypeFor<TypeCategory::Complex, 16> &result,
     const Descriptor &array,
     ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 16>>

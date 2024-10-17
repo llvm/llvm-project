@@ -387,7 +387,7 @@ LogicalResult PatternOp::verifyRegions() {
 void PatternOp::build(OpBuilder &builder, OperationState &state,
                       std::optional<uint16_t> benefit,
                       std::optional<StringRef> name) {
-  build(builder, state, builder.getI16IntegerAttr(benefit ? *benefit : 0),
+  build(builder, state, builder.getI16IntegerAttr(benefit.value_or(0)),
         name ? builder.getStringAttr(*name) : StringAttr());
   state.regions[0]->emplaceBlock();
 }

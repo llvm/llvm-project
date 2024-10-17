@@ -330,5 +330,5 @@ def AArch64PostLegalizerCombiner
                         select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt]> {
+                        combine_mul_cmlt, combine_use_vector_truncate]> {
 }

@@ -37,6 +37,7 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
@@ -113,9 +114,8 @@ static std::string getOutputPath(StringRef path, bool isDll, bool isDriver) {
 
 // Returns true if S matches /crtend.?\.o$/.
 static bool isCrtend(StringRef s) {
-  if (!s.ends_with(".o"))
+  if (!s.consume_back(".o"))
     return false;
-  s = s.drop_back(2);
   if (s.ends_with("crtend"))
     return true;
   return !s.empty() && s.drop_back().ends_with("crtend");
@@ -703,6 +703,24 @@ Symbol *LinkerDriver::addUndefined(StringRef name) {
     ctx.config.gcroot.push_back(b);
   }
   return b;
+}
+
+void LinkerDriver::addUndefinedGlob(StringRef arg) {
+  Expected<GlobPattern> pat = GlobPattern::create(arg);
+  if (!pat) {
+    error("/includeglob: " + toString(pat.takeError()));
+    return;
+  }
+
+  SmallVector<Symbol *, 0> syms;
+  ctx.symtab.forEachSymbol([&syms, &pat](Symbol *sym) {
+    if (pat->match(sym->getName())) {
+      syms.push_back(sym);
+    }
+  });
+
+  for (Symbol *sym : syms)
+    addUndefined(sym->getName());
 }
 
 StringRef LinkerDriver::mangleMaybe(Symbol *s) {
@@ -1322,7 +1340,7 @@ void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
   if (!sym)
     return;
   if (auto undef = dyn_cast<Undefined>(sym))
-    def = undef->getWeakAlias();
+    def = undef->getDefinedWeakAlias();
   else
     def = dyn_cast<Defined>(sym);
   if (!def)
@@ -1358,7 +1376,7 @@ void LinkerDriver::createECExportThunks() {
       continue;
     Defined *targetSym;
     if (auto undef = dyn_cast<Undefined>(sym))
-      targetSym = undef->getWeakAlias();
+      targetSym = undef->getDefinedWeakAlias();
     else
       targetSym = dyn_cast<Defined>(sym);
     if (!targetSym)
@@ -2447,12 +2465,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
     ctx.symtab.addAbsolute("__arm64x_redirection_metadata", 0);
     ctx.symtab.addAbsolute("__arm64x_redirection_metadata_count", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_delayload_iat_copy", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_delayload_iat", 0);
     ctx.symtab.addAbsolute("__hybrid_auxiliary_iat", 0);
     ctx.symtab.addAbsolute("__hybrid_auxiliary_iat_copy", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+    ctx.symtab.addAbsolute("__hybrid_image_info_bitfield", 0);
     ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points", 0);
     ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points_count", 0);
+    ctx.symtab.addSynthetic("__guard_check_icall_a64n_fptr", nullptr);
+    ctx.symtab.addSynthetic("__arm64x_native_entrypoint", nullptr);
   }
 
   if (config->pseudoRelocs) {
@@ -2524,6 +2547,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       }
     } while (run());
   }
+
+  // Handle /includeglob
+  for (StringRef pat : args::getStrings(args, OPT_incl_glob))
+    addUndefinedGlob(pat);
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
@@ -2601,7 +2628,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
-  ctx.symtab.resolveRemainingUndefines();
+  while (ctx.symtab.resolveRemainingUndefines())
+    run();
+
   if (errorCount())
     return;
 

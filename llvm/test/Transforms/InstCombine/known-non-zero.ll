@@ -92,7 +92,8 @@ exit:
   ret <8 x i64> %res
 }
 
-; Test that exposed a bug in the PHI handling after D60846. No folding should happen here!
+; Test that exposed a bug in the PHI handling after D60846.
+; Check that folding happens correctly.
 define void @D60846_miscompile(ptr %p) {
 ; CHECK-LABEL: @D60846_miscompile(
 ; CHECK-NEXT:  entry:
@@ -102,12 +103,11 @@ define void @D60846_miscompile(ptr %p) {
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i16 [[I]], 0
 ; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[COMMON]], label [[NON_ZERO:%.*]]
 ; CHECK:       non_zero:
-; CHECK-NEXT:    [[IS_ONE:%.*]] = icmp eq i16 [[I]], 1
-; CHECK-NEXT:    store i1 [[IS_ONE]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[COMMON]]
 ; CHECK:       common:
-; CHECK-NEXT:    [[I_INC]] = add i16 [[I]], 1
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i16 [[I_INC]], 2
+; CHECK-NEXT:    [[I_INC]] = add nuw nsw i16 [[I]], 1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i16 [[I]], 0
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

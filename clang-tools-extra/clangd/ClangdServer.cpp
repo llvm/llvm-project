@@ -451,6 +451,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
 
     CodeCompleteOpts.MainFileSignals = IP->Signals;
     CodeCompleteOpts.AllScopes = Config::current().Completion.AllScopes;
+    CodeCompleteOpts.ArgumentLists = Config::current().Completion.ArgumentLists;
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(

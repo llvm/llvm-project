@@ -350,8 +350,8 @@ public:
 // Public method for populating conversion rules.
 //===----------------------------------------------------------------------===//
 
-void mlir::populateStorageSpecifierToLLVMPatterns(TypeConverter &converter,
-                                                  RewritePatternSet &patterns) {
+void mlir::populateStorageSpecifierToLLVMPatterns(
+    const TypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<StorageSpecifierGetOpConverter, StorageSpecifierSetOpConverter,
                StorageSpecifierInitOpConverter>(converter,
                                                 patterns.getContext());
