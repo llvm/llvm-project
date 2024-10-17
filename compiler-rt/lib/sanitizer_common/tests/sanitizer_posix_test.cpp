@@ -18,7 +18,6 @@
 
 #  include <numeric>
 
-#  include "gmock/gmock.h"
 #  include "gtest/gtest.h"
 #  include "sanitizer_common/sanitizer_common.h"
 
@@ -68,8 +67,8 @@ TEST(SanitizerCommon, PthreadDestructorIterations) {
 
 TEST(SanitizerCommon, IsAccessibleMemoryRange) {
   const int page_size = GetPageSize();
-  uptr mem = (uptr)mmap(0, 3 * page_size, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANON, -1, 0);
+  InternalMmapVector<char> buffer(3 * page_size);
+  uptr mem = reinterpret_cast<uptr>(buffer.data());
   // Protect the middle page.
   mprotect((void *)(mem + page_size), page_size, PROT_NONE);
   EXPECT_TRUE(IsAccessibleMemoryRange(mem, page_size - 1));
@@ -81,19 +80,12 @@ TEST(SanitizerCommon, IsAccessibleMemoryRange) {
   EXPECT_TRUE(IsAccessibleMemoryRange(mem + 2 * page_size, page_size));
   EXPECT_FALSE(IsAccessibleMemoryRange(mem, 3 * page_size));
   EXPECT_FALSE(IsAccessibleMemoryRange(0x0, 2));
-
-  munmap((void *)mem, 3 * page_size);
 }
 
 TEST(SanitizerCommon, IsAccessibleMemoryRangeLarge) {
-  const int size = GetPageSize() * 10000;
-
-  uptr mem = (uptr)mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON,
-                        -1, 0);
-
-  EXPECT_TRUE(IsAccessibleMemoryRange(mem, size));
-
-  munmap((void *)mem, size);
+  InternalMmapVector<char> buffer(10000 * GetPageSize());
+  EXPECT_TRUE(IsAccessibleMemoryRange(reinterpret_cast<uptr>(buffer.data()),
+                                      buffer.size()));
 }
 
 TEST(SanitizerCommon, TryMemCpy) {
@@ -101,33 +93,52 @@ TEST(SanitizerCommon, TryMemCpy) {
   std::iota(src.begin(), src.end(), 123);
   std::vector<char> dst;
 
-  using ::testing::ElementsAreArray;
+  // Don't use ::testing::ElementsAreArray or similar, as the huge output on an
+  // error is not helpful.
 
   dst.assign(1, 0);
-  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
-  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+  EXPECT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_TRUE(std::equal(dst.begin(), dst.end(), src.begin()));
 
   dst.assign(100, 0);
-  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
-  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+  EXPECT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_TRUE(std::equal(dst.begin(), dst.end(), src.begin()));
 
   dst.assign(534, 0);
-  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
-  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+  EXPECT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_TRUE(std::equal(dst.begin(), dst.end(), src.begin()));
 
   dst.assign(GetPageSize(), 0);
-  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
-  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+  EXPECT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_TRUE(std::equal(dst.begin(), dst.end(), src.begin()));
 
   dst.assign(src.size(), 0);
-  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
-  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+  EXPECT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_TRUE(std::equal(dst.begin(), dst.end(), src.begin()));
 
   dst.assign(src.size() - 1, 0);
-  ASSERT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
-  EXPECT_THAT(dst, ElementsAreArray(src.data(), dst.size()));
+  EXPECT_TRUE(TryMemCpy(dst.data(), src.data(), dst.size()));
+  EXPECT_TRUE(std::equal(dst.begin(), dst.end(), src.begin()));
+}
 
+TEST(SanitizerCommon, TryMemCpyNull) {
+  std::vector<char> dst(100);
   EXPECT_FALSE(TryMemCpy(dst.data(), nullptr, dst.size()));
+}
+
+TEST(SanitizerCommon, TryMemCpyProtected) {
+  const int page_size = GetPageSize();
+  InternalMmapVector<char> src(3 * page_size);
+  std::iota(src.begin(), src.end(), 123);
+  std::vector<char> dst;
+  // Protect the middle page.
+  mprotect(src.data() + page_size, page_size, PROT_NONE);
+
+  dst.assign(src.size(), 0);
+  EXPECT_FALSE(TryMemCpy(dst.data(), src.data(), dst.size()));
+
+  mprotect(src.data() + page_size, page_size, PROT_READ | PROT_WRITE);
+  EXPECT_TRUE(std::equal(dst.begin(), dst.end(), src.begin()));
 }
 
 }  // namespace __sanitizer
