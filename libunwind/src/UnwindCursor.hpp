@@ -2151,8 +2151,8 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
         if (xlcPersonalityV0 == NULL) {
           _LIBUNWIND_TRACE_UNWINDING("dlsym() failed with errno=%d\n", errno);
           assert(0 && "dlsym() failed");
+          dlclose(libHandle);
         }
-        dlclose(libHandle);
         errno = saveErrno;
       }
       xlcPersonalityV0InitLock.unlock();
