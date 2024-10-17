@@ -120,8 +120,8 @@ LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) {
   float xf = x;
   float kf = fputil::nearest_integer(xf * (LOG2F_E * 2.0f * 0x1.0p+5f));
   int x_hi_mid = -static_cast<int>(kf);
-  int x_hi = x_hi_mid >> 5;
-  int x_mid = x_hi_mid & 0x1f;
+  unsigned x_hi = static_cast<unsigned>(x_hi_mid) >> 5;
+  unsigned x_mid = static_cast<unsigned>(x_hi_mid) & 0x1f;
   // lo = x - (hi + mid)
   //    = round(x * log2(e) * 2 * 2^5) * log(2) * 0.5 * (-2^(-5)) + x
   float lo = fputil::multiply_add(kf, LOGF_2 * 0.5f * -0x1.0p-5f, xf);
