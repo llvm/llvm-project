@@ -136,9 +136,11 @@ func.func @invalid_nested_wrapper(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{only supported nested wrapper is 'omp.simd'}}
   omp.wsloop {
     omp.distribute {
-      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
-        omp.yield
-      }
+      omp.simd {
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+      } {omp.composite}
     } {omp.composite}
   } {omp.composite}
 }
@@ -1975,7 +1977,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         omp.yield
       }
-    } {omp.composite}
+    }
   } {omp.composite}
   return
 }
@@ -2188,7 +2190,7 @@ func.func @omp_distribute_nested_wrapper2(%lb: index, %ub: index, %step: index) 
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         "omp.yield"() : () -> ()
       }
-    }) {omp.composite} : () -> ()
+    }) : () -> ()
   } {omp.composite}
 }
 

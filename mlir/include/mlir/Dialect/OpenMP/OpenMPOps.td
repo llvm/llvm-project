@@ -137,7 +137,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
     }
   }];
 
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -175,6 +175,7 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
   }];
 
   let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
@@ -426,6 +427,7 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
   }];
 
   let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -479,6 +481,7 @@ def SimdOp : OpenMP_Op<"simd", traits = [
   }];
 
   let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 
@@ -556,6 +559,7 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
   }];
 
   let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -693,6 +697,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
   }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
