@@ -228,28 +228,27 @@ VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
     : VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
       LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType()) {}
 
-Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
+Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
     return Def->getLiveInIRValue();
 
-  if (hasScalarValue(Def, Instance)) {
-    return Data.VPV2Scalars[Def][Instance.Lane.mapToCacheIndex(VF)];
-  }
-  if (!Instance.Lane.isFirstLane() &&
-      vputils::isUniformAfterVectorization(Def) &&
-      hasScalarValue(Def, {Instance.Part, VPLane::getFirstLane()})) {
+  if (hasScalarValue(Def, Lane))
+    return Data.VPV2Scalars[Def][Lane.mapToCacheIndex(VF)];
+
+  if (!Lane.isFirstLane() && vputils::isUniformAfterVectorization(Def) &&
+      hasScalarValue(Def, VPLane::getFirstLane())) {
     return Data.VPV2Scalars[Def][0];
   }
 
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
   if (!VecPart->getType()->isVectorTy()) {
-    assert(Instance.Lane.isFirstLane() && "cannot get lane > 0 for scalar");
+    assert(Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;
   }
   // TODO: Cache created scalar values.
-  Value *Lane = Instance.Lane.getAsRuntimeExpr(Builder, VF);
-  auto *Extract = Builder.CreateExtractElement(VecPart, Lane);
+  Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
+  auto *Extract = Builder.CreateExtractElement(VecPart, LaneV);
   // set(Def, Extract, Instance);
   return Extract;
 }
@@ -258,11 +257,11 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   if (NeedsScalar) {
     assert((VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def) ||
             !vputils::onlyFirstLaneUsed(Def) ||
-            (hasScalarValue(Def, VPIteration(0, 0)) &&
+            (hasScalarValue(Def, VPLane(0)) &&
              Data.VPV2Scalars[Def].size() == 1)) &&
            "Trying to access a single scalar per part but has multiple scalars "
            "per part.");
-    return get(Def, VPIteration(0, 0));
+    return get(Def, VPLane(0));
   }
 
   // If Values have been set for this Def return the one relevant for \p Part.
@@ -289,7 +288,7 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     return Shuf;
   };
 
-  if (!hasScalarValue(Def, {0, 0})) {
+  if (!hasScalarValue(Def, {0})) {
     assert(Def->isLiveIn() && "expected a live-in");
     Value *IRV = Def->getLiveInIRValue();
     Value *B = GetBroadcastInstrs(IRV);
@@ -297,7 +296,7 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     return B;
   }
 
-  Value *ScalarValue = get(Def, {0, 0});
+  Value *ScalarValue = get(Def, VPLane(0));
   // If we aren't vectorizing, we can just copy the scalar map values over
   // to the vector map.
   if (VF.isScalar()) {
@@ -307,9 +306,9 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
 
   bool IsUniform = vputils::isUniformAfterVectorization(Def);
 
-  unsigned LastLane = IsUniform ? 0 : VF.getKnownMinValue() - 1;
+  VPLane LastLane(IsUniform ? 0 : VF.getKnownMinValue() - 1);
   // Check if there is a scalar value for the selected lane.
-  if (!hasScalarValue(Def, {0, LastLane})) {
+  if (!hasScalarValue(Def, LastLane)) {
     // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
     // VPExpandSCEVRecipes can also be uniform.
     assert((isa<VPWidenIntOrFpInductionRecipe>(Def->getDefiningRecipe()) ||
@@ -320,7 +319,7 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     LastLane = 0;
   }
 
-  auto *LastInst = cast<Instruction>(get(Def, {0, LastLane}));
+  auto *LastInst = cast<Instruction>(get(Def, LastLane));
   // Set the insert point after the last scalarized instruction or after the
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
   // will directly follow the scalar definitions.
@@ -347,7 +346,7 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     Value *Undef = PoisonValue::get(VectorType::get(LastInst->getType(), VF));
     set(Def, Undef);
     for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
-      packScalarIntoVectorValue(Def, {0, Lane});
+      packScalarIntoVectorValue(Def, Lane);
     VectorValue = get(Def);
   }
   Builder.restoreIP(OldIP);
@@ -401,11 +400,11 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
 }
 
 void VPTransformState::packScalarIntoVectorValue(VPValue *Def,
-                                                 const VPIteration &Instance) {
-  Value *ScalarInst = get(Def, Instance);
+                                                 const VPLane &Lane) {
+  Value *ScalarInst = get(Def, Lane);
   Value *VectorValue = get(Def);
-  VectorValue = Builder.CreateInsertElement(
-      VectorValue, ScalarInst, Instance.Lane.getAsRuntimeExpr(Builder, VF));
+  VectorValue = Builder.CreateInsertElement(VectorValue, ScalarInst,
+                                            Lane.getAsRuntimeExpr(Builder, VF));
   set(Def, VectorValue);
 }
 
@@ -483,7 +482,7 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
-  bool Replica = State->Instance && !State->Instance->isFirstIteration();
+  bool Replica = bool(State->Lane);
   VPBasicBlock *PrevVPBB = State->CFG.PrevVPBB;
   VPBlockBase *SingleHPred = nullptr;
   BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
@@ -765,14 +764,14 @@ void VPRegionBlock::execute(VPTransformState *State) {
     return;
   }
 
-  assert(!State->Instance && "Replicating a Region with non-null instance.");
+  assert(!State->Lane && "Replicating a Region with non-null instance.");
 
   // Enter replicating mode.
-  State->Instance = VPIteration(0, 0);
   assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
+  State->Lane = VPLane(0);
   for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
        ++Lane) {
-    State->Instance->Lane = VPLane(Lane, VPLane::Kind::First);
+    State->Lane = VPLane(Lane, VPLane::Kind::First);
     // Visit the VPBlocks connected to \p this, starting from it.
     for (VPBlockBase *Block : RPOT) {
       LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
@@ -781,7 +780,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
   }
 
   // Exit replicating mode.
-  State->Instance.reset();
+  State->Lane.reset();
 }
 
 InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
@@ -864,10 +863,10 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-static VPIRBasicBlock *createVPIRBasicBlockFor(BasicBlock *BB) {
-  auto *VPIRBB = new VPIRBasicBlock(BB);
+VPIRBasicBlock *VPIRBasicBlock::fromBasicBlock(BasicBlock *IRBB) {
+  auto *VPIRBB = new VPIRBasicBlock(IRBB);
   for (Instruction &I :
-       make_range(BB->begin(), BB->getTerminator()->getIterator()))
+       make_range(IRBB->begin(), IRBB->getTerminator()->getIterator()))
     VPIRBB->appendRecipe(new VPIRInstruction(I));
   return VPIRBB;
 }
@@ -876,16 +875,24 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
                                    PredicatedScalarEvolution &PSE,
                                    bool RequiresScalarEpilogueCheck,
                                    bool TailFolded, Loop *TheLoop) {
-  VPIRBasicBlock *Entry = createVPIRBasicBlockFor(TheLoop->getLoopPreheader());
+  VPIRBasicBlock *Entry =
+      VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
 
   // Create SCEV and VPValue for the trip count.
-  const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
-  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) && "Invalid loop count");
+
+  // Currently only loops with countable exits are vectorized, but calling
+  // getSymbolicMaxBackedgeTakenCount allows enablement work for loops with
+  // uncountable exits whilst also ensuring the symbolic maximum and known
+  // back-edge taken count remain identical for loops with countable exits.
+  const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
+  assert((!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
+          BackedgeTakenCountSCEV == PSE.getBackedgeTakenCount()) &&
+         "Invalid loop count");
   ScalarEvolution &SE = *PSE.getSE();
-  const SCEV *TripCount =
-      SE.getTripCountFromExitCount(BackedgeTakenCount, InductionTy, TheLoop);
+  const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
+                                                       InductionTy, TheLoop);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
 
@@ -916,7 +923,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
-  auto *VPExitBlock = createVPIRBasicBlockFor(IRExitBlock);
+  auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.
   VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
@@ -992,18 +999,14 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
 /// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
-  VPIRBasicBlock *IRVPBB = createVPIRBasicBlockFor(IRBB);
+  VPIRBasicBlock *IRVPBB = VPIRBasicBlock::fromBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB)) {
     assert(!R.isPhi() && "Tried to move phi recipe to end of block");
     R.moveBefore(*IRVPBB, IRVPBB->end());
   }
-  VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
-  VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-  VPBlockUtils::connectBlocks(PredVPBB, IRVPBB);
-  for (auto *Succ : to_vector(VPBB->getSuccessors())) {
-    VPBlockUtils::connectBlocks(IRVPBB, Succ);
-    VPBlockUtils::disconnectBlocks(VPBB, Succ);
-  }
+
+  VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
+
   delete VPBB;
 }
 

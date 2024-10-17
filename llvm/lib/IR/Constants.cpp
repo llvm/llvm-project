@@ -932,7 +932,10 @@ Constant *ConstantInt::get(Type *Ty, uint64_t V, bool isSigned) {
 }
 
 ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool isSigned) {
-  return get(Ty->getContext(), APInt(Ty->getBitWidth(), V, isSigned));
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return get(Ty->getContext(),
+             APInt(Ty->getBitWidth(), V, isSigned, /*implicitTrunc=*/true));
 }
 
 Constant *ConstantInt::get(Type *Ty, const APInt& V) {
@@ -2735,17 +2738,34 @@ Constant *ConstantExpr::getIdentity(Instruction *I, Type *Ty,
   return nullptr;
 }
 
-Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty) {
+Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty,
+                                         bool AllowLHSConstant) {
   switch (Opcode) {
   default:
-    // Doesn't have an absorber.
-    return nullptr;
+    break;
 
-  case Instruction::Or:
+  case Instruction::Or: // -1 | X = -1
     return Constant::getAllOnesValue(Ty);
 
-  case Instruction::And:
-  case Instruction::Mul:
+  case Instruction::And: // 0 & X = 0
+  case Instruction::Mul: // 0 * X = 0
+    return Constant::getNullValue(Ty);
+  }
+
+  // AllowLHSConstant must be set.
+  if (!AllowLHSConstant)
+    return nullptr;
+
+  switch (Opcode) {
+  default:
+    return nullptr;
+  case Instruction::Shl:  // 0 << X = 0
+  case Instruction::LShr: // 0 >>l X = 0
+  case Instruction::AShr: // 0 >>a X = 0
+  case Instruction::SDiv: // 0 /s X = 0
+  case Instruction::UDiv: // 0 /u X = 0
+  case Instruction::URem: // 0 %u X = 0
+  case Instruction::SRem: // 0 %s X = 0
     return Constant::getNullValue(Ty);
   }
 }

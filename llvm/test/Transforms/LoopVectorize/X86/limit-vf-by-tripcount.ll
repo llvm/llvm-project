@@ -277,8 +277,7 @@ define void @limit_main_loop_vf_to_avoid_dead_main_vector_loop(ptr noalias %src,
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [3 x i8], ptr [[SRC:%.*]], i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <24 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <24 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <24 x i8> [[WIDE_VEC]], <24 x i8> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0

@@ -224,6 +224,20 @@ private:
   Number n;
 };
 
+class BaseType {
+public:
+  BaseType() : n(0) { }
+  BaseType(int v) : n(v) { }
+  BaseType(const char*);
+private:
+  Number n;
+};
+
+class SomeType : public BaseType {
+public:
+  using BaseType::BaseType;
+};
+
 class RefCounted {
 public:
   void ref() const;
@@ -336,6 +350,8 @@ public:
   unsigned trivial60() { return ObjectWithNonTrivialDestructor { 5 }.value(); }
   unsigned trivial61() { return DerivedNumber('7').value(); }
   void trivial62() { WTFReportBacktrace(); }
+  SomeType trivial63() { return SomeType(0); }
+  SomeType trivial64() { return SomeType(); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -425,6 +441,7 @@ public:
   unsigned nonTrivial21() { return Number("123").value(); }
   unsigned nonTrivial22() { return ComplexNumber(123, "456").real().value(); }
   unsigned nonTrivial23() { return DerivedNumber("123").value(); }
+  SomeType nonTrivial24() { return SomeType("123"); }
 
   static unsigned s_v;
   unsigned v { 0 };
@@ -515,6 +532,8 @@ public:
     getFieldTrivial().trivial60(); // no-warning
     getFieldTrivial().trivial61(); // no-warning
     getFieldTrivial().trivial62(); // no-warning
+    getFieldTrivial().trivial63(); // no-warning
+    getFieldTrivial().trivial64(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
@@ -587,7 +606,11 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial23();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial24();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
+
+  void setField(RefCounted*);
 };
 
 class UnrelatedClass2 {
@@ -598,11 +621,24 @@ public:
   RefCounted &getFieldTrivialRecursively() { return getFieldTrivial().getFieldTrivial(); }
   RefCounted *getFieldTrivialTernary() { return Field ? Field->getFieldTernary() : nullptr; }
 
+  template<typename T, typename ... AdditionalArgs>
+  void callSetField(T&& item, AdditionalArgs&&... args)
+  {
+    item.setField(std::forward<AdditionalArgs>(args)...);
+  }
+
+  template<typename T, typename ... AdditionalArgs>
+  void callSetField2(T&& item, AdditionalArgs&&... args)
+  {
+    item.setField(std::move<AdditionalArgs>(args)...);
+  }
+
   void test() {
     getFieldTrivialRecursively().trivial1(); // no-warning
     getFieldTrivialTernary()->trivial2(); // no-warning
     getFieldTrivialRecursively().someFunction();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    callSetField(getFieldTrivial(), refCountedObj()); // no-warning
   }
 };
 

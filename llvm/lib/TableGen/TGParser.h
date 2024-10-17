@@ -74,7 +74,7 @@ struct ForeachLoop {
 
 struct DefsetRecord {
   SMLoc Loc;
-  RecTy *EltTy = nullptr;
+  const RecTy *EltTy = nullptr;
   SmallVector<Init *, 16> Elements;
 };
 
@@ -143,7 +143,7 @@ class TGParser {
   TGLexer Lex;
   std::vector<SmallVector<LetRecord, 4>> LetStack;
   std::map<std::string, std::unique_ptr<MultiClass>> MultiClasses;
-  std::map<std::string, RecTy *> TypeAliases;
+  std::map<std::string, const RecTy *> TypeAliases;
 
   /// Loops - Keep track of any foreach loops we are within.
   ///
@@ -288,12 +288,12 @@ private:  // Parser methods.
 
   Init *ParseIDValue(Record *CurRec, StringInit *Name, SMRange NameLoc,
                      IDParseMode Mode = ParseValueMode);
-  Init *ParseSimpleValue(Record *CurRec, RecTy *ItemType = nullptr,
+  Init *ParseSimpleValue(Record *CurRec, const RecTy *ItemType = nullptr,
                          IDParseMode Mode = ParseValueMode);
-  Init *ParseValue(Record *CurRec, RecTy *ItemType = nullptr,
+  Init *ParseValue(Record *CurRec, const RecTy *ItemType = nullptr,
                    IDParseMode Mode = ParseValueMode);
-  void ParseValueList(SmallVectorImpl<llvm::Init*> &Result,
-                      Record *CurRec, RecTy *ItemType = nullptr);
+  void ParseValueList(SmallVectorImpl<llvm::Init *> &Result, Record *CurRec,
+                      const RecTy *ItemType = nullptr);
   bool ParseTemplateArgValueList(SmallVectorImpl<llvm::ArgumentInit *> &Result,
                                  Record *CurRec, Record *ArgsRec);
   void ParseDagArgList(
@@ -306,13 +306,13 @@ private:  // Parser methods.
   void ParseRangeList(SmallVectorImpl<unsigned> &Result);
   bool ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
                        TypedInit *FirstItem = nullptr);
-  RecTy *ParseType();
-  Init *ParseOperation(Record *CurRec, RecTy *ItemType);
-  Init *ParseOperationSubstr(Record *CurRec, RecTy *ItemType);
-  Init *ParseOperationFind(Record *CurRec, RecTy *ItemType);
-  Init *ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType);
-  Init *ParseOperationCond(Record *CurRec, RecTy *ItemType);
-  RecTy *ParseOperatorType();
+  const RecTy *ParseType();
+  Init *ParseOperation(Record *CurRec, const RecTy *ItemType);
+  Init *ParseOperationSubstr(Record *CurRec, const RecTy *ItemType);
+  Init *ParseOperationFind(Record *CurRec, const RecTy *ItemType);
+  Init *ParseOperationForEachFilter(Record *CurRec, const RecTy *ItemType);
+  Init *ParseOperationCond(Record *CurRec, const RecTy *ItemType);
+  const RecTy *ParseOperatorType();
   Init *ParseObjectName(MultiClass *CurMultiClass);
   Record *ParseClassID();
   MultiClass *ParseMultiClassID();

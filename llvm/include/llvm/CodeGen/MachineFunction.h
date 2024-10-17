@@ -376,6 +376,7 @@ class LLVM_ABI MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool HasFakeUses = false;
   bool IsOutlined = false;
 
   /// BBID to assign to the next basic block of this function.
@@ -697,11 +698,6 @@ public:
     return (BBSectionsType == BasicBlockSection::All ||
             BBSectionsType == BasicBlockSection::List ||
             BBSectionsType == BasicBlockSection::Preset);
-  }
-
-  /// Returns true if basic block labels are to be generated for this function.
-  bool hasBBLabels() const {
-    return BBSectionsType == BasicBlockSection::Labels;
   }
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
@@ -1199,6 +1195,9 @@ public:
 
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }
+
+  bool hasFakeUses() const { return HasFakeUses; }
+  void setHasFakeUses(bool V) { HasFakeUses = V; }
 
   bool isOutlined() const { return IsOutlined; }
   void setIsOutlined(bool V) { IsOutlined = V; }

@@ -1398,7 +1398,7 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
         if (!Arg)
           continue;
 
-        if (AL.hasParamAttr(I, Attribute::ByVal))
+        if (NewInnerCB->paramHasAttr(I, Attribute::ByVal))
           // It's unsound to propagate memory attributes to byval arguments.
           // Even if CalledFunction doesn't e.g. write to the argument,
           // the call to NewInnerCB may write to its by-value copy.
@@ -2090,7 +2090,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
           Function *IFn =
-              Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
+              Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::objc_release);
           Builder.CreateCall(IFn, RetOpnd, "");
         }
         II->eraseFromParent();
@@ -2125,7 +2125,8 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Function *IFn = Intrinsic::getDeclaration(Mod, Intrinsic::objc_retain);
+      Function *IFn =
+          Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::objc_retain);
       Builder.CreateCall(IFn, RetOpnd, "");
     }
   }
@@ -2375,7 +2376,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     assert(Deleted);
     (void)Deleted;
   };
-  CtxProf.update(Updater, &Caller);
+  CtxProf.update(Updater, Caller);
   return Ret;
 }
 
@@ -3021,7 +3022,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       });
     } else {
       SmallVector<ReturnInst *, 8> NormalReturns;
-      Function *NewDeoptIntrinsic = Intrinsic::getDeclaration(
+      Function *NewDeoptIntrinsic = Intrinsic::getOrInsertDeclaration(
           Caller->getParent(), Intrinsic::experimental_deoptimize,
           {Caller->getReturnType()});
 

@@ -44,7 +44,7 @@ ArrayRef<const char *> RISCVTargetInfo::getGCCRegNames() const {
       "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31",
 
       // CSRs
-      "fflags", "frm", "vtype", "vl", "vxsat", "vxrm"
+      "fflags", "frm", "vtype", "vl", "vxsat", "vxrm", "sf.vcix_state"
     };
   // clang-format on
   return llvm::ArrayRef(GCCRegNames);
@@ -102,7 +102,7 @@ bool RISCVTargetInfo::validateAsmConstraint(
     return true;
   case 'v':
     // A vector register.
-    if (Name[1] == 'r' || Name[1] == 'm') {
+    if (Name[1] == 'r' || Name[1] == 'd' || Name[1] == 'm') {
       Info.setAllowsRegister();
       Name += 1;
       return true;

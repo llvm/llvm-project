@@ -380,7 +380,8 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::masked_load: {
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
-    Function *NewDecl = Intrinsic::getDeclaration(M, IID, {DestTy, SrcTy});
+    Function *NewDecl =
+        Intrinsic::getOrInsertDeclaration(M, IID, {DestTy, SrcTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
@@ -391,7 +392,8 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::masked_gather: {
     Type *RetTy = II->getType();
     Type *NewPtrTy = NewV->getType();
-    Function *NewDecl = Intrinsic::getDeclaration(M, IID, {RetTy, NewPtrTy});
+    Function *NewDecl =
+        Intrinsic::getOrInsertDeclaration(M, IID, {RetTy, NewPtrTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
@@ -400,18 +402,22 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::masked_scatter: {
     Type *ValueTy = II->getOperand(0)->getType();
     Type *NewPtrTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {ValueTy, NewPtrTy});
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {ValueTy, NewPtrTy});
     II->setArgOperand(1, NewV);
     II->setCalledFunction(NewDecl);
     return true;
   }
   case Intrinsic::prefetch:
   case Intrinsic::is_constant: {
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {NewV->getType()});
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {NewV->getType()});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
+    return true;
+  }
+  case Intrinsic::fake_use: {
+    II->replaceUsesOfWith(OldV, NewV);
     return true;
   }
   default: {
@@ -455,6 +461,16 @@ void InferAddressSpacesImpl::collectRewritableIntrinsicOperands(
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(1),
                                                  PostorderStack, Visited);
     break;
+  case Intrinsic::fake_use: {
+    for (Value *Op : II->operands()) {
+      if (Op->getType()->isPtrOrPtrVectorTy()) {
+        appendsFlatAddressExpressionToPostorderStack(Op, PostorderStack,
+                                                     Visited);
+      }
+    }
+
+    break;
+  }
   default:
     SmallVector<int, 2> OpIndexes;
     if (TTI->collectFlatAddressOperands(OpIndexes, IID)) {
