@@ -1151,8 +1151,8 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   if (auto *D = GetAlreadyImportedOrNull(from); D && D != to)
     LLDB_LOG(log,
              "[ClangASTImporter] WARNING: overwriting an already imported decl "
-             "'{0:x}' ('{1}') from '{2:x}' with {3:x}. Likely due to a name "
-             "conflict when importing {1}.",
+             "'{0:x}' ('{1}') from '{2:x}' with '{3:x}'. Likely due to a name "
+             "conflict when importing '{1}'.",
              D, getDeclName(from), from, to);
 
   // We might have a forward declaration from a shared library that we
