@@ -268,11 +268,12 @@ class ScopedErrorReportLock {
 extern uptr stoptheworld_tracer_pid;
 extern uptr stoptheworld_tracer_ppid;
 
-// Returns true if we can read a memory range.
+// Returns true if the entire range can be read.
 bool IsAccessibleMemoryRange(uptr beg, uptr size);
 // Attempts to copy `n` bytes from memory range starting at `src` to `dest`.
-// Returns true if the entire range can be read and copied, false otherwise.
-// If the copy fails, the contents of `dest` are undefined.
+// Returns true if the entire range can be read. Returns `false` if any part of
+// the source range cannot be read, in which case the contents of `dest` are
+// undefined.
 bool TryMemCpy(void *dest, const void *src, uptr n);
 
 // Error report formatting.
