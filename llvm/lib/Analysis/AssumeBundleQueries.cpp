@@ -10,6 +10,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -213,4 +214,22 @@ RetainedKnowledge llvm::getKnowledgeValidInContext(
                               [&](auto, Instruction *I, auto) {
                                 return isValidAssumeForContext(I, CtxI, DT);
                               });
+}
+
+std::optional<ConstantRange>
+llvm::getRangeFromBundle(AssumeInst &Assume,
+                         const CallBase::BundleOpInfo &BOI) {
+  if (Attribute::getAttrKindFromName(BOI.Tag->getKey()) != Attribute::Range)
+    return std::nullopt;
+
+  assert(BOI.End - BOI.Begin > ABA_Argument + 1 &&
+         "range assumptions should have 3 arguments");
+
+  if (auto *Lower = dyn_cast<ConstantInt>(
+          getValueFromBundleOpInfo(Assume, BOI, ABA_Argument)))
+    if (auto *Upper = dyn_cast<ConstantInt>(
+            getValueFromBundleOpInfo(Assume, BOI, ABA_Argument + 1)))
+      if (Lower->getValue() != Upper->getValue())
+        return ConstantRange(Lower->getValue(), Upper->getValue());
+  return std::nullopt;
 }

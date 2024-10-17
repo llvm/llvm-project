@@ -16,11 +16,13 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include <optional>
 
 namespace llvm {
 class AssumptionCache;
 class DominatorTree;
 class Instruction;
+class ConstantRange;
 
 /// Index of elements in the operand bundle.
 /// If the element exist it is guaranteed to be what is specified in this enum
@@ -169,6 +171,9 @@ RetainedKnowledge getKnowledgeValidInContext(
 /// This is mostly for use in the assume builder.
 RetainedKnowledge getKnowledgeFromBundle(AssumeInst &Assume,
                                          const CallBase::BundleOpInfo &BOI);
+
+std::optional<ConstantRange>
+getRangeFromBundle(AssumeInst &Assume, const CallBase::BundleOpInfo &BOI);
 
 } // namespace llvm
 
