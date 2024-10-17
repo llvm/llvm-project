@@ -5515,6 +5515,9 @@ llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,
 void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
     const VarDecl *VD, llvm::Value *Storage, CGBuilderTy &Builder,
     const CGBlockInfo &blockInfo, llvm::Instruction *InsertPoint) {
+  // FIXME: Workaround to prevent crash when using with -gheterogeneous-dwarf
+  if (CGM.getCodeGenOpts().isHeterogeneousDwarfEnabled())
+    return;
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
 
@@ -5647,6 +5650,9 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
                                                        unsigned ArgNo,
                                                        llvm::AllocaInst *Alloca,
                                                        CGBuilderTy &Builder) {
+  // FIXME: Workaround to prevent crash when using with -gheterogeneous-dwarf
+  if (CGM.getCodeGenOpts().isHeterogeneousDwarfEnabled())
+    return;
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   ASTContext &C = CGM.getContext();
   const BlockDecl *blockDecl = block.getBlockDecl();
@@ -6458,6 +6464,12 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
 
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
                                        const VarDecl *D) {
+  // FIXME: Workaround to prevent crash when using with -gheterogeneous-dwarf
+  // NOTE: Only currently reachable for BPF target, but check added for
+  // completeness and in case this changes.
+  if (CGM.getCodeGenOpts().isHeterogeneousDwarfEnabled())
+    return;
+
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (D->hasAttr<NoDebugAttr>())
     return;
