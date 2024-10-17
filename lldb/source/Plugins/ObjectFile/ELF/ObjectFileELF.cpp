@@ -46,7 +46,6 @@
 #include "llvm/Support/MipsABIFlags.h"
 #include "lldb/Target/Process.h"
 
-
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
     s->Printf("%-*s", width, #def);                                            \
@@ -2992,21 +2991,20 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // section, nomatter if .symtab was already parsed or not. This is because
   // minidebuginfo normally removes the .symtab symbols which have their
   // matching .dynsym counterparts.
-  bool found_dynsym = false;
+  Section *dynsym = nullptr;
   if (!symtab ||
       GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
-    Section *dynsym =
+    dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
     if (dynsym) {
-      found_dynsym = true;
       auto [num_symbols, address_class_map] =
           ParseSymbolTable(&lldb_symtab, symbol_id, dynsym);
       symbol_id += num_symbols;
       m_address_class_map.merge(address_class_map);
     }
   }
-  if (!found_dynsym) {
+  if (!dynsym) {
     // Try and read the dynamic symbol table from the .dynamic section.
     uint32_t num_symbols = 0;
     std::optional<DataExtractor> symtab_data =
@@ -3883,9 +3881,9 @@ std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
   // and represent the dynamic symbol tables's string table. These are needed
   // by the dynamic loader and we can read them from a process' address space.
   //
-  // When loading and ELF file from memory, only the program headers end up
-  // being mapped into memory, and we can find these values in the PT_DYNAMIC
-  // segment.
+  // When loading and ELF file from memory, only the program headers are
+  // guaranteed end up being mapped into memory, and we can find these values in
+  // the PT_DYNAMIC segment.
   const ELFDynamic *strtab = FindDynamicSymbol(DT_STRTAB);
   const ELFDynamic *strsz = FindDynamicSymbol(DT_STRSZ);
   if (strtab == nullptr || strsz == nullptr)
@@ -3925,6 +3923,86 @@ std::optional<lldb_private::DataExtractor> ObjectFileELF::GetDynamicData() {
   return std::nullopt;
 }
 
+std::optional<uint32_t> ObjectFileELF::GetNumSymbolsFromDynamicHash() {
+  const ELFDynamic *hash = FindDynamicSymbol(DT_HASH);
+  if (hash == nullptr)
+    return std::nullopt;
+
+  // The DT_HASH header looks like this:
+  struct DtHashHeader {
+    uint32_t nbucket;
+    uint32_t nchain;
+  };
+  if (auto data = ReadDataFromDynamic(hash, 8)) {
+    // We don't need the number of buckets value "nbucket", we just need the
+    // "nchain" value which contains the number of symbols.
+    offset_t offset = offsetof(DtHashHeader, nchain);
+    return data->GetU32(&offset);
+  }
+
+  return std::nullopt;
+}
+
+std::optional<uint32_t> ObjectFileELF::GetNumSymbolsFromDynamicGnuHash() {
+  const ELFDynamic *gnu_hash = FindDynamicSymbol(DT_GNU_HASH);
+  if (gnu_hash == nullptr)
+    return std::nullopt;
+
+  // Create a DT_GNU_HASH header
+  // https://flapenguin.me/elf-dt-gnu-hash
+  struct DtGnuHashHeader {
+    uint32_t nbuckets = 0;
+    uint32_t symoffset = 0;
+    uint32_t bloom_size = 0;
+    uint32_t bloom_shift = 0;
+  };
+  uint32_t num_symbols = 0;
+  // Read enogh data for the DT_GNU_HASH header so we can extract the values.
+  if (auto data = ReadDataFromDynamic(gnu_hash, sizeof(DtGnuHashHeader))) {
+    offset_t offset = 0;
+    DtGnuHashHeader header;
+    header.nbuckets = data->GetU32(&offset);
+    header.symoffset = data->GetU32(&offset);
+    header.bloom_size = data->GetU32(&offset);
+    header.bloom_shift = data->GetU32(&offset);
+    const size_t addr_size = GetAddressByteSize();
+    const addr_t buckets_offset =
+        sizeof(DtGnuHashHeader) + addr_size * header.bloom_size;
+    std::vector<uint32_t> buckets;
+    if (auto bucket_data = ReadDataFromDynamic(gnu_hash, header.nbuckets * 4, buckets_offset)) {
+      offset = 0;
+      for (uint32_t i = 0; i < header.nbuckets; ++i)
+        buckets.push_back(bucket_data->GetU32(&offset));
+      // Locate the chain that handles the largest index bucket.
+      uint32_t last_symbol = 0;
+      for (uint32_t bucket_value : buckets)
+        last_symbol = std::max(bucket_value, last_symbol);
+      if (last_symbol < header.symoffset) {
+        num_symbols = header.symoffset;
+      } else {
+        // Walk the bucket's chain to add the chain length to the total.
+        const addr_t chains_base_offset = buckets_offset + header.nbuckets * 4;
+        for (;;) {
+          if (auto chain_entry_data = ReadDataFromDynamic(gnu_hash, 4, chains_base_offset + (last_symbol - header.symoffset) * 4)) {
+            offset = 0;
+            uint32_t chain_entry = chain_entry_data->GetU32(&offset);
+            ++last_symbol;
+            // If the low bit is set, this entry is the end of the chain.
+            if (chain_entry & 1)
+              break;
+          } else {
+            break;
+          }
+        }
+        num_symbols = last_symbol;
+      }
+    }
+  }
+  if (num_symbols > 0)
+    return ++num_symbols; // First symbol is always all zeros
+
+  return std::nullopt;
+}
 
 std::optional<DataExtractor>
 ObjectFileELF::GetDynsymDataFromDynamic(uint32_t &num_symbols) {
@@ -3943,83 +4021,16 @@ ObjectFileELF::GetDynsymDataFromDynamic(uint32_t &num_symbols) {
   ProcessSP process_sp(m_process_wp.lock());
   const ELFDynamic *symtab = FindDynamicSymbol(DT_SYMTAB);
   const ELFDynamic *syment = FindDynamicSymbol(DT_SYMENT);
-  const ELFDynamic *hash = FindDynamicSymbol(DT_HASH);
-  const ELFDynamic *gnu_hash = FindDynamicSymbol(DT_GNU_HASH);
   // DT_SYMTAB and DT_SYMENT are mandatory.
   if (symtab == nullptr || syment == nullptr)
     return std::nullopt;
-  // We must have either a DT_HASH or a DT_GNU_HASH.
-  if (hash == nullptr && gnu_hash == nullptr)
-    return std::nullopt;
-  // The number of symbols in the symbol table is the number of entries in the
-  // symbol table divided by the size of each symbol table entry.
-  // We must figure out the number of symbols in the symbol table using the
-  // DT_HASH or the DT_GNU_HASH as the number of symbols isn't stored anywhere
-  // in the .dynamic section.
 
-  lldb::offset_t offset;
-  if (hash) {
-    // The DT_HASH header contains the number of symbols in the "nchain"
-    // member. The header looks like this:
-    // struct DT_HASH_HEADER {
-    //   uint32_t nbucket;
-    //   uint32_t nchain;
-    // };
-    if (auto data = ReadDataFromDynamic(hash, 8)) {
-      offset = 4;
-      num_symbols = data->GetU32(&offset);
-    }
-  }
-  if (num_symbols == 0 && gnu_hash) {
-    struct DT_GNU_HASH_HEADER {
-      uint32_t nbuckets = 0;
-      uint32_t symoffset = 0;
-      uint32_t bloom_size = 0;
-      uint32_t bloom_shift = 0;
-    };
-    if (auto data = ReadDataFromDynamic(gnu_hash, sizeof(DT_GNU_HASH_HEADER))) {
-      offset = 0;
-      DT_GNU_HASH_HEADER header;
-      header.nbuckets = data->GetU32(&offset);
-      header.symoffset = data->GetU32(&offset);
-      header.bloom_size = data->GetU32(&offset);
-      header.bloom_shift = data->GetU32(&offset);
-      const size_t addr_size = GetAddressByteSize();
-      const addr_t buckets_offset =
-          sizeof(DT_GNU_HASH_HEADER) + addr_size * header.bloom_size;
-      std::vector<uint32_t> buckets;
-      if (auto bucket_data = ReadDataFromDynamic(gnu_hash, header.nbuckets * 4, buckets_offset)) {
-        offset = 0;
-        for (uint32_t i = 0; i < header.nbuckets; ++i)
-          buckets.push_back(bucket_data->GetU32(&offset));
-        // Locate the chain that handles the largest index bucket.
-        uint32_t last_symbol = 0;
-        for (uint32_t bucket_value : buckets)
-          last_symbol = std::max(bucket_value, last_symbol);
-        if (last_symbol < header.symoffset) {
-          num_symbols = header.symoffset;
-        } else {
-          // Walk the bucket's chain to add the chain length to the total.
-          const addr_t chains_base_offset = buckets_offset + header.nbuckets * 4;
-          for (;;) {
-            if (auto chain_entry_data = ReadDataFromDynamic(gnu_hash, 4, chains_base_offset + (last_symbol - header.symoffset) * 4)) {
-              offset = 0;
-              uint32_t chain_entry = chain_entry_data->GetU32(&offset);
-              ++last_symbol;
-              // If the low bit is set, this entry is the end of the chain.
-              if (chain_entry & 1)
-                break;
-            } else {
-              break;
-            }
-          }
-          num_symbols = last_symbol;
-        }
-      }
-    }
-    if (num_symbols > 0)
-      ++num_symbols; // First symbol is always all zeros
-  }
+  if (std::optional<uint32_t> syms = GetNumSymbolsFromDynamicHash())
+    num_symbols = *syms;
+  else if (std::optional<uint32_t> syms = GetNumSymbolsFromDynamicGnuHash())
+    num_symbols = *syms;
+  else
+    return std::nullopt;
   if (num_symbols == 0)
     return std::nullopt;
   return ReadDataFromDynamic(symtab, syment->d_val * num_symbols);
