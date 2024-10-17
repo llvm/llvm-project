@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "stat.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CrashHandlerFixture.h"
-#include "flang-rt/flang_rt/descriptor.h"
-#include "flang-rt/flang_rt/io-api-funcs.h"
+#include "flang-rt/descriptor.h"
+#include "flang-rt/io-api-funcs.h"
 #include <algorithm>
 #include <array>
 #include <cstring>

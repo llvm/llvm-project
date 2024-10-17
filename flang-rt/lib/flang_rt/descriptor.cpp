@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "ISO_Fortran_util.h"
 #include "derived.h"
-#include "flang-rt/flang_rt/allocator-registry.h"
+#include "flang-rt/allocator-registry.h"
 #include "memory.h"
 #include "stat.h"
 #include "terminator.h"

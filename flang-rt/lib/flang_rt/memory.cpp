@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/flang_rt/memory.h"
+#include "flang-rt/memory.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Runtime/freestanding-tools.h"

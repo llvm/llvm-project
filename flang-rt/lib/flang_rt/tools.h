@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_TOOLS_H_
-#define FORTRAN_FLANG_RT_TOOLS_H_
+#ifndef FLANGRT_TOOLS_H_
+#define FLANGRT_TOOLS_H_
 
-#include "flang-rt/flang_rt/descriptor.h"
-#include "flang-rt/flang_rt/memory.h"
+#include "flang-rt/descriptor.h"
+#include "flang-rt/memory.h"
 #include "stat.h"
 #include "terminator.h"
 #include "flang/Common/optional.h"
@@ -535,4 +535,4 @@ RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
     const char *intrinsic, TypeCode);
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FLANG_RT_TOOLS_H_ */
+#endif /* FLANGRT_TOOLS_H_ */

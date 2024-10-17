@@ -1,4 +1,4 @@
-//===-- include/flang-rt/flang_rt/type-code.h -------------------*- C++ -*-===//
+//===-- include/flang-rt/type-code.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_TYPE_CODE_H_
-#define FORTRAN_FLANG_RT_TYPE_CODE_H_
+#ifndef FLANGRT_TYPE_CODE_H_
+#define FLANGRT_TYPE_CODE_H_
 
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
@@ -75,4 +75,4 @@ private:
   ISO::CFI_type_t raw_{CFI_type_other};
 };
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FLANG_RT_TYPE_CODE_H_ */
+#endif /* FLANGRT_TYPE_CODE_H_ */

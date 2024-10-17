@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/CufRuntime/allocator.h"
-#include "flang-rt/flang_rt/allocator-registry.h"
+#include "flang-rt/CUDA/allocator.h"
+#include "flang-rt/allocator-registry.h"
 #include "../flang_rt/derived.h"
 #include "../flang_rt/stat.h"
 #include "../flang_rt/terminator.h"

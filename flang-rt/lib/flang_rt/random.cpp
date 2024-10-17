@@ -10,7 +10,7 @@
 // RANDOM_SEED.
 
 #include "flang/Runtime/random.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "lock.h"
 #include "random-templates.h"
 #include "terminator.h"

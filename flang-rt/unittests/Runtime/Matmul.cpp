@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/matmul.h"
-#include "flang-rt/flang_rt/descriptor.h"
-#include "flang-rt/flang_rt/type-code.h"
+#include "flang-rt/descriptor.h"
+#include "flang-rt/type-code.h"
 #include "gtest/gtest.h"
 #include "tools.h"
 #include "flang/Runtime/allocatable.h"

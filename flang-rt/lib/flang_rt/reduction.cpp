@@ -14,7 +14,7 @@
 // NORM2, MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
 
 #include "flang/Runtime/reduction.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "reduction-templates.h"
 #include <cinttypes>
 

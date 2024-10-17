@@ -9,7 +9,7 @@
 #include "flang/Runtime/assign.h"
 #include "assign-impl.h"
 #include "derived.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"

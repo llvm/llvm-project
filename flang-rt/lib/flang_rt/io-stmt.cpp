@@ -9,7 +9,7 @@
 #include "io-stmt.h"
 #include "connection.h"
 #include "emit-encoded.h"
-#include "flang-rt/flang_rt/memory.h"
+#include "flang-rt/memory.h"
 #include "format.h"
 #include "tools.h"
 #include "unit.h"

@@ -1,4 +1,4 @@
-//===-- include/flang-rt/flang_rt/allocator-registry.h ----------*- C++ -*-===//
+//===-- include/flang-rt/allocator-registry.h -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_ALLOCATOR_REGISTRY_H_
-#define FORTRAN_FLANG_RT_ALLOCATOR_REGISTRY_H_
+#ifndef FLANGRT_ALLOCATOR_REGISTRY_H_
+#define FLANGRT_ALLOCATOR_REGISTRY_H_
 
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/allocator-registry-consts.h"
@@ -55,4 +55,4 @@ RT_OFFLOAD_VAR_GROUP_END
 
 } // namespace Fortran::runtime
 
-#endif /* FORTRAN_FLANG_RT_ALLOCATOR_REGISTRY_H_ */
+#endif /* FLANGRT_ALLOCATOR_REGISTRY_H_ */

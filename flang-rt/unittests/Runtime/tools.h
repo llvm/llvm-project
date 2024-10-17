@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_UNITTESTS_RUNTIME_TOOLS_H_
-#define FORTRAN_UNITTESTS_RUNTIME_TOOLS_H_
+#ifndef FLANGRT_UNITTESTS_RUNTIME_TOOLS_H_
+#define FLANGRT_UNITTESTS_RUNTIME_TOOLS_H_
 
-#include "flang-rt/flang_rt/descriptor.h"
-#include "flang-rt/flang_rt/type-code.h"
+#include "flang-rt/descriptor.h"
+#include "flang-rt/type-code.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
@@ -54,4 +54,4 @@ static OwningPtr<Descriptor> MakeArray(const std::vector<int> &shape,
 }
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_UNITTESTS_RUNTIME_TOOLS_H_ */
+#endif /* FLANGRT_UNITTESTS_RUNTIME_TOOLS_H_ */

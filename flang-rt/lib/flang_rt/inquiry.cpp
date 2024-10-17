@@ -11,7 +11,7 @@
 
 #include "flang/Runtime/inquiry.h"
 #include "copy.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 #include <algorithm>

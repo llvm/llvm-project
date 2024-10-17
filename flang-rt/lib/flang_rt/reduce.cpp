@@ -9,7 +9,7 @@
 // REDUCE() implementation
 
 #include "flang/Runtime/reduce.h"
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "reduction-templates.h"
 #include "terminator.h"
 #include "tools.h"

@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_ISO_FORTRAN_UTIL_H_
-#define FORTRAN_FLANG_RT_ISO_FORTRAN_UTIL_H_
+#ifndef FLANGRT_ISO_FORTRAN_UTIL_H_
+#define FLANGRT_ISO_FORTRAN_UTIL_H_
 
 // Internal utils for establishing CFI_cdesc_t descriptors.
 
-#include "flang-rt/flang_rt/descriptor.h"
-#include "flang-rt/flang_rt/type-code.h"
+#include "flang-rt/descriptor.h"
+#include "flang-rt/type-code.h"
 #include "terminator.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include <cstdlib>
@@ -99,4 +99,4 @@ static inline RT_API_ATTRS void EstablishDescriptor(CFI_cdesc_t *descriptor,
   }
 }
 } // namespace Fortran::ISO
-#endif /* FORTRAN_FLANG_RT_ISO_FORTRAN_UTIL_H_ */
+#endif /* FLANGRT_ISO_FORTRAN_UTIL_H_ */

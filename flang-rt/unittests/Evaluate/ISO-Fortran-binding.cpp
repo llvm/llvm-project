@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/flang_rt/descriptor.h"
+#include "flang-rt/descriptor.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Testing/testing.h"
 #include "llvm/Support/raw_ostream.h"

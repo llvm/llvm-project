@@ -10,8 +10,8 @@
 // temporaries. For use in HLFIR lowering.
 
 #include "flang/Runtime/temporary-stack.h"
-#include "flang-rt/flang_rt/descriptor.h"
-#include "flang-rt/flang_rt/memory.h"
+#include "flang-rt/descriptor.h"
+#include "flang-rt/memory.h"
 #include "terminator.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
