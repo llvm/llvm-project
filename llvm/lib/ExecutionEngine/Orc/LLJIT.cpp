@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
@@ -195,10 +197,14 @@ public:
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
     auto *AtExitCallbackTy = FunctionType::get(VoidTy, {}, false);
     auto *AtExitCallbackPtrTy = PointerType::getUnqual(AtExitCallbackTy);
-    addHelperAndWrapper(*M, "atexit",
-                        FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
-                        GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
-                        {PlatformInstanceDecl, DSOHandle});
+    auto *AtExit = addHelperAndWrapper(
+        *M, "atexit", FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
+        GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
+        {PlatformInstanceDecl, DSOHandle});
+    Attribute::AttrKind AtExitExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Return(J.getTargetTriple());
+    if (AtExitExtAttr != Attribute::None)
+      AtExit->addRetAttr(AtExitExtAttr);
 
     return J.addIRModule(JD, ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
@@ -602,7 +608,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   using llvm::orc::shared::SPSExecutorAddr;
   using llvm::orc::shared::SPSString;
   using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-  using SPSDLUpdateSig = int32_t(SPSExecutorAddr, int32_t);
+  using SPSDLUpdateSig = int32_t(SPSExecutorAddr);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -628,8 +634,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
     if (dlupdate) {
       int32_t result;
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
-                                                 result, DSOHandles[&JD],
-                                                 int32_t(ORC_RT_RTLD_LAZY));
+                                                 result, DSOHandles[&JD]);
       if (E)
         return E;
       else if (result)
@@ -1172,7 +1177,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
       StaticVCRuntime = VCRuntime->second;
     }
     if (auto P = COFFPlatform::Create(
-            ES, *ObjLinkingLayer, PlatformJD, std::move(RuntimeArchiveBuffer),
+            *ObjLinkingLayer, PlatformJD, std::move(RuntimeArchiveBuffer),
             LoadAndLinkDynLibrary(J), StaticVCRuntime, VCRuntimePath))
       J.getExecutionSession().setPlatform(std::move(*P));
     else
