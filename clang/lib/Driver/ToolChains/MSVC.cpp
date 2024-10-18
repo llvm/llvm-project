@@ -660,6 +660,8 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return false;
   };
 
+  // FIXME: /external:env won't cause user paths already present in the
+  // FIXME: search path to be dropped like /external:I does.
   // Add %INCLUDE%-like dirs via /external:env: flags.
   for (const auto &Var :
        DriverArgs.getAllArgValues(options::OPT__SLASH_external_env)) {
