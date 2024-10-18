@@ -28,5 +28,13 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3) {
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P)]
 ; CHECK: arguments to separate_storage assumptions should be pointers
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P, i32 123)]
+; CHECK: range assumptions should have 3 arguments
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0)]
+; CHECK: first argument should be an integer or vector of integers
+  call void @llvm.assume(i1 true) ["range"(ptr %P, i32 %P1, i32 4)]
+; CHECK: second argument should be an integer with same bit width as the first argument
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, ptr %P, i32 4)]
+; CHECK: third argument should be an integer with same bit width as the first argument
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 4, i8 10)]
   ret void
 }

@@ -10,6 +10,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -69,8 +70,14 @@ bool llvm::hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
 
 void llvm::fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result) {
   for (auto &Bundles : Assume.bundle_op_infos()) {
-    std::pair<Value *, Attribute::AttrKind> Key{
-        nullptr, Attribute::getAttrKindFromName(Bundles.Tag->getKey())};
+    Attribute::AttrKind AttrKind =
+        Attribute::getAttrKindFromName(Bundles.Tag->getKey());
+
+    if (!Attribute::isEnumAttrKind(AttrKind) &&
+        !Attribute::isIntAttrKind(AttrKind))
+      continue;
+
+    std::pair<Value *, Attribute::AttrKind> Key{nullptr, AttrKind};
     if (bundleHasArgument(Bundles, ABA_WasOn))
       Key.first = getValueFromBundleOpInfo(Assume, Bundles, ABA_WasOn);
 
@@ -101,8 +108,14 @@ llvm::getKnowledgeFromBundle(AssumeInst &Assume,
   RetainedKnowledge Result;
   if (!DebugCounter::shouldExecute(AssumeQueryCounter))
     return Result;
+  Attribute::AttrKind AttrKind =
+      Attribute::getAttrKindFromName(BOI.Tag->getKey());
 
-  Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
+  if (!Attribute::isEnumAttrKind(AttrKind) &&
+      !Attribute::isIntAttrKind(AttrKind))
+    return Result;
+
+  Result.AttrKind = AttrKind;
   if (bundleHasArgument(BOI, ABA_WasOn))
     Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn);
   auto GetArgOr1 = [&](unsigned Idx) -> uint64_t {
@@ -201,4 +214,22 @@ RetainedKnowledge llvm::getKnowledgeValidInContext(
                               [&](auto, Instruction *I, auto) {
                                 return isValidAssumeForContext(I, CtxI, DT);
                               });
+}
+
+std::optional<ConstantRange>
+llvm::getRangeFromBundle(AssumeInst &Assume,
+                         const CallBase::BundleOpInfo &BOI) {
+  if (Attribute::getAttrKindFromName(BOI.Tag->getKey()) != Attribute::Range)
+    return std::nullopt;
+
+  assert(BOI.End - BOI.Begin > ABA_Argument + 1 &&
+         "range assumptions should have 3 arguments");
+
+  if (auto *Lower = dyn_cast<ConstantInt>(
+          getValueFromBundleOpInfo(Assume, BOI, ABA_Argument)))
+    if (auto *Upper = dyn_cast<ConstantInt>(
+            getValueFromBundleOpInfo(Assume, BOI, ABA_Argument + 1)))
+      if (Lower->getValue() != Upper->getValue())
+        return ConstantRange(Lower->getValue(), Upper->getValue());
+  return std::nullopt;
 }
