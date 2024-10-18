@@ -312,10 +312,20 @@ The following options allow building libc++ for a different ABI version.
   See ``include/__config`` for the list of ABI macros.
 
 .. option:: LIBCXX_CXX_ABI:STRING
+.. option:: LIBCXX_ABILIB_FOR_SHARED:STRING
+.. option:: LIBCXX_ABILIB_FOR_STATIC:STRING
 
   **Values**: ``none``, ``libcxxabi``, ``system-libcxxabi``, ``libcxxrt``, ``libstdc++``, ``libsupc++``, ``vcruntime``.
 
-  Select the ABI library to build libc++ against.
+  Select the ABI library to build libc++ against. This CMake option also supports "consumption specifiers", which
+  specify how the selected ABI library should be consumed by libc++. The supported specifiers are:
+    - ``shared``: The selected ABI library should be used as a shared library.
+    - ``static``: The selected ABI library should be used as a static library.
+    - ``merged``: The selected ABI library should be a static library whose object files will be merged directly into the produced libc++ library.
+
+  A consumption specifier is provided by appending it to the name of the library, such as ``LIBCXX_CXX_ABI=merged-libcxxabi``.
+  If no consumption specifier is provided, the libc++ shared library will default to using a shared ABI library, and the
+  libc++ static library will default to using a static ABI library.
 
 .. option:: LIBCXX_CXX_ABI_INCLUDE_PATHS:PATHS
 
@@ -326,17 +336,10 @@ The following options allow building libc++ for a different ABI version.
   Provide the path to the ABI library that libc++ should link against. This is only
   useful when linking against an out-of-tree ABI library.
 
-.. option:: LIBCXX_ENABLE_STATIC_ABI_LIBRARY:BOOL
-
-  **Default**: ``OFF``
-
-  If this option is enabled, libc++ will try and link the selected ABI library
-  statically.
-
 .. option:: LIBCXX_ENABLE_ABI_LINKER_SCRIPT:BOOL
 
   **Default**: ``ON`` by default on UNIX platforms other than Apple unless
-  'LIBCXX_ENABLE_STATIC_ABI_LIBRARY' is ON. Otherwise the default value is ``OFF``.
+  using the ``merged-libcxxabi`` ABI library. Otherwise the default value is ``OFF``.
 
   This option generate and installs a linker script as ``libc++.so`` which
   links the correct ABI library.
@@ -452,8 +455,7 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
           -DCMAKE_CXX_COMPILER=clang++                                                \
           -DLLVM_ENABLE_LLD=ON                                                        \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"                                   \
-          -DLIBCXXABI_ENABLE_SHARED=OFF                                               \
-          -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
+          -DLIBCXX_CXX_ABI="merged-libcxxabi"
   > ninja -C build cxx
   > ninja -C build check-cxx
 
