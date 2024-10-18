@@ -17,17 +17,17 @@ define double @caller() {
   ; MIR32: bb.0.entry:
   ; MIR32-NEXT:   renamable $r3 = LI 0
   ; MIR32-NEXT:   renamable $r4 = LIS 16392
-  ; MIR32-NEXT:   STW killed renamable $r4, 180, $r1 :: (store (s32) into unknown-address + 24)
+  ; MIR32-NEXT:   STW killed renamable $r4, 184, $r1 :: (store (s32) into unknown-address + 24, align 8)
   ; MIR32-NEXT:   renamable $r4 = LIS 16384
-  ; MIR32-NEXT:   STW renamable $r3, 184, $r1 :: (store (s32) into unknown-address + 28)
-  ; MIR32-NEXT:   STW renamable $r3, 176, $r1 :: (store (s32) into unknown-address + 20)
-  ; MIR32-NEXT:   STW killed renamable $r4, 172, $r1 :: (store (s32) into unknown-address + 16)
-  ; MIR32-NEXT:   STW renamable $r3, 168, $r1 :: (store (s32) into unknown-address + 12)
+  ; MIR32-NEXT:   STW renamable $r3, 188, $r1 :: (store (s32) into unknown-address + 28, basealign 8)
+  ; MIR32-NEXT:   STW renamable $r3, 180, $r1 :: (store (s32) into unknown-address + 20, basealign 8)
+  ; MIR32-NEXT:   STW killed renamable $r4, 176, $r1 :: (store (s32) into unknown-address + 16, align 8)
+  ; MIR32-NEXT:   STW renamable $r3, 172, $r1 :: (store (s32) into unknown-address + 12, basealign 8)
   ; MIR32-NEXT:   renamable $r4 = LIS 16368
-  ; MIR32-NEXT:   STW killed renamable $r4, 164, $r1 :: (store (s32) into unknown-address + 8)
-  ; MIR32-NEXT:   STW renamable $r3, 160, $r1 :: (store (s32) into unknown-address + 4)
-  ; MIR32-NEXT:   STW killed renamable $r3, 156, $r1 :: (store (s32))
-  ; MIR32-NEXT:   ADJCALLSTACKDOWN 188, 0, implicit-def dead $r1, implicit $r1
+  ; MIR32-NEXT:   STW killed renamable $r4, 168, $r1 :: (store (s32) into unknown-address + 8, align 8)
+  ; MIR32-NEXT:   STW renamable $r3, 164, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; MIR32-NEXT:   STW killed renamable $r3, 160, $r1 :: (store (s32), align 8)
+  ; MIR32-NEXT:   ADJCALLSTACKDOWN 192, 0, implicit-def dead $r1, implicit $r1
   ; MIR32-NEXT:   renamable $vsl0 = XXLXORz
   ; MIR32-NEXT:   renamable $r3 = LI 136
   ; MIR32-NEXT:   renamable $r4 = LI 120
@@ -73,7 +73,7 @@ define double @caller() {
   ; MIR32-NEXT:   $f12 = XXLXORdpz
   ; MIR32-NEXT:   $f13 = XXLXORdpz
   ; MIR32-NEXT:   BL_NOP <mcsymbol .callee[PR]>, csr_aix32_altivec, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $f1, implicit killed $f2, implicit killed $v2, implicit killed $v3, implicit killed $v4, implicit killed $v5, implicit killed $v6, implicit killed $v7, implicit killed $v8, implicit killed $v9, implicit killed $v10, implicit killed $v11, implicit killed $v12, implicit killed $v13, implicit killed $f3, implicit killed $f4, implicit killed $f5, implicit killed $f6, implicit killed $f7, implicit killed $f8, implicit killed $f9, implicit killed $f10, implicit killed $f11, implicit killed $f12, implicit killed $f13, implicit $r2, implicit-def $r1, implicit-def $f1
-  ; MIR32-NEXT:   ADJCALLSTACKUP 188, 0, implicit-def dead $r1, implicit $r1
+  ; MIR32-NEXT:   ADJCALLSTACKUP 192, 0, implicit-def dead $r1, implicit $r1
   ; MIR32-NEXT:   BLR implicit $lr, implicit $rm, implicit $f1
   ;
   ; MIR64-LABEL: name: caller
@@ -81,14 +81,14 @@ define double @caller() {
   ; MIR64-NEXT:   renamable $x3 = LI8 2049
   ; MIR64-NEXT:   renamable $x4 = LI8 1
   ; MIR64-NEXT:   renamable $x3 = RLDIC killed renamable $x3, 51, 1
-  ; MIR64-NEXT:   STD killed renamable $x3, 216, $x1 :: (store (s64) into unknown-address + 24, align 4)
+  ; MIR64-NEXT:   STD killed renamable $x3, 216, $x1 :: (store (s64) into unknown-address + 24)
   ; MIR64-NEXT:   renamable $x3 = LI8 1023
   ; MIR64-NEXT:   renamable $x4 = RLDIC killed renamable $x4, 62, 1
-  ; MIR64-NEXT:   STD killed renamable $x4, 208, $x1 :: (store (s64) into unknown-address + 16, align 4)
+  ; MIR64-NEXT:   STD killed renamable $x4, 208, $x1 :: (store (s64) into unknown-address + 16)
   ; MIR64-NEXT:   renamable $x4 = LI8 0
-  ; MIR64-NEXT:   STD renamable $x4, 192, $x1 :: (store (s64), align 4)
+  ; MIR64-NEXT:   STD renamable $x4, 192, $x1 :: (store (s64))
   ; MIR64-NEXT:   renamable $x3 = RLDIC killed renamable $x3, 52, 2
-  ; MIR64-NEXT:   STD killed renamable $x3, 200, $x1 :: (store (s64) into unknown-address + 8, align 4)
+  ; MIR64-NEXT:   STD killed renamable $x3, 200, $x1 :: (store (s64) into unknown-address + 8)
   ; MIR64-NEXT:   ADJCALLSTACKDOWN 224, 0, implicit-def dead $r1, implicit $r1
   ; MIR64-NEXT:   renamable $vsl0 = XXLXORz
   ; MIR64-NEXT:   renamable $x3 = LI8 160
