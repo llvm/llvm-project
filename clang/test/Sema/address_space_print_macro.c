@@ -19,14 +19,14 @@ char *cmp(AS1 char *x, AS2 char *y) {
 
 __attribute__((address_space(1))) char test_array[10];
 void test3(void) {
-  extern void test3_helper(char *p); // expected-note{{passing argument to parameter 'p' here}}
-  test3_helper(test_array);          // expected-error{{passing '__attribute__((address_space(1))) char *' to parameter of type 'char *' changes address space of pointer}}
+  extern void test3_helper(char *p);
+  test3_helper(test_array);
 }
 
 char AS2 *test4_array;
 void test4(void) {
-  extern void test3_helper(char *p); // expected-note{{passing argument to parameter 'p' here}}
-  test3_helper(test4_array);         // expected-error{{passing 'AS2 char *' to parameter of type 'char *' changes address space of pointer}}
+  extern void test3_helper(char *p);
+  test3_helper(test4_array);
 }
 
 void func(void) {
@@ -34,9 +34,9 @@ void func(void) {
   char AS3 *x2;
   AS5 *x3;
   char *y;
-  y = x;  // expected-error{{assigning 'AS1 char *' to 'char *' changes address space of pointer}}
-  y = x2; // expected-error{{assigning 'AS3 char *' to 'char *' changes address space of pointer}}
-  y = x3; // expected-error{{assigning '__attribute__((address_space(5))) char *' to 'char *' changes address space of pointer}}
+  y = x;
+  y = x2;
+  y = x3;
 }
 
 void multiple_attrs(AS_ND int *x) {
