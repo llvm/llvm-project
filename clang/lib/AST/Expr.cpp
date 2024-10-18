@@ -25,6 +25,7 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
@@ -2255,6 +2256,8 @@ StringRef SourceLocExpr::getBuiltinStr() const {
     return "__builtin_FILE";
   case SourceLocIdentKind::FileName:
     return "__builtin_FILE_NAME";
+  case SourceLocIdentKind::VariableName:
+    return "__builtin_VARIABLE_NAME";
   case SourceLocIdentKind::Function:
     return "__builtin_FUNCTION";
   case SourceLocIdentKind::FuncSig:
@@ -2307,6 +2310,36 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   };
 
   switch (getIdentKind()) {
+  case SourceLocIdentKind::VariableName: {
+    // __builtin_VARIABLE_NAME() is a Clang-specific extension that expands to
+    // the name of the variable being defined in a CXXDefaultArgExpr.
+
+    // FIXME: The AST doesn't have upward edges, so we can't easily traverse up
+    // from the CXXDefaultArgExpr to find it.  Unfortunately, this means we need
+    // to do a linear scan of (up to) the entire FunctionDecl.
+    struct FindVarDecl : public RecursiveASTVisitor<FindVarDecl> {
+      const Expr *ToFind;
+      const VarDecl *Found = nullptr;
+      bool TraverseVarDecl(VarDecl *D) {
+        if (const auto *CE = dyn_cast_or_null<CXXConstructExpr>(D->getInit())) {
+          if (llvm::is_contained(CE->arguments(), ToFind)) {
+            Found = D;
+            return false;
+          }
+        }
+        return RecursiveASTVisitor::TraverseVarDecl(D);
+      }
+    };
+
+    if (isa<Decl>(Context)) {
+      FindVarDecl FVD;
+      FVD.ToFind = DefaultExpr;
+      FVD.TraverseDecl(const_cast<Decl*>(cast<Decl>(Context)));
+      if (FVD.Found)
+        return MakeStringLiteral(FVD.Found->getQualifiedNameAsString());
+    }
+    return MakeStringLiteral("");
+  }
   case SourceLocIdentKind::FileName: {
     // __builtin_FILE_NAME() is a Clang-specific extension that expands to the
     // the last part of __builtin_FILE().
