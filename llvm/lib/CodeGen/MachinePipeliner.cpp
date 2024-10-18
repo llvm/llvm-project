@@ -197,6 +197,10 @@ static cl::opt<bool>
     MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
                cl::desc("Use the MVE code generator for software pipelining"));
 
+static cl::opt<bool> ApplyOnlyEnabledByPragma(
+    "pipeliner-apply-only-enabled-by-pragma", cl::Hidden, cl::init(false),
+    cl::desc("Apply Software Pipelining only if enabled by pragma"));
+
 namespace llvm {
 
 // A command line option to enable the CopyToPhi DAG mutation.
@@ -320,8 +324,8 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
 
 void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   // Reset the pragma for the next loop in iteration.
-  disabledByPragma = false;
   II_setByPragma = 0;
+  EState = EnableState::Unspecified;
 
   MachineBasicBlock *LBLK = L.getTopBlock();
 
@@ -360,8 +364,10 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
       II_setByPragma =
           mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
       assert(II_setByPragma >= 1 && "Pipeline initiation interval must be positive.");
+    } else if (S->getString() == "llvm.loop.pipeline.enable") {
+      EState = EnableState::Enabled;
     } else if (S->getString() == "llvm.loop.pipeline.disable") {
-      disabledByPragma = true;
+      EState = EnableState::Disabled;
     }
   }
 }
@@ -380,11 +386,20 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
     return false;
   }
 
-  if (disabledByPragma) {
+  if (EState == EnableState::Disabled) {
     ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
                                                L.getStartLoc(), L.getHeader())
              << "Disabled by Pragma.";
+    });
+    return false;
+  }
+
+  if (EState != EnableState::Enabled && ApplyOnlyEnabledByPragma) {
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "Not enabled by Pragma.";
     });
     return false;
   }
