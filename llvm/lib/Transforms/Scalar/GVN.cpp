@@ -135,6 +135,10 @@ static cl::opt<uint32_t> MaxNumInsnsPerBlock(
     cl::desc("Max number of instructions to scan in each basic block in GVN "
              "(default = 100)"));
 
+static cl::opt<bool>
+    EnableDomTreeCache("gvn-dom-cache", cl::init(true), cl::Hidden,
+                       cl::desc("enable caching of dom tree nodes"));
+
 struct llvm::GVNPass::Expression {
   uint32_t opcode;
   bool commutative = false;
@@ -735,6 +739,7 @@ void GVNPass::LeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
   if (!Curr.Entry.Val) {
     Curr.Entry.Val = V;
     Curr.Entry.BB = BB;
+    Curr.Entry.DTNode = DT->getNode(BB);
     return;
   }
 
@@ -742,6 +747,7 @@ void GVNPass::LeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
   Node->Entry.Val = V;
   Node->Entry.BB = BB;
   Node->Next = Curr.Next;
+  Node->Entry.DTNode = DT->getNode(BB);
   Curr.Next = Node;
 }
 
@@ -771,6 +777,7 @@ void GVNPass::LeaderMap::erase(uint32_t N, Instruction *I,
       Curr->Entry.Val = Next->Entry.Val;
       Curr->Entry.BB = Next->Entry.BB;
       Curr->Next = Next->Next;
+      Curr->Entry.DTNode = Next->Entry.DTNode;
     }
   }
 }
@@ -827,6 +834,7 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  DomTreeCacheValid = true;
   bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
                          MSSA ? &MSSA->getMSSA() : nullptr);
   if (!Changed)
@@ -2382,6 +2390,14 @@ void GVNPass::ValueTable::eraseTranslateCacheEntry(
     PhiTranslateTable.erase({Num, Pred});
 }
 
+DomTreeNode *GVNPass::getDomTreeNode(const LeaderMap::LeaderTableEntry &Vals) {
+  if (EnableDomTreeCache && DomTreeCacheValid) {
+    assert(DT->getNode(Vals.BB) == Vals.DTNode);
+    return Vals.DTNode;
+  }
+  return DT->getNode(Vals.BB);
+}
+
 // In order to find a leader for a given value number at a
 // specific basic block, we first obtain the list of all Values for that number,
 // and then scan the list to find one whose block dominates the block in
@@ -2393,8 +2409,10 @@ Value *GVNPass::findLeader(const BasicBlock *BB, uint32_t num) {
     return nullptr;
 
   Value *Val = nullptr;
+  DomTreeNode *BBDTNode = DT->getNode(BB);
+
   for (const auto &Entry : Leaders) {
-    if (DT->dominates(Entry.BB, BB)) {
+    if (DT->dominates(getDomTreeNode(Entry), BBDTNode)) {
       Val = Entry.Val;
       if (isa<Constant>(Val))
         return Val;
@@ -2762,8 +2780,10 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   AC = &RunAC;
   DT = &RunDT;
   VN.setDomTree(DT);
+  LeaderTable.setDomTree(DT);
   TLI = &RunTLI;
   VN.setAliasAnalysis(&RunAA);
+  DomTreeCacheValid = true;
   MD = RunMD;
   ImplicitControlFlowTracking ImplicitCFT;
   ICF = &ImplicitCFT;
@@ -3137,9 +3157,19 @@ BasicBlock *GVNPass::splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ) {
       MD->invalidateCachedPredecessors();
     InvalidBlockRPONumbers = true;
   }
+  invalidateDTCache();
   return BB;
 }
 
+void GVNPass::invalidateDTCache() {
+  // It is possible to refresh the leader table here but there are several
+  // reasons not to do so:
+  // 1. Invalidation is rare and usually occurs w/ PRE splitting critical edges.
+  // 2. In cases where invalidation happens, it can happen hundreds of times.
+  if (!EnableDomTreeCache)
+    return;
+  DomTreeCacheValid = false;
+}
 /// Split critical edges found during the previous
 /// iteration that may enable further optimization.
 bool GVNPass::splitCriticalEdges() {

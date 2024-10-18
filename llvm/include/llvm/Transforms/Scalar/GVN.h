@@ -227,6 +227,7 @@ private:
   ImplicitControlFlowTracking *ICF = nullptr;
   LoopInfo *LI = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
+  bool DomTreeCacheValid;
 
   ValueTable VN;
 
@@ -237,6 +238,8 @@ private:
     struct LeaderTableEntry {
       Value *Val;
       const BasicBlock *BB;
+      // Cache domtree node in LeaderTableEntry to avoid having to look it up.
+      DomTreeNode *DTNode;
     };
 
   private:
@@ -246,6 +249,7 @@ private:
     };
     DenseMap<uint32_t, LeaderListNode> NumToLeaders;
     BumpPtrAllocator TableAllocator;
+    DominatorTree *DT;
 
   public:
     class leader_iterator {
@@ -291,6 +295,7 @@ private:
       NumToLeaders.clear();
       TableAllocator.Reset();
     }
+    void setDomTree(DominatorTree *D) { DT = D; }
   };
   LeaderMap LeaderTable;
 
@@ -381,6 +386,10 @@ private:
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
   void assignBlockRPONumber(Function &F);
+
+  // DT node cache-related routines
+  DomTreeNode *getDomTreeNode(const LeaderMap::LeaderTableEntry &Vals);
+  void invalidateDTCache();
 };
 
 /// Create a legacy GVN pass. This also allows parameterizing whether or not
