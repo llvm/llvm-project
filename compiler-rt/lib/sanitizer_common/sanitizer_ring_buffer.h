@@ -66,6 +66,7 @@ class RingBuffer {
   RingBuffer() {}
   ~RingBuffer() {}
   RingBuffer(const RingBuffer&) = delete;
+  RingBuffer &operator=(const RingBuffer &) = delete;
 
   // Data layout:
   // LNDDDDDDDD
@@ -159,6 +160,7 @@ class CompactRingBuffer {
  public:
   ~CompactRingBuffer() {}
   CompactRingBuffer(const CompactRingBuffer &) = delete;
+  CompactRingBuffer &operator=(const CompactRingBuffer &) = delete;
 
   uptr long_;
 };

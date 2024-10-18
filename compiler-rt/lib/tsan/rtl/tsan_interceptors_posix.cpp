@@ -386,6 +386,8 @@ struct BlockingCall {
   }
 
   ThreadState *thr;
+  BlockingCall(const BlockingCall &) = delete;
+  BlockingCall &operator=(const BlockingCall &) = delete;
 };
 
 TSAN_INTERCEPTOR(unsigned, sleep, unsigned sec) {
@@ -2669,6 +2671,9 @@ struct ScopedSyscall {
   ~ScopedSyscall() {
     ProcessPendingSignals(thr);
   }
+
+  ScopedSyscall(const ScopedSyscall &) = delete;
+  ScopedSyscall &operator=(const ScopedSyscall &) = delete;
 };
 
 #if !SANITIZER_FREEBSD && !SANITIZER_APPLE

@@ -83,6 +83,10 @@ class ThreadContextBase {
 
  protected:
   ~ThreadContextBase();
+
+ private:
+  ThreadContextBase(const ThreadContextBase &) = delete;
+  ThreadContextBase &operator=(const ThreadContextBase &) = delete;
 };
 
 typedef ThreadContextBase* (*ThreadContextFactory)(u32 tid);

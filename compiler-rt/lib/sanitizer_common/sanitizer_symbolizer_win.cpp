@@ -194,6 +194,9 @@ struct ScopedHandle {
     return h;
   }
   HANDLE h_;
+
+  ScopedHandle(const ScopedHandle &) = delete;
+  ScopedHandle &operator=(const ScopedHandle &) = delete;
 };
 } // namespace
 

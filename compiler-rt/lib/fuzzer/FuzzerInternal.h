@@ -34,6 +34,8 @@ public:
   Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
          const FuzzingOptions &Options);
   ~Fuzzer() = delete;
+  Fuzzer(const Fuzzer &) = delete;
+  Fuzzer &operator=(const Fuzzer &) = delete;
   void Loop(std::vector<SizedFile> &CorporaFiles);
   void ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles);
   void MinimizeCrashLoop(const Unit &U);
@@ -160,6 +162,11 @@ struct ScopedEnableMsanInterceptorChecks {
     if (EF->__msan_scoped_disable_interceptor_checks)
       EF->__msan_scoped_disable_interceptor_checks();
   }
+
+  ScopedEnableMsanInterceptorChecks(const ScopedEnableMsanInterceptorChecks &) =
+      delete;
+  ScopedEnableMsanInterceptorChecks &
+  operator=(const ScopedEnableMsanInterceptorChecks &) = delete;
 };
 
 struct ScopedDisableMsanInterceptorChecks {
@@ -171,6 +178,11 @@ struct ScopedDisableMsanInterceptorChecks {
     if (EF->__msan_scoped_enable_interceptor_checks)
       EF->__msan_scoped_enable_interceptor_checks();
   }
+
+  ScopedDisableMsanInterceptorChecks(
+      const ScopedDisableMsanInterceptorChecks &) = delete;
+  ScopedDisableMsanInterceptorChecks &
+  operator=(const ScopedDisableMsanInterceptorChecks &) = delete;
 };
 
 } // namespace fuzzer

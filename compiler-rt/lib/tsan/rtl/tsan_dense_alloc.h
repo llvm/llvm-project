@@ -189,6 +189,9 @@ class DenseSlabAlloc {
     atomic_store_relaxed(&fillpos_, fillpos + 1);
     CHECK(c->pos);
   }
+
+  DenseSlabAlloc(const DenseSlabAlloc &) = delete;
+  DenseSlabAlloc &operator=(const DenseSlabAlloc &) = delete;
 };
 
 }  // namespace __tsan

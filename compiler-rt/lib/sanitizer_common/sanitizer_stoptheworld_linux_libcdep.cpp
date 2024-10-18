@@ -358,6 +358,10 @@ class ScopedStackSpaceWithGuard {
   uptr stack_size_;
   uptr guard_size_;
   uptr guard_start_;
+
+  ScopedStackSpaceWithGuard(const ScopedStackSpaceWithGuard &) = delete;
+  ScopedStackSpaceWithGuard &operator=(const ScopedStackSpaceWithGuard &) =
+      delete;
 };
 
 // We have a limitation on the stack frame size, so some stuff had to be moved
@@ -383,6 +387,9 @@ class StopTheWorldScope {
 
  private:
   int process_was_dumpable_;
+
+  StopTheWorldScope(const StopTheWorldScope &) = delete;
+  StopTheWorldScope &operator=(const StopTheWorldScope &) = delete;
 };
 
 // When sanitizer output is being redirected to file (i.e. by using log_path),
@@ -397,6 +404,10 @@ struct ScopedSetTracerPID {
     stoptheworld_tracer_pid = 0;
     stoptheworld_tracer_ppid = 0;
   }
+
+ private:
+  ScopedSetTracerPID(const ScopedSetTracerPID &) = delete;
+  ScopedSetTracerPID &operator=(const ScopedSetTracerPID &) = delete;
 };
 
 void StopTheWorld(StopTheWorldCallback callback, void *argument) {

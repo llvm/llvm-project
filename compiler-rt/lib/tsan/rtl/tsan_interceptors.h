@@ -27,6 +27,9 @@ class ScopedInterceptor {
 
   void DisableIgnoresImpl();
   void EnableIgnoresImpl();
+
+  ScopedInterceptor(const ScopedInterceptor &) = delete;
+  ScopedInterceptor &operator=(const ScopedInterceptor &) = delete;
 };
 
 struct TsanInterceptorContext {

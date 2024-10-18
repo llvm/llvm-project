@@ -300,14 +300,17 @@ class CHR {
   bool run();
 
  private:
-  // See the comments in CHR::run() for the high level flow of the algorithm and
-  // what the following functions do.
+   CHR(const CHR &) = delete;
+   CHR &operator=(const CHR &) = delete;
 
-  void findScopes(SmallVectorImpl<CHRScope *> &Output) {
-    Region *R = RI.getTopLevelRegion();
-    if (CHRScope *Scope = findScopes(R, nullptr, nullptr, Output)) {
-      Output.push_back(Scope);
-    }
+   // See the comments in CHR::run() for the high level flow of the algorithm
+   // and what the following functions do.
+
+   void findScopes(SmallVectorImpl<CHRScope *> &Output) {
+     Region *R = RI.getTopLevelRegion();
+     if (CHRScope *Scope = findScopes(R, nullptr, nullptr, Output)) {
+       Output.push_back(Scope);
+     }
   }
   CHRScope *findScopes(Region *R, Region *NextRegion, Region *ParentRegion,
                         SmallVectorImpl<CHRScope *> &Scopes);

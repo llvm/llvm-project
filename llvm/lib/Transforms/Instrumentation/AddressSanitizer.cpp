@@ -654,6 +654,8 @@ class RuntimeCallInserter {
   Function *OwnerFn = nullptr;
   bool TrackInsertedCalls = false;
   SmallVector<CallInst *> InsertedCalls;
+  RuntimeCallInserter(const RuntimeCallInserter &) = delete;
+  RuntimeCallInserter &operator=(const RuntimeCallInserter &) = delete;
 
 public:
   RuntimeCallInserter(Function &Fn) : OwnerFn(&Fn) {
@@ -829,6 +831,9 @@ private:
       Pass->LocalDynamicShadow = nullptr;
       Pass->ProcessedAllocas.clear();
     }
+
+    FunctionStateRAII(const FunctionStateRAII &) = delete;
+    FunctionStateRAII &operator=(const FunctionStateRAII &) = delete;
   };
 
   Module &M;

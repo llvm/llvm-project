@@ -261,6 +261,8 @@ class ScopedErrorReportLock {
   static void CheckLocked() SANITIZER_CHECK_LOCKED(mutex_);
 
  private:
+  ScopedErrorReportLock(const ScopedErrorReportLock &) = delete;
+  ScopedErrorReportLock &operator=(const ScopedErrorReportLock &) = delete;
   static atomic_uintptr_t reporting_thread_;
   static StaticSpinMutex mutex_;
 };
@@ -908,6 +910,9 @@ class ListOfModules {
     initialized = true;
   }
 
+  ListOfModules(const ListOfModules &) = delete;
+  ListOfModules &operator=(const ListOfModules &) = delete;
+
   InternalMmapVectorNoCtor<LoadedModule> modules_;
   // We rarely have more than 16K loaded modules.
   static const uptr kInitialCapacity = 1 << 14;
@@ -1054,6 +1059,9 @@ class RunOnDestruction {
 
  private:
   Fn fn_;
+
+  RunOnDestruction(const RunOnDestruction &) = delete;
+  RunOnDestruction &operator=(const RunOnDestruction &) = delete;
 };
 
 // A simple scope guard. Usage:

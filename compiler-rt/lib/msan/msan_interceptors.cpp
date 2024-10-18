@@ -71,6 +71,8 @@ void __msan_scoped_enable_interceptor_checks() { --in_interceptor_scope; }
 struct InterceptorScope {
   InterceptorScope() { ++in_interceptor_scope; }
   ~InterceptorScope() { --in_interceptor_scope; }
+  InterceptorScope(const InterceptorScope &) = delete;
+  InterceptorScope &operator=(const InterceptorScope &) = delete;
 };
 
 bool IsInInterceptorScope() {

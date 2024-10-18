@@ -307,6 +307,7 @@ namespace {
       assert(LinesByFile.empty());
       assert(OutEdges.empty());
     }
+    GCOVBlock &operator=(const GCOVBlock &) = delete;
 
     uint32_t Number;
     SmallVector<std::pair<GCOVBlock *, uint32_t>, 4> OutEdges;

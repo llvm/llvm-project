@@ -469,6 +469,8 @@ public:
   size_t NumFeatureUpdates() const { return NumUpdatedFeatures; }
 
 private:
+  InputCorpus(const InputCorpus &) = delete;
+  InputCorpus &operator=(const InputCorpus &) = delete;
 
   static const bool FeatureDebug = false;
 
