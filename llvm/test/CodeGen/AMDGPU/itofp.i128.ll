@@ -172,8 +172,8 @@ define float @sitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
-; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
+; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr2
 ; GISEL-NEXT:  ; %bb.3: ; %Flow3
@@ -417,8 +417,8 @@ define float @uitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
-; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr7
+; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr2
 ; GISEL-NEXT:  ; %bb.3: ; %Flow3
@@ -1263,8 +1263,8 @@ define half @sitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
-; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
+; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr2
 ; GISEL-NEXT:  ; %bb.3: ; %Flow3
@@ -1510,8 +1510,8 @@ define half @uitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
-; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr7
+; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr2
 ; GISEL-NEXT:  ; %bb.3: ; %Flow3

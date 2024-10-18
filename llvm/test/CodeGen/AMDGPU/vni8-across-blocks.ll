@@ -526,6 +526,7 @@ define amdgpu_kernel void @v8i8_phi_const(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX906-NEXT:    v_cmp_lt_u32_e64 s[0:1], 14, v0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
+; GFX906-NEXT:    ; implicit-def: $vgpr3
 ; GFX906-NEXT:    ; implicit-def: $vgpr13
 ; GFX906-NEXT:    ; implicit-def: $vgpr11
 ; GFX906-NEXT:    ; implicit-def: $vgpr14
@@ -534,7 +535,6 @@ define amdgpu_kernel void @v8i8_phi_const(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    ; implicit-def: $vgpr16
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    global_load_dwordx2 v[1:2], v4, s[4:5]
-; GFX906-NEXT:    ; implicit-def: $vgpr3
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v5, 24, v2
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v6, 16, v2

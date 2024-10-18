@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -187,6 +188,7 @@ class VirtRegRewriter : public MachineFunctionPass {
   MachineRegisterInfo *MRI = nullptr;
   SlotIndexes *Indexes = nullptr;
   LiveIntervals *LIS = nullptr;
+  LiveRegMatrix *LRM = nullptr;
   VirtRegMap *VRM = nullptr;
   LiveDebugVariables *DebugVars = nullptr;
   DenseSet<Register> RewriteRegs;
@@ -199,9 +201,6 @@ class VirtRegRewriter : public MachineFunctionPass {
   void handleIdentityCopy(MachineInstr &MI);
   void expandCopyBundle(MachineInstr &MI) const;
   bool subRegLiveThrough(const MachineInstr &MI, MCRegister SuperPhysReg) const;
-  bool needLiveOutUndefSubregDef(const LiveInterval &LI,
-                                 const MachineBasicBlock &MBB, unsigned SubReg,
-                                 MCPhysReg PhysReg) const;
   LaneBitmask liveOutUndefPhiLanesForUndefSubregDef(
       const LiveInterval &LI, const MachineBasicBlock &MBB, unsigned SubReg,
       MCPhysReg PhysReg, const MachineInstr &MI) const;
@@ -237,6 +236,7 @@ INITIALIZE_PASS_BEGIN(VirtRegRewriter, "virtregrewriter",
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
+INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_END(VirtRegRewriter, "virtregrewriter",
@@ -252,6 +252,7 @@ void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
   AU.addRequired<VirtRegMap>();
+  AU.addRequired<LiveRegMatrix>();
 
   if (!ClearVirtRegs)
     AU.addPreserved<LiveDebugVariables>();
@@ -266,6 +267,7 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   MRI = &MF->getRegInfo();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LRM = &getAnalysis<LiveRegMatrix>();
   VRM = &getAnalysis<VirtRegMap>();
   DebugVars = &getAnalysis<LiveDebugVariables>();
   LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
@@ -538,26 +540,6 @@ bool VirtRegRewriter::subRegLiveThrough(const MachineInstr &MI,
   return false;
 }
 
-/// Check if we need to maintain liveness for undef subregister lanes that are
-/// live out of a block.
-bool VirtRegRewriter::needLiveOutUndefSubregDef(const LiveInterval &LI,
-                                                const MachineBasicBlock &MBB,
-                                                unsigned SubReg,
-                                                MCPhysReg PhysReg) const {
-  LaneBitmask UndefMask = ~TRI->getSubRegIndexLaneMask(SubReg);
-  for (const LiveInterval::SubRange &SR : LI.subranges()) {
-    LaneBitmask NeedImpDefLanes = UndefMask & SR.LaneMask;
-    if (NeedImpDefLanes.any() && !LIS->isLiveOutOfMBB(SR, &MBB)) {
-      for (const MachineBasicBlock *Succ : MBB.successors()) {
-        if (LIS->isLiveInToMBB(SR, Succ))
-          return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 /// Compute a lanemask for undef lanes which need to be preserved out of the
 /// defining block for a register assignment.
 LaneBitmask VirtRegRewriter::liveOutUndefPhiLanesForUndefSubregDef(
@@ -575,20 +557,17 @@ LaneBitmask VirtRegRewriter::liveOutUndefPhiLanesForUndefSubregDef(
       }
     }
   }
-  if (LiveOutUndefLanes.none())
-    return LiveOutUndefLanes;
 
   SlotIndex MIIndex = LIS->getInstructionIndex(MI);
   SlotIndex BeforeMIUses = MIIndex.getBaseIndex();
-  SlotIndex AfterMIDefs = MIIndex.getBoundaryIndex();
+  LaneBitmask InterferingLanes =
+      LRM->checkInterferenceLanes(BeforeMIUses, MIIndex.getRegSlot(), PhysReg);
+  LiveOutUndefLanes &= ~InterferingLanes;
 
-  for (MCRegUnitMaskIterator MCRU(PhysReg, TRI); MCRU.isValid(); ++MCRU) {
-    auto [RU, PhysRegMask] = *MCRU;
-
-    const LiveRange &UnitRange = LIS->getRegUnit(RU);
-    if (UnitRange.liveAt(AfterMIDefs) && UnitRange.liveAt(BeforeMIUses))
-      LiveOutUndefLanes &= ~PhysRegMask;
-  }
+  LLVM_DEBUG(if (LiveOutUndefLanes.any()) {
+    dbgs() << "Need live out undef defs for " << printReg(PhysReg)
+           << LiveOutUndefLanes << " from " << printMBBReference(MBB) << '\n';
+  });
 
   return LiveOutUndefLanes;
 }
@@ -656,33 +635,21 @@ void VirtRegRewriter::rewrite() {
                 if (LiveOutUndefLanes.any()) {
                   SmallVector<unsigned, 16> CoveringIndexes;
 
-                  // TODO: Just use the super register if
-                  if (TRI->getCoveringSubRegIndexes(
+                  // TODO: Just use one super register def if none of the lanes
+                  // are needed?
+                  if (!TRI->getCoveringSubRegIndexes(
                           *MRI, MRI->getRegClass(VirtReg), LiveOutUndefLanes,
-                          CoveringIndexes)) {
-                    // Try to represent the minimum needed live out def as a
-                    // sequence of subregister defs.
-                    //
-                    // FIXME: It would be better if we could directly represent
-                    // liveness with a lanemask instead of spamming operands.
-                    for (unsigned SubIdx : CoveringIndexes)
-                      SuperDefs.push_back(TRI->getSubReg(PhysReg, SubIdx));
-                  } else {
-                    // If we could not represent this as a sequence of
-                    // subregisters, it's safe to replace all the lanes with a
-                    // full def of the super register.
-                    SuperDefs.push_back(PhysReg);
-                  }
-                }
+                          CoveringIndexes))
+                    llvm_unreachable(
+                        "cannot represent required subregister defs");
 
-                if (false &&
-                    needLiveOutUndefSubregDef(LI, *MBBI, SubReg, PhysReg)) {
-                  SuperDefs.push_back(PhysReg);
-
-                  for (MCRegister AssignedSubReg : TRI->subregs(PhysReg)) {
-                    if (subRegLiveThrough(MI, AssignedSubReg))
-                      SuperKills.push_back(AssignedSubReg);
-                  }
+                  // Try to represent the minimum needed live out def as a
+                  // sequence of subregister defs.
+                  //
+                  // FIXME: It would be better if we could directly represent
+                  // liveness with a lanemask instead of spamming operands.
+                  for (unsigned SubIdx : CoveringIndexes)
+                    SuperDefs.push_back(TRI->getSubReg(PhysReg, SubIdx));
                 }
               }
             }
