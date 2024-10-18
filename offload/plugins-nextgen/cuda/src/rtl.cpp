@@ -632,15 +632,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUresult Res;
     // If we have an RPC server running on this device we will continuously
     // query it for work rather than blocking.
-    if (!getRPCServer()) {
-      Res = cuStreamSynchronize(Stream);
-    } else {
-      do {
-        Res = cuStreamQuery(Stream);
-        if (auto Err = getRPCServer()->runServer(*this))
-          return Err;
-      } while (Res == CUDA_ERROR_NOT_READY);
-    }
+    Res = cuStreamSynchronize(Stream);
 
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
@@ -824,17 +816,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUstream Stream;
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
-
-    // If there is already pending work on the stream it could be waiting for
-    // someone to check the RPC server.
-    if (auto *RPCServer = getRPCServer()) {
-      CUresult Res = cuStreamQuery(Stream);
-      while (Res == CUDA_ERROR_NOT_READY) {
-        if (auto Err = RPCServer->runServer(*this))
-          return Err;
-        Res = cuStreamQuery(Stream);
-      }
-    }
 
     CUresult Res = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
     return Plugin::check(Res, "Error in cuMemcpyDtoHAsync: %s");
@@ -1294,10 +1275,26 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                     reinterpret_cast<void *>(&LaunchParams.Size),
                     CU_LAUNCH_PARAM_END};
 
+  // If we are running an RPC server we want to wake up the server thread
+  // whenever there is a kernel running and let it sleep otherwise.
+  if (GenericDevice.getRPCServer())
+    GenericDevice.Plugin.getRPCServer().Thread->notify();
+
   CUresult Res = cuLaunchKernel(Func, NumBlocks, /*gridDimY=*/1,
                                 /*gridDimZ=*/1, NumThreads,
                                 /*blockDimY=*/1, /*blockDimZ=*/1,
                                 MaxDynCGroupMem, Stream, nullptr, Config);
+
+  // Register a callback to indicate when the kernel is complete.
+  if (GenericDevice.getRPCServer())
+    cuStreamAddCallback(
+        Stream,
+        [](CUstream Stream, CUresult Status, void *Data) {
+          GenericPluginTy &Plugin = *reinterpret_cast<GenericPluginTy *>(Data);
+          Plugin.getRPCServer().Thread->finish();
+        },
+        &GenericDevice.Plugin, /*flags=*/0);
+
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }
 
