@@ -288,23 +288,33 @@ static inline bool MaybeUserPointer(uptr p) {
 #  endif
 }
 
+namespace {
+struct DirectMemoryAccessor {
+  void Init(uptr begin, uptr end) {};
+  void *LoadPtr(uptr p) const { return *reinterpret_cast<void **>(p); }
+};
+}  // namespace
+
 // Scans the memory range, looking for byte patterns that point into allocator
 // chunks. Marks those chunks with |tag| and adds them to |frontier|.
 // There are two usage modes for this function: finding reachable chunks
 // (|tag| = kReachable) and finding indirectly leaked chunks
 // (|tag| = kIndirectlyLeaked). In the second case, there's no flood fill,
 // so |frontier| = 0.
-void ScanRangeForPointers(uptr begin, uptr end, Frontier *frontier,
-                          const char *region_type, ChunkTag tag) {
+template <class Accessor>
+void ScanForPointers(uptr begin, uptr end, Frontier *frontier,
+                     const char *region_type, ChunkTag tag,
+                     Accessor &accessor) {
   CHECK(tag == kReachable || tag == kIndirectlyLeaked);
   const uptr alignment = flags()->pointer_alignment();
   LOG_POINTERS("Scanning %s range %p-%p.\n", region_type, (void *)begin,
                (void *)end);
+  accessor.Init(begin, end);
   uptr pp = begin;
   if (pp % alignment)
     pp = pp + alignment - pp % alignment;
   for (; pp + sizeof(void *) <= end; pp += alignment) {
-    void *p = *reinterpret_cast<void **>(pp);
+    void *p = accessor.LoadPtr(pp);
 #  if SANITIZER_APPLE
     p = TransformPointer(p);
 #  endif
@@ -339,6 +349,12 @@ void ScanRangeForPointers(uptr begin, uptr end, Frontier *frontier,
   }
 }
 
+void ScanRangeForPointers(uptr begin, uptr end, Frontier *frontier,
+                          const char *region_type, ChunkTag tag) {
+  DirectMemoryAccessor accessor;
+  ScanForPointers(begin, end, frontier, region_type, tag, accessor);
+}
+
 // Scans a global range for pointers
 void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier) {
   uptr allocator_begin = 0, allocator_end = 0;
@@ -356,12 +372,19 @@ void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier) {
   }
 }
 
+template <class Accessor>
+void ScanExtraStack(const InternalMmapVector<Range> &ranges, Frontier *frontier,
+                    Accessor &accessor) {
+  for (uptr i = 0; i < ranges.size(); i++) {
+    ScanForPointers(ranges[i].begin, ranges[i].end, frontier, "FAKE STACK",
+                    kReachable, accessor);
+  }
+}
+
 void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
                           Frontier *frontier) {
-  for (uptr i = 0; i < ranges.size(); i++) {
-    ScanRangeForPointers(ranges[i].begin, ranges[i].end, frontier, "FAKE STACK",
-                         kReachable);
-  }
+  DirectMemoryAccessor accessor;
+  ScanExtraStack(ranges, frontier, accessor);
 }
 
 #  if SANITIZER_FUCHSIA
@@ -399,10 +422,11 @@ static void ProcessThreadRegistry(Frontier *frontier) {
 }
 
 // Scans thread data (stacks and TLS) for heap pointers.
+template <class Accessor>
 static void ProcessThread(tid_t os_id, uptr sp,
                           const InternalMmapVector<uptr> &registers,
                           InternalMmapVector<Range> &extra_ranges,
-                          Frontier *frontier) {
+                          Frontier *frontier, Accessor &accessor) {
   // `extra_ranges` is outside of the function and the loop to reused mapped
   // memory.
   CHECK(extra_ranges.empty());
@@ -426,8 +450,8 @@ static void ProcessThread(tid_t os_id, uptr sp,
     uptr registers_begin = reinterpret_cast<uptr>(registers.data());
     uptr registers_end =
         reinterpret_cast<uptr>(registers.data() + registers.size());
-    ScanRangeForPointers(registers_begin, registers_end, frontier, "REGISTERS",
-                         kReachable);
+    ScanForPointers(registers_begin, registers_end, frontier, "REGISTERS",
+                    kReachable, accessor);
   }
 
   if (flags()->use_stacks) {
@@ -451,9 +475,10 @@ static void ProcessThread(tid_t os_id, uptr sp,
       // Shrink the stack range to ignore out-of-scope values.
       stack_begin = sp;
     }
-    ScanRangeForPointers(stack_begin, stack_end, frontier, "STACK", kReachable);
+    ScanForPointers(stack_begin, stack_end, frontier, "STACK", kReachable,
+                    accessor);
     GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
-    ScanExtraStackRanges(extra_ranges, frontier);
+    ScanExtraStack(extra_ranges, frontier, accessor);
   }
 
   if (flags()->use_tls) {
@@ -463,21 +488,23 @@ static void ProcessThread(tid_t os_id, uptr sp,
       // otherwise, only scan the non-overlapping portions
       if (cache_begin == cache_end || tls_end < cache_begin ||
           tls_begin > cache_end) {
-        ScanRangeForPointers(tls_begin, tls_end, frontier, "TLS", kReachable);
+        ScanForPointers(tls_begin, tls_end, frontier, "TLS", kReachable,
+                        accessor);
       } else {
         if (tls_begin < cache_begin)
-          ScanRangeForPointers(tls_begin, cache_begin, frontier, "TLS",
-                               kReachable);
+          ScanForPointers(tls_begin, cache_begin, frontier, "TLS", kReachable,
+                          accessor);
         if (tls_end > cache_end)
-          ScanRangeForPointers(cache_end, tls_end, frontier, "TLS", kReachable);
+          ScanForPointers(cache_end, tls_end, frontier, "TLS", kReachable,
+                          accessor);
       }
     }
 #    if SANITIZER_ANDROID
     auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
                    void *arg) -> void {
-      ScanRangeForPointers(
+      ScanForPointers(
           reinterpret_cast<uptr>(dtls_begin), reinterpret_cast<uptr>(dtls_end),
-          reinterpret_cast<Frontier *>(arg), "DTLS", kReachable);
+          reinterpret_cast<Frontier *>(arg), "DTLS", kReachable, accessor);
     };
 
     // FIXME: There might be a race-condition here (and in Bionic) if the
@@ -492,8 +519,8 @@ static void ProcessThread(tid_t os_id, uptr sp,
         if (dtls_beg < dtls_end) {
           LOG_THREADS("DTLS %d at %p-%p.\n", id, (void *)dtls_beg,
                       (void *)dtls_end);
-          ScanRangeForPointers(dtls_beg, dtls_end, frontier, "DTLS",
-                               kReachable);
+          ScanForPointers(dtls_beg, dtls_end, frontier, "DTLS", kReachable,
+                          accessor);
         }
       });
     } else {
@@ -530,7 +557,8 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     if (os_id == caller_tid)
       sp = caller_sp;
 
-    ProcessThread(os_id, sp, registers, extra_ranges, frontier);
+    DirectMemoryAccessor accessor;
+    ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor);
   }
 
   // Add pointers reachable from ThreadContexts
