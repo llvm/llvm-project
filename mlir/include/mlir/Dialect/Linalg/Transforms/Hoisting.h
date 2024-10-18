@@ -44,6 +44,10 @@ namespace linalg {
 ///
 /// WARNING: This hoisting does not model parallelism and is generally incorrect
 /// when used on distributed loops with memref semantics!
+/// NOTE: Setting `verifyNonZeroTrip = true` makes this more stable for
+/// distributed loops with memref semantics, but there could still be some
+/// issues when loops are executed a different number of times for different
+/// threads.
 void hoistRedundantVectorTransfers(Operation *root,
                                    bool verifyNonZeroTrip = false);
 
