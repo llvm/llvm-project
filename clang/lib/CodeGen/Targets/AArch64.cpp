@@ -52,8 +52,8 @@ private:
 
   bool isIllegalVectorType(QualType Ty) const;
 
-  bool isPureScalableType(QualType Ty, unsigned &NV, unsigned &NP,
-                          SmallVectorImpl<llvm::Type *> &CoerceToSeq) const;
+  bool passAsPureScalableType(QualType Ty, unsigned &NV, unsigned &NP,
+                              SmallVectorImpl<llvm::Type *> &CoerceToSeq) const;
 
   void flattenType(llvm::Type *Ty,
                    SmallVectorImpl<llvm::Type *> &Flattened) const;
@@ -432,7 +432,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
   if (Kind == AArch64ABIKind::AAPCS && !IsVariadic) {
     unsigned NVec = 0, NPred = 0;
     SmallVector<llvm::Type *> UnpaddedCoerceToSeq;
-    if (isPureScalableType(Ty, NVec, NPred, UnpaddedCoerceToSeq) &&
+    if (passAsPureScalableType(Ty, NVec, NPred, UnpaddedCoerceToSeq) &&
         (NVec + NPred) > 0)
       return coerceAndExpandPureScalableAggregate(
           Ty, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
@@ -510,14 +510,14 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
     // Homogeneous Floating-point Aggregates (HFAs) are returned directly.
     return ABIArgInfo::getDirect();
 
-  // In AAPCS return values of a Pure Scalable type are treated is a first named
-  // argument and passed expanded in registers, or indirectly if there are not
-  // enough registers.
+  // In AAPCS return values of a Pure Scalable type are treated as a single
+  // named argument and passed expanded in registers, or indirectly if there are
+  // not enough registers.
   if (Kind == AArch64ABIKind::AAPCS) {
     unsigned NSRN = 0, NPRN = 0;
     unsigned NVec = 0, NPred = 0;
     SmallVector<llvm::Type *> UnpaddedCoerceToSeq;
-    if (isPureScalableType(RetTy, NVec, NPred, UnpaddedCoerceToSeq) &&
+    if (passAsPureScalableType(RetTy, NVec, NPred, UnpaddedCoerceToSeq) &&
         (NVec + NPred) > 0)
       return coerceAndExpandPureScalableAggregate(
           RetTy, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
@@ -638,13 +638,15 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
   return true;
 }
 
-// Check if a type is a Pure Scalable Type as defined by AAPCS64. Return the
-// number of data vectors and the number of predicate vectors in the types, into
-// `NVec` and `NPred`, respectively. Upon return `CoerceToSeq` contains an
-// expanded sequence of LLVM IR types, one element for each non-composite
-// member. For practical purposes, limit the length of `CoerceToSeq` to about
-// 12, the maximum size that could possibly fit in registers.
-bool AArch64ABIInfo::isPureScalableType(
+// Check if a type needs to be passed in registers as a Pure Scalable Type (as
+// defined by AAPCS64). Return the number of data vectors and the number of
+// predicate vectors in the type, into `NVec` and `NPred`, respectively. Upon
+// return `CoerceToSeq` contains an expanded sequence of LLVM IR types, one
+// element for each non-composite member. For practical purposes, limit the
+// length of `CoerceToSeq` to about 12 (the maximum that could possibly fit
+// in registers) and return false, the effect of which will be to  pass the
+// argument under the rules for a large (> 128 bytes) composite.
+bool AArch64ABIInfo::passAsPureScalableType(
     QualType Ty, unsigned &NVec, unsigned &NPred,
     SmallVectorImpl<llvm::Type *> &CoerceToSeq) const {
   if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
@@ -654,10 +656,13 @@ bool AArch64ABIInfo::isPureScalableType(
 
     unsigned NV = 0, NP = 0;
     SmallVector<llvm::Type *> EltCoerceToSeq;
-    if (!isPureScalableType(AT->getElementType(), NV, NP, EltCoerceToSeq))
+    if (!passAsPureScalableType(AT->getElementType(), NV, NP, EltCoerceToSeq))
       return false;
 
-    for (uint64_t I = 0; CoerceToSeq.size() < 12 && I < NElt; ++I)
+    if (CoerceToSeq.size() + NElt * EltCoerceToSeq.size() > 12)
+      return false;
+
+    for (uint64_t I = 0; I < NElt; ++I)
       llvm::copy(EltCoerceToSeq, std::back_inserter(CoerceToSeq));
 
     NVec += NElt * NV;
@@ -676,12 +681,12 @@ bool AArch64ABIInfo::isPureScalableType(
     if (RD->isUnion())
       return false;
 
-    // If this is a C++ record, check the bases bases.
+    // If this is a C++ record, check the bases.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       for (const auto &I : CXXRD->bases()) {
         if (isEmptyRecord(getContext(), I.getType(), true))
           continue;
-        if (!isPureScalableType(I.getType(), NVec, NPred, CoerceToSeq))
+        if (!passAsPureScalableType(I.getType(), NVec, NPred, CoerceToSeq))
           return false;
       }
     }
@@ -689,9 +694,9 @@ bool AArch64ABIInfo::isPureScalableType(
     // Check members.
     for (const auto *FD : RD->fields()) {
       QualType FT = FD->getType();
-      if (isEmptyRecord(getContext(), FT, true))
+      if (isEmptyField(getContext(), FD, /* AllowArrays */ true))
         continue;
-      if (!isPureScalableType(FT, NVec, NPred, CoerceToSeq))
+      if (!passAsPureScalableType(FT, NVec, NPred, CoerceToSeq))
         return false;
     }
 
@@ -704,15 +709,17 @@ bool AArch64ABIInfo::isPureScalableType(
 
   if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     ++NPred;
-    if (CoerceToSeq.size() < 12)
-      CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
+    if (CoerceToSeq.size() + 1 > 12)
+      return false;
+    CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
     return true;
   }
 
   if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
     ++NVec;
-    if (CoerceToSeq.size() < 12)
-      CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
+    if (CoerceToSeq.size() + 1 > 12)
+      return false;
+    CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
     return true;
   }
 
@@ -741,8 +748,9 @@ bool AArch64ABIInfo::isPureScalableType(
   auto VTy = llvm::ScalableVectorType::get(CGT.ConvertType(Info.ElementType),
                                            Info.EC.getKnownMinValue());
 
-  if (CoerceToSeq.size() < 12)
-    std::fill_n(std::back_inserter(CoerceToSeq), Info.NumVectors, VTy);
+  if (CoerceToSeq.size() + Info.NumVectors > 12)
+    return false;
+  std::fill_n(std::back_inserter(CoerceToSeq), Info.NumVectors, VTy);
 
   return true;
 }
@@ -784,7 +792,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
                                       CodeGenFunction &CGF, AArch64ABIKind Kind,
                                       AggValueSlot Slot) const {
   // These numbers are not used for variadic arguments, hence it doesn't matter
-  // they don't retain their values accross multiple calls to
+  // they don't retain their values across multiple calls to
   // `classifyArgumentType` here.
   unsigned NSRN = 0, NPRN = 0;
   ABIArgInfo AI =

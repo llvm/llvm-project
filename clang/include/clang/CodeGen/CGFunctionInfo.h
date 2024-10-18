@@ -271,7 +271,8 @@ public:
     // in the unpadded type.
     unsigned unpaddedIndex = 0;
     for (auto eltType : coerceToType->elements()) {
-      if (isPaddingForCoerceAndExpand(eltType)) continue;
+      if (isPaddingForCoerceAndExpand(eltType))
+        continue;
       unpaddedIndex++;
     }
 
