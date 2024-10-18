@@ -1,0 +1,19 @@
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs -o - %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+# ERR: LLVM ERROR: cannot select: %{{[0-9]+}}:sreg_32_xm0_xexec(s1) = COPY $sgpr4_sgpr5 (in function: copy_sgpr_to_s1_vcc)
+
+---
+name: copy_sgpr_to_s1_vcc
+legalized: true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+    %0:vcc(s1) = COPY $sgpr4_sgpr5
+    %2:vgpr(s32) = G_CONSTANT i32 1
+    %3:vgpr(s32) = G_CONSTANT i32 0
+    %1:vgpr(s32) = G_SELECT %0:vcc(s1), %2:vgpr, %3:vgpr
+    S_ENDPGM 0, implicit %1:vgpr(s32)
+...
+

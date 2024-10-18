@@ -73,6 +73,8 @@ private:
 
   bool isInstrUniform(const MachineInstr &MI) const;
   bool isVCC(Register Reg, const MachineRegisterInfo &MRI) const;
+  bool isCopyPhysicalToVCC(Register DstReg, Register SrcReg,
+                           const MachineRegisterInfo &MRI, bool &IsValid) const;
 
   const RegisterBank *getArtifactRegBank(
     Register Reg, const MachineRegisterInfo &MRI,
