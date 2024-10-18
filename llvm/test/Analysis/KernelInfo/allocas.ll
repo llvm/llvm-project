@@ -9,26 +9,28 @@ target triple = "nvptx64-nvidia-cuda"
 
 define void @h() !dbg !3 {
 entry:
-  ; CHECK: remark: test.c:0:0: in artificial function 'h', artificial alloca 'dyn_ptr' with static size of 8 bytes
+  ; CHECK: remark: test.c:0:0: in artificial function 'h', artificial alloca ('%dyn_ptr.addr') for 'dyn_ptr' with static size of 8 bytes
   %dyn_ptr.addr = alloca ptr, align 8
-  ; CHECK: remark: test.c:14:9: in artificial function 'h', alloca 'i' with static size of 4 bytes
+  ; CHECK: remark: test.c:14:9: in artificial function 'h', alloca ('%i') for 'i' with static size of 4 bytes
   %i = alloca i32, align 4
-  ; CHECK: remark: test.c:15:9: in artificial function 'h', alloca 'a' with static size of 8 bytes
+  ; CHECK: remark: test.c:15:9: in artificial function 'h', alloca ('%a') for 'a' with static size of 8 bytes
   %a = alloca [2 x i32], align 4
+  ; CHECK: remark: <unknown>:0:0: in artificial function 'h', alloca ('%nodbg') without debug info with static size of 4 bytes
+  %nodbg = alloca i32, align 4
   tail call void @llvm.dbg.declare(metadata ptr %dyn_ptr.addr, metadata !7, metadata !DIExpression()), !dbg !11
   tail call void @llvm.dbg.declare(metadata ptr %i, metadata !12, metadata !DIExpression()), !dbg !15
   tail call void @llvm.dbg.declare(metadata ptr %a, metadata !16, metadata !DIExpression()), !dbg !20
   ret void
 }
-; CHECK: remark: test.c:13:0: in artificial function 'h', Allocas = 3
-; CHECK: remark: test.c:13:0: in artificial function 'h', AllocasStaticSizeSum = 20
+; CHECK: remark: test.c:13:0: in artificial function 'h', Allocas = 4
+; CHECK: remark: test.c:13:0: in artificial function 'h', AllocasStaticSizeSum = 24
 ; CHECK: remark: test.c:13:0: in artificial function 'h', AllocasDyn = 0
 
 define void @g() !dbg !21 {
 entry:
-  ; CHECK: remark: test.c:4:7: in function 'g', alloca 'i' with static size of 4 bytes
+  ; CHECK: remark: test.c:4:7: in function 'g', alloca ('%i') for 'i' with static size of 4 bytes
   %i = alloca i32, align 4
-  ; CHECK: remark: test.c:5:7: in function 'g', alloca 'a' with static size of 8 bytes
+  ; CHECK: remark: test.c:5:7: in function 'g', alloca ('%a') for 'a' with static size of 8 bytes
   %a = alloca [2 x i32], align 4
   tail call void @llvm.dbg.declare(metadata ptr %i, metadata !23, metadata !DIExpression()), !dbg !24
   tail call void @llvm.dbg.declare(metadata ptr %a, metadata !25, metadata !DIExpression()), !dbg !26
