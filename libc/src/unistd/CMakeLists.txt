@@ -341,5 +341,5 @@ add_entrypoint_object(
   HDRS
     gettid.h
   DEPENDS
-    libc.src.__support.threads.tid
+    libc.src.__support.threads.identifier
 )

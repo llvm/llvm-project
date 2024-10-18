@@ -42,9 +42,8 @@ bool DomTreeUpdater::forceFlushDeletedBB() {
     // delete only has an UnreachableInst inside.
     assert(BB->size() == 1 && isa<UnreachableInst>(BB->getTerminator()) &&
            "DelBB has been modified while awaiting deletion.");
-    BB->removeFromParent();
     eraseDelBBNode(BB);
-    delete BB;
+    BB->eraseFromParent();
   }
   DeletedBBs.clear();
   Callbacks.clear();
@@ -63,9 +62,8 @@ void DomTreeUpdater::deleteBB(BasicBlock *DelBB) {
     return;
   }
 
-  DelBB->removeFromParent();
   eraseDelBBNode(DelBB);
-  delete DelBB;
+  DelBB->eraseFromParent();
 }
 
 void DomTreeUpdater::callbackDeleteBB(
@@ -77,8 +75,8 @@ void DomTreeUpdater::callbackDeleteBB(
     return;
   }
 
-  DelBB->removeFromParent();
   eraseDelBBNode(DelBB);
+  DelBB->removeFromParent();
   Callback(DelBB);
   delete DelBB;
 }

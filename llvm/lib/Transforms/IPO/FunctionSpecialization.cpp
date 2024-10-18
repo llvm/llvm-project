@@ -57,9 +57,9 @@ static cl::opt<unsigned> MaxBlockPredecessors(
     "considered during the estimation of dead code"));
 
 static cl::opt<unsigned> MinFunctionSize(
-    "funcspec-min-function-size", cl::init(300), cl::Hidden, cl::desc(
-    "Don't specialize functions that have less than this number of "
-    "instructions"));
+    "funcspec-min-function-size", cl::init(500), cl::Hidden,
+    cl::desc("Don't specialize functions that have less than this number of "
+             "instructions"));
 
 static cl::opt<unsigned> MaxCodeSizeGrowth(
     "funcspec-max-codesize-growth", cl::init(3), cl::Hidden, cl::desc(
@@ -423,13 +423,16 @@ Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
-  if (I.getCondition() != LastVisited->first)
-    return nullptr;
-
-  Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
-                                                : I.getTrueValue();
-  Constant *C = findConstantFor(V, KnownConstants);
-  return C;
+  if (I.getCondition() == LastVisited->first) {
+    Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
+                                                  : I.getTrueValue();
+    return findConstantFor(V, KnownConstants);
+  }
+  if (Constant *Condition = findConstantFor(I.getCondition(), KnownConstants))
+    if ((I.getTrueValue() == LastVisited->first && Condition->isOneValue()) ||
+        (I.getFalseValue() == LastVisited->first && Condition->isZeroValue()))
+      return LastVisited->second;
+  return nullptr;
 }
 
 Constant *InstCostVisitor::visitCastInst(CastInst &I) {
@@ -481,11 +484,6 @@ Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,
     // the usage in the CallInst, which is what we check here.
     if (User == Call)
       continue;
-    if (auto *Bitcast = dyn_cast<BitCastInst>(User)) {
-      if (!Bitcast->hasOneUse() || *Bitcast->user_begin() != Call)
-        return nullptr;
-      continue;
-    }
 
     if (auto *Store = dyn_cast<StoreInst>(User)) {
       // This is a duplicate store, bail out.
@@ -643,12 +641,17 @@ bool FunctionSpecializer::run() {
         Metrics.analyzeBasicBlock(&BB, GetTTI(F), EphValues);
     }
 
+    // When specializing literal constants is enabled, always require functions
+    // to be larger than MinFunctionSize, to prevent excessive specialization.
+    const bool RequireMinSize =
+        !ForceSpecialization &&
+        (SpecializeLiteralConstant || !F.hasFnAttribute(Attribute::NoInline));
+
     // If the code metrics reveal that we shouldn't duplicate the function,
     // or if the code size implies that this function is easy to get inlined,
     // then we shouldn't specialize it.
     if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-        (!ForceSpecialization && !F.hasFnAttribute(Attribute::NoInline) &&
-         Metrics.NumInsts < MinFunctionSize))
+        (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
       continue;
 
     // TODO: For now only consider recursive functions when running multiple

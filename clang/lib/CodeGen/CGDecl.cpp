@@ -370,38 +370,12 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   assert(VarSize == CstSize && "Emitted constant has unexpected size");
 #endif
 
-  // The initializer may differ in type from the global. Rewrite
-  // the global to match the initializer.  (We have to do this
-  // because some types, like unions, can't be completely represented
-  // in the LLVM type system.)
-  if (GV->getValueType() != Init->getType()) {
-    llvm::GlobalVariable *OldGV = GV;
-
-    GV = new llvm::GlobalVariable(
-        CGM.getModule(), Init->getType(), OldGV->isConstant(),
-        OldGV->getLinkage(), Init, "",
-        /*InsertBefore*/ OldGV, OldGV->getThreadLocalMode(),
-        OldGV->getType()->getPointerAddressSpace());
-    GV->setVisibility(OldGV->getVisibility());
-    GV->setDSOLocal(OldGV->isDSOLocal());
-    GV->setComdat(OldGV->getComdat());
-
-    // Steal the name of the old global
-    GV->takeName(OldGV);
-
-    // Replace all uses of the old global with the new global
-    OldGV->replaceAllUsesWith(GV);
-
-    // Erase the old global, since it is no longer used.
-    OldGV->eraseFromParent();
-  }
-
   bool NeedsDtor =
       D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
   GV->setConstant(
       D.getType().isConstantStorage(getContext(), true, !NeedsDtor));
-  GV->setInitializer(Init);
+  GV->replaceInitializer(Init);
 
   emitter.finalize(GV);
 
@@ -1971,7 +1945,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
                                   replaceUndef(CGM, isPattern, constant));
     }
 
-    if (D.getType()->isBitIntType() &&
+    if (constant && D.getType()->isBitIntType() &&
         CGM.getTypes().typeRequiresSplitIntoByteArray(D.getType())) {
       // Constants for long _BitInt types are split into individual bytes.
       // Try to fold these back into an integer constant so it can be stored
@@ -2535,8 +2509,8 @@ void CodeGenFunction::pushRegularPartialArrayCleanup(llvm::Value *arrayBegin,
 llvm::Function *CodeGenModule::getLLVMLifetimeStartFn() {
   if (LifetimeStartFn)
     return LifetimeStartFn;
-  LifetimeStartFn = llvm::Intrinsic::getDeclaration(&getModule(),
-    llvm::Intrinsic::lifetime_start, AllocaInt8PtrTy);
+  LifetimeStartFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::lifetime_start, AllocaInt8PtrTy);
   return LifetimeStartFn;
 }
 
@@ -2544,8 +2518,8 @@ llvm::Function *CodeGenModule::getLLVMLifetimeStartFn() {
 llvm::Function *CodeGenModule::getLLVMLifetimeEndFn() {
   if (LifetimeEndFn)
     return LifetimeEndFn;
-  LifetimeEndFn = llvm::Intrinsic::getDeclaration(&getModule(),
-    llvm::Intrinsic::lifetime_end, AllocaInt8PtrTy);
+  LifetimeEndFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::lifetime_end, AllocaInt8PtrTy);
   return LifetimeEndFn;
 }
 
@@ -2790,7 +2764,7 @@ void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
 }
 
 void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
-  for (const Expr *E : D->varlists()) {
+  for (const Expr *E : D->varlist()) {
     const auto *DE = cast<DeclRefExpr>(E);
     const auto *VD = cast<VarDecl>(DE->getDecl());
 

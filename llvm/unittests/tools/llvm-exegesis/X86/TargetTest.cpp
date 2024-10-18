@@ -599,9 +599,9 @@ TEST_F(X86Core2TargetTest, GenerateLowerMunmapTest) {
 }
 
 #ifdef __arm__
-static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 TEST_F(X86Core2TargetTest, GenerateUpperMunmapTest) {

@@ -1024,6 +1024,8 @@ private:
   ///   ....
   ///   TPA.Revert();
   ///
+  /// If the Unannotated parameter is true, any token annotations created
+  /// during the tentative parse are reverted.
   class TentativeParsingAction {
     Parser &P;
     PreferredTypeBuilder PrevPreferredType;
@@ -1033,7 +1035,7 @@ private:
     bool isActive;
 
   public:
-    explicit TentativeParsingAction(Parser &p)
+    explicit TentativeParsingAction(Parser &p, bool Unannotated = false)
         : P(p), PrevPreferredType(P.PreferredType) {
       PrevTok = P.Tok;
       PrevTentativelyDeclaredIdentifierCount =
@@ -1041,7 +1043,7 @@ private:
       PrevParenCount = P.ParenCount;
       PrevBracketCount = P.BracketCount;
       PrevBraceCount = P.BraceCount;
-      P.PP.EnableBacktrackAtThisPos();
+      P.PP.EnableBacktrackAtThisPos(Unannotated);
       isActive = true;
     }
     void Commit() {
@@ -1072,12 +1074,10 @@ private:
   class RevertingTentativeParsingAction
       : private Parser::TentativeParsingAction {
   public:
-    RevertingTentativeParsingAction(Parser &P)
-        : Parser::TentativeParsingAction(P) {}
+    using TentativeParsingAction::TentativeParsingAction;
+
     ~RevertingTentativeParsingAction() { Revert(); }
   };
-
-  class UnannotatedTentativeParsingAction;
 
   /// ObjCDeclContextSwitch - An object used to switch context from
   /// an objective-c decl context to its enclosing decl context and
@@ -1354,6 +1354,10 @@ private:
     void ParseLexedMethodDefs() override;
     void ParseLexedAttributes() override;
     void ParseLexedPragmas() override;
+
+    // Delete copy constructor and copy assignment operator.
+    LateParsedClass(const LateParsedClass &) = delete;
+    LateParsedClass &operator=(const LateParsedClass &) = delete;
 
   private:
     Parser *Self;
@@ -1983,7 +1987,8 @@ private:
       CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHasErrors,
       bool EnteringContext, bool *MayBePseudoDestructor = nullptr,
       bool IsTypename = false, const IdentifierInfo **LastII = nullptr,
-      bool OnlyNamespace = false, bool InUsingDeclaration = false);
+      bool OnlyNamespace = false, bool InUsingDeclaration = false,
+      bool Disambiguation = false);
 
   //===--------------------------------------------------------------------===//
   // C++11 5.1.2: Lambda expressions
@@ -2942,6 +2947,9 @@ private:
     return false;
   }
 
+  bool ParseSingleGNUAttribute(ParsedAttributes &Attrs, SourceLocation &EndLoc,
+                               LateParsedAttrList *LateAttrs = nullptr,
+                               Declarator *D = nullptr);
   void ParseGNUAttributes(ParsedAttributes &Attrs,
                           LateParsedAttrList *LateAttrs = nullptr,
                           Declarator *D = nullptr);
@@ -3020,7 +3028,7 @@ private:
           SemaCodeCompletion::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
 
-  void MaybeParseHLSLAnnotations(Declarator &D,
+  bool MaybeParseHLSLAnnotations(Declarator &D,
                                  SourceLocation *EndLoc = nullptr,
                                  bool CouldBeBitField = false) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
@@ -3028,7 +3036,9 @@ private:
       ParsedAttributes Attrs(AttrFactory);
       ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
       D.takeAttributes(Attrs);
+      return true;
     }
+    return false;
   }
 
   void MaybeParseHLSLAnnotations(ParsedAttributes &Attrs,
@@ -3530,6 +3540,17 @@ private:
                                  OpenMPDirectiveKind DKind, SourceLocation Loc,
                                  bool ReadDirectiveWithinMetadirective);
 
+  /// Parses informational directive.
+  ///
+  /// \param StmtCtx The context in which we're parsing the directive.
+  /// \param DKind The kind of the informational directive.
+  /// \param Loc Source location of the beginning of the directive.
+  /// \param ReadDirectiveWithinMetadirective true if directive is within a
+  /// metadirective and therefore ends on the closing paren.
+  StmtResult ParseOpenMPInformationalDirective(
+      ParsedStmtContext StmtCtx, OpenMPDirectiveKind DKind, SourceLocation Loc,
+      bool ReadDirectiveWithinMetadirective);
+
   /// Parses clause of kind \a CKind for directive of a kind \a Kind.
   ///
   /// \param DKind Kind of current directive.
@@ -3573,6 +3594,9 @@ private:
 
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
+
+  /// Parses the 'permutation' clause of a '#pragma omp interchange' directive.
+  OMPClause *ParseOpenMPPermutationClause();
 
   /// Parses clause without any additional arguments.
   ///
@@ -3765,14 +3789,23 @@ private:
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
                                                       OpenACCClauseKind CK,
                                                       SourceLocation Loc);
+
   /// Parses the 'size-expr', which is an integral value, or an asterisk.
-  bool ParseOpenACCSizeExpr();
+  /// Asterisk is represented by a OpenACCAsteriskSizeExpr
+  ExprResult ParseOpenACCSizeExpr(OpenACCClauseKind CK);
   /// Parses a comma delimited list of 'size-expr's.
-  bool ParseOpenACCSizeExprList();
+  bool ParseOpenACCSizeExprList(OpenACCClauseKind CK,
+                                llvm::SmallVectorImpl<Expr *> &SizeExprs);
   /// Parses a 'gang-arg-list', used for the 'gang' clause.
-  bool ParseOpenACCGangArgList(SourceLocation GangLoc);
-  /// Parses a 'gang-arg', used for the 'gang' clause.
-  bool ParseOpenACCGangArg(SourceLocation GangLoc);
+  bool ParseOpenACCGangArgList(SourceLocation GangLoc,
+                               llvm::SmallVectorImpl<OpenACCGangKind> &GKs,
+                               llvm::SmallVectorImpl<Expr *> &IntExprs);
+
+  using OpenACCGangArgRes = std::pair<OpenACCGangKind, ExprResult>;
+  /// Parses a 'gang-arg', used for the 'gang' clause. Returns a pair of the
+  /// ExprResult (which contains the validity of the expression), plus the gang
+  /// kind for the current argument.
+  OpenACCGangArgRes ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
 
@@ -3888,6 +3921,8 @@ private:
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();
   ExprResult ParseExpressionTrait();
+
+  ExprResult ParseBuiltinPtrauthTypeDiscriminator();
 
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through

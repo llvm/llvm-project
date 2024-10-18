@@ -27,6 +27,8 @@ include "mlir/IR/OpAsmInterface.td"
 class Test_Attr<string name, list<Trait> traits = []>
     : AttrDef<Test_Dialect, name, traits>;
 
+class Test_LocAttr<string name> : LocationAttrDef<Test_Dialect, name, []>;
+
 def SimpleAttrA : Test_Attr<"SimpleA"> {
   let mnemonic = "smpla";
 }
@@ -79,6 +81,15 @@ def TestAttrTrait : NativeAttrTrait<"TestAttrTrait">;
 // The definition of a singleton attribute that has a trait.
 def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
   let mnemonic = "attr_with_trait";
+}
+
+// An attribute of a list of decimal formatted integers in similar format to shapes.
+def TestDecimalShapeAttr : Test_Attr<"TestDecimalShape"> {
+  let mnemonic = "decimal_shape";
+
+  let parameters = (ins ArrayRefParameter<"int64_t">:$shape);
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 // Test support for ElementsAttrInterface.
@@ -261,7 +272,6 @@ def TestOverrideBuilderAttr : Test_Attr<"TestOverrideBuilder"> {
   let assemblyFormat = "`<` $a `>`";
 
   let skipDefaultBuilders = 1;
-  let genVerifyDecl = 1;
   let builders = [AttrBuilder<(ins "int":$a), [{
     return ::mlir::IntegerAttr::get(::mlir::IndexType::get($_ctxt), a);
   }], "::mlir::Attribute">];
@@ -368,5 +378,15 @@ def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
   }];
 }
 
+
+// Test custom location handling.
+def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
+  let mnemonic = "custom_location";
+  let parameters = (ins "mlir::StringAttr":$file, "unsigned":$line);
+
+  // Choose a silly separator token so we know it's hitting this code path
+  // and not another.
+  let assemblyFormat = "`<` $file `*` $line `>`";
+}
 
 #endif // TEST_ATTRDEFS

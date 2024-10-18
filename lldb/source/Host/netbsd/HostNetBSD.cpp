@@ -269,5 +269,5 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }

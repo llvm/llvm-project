@@ -230,7 +230,7 @@ namespace __extended_grapheme_custer_property_boundary {{
 {content}
 }} // namespace __extended_grapheme_custer_property_boundary
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -32,6 +32,36 @@ using namespace mlir;
 namespace fir {
 namespace {
 
+// Helper to only build the symbol table if needed because its build time is
+// linear on the number of symbols in the module.
+struct LazySymbolTable {
+  LazySymbolTable(mlir::Operation *op)
+      : module{op->getParentOfType<mlir::ModuleOp>()} {}
+  void build() {
+    if (table)
+      return;
+    table = std::make_unique<mlir::SymbolTable>(module);
+  }
+
+  template <typename T>
+  T lookup(llvm::StringRef name) {
+    build();
+    return table->lookup<T>(name);
+  }
+
+private:
+  std::unique_ptr<mlir::SymbolTable> table;
+  mlir::ModuleOp module;
+};
+
+bool hasScalarDerivedResult(mlir::FunctionType funTy) {
+  // C_PTR/C_FUNPTR are results to void* in this pass, do not consider
+  // them as normal derived types.
+  return funTy.getNumResults() == 1 &&
+         mlir::isa<fir::RecordType>(funTy.getResult(0)) &&
+         !fir::isa_builtin_cptr_type(funTy.getResult(0));
+}
+
 static mlir::Type getResultArgumentType(mlir::Type resultType,
                                         bool shouldBoxResult) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(resultType)
@@ -59,14 +89,16 @@ static mlir::FunctionType getNewFunctionType(mlir::FunctionType funcTy,
                                  /*resultTypes=*/{});
 }
 
+static mlir::Type getVoidPtrType(mlir::MLIRContext *context) {
+  return fir::ReferenceType::get(mlir::NoneType::get(context));
+}
+
 /// This is for function result types that are of type C_PTR from ISO_C_BINDING.
 /// Follow the ABI for interoperability with C.
 static mlir::FunctionType getCPtrFunctionType(mlir::FunctionType funcTy) {
-  auto resultType = funcTy.getResult(0);
-  assert(fir::isa_builtin_cptr_type(resultType));
-  llvm::SmallVector<mlir::Type> outputTypes;
-  auto recTy = mlir::dyn_cast<fir::RecordType>(resultType);
-  outputTypes.emplace_back(recTy.getTypeList()[0].second);
+  assert(fir::isa_builtin_cptr_type(funcTy.getResult(0)));
+  llvm::SmallVector<mlir::Type> outputTypes{
+      getVoidPtrType(funcTy.getContext())};
   return mlir::FunctionType::get(funcTy.getContext(), funcTy.getInputs(),
                                  outputTypes);
 }
@@ -109,15 +141,11 @@ public:
           saveResult.getTypeparams());
 
     llvm::SmallVector<mlir::Type> newResultTypes;
-    // TODO: This should be generalized for derived types, and it is
-    // architecture and OS dependent.
     bool isResultBuiltinCPtr = fir::isa_builtin_cptr_type(result.getType());
-    Op newOp;
-    if (isResultBuiltinCPtr) {
-      auto recTy = mlir::dyn_cast<fir::RecordType>(result.getType());
-      newResultTypes.emplace_back(recTy.getTypeList()[0].second);
-    }
+    if (isResultBuiltinCPtr)
+      newResultTypes.emplace_back(getVoidPtrType(result.getContext()));
 
+    Op newOp;
     // fir::CallOp specific handling.
     if constexpr (std::is_same_v<Op, fir::CallOp>) {
       if (op.getCallee()) {
@@ -156,17 +184,14 @@ public:
         newOperands.emplace_back(arg);
       unsigned passArgShift = newOperands.size();
       newOperands.append(op.getOperands().begin() + 1, op.getOperands().end());
-
-      fir::DispatchOp newDispatchOp;
+      mlir::IntegerAttr passArgPos;
       if (op.getPassArgPos())
-        newOp = rewriter.create<fir::DispatchOp>(
-            loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
-            op.getOperands()[0], newOperands,
-            rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift));
-      else
-        newOp = rewriter.create<fir::DispatchOp>(
-            loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
-            op.getOperands()[0], newOperands, nullptr);
+        passArgPos =
+            rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift);
+      newOp = rewriter.create<fir::DispatchOp>(
+          loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
+          op.getOperands()[0], newOperands, passArgPos,
+          op.getProcedureAttrsAttr());
     }
 
     if (isResultBuiltinCPtr) {
@@ -175,7 +200,7 @@ public:
       FirOpBuilder builder(rewriter, module);
       mlir::Value saveAddr = fir::factory::genCPtrOrCFunptrAddr(
           builder, loc, save, result.getType());
-      rewriter.create<fir::StoreOp>(loc, newOp->getResult(0), saveAddr);
+      builder.createStoreWithConvert(loc, newOp->getResult(0), saveAddr);
     }
     op->dropAllReferences();
     rewriter.eraseOp(op);
@@ -195,7 +220,15 @@ public:
   llvm::LogicalResult
   matchAndRewrite(fir::SaveResultOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.eraseOp(op);
+    mlir::Operation *call = op.getValue().getDefiningOp();
+    mlir::Type type = op.getValue().getType();
+    if (mlir::isa<fir::RecordType>(type) && call && fir::hasBindcAttr(call) &&
+        !fir::isa_builtin_cptr_type(type)) {
+      rewriter.replaceOpWithNewOp<fir::StoreOp>(op, op.getValue(),
+                                                op.getMemref());
+    } else {
+      rewriter.eraseOp(op);
+    }
     return mlir::success();
   }
 };
@@ -210,42 +243,52 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = ret.getLoc();
     rewriter.setInsertionPoint(ret);
-    auto returnedValue = ret.getOperand(0);
-    bool replacedStorage = false;
-    if (auto *op = returnedValue.getDefiningOp())
-      if (auto load = mlir::dyn_cast<fir::LoadOp>(op)) {
-        auto resultStorage = load.getMemref();
-        // The result alloca may be behind a fir.declare, if any.
-        if (auto declare = mlir::dyn_cast_or_null<fir::DeclareOp>(
-                resultStorage.getDefiningOp()))
-          resultStorage = declare.getMemref();
-        // TODO: This should be generalized for derived types, and it is
-        // architecture and OS dependent.
-        if (fir::isa_builtin_cptr_type(returnedValue.getType())) {
-          rewriter.eraseOp(load);
-          auto module = ret->getParentOfType<mlir::ModuleOp>();
-          FirOpBuilder builder(rewriter, module);
-          mlir::Value retAddr = fir::factory::genCPtrOrCFunptrAddr(
-              builder, loc, resultStorage, returnedValue.getType());
-          mlir::Value retValue = rewriter.create<fir::LoadOp>(
-              loc, fir::unwrapRefType(retAddr.getType()), retAddr);
-          rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(
-              ret, mlir::ValueRange{retValue});
-          return mlir::success();
-        }
-        resultStorage.replaceAllUsesWith(newArg);
-        replacedStorage = true;
-        if (auto *alloc = resultStorage.getDefiningOp())
-          if (alloc->use_empty())
-            rewriter.eraseOp(alloc);
+    mlir::Value resultValue = ret.getOperand(0);
+    fir::LoadOp resultLoad;
+    mlir::Value resultStorage;
+    // Identify result local storage.
+    if (auto load = resultValue.getDefiningOp<fir::LoadOp>()) {
+      resultLoad = load;
+      resultStorage = load.getMemref();
+      // The result alloca may be behind a fir.declare, if any.
+      if (auto declare = resultStorage.getDefiningOp<fir::DeclareOp>())
+        resultStorage = declare.getMemref();
+    }
+    // Replace old local storage with new storage argument, unless
+    // the derived type is C_PTR/C_FUN_PTR, in which case the return
+    // type is updated to return void* (no new argument is passed).
+    if (fir::isa_builtin_cptr_type(resultValue.getType())) {
+      auto module = ret->getParentOfType<mlir::ModuleOp>();
+      FirOpBuilder builder(rewriter, module);
+      mlir::Value cptr = resultValue;
+      if (resultLoad) {
+        // Replace whole derived type load by component load.
+        cptr = resultLoad.getMemref();
+        rewriter.setInsertionPoint(resultLoad);
       }
-    // The result storage may have been optimized out by a memory to
-    // register pass, this is possible for fir.box results, or fir.record
-    // with no length parameters. Simply store the result in the result storage.
-    // at the return point.
-    if (!replacedStorage)
-      rewriter.create<fir::StoreOp>(loc, returnedValue, newArg);
-    rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(ret);
+      mlir::Value newResultValue =
+          fir::factory::genCPtrOrCFunptrValue(builder, loc, cptr);
+      newResultValue = builder.createConvert(
+          loc, getVoidPtrType(ret.getContext()), newResultValue);
+      rewriter.setInsertionPoint(ret);
+      rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(
+          ret, mlir::ValueRange{newResultValue});
+    } else if (resultStorage) {
+      resultStorage.replaceAllUsesWith(newArg);
+      rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(ret);
+    } else {
+      // The result storage may have been optimized out by a memory to
+      // register pass, this is possible for fir.box results, or fir.record
+      // with no length parameters. Simply store the result in the result
+      // storage. at the return point.
+      rewriter.create<fir::StoreOp>(loc, resultValue, newArg);
+      rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(ret);
+    }
+    // Delete result old local storage if unused.
+    if (resultStorage)
+      if (auto alloc = resultStorage.getDefiningOp<fir::AllocaOp>())
+        if (alloc->use_empty())
+          rewriter.eraseOp(alloc);
     return mlir::success();
   }
 
@@ -263,8 +306,6 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     auto oldFuncTy = mlir::cast<mlir::FunctionType>(addrOf.getType());
     mlir::FunctionType newFuncTy;
-    // TODO: This should be generalized for derived types, and it is
-    // architecture and OS dependent.
     if (oldFuncTy.getNumResults() != 0 &&
         fir::isa_builtin_cptr_type(oldFuncTy.getResult(0)))
       newFuncTy = getCPtrFunctionType(oldFuncTy);
@@ -297,9 +338,13 @@ public:
     auto *context = &getContext();
     // Convert function type itself if it has an abstract result.
     auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
+    // Scalar derived result of BIND(C) function must be returned according
+    // to the C struct return ABI which is target dependent and implemented in
+    // the target-rewrite pass.
+    if (hasScalarDerivedResult(funcTy) &&
+        fir::hasBindcAttr(func.getOperation()))
+      return;
     if (hasAbstractResult(funcTy)) {
-      // TODO: This should be generalized for derived types, and it is
-      // architecture and OS dependent.
       if (fir::isa_builtin_cptr_type(funcTy.getResult(0))) {
         func.setType(getCPtrFunctionType(funcTy));
         patterns.insert<ReturnOpConversion>(context, mlir::Value{});
@@ -394,6 +439,8 @@ public:
       return;
     }
 
+    LazySymbolTable symbolTable(op);
+
     mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target = *context;
     const bool shouldBoxResult = this->passResultAsBox.getValue();
@@ -408,14 +455,29 @@ public:
                            mlir::func::FuncDialect>();
     target.addIllegalOp<fir::SaveResultOp>();
     target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp call) {
-      return !hasAbstractResult(call.getFunctionType());
+      mlir::FunctionType funTy = call.getFunctionType();
+      if (hasScalarDerivedResult(funTy) &&
+          fir::hasBindcAttr(call.getOperation()))
+        return true;
+      return !hasAbstractResult(funTy);
     });
-    target.addDynamicallyLegalOp<fir::AddrOfOp>([](fir::AddrOfOp addrOf) {
-      if (auto funTy = mlir::dyn_cast<mlir::FunctionType>(addrOf.getType()))
+    target.addDynamicallyLegalOp<fir::AddrOfOp>([&symbolTable](
+                                                    fir::AddrOfOp addrOf) {
+      if (auto funTy = mlir::dyn_cast<mlir::FunctionType>(addrOf.getType())) {
+        if (hasScalarDerivedResult(funTy)) {
+          auto func = symbolTable.lookup<mlir::func::FuncOp>(
+              addrOf.getSymbol().getRootReference().getValue());
+          return func && fir::hasBindcAttr(func.getOperation());
+        }
         return !hasAbstractResult(funTy);
+      }
       return true;
     });
     target.addDynamicallyLegalOp<fir::DispatchOp>([](fir::DispatchOp dispatch) {
+      mlir::FunctionType funTy = dispatch.getFunctionType();
+      if (hasScalarDerivedResult(funTy) &&
+          fir::hasBindcAttr(dispatch.getOperation()))
+        return true;
       return !hasAbstractResult(dispatch.getFunctionType());
     });
 

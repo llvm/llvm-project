@@ -35,7 +35,7 @@ void A (Tail *p) {
 // CHECK-LABEL: define dso_local void @_Z1BP4Tail
 // CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 2
 // CHECK-NEXT:    [[INC:%.*]] = add i8 [[BF_LOAD]], 1
 // CHECK-NEXT:    store i8 [[INC]], ptr [[B]], align 2
@@ -60,7 +60,7 @@ void A (Char *p) {
 // CHECK-LABEL: define dso_local void @_Z1BP4Char
 // CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 2
 // CHECK-NEXT:    [[INC:%.*]] = add i8 [[BF_LOAD]], 1
 // CHECK-NEXT:    store i8 [[INC]], ptr [[B]], align 2

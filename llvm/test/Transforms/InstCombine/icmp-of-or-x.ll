@@ -95,7 +95,7 @@ define i1 @or_eq_notY_eq_0(i8 %x, i8 %y) {
 define i1 @or_eq_notY_eq_0_fail_multiuse(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_eq_notY_eq_0_fail_multiuse(
 ; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[NY]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[NY]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[OR]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], [[NY]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -122,7 +122,7 @@ define i1 @or_ne_notY_eq_1s(i8 %x, i8 %y) {
 define i1 @or_ne_notY_eq_1s_fail_bad_not(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_ne_notY_eq_1s_fail_bad_not(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -307,7 +307,7 @@ define i1 @or_simplify_uge(i8 %y_in, i8 %rhs_in, i1 %c) {
 define i1 @or_simplify_ule_fail(i8 %y_in, i8 %rhs_in) {
 ; CHECK-LABEL: @or_simplify_ule_fail(
 ; CHECK-NEXT:    [[RHS:%.*]] = and i8 [[RHS_IN:%.*]], 127
-; CHECK-NEXT:    [[Y:%.*]] = or i8 [[RHS]], [[Y_IN:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[Y_IN:%.*]], [[RHS]]
 ; CHECK-NEXT:    [[LBO:%.*]] = or i8 [[Y]], 64
 ; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[LBO]], [[RHS]]
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -352,7 +352,7 @@ define i1 @or_simplify_ult(i8 %y_in, i8 %rhs_in) {
 define i1 @or_simplify_ugt_fail(i8 %y_in, i8 %rhs_in) {
 ; CHECK-LABEL: @or_simplify_ugt_fail(
 ; CHECK-NEXT:    [[RHS:%.*]] = or i8 [[RHS_IN:%.*]], 1
-; CHECK-NEXT:    [[LBO:%.*]] = or i8 [[RHS]], [[Y_IN:%.*]]
+; CHECK-NEXT:    [[LBO:%.*]] = or i8 [[Y_IN:%.*]], [[RHS]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[LBO]], [[RHS]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -377,7 +377,7 @@ define i1 @pr64610(ptr %b) {
 define i1 @icmp_eq_x_invertable_y2_todo(i8 %x, i1 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y2_todo(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[Y:%.*]], i8 -8, i8 [[Z:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

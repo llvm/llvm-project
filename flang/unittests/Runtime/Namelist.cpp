@@ -305,4 +305,33 @@ TEST(NamelistTests, Comma) {
   EXPECT_EQ(got, expect);
 }
 
+// Tests REAL-looking input to integers
+TEST(NamelistTests, RealValueForInt) {
+  OwningPtr<Descriptor> scDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{{}})};
+  const NamelistGroup::Item items[]{{"j", *scDesc}};
+  const NamelistGroup group{"nml", 1, items};
+  static char t1[]{"&nml j=123.456/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist real input for integer";
+  char out[16];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{" &NML J= 123/   "};
+  EXPECT_EQ(got, expect);
+}
+
 // TODO: Internal NAMELIST error tests

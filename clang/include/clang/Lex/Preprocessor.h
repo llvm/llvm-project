@@ -1053,22 +1053,6 @@ private:
     std::optional<MacroAnnotationInfo> DeprecationInfo;
     std::optional<MacroAnnotationInfo> RestrictExpansionInfo;
     std::optional<SourceLocation> FinalAnnotationLoc;
-
-    static MacroAnnotations makeDeprecation(SourceLocation Loc,
-                                            std::string Msg) {
-      return MacroAnnotations{MacroAnnotationInfo{Loc, std::move(Msg)},
-                              std::nullopt, std::nullopt};
-    }
-
-    static MacroAnnotations makeRestrictExpansion(SourceLocation Loc,
-                                                  std::string Msg) {
-      return MacroAnnotations{
-          std::nullopt, MacroAnnotationInfo{Loc, std::move(Msg)}, std::nullopt};
-    }
-
-    static MacroAnnotations makeFinal(SourceLocation Loc) {
-      return MacroAnnotations{std::nullopt, std::nullopt, Loc};
-    }
   };
 
   /// Warning information for macro annotations.
@@ -1159,6 +1143,11 @@ private:
   /// indicate where CachedLexPos should be set when the BackTrack() method is
   /// invoked (at which point the last position is popped).
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
+
+  /// Stack of cached tokens/initial number of cached tokens pairs, allowing
+  /// nested unannotated backtracks.
+  std::vector<std::pair<CachedTokensTy, CachedTokensTy::size_type>>
+      UnannotatedBacktrackTokens;
 
   /// True if \p Preprocessor::SkipExcludedConditionalBlock() is running.
   /// This is used to guard against calling this function recursively.
@@ -1722,8 +1711,16 @@ public:
   /// at some point after EnableBacktrackAtThisPos. If you don't, caching of
   /// tokens will continue indefinitely.
   ///
-  void EnableBacktrackAtThisPos();
+  /// \param Unannotated Whether token annotations are reverted upon calling
+  /// Backtrack().
+  void EnableBacktrackAtThisPos(bool Unannotated = false);
 
+private:
+  std::pair<CachedTokensTy::size_type, bool> LastBacktrackPos();
+
+  CachedTokensTy PopUnannotatedBacktrackTokens();
+
+public:
   /// Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
 
@@ -1734,6 +1731,12 @@ public:
   /// True if EnableBacktrackAtThisPos() was called and
   /// caching of tokens is on.
   bool isBacktrackEnabled() const { return !BacktrackPositions.empty(); }
+
+  /// True if EnableBacktrackAtThisPos() was called and
+  /// caching of unannotated tokens is on.
+  bool isUnannotatedBacktrackEnabled() const {
+    return !UnannotatedBacktrackTokens.empty();
+  }
 
   /// Lex the next token for this preprocessor.
   void Lex(Token &Result);
@@ -1841,8 +1844,9 @@ public:
   void RevertCachedTokens(unsigned N) {
     assert(isBacktrackEnabled() &&
            "Should only be called when tokens are cached for backtracking");
-    assert(signed(CachedLexPos) - signed(N) >= signed(BacktrackPositions.back())
-         && "Should revert tokens up to the last backtrack position, not more");
+    assert(signed(CachedLexPos) - signed(N) >=
+               signed(LastBacktrackPos().first) &&
+           "Should revert tokens up to the last backtrack position, not more");
     assert(signed(CachedLexPos) - signed(N) >= 0 &&
            "Corrupted backtrack positions ?");
     CachedLexPos -= N;
@@ -2119,8 +2123,8 @@ public:
   }
 
   /// Given a Token \p Tok that is a numeric constant with length 1,
-  /// return the character.
-  char
+  /// return the value of constant as an unsigned 8-bit integer.
+  uint8_t
   getSpellingOfSingleCharacterNumericConstant(const Token &Tok,
                                               bool *Invalid = nullptr) const {
     assert((Tok.is(tok::numeric_constant) || Tok.is(tok::binary_data)) &&
@@ -2864,35 +2868,18 @@ public:
 
   void addMacroDeprecationMsg(const IdentifierInfo *II, std::string Msg,
                               SourceLocation AnnotationLoc) {
-    auto Annotations = AnnotationInfos.find(II);
-    if (Annotations == AnnotationInfos.end())
-      AnnotationInfos.insert(std::make_pair(
-          II,
-          MacroAnnotations::makeDeprecation(AnnotationLoc, std::move(Msg))));
-    else
-      Annotations->second.DeprecationInfo =
-          MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
+    AnnotationInfos[II].DeprecationInfo =
+        MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
   }
 
   void addRestrictExpansionMsg(const IdentifierInfo *II, std::string Msg,
                                SourceLocation AnnotationLoc) {
-    auto Annotations = AnnotationInfos.find(II);
-    if (Annotations == AnnotationInfos.end())
-      AnnotationInfos.insert(
-          std::make_pair(II, MacroAnnotations::makeRestrictExpansion(
-                                 AnnotationLoc, std::move(Msg))));
-    else
-      Annotations->second.RestrictExpansionInfo =
-          MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
+    AnnotationInfos[II].RestrictExpansionInfo =
+        MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
   }
 
   void addFinalLoc(const IdentifierInfo *II, SourceLocation AnnotationLoc) {
-    auto Annotations = AnnotationInfos.find(II);
-    if (Annotations == AnnotationInfos.end())
-      AnnotationInfos.insert(
-          std::make_pair(II, MacroAnnotations::makeFinal(AnnotationLoc)));
-    else
-      Annotations->second.FinalAnnotationLoc = AnnotationLoc;
+    AnnotationInfos[II].FinalAnnotationLoc = AnnotationLoc;
   }
 
   const MacroAnnotations &getMacroAnnotations(const IdentifierInfo *II) const {

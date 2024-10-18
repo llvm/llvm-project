@@ -35,6 +35,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
@@ -216,6 +217,8 @@ void LoongArchPassConfig::addMachineSSAOptimization() {
 
 void LoongArchPassConfig::addPreRegAlloc() {
   addPass(createLoongArchPreRAExpandPseudoPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchMergeBaseOffsetOptPass());
 }
 
 bool LoongArchPassConfig::addRegAssignAndRewriteFast() {

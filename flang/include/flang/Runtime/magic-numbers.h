@@ -100,10 +100,14 @@ The denorm value is a nonstandard extension.
 #define _FORTRAN_RUNTIME_IEEE_OVERFLOW 8
 #define _FORTRAN_RUNTIME_IEEE_UNDERFLOW 16
 #define _FORTRAN_RUNTIME_IEEE_INEXACT 32
+#define _FORTRAN_RUNTIME_IEEE_ALL \
+  _FORTRAN_RUNTIME_IEEE_INVALID | _FORTRAN_RUNTIME_IEEE_DENORM | \
+      _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO | _FORTRAN_RUNTIME_IEEE_OVERFLOW | \
+      _FORTRAN_RUNTIME_IEEE_UNDERFLOW | _FORTRAN_RUNTIME_IEEE_INEXACT
 
 #if 0
 ieee_round_type values
-The values are those of the llvm.get.rounding instrinsic, which is assumed by
+The values are those of the llvm.get.rounding intrinsic, which is assumed by
 ieee_arithmetic module rounding procedures.
 #endif
 #define _FORTRAN_RUNTIME_IEEE_TO_ZERO 0

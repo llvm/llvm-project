@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s
 
 namespace usage_invalid {
   // FIXME: Should we diagnose a void return type?
@@ -9,6 +9,7 @@ namespace usage_invalid {
     A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a constructor}}
     ~A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a destructor}}
     static int *static_class_member() [[clang::lifetimebound]]; // expected-error {{static member function has no implicit object parameter}}
+    int *explicit_object(this A&) [[clang::lifetimebound]]; // expected-error {{explicit object member function has no implicit object parameter}}
     int not_function [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
     int [[clang::lifetimebound]] also_not_function; // expected-error {{cannot be applied to types}}
   };
@@ -47,25 +48,53 @@ namespace usage_ok {
     q = A(); // expected-warning {{object backing the pointer q will be destroyed at the end of the full-expression}}
     r = A(1); // expected-warning {{object backing the pointer r will be destroyed at the end of the full-expression}}
   }
+
+  struct FieldCheck {
+    struct Set {
+      int a;
+    };
+    struct Pair {
+      const int& a;
+      int b;
+      Set c;
+      int * d;
+    };
+    Pair p;  
+    FieldCheck(const int& a): p(a){}
+    Pair& getR() [[clang::lifetimebound]] { return p; }
+    Pair* getP() [[clang::lifetimebound]] { return &p; }
+    Pair* getNoLB() { return &p; }
+  };
+  void test_field_access() {
+    int x = 0;
+    const int& a = FieldCheck{x}.getR().a;
+    const int& b = FieldCheck{x}.getP()->b;   // expected-warning {{temporary bound to local reference 'b' will be destroyed at the end of the full-expression}}
+    const int& c = FieldCheck{x}.getP()->c.a; // expected-warning {{temporary bound to local reference 'c' will be destroyed at the end of the full-expression}}
+    const int& d = FieldCheck{x}.getNoLB()->c.a;
+    const int* e = FieldCheck{x}.getR().d;
+  }
 }
 
-# 1 "<std>" 1 3
 namespace std {
   using size_t = __SIZE_TYPE__;
-  struct string {
-    string();
-    string(const char*);
+  template<typename T>
+  struct basic_string {
+    basic_string();
+    basic_string(const T*);
 
     char &operator[](size_t) const [[clang::lifetimebound]];
   };
-  string operator""s(const char *, size_t);
+  using string =  basic_string<char>;
+  string operator""s(const char *, size_t); // expected-warning {{user-defined literal suffixes not starting with '_' are reserved}}
 
-  struct string_view {
-    string_view();
-    string_view(const char *p [[clang::lifetimebound]]);
-    string_view(const string &s [[clang::lifetimebound]]);
+  template<typename T>
+  struct basic_string_view {
+    basic_string_view();
+    basic_string_view(const T *p);
+    basic_string_view(const string &s [[clang::lifetimebound]]);
   };
-  string_view operator""sv(const char *, size_t);
+  using string_view = basic_string_view<char>;
+  string_view operator""sv(const char *, size_t); // expected-warning {{user-defined literal suffixes not starting with '_' are reserved}}
 
   struct vector {
     int *data();
@@ -74,10 +103,40 @@ namespace std {
 
   template<typename K, typename V> struct map {};
 }
-# 68 "attr-lifetimebound.cpp" 2
 
 using std::operator""s;
 using std::operator""sv;
+
+namespace default_args {
+  using IntArray = int[];
+  const int *defaultparam1(const int &def1 [[clang::lifetimebound]] = 0); // #def1
+  const int &defaultparam_array([[clang::lifetimebound]] const int *p = IntArray{1, 2, 3}); // #def2
+  struct A {
+    A(const char *, const int &def3 [[clang::lifetimebound]] = 0); // #def3
+  };
+  const int &defaultparam2(const int &def4 [[clang::lifetimebound]] = 0); // #def4
+  const int &defaultparam3(const int &def5 [[clang::lifetimebound]] = defaultparam2(), const int &def6 [[clang::lifetimebound]] = 0); // #def5 #def6
+  std::string_view defaultparam4(std::string_view s [[clang::lifetimebound]] = std::string()); // #def7
+
+  const int *test_default_args() {
+    const int *c = defaultparam1(); // expected-warning {{temporary whose address is used as value of local variable 'c' will be destroyed at the end of the full-expression}} expected-note@#def1 {{initializing parameter 'def1' with default argument}}
+    A a = A(""); // expected-warning {{temporary whose address is used as value of local variable 'a' will be destroyed at the end of the full-expression}} expected-note@#def3 {{initializing parameter 'def3' with default argument}}
+    const int &s = defaultparam2(); // expected-warning {{temporary bound to local reference 's' will be destroyed at the end of the full-expression}} expected-note@#def4 {{initializing parameter 'def4' with default argument}}
+    const int &t = defaultparam3(); // expected-warning {{temporary bound to local reference 't' will be destroyed at the end of the full-expression}} expected-note@#def4 {{initializing parameter 'def4' with default argument}} expected-note@#def5 {{initializing parameter 'def5' with default argument}} expected-warning {{temporary bound to local reference 't' will be destroyed at the end of the full-expression}} expected-note@#def6 {{initializing parameter 'def6' with default argument}}
+    const int &u = defaultparam_array(); // expected-warning {{temporary bound to local reference 'u' will be destroyed at the end of the full-expression}} expected-note@#def2 {{initializing parameter 'p' with default argument}}
+    int local;
+    const int &v = defaultparam2(local); // no warning
+    const int &w = defaultparam2(1); // expected-warning {{temporary bound to local reference 'w' will be destroyed at the end of the full-expression}}
+    if (false) {
+      return &defaultparam2();  // expected-warning {{returning address of local temporary object}}
+    }
+    if (false) {
+      return &defaultparam2(0);  // expected-warning {{returning address of local temporary object}} expected-note@#def4 {{initializing parameter 'def4' with default argument}}
+    }
+    std::string_view sv = defaultparam4(); // expected-warning {{temporary whose address is used as value of local variable 'sv' will be destroyed at the end of the full-expression}} expected-note@#def7 {{initializing parameter 's' with default argument}}
+    return nullptr;
+  }
+} // namespace default_args
 
 namespace p0936r0_examples {
   std::string_view s = "foo"s; // expected-warning {{temporary}}
@@ -86,7 +145,7 @@ namespace p0936r0_examples {
   void f() {
     std::string_view sv = "hi";
     std::string_view sv2 = sv + sv; // expected-warning {{temporary}}
-    sv2 = sv + sv; // FIXME: can we infer that we should warn here too?
+    sv2 = sv + sv; // expected-warning {{object backing the pointer}}
   }
 
   struct X { int a, b; };
@@ -212,6 +271,11 @@ template <class T> T *addressof(T &arg) {
         &const_cast<char &>(reinterpret_cast<const volatile char &>(arg)));
 }
 
+template <class T> struct span {
+  template<size_t _ArrayExtent>
+	span(const T (&__arr)[_ArrayExtent]) noexcept;
+};
+
 } // namespace foo
 } // namespace std
 
@@ -239,3 +303,35 @@ namespace move_forward_et_al_examples {
   S X;
   S *AddressOfOk = std::addressof(X);
 } // namespace move_forward_et_al_examples
+
+namespace ctor_cases {
+std::basic_string_view<char> test1() {
+  char abc[10];
+  return abc;  // expected-warning {{address of stack memory associated with local variable}}
+}
+
+std::span<int> test2() {
+  int abc[10];
+  return abc; // expected-warning {{address of stack memory associated with local variable}}
+}
+} // namespace ctor_cases
+
+namespace GH106372 {
+class [[gsl::Owner]] Foo {};
+class [[gsl::Pointer]] FooView {};
+
+class NonAnnotatedFoo {};
+class NonAnnotatedFooView {};
+
+template <typename T>
+struct StatusOr {
+  template <typename U = T>
+  StatusOr& operator=(U&& v [[clang::lifetimebound]]);
+};
+
+void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
+  foo1 = Foo(); // expected-warning {{object backing the pointer foo1 will be destroyed at the end}}
+  // No warning on non-gsl annotated types.
+  foo2 = NonAnnotatedFoo();
+}
+} // namespace GH106372

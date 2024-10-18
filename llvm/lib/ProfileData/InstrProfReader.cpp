@@ -150,22 +150,25 @@ static void printBinaryIdsInternal(raw_ostream &OS,
   }
 }
 
-Expected<std::unique_ptr<InstrProfReader>>
-InstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
-                        const InstrProfCorrelator *Correlator,
-                        std::function<void(Error)> Warn) {
+Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
+    const Twine &Path, vfs::FileSystem &FS,
+    const InstrProfCorrelator *Correlator,
+    const object::BuildIDFetcher *BIDFetcher,
+    const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
+    std::function<void(Error)> Warn) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
   return InstrProfReader::create(std::move(BufferOrError.get()), Correlator,
-                                 Warn);
+                                 BIDFetcher, BIDFetcherCorrelatorKind, Warn);
 }
 
-Expected<std::unique_ptr<InstrProfReader>>
-InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
-                        const InstrProfCorrelator *Correlator,
-                        std::function<void(Error)> Warn) {
+Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
+    std::unique_ptr<MemoryBuffer> Buffer, const InstrProfCorrelator *Correlator,
+    const object::BuildIDFetcher *BIDFetcher,
+    const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
+    std::function<void(Error)> Warn) {
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
@@ -174,9 +177,13 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   if (IndexedInstrProfReader::hasFormat(*Buffer))
     Result.reset(new IndexedInstrProfReader(std::move(Buffer)));
   else if (RawInstrProfReader64::hasFormat(*Buffer))
-    Result.reset(new RawInstrProfReader64(std::move(Buffer), Correlator, Warn));
+    Result.reset(new RawInstrProfReader64(std::move(Buffer), Correlator,
+                                          BIDFetcher, BIDFetcherCorrelatorKind,
+                                          Warn));
   else if (RawInstrProfReader32::hasFormat(*Buffer))
-    Result.reset(new RawInstrProfReader32(std::move(Buffer), Correlator, Warn));
+    Result.reset(new RawInstrProfReader32(std::move(Buffer), Correlator,
+                                          BIDFetcher, BIDFetcherCorrelatorKind,
+                                          Warn));
   else if (TextInstrProfReader::hasFormat(*Buffer))
     Result.reset(new TextInstrProfReader(std::move(Buffer)));
   else
@@ -633,6 +640,19 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
     return error(instrprof_error::bad_header);
 
+  if (BIDFetcher) {
+    std::vector<object::BuildID> BinaryIDs;
+    if (Error E = readBinaryIds(BinaryIDs))
+      return E;
+    if (auto E = InstrProfCorrelator::get("", BIDFetcherCorrelatorKind,
+                                          BIDFetcher, BinaryIDs)
+                     .moveInto(BIDFetcherCorrelator)) {
+      return E;
+    }
+    if (auto Err = BIDFetcherCorrelator->correlateProfileData(0))
+      return Err;
+  }
+
   if (Correlator) {
     // These sizes in the raw file are zero because we constructed them in the
     // Correlator.
@@ -643,6 +663,14 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     DataEnd = Data + Correlator->getDataSize();
     NamesStart = Correlator->getNamesPointer();
     NamesEnd = NamesStart + Correlator->getNamesSize();
+  } else if (BIDFetcherCorrelator) {
+    InstrProfCorrelatorImpl<IntPtrT> *BIDFetcherCorrelatorImpl =
+        dyn_cast_or_null<InstrProfCorrelatorImpl<IntPtrT>>(
+            BIDFetcherCorrelator.get());
+    Data = BIDFetcherCorrelatorImpl->getDataPointer();
+    DataEnd = Data + BIDFetcherCorrelatorImpl->getDataSize();
+    NamesStart = BIDFetcherCorrelatorImpl->getNamesPointer();
+    NamesEnd = NamesStart + BIDFetcherCorrelatorImpl->getNamesSize();
   } else {
     Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
         Start + DataOffset);

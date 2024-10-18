@@ -37,7 +37,7 @@ MachineFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
                   .getCachedResult<MachineModuleAnalysis>(*F.getParent())
                   ->getMMI();
   auto MF = std::make_unique<MachineFunction>(
-      F, *TM, STI, Context.generateMachineFunctionNum(F), MMI);
+      F, *TM, STI, MMI.getContext(), Context.generateMachineFunctionNum(F));
   MF->initTargetMachineFunctionInfo(STI);
 
   // MRI callback for target specific initializations.

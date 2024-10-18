@@ -1157,8 +1157,8 @@ define <vscale x 1 x i64> @intrinsic_vrsub_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x 
 ; RV32-LABEL: intrinsic_vrsub_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -1192,8 +1192,8 @@ define <vscale x 1 x i64> @intrinsic_vsadd_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x 
 ; RV32-LABEL: intrinsic_vsadd_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -1296,8 +1296,8 @@ define <vscale x 1 x i64> @intrinsic_vsmul_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x 
 ; RV32-LABEL: intrinsic_vsmul_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -1468,8 +1468,8 @@ define <vscale x 1 x i64> @intrinsic_vssub_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x 
 ; RV32-LABEL: intrinsic_vssub_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -1503,8 +1503,8 @@ define <vscale x 1 x i64> @intrinsic_vssubu_vx_nxv1i64_nxv1i64_i64(<vscale x 1 x
 ; RV32-LABEL: intrinsic_vssubu_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -2492,8 +2492,8 @@ define <vscale x 8 x i64> @intrinsic_vmerge_vxm_nxv8i64_nxv8i64_i64(<vscale x 8 
 ; RV32-LABEL: intrinsic_vmerge_vxm_nxv8i64_nxv8i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
@@ -2523,9 +2523,9 @@ define <vscale x 8 x i64> @intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64(<vscale x 8 
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    li a1, 15
+; RV32-NEXT:    li a2, -1
+; RV32-NEXT:    sw a2, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    li a1, -1
-; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a1), zero
@@ -2576,21 +2576,21 @@ entry:
   ret <vscale x 8 x double> %a
 }
 
-declare <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
+declare <vscale x 1 x half> @llvm.riscv.vmerge.nxv1f16.nxv1f16(
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x i1>,
   iXLen);
 
-define <vscale x 1 x half> @intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
-; CHECK-LABEL: intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16:
+define <vscale x 1 x half> @intrinsic_vmerge_vvm_nxv1f16_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+; CHECK-LABEL: intrinsic_vmerge_vvm_nxv1f16_nxv1f16_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
+  %a = call <vscale x 1 x half> @llvm.riscv.vmerge.nxv1f16.nxv1f16(
     <vscale x 1 x half> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x half> %2,
@@ -2673,8 +2673,8 @@ define <vscale x 1 x i64> @intrinsic_vmv.v.x_x_nxv1i64(<vscale x 1 x i64> %0, i6
 ; RV32-LABEL: intrinsic_vmv.v.x_x_nxv1i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero

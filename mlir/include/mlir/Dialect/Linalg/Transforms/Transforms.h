@@ -296,9 +296,9 @@ struct LinalgPaddingOptions {
   }
   /// A flag for every operand to mark the PadOp as nofold which enables
   /// packing for statically shaped operands.
-  SmallVector<bool> packPaddings;
-  LinalgPaddingOptions &setPackPaddings(ArrayRef<bool> pp) {
-    packPaddings.assign(pp.begin(), pp.end());
+  SmallVector<bool> nofoldFlags;
+  LinalgPaddingOptions &setNofoldFlags(ArrayRef<bool> pp) {
+    nofoldFlags.assign(pp.begin(), pp.end());
     return *this;
   }
   /// A number of loops to hoist the PadOp out for every operand.
@@ -488,8 +488,13 @@ struct ControlDropUnitDims {
     return SmallVector<unsigned>{};
   };
 };
-LogicalResult dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
-                           const ControlDropUnitDims &options);
+struct DropUnitDimsResult {
+  linalg::GenericOp resultOp;
+  SmallVector<Value> replacements;
+};
+FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
+                                           GenericOp genericOp,
+                                           const ControlDropUnitDims &options);
 
 /// Fuse two `linalg.generic` operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
@@ -497,11 +502,18 @@ LogicalResult dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
 struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
-  static llvm::SmallDenseSet<int>
-  getPreservedProducerResults(GenericOp producer, GenericOp consumer);
 };
 FailureOr<ElementwiseOpFusionResult>
 fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
+
+/// Returns a set of indices of the producer's results which would
+/// be preserved after the fusion.
+/// * There is a chance that the implementation of the transformation does not
+/// agree with the result of this method. This function gives a prediction based
+/// on an optimized fusion.
+llvm::SmallDenseSet<int> getPreservedProducerResults(GenericOp producer,
+                                                     GenericOp consumer,
+                                                     OpOperand *fusedOperand);
 
 /// Try to peel and canonicalize loop `op` and return the new result.
 /// Also applies affine_min/max bounds simplification on the fly where relevant.
@@ -518,7 +530,7 @@ void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 ///
 /// * "options.padToMultipleOf" indicates that each padding dimension should be
 ///   padded to the specified multiple.
-/// * Use "options.paddingValues" and "options.packPaddings" to set padding
+/// * Use "options.paddingValues" and "options.nofoldFlags" to set padding
 ///   value and nofold attribute of the created tensor::PadOps, respectively.
 /// * The unpadded results (extracted slice of the cloned operation) are
 ///   returned via `replacements`.
@@ -537,7 +549,7 @@ namespace detail {
 struct PackingResult {
   SmallVector<OpFoldResult> offsets, sizes, strides;
   SmallVector<Value> clonedLoopIvs, leadingPackedTensorIndexings;
-  GenericOp maybeTransposeOp;
+  TransposeOp maybeTransposeOp;
   tensor::PadOp hoistedPadOp;
 };
 
@@ -556,9 +568,9 @@ buildPackingLoopNest(RewriterBase &rewriter, tensor::PadOp opToHoist,
 /// a larger tensor. On success, `opToHoist` is replaced by the cloned version
 /// in the packing loop so the caller can continue reasoning about the padding
 /// operation. If `transposeVector` is non-empty, hoist padding introduces a
-/// GenericOp to transpose the padded tensor before inserting it into the packed
-/// tensor. A `transposeVector` can change the storage order of the padded
-/// tensor but does not change the order of the pack or compute loops.
+/// TransposeOp to transpose the padded tensor before inserting it into the
+/// packed tensor. A `transposeVector` can change the storage order of the
+/// padded tensor but does not change the order of the pack or compute loops.
 ///
 /// TODO: In the future, we should consider rewriting as a tensor.pack after
 /// hoisting since this abstraction is now available.
@@ -603,13 +615,13 @@ FailureOr<Value>
 hoistPaddingOnTensors(RewriterBase &rewriter, tensor::PadOp opToHoist,
                       int64_t numLoops, ArrayRef<int64_t> transposeVector,
                       tensor::PadOp &hoistedOp,
-                      SmallVectorImpl<GenericOp> &transposeOps);
+                      SmallVectorImpl<TransposeOp> &transposeOps);
 /// Calls into `hoistPaddingOnTensors` with a local IRRewriter.
 FailureOr<Value>
 hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
                       ArrayRef<int64_t> transposeVector,
                       tensor::PadOp &hoistedOp,
-                      SmallVectorImpl<GenericOp> &transposeOps);
+                      SmallVectorImpl<TransposeOp> &transposeOps);
 
 /// Apply padding and hoisting to `linalgOp` according to the configuration
 /// specified in `options`.
@@ -750,6 +762,14 @@ LogicalResult copyToGPUPrivateMemory(OpBuilder &b, Value src, Value dst);
 /// memory is freed when going outside of the scope.
 LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 
+/// Return true if there's dedicated logic in the Linalg Vectorizer to
+/// vectorize this Op, false otherwise.
+///
+/// Note that this helper merely implements a very high level check and that the
+/// vectorizer also requires various additional pre-conditions to be met for it
+/// to work (these are checked by the vectorizer itself).
+bool hasVectorizationImpl(Operation *);
+
 /// Emit a suitable vector form for an operation. If provided,
 /// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
 /// must match the rank of the iteration space of the operation and the sizes
@@ -866,29 +886,6 @@ FailureOr<ContinuousTileSizeSpecification>
 computeContinuousTileSizes(OpBuilder &builder, TilingInterface op,
                            unsigned dimension, OpFoldResult targetSize,
                            bool emitAssertions);
-/// Rewrite a TilingInterface `op` to a tiled `scf.forall`, applying
-/// tiling by `numThreads`.
-/// If non-empty, the `mapping` is added as an attribute to the
-/// resulting `scf.forall`.
-/// Zero tile sizes indicate that the dimension is not tiled, and can be
-/// thought of as tiling by the full size of data. It is the user's
-/// responsibility to ensure that `numThreads` is a valid tiling specification
-/// (i.e. that only tiles parallel dimensions, e.g. in the Linalg case).
-struct ForallTilingResult {
-  Operation *tileOp;
-  Operation *tiledOp;
-};
-FailureOr<ForallTilingResult> tileToForallOp(RewriterBase &builder,
-                                             TilingInterface op,
-                                             ArrayRef<OpFoldResult> numThreads,
-                                             std::optional<ArrayAttr> mapping);
-
-/// Same as `tileToForallOp`, but calculate the number of threads
-/// required using the given tileSizes.
-FailureOr<ForallTilingResult>
-tileToForallOpUsingTileSizes(RewriterBase &builder, TilingInterface op,
-                             ArrayRef<OpFoldResult> tileSizes,
-                             std::optional<ArrayAttr> mapping);
 
 /// Transformation information returned after reduction tiling.
 struct ForallReductionTilingResult {
@@ -1339,6 +1336,63 @@ FailureOr<Operation *> winogradConv2D(RewriterBase &rewriter,
                                       linalg::Conv2DNhwcFhwcOp op, int64_t m,
                                       int64_t r);
 
+/// Rewrite linalg.winograd_filter_transform. The data layout of the filter is
+/// FHWC. The transformation matrix is 2-dimension. We need to extract H x W
+/// from FHWC first. We generate 2 levels of loops to iterate on F and C. After
+/// the rewriting, we get
+///
+/// scf.for %f = lo_f to hi_f step 1
+///   scf.for %c = lo_c to hi_c step 1
+///     %extracted = extract filter<h x w> from filter<f x h x w x c>
+///     %ret = linalg.matmul G, %extracted
+///     %ret = linalg.matmul %ret, GT
+///     %inserted = insert %ret into filter<h x w x c x f>
+FailureOr<Operation *>
+decomposeWinogradFilterTransformOp(RewriterBase &rewriter,
+                                   linalg::WinogradFilterTransformOp op);
+
+/// Rewrite linalg.winograd_input_transform. The data layout of the input is
+/// NHWC. The transformation matrix is 2-dimension. We need to extract H x W
+/// from NHWC first. We generate 4 levels of loops to iterate on N, C, tileH,
+/// and tileW. After the rewriting, we get
+///
+/// scf.for %h = 0 to tileH step 1
+///   scf.for %w = 0 to tileW step 1
+///     scf.for %n = 0 to N step 1
+///       scf.for %c = 0 to C step 1
+///         %extracted = extract %extracted<alphaH x alphaW> from
+///                              %input<N x H x W x C>
+///                              at [%n, (%h x m), (%w x m), %c]
+///         %ret = linalg.matmul BT, %extracted
+///         %ret = linalg.matmul %ret, B
+///         %inserted = insert %ret<alphaH x alphaW> into
+///                            %output<alphaH x alphaW x tileH x tileW x N x C>
+///                            at [0, 0, %h, %w, %n, %c]
+FailureOr<Operation *>
+decomposeWinogradInputTransformOp(RewriterBase &rewriter,
+                                  linalg::WinogradInputTransformOp op);
+
+/// Rewrite linalg.winograd_output_transform. The data layout of the output is
+/// HWNF. The transformation matrix is 2-dimension. We need to extract H x W
+/// from HWNF first. We generate 4 levels of loops to iterate on N, F, tileH,
+/// and tileW. After the transformation, we get
+///
+/// scf.for %h = 0 to tileH step 1
+///   scf.for %w = 0 to tileW step 1
+///     scf.for %n = 0 to N step 1
+///       scf.for %f = 0 to F step 1
+///         %extracted = extract %extracted<alphaH x alphaW> from
+///                              %input<alphaH x alphaW x tileH x tileW x N x F>
+///                              at [0, 0, %h, %w, %n, %f]
+///         %ret = linalg.matmul AT, %extracted
+///         %ret = linalg.matmul %ret, A
+///         %inserted = insert %ret<alphaH x alphaW> into
+///                            output<N x H x W x F>
+///                            at [%n, (%h x m), (%w x m), %f]
+FailureOr<Operation *>
+decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
+                                   linalg::WinogradOutputTransformOp op);
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
 // TODO: every single such pattern should be a close to noop wrapper around a
@@ -1701,6 +1755,10 @@ void populateFoldReshapeOpsByCollapsingPatterns(
 void populateConstantFoldLinalgOperations(RewritePatternSet &patterns,
                                           const ControlFusionFn &controlFn);
 
+/// Pattern to replace `linalg.add` when destination passing on a contraction op
+/// suffices for achieving the sum.
+void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
+
 /// Pattern to fuse a `tensor.pad` operation with the producer of its source,
 /// if the producer is a `linalg` operation with all parallel iterator types.
 void populateFuseTensorPadWithProducerLinalgOpPatterns(
@@ -1750,10 +1808,12 @@ void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
 void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);
 
 /// Adds patterns that reduce the rank of named contraction ops that have
-/// unit dimensions in the operand(s) by converting to a sequence of `collapse_shape`,
-/// `<corresponding linalg named op>`, `expand_shape` (if on tensors).  For example a
-/// `linalg.batch_matmul` with unit batch size will convert to `linalg.matmul`
-/// and a `linalg.matvec` with with unit spatial dim in lhs will convert to a `linalg.dot`.
+/// unit dimensions in the operand(s) by converting to a sequence of
+/// `collapse_shape`,
+/// `<corresponding linalg named op>`, `expand_shape` (if on tensors).  For
+/// example a `linalg.batch_matmul` with unit batch size will convert to
+/// `linalg.matmul` and a `linalg.matvec` with with unit spatial dim in lhs will
+/// convert to a `linalg.dot`.
 void populateContractionOpRankReducingPatterns(RewritePatternSet &patterns);
 
 } // namespace linalg

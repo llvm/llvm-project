@@ -52,7 +52,9 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -288,7 +290,7 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
        State ? State->getActiveModuleMacros(*this, II) : std::nullopt)
     Active.insert(MM);
   llvm::DenseSet<ModuleMacro*> Visited;
-  llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf.begin(), Leaf.end());
+  llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf);
   while (!Worklist.empty()) {
     auto *MM = Worklist.pop_back_val();
     llvm::errs() << " ModuleMacro " << MM << " "
@@ -1602,6 +1604,46 @@ static bool isTargetVariantEnvironment(const TargetInfo &TI,
   return false;
 }
 
+#if defined(__sun__) && defined(__svr4__) && defined(__clang__) &&             \
+    __clang__ < 20
+// GCC mangles std::tm as tm for binary compatibility on Solaris (Issue
+// #33114).  We need to match this to allow the std::put_time calls to link
+// (PR #99075).  clang 20 contains a fix, but the workaround is still needed
+// with older versions.
+asm("_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
+    "RSt8ios_basecPKSt2tmPKcSB_ = "
+    "_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
+    "RSt8ios_basecPK2tmPKcSB_");
+#endif
+
+static bool IsBuiltinTrait(Token &Tok) {
+
+#define TYPE_TRAIT_1(Spelling, Name, Key)                                      \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define TYPE_TRAIT_2(Spelling, Name, Key)                                      \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define TYPE_TRAIT_N(Spelling, Name, Key)                                      \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define ARRAY_TYPE_TRAIT(Spelling, Name, Key)                                  \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define EXPRESSION_TRAIT(Spelling, Name, Key)                                  \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define TRANSFORM_TYPE_TRAIT_DEF(K, Spelling)                                  \
+  case tok::kw___##Spelling:                                                   \
+    return true;
+
+  switch (Tok.getKind()) {
+  default:
+    return false;
+#include "clang/Basic/TokenKinds.def"
+  }
+}
+
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
 /// as a builtin macro, handle it and return the next token as 'Tok'.
 void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
@@ -1721,11 +1763,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     Diag(Tok.getLocation(), diag::warn_pp_date_time);
     // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
     // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
-    const char *Result;
+    std::string Result;
+    std::stringstream TmpStream;
+    TmpStream.imbue(std::locale("C"));
     if (getPreprocessorOpts().SourceDateEpoch) {
       time_t TT = *getPreprocessorOpts().SourceDateEpoch;
       std::tm *TM = std::gmtime(&TT);
-      Result = asctime(TM);
+      TmpStream << std::put_time(TM, "%a %b %e %T %Y");
     } else {
       // Get the file that we are lexing out of.  If we're currently lexing from
       // a macro, dig into the include stack.
@@ -1735,13 +1779,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       if (CurFile) {
         time_t TT = CurFile->getModificationTime();
         struct tm *TM = localtime(&TT);
-        Result = asctime(TM);
-      } else {
-        Result = "??? ??? ?? ??:??:?? ????\n";
+        TmpStream << std::put_time(TM, "%a %b %e %T %Y");
       }
     }
-    // Surround the string with " and strip the trailing newline.
-    OS << '"' << StringRef(Result).drop_back() << '"';
+    Result = TmpStream.str();
+    if (Result.empty())
+      Result = "??? ??? ?? ??:??:?? ????";
+    OS << '"' << Result << '"';
     Tok.setKind(tok::string_literal);
   } else if (II == Ident__FLT_EVAL_METHOD__) {
     // __FLT_EVAL_METHOD__ is set to the default value.
@@ -1798,30 +1842,17 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                 getTargetInfo().getTargetOpts().FeatureMap);
           }
           return true;
-        } else if (II->getTokenID() != tok::identifier ||
-                   II->hasRevertedTokenIDToIdentifier()) {
-          // Treat all keywords that introduce a custom syntax of the form
-          //
-          //   '__some_keyword' '(' [...] ')'
-          //
-          // as being "builtin functions", even if the syntax isn't a valid
-          // function call (for example, because the builtin takes a type
-          // argument).
-          if (II->getName().starts_with("__builtin_") ||
-              II->getName().starts_with("__is_") ||
-              II->getName().starts_with("__has_"))
-            return true;
-          return llvm::StringSwitch<bool>(II->getName())
-              .Case("__array_rank", true)
-              .Case("__array_extent", true)
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
-#include "clang/Basic/TransformTypeTraits.def"
-              .Default(false);
+        } else if (IsBuiltinTrait(Tok)) {
+          return true;
+        } else if (II->getTokenID() != tok::identifier &&
+                   II->getName().starts_with("__builtin_")) {
+          return true;
         } else {
           return llvm::StringSwitch<bool>(II->getName())
               // Report builtin templates as being builtins.
               .Case("__make_integer_seq", getLangOpts().CPlusPlus)
               .Case("__type_pack_element", getLangOpts().CPlusPlus)
+              .Case("__builtin_common_type", getLangOpts().CPlusPlus)
               // Likewise for some builtin preprocessor macros.
               // FIXME: This is inconsistent; we usually suggest detecting
               // builtin macros via #ifdef. Don't add more cases here.

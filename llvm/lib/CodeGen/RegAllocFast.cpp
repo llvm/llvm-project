@@ -584,7 +584,7 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
       SpilledOperandsMap;
   for (MachineOperand *MO : LRIDbgOperands)
     SpilledOperandsMap[MO->getParent()].push_back(MO);
-  for (auto MISpilledOperands : SpilledOperandsMap) {
+  for (const auto &MISpilledOperands : SpilledOperandsMap) {
     MachineInstr &DBG = *MISpilledOperands.first;
     // We don't have enough support for tracking operands of DBG_VALUE_LISTs.
     if (DBG.isDebugValueList())
@@ -1329,9 +1329,8 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
   // we assign these.
   SmallVector<unsigned> RegClassDefCounts(TRI->getNumRegClasses(), 0);
 
-  for (const MachineOperand &MO : MI.operands())
-    if (MO.isReg() && MO.isDef())
-      addRegClassDefCounts(RegClassDefCounts, MO.getReg());
+  for (const MachineOperand &MO : MI.all_defs())
+    addRegClassDefCounts(RegClassDefCounts, MO.getReg());
 
   llvm::sort(DefOperandIndexes, [&](unsigned I0, unsigned I1) {
     const MachineOperand &MO0 = MI.getOperand(I0);
@@ -1481,9 +1480,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
         // Assign virtual register defs.
         while (ReArrangedImplicitOps) {
           ReArrangedImplicitOps = false;
-          for (MachineOperand &MO : MI.operands()) {
-            if (!MO.isReg() || !MO.isDef())
-              continue;
+          for (MachineOperand &MO : MI.all_defs()) {
             Register Reg = MO.getReg();
             if (Reg.isVirtual()) {
               ReArrangedImplicitOps =
@@ -1499,10 +1496,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
     // Free registers occupied by defs.
     // Iterate operands in reverse order, so we see the implicit super register
     // defs first (we added them earlier in case of <def,read-undef>).
-    for (MachineOperand &MO : reverse(MI.operands())) {
-      if (!MO.isReg() || !MO.isDef())
-        continue;
-
+    for (MachineOperand &MO : reverse(MI.all_defs())) {
       Register Reg = MO.getReg();
 
       // subreg defs don't free the full register. We left the subreg number

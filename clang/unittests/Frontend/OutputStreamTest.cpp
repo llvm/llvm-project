@@ -67,7 +67,7 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
 
   bool Success = ExecuteCompilerInvocation(&Compiler);
   EXPECT_FALSE(Success);
-  EXPECT_TRUE(!VerboseStream.str().empty());
+  EXPECT_TRUE(!VerboseBuffer.empty());
   EXPECT_TRUE(StringRef(VerboseBuffer.data()).contains("errors generated"));
 }
 

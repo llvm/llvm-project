@@ -67,6 +67,7 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let isBarrier          = ps.isBarrier;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   // encoding
   bits<7> sdst;
@@ -579,6 +580,7 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   let DisableEncoding      = ps.DisableEncoding;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   // encoding
   bits<7> sdst;
@@ -638,12 +640,12 @@ class SOP2_64_32_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
 
 
 let Defs = [SCC] in { // Carry out goes to SCC
-let isCommutable = 1 in {
+let isCommutable = 1, isAdd = 1 in {
 def S_ADD_U32 : SOP2_32 <"s_add_u32">;
 def S_ADD_I32 : SOP2_32 <"s_add_i32",
   [(set i32:$sdst, (UniformBinFrag<add> SSrc_b32:$src0, SSrc_b32:$src1))]
 >;
-} // End isCommutable = 1
+} // End isCommutable = 1, isAdd = 1
 
 def S_SUB_U32 : SOP2_32 <"s_sub_u32">;
 def S_SUB_I32 : SOP2_32 <"s_sub_i32",
@@ -996,6 +998,7 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   let isBarrier          = ps.isBarrier;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   // encoding
   bits<7>  sdst;
@@ -1262,6 +1265,7 @@ class SOPC_Real<bits<7> op, SOPC_Pseudo ps> :
   let mayStore             = ps.mayStore;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   // encoding
   bits<8> src0;
@@ -1459,6 +1463,7 @@ class SOPP_Real<SOPP_Pseudo ps, string name = ps.Mnemonic> :
   let isBarrier            = ps.isBarrier;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
   bits <16> simm16;
 }
 
@@ -1746,11 +1751,6 @@ let OtherPredicates = [HasExportInsts] in
   def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins SDelayALU:$simm16),
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
-
-let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
-  def S_SINGLEUSE_VDST :
-    SOPP_Pseudo<"s_singleuse_vdst", (ins s16imm:$simm16), "$simm16">;
-} // End SubtargetPredicate = HasVGPRSingeUseHintInsts
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_LOADCNT :
@@ -2670,12 +2670,6 @@ defm S_TTRACEDATA_IMM             : SOPP_Real_32_gfx11_gfx12<0x03b>;
 defm S_ICACHE_INV                 : SOPP_Real_32_gfx11_gfx12<0x03c>;
 
 defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
-
-//===----------------------------------------------------------------------===//
-// SOPP - GFX1150, GFX12.
-//===----------------------------------------------------------------------===//
-
-defm S_SINGLEUSE_VDST             : SOPP_Real_32_gfx11_gfx12<0x013>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10

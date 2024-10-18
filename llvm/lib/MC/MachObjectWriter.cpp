@@ -60,6 +60,7 @@ void MachObjectWriter::reset() {
   VersionInfo.SDKVersion = VersionTuple();
   TargetVariantVersionInfo.Major = 0;
   TargetVariantVersionInfo.SDKVersion = VersionTuple();
+  LinkerOptions.clear();
   MCObjectWriter::reset();
 }
 
@@ -190,7 +191,18 @@ void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
   W.write<uint32_t>(is64Bit() ? MachO::MH_MAGIC_64 : MachO::MH_MAGIC);
 
   W.write<uint32_t>(TargetObjectWriter->getCPUType());
-  W.write<uint32_t>(TargetObjectWriter->getCPUSubtype());
+
+  uint32_t Cpusubtype = TargetObjectWriter->getCPUSubtype();
+
+  // Promote arm64e subtypes to always be ptrauth-ABI-versioned, at version 0.
+  // We never need to emit unversioned binaries.
+  // And we don't support arbitrary ABI versions (or the kernel flag) yet.
+  if (TargetObjectWriter->getCPUType() == MachO::CPU_TYPE_ARM64 &&
+      Cpusubtype == MachO::CPU_SUBTYPE_ARM64E)
+    Cpusubtype = MachO::CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
+        /*PtrAuthABIVersion=*/0, /*PtrAuthKernelABIVersion=*/false);
+
+  W.write<uint32_t>(Cpusubtype);
 
   W.write<uint32_t>(Type);
   W.write<uint32_t>(NumLoadCommands);
@@ -743,7 +755,7 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     if (!hasReliableSymbolDifference) {
       if (!SA.isInSection() || &SecA != &SecB ||
           (!SA.isTemporary() && FB.getAtom() != SA.getFragment()->getAtom() &&
-           Asm.getSubsectionsViaSymbols()))
+           SubsectionsViaSymbols))
         return false;
       return true;
     }
@@ -791,13 +803,13 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   computeSymbolTable(Asm, LocalSymbolData, ExternalSymbolData,
                      UndefinedSymbolData);
 
-  if (!Asm.CGProfile.empty()) {
+  if (!CGProfile.empty()) {
     MCSection *CGProfileSection = Asm.getContext().getMachOSection(
         "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
     auto &Frag = cast<MCDataFragment>(*CGProfileSection->begin());
     Frag.getContents().clear();
     raw_svector_ostream OS(Frag.getContents());
-    for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
+    for (const MCObjectWriter::CGProfileEntry &CGPE : CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
       support::endian::write(OS, FromIndex, W.Endian);
@@ -857,7 +869,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Add the linker option load commands sizes.
-  for (const auto &Option : Asm.getLinkerOptions()) {
+  for (const auto &Option : LinkerOptions) {
     ++NumLoadCommands;
     LoadCommandsSize += ComputeLinkerOptionsLoadCommandSize(Option, is64Bit());
   }
@@ -893,7 +905,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 
   // Write the prolog, starting with the header and load command...
   writeHeader(MachO::MH_OBJECT, NumLoadCommands, LoadCommandsSize,
-              Asm.getSubsectionsViaSymbols());
+              SubsectionsViaSymbols);
   uint32_t Prot =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
   writeSegmentLoadCommand("", NumSections, 0, VMSize, SectionDataStart,
@@ -1016,7 +1028,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Write the linker options load commands.
-  for (const auto &Option : Asm.getLinkerOptions())
+  for (const auto &Option : LinkerOptions)
     writeLinkerOptionsLoadCommand(Option);
 
   // Write the actual section data.
@@ -1106,11 +1118,4 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   return NumBytesWritten();
-}
-
-std::unique_ptr<MCObjectWriter>
-llvm::createMachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
-                             raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return std::make_unique<MachObjectWriter>(std::move(MOTW), OS,
-                                             IsLittleEndian);
 }

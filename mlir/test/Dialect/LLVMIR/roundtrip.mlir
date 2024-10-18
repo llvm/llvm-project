@@ -1,5 +1,10 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
+
+// CHECK-LABEL: func @baz
+// something to call
+llvm.func @baz()
+
 // CHECK-LABEL: func @ops
 // CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[PTR1:.*]]: !llvm.ptr, %[[PTR2:.*]]: !llvm.ptr, %[[BOOL:.*]]: i1, %[[VPTR1:.*]]: !llvm.vec<2 x ptr>)
 func.func @ops(%arg0: i32, %arg1: f32,
@@ -92,6 +97,19 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %variadic_func = llvm.mlir.addressof @vararg_func : !llvm.ptr
   llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
   llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> ()
+
+// Function call attributes
+// CHECK: llvm.call @baz() {convergent} : () -> ()
+  llvm.call @baz() {convergent} : () -> ()
+
+// CHECK: llvm.call @baz() {no_unwind} : () -> ()
+  llvm.call @baz() {no_unwind} : () -> ()
+
+// CHECK: llvm.call @baz() {will_return} : () -> ()
+  llvm.call @baz() {will_return} : () -> ()
+
+// CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
+  llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
 
 // Terminator operations and their successors.
 //
@@ -402,11 +420,13 @@ func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
 }
 
 // CHECK-LABEL: @atomicrmw
-func.func @atomicrmw(%ptr : !llvm.ptr, %val : f32) {
+func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
-  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : !llvm.ptr, f32
+  %0 = llvm.atomicrmw fadd %ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: llvm.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
-  %1 = llvm.atomicrmw volatile fsub %ptr, %val syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
+  %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
+  // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
+  %2 = llvm.atomicrmw fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
   llvm.return
 }
 
@@ -626,6 +646,9 @@ llvm.func @vararg_func(%arg0: i32, ...) {
   %list2 = llvm.alloca %1 x !llvm.struct<"struct.va_list_opaque", (ptr)> : (i32) -> !llvm.ptr
   llvm.intr.vacopy %list to %list2 : !llvm.ptr, !llvm.ptr
 
+  // CHECK: %[[RET:.+]] = llvm.va_arg %[[LIST2]] : (!llvm.ptr) -> i32
+  %ret = llvm.va_arg %list2 : (!llvm.ptr) -> i32
+
   // CHECK: llvm.intr.vaend %[[LIST]] : !llvm.ptr{{$}}
   // CHECK: llvm.intr.vaend %[[LIST2]] : !llvm.ptr{{$}}
   llvm.intr.vaend %list : !llvm.ptr
@@ -710,4 +733,133 @@ llvm.func @test_notail() -> i32 {
   // CHECK-NEXT: llvm.call notail @tail_call_target() : () -> i32
   %0 = llvm.call notail @tail_call_target() : () -> i32
   llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @vector_predication_intrinsics
+// CHECK-SAME: (%[[ARG0:.*]]: vector<8xi32>, %[[ARG1:.*]]: vector<8xi32>, %[[ARG2:.*]]: vector<8xi1>, %[[ARG3:.*]]: i32)
+llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
+                                         %mask: vector<8xi1>, %evl: i32) {
+  // CHECK-NEXT: "llvm.intr.vp.smax"(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]])
+  "llvm.intr.vp.smax" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK-NEXT: "llvm.intr.vp.smin"(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]])
+  "llvm.intr.vp.smin" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK-NEXT: "llvm.intr.vp.umax"(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]])
+  "llvm.intr.vp.umax" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK-NEXT: "llvm.intr.vp.umin"(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]])
+  "llvm.intr.vp.umin" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  llvm.return
+}
+
+llvm.func @op_bundle_target()
+
+// CHECK-LABEL: @test_call_with_empty_opbundle
+llvm.func @test_call_with_empty_opbundle() {
+  // CHECK: llvm.call @op_bundle_target() : () -> ()
+  llvm.call @op_bundle_target() [] : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @test_call_with_empty_opbundle_operands
+llvm.func @test_call_with_empty_opbundle_operands() {
+  // CHECK: llvm.call @op_bundle_target() ["tag"()] : () -> ()
+  llvm.call @op_bundle_target() ["tag"()] : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @test_call_with_opbundle
+llvm.func @test_call_with_opbundle() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  %2 = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: llvm.call @op_bundle_target() ["tag1"(%{{.+}}, %{{.+}} : i32, i32), "tag2"(%{{.+}} : i32)] : () -> ()
+  llvm.call @op_bundle_target() ["tag1"(%0, %1 : i32, i32), "tag2"(%2 : i32)] : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @test_invoke_with_empty_opbundle
+llvm.func @test_invoke_with_empty_opbundle() attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: llvm.invoke @op_bundle_target() to ^{{.+}} unwind ^{{.+}} : () -> ()
+  llvm.invoke @op_bundle_target() to ^bb2 unwind ^bb1 [] : () -> ()
+
+^bb1:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL: @test_invoke_with_empty_opbundle_operands
+llvm.func @test_invoke_with_empty_opbundle_operands() attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: llvm.invoke @op_bundle_target() to ^{{.+}} unwind ^{{.+}} ["tag"()] : () -> ()
+  llvm.invoke @op_bundle_target() to ^bb2 unwind ^bb1 ["tag"()] : () -> ()
+
+^bb1:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL: @test_invoke_with_opbundle
+llvm.func @test_invoke_with_opbundle() attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: llvm.invoke @op_bundle_target() to ^{{.+}} unwind ^{{.+}} ["tag1"(%{{.+}}, %{{.+}} : i32, i32), "tag2"(%{{.+}} : i32)] : () -> ()
+  llvm.invoke @op_bundle_target() to ^bb2 unwind ^bb1 ["tag1"(%0, %1 : i32, i32), "tag2"(%2 : i32)] : () -> ()
+
+^bb1:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL: @test_call_intrin_with_opbundle
+llvm.func @test_call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  %1 = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: llvm.call_intrinsic "llvm.assume"(%{{.+}}) ["align"(%{{.+}}, %{{.+}} : !llvm.ptr, i32)] : (i1) -> ()
+  llvm.call_intrinsic "llvm.assume"(%0) ["align"(%arg0, %1 : !llvm.ptr, i32)] : (i1) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_no_opbundle
+llvm.func @test_assume_intr_no_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  // CHECK: llvm.intr.assume %0 : i1
+  llvm.intr.assume %0 : i1
+  llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_empty_opbundle
+llvm.func @test_assume_intr_empty_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  // CHECK: llvm.intr.assume %0 : i1
+  llvm.intr.assume %0 [] : i1
+  llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_with_opbundles
+llvm.func @test_assume_intr_with_opbundles(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  %3 = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: llvm.intr.assume %0 ["tag1"(%1, %2 : i32, i32), "tag2"(%3 : i32)] : i1
+  llvm.intr.assume %0 ["tag1"(%1, %2 : i32, i32), "tag2"(%3 : i32)] : i1
+  llvm.return
 }

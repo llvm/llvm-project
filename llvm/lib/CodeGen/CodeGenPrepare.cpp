@@ -27,6 +27,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -471,6 +472,7 @@ private:
   bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, Value *Arg0, Value *Arg1,
                                    CmpInst *Cmp, Intrinsic::ID IID);
   bool optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT);
+  bool optimizeURem(Instruction *Rem);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   void verifyBFIUpdates(Function &F);
@@ -1181,6 +1183,12 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
     }
   }
 
+  // Preserve loop Metadata.
+  if (BI->hasMetadata(LLVMContext::MD_loop)) {
+    for (auto *Pred : predecessors(BB))
+      Pred->getTerminator()->copyMetadata(*BI, LLVMContext::MD_loop);
+  }
+
   // The PHIs are now updated, change everything that refers to BB to use
   // DestBB and remove BB.
   BB->replaceAllUsesWith(DestBB);
@@ -1643,7 +1651,7 @@ static bool matchUAddWithOverflowConstantEdgeCases(CmpInst *Cmp,
   if (Pred == ICmpInst::ICMP_EQ && match(B, m_AllOnes()))
     B = ConstantInt::get(B->getType(), 1);
   else if (Pred == ICmpInst::ICMP_NE && match(B, m_ZeroInt()))
-    B = ConstantInt::get(B->getType(), -1);
+    B = Constant::getAllOnesValue(B->getType());
   else
     return false;
 
@@ -1974,6 +1982,160 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
   return true;
 }
 
+static bool isRemOfLoopIncrementWithLoopInvariant(Instruction *Rem,
+                                                  const LoopInfo *LI,
+                                                  Value *&RemAmtOut,
+                                                  PHINode *&LoopIncrPNOut) {
+  Value *Incr, *RemAmt;
+  // NB: If RemAmt is a power of 2 it *should* have been transformed by now.
+  if (!match(Rem, m_URem(m_Value(Incr), m_Value(RemAmt))))
+    return false;
+
+  // Find out loop increment PHI.
+  auto *PN = dyn_cast<PHINode>(Incr);
+  if (!PN)
+    return false;
+
+  // This isn't strictly necessary, what we really need is one increment and any
+  // amount of initial values all being the same.
+  if (PN->getNumIncomingValues() != 2)
+    return false;
+
+  // Only trivially analyzable loops.
+  Loop *L = LI->getLoopFor(PN->getParent());
+  if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
+    return false;
+
+  // Req that the remainder is in the loop
+  if (!L->contains(Rem))
+    return false;
+
+  // Only works if the remainder amount is a loop invaraint
+  if (!L->isLoopInvariant(RemAmt))
+    return false;
+
+  // Is the PHI a loop increment?
+  auto LoopIncrInfo = getIVIncrement(PN, LI);
+  if (!LoopIncrInfo)
+    return false;
+
+  // We need remainder_amount % increment_amount to be zero. Increment of one
+  // satisfies that without any special logic and is overwhelmingly the common
+  // case.
+  if (!match(LoopIncrInfo->second, m_One()))
+    return false;
+
+  // Need the increment to not overflow.
+  if (!match(LoopIncrInfo->first, m_c_NUWAdd(m_Specific(PN), m_Value())))
+    return false;
+
+  // Set output variables.
+  RemAmtOut = RemAmt;
+  LoopIncrPNOut = PN;
+
+  return true;
+}
+
+// Try to transform:
+//
+// for(i = Start; i < End; ++i)
+//    Rem = (i nuw+ IncrLoopInvariant) u% RemAmtLoopInvariant;
+//
+// ->
+//
+// Rem = (Start nuw+ IncrLoopInvariant) % RemAmtLoopInvariant;
+// for(i = Start; i < End; ++i, ++rem)
+//    Rem = rem == RemAmtLoopInvariant ? 0 : Rem;
+//
+// Currently only implemented for `IncrLoopInvariant` being zero.
+static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
+                                    const LoopInfo *LI,
+                                    SmallSet<BasicBlock *, 32> &FreshBBs,
+                                    bool IsHuge) {
+  Value *RemAmt;
+  PHINode *LoopIncrPN;
+  if (!isRemOfLoopIncrementWithLoopInvariant(Rem, LI, RemAmt, LoopIncrPN))
+    return false;
+
+  // Only non-constant remainder as the extra IV is probably not profitable
+  // in that case.
+  //
+  // Potential TODO(1): `urem` of a const ends up as `mul` + `shift` + `add`. If
+  // we can rule out register pressure and ensure this `urem` is executed each
+  // iteration, its probably profitable to handle the const case as well.
+  //
+  // Potential TODO(2): Should we have a check for how "nested" this remainder
+  // operation is? The new code runs every iteration so if the remainder is
+  // guarded behind unlikely conditions this might not be worth it.
+  if (match(RemAmt, m_ImmConstant()))
+    return false;
+
+  Loop *L = LI->getLoopFor(LoopIncrPN->getParent());
+  Value *Start = LoopIncrPN->getIncomingValueForBlock(L->getLoopPreheader());
+  // If we can't fully optimize out the `rem`, skip this transform.
+  Start = simplifyURemInst(Start, RemAmt, *DL);
+  if (!Start)
+    return false;
+
+  // Create new remainder with induction variable.
+  Type *Ty = Rem->getType();
+  IRBuilder<> Builder(Rem->getContext());
+
+  Builder.SetInsertPoint(LoopIncrPN);
+  PHINode *NewRem = Builder.CreatePHI(Ty, 2);
+
+  Builder.SetInsertPoint(cast<Instruction>(
+      LoopIncrPN->getIncomingValueForBlock(L->getLoopLatch())));
+  // `(add (urem x, y), 1)` is always nuw.
+  Value *RemAdd = Builder.CreateNUWAdd(NewRem, ConstantInt::get(Ty, 1));
+  Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
+  Value *RemSel =
+      Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+
+  NewRem->addIncoming(Start, L->getLoopPreheader());
+  NewRem->addIncoming(RemSel, L->getLoopLatch());
+
+  // Insert all touched BBs.
+  FreshBBs.insert(LoopIncrPN->getParent());
+  FreshBBs.insert(L->getLoopLatch());
+  FreshBBs.insert(Rem->getParent());
+
+  replaceAllUsesWith(Rem, NewRem, FreshBBs, IsHuge);
+  Rem->eraseFromParent();
+  return true;
+}
+
+bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
+  if (foldURemOfLoopIncrement(Rem, DL, LI, FreshBBs, IsHugeFunc))
+    return true;
+  return false;
+}
+
+/// Some targets have better codegen for `ctpop(X) u< 2` than `ctpop(X) == 1`.
+/// This function converts `ctpop(X) ==/!= 1` into `ctpop(X) u</u> 2/1` if the
+/// result cannot be zero.
+static bool adjustIsPower2Test(CmpInst *Cmp, const TargetLowering &TLI,
+                               const TargetTransformInfo &TTI,
+                               const DataLayout &DL) {
+  ICmpInst::Predicate Pred;
+  if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(), m_One())))
+    return false;
+  if (!ICmpInst::isEquality(Pred))
+    return false;
+  auto *II = cast<IntrinsicInst>(Cmp->getOperand(0));
+
+  if (isKnownNonZero(II, DL)) {
+    if (Pred == ICmpInst::ICMP_EQ) {
+      Cmp->setOperand(1, ConstantInt::get(II->getType(), 2));
+      Cmp->setPredicate(ICmpInst::ICMP_ULT);
+    } else {
+      Cmp->setPredicate(ICmpInst::ICMP_UGT);
+    }
+    return true;
+  }
+  return false;
+}
+
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (sinkCmpExpression(Cmp, *TLI))
     return true;
@@ -1991,6 +2153,9 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
     return true;
 
   if (foldFCmpToFPClassTest(Cmp, *TLI, *DL))
+    return true;
+
+  if (adjustIsPower2Test(Cmp, *TLI, *TTI, *DL))
     return true;
 
   return false;
@@ -2540,7 +2705,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
   }
 
   // From here on out we're working with named functions.
-  if (!CI->getCalledFunction())
+  auto *Callee = CI->getCalledFunction();
+  if (!Callee)
     return false;
 
   // Lower all default uses of _chk calls.  This is very similar
@@ -2553,6 +2719,51 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
     replaceAllUsesWith(CI, V, FreshBBs, IsHugeFunc);
     CI->eraseFromParent();
     return true;
+  }
+
+  // SCCP may have propagated, among other things, C++ static variables across
+  // calls. If this happens to be the case, we may want to undo it in order to
+  // avoid redundant pointer computation of the constant, as the function method
+  // returning the constant needs to be executed anyways.
+  auto GetUniformReturnValue = [](const Function *F) -> GlobalVariable * {
+    if (!F->getReturnType()->isPointerTy())
+      return nullptr;
+
+    GlobalVariable *UniformValue = nullptr;
+    for (auto &BB : *F) {
+      if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
+        if (auto *V = dyn_cast<GlobalVariable>(RI->getReturnValue())) {
+          if (!UniformValue)
+            UniformValue = V;
+          else if (V != UniformValue)
+            return nullptr;
+        } else {
+          return nullptr;
+        }
+      }
+    }
+
+    return UniformValue;
+  };
+
+  if (Callee->hasExactDefinition()) {
+    if (GlobalVariable *RV = GetUniformReturnValue(Callee)) {
+      bool MadeChange = false;
+      for (Use &U : make_early_inc_range(RV->uses())) {
+        auto *I = dyn_cast<Instruction>(U.getUser());
+        if (!I || I->getParent() != CI->getParent()) {
+          // Limit to the same basic block to avoid extending the call-site live
+          // range, which otherwise could increase register pressure.
+          continue;
+        }
+        if (CI->comesBefore(I)) {
+          U.set(CI);
+          MadeChange = true;
+        }
+      }
+
+      return MadeChange;
+    }
   }
 
   return false;
@@ -2663,12 +2874,34 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     return false;
   };
 
+  SmallVector<const IntrinsicInst *, 4> FakeUses;
+
+  auto isFakeUse = [&FakeUses](const Instruction *Inst) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Inst);
+        II && II->getIntrinsicID() == Intrinsic::fake_use) {
+      // Record the instruction so it can be preserved when the exit block is
+      // removed. Do not preserve the fake use that uses the result of the
+      // PHI instruction.
+      // Do not copy fake uses that use the result of a PHI node.
+      // FIXME: If we do want to copy the fake use into the return blocks, we
+      // have to figure out which of the PHI node operands to use for each
+      // copy.
+      if (!isa<PHINode>(II->getOperand(0))) {
+        FakeUses.push_back(II);
+      }
+      return true;
+    }
+
+    return false;
+  };
+
   // Make sure there are no instructions between the first instruction
   // and return.
   const Instruction *BI = BB->getFirstNonPHI();
   // Skip over debug and the bitcast.
   while (isa<DbgInfoIntrinsic>(BI) || BI == BCI || BI == EVI ||
-         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(BI))
+         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(BI) ||
+         isFakeUse(BI))
     BI = BI->getNextNode();
   if (BI != RetI)
     return false;
@@ -2677,6 +2910,9 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   /// call.
   const Function *F = BB->getParent();
   SmallVector<BasicBlock *, 4> TailCallBBs;
+  // Record the call instructions so we can insert any fake uses
+  // that need to be preserved before them.
+  SmallVector<CallInst *, 4> CallInsts;
   if (PN) {
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
       // Look through bitcasts.
@@ -2688,6 +2924,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
           TLI->mayBeEmittedAsTailCall(CI) &&
           attributesPermitTailCall(F, CI, RetI, *TLI)) {
         TailCallBBs.push_back(PredBB);
+        CallInsts.push_back(CI);
       } else {
         // Consider the cases in which the phi value is indirectly produced by
         // the tail call, for example when encountering memset(), memmove(),
@@ -2707,8 +2944,10 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
             isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
             IncomingVal == CI->getArgOperand(0) &&
             TLI->mayBeEmittedAsTailCall(CI) &&
-            attributesPermitTailCall(F, CI, RetI, *TLI))
+            attributesPermitTailCall(F, CI, RetI, *TLI)) {
           TailCallBBs.push_back(PredBB);
+          CallInsts.push_back(CI);
+        }
       }
     }
   } else {
@@ -2726,6 +2965,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
               (isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
                V == CI->getArgOperand(0))) {
             TailCallBBs.push_back(Pred);
+            CallInsts.push_back(CI);
           }
         }
       }
@@ -2752,8 +2992,17 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   }
 
   // If we eliminated all predecessors of the block, delete the block now.
-  if (Changed && !BB->hasAddressTaken() && pred_empty(BB))
+  if (Changed && !BB->hasAddressTaken() && pred_empty(BB)) {
+    // Copy the fake uses found in the original return block to all blocks
+    // that contain tail calls.
+    for (auto *CI : CallInsts) {
+      for (auto const *FakeUse : FakeUses) {
+        auto *ClonedInst = FakeUse->clone();
+        ClonedInst->insertBefore(CI);
+      }
+    }
     BB->eraseFromParent();
+  }
 
   return Changed;
 }
@@ -7053,7 +7302,7 @@ bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
   // We can't do this effectively in SDAG because we may not be able to
   // determine if the select operands are splats from within a basic block.
   Type *Ty = Shift->getType();
-  if (!Ty->isVectorTy() || !TLI->isVectorShiftByScalarCheap(Ty))
+  if (!Ty->isVectorTy() || !TTI->isVectorShiftByScalarCheap(Ty))
     return false;
   Value *Cond, *TVal, *FVal;
   if (!match(Shift->getOperand(1),
@@ -7088,7 +7337,7 @@ bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
   // We can't do this effectively in SDAG because we may not be able to
   // determine if the select operands are splats from within a basic block.
   Type *Ty = Fsh->getType();
-  if (!Ty->isVectorTy() || !TLI->isVectorShiftByScalarCheap(Ty))
+  if (!Ty->isVectorTy() || !TTI->isVectorShiftByScalarCheap(Ty))
     return false;
   Value *Cond, *TVal, *FVal;
   if (!match(Fsh->getOperand(2),
@@ -7345,7 +7594,7 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
   // If the operands of I can be folded into a target instruction together with
   // I, duplicate and sink them.
   SmallVector<Use *, 4> OpsToSink;
-  if (!TLI->shouldSinkOperands(I, OpsToSink))
+  if (!TTI->isProfitableToSinkOperands(I, OpsToSink))
     return false;
 
   // OpsToSink can contain multiple uses in a use chain (e.g.
@@ -7382,12 +7631,9 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
     if (IsHugeFunc) {
       // Now we clone an instruction, its operands' defs may sink to this BB
       // now. So we put the operands defs' BBs into FreshBBs to do optimization.
-      for (unsigned I = 0; I < NI->getNumOperands(); ++I) {
-        auto *OpDef = dyn_cast<Instruction>(NI->getOperand(I));
-        if (!OpDef)
-          continue;
-        FreshBBs.insert(OpDef->getParent());
-      }
+      for (Value *Op : NI->operands())
+        if (auto *OpDef = dyn_cast<Instruction>(Op))
+          FreshBBs.insert(OpDef->getParent());
     }
 
     NewInstructions[UI] = NI;
@@ -8358,6 +8604,10 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
 
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     if (optimizeCmp(Cmp, ModifiedDT))
+      return true;
+
+  if (match(I, m_URem(m_Value(), m_Value())))
+    if (optimizeURem(I))
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {

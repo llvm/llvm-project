@@ -12,6 +12,7 @@
 
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
+#include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
@@ -39,7 +40,7 @@ namespace llvm {
 extern cl::opt<bool> EnableSingleByteCoverage;
 } // namespace llvm
 
-namespace  {
+namespace {
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   CodeGenFunction &CGF;
   CGBuilderTy &Builder;
@@ -63,6 +64,9 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   // points to said slot.
   void withReturnValueSlot(const Expr *E,
                            llvm::function_ref<RValue(ReturnValueSlot)> Fn);
+
+  void DoZeroInitPadding(uint64_t &PaddingStart, uint64_t PaddingEnd,
+                         const FieldDecl *NextField);
 
 public:
   AggExprEmitter(CodeGenFunction &cgf, AggValueSlot Dest, bool IsResultUnused)
@@ -131,15 +135,12 @@ public:
     EnsureDest(E->getType());
 
     if (llvm::Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
-      Address StoreDest = Dest.getAddress();
-      // The emitted value is guaranteed to have the same size as the
-      // destination but can have a different type. Just do a bitcast in this
-      // case to avoid incorrect GEPs.
-      if (Result->getType() != StoreDest.getType())
-        StoreDest = StoreDest.withElementType(Result->getType());
-
-      CGF.EmitAggregateStore(Result, StoreDest,
-                             E->getType().isVolatileQualified());
+      CGF.CreateCoercedStore(
+          Result, Dest.getAddress(),
+          llvm::TypeSize::getFixed(
+              Dest.getPreferredSize(CGF.getContext(), E->getType())
+                  .getQuantity()),
+          E->getType().isVolatileQualified());
       return;
     }
     return Visit(E->getSubExpr());
@@ -1570,26 +1571,7 @@ AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
     return CGF.EmitStoreThroughLValue(RV, LV);
   }
 
-  switch (CGF.getEvaluationKind(type)) {
-  case TEK_Complex:
-    CGF.EmitComplexExprIntoLValue(E, LV, /*isInit*/ true);
-    return;
-  case TEK_Aggregate:
-    CGF.EmitAggExpr(
-        E, AggValueSlot::forLValue(LV, AggValueSlot::IsDestructed,
-                                   AggValueSlot::DoesNotNeedGCBarriers,
-                                   AggValueSlot::IsNotAliased,
-                                   AggValueSlot::MayOverlap, Dest.isZeroed()));
-    return;
-  case TEK_Scalar:
-    if (LV.isSimple()) {
-      CGF.EmitScalarInit(E, /*D=*/nullptr, LV, /*Captured=*/false);
-    } else {
-      CGF.EmitStoreThroughLValue(RValue::get(CGF.EmitScalarExpr(E)), LV);
-    }
-    return;
-  }
-  llvm_unreachable("bad evaluation kind");
+  CGF.EmitInitializationToLValue(E, LV, Dest.isZeroed());
 }
 
 void AggExprEmitter::EmitNullInitializationToLValue(LValue lv) {
@@ -1720,6 +1702,9 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // Prepare a 'this' for CXXDefaultInitExprs.
   CodeGenFunction::FieldConstructionScope FCS(CGF, Dest.getAddress());
 
+  const bool ZeroInitPadding =
+      CGF.CGM.shouldZeroInitPadding() && !Dest.isZeroed();
+
   if (record->isUnion()) {
     // Only initialize one field of a union. The field itself is
     // specified by the initializer list.
@@ -1744,16 +1729,27 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     if (NumInitElements) {
       // Store the initializer into the field
       EmitInitializationToLValue(InitExprs[0], FieldLoc);
+      if (ZeroInitPadding) {
+        uint64_t TotalSize = CGF.getContext().toBits(
+            Dest.getPreferredSize(CGF.getContext(), DestLV.getType()));
+        uint64_t FieldSize = CGF.getContext().getTypeSize(FieldLoc.getType());
+        DoZeroInitPadding(FieldSize, TotalSize, nullptr);
+      }
     } else {
       // Default-initialize to null.
-      EmitNullInitializationToLValue(FieldLoc);
+      if (ZeroInitPadding)
+        EmitNullInitializationToLValue(DestLV);
+      else
+        EmitNullInitializationToLValue(FieldLoc);
     }
-
     return;
   }
 
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
+  const ASTRecordLayout &Layout = CGF.getContext().getASTRecordLayout(record);
+  uint64_t PaddingStart = 0;
+
   for (const auto *field : record->fields()) {
     // We're done once we hit the flexible array member.
     if (field->getType()->isIncompleteArrayType())
@@ -1770,6 +1766,9 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
         CGF.getTypes().isZeroInitializable(ExprToVisit->getType()))
       break;
 
+    if (ZeroInitPadding)
+      DoZeroInitPadding(PaddingStart,
+                        Layout.getFieldOffset(field->getFieldIndex()), field);
 
     LValue LV = CGF.EmitLValueForFieldInitialization(DestLV, field);
     // We never generate write-barries for initialized fields.
@@ -1796,6 +1795,54 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
       }
     }
   }
+  if (ZeroInitPadding) {
+    uint64_t TotalSize = CGF.getContext().toBits(
+        Dest.getPreferredSize(CGF.getContext(), DestLV.getType()));
+    DoZeroInitPadding(PaddingStart, TotalSize, nullptr);
+  }
+}
+
+void AggExprEmitter::DoZeroInitPadding(uint64_t &PaddingStart,
+                                       uint64_t PaddingEnd,
+                                       const FieldDecl *NextField) {
+
+  auto InitBytes = [&](uint64_t StartBit, uint64_t EndBit) {
+    CharUnits Start = CGF.getContext().toCharUnitsFromBits(StartBit);
+    CharUnits End = CGF.getContext().toCharUnitsFromBits(EndBit);
+    Address Addr = Dest.getAddress().withElementType(CGF.CharTy);
+    if (!Start.isZero())
+      Addr = Builder.CreateConstGEP(Addr, Start.getQuantity());
+    llvm::Constant *SizeVal = Builder.getInt64((End - Start).getQuantity());
+    CGF.Builder.CreateMemSet(Addr, Builder.getInt8(0), SizeVal, false);
+  };
+
+  if (NextField != nullptr && NextField->isBitField()) {
+    // For bitfield, zero init StorageSize before storing the bits. So we don't
+    // need to handle big/little endian.
+    const CGRecordLayout &RL =
+        CGF.getTypes().getCGRecordLayout(NextField->getParent());
+    const CGBitFieldInfo &Info = RL.getBitFieldInfo(NextField);
+    uint64_t StorageStart = CGF.getContext().toBits(Info.StorageOffset);
+    if (StorageStart + Info.StorageSize > PaddingStart) {
+      if (StorageStart > PaddingStart)
+        InitBytes(PaddingStart, StorageStart);
+      Address Addr = Dest.getAddress();
+      if (!Info.StorageOffset.isZero())
+        Addr = Builder.CreateConstGEP(Addr.withElementType(CGF.CharTy),
+                                      Info.StorageOffset.getQuantity());
+      Addr = Addr.withElementType(
+          llvm::Type::getIntNTy(CGF.getLLVMContext(), Info.StorageSize));
+      Builder.CreateStore(Builder.getIntN(Info.StorageSize, 0), Addr);
+      PaddingStart = StorageStart + Info.StorageSize;
+    }
+    return;
+  }
+
+  if (PaddingStart < PaddingEnd)
+    InitBytes(PaddingStart, PaddingEnd);
+  if (NextField != nullptr)
+    PaddingStart =
+        PaddingEnd + CGF.getContext().getTypeSize(NextField->getType());
 }
 
 void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
@@ -2050,6 +2097,10 @@ CodeGenFunction::getOverlapForFieldInit(const FieldDecl *FD) {
   if (!FD->hasAttr<NoUniqueAddressAttr>() || !FD->getType()->isRecordType())
     return AggValueSlot::DoesNotOverlap;
 
+  // Empty fields can overlap earlier fields.
+  if (FD->getType()->getAsCXXRecordDecl()->isEmpty())
+    return AggValueSlot::MayOverlap;
+
   // If the field lies entirely within the enclosing class's nvsize, its tail
   // padding cannot overlap any already-initialized object. (The only subobjects
   // with greater addresses that might already be initialized are vbases.)
@@ -2070,6 +2121,10 @@ AggValueSlot::Overlap_t CodeGenFunction::getOverlapForBaseInit(
   // the tail padding of any virtual base could be reused for other subobjects
   // of that field's class.
   if (IsVirtual)
+    return AggValueSlot::MayOverlap;
+
+  // Empty bases can overlap earlier bases.
+  if (BaseRD->isEmpty())
     return AggValueSlot::MayOverlap;
 
   // If the base class is laid out entirely within the nvsize of the derived

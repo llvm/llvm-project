@@ -329,6 +329,12 @@ private:
   /// metadata nodes for them.
   LogicalResult createTBAAMetadata();
 
+  /// Process the ident LLVM Metadata, if it exists.
+  LogicalResult createIdentMetadata();
+
+  /// Process the llvm.commandline LLVM Metadata, if it exists.
+  LogicalResult createCommandlineMetadata();
+
   /// Translates dialect attributes attached to the given operation.
   LogicalResult
   convertDialectAttributes(Operation *op,

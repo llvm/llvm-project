@@ -19,6 +19,7 @@ target_link_libraries(fir-opt PRIVATE
   FIRCodeGen
   HLFIRDialect
   HLFIRTransforms
+  FlangOpenMPTransforms
   FIRAnalysis
   ${test_libs}
   ${dialect_libs}

@@ -28,18 +28,18 @@ Also, if users choose to mix more than one libc with the system libc, then
 the name ``libllvmlibc.a`` makes it absolutely clear that it is the static
 archive of LLVM's libc.
 
-Building the static archive with libc as a normal LLVM project
---------------------------------------------------------------
+Building LLVM-libc as a standalone runtime
+------------------------------------------
 
-We can treat the ``libc`` project as any other normal LLVM project and perform
-the CMake configure step as follows:
+We can treat the ``libc`` project like any other normal LLVM runtime library by
+building it with the following cmake command:
 
 .. code-block:: sh
 
   $> cd llvm-project  # The llvm-project checkout
   $> mkdir build
   $> cd build
-  $> cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="libc"  \
+  $> cmake ../runtimes -G Ninja -DLLVM_ENABLE_RUNTIMES="libc"  \
      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
      -DCMAKE_BUILD_TYPE=<Debug|Release>                    \  # Select build type
      -DCMAKE_INSTALL_PREFIX=<Your prefix of choice>           # Optional
@@ -50,24 +50,29 @@ Next, build the libc:
 
   $> ninja libc
 
-The build step will build the static archive the in the directory
-``build/projects/libc/lib``. Notice that the above CMake configure step also
-specified an install prefix. This is optional, but if one uses it, then they
-can follow up the build step with an install step:
+Then, run the tests:
 
 .. code-block:: sh
 
-  $> ninja install-llvmlibc
+  $> ninja check-libc
+
+The build step will build the static archive the in the directory
+``build/projects/libc/lib``. Notice that the above CMake configure step also
+specified an install prefix. This is optional, but it's used, then the following
+command will install the static archive to the install path:
+
+.. code-block:: sh
+
+  $> ninja install-libc
 
 Building the static archive as part of the bootstrap build
 ----------------------------------------------------------
 
 The bootstrap build is a build mode in which runtime components like libc++,
 libcxx-abi, libc etc. are built using the ToT clang. The idea is that this build
-produces an in-sync toolchain of compiler + runtime libraries. Such a synchrony
-is not essential for the libc but can one still build the overlay static archive
-as part of the bootstrap build if one wants to. The first step is to configure
-appropriately:
+produces an in-sync toolchain of compiler + runtime libraries. This ensures that
+LLVM-libc has access to the latest clang features, which should provide the best
+performance possible.
 
 .. code-block:: sh
 
@@ -77,14 +82,13 @@ appropriately:
      -DCMAKE_BUILD_TYPE=<Debug|Release>                    \  # Select build type
      -DCMAKE_INSTALL_PREFIX=<Your prefix of choice>           # Optional
 
-The build and install steps are similar to the those used when configured
-as a normal project. Note that the build step takes much longer this time
-as ``clang`` will be built before building ``libllvmlibc.a``.
+The build and install steps are the same as above, but the build step will take
+much longer since ``clang`` will be built before building ``libllvmlibc.a``.
 
 .. code-block:: sh
 
   $> ninja libc
-  $> ninja install-llvmlibc
+  $> ninja check-libc
 
 Using the overlay static archive
 ================================

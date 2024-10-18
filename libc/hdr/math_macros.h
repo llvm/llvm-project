@@ -11,7 +11,6 @@
 
 #ifdef LIBC_FULL_BUILD
 
-#include "include/llvm-libc-macros/math-function-macros.h"
 #include "include/llvm-libc-macros/math-macros.h"
 
 #else // Overlay mode

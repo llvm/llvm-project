@@ -355,9 +355,9 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
   return FrameSize;
 }
 
-// hasFP - Return true if the specified function actually has a dedicated frame
-// pointer register.
-bool PPCFrameLowering::hasFP(const MachineFunction &MF) const {
+// hasFPImpl - Return true if the specified function actually has a dedicated
+// frame pointer register.
+bool PPCFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   // FIXME: This is pretty much broken by design: hasFP() might be called really
   // early, before the stack layout was calculated and thus hasFP() might return
@@ -1007,7 +1007,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         // R0 cannot be used as a base register, but it can be used as an
         // index in a store-indexed.
         int LastOffset = 0;
-        if (HasFP)  {
+        if (HasFP) {
           // R0 += (FPOffset-LastOffset).
           // Need addic, since addi treats R0 as 0.
           BuildMI(MBB, MBBI, dl, TII.get(PPC::ADDIC), ScratchReg)
@@ -2025,8 +2025,18 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // code. Same goes for the base pointer and the PIC base register.
   if (needsFP(MF))
     SavedRegs.reset(isPPC64 ? PPC::X31 : PPC::R31);
-  if (RegInfo->hasBasePointer(MF))
+  if (RegInfo->hasBasePointer(MF)) {
     SavedRegs.reset(RegInfo->getBaseRegister(MF));
+    // On AIX, when BaseRegister(R30) is used, need to spill r31 too to match
+    // AIX trackback table requirement.
+    if (!needsFP(MF) && !SavedRegs.test(isPPC64 ? PPC::X31 : PPC::R31) &&
+        Subtarget.isAIXABI()) {
+      assert(
+          (RegInfo->getBaseRegister(MF) == (isPPC64 ? PPC::X30 : PPC::R30)) &&
+          "Invalid base register on AIX!");
+      SavedRegs.set(isPPC64 ? PPC::X31 : PPC::R31);
+    }
+  }
   if (FI->usesPICBase())
     SavedRegs.reset(PPC::R30);
 
@@ -2414,8 +2424,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
   // or two GPRs, so we need table to record information for later save/restore.
   for (const CalleeSavedInfo &Info : CSI) {
     if (Info.isSpilledToReg()) {
-      auto &SpilledVSR =
-          VSRContainingGPRs.FindAndConstruct(Info.getDstReg()).second;
+      auto &SpilledVSR = VSRContainingGPRs[Info.getDstReg()];
       assert(SpilledVSR.second == 0 &&
              "Can't spill more than two GPRs into VSR!");
       if (SpilledVSR.first == 0)

@@ -1,8 +1,13 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify=expected,cxx98-14,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify=expected,cxx98,cxx98-14,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -verify=expected,cxx98-14,cxx98-11,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -verify=expected,cxx98-14,since-cxx14,since-cxx11,cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2a %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
 
 namespace cwg705 { // cwg705: yes
   namespace N {
@@ -70,6 +75,28 @@ namespace cwg712 { // cwg712: partial
   }
 #endif
 }
+
+namespace cwg713 { // cwg713: 3.0
+template<typename T>
+struct is_const {
+    static const bool value = __is_const(T);
+};
+template<typename T>
+struct is_volatile {
+    static const bool value = __is_volatile(T);
+};
+
+static_assert(!is_const<void()const>::value, "");
+static_assert(!is_const<void()const volatile>::value, "");
+static_assert(!is_volatile<void()volatile>::value, "");
+static_assert(!is_volatile<void()const volatile>::value, "");
+#if __cplusplus >= 201103L
+static_assert(!is_const<void()const&>::value, "");
+static_assert(!is_volatile<void()volatile&>::value, "");
+#endif
+} // namespace cwg713
+
+// cwg722 is in cwg722.cpp
 
 namespace cwg727 { // cwg727: partial
   struct A {

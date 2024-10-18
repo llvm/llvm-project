@@ -304,7 +304,7 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
         return getNaturalAlignIndirect(Ty, false);
 
     return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
-                ? ABIArgInfo::getExtend(Ty)
+                ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
                 : ABIArgInfo::getDirect());
   }
 
@@ -500,7 +500,7 @@ bool AArch64SwiftABIInfo::isLegalVectorType(CharUnits VectorSize,
 bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // For the soft-float ABI variant, no types are considered to be homogeneous
   // aggregates.
-  if (Kind == AArch64ABIKind::AAPCSSoft)
+  if (isSoftFloat())
     return false;
 
   // Homogeneous aggregates for AAPCS64 must have base types of a floating
@@ -555,8 +555,8 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     BaseTy = ArrTy->getElementType();
     NumRegs = ArrTy->getNumElements();
   }
-  bool IsFPR = Kind != AArch64ABIKind::AAPCSSoft &&
-               (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
+  bool IsFPR =
+      !isSoftFloat() && (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
 
   // The AArch64 va_list type and handling is specified in the Procedure Call
   // Standard, section B.4:
@@ -840,12 +840,13 @@ static bool isStreamingCompatible(const FunctionDecl *F) {
 static void diagnoseIfNeedsFPReg(DiagnosticsEngine &Diags,
                                  const StringRef ABIName,
                                  const AArch64ABIInfo &ABIInfo,
-                                 const QualType &Ty, const NamedDecl *D) {
+                                 const QualType &Ty, const NamedDecl *D,
+                                 SourceLocation loc) {
   const Type *HABase = nullptr;
   uint64_t HAMembers = 0;
   if (Ty->isFloatingType() || Ty->isVectorType() ||
       ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
-    Diags.Report(D->getLocation(), diag::err_target_unsupported_type_for_abi)
+    Diags.Report(loc, diag::err_target_unsupported_type_for_abi)
         << D->getDeclName() << Ty << ABIName;
   }
 }
@@ -860,10 +861,11 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
 
   if (!TI.hasFeature("fp") && !ABIInfo.isSoftFloat()) {
     diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo,
-                         FuncDecl->getReturnType(), FuncDecl);
+                         FuncDecl->getReturnType(), FuncDecl,
+                         FuncDecl->getLocation());
     for (ParmVarDecl *PVD : FuncDecl->parameters()) {
       diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, PVD->getType(),
-                           PVD);
+                           PVD, FuncDecl->getLocation());
     }
   }
 }
@@ -883,8 +885,10 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
 
   if (!CalleeIsStreamingCompatible &&
       (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
-    CGM.getDiags().Report(CallLoc,
-                          diag::err_function_always_inline_attribute_mismatch)
+    CGM.getDiags().Report(
+        CallLoc, CalleeIsStreaming
+                     ? diag::err_function_always_inline_attribute_mismatch
+                     : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
   if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
     if (NewAttr->isNewZA())
@@ -906,11 +910,11 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABISoftFloat(
     return;
 
   diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, ReturnType,
-                       Caller);
+                       Callee ? Callee : Caller, CallLoc);
 
   for (const CallArg &Arg : Args)
     diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, Arg.getType(),
-                         Caller);
+                         Callee ? Callee : Caller, CallLoc);
 }
 
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,

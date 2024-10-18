@@ -77,9 +77,9 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
   // CHECK: %[[IntParam:.+]] = load i32, ptr %{{.*}}
-  // CHECK: %[[MoGep:.+]] = getelementptr inbounds %struct.MoveOnly, ptr %[[MoCopy]], i32 0, i32 0
+  // CHECK: %[[MoGep:.+]] = getelementptr inbounds nuw %struct.MoveOnly, ptr %[[MoCopy]], i32 0, i32 0
   // CHECK: %[[MoVal:.+]] = load i32, ptr %[[MoGep]]
-  // CHECK: %[[McGep:.+]] =  getelementptr inbounds %struct.MoveAndCopy, ptr %[[McCopy]], i32 0, i32 0
+  // CHECK: %[[McGep:.+]] =  getelementptr inbounds nuw %struct.MoveAndCopy, ptr %[[McCopy]], i32 0, i32 0
   // CHECK: %[[McVal:.+]] = load i32, ptr %[[McGep]]
   // CHECK: call void @_Z7consumeiii(i32 noundef %[[IntParam]], i32 noundef %[[MoVal]], i32 noundef %[[McVal]])
 

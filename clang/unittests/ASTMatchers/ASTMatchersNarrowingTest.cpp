@@ -2552,6 +2552,10 @@ TEST_P(ASTMatchersTest, HasName_MatchesNamespaces) {
                          recordDecl(hasName("a+b::C"))));
   EXPECT_TRUE(notMatches("namespace a { namespace b { class AC; } }",
                          recordDecl(hasName("C"))));
+  EXPECT_TRUE(matches("namespace a { inline namespace a { class C; } }",
+                      recordDecl(hasName("::a::C"))));
+  EXPECT_TRUE(matches("namespace a { inline namespace a { class C; } }",
+                      recordDecl(hasName("::a::a::C"))));
 }
 
 TEST_P(ASTMatchersTest, HasName_MatchesOuterClasses) {
@@ -2593,6 +2597,35 @@ TEST_P(ASTMatchersTest, HasName_MatchesInlinedNamespaces) {
   EXPECT_TRUE(matches(code, recordDecl(hasName("a::C"))));
   EXPECT_TRUE(matches(code, recordDecl(hasName("::a::b::C"))));
   EXPECT_TRUE(matches(code, recordDecl(hasName("::a::C"))));
+}
+
+TEST_P(ASTMatchersTest, HasName_MatchesSpecializedInlinedNamespace) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+
+  StringRef code = R"(
+namespace a {
+    inline namespace v1 {
+        template<typename T> T foo(T);
+    }
+}
+
+namespace a {
+    enum Tag{T1, T2};
+
+    template <Tag, typename T> T foo(T);
+}
+
+auto v1 = a::foo(1);
+auto v2 = a::foo<a::T1>(1);
+)";
+  EXPECT_TRUE(matches(
+      code, varDecl(hasName("v1"), hasDescendant(callExpr(callee(
+                                       functionDecl(hasName("::a::foo"))))))));
+  EXPECT_TRUE(matches(
+      code, varDecl(hasName("v2"), hasDescendant(callExpr(callee(
+                                       functionDecl(hasName("::a::foo"))))))));
 }
 
 TEST_P(ASTMatchersTest, HasName_MatchesAnonymousNamespaces) {

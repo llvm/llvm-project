@@ -2066,7 +2066,7 @@ struct CounterCoverageMappingBuilder
       GapRegionCounter = OutCount;
     }
 
-    if (!S->isConsteval() && !llvm::EnableSingleByteCoverage)
+    if (!llvm::EnableSingleByteCoverage)
       // Create Branch Region around condition.
       createBranchRegion(S->getCond(), ThenCount,
                          subtractCounters(ParentCount, ThenCount));
@@ -2595,12 +2595,7 @@ void CoverageMappingModuleGen::emit() {
 }
 
 unsigned CoverageMappingModuleGen::getFileID(FileEntryRef File) {
-  auto It = FileEntries.find(File);
-  if (It != FileEntries.end())
-    return It->second;
-  unsigned FileID = FileEntries.size() + 1;
-  FileEntries.insert(std::make_pair(File, FileID));
-  return FileID;
+  return FileEntries.try_emplace(File, FileEntries.size() + 1).first->second;
 }
 
 void CoverageMappingGen::emitCounterMapping(const Decl *D,

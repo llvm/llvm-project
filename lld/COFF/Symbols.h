@@ -340,7 +340,13 @@ public:
   // If this symbol is external weak, try to resolve it to a defined
   // symbol by searching the chain of fallback symbols. Returns the symbol if
   // successful, otherwise returns null.
-  Defined *getWeakAlias();
+  Symbol *getWeakAlias();
+  Defined *getDefinedWeakAlias() {
+    return dyn_cast_or_null<Defined>(getWeakAlias());
+  }
+
+  // If this symbol is external weak, replace this object with aliased symbol.
+  bool resolveWeakAlias();
 };
 
 // Windows-specific classes.
@@ -351,23 +357,23 @@ public:
 // table in an output. The former has "__imp_" prefix.
 class DefinedImportData : public Defined {
 public:
-  DefinedImportData(StringRef n, ImportFile *f)
-      : Defined(DefinedImportDataKind, n), file(f) {
-  }
+  DefinedImportData(StringRef n, ImportFile *file, Chunk *&location)
+      : Defined(DefinedImportDataKind, n), file(file), location(location) {}
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportDataKind;
   }
 
-  uint64_t getRVA() { return file->location->getRVA(); }
-  Chunk *getChunk() { return file->location; }
-  void setLocation(Chunk *addressTable) { file->location = addressTable; }
+  uint64_t getRVA() { return getChunk()->getRVA(); }
+  Chunk *getChunk() { return location; }
+  void setLocation(Chunk *addressTable) { location = addressTable; }
 
   StringRef getDLLName() { return file->dllName; }
   StringRef getExternalName() { return file->externalName; }
   uint16_t getOrdinal() { return file->hdr->OrdinalHint; }
 
   ImportFile *file;
+  Chunk *&location;
 
   // This is a pointer to the synthetic symbol associated with the load thunk
   // for this symbol that will be called if the DLL is delay-loaded. This is
@@ -385,19 +391,19 @@ public:
 class DefinedImportThunk : public Defined {
 public:
   DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                     DefinedImportData *s, uint16_t machine);
+                     DefinedImportData *s, ImportThunkChunk *chunk);
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportThunkKind;
   }
 
   uint64_t getRVA() { return data->getRVA(); }
-  Chunk *getChunk() { return data; }
+  ImportThunkChunk *getChunk() const { return data; }
 
   DefinedImportData *wrappedSym;
 
 private:
-  Chunk *data;
+  ImportThunkChunk *data;
 };
 
 // If you have a symbol "foo" in your object file, a symbol name

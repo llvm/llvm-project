@@ -13,11 +13,11 @@
 #include "Synchronization.h"
 
 #include "Debug.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
-#include "Types.h"
-#include "Utils.h"
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -397,6 +397,10 @@ void setLock(omp_lock_t *Lock) {
     }
   } // wait for 0 to be the read value
 }
+
+void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
+
+void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
 #pragma omp end declare variant
 ///}

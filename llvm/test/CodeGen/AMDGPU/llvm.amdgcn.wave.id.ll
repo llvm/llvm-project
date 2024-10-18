@@ -49,7 +49,7 @@ define amdgpu_gfx void @test_wave_id_callable(ptr addrspace(1) %out) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]

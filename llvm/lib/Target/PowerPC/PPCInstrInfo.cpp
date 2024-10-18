@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -1678,7 +1679,8 @@ static unsigned getCRBitValue(unsigned CRBit) {
 void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
                                const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               MCRegister SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   // We can end up with self copies and similar things as a result of VSX copy
   // legalization. Promote them here.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -3106,9 +3108,16 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
   case TargetOpcode::LOAD_STACK_GUARD: {
-    assert(Subtarget.isTargetLinux() &&
-           "Only Linux target is expected to contain LOAD_STACK_GUARD");
-    const int64_t Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
+    auto M = MBB.getParent()->getFunction().getParent();
+    assert(
+        (Subtarget.isTargetLinux() || M->getStackProtectorGuard() == "tls") &&
+        "Only Linux target or tls mode are expected to contain "
+        "LOAD_STACK_GUARD");
+    int64_t Offset;
+    if (M->getStackProtectorGuard() == "tls")
+      Offset = M->getStackProtectorGuardOffset();
+    else
+      Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
     const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
     MI.setDesc(get(Subtarget.isPPC64() ? PPC::LD : PPC::LWZ));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
@@ -3485,6 +3494,7 @@ unsigned PPCInstrInfo::getSpillTarget() const {
   // With P10, we may need to spill paired vector registers or accumulator
   // registers. MMA implies paired vectors, so we can just check that.
   bool IsP10Variant = Subtarget.isISA3_1() || Subtarget.pairedVectorMemops();
+  // P11 uses the P10 target.
   return Subtarget.isISAFuture() ? 3 : IsP10Variant ?
                                    2 : Subtarget.hasP9Vector() ?
                                    1 : 0;

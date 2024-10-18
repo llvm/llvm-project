@@ -170,7 +170,7 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
 }
 
 Preprocessor::~Preprocessor() {
-  assert(BacktrackPositions.empty() && "EnableBacktrack/Backtrack imbalance!");
+  assert(!isBacktrackEnabled() && "EnableBacktrack/Backtrack imbalance!");
 
   IncludeMacroStack.clear();
 
@@ -902,6 +902,10 @@ void Preprocessor::Lex(Token &Result) {
     case tok::r_brace:
       StdCXXImportSeqState.handleCloseBrace();
       break;
+#define PRAGMA_ANNOTATION(X) case tok::annot_##X:
+// For `#pragma ...` mimic ';'.
+#include "clang/Basic/TokenKinds.def"
+#undef PRAGMA_ANNOTATION
     // This token is injected to represent the translation of '#include "a.h"'
     // into "import a.h;". Mimic the notional ';'.
     case tok::annot_module_include:

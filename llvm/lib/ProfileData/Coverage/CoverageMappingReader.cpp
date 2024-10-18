@@ -894,13 +894,15 @@ static Error readCoverageMappingData(
 Expected<std::unique_ptr<BinaryCoverageReader>>
 BinaryCoverageReader::createCoverageReaderFromBuffer(
     StringRef Coverage, FuncRecordsStorage &&FuncRecords,
+    CoverageMapCopyStorage &&CoverageMap,
     std::unique_ptr<InstrProfSymtab> ProfileNamesPtr, uint8_t BytesInAddress,
     llvm::endianness Endian, StringRef CompilationDir) {
   if (ProfileNamesPtr == nullptr)
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "Caller must provide ProfileNames");
-  std::unique_ptr<BinaryCoverageReader> Reader(new BinaryCoverageReader(
-      std::move(ProfileNamesPtr), std::move(FuncRecords)));
+  std::unique_ptr<BinaryCoverageReader> Reader(
+      new BinaryCoverageReader(std::move(ProfileNamesPtr),
+                               std::move(FuncRecords), std::move(CoverageMap)));
   InstrProfSymtab &ProfileNames = *Reader->ProfileNames;
   StringRef FuncRecordsRef = Reader->FuncRecords->getBuffer();
   if (BytesInAddress == 4 && Endian == llvm::endianness::little) {
@@ -1035,8 +1037,8 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
       MemoryBuffer::getMemBuffer(Data);
 
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
-      CoverageMapping, std::move(CoverageRecords), std::move(ProfileNames),
-      BytesInAddress, Endian, CompilationDir);
+      CoverageMapping, std::move(CoverageRecords), nullptr,
+      std::move(ProfileNames), BytesInAddress, Endian, CompilationDir);
 }
 
 /// Find all sections that match \p IPSK name. There may be more than one if
@@ -1061,9 +1063,11 @@ lookupSections(ObjectFile &OF, InstrProfSectKind IPSK) {
     if (!NameOrErr)
       return NameOrErr.takeError();
     if (stripSuffix(*NameOrErr) == Name) {
+      // Skip empty profile name section.
       // COFF profile name section contains two null bytes indicating the
       // start/end of the section. If its size is 2 bytes, it's empty.
-      if (IsCOFF && IPSK == IPSK_name && Section.getSize() == 2)
+      if (IPSK == IPSK_name &&
+          (Section.getSize() == 0 || (IsCOFF && Section.getSize() == 2)))
         continue;
       Sections.push_back(Section);
     }
@@ -1134,6 +1138,15 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
     return CoverageMappingOrErr.takeError();
   StringRef CoverageMapping = CoverageMappingOrErr.get();
 
+  // If the coverage mapping section is not aligned to 8 bytes, copy it to a
+  // new buffer that is. Wasm format typically has unaligned section contents
+  // because it doesn't have a good way to insert padding bytes.
+  std::unique_ptr<MemoryBuffer> CoverageMapCopy;
+  if (!isAddrAligned(Align(8), CoverageMapping.data())) {
+    CoverageMapCopy = MemoryBuffer::getMemBufferCopy(CoverageMapping);
+    CoverageMapping = CoverageMapCopy->getBuffer();
+  }
+
   // Look for the coverage records section (Version4 only).
   auto CoverageRecordsSections = lookupSections(*OF, IPSK_covfun);
 
@@ -1182,8 +1195,8 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
     *BinaryID = getBuildID(OF.get());
 
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
-      CoverageMapping, std::move(FuncRecords), std::move(ProfileNames),
-      BytesInAddress, Endian, CompilationDir);
+      CoverageMapping, std::move(FuncRecords), std::move(CoverageMapCopy),
+      std::move(ProfileNames), BytesInAddress, Endian, CompilationDir);
 }
 
 /// Determine whether \p Arch is invalid or empty, given \p Bin.

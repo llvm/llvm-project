@@ -319,9 +319,12 @@ static bool shouldReplace(const Symbol *existing, InputFile *newFile,
   }
 
   // Neither symbol is week. They conflict.
-  error("duplicate symbol: " + toString(*existing) + "\n>>> defined in " +
-        toString(existing->getFile()) + "\n>>> defined in " +
-        toString(newFile));
+  if (config->allowMultipleDefinition)
+    return false;
+
+  errorOrWarn("duplicate symbol: " + toString(*existing) + "\n>>> defined in " +
+              toString(existing->getFile()) + "\n>>> defined in " +
+              toString(newFile));
   return true;
 }
 

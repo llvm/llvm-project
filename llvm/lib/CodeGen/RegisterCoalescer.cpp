@@ -1320,7 +1320,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (!definesFullReg(*DefMI, SrcReg))
     return false;
   bool SawStore = false;
-  if (!DefMI->isSafeToMove(AA, SawStore))
+  if (!DefMI->isSafeToMove(SawStore))
     return false;
   const MCInstrDesc &MCID = DefMI->getDesc();
   if (MCID.getNumDefs() != 1)
@@ -3230,8 +3230,8 @@ void JoinVals::pruneValues(JoinVals &Other,
           // Also remove dead flags since the joined live range will
           // continue past this instruction.
           for (MachineOperand &MO :
-               Indexes->getInstructionFromIndex(Def)->operands()) {
-            if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
+               Indexes->getInstructionFromIndex(Def)->all_defs()) {
+            if (MO.getReg() == Reg) {
               if (MO.getSubReg() != 0 && MO.isUndef() && !EraseImpDef)
                 MO.setIsUndef(false);
               MO.setIsDead(false);
@@ -3548,8 +3548,7 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
   LHSVals.removeImplicitDefs();
   RHSVals.removeImplicitDefs();
 
-  LRange.verify();
-  RRange.verify();
+  assert(LRange.verify() && RRange.verify());
 
   // Join RRange into LHS.
   LRange.join(RRange, LHSVals.getAssignments(), RHSVals.getAssignments(),
@@ -3673,6 +3672,13 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
     LHSVals.pruneSubRegValues(LHS, ShrinkMask);
     RHSVals.pruneSubRegValues(LHS, ShrinkMask);
+  } else if (TrackSubRegLiveness && !CP.getDstIdx() && CP.getSrcIdx()) {
+    LHS.createSubRangeFrom(LIS->getVNInfoAllocator(),
+                           CP.getNewRC()->getLaneMask(), LHS);
+    mergeSubRangeInto(LHS, RHS, TRI->getSubRegIndexLaneMask(CP.getSrcIdx()), CP,
+                      CP.getDstIdx());
+    LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
+    LHSVals.pruneSubRegValues(LHS, ShrinkMask);
   }
 
   // The merging algorithm in LiveInterval::join() can't handle conflicting
@@ -4233,7 +4239,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   JoinSplitEdges = EnableJoinSplits;
 
   if (VerifyCoalescing)
-    MF->verify(this, "Before register coalescing");
+    MF->verify(this, "Before register coalescing", &errs());
 
   DbgVRegToValues.clear();
   buildVRegToDbgValueMap(fn);
@@ -4293,7 +4299,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
 
   LLVM_DEBUG(dump());
   if (VerifyCoalescing)
-    MF->verify(this, "After register coalescing");
+    MF->verify(this, "After register coalescing", &errs());
   return true;
 }
 

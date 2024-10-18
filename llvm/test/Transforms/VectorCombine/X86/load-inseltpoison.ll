@@ -626,6 +626,58 @@ define <8 x i16> @gep1_load_v2i16_extract_insert_v8i16(ptr align 1 dereferenceab
   ret <8 x i16> %r
 }
 
+; Negative sanitizer tests.
+
+define <4 x i32> @load_i32_insert_v4i32_asan(ptr align 16 dereferenceable(16) %p) nofree nosync sanitize_address  {
+; CHECK-LABEL: @load_i32_insert_v4i32_asan(
+; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i32 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %s = load i32, ptr %p, align 4
+  %r = insertelement <4 x i32> poison, i32 %s, i32 0
+  ret <4 x i32> %r
+}
+
+define <4 x float> @load_v2f32_extract_insert_v4f32_hwasan(ptr align 16 dereferenceable(16) %p) nofree nosync sanitize_hwaddress  {
+; CHECK-LABEL: @load_v2f32_extract_insert_v4f32_hwasan(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = extractelement <2 x float> [[L]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> poison, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %l = load <2 x float>, ptr %p, align 4
+  %s = extractelement <2 x float> %l, i32 0
+  %r = insertelement <4 x float> poison, float %s, i32 0
+  ret <4 x float> %r
+}
+
+define <4 x float> @load_v2f32_extract_insert_v4f32_tsan(ptr align 16 dereferenceable(16) %p) nofree nosync sanitize_thread  {
+; CHECK-LABEL: @load_v2f32_extract_insert_v4f32_tsan(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = extractelement <2 x float> [[L]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> poison, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %l = load <2 x float>, ptr %p, align 4
+  %s = extractelement <2 x float> %l, i32 0
+  %r = insertelement <4 x float> poison, float %s, i32 0
+  ret <4 x float> %r
+}
+
+; Double negative msan tests, it's OK with the optimization.
+
+define <2 x float> @load_f32_insert_v2f32_msan(ptr align 16 dereferenceable(16) %p) nofree nosync sanitize_memory  {
+; CHECK-LABEL: @load_f32_insert_v2f32_msan(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %s = load float, ptr %p, align 4
+  %r = insertelement <2 x float> poison, float %s, i32 0
+  ret <2 x float> %r
+}
+
 ; PR30986 - split vector loads for scalarized operations
 define <2 x i64> @PR30986(ptr %0) {
 ; CHECK-LABEL: @PR30986(

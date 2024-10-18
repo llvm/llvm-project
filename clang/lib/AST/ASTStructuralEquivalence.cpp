@@ -645,6 +645,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
      // It is sufficient to check value of getAsTemplateDecl.
      break;
 
+   case TemplateName::DeducedTemplate:
+     // FIXME: We can't reach here.
+     llvm_unreachable("unimplemented");
   }
 
   return true;
@@ -1090,6 +1093,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(
             Context, cast<BTFTagAttributedType>(T1)->getWrappedType(),
             cast<BTFTagAttributedType>(T2)->getWrappedType()))
+      return false;
+    break;
+
+  case Type::HLSLAttributedResource:
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getWrappedType(),
+            cast<HLSLAttributedResourceType>(T2)->getWrappedType()))
+      return false;
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
+            cast<HLSLAttributedResourceType>(T2)->getContainedType()))
+      return false;
+    if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
+        cast<HLSLAttributedResourceType>(T2)->getAttrs())
       return false;
     break;
 

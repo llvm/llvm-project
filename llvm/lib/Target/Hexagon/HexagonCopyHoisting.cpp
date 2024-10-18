@@ -249,8 +249,7 @@ void HexagonCopyHoisting::moveCopyInstr(MachineBasicBlock *DestBB,
   DestBB->splice(FirstTI, MI->getParent(), MI);
 
   addMItoCopyList(MI);
-  for (auto I = ++(DestBB->succ_begin()), E = DestBB->succ_end(); I != E; ++I) {
-    MachineBasicBlock *SuccBB = *I;
+  for (MachineBasicBlock *SuccBB : drop_begin(DestBB->successors())) {
     auto &BBCopyInst = CopyMIList[SuccBB->getNumber()];
     MachineInstr *SuccMI = BBCopyInst[Key];
     SuccMI->eraseFromParent();

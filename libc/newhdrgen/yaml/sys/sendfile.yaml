@@ -6,13 +6,13 @@ types:
   - type_name: off_t
 enums: []
 objects: []
-functions: 
+functions:
   - name: sendfile
-    standards: 
+    standards:
       - GNUExtensions
     return_type: ssize_t
-    arguments: 
-      - type: int 
-      - type: int 
-      - type: off_t * 
-      - type: size_t 
+    arguments:
+      - type: int
+      - type: int
+      - type: off_t *
+      - type: size_t

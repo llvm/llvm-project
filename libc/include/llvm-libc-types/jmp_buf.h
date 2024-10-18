@@ -35,6 +35,11 @@ typedef struct {
 #elif defined(__arm__)
   // r4, r5, r6, r7, r8, r9, r10, r11, r12, lr
   long opaque[10];
+#elif defined(__aarch64__)
+  long opaque[14]; // x19-x29, lr, sp, optional x18
+#if __ARM_FP
+  long fopaque[8]; // d8-d15
+#endif
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif

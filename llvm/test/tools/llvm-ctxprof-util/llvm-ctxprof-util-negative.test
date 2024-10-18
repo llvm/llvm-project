@@ -1,0 +1,24 @@
+; REQUIRES: x86_64-linux
+
+; RUN: not llvm-ctxprof-util nofile.json 2>&1 | FileCheck %s --check-prefix=NO_CMD
+; RUN: not llvm-ctxprof-util invalidCmd --input nofile.json 2>&1 | FileCheck %s --check-prefix=INVALID_CMD
+; RUN: not llvm-ctxprof-util fromJSON nofile.json 2>&1 | FileCheck %s --check-prefix=NO_FLAG
+; RUN: not llvm-ctxprof-util fromJSON --input nofile.json 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NO_FILE
+; RUN: not llvm-ctxprof-util fromJSON --input %S/Inputs/bad.json 2>&1 | FileCheck %s --check-prefix=BAD_JSON
+; RUN: not llvm-ctxprof-util fromJSON --input %S/Inputs/invalid-no-vector.json 2>&1 | FileCheck %s --check-prefix=NO_VECTOR
+; RUN: not llvm-ctxprof-util fromJSON --input %S/Inputs/invalid-no-ctx.json 2>&1 | FileCheck %s --check-prefix=NO_CTX
+; RUN: not llvm-ctxprof-util fromJSON --input %S/Inputs/invalid-no-counters.json 2>&1 | FileCheck %s --check-prefix=NO_COUNTERS
+; RUN: not llvm-ctxprof-util fromJSON --input %S/Inputs/invalid-bad-subctx.json 2>&1 | FileCheck %s --check-prefix=BAD_SUBCTX
+; RUN: rm -rf %t
+; RUN: not llvm-ctxprof-util fromJSON --input %S/Inputs/valid.json --output %t/output.bitstream 2>&1 | FileCheck %s --check-prefix=NO_DIR
+
+; NO_CMD: Unknown subcommand 'nofile.json'
+; INVALID_CMD: Unknown subcommand 'invalidCmd'
+; NO_FLAG: Unknown command line argument 'nofile.json'. 
+; NO_FILE: 'nofile.json': [[MSG]]
+; BAD_JSON: Expected object key
+; NO_VECTOR: expected array
+; NO_CTX: missing value at (root)[0].Guid
+; NO_COUNTERS: missing value at (root)[0].Counters
+; BAD_SUBCTX: expected array at (root)[0].Callsites[0]
+; NO_DIR: failed to open output

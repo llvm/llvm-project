@@ -18,7 +18,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   "llvm.intr.memset"(%ptr, %byte, %0) <{isVolatile = true}> : (!llvm.ptr, i8, i32) -> ()
   "llvm.intr.memmove"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   "llvm.intr.memcpy"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-  "llvm.intr.assume"(%true) : (i1) -> ()
+  llvm.intr.assume %true : i1
   llvm.fence release
   %2 = llvm.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32
   %3 = llvm.cmpxchg %ptr, %0, %1 acq_rel monotonic : !llvm.ptr, i32
@@ -44,7 +44,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: "llvm.intr.memset"(%[[PTR]]
 // CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
 // CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
-// CHECK: "llvm.intr.assume"
+// CHECK: llvm.intr.assume
 // CHECK: llvm.fence release
 // CHECK: llvm.atomicrmw add %[[PTR]], %[[CST]] monotonic
 // CHECK: llvm.cmpxchg %[[PTR]], %[[CST]], %[[RES]] acq_rel monotonic
@@ -422,7 +422,7 @@ llvm.func @test_byval(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} {
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} {
   llvm.return
 }
 
@@ -436,7 +436,7 @@ llvm.func @test_byval_read_only(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite>} {
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite>} {
   llvm.return
 }
 
@@ -451,7 +451,7 @@ llvm.func @test_byval_write_only(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.return
 }
 
@@ -472,7 +472,7 @@ llvm.func @test_byval_input_aligned(%unaligned : !llvm.ptr, %aligned : !llvm.ptr
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -496,7 +496,7 @@ module attributes {
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -524,7 +524,7 @@ module attributes {
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -550,7 +550,7 @@ llvm.func @test_alignment_exceeded_anyway() {
 llvm.mlir.global private @unaligned_global(42 : i64) : i64
 llvm.mlir.global private @aligned_global(42 : i64) { alignment = 64 } : i64
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.return
 }
 

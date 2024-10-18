@@ -227,9 +227,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   auto c =
       matchOperandMap(indexingMaps[2], numOfBatchDims, dims.m[0], dims.n[0]);
 
-  if (llvm::any_of(ArrayRef<IndexMatchResult>{a, b, c}, [](IndexMatchResult r) {
-        return r == IndexMatchResult::Mismatch;
-      }))
+  if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
     return failure();
 
   if (c != IndexMatchResult::Match ||
@@ -261,18 +259,43 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
                                                       GenericOp genericOp) {
+  // Copy
   if (isaCopyOpInterface(genericOp)) {
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<CopyOp>(
         genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0]);
     return namedOp;
   }
 
+  // Fill
   if (isaFillOpInterface(genericOp)) {
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<FillOp>(
         genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0]);
     return namedOp;
   }
 
+  // Broadcast
+  std::optional<SmallVector<int64_t>> equivalentToBroadcast =
+      isaBroadcastOpInterface(genericOp);
+  if (equivalentToBroadcast) {
+    auto dims = *equivalentToBroadcast;
+    LinalgOp namedOp = rewriter.replaceOpWithNewOp<BroadcastOp>(
+        genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
+        dims);
+    return namedOp;
+  }
+
+  // Transpose
+  std::optional<SmallVector<int64_t>> equivalentToTranspose =
+      isaTransposeOpInterface(genericOp);
+  if (equivalentToTranspose) {
+    auto permutation = *equivalentToTranspose;
+    LinalgOp namedOp = rewriter.replaceOpWithNewOp<TransposeOp>(
+        genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
+        permutation);
+    return namedOp;
+  }
+
+  // Elementwise Unary
   if (isaElemwiseSingleUnaryOpInterface(genericOp)) {
     Operation *op = &genericOp.getBody()->front();
     if (isa<math::ExpOp>(op)) {
@@ -281,6 +304,7 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
     }
   }
 
+  // Elementwise Binary
   if (isaElemwiseSingleBinaryOpInterface(genericOp)) {
     bool swap = areBinOpsSwapped(genericOp);
     Operation *op = &genericOp.getBody()->front();
@@ -302,6 +326,7 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
     }
   }
 
+  // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
     return specializeLinalgContractions(rewriter, genericOp);
   }

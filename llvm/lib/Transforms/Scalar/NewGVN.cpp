@@ -297,7 +297,8 @@ public:
   using MemoryMemberSet = SmallPtrSet<const MemoryMemberType *, 2>;
 
   explicit CongruenceClass(unsigned ID) : ID(ID) {}
-  CongruenceClass(unsigned ID, Value *Leader, const Expression *E)
+  CongruenceClass(unsigned ID, std::pair<Value *, unsigned int> Leader,
+                  const Expression *E)
       : ID(ID), RepLeader(Leader), DefiningExpr(E) {}
 
   unsigned getID() const { return ID; }
@@ -311,15 +312,23 @@ public:
   }
 
   // Leader functions
-  Value *getLeader() const { return RepLeader; }
-  void setLeader(Value *Leader) { RepLeader = Leader; }
+  Value *getLeader() const { return RepLeader.first; }
+  void setLeader(std::pair<Value *, unsigned int> Leader) {
+    RepLeader = Leader;
+  }
   const std::pair<Value *, unsigned int> &getNextLeader() const {
     return NextLeader;
   }
   void resetNextLeader() { NextLeader = {nullptr, ~0}; }
-  void addPossibleNextLeader(std::pair<Value *, unsigned int> LeaderPair) {
-    if (LeaderPair.second < NextLeader.second)
+  bool addPossibleLeader(std::pair<Value *, unsigned int> LeaderPair) {
+    if (LeaderPair.second < RepLeader.second) {
+      NextLeader = RepLeader;
+      RepLeader = LeaderPair;
+      return true;
+    } else if (LeaderPair.second < NextLeader.second) {
       NextLeader = LeaderPair;
+    }
+    return false;
   }
 
   Value *getStoredValue() const { return RepStoredValue; }
@@ -392,11 +401,13 @@ public:
 private:
   unsigned ID;
 
-  // Representative leader.
-  Value *RepLeader = nullptr;
+  // Representative leader and its corresponding RPO number.
+  // The leader must have the lowest RPO number.
+  std::pair<Value *, unsigned int> RepLeader = {nullptr, ~0U};
 
-  // The most dominating leader after our current leader, because the member set
-  // is not sorted and is expensive to keep sorted all the time.
+  // The most dominating leader after our current leader (given by the RPO
+  // number), because the member set is not sorted and is expensive to keep
+  // sorted all the time.
   std::pair<Value *, unsigned int> NextLeader = {nullptr, ~0U};
 
   // If this is represented by a store, the value of the store.
@@ -735,7 +746,19 @@ private:
 
   // Congruence class handling.
   CongruenceClass *createCongruenceClass(Value *Leader, const Expression *E) {
-    auto *result = new CongruenceClass(NextCongruenceNum++, Leader, E);
+    // Set RPO to 0 for values that are always available (constants and function
+    // args). These should always be made leader.
+    unsigned LeaderDFS = 0;
+
+    // If Leader is not specified, either we have a memory class or the leader
+    // will be set later. Otherwise, if Leader is an Instruction, set LeaderDFS
+    // to its RPO number.
+    if (!Leader)
+      LeaderDFS = ~0;
+    else if (auto *I = dyn_cast<Instruction>(Leader))
+      LeaderDFS = InstrToDFSNum(I);
+    auto *result =
+        new CongruenceClass(NextCongruenceNum++, {Leader, LeaderDFS}, E);
     CongruenceClasses.emplace_back(result);
     return result;
   }
@@ -2248,8 +2271,13 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
   OldClass->erase(I);
   NewClass->insert(I);
 
-  if (NewClass->getLeader() != I)
-    NewClass->addPossibleNextLeader({I, InstrToDFSNum(I)});
+  // Ensure that the leader has the lowest RPO. If the leader changed notify all
+  // members of the class.
+  if (NewClass->getLeader() != I &&
+      NewClass->addPossibleLeader({I, InstrToDFSNum(I)})) {
+    markValueLeaderChangeTouched(NewClass);
+  }
+
   // Handle our special casing of stores.
   if (auto *SI = dyn_cast<StoreInst>(I)) {
     OldClass->decStoreCount();
@@ -2273,7 +2301,7 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
                           << " because store joined class\n");
         // If we changed the leader, we have to mark it changed because we don't
         // know what it will do to symbolic evaluation.
-        NewClass->setLeader(SI);
+        NewClass->setLeader({SI, InstrToDFSNum(SI)});
       }
       // We rely on the code below handling the MemoryAccess change.
     }
@@ -2319,7 +2347,8 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
       if (OldClass->getStoredValue())
         OldClass->setStoredValue(nullptr);
     }
-    OldClass->setLeader(getNextValueLeader(OldClass));
+    OldClass->setLeader({getNextValueLeader(OldClass),
+                         InstrToDFSNum(getNextValueLeader(OldClass))});
     OldClass->resetNextLeader();
     markValueLeaderChangeTouched(OldClass);
   }
@@ -2358,15 +2387,15 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
 
       // Constants and variables should always be made the leader.
       if (const auto *CE = dyn_cast<ConstantExpression>(E)) {
-        NewClass->setLeader(CE->getConstantValue());
+        NewClass->setLeader({CE->getConstantValue(), 0});
       } else if (const auto *SE = dyn_cast<StoreExpression>(E)) {
         StoreInst *SI = SE->getStoreInst();
-        NewClass->setLeader(SI);
+        NewClass->setLeader({SI, InstrToDFSNum(SI)});
         NewClass->setStoredValue(SE->getStoredValue());
         // The RepMemoryAccess field will be filled in properly by the
         // moveValueToNewCongruenceClass call.
       } else {
-        NewClass->setLeader(I);
+        NewClass->setLeader({I, InstrToDFSNum(I)});
       }
       assert(!isa<VariableExpression>(E) &&
              "VariableExpression should have been handled already");
@@ -3253,7 +3282,6 @@ void NewGVN::verifyMemoryCongruency() const {
         return ReachableEdges.count(
                    {FirstMP->getIncomingBlock(U), FirstMP->getBlock()}) &&
                isa<MemoryDef>(U);
-
       };
       // All arguments should in the same class, ignoring unreachable arguments
       auto FilteredPhiArgs =

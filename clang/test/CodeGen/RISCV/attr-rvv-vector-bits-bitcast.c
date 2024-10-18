@@ -69,22 +69,22 @@ DEFINE_STRUCT(bool64)
 
 // CHECK-64-LABEL: @read_int64m1(
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load <1 x i64>, ptr [[Y]], align 8, !tbaa [[TBAA4:![0-9]+]]
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load <1 x i64>, ptr [[Y]], align 8, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v1i64(<vscale x 1 x i64> undef, <1 x i64> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 // CHECK-128-LABEL: @read_int64m1(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[Y]], align 8, !tbaa [[TBAA4:![0-9]+]]
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[Y]], align 8, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-128-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v2i64(<vscale x 1 x i64> undef, <2 x i64> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 // CHECK-256-LABEL: @read_int64m1(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[Y]], align 8, !tbaa [[TBAA4:![0-9]+]]
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 32
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[Y]], align 8, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
@@ -95,22 +95,22 @@ vint64m1_t read_int64m1(struct struct_int64m1 *s) {
 // CHECK-64-LABEL: @write_int64m1(
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAST_FIXED:%.*]] = tail call <1 x i64> @llvm.vector.extract.v1i64.nxv1i64(<vscale x 1 x i64> [[X:%.*]], i64 0)
-// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
-// CHECK-64-NEXT:    store <1 x i64> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 8
+// CHECK-64-NEXT:    store <1 x i64> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-64-NEXT:    ret void
 //
 // CHECK-128-LABEL: @write_int64m1(
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[CAST_FIXED:%.*]] = tail call <2 x i64> @llvm.vector.extract.v2i64.nxv1i64(<vscale x 1 x i64> [[X:%.*]], i64 0)
-// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
-// CHECK-128-NEXT:    store <2 x i64> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+// CHECK-128-NEXT:    store <2 x i64> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_int64m1(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[CAST_FIXED:%.*]] = tail call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[X:%.*]], i64 0)
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
-// CHECK-256-NEXT:    store <4 x i64> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 32
+// CHECK-256-NEXT:    store <4 x i64> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 void write_int64m1(struct struct_int64m1 *s, vint64m1_t x) {
@@ -123,22 +123,22 @@ void write_int64m1(struct struct_int64m1 *s, vint64m1_t x) {
 
 // CHECK-64-LABEL: @read_float64m1(
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load <1 x double>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load <1 x double>, ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x double> @llvm.vector.insert.nxv1f64.v1f64(<vscale x 1 x double> undef, <1 x double> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    ret <vscale x 1 x double> [[CAST_SCALABLE]]
 //
 // CHECK-128-LABEL: @read_float64m1(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x double> @llvm.vector.insert.nxv1f64.v2f64(<vscale x 1 x double> undef, <2 x double> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    ret <vscale x 1 x double> [[CAST_SCALABLE]]
 //
 // CHECK-256-LABEL: @read_float64m1(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 32
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x double> @llvm.vector.insert.nxv1f64.v4f64(<vscale x 1 x double> undef, <4 x double> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    ret <vscale x 1 x double> [[CAST_SCALABLE]]
 //
@@ -149,22 +149,22 @@ vfloat64m1_t read_float64m1(struct struct_float64m1 *s) {
 // CHECK-64-LABEL: @write_float64m1(
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAST_FIXED:%.*]] = tail call <1 x double> @llvm.vector.extract.v1f64.nxv1f64(<vscale x 1 x double> [[X:%.*]], i64 0)
-// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
-// CHECK-64-NEXT:    store <1 x double> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 8
+// CHECK-64-NEXT:    store <1 x double> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-64-NEXT:    ret void
 //
 // CHECK-128-LABEL: @write_float64m1(
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[CAST_FIXED:%.*]] = tail call <2 x double> @llvm.vector.extract.v2f64.nxv1f64(<vscale x 1 x double> [[X:%.*]], i64 0)
-// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
-// CHECK-128-NEXT:    store <2 x double> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+// CHECK-128-NEXT:    store <2 x double> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_float64m1(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[CAST_FIXED:%.*]] = tail call <4 x double> @llvm.vector.extract.v4f64.nxv1f64(<vscale x 1 x double> [[X:%.*]], i64 0)
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
-// CHECK-256-NEXT:    store <4 x double> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 32
+// CHECK-256-NEXT:    store <4 x double> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 void write_float64m1(struct struct_float64m1 *s, vfloat64m1_t x) {
@@ -177,24 +177,24 @@ void write_float64m1(struct struct_float64m1 *s, vfloat64m1_t x) {
 
 // CHECK-64-LABEL: @read_bool1(
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v8i8(<vscale x 8 x i8> undef, <8 x i8> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-64-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
 //
 // CHECK-128-LABEL: @read_bool1(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v16i8(<vscale x 8 x i8> undef, <16 x i8> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-128-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_bool1(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 32
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-256-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
@@ -207,24 +207,24 @@ vbool1_t read_bool1(struct struct_bool1 *s) {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i1> [[X:%.*]] to <vscale x 8 x i8>
 // CHECK-64-NEXT:    [[CAST_FIXED:%.*]] = tail call <8 x i8> @llvm.vector.extract.v8i8.nxv8i8(<vscale x 8 x i8> [[TMP0]], i64 0)
-// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
-// CHECK-64-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 8
+// CHECK-64-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-64-NEXT:    ret void
 //
 // CHECK-128-LABEL: @write_bool1(
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i1> [[X:%.*]] to <vscale x 8 x i8>
 // CHECK-128-NEXT:    [[CAST_FIXED:%.*]] = tail call <16 x i8> @llvm.vector.extract.v16i8.nxv8i8(<vscale x 8 x i8> [[TMP0]], i64 0)
-// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
-// CHECK-128-NEXT:    store <16 x i8> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+// CHECK-128-NEXT:    store <16 x i8> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_bool1(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i1> [[X:%.*]] to <vscale x 8 x i8>
 // CHECK-256-NEXT:    [[CAST_FIXED:%.*]] = tail call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[TMP0]], i64 0)
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
-// CHECK-256-NEXT:    store <32 x i8> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 32
+// CHECK-256-NEXT:    store <32 x i8> [[CAST_FIXED]], ptr [[Y]], align 8, !tbaa [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 void write_bool1(struct struct_bool1 *s, vbool1_t x) {

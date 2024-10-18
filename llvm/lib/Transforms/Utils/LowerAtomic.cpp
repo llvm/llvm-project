@@ -25,10 +25,11 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   Value *Cmp = CXI->getCompareOperand();
   Value *Val = CXI->getNewValOperand();
 
-  LoadInst *Orig = Builder.CreateLoad(Val->getType(), Ptr);
+  LoadInst *Orig =
+      Builder.CreateAlignedLoad(Val->getType(), Ptr, CXI->getAlign());
   Value *Equal = Builder.CreateICmpEQ(Orig, Cmp);
   Value *Res = Builder.CreateSelect(Equal, Val, Orig);
-  Builder.CreateStore(Res, Ptr);
+  Builder.CreateAlignedStore(Res, Ptr, CXI->getAlign());
 
   Res = Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
   Res = Builder.CreateInsertValue(Res, Equal, 1);
@@ -94,6 +95,14 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
     Value *Or = Builder.CreateOr(CmpEq0, CmpOldGtVal);
     return Builder.CreateSelect(Or, Val, Dec, "new");
   }
+  case AtomicRMWInst::USubCond: {
+    Value *Cmp = Builder.CreateICmpUGE(Loaded, Val);
+    Value *Sub = Builder.CreateSub(Loaded, Val);
+    return Builder.CreateSelect(Cmp, Sub, Loaded, "new");
+  }
+  case AtomicRMWInst::USubSat:
+    return Builder.CreateIntrinsic(Intrinsic::usub_sat, Loaded->getType(),
+                                   {Loaded, Val}, nullptr, "new");
   default:
     llvm_unreachable("Unknown atomic op");
   }

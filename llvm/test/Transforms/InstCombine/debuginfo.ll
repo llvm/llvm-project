@@ -74,10 +74,10 @@ entry:
 ; NOLOWER-NOT: store
 ; NOLOWER-NOT: #dbg_declare
 ; Here we want to find:  call void @llvm.dbg.value(metadata i64 %o.coerce0, metadata [[VARIABLE_O]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
-; NOLOWER: #dbg_value(i64 undef, {{.*}})
+; NOLOWER: #dbg_value(i64 poison, {{.*}})
 ; NOLOWER-NOT: store
 ; Here we want to find:  call void @llvm.dbg.value(metadata i64 %o.coerce1, metadata [[VARIABLE_O]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
-; NOLOWER: #dbg_value(i64 undef, {{.*}})
+; NOLOWER: #dbg_value(i64 poison, {{.*}})
 ; NOLOWER-NOT: store
 ; NOLOWER: call void @tworegs_callee(i64 %o.coerce0, i64 %o.coerce1)
 

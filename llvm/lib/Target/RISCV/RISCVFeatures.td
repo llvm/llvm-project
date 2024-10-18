@@ -348,6 +348,11 @@ def FeatureStdExtZfinx
 def HasStdExtZfinx : Predicate<"Subtarget->hasStdExtZfinx()">,
                      AssemblerPredicate<(all_of FeatureStdExtZfinx),
                                         "'Zfinx' (Float in Integer)">;
+def HasStdExtFOrZfinx : Predicate<"Subtarget->hasStdExtFOrZfinx()">,
+                        AssemblerPredicate<(any_of FeatureStdExtF,
+                                                   FeatureStdExtZfinx),
+                            "'F' (Single-Precision Floating-Point) or "
+                            "'Zfinx' (Float in Integer)">;
 
 def FeatureStdExtZdinx
     : RISCVExtension<"zdinx", 1, 0,
@@ -508,9 +513,6 @@ def FeatureStdExtB
     : RISCVExtension<"b", 1, 0,
                      "'B' (the collection of the Zba, Zbb, Zbs extensions)",
                      [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
-def HasStdExtB : Predicate<"Subtarget->hasStdExtB()">,
-                           AssemblerPredicate<(all_of FeatureStdExtB),
-                           "'B' (the collection of the Zba, Zbb, Zbs extensions)">;
 
 def FeatureStdExtZbkb
     : RISCVExtension<"zbkb", 1, 0,
@@ -754,6 +756,14 @@ def HasStdExtZvbc : Predicate<"Subtarget->hasStdExtZvbc()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvbc),
                         "'Zvbc' (Vector Carryless Multiplication)">;
 
+def FeatureStdExtZvbc32e
+    : RISCVExperimentalExtension<"zvbc32e", 0, 7,
+                                 "'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)">;
+
+def HasStdExtZvbcOrZvbc32e : Predicate<"Subtarget->hasStdExtZvbc() || Subtarget->hasStdExtZvbc32e()">,
+                             AssemblerPredicate<(any_of FeatureStdExtZvbc, FeatureStdExtZvbc32e),
+                             "'Zvbc' or 'Zvbc32e' (Vector Carryless Multiplication)">;
+
 def FeatureStdExtZvkg
     : RISCVExtension<"zvkg", 1, 0,
                      "'Zvkg' (Vector GCM instructions for Cryptography)">,
@@ -761,6 +771,14 @@ def FeatureStdExtZvkg
 def HasStdExtZvkg : Predicate<"Subtarget->hasStdExtZvkg()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvkg),
                         "'Zvkg' (Vector GCM instructions for Cryptography)">;
+
+def FeatureStdExtZvkgs
+    : RISCVExperimentalExtension<"zvkgs", 0, 7,
+                                 "'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)",
+                                 [FeatureStdExtZvkg]>;
+def HasStdExtZvkgs : Predicate<"Subtarget->hasStdExtZvkgs()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvkgs),
+                        "'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)">;
 
 def FeatureStdExtZvkned
     : RISCVExtension<"zvkned", 1, 0,
@@ -780,8 +798,7 @@ def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
 
 def FeatureStdExtZvknhb
     : RISCVExtension<"zvknhb", 1, 0,
-                     "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))",
-                     [FeatureStdExtZve64x]>,
+                     "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))">,
       RISCVExtensionBitmask<0, 56>;
 def HasStdExtZvknhb : Predicate<"Subtarget->hasStdExtZvknhb()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvknhb),
@@ -870,7 +887,7 @@ def HasVInstructionsF16Minimal : Predicate<"Subtarget->hasVInstructionsF16Minima
                          "'Zvfhmin' (Vector Half-Precision Floating-Point Minimal) or "
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
-def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
+def HasVInstructionsBF16Minimal : Predicate<"Subtarget->hasVInstructionsBF16Minimal()">;
 def HasVInstructionsF16 : Predicate<"Subtarget->hasVInstructionsF16()">;
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
@@ -953,9 +970,9 @@ def FeatureStdExtSstc
     : RISCVExtension<"sstc", 1, 0,
                      "'Sstc' (Supervisor-mode timer interrupts)">;
 
-def FeaturesStdExtSsqosid
-    : RISCVExperimentalExtension<"ssqosid", 1, 0,
-                                 "'Ssqosid' (Quality-of-Service (QoS) Identifiers)">;
+def FeatureStdExtSsqosid
+    : RISCVExtension<"ssqosid", 1, 0,
+                     "'Ssqosid' (Quality-of-Service (QoS) Identifiers)">;
 
 def FeatureStdExtShtvala
     : RISCVExtension<"shtvala", 1, 0,
@@ -1038,6 +1055,19 @@ def FeatureStdExtSspm
 def FeatureStdExtSupm
     : RISCVExperimentalExtension<"supm", 1, 0,
                                  "'Supm' (Indicates User-mode Pointer Masking)">;
+
+def FeatureStdExtSmctr
+    : RISCVExperimentalExtension<"smctr", 1, 0,
+                                 "'Smctr' (Control Transfer Records Machine Level)",
+                                 [FeatureStdExtSscsrind]>;
+def FeatureStdExtSsctr
+    : RISCVExperimentalExtension<"ssctr" ,1, 0,
+                                 "'Ssctr' (Control Transfer Records Supervisor Level)",
+                                 [FeatureStdExtSscsrind]>;
+def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
+                            AssemblerPredicate<(any_of FeatureStdExtSmctr, FeatureStdExtSsctr),
+                               "'Smctr' (Control Transfer Records Machine Level) or "
+                               "'Ssctr' (Control Transfer Records Supervisor Level)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -1370,9 +1400,7 @@ def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()"
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
-                                   "SiFive 7-Series processors",
-                                   [TuneNoDefaultUnroll,
-                                    TuneShortForwardBranchOpt]>;
+                                   "SiFive 7-Series processors">;
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;

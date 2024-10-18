@@ -22,26 +22,6 @@
 #include <utility>
 #include <variant>
 
-namespace detail {
-template <typename C>
-llvm::omp::Clause getClauseIdForClass(C &&) {
-  using namespace Fortran;
-  using A = llvm::remove_cvref_t<C>; // A is referenced in OMP.inc
-  // The code included below contains a sequence of checks like the following
-  // for each OpenMP clause
-  //   if constexpr (std::is_same_v<A, parser::OmpClause::AcqRel>)
-  //     return llvm::omp::Clause::OMPC_acq_rel;
-  //   [...]
-#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
-#include "llvm/Frontend/OpenMP/OMP.inc"
-}
-} // namespace detail
-
-static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
-  return Fortran::common::visit(
-      [](auto &&s) { return detail::getClauseIdForClass(s); }, clause.u);
-}
-
 namespace Fortran::lower::omp {
 using SymbolWithDesignator = std::tuple<semantics::Symbol *, MaybeExpr>;
 
@@ -218,9 +198,9 @@ MAKE_EMPTY_CLASS(Full, Full);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
-// MAKE_EMPTY_CLASS(NoOpenmp, );         // missing-in-parser
-// MAKE_EMPTY_CLASS(NoOpenmpRoutines, ); // missing-in-parser
-// MAKE_EMPTY_CLASS(NoParallelism, );    // missing-in-parser
+MAKE_EMPTY_CLASS(NoOpenmp, NoOpenmp);
+MAKE_EMPTY_CLASS(NoOpenmpRoutines, NoOpenmpRoutines);
+MAKE_EMPTY_CLASS(NoParallelism, NoParallelism);
 MAKE_EMPTY_CLASS(Notinbranch, Notinbranch);
 MAKE_EMPTY_CLASS(Nowait, Nowait);
 MAKE_EMPTY_CLASS(OmpxAttribute, OmpxAttribute);
@@ -321,7 +301,11 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
 // --------------------------------------------------------------------
 // Actual clauses. Each T (where tomp::T exists in ClauseT) has its "make".
 
-// Absent: missing-in-parser
+Absent make(const parser::OmpClause::Absent &inp,
+            semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: absent");
+}
+
 // AcqRel: empty
 // Acquire: empty
 // AdjustArgs: incomplete
@@ -444,7 +428,11 @@ Collapse make(const parser::OmpClause::Collapse &inp,
 }
 
 // Compare: empty
-// Contains: missing-in-parser
+
+Contains make(const parser::OmpClause::Contains &inp,
+              semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: contains");
+}
 
 Copyin make(const parser::OmpClause::Copyin &inp,
             semantics::SemanticsContext &semaCtx) {
@@ -704,7 +692,10 @@ Hint make(const parser::OmpClause::Hint &inp,
   return Hint{/*HintExpr=*/makeExpr(inp.v, semaCtx)};
 }
 
-// Holds: missing-in-parser
+Holds make(const parser::OmpClause::Holds &inp,
+           semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: holds");
+}
 
 If make(const parser::OmpClause::If &inp,
         semantics::SemanticsContext &semaCtx) {
@@ -772,9 +763,22 @@ IsDevicePtr make(const parser::OmpClause::IsDevicePtr &inp,
 
 Lastprivate make(const parser::OmpClause::Lastprivate &inp,
                  semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpObjectList
-  return Lastprivate{{/*LastprivateModifier=*/std::nullopt,
-                      /*List=*/makeObjects(inp.v, semaCtx)}};
+  // inp.v -> parser::OmpLastprivateClause
+  using wrapped = parser::OmpLastprivateClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpLastprivateClause::LastprivateModifier,
+      Lastprivate::LastprivateModifier,
+      // clang-format off
+      MS(Conditional, Conditional)
+      // clang-format on
+  );
+
+  auto &t0 = std::get<std::optional<wrapped::LastprivateModifier>>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  return Lastprivate{{/*LastprivateModifier=*/maybeApply(convert, t0),
+                      /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 Linear make(const parser::OmpClause::Linear &inp,
@@ -822,41 +826,49 @@ Link make(const parser::OmpClause::Link &inp,
 Map make(const parser::OmpClause::Map &inp,
          semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpMapClause
+  using wrapped = parser::OmpMapClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert1, parser::OmpMapType::Type, Map::MapType,
+      convert1, parser::OmpMapClause::Type, Map::MapType,
       // clang-format off
-      MS(To,       To)
-      MS(From,     From)
-      MS(Tofrom,   Tofrom)
       MS(Alloc,    Alloc)
-      MS(Release,  Release)
       MS(Delete,   Delete)
+      MS(From,     From)
+      MS(Release,  Release)
+      MS(To,       To)
+      MS(Tofrom,   Tofrom)
       // clang-format on
   );
 
-  // No convert2: MapTypeModifier is not an enum in parser.
+  CLAUSET_ENUM_CONVERT( //
+      convert2, parser::OmpMapClause::TypeModifier, Map::MapTypeModifier,
+      // clang-format off
+      MS(Always,   Always)
+      MS(Close,    Close)
+      MS(OmpxHold, OmpxHold)
+      MS(Present,  Present)
+      // clang-format on
+  );
 
-  auto &t0 = std::get<std::optional<parser::OmpMapType>>(inp.v.t);
-  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &t0 = std::get<std::optional<std::list<wrapped::TypeModifier>>>(inp.v.t);
+  auto &t1 = std::get<std::optional<wrapped::Type>>(inp.v.t);
+  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  if (!t0) {
-    return Map{{/*MapType=*/std::nullopt, /*MapTypeModifiers=*/std::nullopt,
-                /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-                /*LocatorList=*/makeObjects(t1, semaCtx)}};
-  }
+  std::optional<Map::MapType> maybeType = maybeApply(convert1, t1);
 
-  auto &s0 = std::get<std::optional<parser::OmpMapType::Always>>(t0->t);
-  auto &s1 = std::get<parser::OmpMapType::Type>(t0->t);
+  std::optional<Map::MapTypeModifiers> maybeTypeMods = maybeApply(
+      [&](const std::list<wrapped::TypeModifier> &typeMods) {
+        Map::MapTypeModifiers mods;
+        for (wrapped::TypeModifier mod : typeMods)
+          mods.push_back(convert2(mod));
+        return mods;
+      },
+      t0);
 
-  std::optional<Map::MapTypeModifiers> maybeList;
-  if (s0)
-    maybeList = Map::MapTypeModifiers{Map::MapTypeModifier::Always};
-
-  return Map{{/*MapType=*/convert1(s1),
-              /*MapTypeModifiers=*/maybeList,
+  return Map{{/*MapType=*/maybeType,
+              /*MapTypeModifiers=*/maybeTypeMods,
               /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-              /*LocatorList=*/makeObjects(t1, semaCtx)}};
+              /*LocatorList=*/makeObjects(t2, semaCtx)}};
 }
 
 // Match: incomplete
@@ -883,9 +895,9 @@ Nontemporal make(const parser::OmpClause::Nontemporal &inp,
   return Nontemporal{/*List=*/makeList(inp.v, makeObjectFn(semaCtx))};
 }
 
-// NoOpenmp: missing-in-parser
-// NoOpenmpRoutines: missing-in-parser
-// NoParallelism: missing-in-parser
+// NoOpenmp: empty
+// NoOpenmpRoutines: empty
+// NoParallelism: empty
 // Notinbranch: empty
 
 Novariants make(const parser::OmpClause::Novariants &inp,
@@ -906,8 +918,9 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::ScalarIntExpr
-  return NumTeams{{/*LowerBound=*/std::nullopt,
-                   /*UpperBound=*/makeExpr(inp.v, semaCtx)}};
+  List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
+                            /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
+  return NumTeams{/*List=*/v};
 }
 
 NumThreads make(const parser::OmpClause::NumThreads &inp,
@@ -1136,6 +1149,12 @@ Sizes make(const parser::OmpClause::Sizes &inp,
   return Sizes{/*SizeList=*/makeList(inp.v, makeExprFn(semaCtx))};
 }
 
+Permutation make(const parser::OmpClause::Permutation &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::list<parser::ScalarIntConstantExpr>
+  return Permutation{/*ArgList=*/makeList(inp.v, makeExprFn(semaCtx))};
+}
+
 TaskReduction make(const parser::OmpClause::TaskReduction &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
@@ -1214,8 +1233,7 @@ Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
   return Fortran::common::visit(
       [&](auto &&s) {
-        return makeClause(getClauseId(cls), clause::make(s, semaCtx),
-                          cls.source);
+        return makeClause(cls.Id(), clause::make(s, semaCtx), cls.source);
       },
       cls.u);
 }

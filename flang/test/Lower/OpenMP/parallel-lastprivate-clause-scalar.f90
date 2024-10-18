@@ -1,7 +1,7 @@
 ! This test checks lowering of `LASTPRIVATE` clause for scalar types.
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: flang -fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 !CHECK: func @_QPlastprivate_character(%[[ARG1:.*]]: !fir.boxchar<1>{{.*}}) {
 !CHECK-DAG: %[[ARG1_UNBOX:.*]]:2 = fir.unboxchar
@@ -37,11 +37,10 @@
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 
 ! Testing lastprivate val update
-!CHECK: hlfir.assign %[[ARG1_PVT_DECL]]#0 to %[[ARG1_DECL]]#0 temporary_lhs : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
-!CHECK: } 
+!CHECK: hlfir.assign %[[ARG1_PVT_DECL]]#0 to %[[ARG1_DECL]]#0 : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
+!CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 
 subroutine lastprivate_character(arg1)
@@ -76,11 +75,10 @@ end subroutine
 
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE_DECL]]#0 : !fir.ref<i32>
-!CHECK:      hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK:      hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 
 subroutine lastprivate_int(arg1)
@@ -118,13 +116,12 @@ end subroutine
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-DAG: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1_DECL]]#0 : !fir.ref<i32>
-!CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK-DAG: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2_DECL]]#0 : !fir.ref<i32>
-!CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 
 subroutine mult_lastprivate_int(arg1, arg2)
@@ -163,13 +160,12 @@ end subroutine
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 !Testing lastprivate val update
 !CHECK-DAG: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2_DECL]]#0 : !fir.ref<i32>
-!CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK-DAG: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1_DECL]]#0 : !fir.ref<i32>
-!CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 
 subroutine mult_lastprivate_int2(arg1, arg2)
@@ -194,7 +190,7 @@ end subroutine
 !CHECK: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1", pinned, {{.*}}}
 !CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFfirstpriv_lastpriv_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[FPV_LD:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[FPV_LD]] to %[[CLONE1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[FPV_LD]] to %[[CLONE1_DECL]]#0 : i32, !fir.ref<i32>
 ! Lastprivate Allocation
 !CHECK: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2", pinned, {{.*}}}
 !CHECK: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] {uniq_name = "_QFfirstpriv_lastpriv_intEarg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -213,11 +209,10 @@ end subroutine
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE2_DECL]]#0 : !fir.ref<i32>
-!CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG2_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG2_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK-NEXT: }
 !CHECK-NEXT: omp.yield
 !CHECK-NEXT: }
-!CHECK-NEXT: omp.terminator
 !CHECK-NEXT: }
 
 subroutine firstpriv_lastpriv_int(arg1, arg2)
@@ -242,7 +237,7 @@ end subroutine
 !CHECK: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1", pinned, {{.*}}}
 !CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFfirstpriv_lastpriv_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT: %[[FPV_LD:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<i32>
-!CHECK-NEXT: hlfir.assign %[[FPV_LD]] to %[[CLONE1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-NEXT: hlfir.assign %[[FPV_LD]] to %[[CLONE1_DECL]]#0 : i32, !fir.ref<i32>
 
 !CHECK-NEXT: %[[IV:.*]] = fir.alloca i32 {bindc_name = "n", pinned, {{.*}}}
 !CHECK-NEXT: hlfir.declare %[[IV]]
@@ -261,11 +256,10 @@ end subroutine
 !CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE1_DECL]]#0 : !fir.ref<i32>
-!CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK-NEXT: }
 !CHECK-NEXT: omp.yield
 !CHECK-NEXT: }
-!CHECK-NEXT: omp.terminator
 !CHECK-NEXT: }
 
 subroutine firstpriv_lastpriv_int2(arg1)

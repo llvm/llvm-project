@@ -346,11 +346,11 @@ static Error registerJITLoaderPerfStartImpl() {
   // Need to open ourselves, because we need to hand the FD to OpenMarker() and
   // raw_fd_ostream doesn't expose the FD.
   using sys::fs::openFileForWrite;
-  if (auto EC = openFileForReadWrite(FilenameBuf.str(), Tentative.DumpFd,
+  if (auto EC = openFileForReadWrite(Filename, Tentative.DumpFd,
                                      sys::fs::CD_CreateNew, sys::fs::OF_None)) {
     std::string ErrStr;
     raw_string_ostream ErrStream(ErrStr);
-    ErrStream << "could not open JIT dump file " << FilenameBuf.str() << ": "
+    ErrStream << "could not open JIT dump file " << Filename << ": "
               << EC.message() << "\n";
     return make_error<StringError>(std::move(ErrStr), inconvertibleErrorCode());
   }

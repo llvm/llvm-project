@@ -259,7 +259,7 @@ TEST_F(StackPrintDeathTest, SKIP_ON_SPARC(RequiresNonNullBuffer)) {
 #endif // SANITIZER_CAN_FAST_UNWIND
 
 TEST(SlowUnwindTest, ShortStackTrace) {
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   uptr pc = StackTrace::GetCurrentPc();
   uptr bp = GET_CURRENT_FRAME();
   stack.Unwind(pc, bp, nullptr, false, /*max_depth=*/0);

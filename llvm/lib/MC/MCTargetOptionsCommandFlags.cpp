@@ -48,6 +48,7 @@ MCOPT(bool, NoDeprecatedWarn)
 MCOPT(bool, NoTypeCheck)
 MCOPT(bool, SaveTempLabels)
 MCOPT(bool, Crel)
+MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
 MCOPT(std::string, ABIName)
@@ -134,10 +135,18 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                             cl::desc("Use CREL relocation format for ELF"));
   MCBINDOPT(Crel);
 
+  static cl::opt<bool> ImplicitMapSyms(
+      "implicit-mapsyms",
+      cl::desc("Allow mapping symbol at section beginning to be implicit, "
+               "lowering number of mapping symbols at the expense of some "
+               "portability. Recommended for projects that can build all their "
+               "object files using this option"));
+  MCBINDOPT(ImplicitMapSyms);
+
   static cl::opt<bool> X86RelaxRelocations(
       "x86-relax-relocations",
-      cl::desc(
-          "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
+      cl::desc("Emit GOTPCRELX/REX_GOTPCRELX/REX2_GOTPCRELX instead of "
+               "GOTPCREL on x86-64 ELF"),
       cl::init(true));
   MCBINDOPT(X86RelaxRelocations);
 
@@ -174,6 +183,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoTypeCheck = getNoTypeCheck();
   Options.MCSaveTempLabels = getSaveTempLabels();
   Options.Crel = getCrel();
+  Options.ImplicitMapSyms = getImplicitMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();

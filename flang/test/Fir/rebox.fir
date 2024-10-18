@@ -22,8 +22,12 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %0 = fir.slice %c5, %undef, %undef, %c6, %c80, %c3 : (index, index, index, index, index, index) -> !fir.slice<2>
   %1 = fir.shift %c3, %c4 : (index, index) -> !fir.shift<2>
 
+  // CHECK: %[[EXTRA_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 6
+  // CHECK: %[[EXTRA:.*]] = load i8, ptr %[[EXTRA_GEP]]
+  // CHECK: %[[EXTRA_WITH_ADDENDUM_CORRECTION:.*]] = and i8 %[[EXTRA]]
+  // CHECK: %[[OUTBOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), i32 20240719, i8 1, i8 27, i8 0, i8 undef, [1 x [3 x i64]] undef }, i8 %[[EXTRA_WITH_ADDENDUM_CORRECTION]], 6
   // CHECK: %[[INSTRIDE_0_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 0, i32 2
-  // CHECK: %[[INSTRIDE_0:.]] = load i64, ptr %[[INSTRIDE_0_GEP]]
+  // CHECK: %[[INSTRIDE_0:.*]] = load i64, ptr %[[INSTRIDE_0_GEP]]
   // CHECK: %[[INSTRIDE_1_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 1, i32 2
   // CHECK: %[[INSTRIDE_1:.*]] = load i64, ptr %[[INSTRIDE_1_GEP]]
   // CHECK: %[[INBASE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 0
@@ -33,9 +37,9 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   // CHECK: %[[OFFSET_1:.*]] = mul i64 2, %[[INSTRIDE_1]]
   // CHECK: %[[VOIDBASE1:.*]] = getelementptr i8, ptr %[[VOIDBASE0]], i64 %[[OFFSET_1]]
   // CHECK: %[[OUTSTRIDE0:.*]] = mul i64 3, %[[INSTRIDE_1]]
-  // CHECK: %[[OUTBOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), i32 {{.*}}, i8 1, i8 27, i8 0, i8 0, [1 x [3 x i64]] [{{.*}} [i64 1, i64 25, i64 undef]] }, i64 %[[OUTSTRIDE0]], 7, 0, 2
-  // CHECK: %[[OUTBOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX0]], ptr %[[VOIDBASE1]], 0
-  // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX1]], ptr %[[OUTBOX_ALLOC]], align 8
+  // CHECK: %[[OUTBOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, i64 %[[OUTSTRIDE0]], 7, 0, 2
+  // CHECK: %[[OUTBOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX1]], ptr %[[VOIDBASE1]], 0
+  // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX2]], ptr %[[OUTBOX_ALLOC]], align 8
   %2 = fir.rebox %arg0(%1) [%0] : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
   // CHECK: call void @bar1(ptr %[[OUTBOX_ALLOC]])
   fir.call @bar1(%2) : (!fir.box<!fir.array<?xf32>>) -> ()
@@ -92,7 +96,7 @@ func.func @test_rebox_3(%arg0: !fir.box<!fir.array<?xf32>>) {
   // CHECK: %[[INBASE:.*]] = load ptr, ptr %[[INBASE_GEP]]
   // CHECK: %[[OUTSTRIDE1:.*]] = mul i64 3, %[[INSTRIDE]]
   // CHECK: %[[OUTSTRIDE2:.*]] = mul i64 4, %[[OUTSTRIDE1]]
-  // CHECK: %[[OUTBOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [3 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), i32 {{.*}}, i8 3, i8 27, i8 0, i8 0, [3 x [3 x i64]] [{{.*}} [i64 2, i64 3, i64 undef], [3 x i64] undef, [3 x i64] undef] }, i64 %[[INSTRIDE]], 7, 0, 2
+  // CHECK: %[[OUTBOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [3 x [3 x i64]] } %{{.*}}, i64 %[[INSTRIDE]], 7, 0, 2
   // CHECK: %[[OUTBOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [3 x [3 x i64]] } %[[OUTBOX0]], i64 3, 7, 1, 0
   // CHECK: %[[OUTBOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [3 x [3 x i64]] } %[[OUTBOX1]], i64 4, 7, 1, 1
   // CHECK: %[[OUTBOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [3 x [3 x i64]] } %[[OUTBOX2]], i64 %[[OUTSTRIDE1]], 7, 1, 2
@@ -121,7 +125,7 @@ func.func @test_rebox_4(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
   // CHECK: %[[STRIDE:.*]] = load i64, ptr %[[STRIDE_GEP]]
   // CHECK: %[[BASE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INPUT]], i32 0, i32 0
   // CHECK: %[[BASE:.*]] = load ptr, ptr %[[BASE_GEP]]
-  // CHECK: %[[NEWBOX1:.*]] = insertvalue {{{.*}}} { ptr undef, i64 ptrtoint (ptr getelementptr ([10 x i8], ptr null, i32 1) to i64), i32 20180515, i8 1, i8 40, i8 1, i8 0, [1 x [3 x i64]] [{{.*}} [i64 1, i64 undef, i64 undef]] }, i64 %[[EXTENT]], 7, 0, 1
+  // CHECK: %[[NEWBOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, i64 %[[EXTENT]], 7, 0, 1
   // CHECK: %[[NEWBOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[NEWBOX1]], i64 %[[STRIDE]], 7, 0, 2
   // CHECK: %[[NEWBOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[NEWBOX2]], ptr %[[BASE]], 0
   // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[NEWBOX3]], ptr %[[NEWBOX_STORAGE]]
@@ -141,14 +145,14 @@ func.func private @bar_test_rebox_4(!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,1
 
 // CHECK-LABEL: define void @test_cmplx_1(
 // CHECK-SAME: ptr %[[INBOX:.*]])
-func.func @test_cmplx_1(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>) {
+func.func @test_cmplx_1(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
   // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   %c1 = arith.constant 1 : index
   %c1_i32 = arith.constant 0 : i32
   %c0 = arith.constant 0 : index
-  %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.complex<4>>>, index) -> (index, index, index)
+  %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?xcomplex<f32>>>, index) -> (index, index, index)
   %1 = fir.slice %c1, %0#1, %c1 path %c1_i32 : (index, index, index, i32) -> !fir.slice<1>
-  %2 = fir.rebox %arg0 [%1] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+  %2 = fir.rebox %arg0 [%1] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
   // CHECK: %[[INSTRIDE_0_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i64 0, i32 1
   // CHECK: %[[INSTRIDE_0:.*]] = load i64, ptr %[[INSTRIDE_0_GEP]]
   // CHECK: %[[INSTRIDE_1_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 0, i32 2
@@ -164,7 +168,7 @@ func.func @test_cmplx_1(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>) {
   // CHECK: %[[CHECK_NONZERO:.*]] = icmp sgt i64 %[[DIV_1]], 0
   // CHECK: %[[CHECKED_BOUND:.*]] = select i1 %[[CHECK_NONZERO]], i64 %[[DIV_1]], i64 0
   // CHECK: %[[STRIDE:.*]] = mul i64 1, %[[INSTRIDE_1]]
-  // CHECK: %[[VAL_BUILD_1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), i32 {{.*}}, i8 1, i8 27, i8 0, i8 0, [1 x [3 x i64]] [{{\[}}3 x i64] [i64 1, i64 undef, i64 undef]] }, i64 %[[CHECKED_BOUND]], 7, 0, 1
+  // CHECK: %[[VAL_BUILD_1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, i64 %[[CHECKED_BOUND]], 7, 0, 1
   // CHECK: %[[VAL_BUILD_2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_1]], i64 %[[STRIDE]], 7, 0, 2
   // CHECK: %[[VAL_BUILD_3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_2]], ptr %[[OFFSET_GEP]], 0
   // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_3]], ptr %[[OUTBOX_ALLOC]]
@@ -181,14 +185,14 @@ func.func @test_cmplx_1(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>) {
 
 // CHECK-LABEL: define void @test_cmplx_2(
 // CHECK-SAME: ptr %[[INBOX:.*]])
-func.func @test_cmplx_2(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>) {
+func.func @test_cmplx_2(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
   // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   %c7 = arith.constant 7 : index
   %c5 = arith.constant 5 : index
   %c60 = arith.constant 60 : index
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.slice %c7, %c60, %c5 path %c1_i32 : (index, index, index, i32) -> !fir.slice<1>
-  %1 = fir.rebox %arg0 [%0] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.slice<1>) -> !fir.box<!fir.array<11xf32>>
+  %1 = fir.rebox %arg0 [%0] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.slice<1>) -> !fir.box<!fir.array<11xf32>>
   %2 = fir.convert %1 : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
   // CHECK: %[[INSTRIDE_0_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[INSTRIDE_0:.*]] = load i64, ptr %[[INSTRIDE_0_GEP]]
@@ -198,7 +202,7 @@ func.func @test_cmplx_2(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>) {
   // CHECK: %[[FRONT_OFFSET:.*]] = mul i64 6, %[[INSTRIDE_0]]
   // CHECK: %[[OFFSET_GEP:.*]] = getelementptr i8, ptr %[[FIELD_OFFSET_GEP]], i64 %[[FRONT_OFFSET]]
   // CHECK: %[[STRIDE:.*]] = mul i64 5, %[[INSTRIDE_0]]
-  // CHECK: %[[VAL_BUILD_1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), i32 {{.*}}, i8 1, i8 27, i8 0, i8 0, [1 x [3 x i64]] [{{\[}}3 x i64] [i64 1, i64 11, i64 undef]] }, i64 %[[STRIDE]], 7, 0, 2
+  // CHECK: %[[VAL_BUILD_1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, i64 %[[STRIDE]], 7, 0, 2
   // CHECK: %[[VAL_BUILD_2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_1]], ptr %[[OFFSET_GEP]], 0
   // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_2]], ptr %[[OUTBOX_ALLOC]]
   fir.call @bar1(%2) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()

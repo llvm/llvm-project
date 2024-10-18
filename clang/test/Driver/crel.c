@@ -24,8 +24,10 @@
 
 /// The --allow-experimental-crel error check doesn't apply to LTO.
 // RUN: %clang -### --target=x86_64-linux -Werror -flto -Wa,--crel %s 2>&1 | FileCheck %s --check-prefix=LTO
+// RUN: %clang -### --target=x86_64-linux -Werror -flto -Wa,--crel -Wa,--no-crel %s 2>&1 | FileCheck %s --check-prefix=LTO-NO
 
 // LTO: "-plugin-opt=-crel"
+// LTO-NO-NOT: "-plugin-opt=-crel"
 
 // RUN: touch %t.o
 // RUN: not %clang -### --target=mips64-linux-gnu -flto -Wa,--crel %t.o 2>&1 | FileCheck %s --check-prefix=ERR

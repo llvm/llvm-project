@@ -32,8 +32,8 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
       Assembler(std::make_unique<MCAssembler>(
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
       EmitEHFrame(true), EmitDebugFrame(false) {
-  if (Assembler->getBackendPtr())
-    setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
+  assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
+  setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
   if (Context.getTargetOptions() && Context.getTargetOptions()->MCRelaxAll)
     Assembler->setRelaxAll(true);
 }
@@ -467,12 +467,16 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
 }
 
 void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
-                                             MCSymbol *LastLabel) {
-  // Emit a DW_LNE_end_sequence for the end of the section.
-  // Use the section end label to compute the address delta and use INT64_MAX
-  // as the line delta which is the signal that this is actually a
+                                             MCSymbol *LastLabel,
+                                             MCSymbol *EndLabel) {
+  // Emit a DW_LNE_end_sequence into the line table. When EndLabel is null, it
+  // means we should emit the entry for the end of the section and therefore we
+  // use the section end label for the reference label. After having the
+  // appropriate reference label, we emit the address delta and use INT64_MAX as
+  // the line delta which is the signal that this is actually a
   // DW_LNE_end_sequence.
-  MCSymbol *SectionEnd = endSection(Section);
+  if (!EndLabel)
+    EndLabel = endSection(Section);
 
   // Switch back the dwarf line section, in case endSection had to switch the
   // section.
@@ -480,7 +484,7 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
   switchSection(Ctx.getObjectFileInfo()->getDwarfLineSection());
 
   const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
-  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, SectionEnd,
+  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
                            AsmInfo->getCodePointerSize());
 }
 
@@ -784,15 +788,18 @@ void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {
-  getAssembler().addFileName(Filename);
+  MCAssembler &Asm = getAssembler();
+  Asm.getWriter().addFileName(Asm, Filename);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename,
                                          StringRef CompilerVersion,
                                          StringRef TimeStamp,
                                          StringRef Description) {
-  getAssembler().addFileName(Filename);
-  getAssembler().setCompilerVersion(CompilerVersion.str());
+  MCObjectWriter &W = getAssembler().getWriter();
+  W.addFileName(getAssembler(), Filename);
+  if (CompilerVersion.size())
+    W.setCompilerVersion(CompilerVersion);
   // TODO: add TimeStamp and Description to .file symbol table entry
   // with the integrated assembler.
 }

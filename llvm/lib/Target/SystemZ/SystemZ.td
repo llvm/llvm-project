@@ -67,11 +67,11 @@ def SystemZAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;
 }
 
-def ATTAsmParserVariant : AsmParserVariant {
+def GNUAsmParserVariant : AsmParserVariant {
   int Variant = 0;
 
   // Variant name.
-  string Name = "att";
+  string Name = "gnu";
 }
 
 def HLASMAsmParserVariant : AsmParserVariant {
@@ -88,6 +88,6 @@ def HLASMAsmParserVariant : AsmParserVariant {
 def SystemZ : Target {
   let InstructionSet = SystemZInstrInfo;
   let AssemblyParsers = [SystemZAsmParser];
-  let AssemblyParserVariants = [ATTAsmParserVariant, HLASMAsmParserVariant];
+  let AssemblyParserVariants = [GNUAsmParserVariant, HLASMAsmParserVariant];
   let AllowRegisterRenaming = 1;
 }

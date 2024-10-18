@@ -158,6 +158,7 @@ enum NodeType : unsigned {
   FP_EXTEND_MERGE_PASSTHRU,
   UINT_TO_FP_MERGE_PASSTHRU,
   SINT_TO_FP_MERGE_PASSTHRU,
+  FCVTX_MERGE_PASSTHRU,
   FCVTZU_MERGE_PASSTHRU,
   FCVTZS_MERGE_PASSTHRU,
   SIGN_EXTEND_INREG_MERGE_PASSTHRU,
@@ -280,9 +281,10 @@ enum NodeType : unsigned {
   SADDLP,
   UADDLP,
 
-  // udot/sdot instructions
+  // udot/sdot/usdot instructions
   UDOT,
   SDOT,
+  USDOT,
 
   // Vector across-lanes min/max
   // Only the lower result lane is defined.
@@ -686,9 +688,6 @@ public:
   bool isZExtFree(EVT VT1, EVT VT2) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
 
-  bool shouldSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override;
-
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
 
@@ -703,11 +702,13 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                        LoadInst *LI) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(
+      IntrinsicInst *DI, LoadInst *LI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
-  bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                       StoreInst *SI) const override;
+  bool lowerInterleaveIntrinsicToStore(
+      IntrinsicInst *II, StoreInst *SI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -742,6 +743,11 @@ public:
 
   bool generateFMAsInMachineCombiner(EVT VT,
                                      CodeGenOptLevel OptLevel) const override;
+
+  /// Return true if the target has native support for
+  /// the specified value type and it is 'desirable' to use the type for the
+  /// given node type.
+  bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override;
 
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
@@ -805,7 +811,7 @@ public:
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
-  bool useLoadStackGuardNode() const override;
+  bool useLoadStackGuardNode(const Module &M) const override;
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
@@ -840,16 +846,7 @@ public:
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
-                        const MachineFunction &MF) const override {
-    // Do not merge to float value size (128 bytes) if no implicit
-    // float attribute is set.
-
-    bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
-
-    if (NoFloat)
-      return (MemVT.getSizeInBits() <= 64);
-    return true;
-  }
+                        const MachineFunction &MF) const override;
 
   bool isCheapToSpeculateCttz(Type *) const override {
     return true;
@@ -907,7 +904,7 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
-  bool shouldExpandCmpUsingSelects() const override { return true; }
+  bool shouldExpandCmpUsingSelects(EVT VT) const override;
 
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
@@ -991,6 +988,9 @@ public:
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
+  bool
+  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const override;
+
   bool shouldExpandCttzElements(EVT VT) const override;
 
   /// If a change in streaming mode is required on entry to/return from a
@@ -1073,6 +1073,8 @@ private:
 
   SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerVECTOR_COMPRESS(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
@@ -1143,8 +1145,11 @@ private:
   SDValue LowerSELECT_CC(ISD::CondCode CC, SDValue LHS, SDValue RHS,
                          SDValue TVal, SDValue FVal, const SDLoc &dl,
                          SelectionDAG &DAG) const;
+  SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBRIND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAAPCS_VASTART(SDValue Op, SelectionDAG &DAG) const;
@@ -1239,6 +1244,7 @@ private:
   SDValue LowerFixedLengthFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVECTOR_SHUFFLEToSVE(SDValue Op,
                                               SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthBuildVectorToSVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;

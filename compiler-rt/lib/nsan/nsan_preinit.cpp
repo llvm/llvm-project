@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "nsan/nsan.h"
+#include "nsan.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY

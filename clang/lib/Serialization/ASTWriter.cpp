@@ -34,6 +34,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -559,6 +560,11 @@ void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocWriter::VisitHLSLAttributedResourceTypeLoc(
+    HLSLAttributedResourceTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
@@ -897,6 +903,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
   RECORD(UPDATE_VISIBLE);
   RECORD(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD);
+  RECORD(FUNCTION_DECL_TO_LAMBDAS_MAP);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
   RECORD(CUDA_SPECIAL_DECL_REFS);
@@ -927,6 +934,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
   RECORD(PP_ASSUME_NONNULL_LOC);
   RECORD(PP_UNSAFE_BUFFER_USAGE);
+  RECORD(VTABLES_TO_EMIT);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -2610,7 +2618,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
 
       // We write out exported module macros for PCH as well.
       auto Leafs = PP.getLeafModuleMacros(Name);
-      SmallVector<ModuleMacro *, 8> Worklist(Leafs.begin(), Leafs.end());
+      SmallVector<ModuleMacro *, 8> Worklist(Leafs);
       llvm::DenseMap<ModuleMacro *, unsigned> Visits;
       while (!Worklist.empty()) {
         auto *Macro = Worklist.pop_back_val();
@@ -3961,6 +3969,13 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     Stream.EmitRecord(INTERESTING_IDENTIFIERS, InterestingIdents);
 }
 
+void ASTWriter::handleVTable(CXXRecordDecl *RD) {
+  if (!RD->isInNamedModule())
+    return;
+
+  PendingEmittingVTables.push_back(RD);
+}
+
 //===----------------------------------------------------------------------===//
 // DeclContext's Name Lookup Table Serialization
 //===----------------------------------------------------------------------===//
@@ -4627,6 +4642,17 @@ void ASTWriter::WriteFloatControlPragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(FLOAT_CONTROL_PRAGMA_OPTIONS, Record);
 }
 
+/// Write Sema's collected list of declarations with unverified effects.
+void ASTWriter::WriteDeclsWithEffectsToVerify(Sema &SemaRef) {
+  if (SemaRef.DeclsWithEffectsToVerify.empty())
+    return;
+  RecordData Record;
+  for (const auto *D : SemaRef.DeclsWithEffectsToVerify) {
+    AddDeclRef(D, Record);
+  }
+  Stream.EmitRecord(DECLS_WITH_EFFECTS_TO_VERIFY, Record);
+}
+
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
                                          ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
@@ -4729,6 +4755,7 @@ void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
+    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing serialization code for annotation token");
@@ -5036,6 +5063,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
                      PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID);
   RegisterPredefDecl(Context.TypePackElementDecl,
                      PREDEF_DECL_TYPE_PACK_ELEMENT_ID);
+  RegisterPredefDecl(Context.BuiltinCommonTypeDecl, PREDEF_DECL_COMMON_TYPE_ID);
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
 
@@ -5163,6 +5191,13 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   // Write all of the DeclsToCheckForDeferredDiags.
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     GetDeclRef(D);
+
+  // Write all classes that need to emit the vtable definitions if required.
+  if (isWritingStdCXXNamedModules())
+    for (CXXRecordDecl *RD : PendingEmittingVTables)
+      GetDeclRef(RD);
+  else
+    PendingEmittingVTables.clear();
 }
 
 void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
@@ -5317,6 +5352,17 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   }
   if (!DeleteExprsToAnalyze.empty())
     Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
+
+  RecordData VTablesToEmit;
+  for (CXXRecordDecl *RD : PendingEmittingVTables) {
+    if (!wasDeclEmitted(RD))
+      continue;
+
+    AddDeclRef(RD, VTablesToEmit);
+  }
+
+  if (!VTablesToEmit.empty())
+    Stream.EmitRecord(VTABLES_TO_EMIT, VTablesToEmit);
 }
 
 ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
@@ -5564,6 +5610,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   }
   WritePackPragmaOptions(SemaRef);
   WriteFloatControlPragmaOptions(SemaRef);
+  WriteDeclsWithEffectsToVerify(SemaRef);
 
   // Some simple statistics
   RecordData::value_type Record[] = {
@@ -5672,6 +5719,26 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   if (!DelayedNamespaceRecord.empty())
     Stream.EmitRecord(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD,
                       DelayedNamespaceRecord);
+
+  if (!FunctionToLambdasMap.empty()) {
+    // TODO: on disk hash table for function to lambda mapping might be more
+    // efficent becuase it allows lazy deserialization.
+    RecordData FunctionToLambdasMapRecord;
+    for (const auto &Pair : FunctionToLambdasMap) {
+      FunctionToLambdasMapRecord.push_back(Pair.first.getRawValue());
+      FunctionToLambdasMapRecord.push_back(Pair.second.size());
+      for (const auto &Lambda : Pair.second)
+        FunctionToLambdasMapRecord.push_back(Lambda.getRawValue());
+    }
+
+    auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
+    Abv->Add(llvm::BitCodeAbbrevOp(FUNCTION_DECL_TO_LAMBDAS_MAP));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
+    unsigned FunctionToLambdaMapAbbrev = Stream.EmitAbbrev(std::move(Abv));
+    Stream.EmitRecord(FUNCTION_DECL_TO_LAMBDAS_MAP, FunctionToLambdasMapRecord,
+                      FunctionToLambdaMapAbbrev);
+  }
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   // Create a lexical update block containing all of the declarations in the
@@ -6559,10 +6626,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   // computed.
   Record->push_back(D->getODRHash());
 
-  bool ModulesDebugInfo =
-      Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
-  Record->push_back(ModulesDebugInfo);
-  if (ModulesDebugInfo)
+  bool ModulesCodegen =
+      !D->isDependentType() &&
+     (Writer->Context->getLangOpts().ModulesDebugInfo ||
+      D->isInNamedModule());
+  Record->push_back(ModulesCodegen);
+  if (ModulesCodegen)
     Writer->AddDeclRef(D, Writer->ModularCodegenDecls);
 
   // IsLambda bit is already saved.
@@ -6727,6 +6796,12 @@ void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
   // higher module file indexes.
   if (Idx.getModuleFileIndex() >= StoredIdx.getModuleFileIndex())
     StoredIdx = Idx;
+}
+
+void ASTWriter::PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) {
+  assert(D->isCanonicalDecl() && "predefined decl is not canonical");
+  DeclIDs[D] = LocalDeclID(ID);
+  PredefinedDecls.insert(D);
 }
 
 void ASTWriter::SelectorRead(SelectorID ID, Selector S) {
@@ -7113,6 +7188,13 @@ void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPPermutationClause(OMPPermutationClause *C) {
+  Record.push_back(C->getNumLoops());
+  for (Expr *Size : C->getArgsRefs())
+    Record.AddStmt(Size);
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPFullClause(OMPFullClause *C) {}
 
 void OMPClauseWriter::VisitOMPPartialClause(OMPPartialClause *C) {
@@ -7204,6 +7286,34 @@ void OMPClauseWriter::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 
 void OMPClauseWriter::VisitOMPAcqRelClause(OMPAcqRelClause *) {}
 
+void OMPClauseWriter::VisitOMPAbsentClause(OMPAbsentClause *C) {
+  Record.push_back(static_cast<uint64_t>(C->getDirectiveKinds().size()));
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto K : C->getDirectiveKinds()) {
+    Record.writeEnum(K);
+  }
+}
+
+void OMPClauseWriter::VisitOMPHoldsClause(OMPHoldsClause *C) {
+  Record.AddStmt(C->getExpr());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPContainsClause(OMPContainsClause *C) {
+  Record.push_back(static_cast<uint64_t>(C->getDirectiveKinds().size()));
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto K : C->getDirectiveKinds()) {
+    Record.writeEnum(K);
+  }
+}
+
+void OMPClauseWriter::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
+
+void OMPClauseWriter::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseWriter::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
+
 void OMPClauseWriter::VisitOMPAcquireClause(OMPAcquireClause *) {}
 
 void OMPClauseWriter::VisitOMPReleaseClause(OMPReleaseClause *) {}
@@ -7220,7 +7330,7 @@ void OMPClauseWriter::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
 void OMPClauseWriter::VisitOMPInitClause(OMPInitClause *C) {
   Record.push_back(C->varlist_size());
-  for (Expr *VE : C->varlists())
+  for (Expr *VE : C->varlist())
     Record.AddStmt(VE);
   Record.writeBool(C->getIsTarget());
   Record.writeBool(C->getIsTargetSync());
@@ -7266,7 +7376,7 @@ void OMPClauseWriter::VisitOMPAlignClause(OMPAlignClause *C) {
 void OMPClauseWriter::VisitOMPPrivateClause(OMPPrivateClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     Record.AddStmt(VE);
   }
   for (auto *VE : C->private_copies()) {
@@ -7278,7 +7388,7 @@ void OMPClauseWriter::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
   Record.push_back(C->varlist_size());
   VisitOMPClauseWithPreInit(C);
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     Record.AddStmt(VE);
   }
   for (auto *VE : C->private_copies()) {
@@ -7296,7 +7406,7 @@ void OMPClauseWriter::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
   Record.writeEnum(C->getKind());
   Record.AddSourceLocation(C->getKindLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *E : C->private_copies())
     Record.AddStmt(E);
@@ -7311,7 +7421,7 @@ void OMPClauseWriter::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
 void OMPClauseWriter::VisitOMPSharedClause(OMPSharedClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
@@ -7324,7 +7434,7 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
   Record.AddDeclarationNameInfo(C->getNameInfo());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *VE : C->privates())
     Record.AddStmt(VE);
@@ -7351,7 +7461,7 @@ void OMPClauseWriter::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
   Record.AddDeclarationNameInfo(C->getNameInfo());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *VE : C->privates())
     Record.AddStmt(VE);
@@ -7370,7 +7480,7 @@ void OMPClauseWriter::VisitOMPInReductionClause(OMPInReductionClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
   Record.AddDeclarationNameInfo(C->getNameInfo());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *VE : C->privates())
     Record.AddStmt(VE);
@@ -7391,7 +7501,7 @@ void OMPClauseWriter::VisitOMPLinearClause(OMPLinearClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   Record.push_back(C->getModifier());
   Record.AddSourceLocation(C->getModifierLoc());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     Record.AddStmt(VE);
   }
   for (auto *VE : C->privates()) {
@@ -7416,7 +7526,7 @@ void OMPClauseWriter::VisitOMPAlignedClause(OMPAlignedClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   Record.AddStmt(C->getAlignment());
 }
@@ -7424,7 +7534,7 @@ void OMPClauseWriter::VisitOMPAlignedClause(OMPAlignedClause *C) {
 void OMPClauseWriter::VisitOMPCopyinClause(OMPCopyinClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *E : C->source_exprs())
     Record.AddStmt(E);
@@ -7437,7 +7547,7 @@ void OMPClauseWriter::VisitOMPCopyinClause(OMPCopyinClause *C) {
 void OMPClauseWriter::VisitOMPCopyprivateClause(OMPCopyprivateClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *E : C->source_exprs())
     Record.AddStmt(E);
@@ -7450,7 +7560,7 @@ void OMPClauseWriter::VisitOMPCopyprivateClause(OMPCopyprivateClause *C) {
 void OMPClauseWriter::VisitOMPFlushClause(OMPFlushClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
@@ -7468,7 +7578,7 @@ void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {
   Record.AddSourceLocation(C->getDependencyLoc());
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddSourceLocation(C->getOmpAllMemoryLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
     Record.AddStmt(C->getLoopData(I));
@@ -7500,7 +7610,7 @@ void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
   Record.push_back(C->getMapType());
   Record.AddSourceLocation(C->getMapLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *E : C->mapperlists())
     Record.AddStmt(E);
@@ -7523,20 +7633,24 @@ void OMPClauseWriter::VisitOMPAllocateClause(OMPAllocateClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddStmt(C->getAllocator());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
+  Record.push_back(C->varlist_size());
   VisitOMPClauseWithPreInit(C);
-  Record.AddStmt(C->getNumTeams());
   Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlist())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  Record.push_back(C->varlist_size());
   VisitOMPClauseWithPreInit(C);
-  Record.AddStmt(C->getThreadLimit());
   Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlist())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPPriorityClause(OMPPriorityClause *C) {
@@ -7596,7 +7710,7 @@ void OMPClauseWriter::VisitOMPToClause(OMPToClause *C) {
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *E : C->mapperlists())
     Record.AddStmt(E);
@@ -7626,7 +7740,7 @@ void OMPClauseWriter::VisitOMPFromClause(OMPFromClause *C) {
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *E : C->mapperlists())
     Record.AddStmt(E);
@@ -7649,7 +7763,7 @@ void OMPClauseWriter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *VE : C->private_copies())
     Record.AddStmt(VE);
@@ -7673,7 +7787,7 @@ void OMPClauseWriter::VisitOMPUseDeviceAddrClause(OMPUseDeviceAddrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);
@@ -7693,7 +7807,7 @@ void OMPClauseWriter::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);
@@ -7713,7 +7827,7 @@ void OMPClauseWriter::VisitOMPHasDeviceAddrClause(OMPHasDeviceAddrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);
@@ -7765,7 +7879,7 @@ void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
 void OMPClauseWriter::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *E : C->private_refs())
     Record.AddStmt(E);
@@ -7774,14 +7888,14 @@ void OMPClauseWriter::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
 void OMPClauseWriter::VisitOMPInclusiveClause(OMPInclusiveClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPExclusiveClause(OMPExclusiveClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
@@ -7810,7 +7924,7 @@ void OMPClauseWriter::VisitOMPAffinityClause(OMPAffinityClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddStmt(C->getModifier());
   Record.AddSourceLocation(C->getColonLoc());
-  for (Expr *E : C->varlists())
+  for (Expr *E : C->varlist())
     Record.AddStmt(E);
 }
 
@@ -7833,7 +7947,7 @@ void OMPClauseWriter::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
   Record.push_back(C->getDependenceType());
   Record.AddSourceLocation(C->getDependenceLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
     Record.AddStmt(C->getLoopData(I));
@@ -8053,11 +8167,50 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     // Nothing to do here, there is no additional information beyond the
     // begin/end loc and clause kind.
     return;
+  case OpenACCClauseKind::Collapse: {
+    const auto *CC = cast<OpenACCCollapseClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeBool(CC->hasForce());
+    AddStmt(const_cast<Expr *>(CC->getLoopCount()));
+    return;
+  }
+  case OpenACCClauseKind::Tile: {
+    const auto *TC = cast<OpenACCTileClause>(C);
+    writeSourceLocation(TC->getLParenLoc());
+    writeUInt32(TC->getSizeExprs().size());
+    for (Expr *E : TC->getSizeExprs())
+      AddStmt(E);
+    return;
+  }
+  case OpenACCClauseKind::Gang: {
+    const auto *GC = cast<OpenACCGangClause>(C);
+    writeSourceLocation(GC->getLParenLoc());
+    writeUInt32(GC->getNumExprs());
+    for (unsigned I = 0; I < GC->getNumExprs(); ++I) {
+      writeEnum(GC->getExpr(I).first);
+      AddStmt(const_cast<Expr *>(GC->getExpr(I).second));
+    }
+    return;
+  }
+  case OpenACCClauseKind::Worker: {
+    const auto *WC = cast<OpenACCWorkerClause>(C);
+    writeSourceLocation(WC->getLParenLoc());
+    writeBool(WC->hasIntExpr());
+    if (WC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(WC->getIntExpr()));
+    return;
+  }
+  case OpenACCClauseKind::Vector: {
+    const auto *VC = cast<OpenACCVectorClause>(C);
+    writeSourceLocation(VC->getLParenLoc());
+    writeBool(VC->hasIntExpr());
+    if (VC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(VC->getIntExpr()));
+    return;
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Delete:
@@ -8066,12 +8219,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::Tile:
-  case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

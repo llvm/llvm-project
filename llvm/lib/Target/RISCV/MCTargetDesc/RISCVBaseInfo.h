@@ -123,6 +123,20 @@ enum {
   // 3 -> widening case
   TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
   TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
+
+  ElementsDependOnVLShift = TargetOverlapConstraintTypeShift + 2,
+  ElementsDependOnVLMask = 1ULL << ElementsDependOnVLShift,
+
+  ElementsDependOnMaskShift = ElementsDependOnVLShift + 1,
+  ElementsDependOnMaskMask = 1ULL << ElementsDependOnMaskShift,
+
+  // Indicates the EEW of a vector instruction's destination operand.
+  // 0 -> 1
+  // 1 -> SEW
+  // 2 -> SEW * 2
+  // 3 -> SEW * 4
+  DestEEWShift = ElementsDependOnMaskShift + 1,
+  DestEEWMask = 3ULL << DestEEWShift,
 };
 
 // Helper functions to read TSFlags.
@@ -170,6 +184,18 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
 
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
+
+/// \returns true if the elements in the body are affected by VL,
+/// e.g. vslide1down.vx/vredsum.vs/viota.m
+static inline bool elementsDependOnVL(uint64_t TSFlags) {
+  return TSFlags & ElementsDependOnVLMask;
+}
+
+/// \returns true if the elements in the body are affected by the mask,
+/// e.g. vredsum.vs/viota.m
+static inline bool elementsDependOnMask(uint64_t TSFlags) {
+  return TSFlags & ElementsDependOnMaskMask;
+}
 
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
@@ -283,6 +309,8 @@ enum OperandType : unsigned {
   OPERAND_UIMM12,
   OPERAND_UIMM16,
   OPERAND_UIMM32,
+  OPERAND_UIMM48,
+  OPERAND_UIMM64,
   OPERAND_ZERO,
   OPERAND_SIMM5,
   OPERAND_SIMM5_PLUS1,

@@ -1014,12 +1014,14 @@ def POPCNTB8 : XForm_11<31, 122, (outs g8rc:$RA), (ins g8rc:$RST),
                         [(set i64:$RA, (int_ppc_popcntb i64:$RST))]>;
 
 def CDTBCD8 : XForm_11<31, 282, (outs g8rc:$RA), (ins g8rc:$RST),
-                       "cdtbcd $RA, $RST", IIC_IntGeneral, []>;
+                       "cdtbcd $RA, $RST", IIC_IntGeneral,
+                       [(set i64:$RA, (int_ppc_cdtbcdd i64:$RST))]>;
 def CBCDTD8 : XForm_11<31, 314, (outs g8rc:$RA), (ins g8rc:$RST),
-                       "cbcdtd $RA, $RST", IIC_IntGeneral, []>;
-
+                       "cbcdtd $RA, $RST", IIC_IntGeneral,
+                       [(set i64:$RA, (int_ppc_cbcdtdd i64:$RST))]>;
 def ADDG6S8 : XOForm_1<31, 74, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
-                       "addg6s $RT, $RA, $RB", IIC_IntGeneral, []>;
+                       "addg6s $RT, $RA, $RB", IIC_IntGeneral,
+                       [(set i64:$RT, (int_ppc_addg6sd i64:$RA, i64:$RB))]>;
 }
 
 defm DIVD  : XOForm_1rcr<31, 489, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
@@ -2014,9 +2016,9 @@ def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
 } // IsISA3_0
 
 def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
-          (STDCX g8rc:$A, ForceXForm:$dst)>;
+          (RLWINM (STDCX g8rc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, g8rc:$A, 8),
-          (STDCX g8rc:$A, ForceXForm:$dst)>;
+          (RLWINM (STDCX g8rc:$A, ForceXForm:$dst), 31, 31, 31)>;
 
 def : Pat<(i64 (int_ppc_mfspr timm:$SPR)),
           (MFSPR8 $SPR)>;

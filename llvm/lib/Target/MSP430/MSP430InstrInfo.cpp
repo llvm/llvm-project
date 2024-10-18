@@ -90,7 +90,8 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  MCRegister SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc;
   if (MSP430::GR16RegClass.contains(DestReg, SrcReg))
     Opc = MSP430::MOV16rr;

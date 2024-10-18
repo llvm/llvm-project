@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-jitlink.h"
-
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
@@ -28,6 +28,9 @@
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
@@ -58,7 +61,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
-
 #include <cstring>
 #include <deque>
 #include <string>
@@ -258,6 +260,21 @@ static cl::opt<bool>
 static cl::opt<bool> UseSharedMemory(
     "use-shared-memory",
     cl::desc("Use shared memory to transfer generated code and data"),
+    cl::init(false), cl::cat(JITLinkCategory));
+
+static cl::opt<std::string>
+    OverrideTriple("triple", cl::desc("Override target triple detection"),
+                   cl::init(""), cl::cat(JITLinkCategory));
+
+static cl::opt<bool> AllLoad("all_load",
+                             cl::desc("Load all members of static archives"),
+                             cl::init(false), cl::cat(JITLinkCategory));
+
+static cl::opt<bool> ForceLoadObjC(
+    "ObjC",
+    cl::desc("Load all members of static archives that implement "
+             "Objective-C classes or categories, or Swift structs, "
+             "classes or extensions"),
     cl::init(false), cl::cat(JITLinkCategory));
 
 static ExitOnError ExitOnErr;
@@ -1028,16 +1045,16 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     PlatformJD->addToLinkOrder(*ProcessSymsJD);
 
     if (TT.isOSBinFormatMachO()) {
-      if (auto P = MachOPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                         OrcRuntime.c_str()))
+      if (auto P =
+              MachOPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
         return;
       }
     } else if (TT.isOSBinFormatELF()) {
-      if (auto P = ELFNixPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                          OrcRuntime.c_str()))
+      if (auto P =
+              ELFNixPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
@@ -1052,9 +1069,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         return loadAndLinkDynamicLibrary(JD, DLLName);
       };
 
-      if (auto P = COFFPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                        OrcRuntime.c_str(),
-                                        std::move(LoadDynLibrary)))
+      if (auto P =
+              COFFPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str(),
+                                   std::move(LoadDynLibrary)))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
@@ -1101,7 +1118,10 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   for (auto &HarnessFile : TestHarnesses) {
     HarnessFiles.insert(HarnessFile);
 
-    auto ObjBuffer = ExitOnErr(getFile(HarnessFile));
+    auto ObjBuffer =
+        ExitOnErr(loadLinkableFile(HarnessFile, ES.getTargetTriple(),
+                                   LoadArchives::Never))
+            .first;
 
     auto ObjInterface =
         ExitOnErr(getObjectFileInterface(ES, ObjBuffer->getMemBufferRef()));
@@ -1418,6 +1438,14 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
   static std::pair<Triple, SubtargetFeatures> FirstTTAndFeatures = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
+
+    if (!OverrideTriple.empty()) {
+      LLVM_DEBUG({
+        dbgs() << "Triple from -triple override: " << OverrideTriple << "\n";
+      });
+      return std::make_pair(Triple(OverrideTriple), SubtargetFeatures());
+    }
+
     for (auto InputFile : InputFiles) {
       auto ObjBuffer = ExitOnErr(getFile(InputFile));
       file_magic Magic = identify_magic(ObjBuffer->getBuffer());
@@ -1436,13 +1464,25 @@ static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
         SubtargetFeatures Features;
         if (auto ObjFeatures = Obj->getFeatures())
           Features = std::move(*ObjFeatures);
+
+        LLVM_DEBUG({
+          dbgs() << "Triple from " << InputFile << ": " << TT.str() << "\n";
+        });
         return std::make_pair(TT, Features);
       }
       default:
         break;
       }
     }
-    return std::make_pair(Triple(), SubtargetFeatures());
+
+    // If no plain object file inputs exist to pin down the triple then detect
+    // the host triple and default to that.
+    auto JTMB = ExitOnErr(JITTargetMachineBuilder::detectHost());
+    LLVM_DEBUG({
+      dbgs() << "Triple from host-detection: " << JTMB.getTargetTriple().str()
+             << "\n";
+    });
+    return std::make_pair(JTMB.getTargetTriple(), JTMB.getFeatures());
   }();
 
   return FirstTTAndFeatures;
@@ -1711,9 +1751,9 @@ static Error addSectCreates(Session &S,
                                          ", filename component cannot be empty",
                                      inconvertibleErrorCode());
 
-    auto Content = MemoryBuffer::getFile(FileName);
+    auto Content = getFile(FileName);
     if (!Content)
-      return createFileError(FileName, errorCodeToError(Content.getError()));
+      return Content.takeError();
 
     SectCreateMaterializationUnit::ExtraSymbolsMap ExtraSymbols;
     while (!ExtraSymbolsString.empty()) {
@@ -1745,10 +1785,11 @@ static Error addTestHarnesses(Session &S) {
   LLVM_DEBUG(dbgs() << "Adding test harness objects...\n");
   for (auto HarnessFile : TestHarnesses) {
     LLVM_DEBUG(dbgs() << "  " << HarnessFile << "\n");
-    auto ObjBuffer = getFile(HarnessFile);
-    if (!ObjBuffer)
-      return ObjBuffer.takeError();
-    if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(*ObjBuffer)))
+    auto Linkable = loadLinkableFile(HarnessFile, S.ES.getTargetTriple(),
+                                     LoadArchives::Never);
+    if (!Linkable)
+      return Linkable.takeError();
+    if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(Linkable->first)))
       return Err;
   }
   return Error::success();
@@ -1770,21 +1811,22 @@ static Error addObjects(Session &S,
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
-    auto ObjBuffer = getFile(InputFile);
+    auto ObjBuffer = loadLinkableFile(InputFile, S.ES.getTargetTriple(),
+                                      LoadArchives::Never);
     if (!ObjBuffer)
       return ObjBuffer.takeError();
 
     if (S.HarnessFiles.empty()) {
-      if (auto Err = S.ObjLayer.add(JD, std::move(*ObjBuffer)))
+      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first)))
         return Err;
     } else {
       // We're in -harness mode. Use a custom interface for this
       // test object.
       auto ObjInterface =
-          getTestObjectFileInterface(S, (*ObjBuffer)->getMemBufferRef());
+          getTestObjectFileInterface(S, ObjBuffer->first->getMemBufferRef());
       if (!ObjInterface)
         return ObjInterface.takeError();
-      if (auto Err = S.ObjLayer.add(JD, std::move(*ObjBuffer),
+      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first),
                                     std::move(*ObjInterface)))
         return Err;
     }
@@ -1927,10 +1969,9 @@ static Error addLibraries(Session &S,
              });
 
   // 3. Process library loads.
-  auto AddArchive = [&](const char *Path, const LibraryLoad &LL)
+  auto AddArchive = [&](JITDylib &JD, const char *Path, const LibraryLoad &LL)
       -> Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>> {
-    unique_function<Expected<MaterializationUnit::Interface>(
-        ExecutionSession & ES, MemoryBufferRef ObjBuffer)>
+    StaticLibraryDefinitionGenerator::GetObjectFileInterface
         GetObjFileInterface;
     switch (LL.Modifier) {
     case LibraryLoad::Standard:
@@ -1940,8 +1981,17 @@ static Error addLibraries(Session &S,
       GetObjFileInterface = getObjectFileInterfaceHidden;
       break;
     }
+
+    StaticLibraryDefinitionGenerator::VisitMembersFunction VisitMembers;
+    if (AllLoad)
+      VisitMembers = StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
+          S.ObjLayer, JD);
+    else if (S.ES.getTargetTriple().isOSBinFormatMachO() && ForceLoadObjC)
+      VisitMembers = ForceLoadMachOArchiveMembers(S.ObjLayer, JD, true);
+
     auto G = StaticLibraryDefinitionGenerator::Load(
-        S.ObjLayer, Path, std::move(GetObjFileInterface));
+        S.ObjLayer, Path, std::move(VisitMembers),
+        std::move(GetObjFileInterface));
     if (!G)
       return G.takeError();
 
@@ -1979,7 +2029,7 @@ static Error addLibraries(Session &S,
     }
 
     if (LL.IsPath) {
-      auto G = AddArchive(LL.LibName.c_str(), LL);
+      auto G = AddArchive(JD, LL.LibName.c_str(), LL);
       if (!G)
         return createFileError(LL.LibName, G.takeError());
       JD.addGenerator(std::move(*G));
@@ -2035,7 +2085,7 @@ static Error addLibraries(Session &S,
         }
         case file_magic::archive:
         case file_magic::macho_universal_binary: {
-          auto G = AddArchive(LibPath.data(), LL);
+          auto G = AddArchive(JD, LibPath.data(), LL);
           if (!G)
             return G.takeError();
           JD.addGenerator(std::move(*G));

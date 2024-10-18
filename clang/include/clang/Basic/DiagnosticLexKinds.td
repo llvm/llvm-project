@@ -283,6 +283,9 @@ def warn_cxx98_compat_unicode_literal : Warning<
 def warn_cxx14_compat_u8_character_literal : Warning<
   "unicode literals are incompatible with C++ standards before C++17">,
   InGroup<CXXPre17Compat>, DefaultIgnore;
+def warn_c17_compat_u8_character_literal : Warning<
+  "unicode literals are incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def warn_cxx11_compat_user_defined_literal : Warning<
   "identifier after literal will be treated as a user-defined literal suffix "
   "in C++11">, InGroup<CXX11Compat>, DefaultIgnore;
@@ -505,6 +508,8 @@ def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 
 def ext_pp_opencl_variadic_macros : Extension<
   "variadic macros are a Clang extension in OpenCL">;
+def err_opencl_logical_exclusive_or : Error<
+  "^^ is a reserved operator in OpenCL">;
 
 def ext_pp_gnu_line_directive : Extension<
   "this style of line directive is a GNU extension">,

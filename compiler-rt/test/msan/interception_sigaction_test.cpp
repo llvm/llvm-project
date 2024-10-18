@@ -1,5 +1,5 @@
 // RUN: %clangxx_msan -O0 -g %s -o %t
-// RUN: MSAN_OPTIONS=handle_segv=2 %t 2>&1 | FileCheck %s
+// RUN: env MSAN_OPTIONS=handle_segv=2 %t 2>&1 | FileCheck %s
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>

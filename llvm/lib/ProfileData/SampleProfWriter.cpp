@@ -624,6 +624,9 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     LineCount++;
   }
 
+  if (Indent == 0 && MarkFlatProfiles && S.getCallsiteSamples().size() == 0)
+    OS << " !Flat\n";
+
   return sampleprof_error::success;
 }
 

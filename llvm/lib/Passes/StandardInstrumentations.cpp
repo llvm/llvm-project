@@ -14,7 +14,6 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
-#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -23,7 +22,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineVerifier.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -44,6 +42,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -236,12 +235,12 @@ void printIR(raw_ostream &OS, const MachineFunction *MF) {
   MF->print(OS);
 }
 
-std::string getIRName(Any IR, bool demangled = false) {
+std::string getIRName(Any IR) {
   if (unwrapIR<Module>(IR))
     return "[module]";
 
   if (const auto *F = unwrapIR<Function>(IR))
-    return demangled ? demangle(F->getName()) : F->getName().str();
+    return F->getName().str();
 
   if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
     return C->getName();
@@ -251,7 +250,7 @@ std::string getIRName(Any IR, bool demangled = false) {
            L->getHeader()->getParent()->getName().str();
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
-    return demangled ? demangle(MF->getName()) : MF->getName().str();
+    return MF->getName().str();
 
   llvm_unreachable("Unknown wrapped IR type");
 }
@@ -752,29 +751,29 @@ PrintIRInstrumentation::~PrintIRInstrumentation() {
 static SmallString<32> getIRFileDisplayName(Any IR) {
   SmallString<32> Result;
   raw_svector_ostream ResultStream(Result);
-  const Module *M = unwrapModule(IR);
-  stable_hash NameHash = stable_hash_combine_string(M->getName());
-  unsigned int MaxHashWidth = sizeof(stable_hash) * 8 / 4;
+  const Module *M = unwrapModule(IR, /*Force=*/true);
+  assert(M && "should have unwrapped module");
+  uint64_t NameHash = xxh3_64bits(M->getName());
+  unsigned MaxHashWidth = sizeof(uint64_t) * 2;
   write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);
   if (unwrapIR<Module>(IR)) {
     ResultStream << "-module";
   } else if (const auto *F = unwrapIR<Function>(IR)) {
     ResultStream << "-function-";
-    stable_hash FunctionNameHash = stable_hash_combine_string(F->getName());
+    auto FunctionNameHash = xxh3_64bits(F->getName());
     write_hex(ResultStream, FunctionNameHash, HexPrintStyle::Lower,
               MaxHashWidth);
   } else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
     ResultStream << "-scc-";
-    stable_hash SCCNameHash = stable_hash_combine_string(C->getName());
+    auto SCCNameHash = xxh3_64bits(C->getName());
     write_hex(ResultStream, SCCNameHash, HexPrintStyle::Lower, MaxHashWidth);
   } else if (const auto *L = unwrapIR<Loop>(IR)) {
     ResultStream << "-loop-";
-    stable_hash LoopNameHash = stable_hash_combine_string(L->getName());
+    auto LoopNameHash = xxh3_64bits(L->getName());
     write_hex(ResultStream, LoopNameHash, HexPrintStyle::Lower, MaxHashWidth);
   } else if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
     ResultStream << "-machine-function-";
-    stable_hash MachineFunctionNameHash =
-        stable_hash_combine_string(MF->getName());
+    auto MachineFunctionNameHash = xxh3_64bits(MF->getName());
     write_hex(ResultStream, MachineFunctionNameHash, HexPrintStyle::Lower,
               MaxHashWidth);
   } else {
@@ -1359,7 +1358,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
   bool Registered = false;
   PIC.registerBeforeNonSkippedPassCallback([this, &MAM, Registered](
                                                StringRef P, Any IR) mutable {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(&PassStack.emplace_back(P));
 #endif
     (void)this;
@@ -1388,7 +1387,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassInvalidatedCallback(
       [this](StringRef P, const PreservedAnalyses &PassPA) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
         assert(PassStack.pop_back_val() == P &&
                "Before and After callbacks must correspond");
 #endif
@@ -1397,7 +1396,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassCallback([this, &MAM](StringRef P, Any IR,
                                              const PreservedAnalyses &PassPA) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(PassStack.pop_back_val() == P &&
            "Before and After callbacks must correspond");
 #endif
@@ -1589,7 +1588,7 @@ void TimeProfilingPassesHandler::registerCallbacks(
 }
 
 void TimeProfilingPassesHandler::runBeforePass(StringRef PassID, Any IR) {
-  timeTraceProfilerBegin(PassID, getIRName(IR, true));
+  timeTraceProfilerBegin(PassID, getIRName(IR));
 }
 
 void TimeProfilingPassesHandler::runAfterPass() { timeTraceProfilerEnd(); }
@@ -2041,13 +2040,14 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
     StringRef Colour = E.second;
 
     // Look for an edge from Source to Sink
-    if (EdgeLabels.count(SourceSink) == 0)
-      EdgeLabels.insert({SourceSink, colourize(Value.str(), Colour)});
+    auto [It, Inserted] = EdgeLabels.try_emplace(SourceSink);
+    if (Inserted)
+      It->getValue() = colourize(Value.str(), Colour);
     else {
-      StringRef V = EdgeLabels.find(SourceSink)->getValue();
+      StringRef V = It->getValue();
       std::string NV = colourize(V.str() + " " + Value.str(), Colour);
       Colour = CommonColour;
-      EdgeLabels[SourceSink] = NV;
+      It->getValue() = NV;
     }
     SourceNode.addEdge(SinkNode, Value, Colour);
   }

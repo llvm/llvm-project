@@ -1,6 +1,23 @@
 // RUN: mlir-opt -split-input-file -convert-arith-to-spirv -verify-diagnostics %s
 
 ///===----------------------------------------------------------------------===//
+// Cast ops
+//===----------------------------------------------------------------------===//
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Float16, Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @experimental_constrained_fptrunc(%arg0 : f32) {
+  // expected-error@+1 {{failed to legalize operation 'arith.truncf'}}
+  %3 = arith.truncf %arg0 to_nearest_away : f32 to f16
+  return
+}
+
+} // end module
+
+///===----------------------------------------------------------------------===//
 // Binary ops
 //===----------------------------------------------------------------------===//
 

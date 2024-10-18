@@ -128,9 +128,12 @@ public:
                                 const char *Suffix) const = 0;
   virtual const char *getProfileRTLibName() const = 0;
 
+  StringRef getSDKLibraryRootDir() const { return SDKLibraryRootDir; }
+
 private:
-  // We compute the SDK root dir in the ctor, and use it later.
-  std::string SDKRootDir;
+  // We compute the SDK locations in the ctor, and use them later.
+  std::string SDKHeaderRootDir;
+  std::string SDKLibraryRootDir;
 };
 
 // PS4-specific Toolchain class.
@@ -179,7 +182,7 @@ public:
                         llvm::opt::ArgStringList &CmdArgs, const char *Prefix,
                         const char *Suffix) const override;
   const char *getProfileRTLibName() const override {
-    return "libclang_rt.profile-x86_64_nosubmission.a";
+    return "libclang_rt.profile_nosubmission.a";
   }
 
 protected:

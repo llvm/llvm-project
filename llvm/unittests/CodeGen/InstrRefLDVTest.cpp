@@ -94,7 +94,7 @@ public:
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
     MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
-                                           STI, FunctionNum, *MMI);
+                                           STI, MMI->getContext(), FunctionNum);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.
@@ -102,8 +102,7 @@ public:
     OurFile = DIB.createFile("xyzzy.c", "/cave");
     OurCU =
         DIB.createCompileUnit(dwarf::DW_LANG_C99, OurFile, "nou", false, "", 0);
-    auto OurSubT =
-        DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+    auto OurSubT = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     OurFunc =
         DIB.createFunction(OurCU, "bees", "", OurFile, 1, OurSubT, 1,
                            DINode::FlagZero, DISubprogram::SPFlagDefinition);

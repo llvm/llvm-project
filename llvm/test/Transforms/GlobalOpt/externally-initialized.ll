@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -passes=globalopt | FileCheck %s
+; RUN: opt < %s -passes=early-cse | opt -S -passes=globalopt | FileCheck %s --check-prefix=CHECK-CONSTANT
 
 ; This global is externally_initialized, which may modify the value between
 ; it's static initializer and any code in this module being run, so the only
@@ -12,6 +13,10 @@
 ; CHECK: @b = internal unnamed_addr externally_initialized global i32 undef
 @b = internal externally_initialized global i32 undef
 
+; This constant global is externally_initialized, which may modify the value
+; between its static const initializer and any code in this module being run, so
+; the read from it cannot be const propagated
+@c = internal externally_initialized constant i32 42
 
 define void @foo() {
 ; CHECK-LABEL: foo
@@ -33,5 +38,13 @@ define i32 @baz() {
 entry:
 ; CHECK: %val = load i32, ptr @b
   %val = load i32, ptr @b
+  ret i32 %val
+}
+
+define i32 @bam() {
+; CHECK-CONSTANT-LABEL: bam
+entry:
+; CHECK-CONSTANT: %val = load i32, ptr @c
+  %val = load i32, ptr @c
   ret i32 %val
 }

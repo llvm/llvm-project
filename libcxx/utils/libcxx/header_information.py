@@ -10,8 +10,8 @@ import os, pathlib
 
 header_restrictions = {
     # headers with #error directives
-    "atomic": "!defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)",
-    "stdatomic.h": "!defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)",
+    "atomic": "_LIBCPP_HAS_ATOMIC_HEADER",
+    "stdatomic.h": "_LIBCPP_HAS_ATOMIC_HEADER",
 
     # headers with #error directives
     "ios": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
@@ -30,22 +30,6 @@ header_restrictions = {
     "streambuf": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "strstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-
-    # headers with #error directives
-    "barrier": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "future": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "latch": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "semaphore": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "shared_mutex": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "stop_token": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "thread": "!defined(_LIBCPP_HAS_NO_THREADS)",
-
-    # headers with #error directives
-    "wchar.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    "wctype.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    # transitive includers of the above headers
-    "cwchar": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    "cwctype": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
 }
 
 lit_header_restrictions = {

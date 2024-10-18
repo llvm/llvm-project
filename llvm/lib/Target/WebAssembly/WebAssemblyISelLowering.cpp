@@ -70,7 +70,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     addRegisterClass(MVT::v8f16, &WebAssembly::V128RegClass);
   }
   if (Subtarget->hasReferenceTypes()) {
@@ -95,6 +95,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::LOAD, T, Custom);
       setOperationAction(ISD::STORE, T, Custom);
     }
+  }
+  if (Subtarget->hasFP16()) {
+    setOperationAction(ISD::LOAD, MVT::v8f16, Custom);
+    setOperationAction(ISD::STORE, MVT::v8f16, Custom);
   }
   if (Subtarget->hasReferenceTypes()) {
     // We need custom load and store lowering for both externref, funcref and
@@ -146,7 +150,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }
@@ -194,8 +198,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     setTargetDAGCombine(ISD::TRUNCATE);
 
-    // Support saturating add for i8x16 and i16x8
-    for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
+    // Support saturating add/sub for i8x16 and i16x8
+    for (auto Op : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
       for (auto T : {MVT::v16i8, MVT::v8i16})
         setOperationAction(Op, T, Legal);
 
@@ -207,6 +211,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
                    MVT::v2f64})
       setOperationAction(ISD::BUILD_VECTOR, T, Custom);
+
+    if (Subtarget->hasFP16())
+      setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
 
     // We have custom shuffle lowering to expose the shuffle mask
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
@@ -275,8 +282,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Expand);
 
     // But saturating fp_to_int converstions are
-    for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT})
+    for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}) {
       setOperationAction(Op, MVT::v4i32, Custom);
+      if (Subtarget->hasFP16()) {
+        setOperationAction(Op, MVT::v8i16, Custom);
+      }
+    }
 
     // Support vector extending
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
@@ -832,30 +843,6 @@ bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
   return isa<Function>(GV) ? false : TargetLowering::isOffsetFoldingLegal(GA);
 }
 
-bool WebAssemblyTargetLowering::shouldSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
-  using namespace llvm::PatternMatch;
-
-  if (!I->getType()->isVectorTy() || !I->isShift())
-    return false;
-
-  Value *V = I->getOperand(1);
-  // We dont need to sink constant splat.
-  if (dyn_cast<Constant>(V))
-    return false;
-
-  if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
-                         m_Value(), m_ZeroMask()))) {
-    // Sink insert
-    Ops.push_back(&cast<Instruction>(V)->getOperandUse(0));
-    // Sink shuffle
-    Ops.push_back(&I->getOperandUse(1));
-    return true;
-  }
-
-  return false;
-}
-
 EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
                                                   LLVMContext &C,
                                                   EVT VT) const {
@@ -1189,8 +1176,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
-    int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
-                                                 Layout.getStackAlignment(),
+    MaybeAlign StackAlign = Layout.getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes, *StackAlign,
                                                  /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;
@@ -2050,6 +2038,18 @@ static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
 
 SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                      SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  if (VT == MVT::v8f16) {
+    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scaler
+    // FP16 type, so cast them to I16s.
+    MVT IVT = VT.changeVectorElementType(MVT::i16);
+    SmallVector<SDValue, 8> NewOps;
+    for (unsigned I = 0, E = Op.getNumOperands(); I < E; ++I)
+      NewOps.push_back(DAG.getBitcast(MVT::i16, Op.getOperand(I)));
+    SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(), IVT, NewOps);
+    return DAG.getBitcast(VT, Res);
+  }
+
   if (auto ConvertLow = LowerConvertLow(Op, DAG))
     return ConvertLow;
 
@@ -2275,8 +2275,15 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return IsConstant(Lane);
     };
   } else {
-    // Use a splat (which might be selected as a load splat)
-    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+    size_t DestLaneSize = VecT.getVectorElementType().getFixedSizeInBits();
+    if (NumSplatLanes == 1 && Op->getOperand(0) == SplatValue &&
+        (DestLaneSize == 32 || DestLaneSize == 64)) {
+      // Could be selected to load_zero.
+      Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecT, SplatValue);
+    } else {
+      // Use a splat (which might be selected as a load splat)
+      Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+    }
     IsLaneConstructed = [&SplatValue](size_t _, const SDValue &Lane) {
       return Lane == SplatValue;
     };
@@ -2465,6 +2472,9 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     return Op;
 
   if (ResT == MVT::v4i32 && SatVT == MVT::i32)
+    return Op;
+
+  if (ResT == MVT::v8i16 && SatVT == MVT::i16)
     return Op;
 
   return SDValue();

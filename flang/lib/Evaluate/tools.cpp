@@ -1011,6 +1011,9 @@ struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
   }
   // Overload some of the operator() to filter out the symbols that are not
   // of interest for CUDA data transfer logic.
+  semantics::UnorderedSymbolSet operator()(const DescriptorInquiry &) const {
+    return {};
+  }
   semantics::UnorderedSymbolSet operator()(const Subscript &) const {
     return {};
   }
@@ -1300,12 +1303,12 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
     const Expr<SomeType> &expr, const DynamicType &type) {
   if (std::optional<std::string> chValue{GetScalarConstantValue<Ascii>(expr)}) {
     // Pad on the right with spaces when short, truncate the right if long.
-    // TODO: big-endian targets
     auto bytes{static_cast<std::size_t>(
         ToInt64(type.MeasureSizeInBytes(context, false)).value())};
     BOZLiteralConstant bits{0};
     for (std::size_t j{0}; j < bytes; ++j) {
-      char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
+      auto idx{isHostLittleEndian ? j : bytes - j - 1};
+      char ch{idx >= chValue->size() ? ' ' : chValue->at(idx)};
       BOZLiteralConstant chBOZ{static_cast<unsigned char>(ch)};
       bits = bits.IOR(chBOZ.SHIFTL(8 * j));
     }
@@ -1317,8 +1320,10 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
 
 // Extracts a whole symbol being used as a bound of a dummy argument,
 // possibly wrapped with parentheses or MAX(0, ...).
+// Works with any integer expression.
+template <typename T> const Symbol *GetBoundSymbol(const Expr<T> &);
 template <int KIND>
-static const Symbol *GetBoundSymbol(
+const Symbol *GetBoundSymbol(
     const Expr<Type<TypeCategory::Integer, KIND>> &expr) {
   using T = Type<TypeCategory::Integer, KIND>;
   return common::visit(
@@ -1355,9 +1360,15 @@ static const Symbol *GetBoundSymbol(
       },
       expr.u);
 }
+template <>
+const Symbol *GetBoundSymbol<SomeInteger>(const Expr<SomeInteger> &expr) {
+  return common::visit(
+      [](const auto &kindExpr) { return GetBoundSymbol(kindExpr); }, expr.u);
+}
 
+template <typename T>
 std::optional<bool> AreEquivalentInInterface(
-    const Expr<SubscriptInteger> &x, const Expr<SubscriptInteger> &y) {
+    const Expr<T> &x, const Expr<T> &y) {
   auto xVal{ToInt64(x)};
   auto yVal{ToInt64(y)};
   if (xVal && yVal) {
@@ -1391,6 +1402,10 @@ std::optional<bool> AreEquivalentInInterface(
     return std::nullopt; // not sure
   }
 }
+template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
+    const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
+template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
+    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 
 bool CheckForCoindexedObject(parser::ContextualMessages &messages,
     const std::optional<ActualArgument> &arg, const std::string &procName,
@@ -1696,7 +1711,8 @@ bool IsSaved(const Symbol &original) {
       (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
-              symbol.size() > 32))) {
+              symbol.size() > 32)) &&
+      Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol)) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and

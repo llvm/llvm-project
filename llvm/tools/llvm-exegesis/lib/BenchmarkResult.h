@@ -53,7 +53,7 @@ struct MemoryValue {
 
 struct MemoryMapping {
   // The address to place the mapping at.
-  intptr_t Address;
+  uintptr_t Address;
   // The name of the value that should be mapped.
   std::string MemoryValueName;
 };
@@ -73,7 +73,7 @@ struct BenchmarkKey {
   std::string Config;
   // The address that the snippet should be loaded in at if the execution mode
   // being used supports it.
-  intptr_t SnippetAddress = 0;
+  uintptr_t SnippetAddress = 0;
   // The register that should be used to hold the loop counter.
   unsigned LoopRegister;
 };

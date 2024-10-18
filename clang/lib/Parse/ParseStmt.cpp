@@ -24,6 +24,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
@@ -228,7 +229,7 @@ Retry:
         return StmtError();
       }
 
-      // If the identifier was typo-corrected, try again.
+      // If the identifier was annotated, try again.
       if (Tok.isNot(tok::identifier))
         goto Retry;
     }
@@ -297,6 +298,15 @@ Retry:
     GNUAttributeLoc = Tok.getLocation();
     ParseGNUAttributes(GNUAttrs);
     goto Retry;
+  }
+
+  case tok::kw_template: {
+    SourceLocation DeclEnd;
+    ParsedAttributes Attrs(AttrFactory);
+    ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
+                                             Attrs,
+                                             getAccessSpecifierIfPresent());
+    return StmtError();
   }
 
   case tok::kw_case:                // C99 6.8.1: labeled-statement
@@ -1508,10 +1518,13 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   SourceLocation ConstevalLoc;
 
   if (Tok.is(tok::kw_constexpr)) {
-    Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
-                                        : diag::ext_constexpr_if);
-    IsConstexpr = true;
-    ConsumeToken();
+    // C23 supports constexpr keyword, but only for object definitions.
+    if (getLangOpts().CPlusPlus) {
+      Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
+                                          : diag::ext_constexpr_if);
+      IsConstexpr = true;
+      ConsumeToken();
+    }
   } else {
     if (Tok.is(tok::exclaim)) {
       NotLocation = ConsumeToken();
@@ -1845,6 +1858,11 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
                                 Sema::ConditionKind::Boolean, LParen, RParen))
     return StmtError();
 
+  // OpenACC Restricts a while-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
+  getActions().OpenACC().ActOnWhileStmt(WhileLoc);
+
   // C99 6.8.5p5 - In C99, the body of the while statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -1892,6 +1910,11 @@ StmtResult Parser::ParseDoStatement() {
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
 
   ParseScope DoScope(this, ScopeFlags);
+
+  // OpenACC Restricts a do-while-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
+  getActions().OpenACC().ActOnDoStmt(DoLoc);
 
   // C99 6.8.5p5 - In C99, the body of the do statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause. We only do this
@@ -2317,6 +2340,11 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     }
   }
 
+  // OpenACC Restricts a for-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
+  getActions().OpenACC().ActOnForStmtBegin(ForLoc);
+
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -2348,6 +2376,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
   // Pop the body scope if needed.
   InnerScope.Exit();
+
+  getActions().OpenACC().ActOnForStmtEnd(ForLoc, Body);
 
   // Leave the for-scope.
   ForScope.Exit();

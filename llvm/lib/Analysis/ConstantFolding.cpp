@@ -82,7 +82,7 @@ static Constant *foldConstVectorToAPInt(APInt &Result, Type *DestTy,
     else
       Element = C->getAggregateElement(i);
 
-    if (Element && isa<UndefValue>(Element)) {
+    if (isa_and_nonnull<UndefValue>(Element)) {
       Result <<= BitShift;
       continue;
     }
@@ -145,7 +145,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If this is a scalar -> vector cast, convert the input into a <1 x scalar>
   // vector so the code below can handle it uniformly.
-  if (isa<ConstantFP>(C) || isa<ConstantInt>(C)) {
+  if (!isa<VectorType>(C->getType()) &&
+      (isa<ConstantFP>(C) || isa<ConstantInt>(C))) {
     Constant *Ops = C; // don't take the address of C!
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }
@@ -218,7 +219,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize*(Ratio-1);
       for (unsigned j = 0; j != Ratio; ++j) {
         Constant *Src = C->getAggregateElement(SrcElt++);
-        if (Src && isa<UndefValue>(Src))
+        if (isa_and_nonnull<UndefValue>(Src))
           Src = Constant::getNullValue(
               cast<VectorType>(C->getType())->getElementType());
         else
@@ -564,16 +565,14 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     Type *MapTy = Type::getIntNTy(C->getContext(),
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
     if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, Offset, DL)) {
-      if (Res->isNullValue() && !LoadTy->isX86_MMXTy() &&
-          !LoadTy->isX86_AMXTy())
+      if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
         // Materializing a zero can be done trivially without a bitcast
         return Constant::getNullValue(LoadTy);
       Type *CastTy = LoadTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(LoadTy) : LoadTy;
       Res = FoldBitCast(Res, CastTy, DL);
       if (LoadTy->isPtrOrPtrVectorTy()) {
         // For vector of pointer, we needed to first convert to a vector of integer, then do vector inttoptr
-        if (Res->isNullValue() && !LoadTy->isX86_MMXTy() &&
-            !LoadTy->isX86_AMXTy())
+        if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
           return Constant::getNullValue(LoadTy);
         if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
           // Be careful not to replace a load of an addrspace value with an inttoptr here
@@ -764,7 +763,7 @@ Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
   // uniform.
   if (!DL.typeSizeEqualsStoreSize(C->getType()))
     return nullptr;
-  if (C->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy())
+  if (C->isNullValue() && !Ty->isX86_AMXTy())
     return Constant::getNullValue(Ty);
   if (C->isAllOnesValue() &&
       (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy()))
@@ -889,7 +888,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   APInt Offset = APInt(
       BitWidth,
       DL.getIndexedOffsetInType(
-          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)));
+          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)),
+      /*isSigned=*/true, /*implicitTrunc=*/true);
 
   std::optional<ConstantRange> InRange = GEP->getInRange();
   if (InRange)
@@ -1678,9 +1678,10 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
   case 'l':
-    return Name == "log" || Name == "logf" || Name == "log2" ||
-           Name == "log2f" || Name == "log10" || Name == "log10f" ||
-           Name == "logl";
+    return Name == "log" || Name == "logf" || Name == "logl" ||
+           Name == "log2" || Name == "log2f" || Name == "log10" ||
+           Name == "log10f" || Name == "logb" || Name == "logbf" ||
+           Name == "log1p" || Name == "log1pf";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -1784,8 +1785,8 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
 }
 
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
-Constant *ConstantFoldFP128(long double (*NativeFP)(long double),
-                            const APFloat &V, Type *Ty) {
+Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
+                            Type *Ty) {
   llvm_fenv_clearexcept();
   float128 Result = NativeFP(V.convertToQuad());
   if (llvm_fenv_testexcept()) {
@@ -2124,7 +2125,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       }
 
       LibFunc Fp128Func = NotLibFunc;
-      if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
+      if (TLI && TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
           Fp128Func == LibFunc_logl)
         return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
     }
@@ -2389,6 +2390,16 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
+      break;
+    case LibFunc_logb:
+    case LibFunc_logbf:
+      if (!APF.isZero() && TLI->has(Func))
+        return ConstantFoldFP(logb, APF, Ty);
+      break;
+    case LibFunc_log1p:
+    case LibFunc_log1pf:
+      if (APF > APFloat::getOne(APF.getSemantics(), true) && TLI->has(Func))
+        return ConstantFoldFP(log1p, APF, Ty);
       break;
     case LibFunc_logl:
       return nullptr;
@@ -3402,8 +3413,9 @@ ConstantFoldScalarFrexpCall(Constant *Op, Type *IntTy) {
 
   // The exponent is an "unspecified value" for inf/nan. We use zero to avoid
   // using undef.
-  Constant *Result1 = FrexpMant.isFinite() ? ConstantInt::get(IntTy, FrexpExp)
-                                           : ConstantInt::getNullValue(IntTy);
+  Constant *Result1 = FrexpMant.isFinite()
+                          ? ConstantInt::getSigned(IntTy, FrexpExp)
+                          : ConstantInt::getNullValue(IntTy);
   return {Result0, Result1};
 }
 
@@ -3583,8 +3595,8 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_acosl:
       case LibFunc_acos:
       case LibFunc_acosf:
-        return !(Op < APFloat(Op.getSemantics(), "-1") ||
-                 Op > APFloat(Op.getSemantics(), "1"));
+        return !(Op < APFloat::getOne(Op.getSemantics(), true) ||
+                 Op > APFloat::getOne(Op.getSemantics()));
 
       case LibFunc_sinh:
       case LibFunc_cosh:

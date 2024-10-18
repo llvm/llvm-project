@@ -1137,7 +1137,7 @@ namespace llvm {
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
     /// Override to support customized stack guard loading.
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     void insertSSPDeclarations(Module &M) const override;
     Value *getSDagStackGuard(const Module &M) const override;
 
@@ -1296,6 +1296,7 @@ namespace llvm {
                            const SDLoc &dl) const;
     SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSHL_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSRL_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const;

@@ -705,7 +705,6 @@ TEST(VPBasicBlockTest, print) {
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
     I3->print(OS, "", SlotTracker);
-    OS.flush();
     EXPECT_EQ("EMIT br <badref>, <badref>", I3Dump);
   }
 
@@ -769,7 +768,6 @@ No successors
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
-    OS.flush();
     EXPECT_EQ("EMIT br vp<%2>, vp<%3>", I3Dump);
   }
 
@@ -777,7 +775,6 @@ No successors
     std::string I4Dump;
     raw_string_ostream OS(I4Dump);
     OS << *I4;
-    OS.flush();
     EXPECT_EQ("EMIT vp<%5> = mul vp<%3>, vp<%2>", I4Dump);
   }
 }
@@ -904,7 +901,7 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   Args.push_back(&Op1);
   Args.push_back(&Op2);
   Args.push_back(&CalledFn);
-  VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
+  VPWidenCallRecipe Recipe(Call, Fn, Args);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1140,7 +1137,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
                              &VecOp, false);
     VPValue EVL;
-    VPReductionEVLRecipe EVLRecipe(&Recipe, &EVL, &CondOp);
+    VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
     EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
     EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
@@ -1185,7 +1182,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(&Op1);
     Args.push_back(&Op2);
     Args.push_back(&CalledFn);
-    VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
+    VPWidenCallRecipe Recipe(Call, Fn, Args);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1198,7 +1195,8 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     // Test for a call to a function without side-effects.
     LLVMContext C;
     Module M("", C);
-    Function *TheFn = Intrinsic::getDeclaration(&M, Intrinsic::thread_pointer);
+    Function *TheFn =
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::thread_pointer);
 
     auto *Call = CallInst::Create(TheFn->getFunctionType(), TheFn);
     VPValue Op1;
@@ -1208,7 +1206,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(&Op1);
     Args.push_back(&Op2);
     Args.push_back(&CalledFn);
-    VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
+    VPWidenCallRecipe Recipe(Call, TheFn, Args);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1233,9 +1231,9 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue Op2;
     VPInstruction VPInst(Instruction::Add, {&Op1, &Op2});
     VPRecipeBase &Recipe = VPInst;
-    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
-    EXPECT_TRUE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
   }
   {
@@ -1277,6 +1275,21 @@ TEST(VPRecipeTest, dumpRecipeInPlan) {
     EXPECT_EXIT(
         {
           VPV->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
+    VPDef *Def = WidenR;
+    EXPECT_EXIT(
+        {
+          Def->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
+    EXPECT_EXIT(
+        {
+          WidenR->dump();
           exit(0);
         },
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
@@ -1495,7 +1508,7 @@ TEST(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
                            &VecOp, false);
   VPValue EVL;
-  VPReductionEVLRecipe EVLRecipe(&Recipe, &EVL, &CondOp);
+  VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
   EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
   VPRecipeBase *BaseR = &EVLRecipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));

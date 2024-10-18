@@ -31,12 +31,8 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
-option(LIBUNWIND_BUILD_32_BITS "Build 32 bit multilib libunwind. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})
-if (LIBUNWIND_BUILD_32_BITS)
-  message(FATAL_ERROR "LIBUNWIND_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
-endif()
-
 option(LIBUNWIND_ENABLE_CET "Build libunwind with CET enabled." OFF)
+option(LIBUNWIND_ENABLE_GCS "Build libunwind with GCS enabled." OFF)
 option(LIBUNWIND_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBUNWIND_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBUNWIND_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
@@ -65,8 +61,18 @@ cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
 
+set(LIBUNWIND_LIBRARY_VERSION "1.0" CACHE STRING
+  "Version of libunwind. This will be reflected in the name of the shared library produced.
+   For example, -DLIBUNWIND_LIBRARY_VERSION=x.y will result in the library being named
+   libunwind.x.y.dylib, along with the usual symlinks pointing to that. On Apple platforms,
+   this also controls the linker's 'current_version' property.")
+
 if(MINGW)
-  set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-mingw.cfg.in")
+  if (LIBUNWIND_ENABLE_SHARED)
+    set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-shared-mingw.cfg.in")
+  else()
+    set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-static-mingw.cfg.in")
+  endif()
 elseif (LIBUNWIND_ENABLE_SHARED)
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-shared.cfg.in")
 else()
@@ -156,8 +162,7 @@ set(LIBUNWIND_C_FLAGS "")
 set(LIBUNWIND_CXX_FLAGS "")
 set(LIBUNWIND_COMPILE_FLAGS "")
 set(LIBUNWIND_LINK_FLAGS "")
-set(LIBUNWIND_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+set(LIBUNWIND_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING "See documentation for LIBCXX_ADDITIONAL_COMPILE_FLAGS")
 set(LIBUNWIND_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libunwind is linked to which can be provided in cache")
 
@@ -185,6 +190,13 @@ if (LIBUNWIND_ENABLE_CET)
   endif()
   if (NOT CXX_SUPPORTS_MSHSTK_FLAG)
     message(SEND_ERROR "Compiler doesn't support CET -mshstk option!")
+  endif()
+endif()
+
+if (LIBUNWIND_ENABLE_GCS)
+  add_compile_flags_if_supported(-mbranch-protection=standard)
+  if (NOT CXX_SUPPORTS_MBRANCH_PROTECTION_EQ_STANDARD_FLAG)
+    message(SEND_ERROR "Compiler doesn't support GCS -mbranch-protection option!")
   endif()
 endif()
 

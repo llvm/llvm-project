@@ -1050,11 +1050,6 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
         continue; // Otherwise, storing through it, or storing into GV... fine.
       }
 
-      if (auto *BCI = dyn_cast<BitCastInst>(U)) {
-        Worklist.push_back(BCI);
-        continue;
-      }
-
       if (auto *GEPI = dyn_cast<GetElementPtrInst>(U)) {
         Worklist.push_back(GEPI);
         continue;
@@ -1338,6 +1333,7 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
+  ReplaceableMetadataImpl::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
   return true;

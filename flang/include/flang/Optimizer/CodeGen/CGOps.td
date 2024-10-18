@@ -48,6 +48,9 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
        - substring: A substring operator (offset, length) for CHARACTER.
        - LEN type parameters: A vector of runtime LEN type parameters that
          describe an correspond to the elemental derived type.
+       - sourceBox: A box to read information from such as CFI type,
+         type descriptor or element size to populate the new descriptor.
+       - allocator_idx: specify special allocator to use.
 
     The memref and shape arguments are mandatory. The rest are optional.
   }];
@@ -60,7 +63,8 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     Variadic<AnyCoordinateType>:$subcomponent,
     Variadic<AnyIntegerType>:$substr,
     Variadic<AnyIntegerType>:$lenParams,
-    Optional<fir_ClassType>:$sourceBox
+    Optional<fir_ClassType>:$sourceBox,
+    OptionalAttr<I32Attr>:$allocator_idx
   );
   let results = (outs BoxOrClassType);
 
@@ -78,16 +82,24 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     unsigned getOutRank();
 
     // The shape operands are mandatory and always start at 1.
-    unsigned shapeOffset() { return 1; }
-    unsigned shiftOffset() { return shapeOffset() + getShape().size(); }
-    unsigned sliceOffset() { return shiftOffset() + getShift().size(); }
-    unsigned subcomponentOffset() { return sliceOffset() + getSlice().size(); }
-    unsigned substrOffset() {
-      return subcomponentOffset() + getSubcomponent().size();
+    unsigned getShapeOperandIndex() { return 1; }
+    unsigned getShiftOperandIndex() {
+      return getShapeOperandIndex() + getShape().size();
     }
-    unsigned lenParamOffset() { return substrOffset() + getSubstr().size(); }
-    unsigned getSourceBoxOffset() {
-      return lenParamOffset() + getLenParams().size();
+    unsigned getSliceOperandIndex() {
+      return getShiftOperandIndex() + getShift().size();
+    }
+    unsigned getSubcomponentOperandIndex() {
+      return getSliceOperandIndex() + getSlice().size();
+    }
+    unsigned getSubstrOperandIndex() {
+      return getSubcomponentOperandIndex() + getSubcomponent().size();
+    }
+    unsigned getLenParamOperandIndex() {
+      return getSubstrOperandIndex() + getSubstr().size();
+    }
+    unsigned getSourceBoxOperandIndex() {
+      return getLenParamOperandIndex() + getLenParams().size();
     }
   }];
 }
@@ -135,12 +147,18 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
     // The rank of the result box
     unsigned getOutRank();
 
-    unsigned shapeOffset() { return 1; }
-    unsigned shiftOffset() { return shapeOffset() + getShape().size(); }
-    unsigned sliceOffset() { return shiftOffset() + getShift().size(); }
-    unsigned subcomponentOffset() { return sliceOffset() + getSlice().size(); }
-    unsigned substrOffset() {
-      return subcomponentOffset() + getSubcomponent().size();
+    unsigned getShapeOperandIndex() { return 1; }
+    unsigned getShiftOperandIndex() {
+      return getShapeOperandIndex() + getShape().size();
+    }
+    unsigned getSliceOperandIndex() {
+      return getShiftOperandIndex() + getShift().size();
+    }
+    unsigned getSubcomponentOperandIndex() {
+      return getSliceOperandIndex() + getSlice().size();
+    }
+    unsigned getSubstrOperandIndex() {
+      return getSubcomponentOperandIndex() + getSubcomponent().size();
     }
   }];
 }
@@ -193,14 +211,22 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
     unsigned getRank();
 
     // Shape is optional, but if it exists, it will be at offset 1.
-    unsigned shapeOffset() { return 1; }
-    unsigned shiftOffset() { return shapeOffset() + getShape().size(); }
-    unsigned sliceOffset() { return shiftOffset() + getShift().size(); }
-    unsigned subcomponentOffset() { return sliceOffset() + getSlice().size(); }
-    unsigned indicesOffset() {
-      return subcomponentOffset() + getSubcomponent().size();
+    unsigned getShapeOperandIndex() { return 1; }
+    unsigned getShiftOperandIndex() {
+      return getShapeOperandIndex() + getShape().size();
     }
-    unsigned lenParamsOffset() { return indicesOffset() + getIndices().size(); }
+    unsigned getSliceOperandIndex() {
+      return getShiftOperandIndex() + getShift().size();
+    }
+    unsigned getSubcomponentOperandIndex() {
+      return getSliceOperandIndex() + getSlice().size();
+    }
+    unsigned getIndicesOperandIndex() {
+      return getSubcomponentOperandIndex() + getSubcomponent().size();
+    }
+    unsigned getLenParamsOperandIndex() {
+    return getIndicesOperandIndex() + getIndices().size();
+    }
   }];
 }
 
@@ -231,8 +257,10 @@ def fircg_XDeclareOp : fircg_Op<"ext_declare", [AttrSizedOperandSegments]> {
 
   let extraClassDeclaration = [{
     // Shape is optional, but if it exists, it will be at offset 1.
-    unsigned shapeOffset() { return 1; }
-    unsigned shiftOffset() { return shapeOffset() + getShape().size(); }
+    unsigned getShapeOperandIndex() { return 1; }
+    unsigned getShiftOperandIndex() {
+      return getShapeOperandIndex() + getShape().size();
+    }
   }];
 }
 

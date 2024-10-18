@@ -11,6 +11,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/os.h"
 
 #include <stddef.h> // For size_t
 #include <stdlib.h> // For malloc, free etc.
@@ -47,7 +48,15 @@ public:
 
   LIBC_INLINE static void *aligned_alloc(size_t s, std::align_val_t align,
                                          AllocChecker &ac) {
+#ifdef LIBC_TARGET_OS_IS_WINDOWS
+    // std::aligned_alloc is not available on Windows because std::free on
+    // Windows cannot deallocate any over-aligned memory. Microsoft provides an
+    // alternative for std::aligned_alloc named _aligned_malloc, but it must be
+    // paired with _aligned_free instead of std::free.
+    void *mem = ::_aligned_malloc(static_cast<size_t>(align), s);
+#else
     void *mem = ::aligned_alloc(static_cast<size_t>(align), s);
+#endif
     ac = (mem != nullptr);
     return mem;
   }

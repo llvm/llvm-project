@@ -2274,7 +2274,7 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
 
   // Normalize the mask so that the first non-negative index comes from
   // the first operand.
-  SmallVector<int,8> Mask(AM.begin(), AM.end());
+  SmallVector<int, 8> Mask(AM);
   unsigned F = llvm::find_if(AM, [](int M) { return M >= 0; }) - AM.data();
   if (F == AM.size())
     return DAG.getUNDEF(VecTy);
@@ -3859,15 +3859,13 @@ void HexagonTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 Value *HexagonTargetLowering::emitLoadLinked(IRBuilderBase &Builder,
                                              Type *ValueTy, Value *Addr,
                                              AtomicOrdering Ord) const {
-  BasicBlock *BB = Builder.GetInsertBlock();
-  Module *M = BB->getParent()->getParent();
   unsigned SZ = ValueTy->getPrimitiveSizeInBits();
   assert((SZ == 32 || SZ == 64) && "Only 32/64-bit atomic loads supported");
   Intrinsic::ID IntID = (SZ == 32) ? Intrinsic::hexagon_L2_loadw_locked
                                    : Intrinsic::hexagon_L4_loadd_locked;
-  Function *Fn = Intrinsic::getDeclaration(M, IntID);
 
-  Value *Call = Builder.CreateCall(Fn, Addr, "larx");
+  Value *Call =
+      Builder.CreateIntrinsic(IntID, {}, Addr, /*FMFSource=*/nullptr, "larx");
 
   return Builder.CreateBitCast(Call, ValueTy);
 }
@@ -3886,11 +3884,11 @@ Value *HexagonTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   assert((SZ == 32 || SZ == 64) && "Only 32/64-bit atomic stores supported");
   Intrinsic::ID IntID = (SZ == 32) ? Intrinsic::hexagon_S2_storew_locked
                                    : Intrinsic::hexagon_S4_stored_locked;
-  Function *Fn = Intrinsic::getDeclaration(M, IntID);
 
   Val = Builder.CreateBitCast(Val, CastTy);
 
-  Value *Call = Builder.CreateCall(Fn, {Addr, Val}, "stcx");
+  Value *Call = Builder.CreateIntrinsic(IntID, {}, {Addr, Val},
+                                        /*FMFSource=*/nullptr, "stcx");
   Value *Cmp = Builder.CreateICmpEQ(Call, Builder.getInt32(0), "");
   Value *Ext = Builder.CreateZExt(Cmp, Type::getInt32Ty(M->getContext()));
   return Ext;

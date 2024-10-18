@@ -76,13 +76,25 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
-  auto ShouldRemove = [&](bool IsHot) {
-    if (!RandomRate.getNumOccurrences())
-      return IsHot;
+  auto GetRng = [&]() -> RandomNumberGenerator & {
     if (!Rng)
       Rng = F.getParent()->createRNG(F.getName());
-    std::bernoulli_distribution D(RandomRate);
-    return !D(*Rng);
+    return *Rng;
+  };
+
+  auto ShouldRemoveHot = [&](const BasicBlock &BB) {
+    return HotPercentileCutoff.getNumOccurrences() && PSI &&
+           PSI->isHotCountNthPercentile(
+               HotPercentileCutoff, BFI.getBlockProfileCount(&BB).value_or(0));
+  };
+
+  auto ShouldRemoveRandom = [&]() {
+    return RandomRate.getNumOccurrences() &&
+           !std::bernoulli_distribution(RandomRate)(GetRng());
+  };
+
+  auto ShouldRemove = [&](const BasicBlock &BB) {
+    return ShouldRemoveRandom() || ShouldRemoveHot(BB);
   };
 
   for (BasicBlock &BB : F) {
@@ -96,13 +108,7 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
       case Intrinsic::allow_runtime_check: {
         ++NumChecksTotal;
 
-        bool IsHot = false;
-        if (PSI) {
-          uint64_t Count = BFI.getBlockProfileCount(&BB).value_or(0);
-          IsHot = PSI->isHotCountNthPercentile(HotPercentileCutoff, Count);
-        }
-
-        bool ToRemove = ShouldRemove(IsHot);
+        bool ToRemove = ShouldRemove(BB);
         ReplaceWithValue.push_back({
             II,
             ToRemove,

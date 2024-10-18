@@ -1560,3 +1560,142 @@ define i64 @orc_b_i64(i64 %a) {
   %2 = mul nuw i64 %1, 255
   ret i64 %2
 }
+
+define i64 @srai_slli(i16 signext %0) {
+; RV64I-LABEL: srai_slli:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 57
+; RV64I-NEXT:    srai a0, a0, 63
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: srai_slli:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    slli a0, a0, 57
+; RV64ZBB-NEXT:    srai a0, a0, 63
+; RV64ZBB-NEXT:    ret
+  %2 = shl i16 %0, 9
+  %sext = ashr i16 %2, 15
+  %3 = sext i16 %sext to i64
+  ret i64 %3
+}
+
+define i64 @srai_slli2(i16 signext %0) {
+; RV64I-LABEL: srai_slli2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 57
+; RV64I-NEXT:    srai a0, a0, 62
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: srai_slli2:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    slli a0, a0, 57
+; RV64ZBB-NEXT:    srai a0, a0, 62
+; RV64ZBB-NEXT:    ret
+  %2 = shl i16 %0, 9
+  %sext = ashr i16 %2, 14
+  %3 = sext i16 %sext to i64
+  ret i64 %3
+}
+
+define signext i32 @func0000000000000001(i32 signext %0, i8 signext %1) #0 {
+; RV64I-LABEL: func0000000000000001:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a1, a1, 59
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: func0000000000000001:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    slli a1, a1, 59
+; RV64ZBB-NEXT:    srai a1, a1, 63
+; RV64ZBB-NEXT:    addw a0, a1, a0
+; RV64ZBB-NEXT:    ret
+entry:
+  %2 = shl i8 %1, 3
+  %3 = ashr i8 %2, 7
+  %4 = sext i8 %3 to i32
+  %5 = add nsw i32 %4, %0
+  ret i32 %5
+}
+
+define i1 @ctpop32_eq_one_nonzero(i32 %x) {
+; RV64I-LABEL: ctpop32_eq_one_nonzero:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a1, a0, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: ctpop32_eq_one_nonzero:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    cpopw a0, a0
+; RV64ZBB-NEXT:    sltiu a0, a0, 2
+; RV64ZBB-NEXT:    ret
+entry:
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %popcnt, 1
+  ret i1 %cmp
+}
+
+define i1 @ctpop32_ne_one_nonzero(i32 %x) {
+; RV64I-LABEL: ctpop32_ne_one_nonzero:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a1, a0, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: ctpop32_ne_one_nonzero:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    cpopw a0, a0
+; RV64ZBB-NEXT:    sltiu a0, a0, 2
+; RV64ZBB-NEXT:    xori a0, a0, 1
+; RV64ZBB-NEXT:    ret
+entry:
+  %popcnt = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ne i32 %popcnt, 1
+  ret i1 %cmp
+}
+
+define i1 @ctpop64_eq_one_nonzero(i64 %x) {
+; RV64I-LABEL: ctpop64_eq_one_nonzero:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a1, a0, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: ctpop64_eq_one_nonzero:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    cpop a0, a0
+; RV64ZBB-NEXT:    sltiu a0, a0, 2
+; RV64ZBB-NEXT:    ret
+entry:
+  %popcnt = call range(i64 1, 65) i64 @llvm.ctpop.i64(i64 %x)
+  %cmp = icmp eq i64 %popcnt, 1
+  ret i1 %cmp
+}
+
+define i1 @ctpop32_eq_one_maybezero(i32 %x) {
+; RV64I-LABEL: ctpop32_eq_one_maybezero:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addiw a1, a0, -1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: ctpop32_eq_one_maybezero:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    cpopw a0, a0
+; RV64ZBB-NEXT:    addi a0, a0, -1
+; RV64ZBB-NEXT:    seqz a0, a0
+; RV64ZBB-NEXT:    ret
+entry:
+  %popcnt = call range(i32 0, 16) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %popcnt, 1
+  ret i1 %cmp
+}

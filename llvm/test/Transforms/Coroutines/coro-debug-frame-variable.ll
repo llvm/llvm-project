@@ -42,12 +42,14 @@
 ; CHECK-NEXT:    %[[DBG_PTR:.*]] = alloca ptr
 ; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[XVAR_RESUME:[0-9]+]],   !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32),
 ; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[IVAR_RESUME:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 20), ![[IDBGLOC_RESUME:[0-9]+]]
+; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[FRAME_RESUME:[0-9]+]], !DIExpression(DW_OP_deref),
 ; CHECK-NEXT:    store ptr {{.*}}, ptr %[[DBG_PTR]]
 ; CHECK:         %[[J:.*]] = alloca i32, align 4
 ; CHECK-NEXT:    #dbg_declare(ptr %[[J]], ![[JVAR_RESUME:[0-9]+]], !DIExpression(), ![[JDBGLOC_RESUME:[0-9]+]]
 ; CHECK:       init.ready:
 ; CHECK:       await.ready:
 ;
+; CHECK-DAG: ![[FRAME_RESUME]] = !DILocalVariable(name: "__coro_frame"
 ; CHECK-DAG: ![[IVAR]] = !DILocalVariable(name: "i"
 ; CHECK-DAG: ![[PROG_SCOPE:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
 ; CHECK-DAG: ![[BLK_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[PROG_SCOPE]], file: !1, line: 23, column: 12)

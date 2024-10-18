@@ -14,12 +14,12 @@
 
 #include "Workshare.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
-#include "Utils.h"
 
 using namespace ompx;
 
@@ -349,7 +349,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     if (rank == 0) {
       warp_res = atomic::add(&Cnt, change, atomic::seq_cst);
     }
-    warp_res = utils::shuffle(active, warp_res, leader);
+    warp_res = utils::shuffle(active, warp_res, leader, mapping::getWarpSize());
     return warp_res + rank;
   }
 

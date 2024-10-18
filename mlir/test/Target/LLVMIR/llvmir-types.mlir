@@ -20,8 +20,6 @@ llvm.func @return_fp128() -> f128
 llvm.func @return_x86_fp80() -> f80
 // CHECK: declare ppc_fp128 @return_ppc_fp128()
 llvm.func @return_ppc_fp128() -> !llvm.ppc_fp128
-// CHECK: declare x86_mmx @return_x86_mmx()
-llvm.func @return_x86_mmx() -> !llvm.x86_mmx
 
 //
 // Functions.
@@ -101,6 +99,10 @@ llvm.func @return_a8_float() -> !llvm.array<8 x f32>
 llvm.func @return_a10_p_4() -> !llvm.array<10 x ptr<4>>
 // CHECK: declare [10 x [4 x float]] @return_a10_a4_float()
 llvm.func @return_a10_a4_float() -> !llvm.array<10 x array<4 x f32>>
+// CHECK: declare [10 x [4 x <4 x float>]] @return_a10_a4_v4_float()
+llvm.func @return_a10_a4_v4_float() -> !llvm.array<10 x array<4 x vector<4xf32>>>
+// CHECK: declare [10 x [4 x <vscale x 4 x float>]] @return_a10_a4_sv4_float()
+llvm.func @return_a10_a4_sv4_float() -> !llvm.array<10 x array<4 x vector<[4]xf32>>>
 
 //
 // Literal structures.

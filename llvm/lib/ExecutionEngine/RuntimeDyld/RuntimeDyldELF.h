@@ -16,8 +16,6 @@
 #include "RuntimeDyldImpl.h"
 #include "llvm/ADT/DenseMap.h"
 
-using namespace llvm;
-
 namespace llvm {
 namespace object {
 class ELFObjectFileBase;
@@ -59,6 +57,10 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
 
   void resolveBPFRelocation(const SectionEntry &Section, uint64_t Offset,
                             uint64_t Value, uint32_t Type, int64_t Addend);
+
+  void resolveRISCVRelocation(const SectionEntry &Section, uint64_t Offset,
+                              uint64_t Value, uint32_t Type, int64_t Addend,
+                              SID SectionID);
 
   unsigned getMaxStubSize() const override {
     if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be)
@@ -148,6 +150,9 @@ private:
 
   // *HI16 relocations will be added for resolving when we find matching
   // *LO16 part. (Mips specific)
+  //
+  // *HI20 relocations will be added for resolving when we find matching
+  // *LO12 part. (RISC-V specific)
   SmallVector<std::pair<RelocationValueRef, RelocationEntry>, 8> PendingRelocs;
 
   // When a module is loaded we save the SectionID of the EH frame section
@@ -233,4 +238,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_RUNTIMEDYLDELF_H
