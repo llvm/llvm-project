@@ -415,6 +415,7 @@ exit:
 
 ; Test case to make sure that uses of versioned strides of type i1 are properly
 ; extended. From https://github.com/llvm/llvm-project/issues/91369.
+; TODO: Better check (udiv i64 15, %g.64) after checking if %g == 1.
 define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-LABEL: define void @zext_of_i1_stride(
 ; CHECK-SAME: i1 [[G:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {

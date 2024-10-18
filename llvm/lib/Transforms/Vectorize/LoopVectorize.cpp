@@ -2449,12 +2449,9 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     } else if (!SE.isKnownPredicate(CmpInst::getInversePredicate(P),
                                     TripCountSCEV, SE.getSCEV(Step))) {
       // Generate the minimum iteration check only if we cannot prove the
-      // check is known to be true, or known to be false
+      // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
-
-      // else step is known to be smaller than trip count, use CheckMinIters
-      // preset to false.
-    }
+    } // else step known to be < trip count, use CheckMinIters preset to false.
   } else if (VF.isScalable() &&
              !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
              Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
@@ -2470,11 +2467,12 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     Value *Step = CreateStep();
 #ifndef NDEBUG
     ScalarEvolution &SE = *PSE.getSE();
-    const SCEV *TripCountSCEV = SE.applyLoopGuards(SE.getSCEV(LHS), OrigLoop);
+    const SCEV *TC2OverflowSCEV = SE.applyLoopGuards(SE.getSCEV(LHS), OrigLoop);
     assert(
+        !isIndvarOverflowCheckKnownFalse(Cost, VF * UF) &&
         !SE.isKnownPredicate(CmpInst::getInversePredicate(ICmpInst::ICMP_ULT),
-                             TripCountSCEV, SE.getSCEV(Step)) &&
-        "SCEV unexpectedly proved overflow check to be known");
+                             TC2OverflowSCEV, SE.getSCEV(Step)) &&
+        "unexpectedly proved overflow check to be known");
 #endif
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
     CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, Step);

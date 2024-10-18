@@ -1659,6 +1659,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret i64 %1
 }
 
+; FIXME: %indvars.iv.next is poison on first iteration due to sub nuw 0, 1.
 define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK-LABEL: define i32 @fcmp_0_sub_select1(
 ; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
