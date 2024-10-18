@@ -11,10 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -3223,6 +3225,49 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
         << ParamName << (FDecl != nullptr) << FDecl;
 }
 
+void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
+                                  const Expr *ThisArg,
+                                  ArrayRef<const Expr *> Args) {
+  auto GetArgAt = [&](int Idx) {
+    if (IsMemberFunction && Idx == 0)
+      return const_cast<Expr *>(ThisArg);
+    return const_cast<Expr *>(Args[Idx - int(IsMemberFunction)]);
+  };
+  for (unsigned I = 0; I < FD->getNumParams(); ++I) {
+    auto *CapturedByAttr =
+        FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
+    if (!CapturedByAttr)
+      continue;
+    for (int CapturingParamIdx : CapturedByAttr->params()) {
+      Expr *Capturing = GetArgAt(CapturingParamIdx);
+      Expr *Captured = GetArgAt(I + IsMemberFunction);
+      CapturingEntity CE{Capturing};
+      // Ensure that 'Captured' outlives the 'Capturing' entity.
+      checkCaptureLifetime(*this, CE, Captured);
+    }
+  }
+  // Check when the 'this' object is captured.
+  if (IsMemberFunction) {
+    TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+    if (!TSI)
+      return;
+    AttributedTypeLoc ATL;
+    for (TypeLoc TL = TSI->getTypeLoc();
+         (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+         TL = ATL.getModifiedLoc()) {
+      auto *CapturedByAttr = ATL.getAttrAs<LifetimeCaptureByAttr>();
+      if (!CapturedByAttr)
+        continue;
+      Expr *Captured = GetArgAt(0);
+      for (int CapturingParamIdx : CapturedByAttr->params()) {
+        Expr *Capturing = GetArgAt(CapturingParamIdx);
+        CapturingEntity CE{Capturing};
+        checkCaptureLifetime(*this, CE, Captured);
+      }
+    }
+  }
+}
+
 void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                      const Expr *ThisArg, ArrayRef<const Expr *> Args,
                      bool IsMemberFunction, SourceLocation Loc,
@@ -3264,6 +3309,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     }
   }
 
+  if (FD)
+    checkLifetimeCaptureBy(FD, IsMemberFunction, ThisArg, Args);
   if (FDecl || Proto) {
     CheckNonNullArguments(*this, FDecl, Proto, Args, Loc);
 

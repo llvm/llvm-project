@@ -14812,8 +14812,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           // Check for a self move.
           DiagnoseSelfMove(Args[0], Args[1], OpLoc);
           // lifetime check.
-          checkExprLifetime(
-              *this, AssignedEntity{Args[0], dyn_cast<CXXMethodDecl>(FnDecl)},
+          checkAssignmentLifetime(
+              *this, CapturingEntity{Args[0], dyn_cast<CXXMethodDecl>(FnDecl)},
               Args[1]);
         }
         if (ImplicitThis) {
