@@ -6,16 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TODO:  This implements a function merge using function hash while tracking
-// differences in Constants. This uses stable function hash to find potential
-// merge candidates. The first codegen round collects stable function hashes,
-// and determines the merge candidates that match the stable function hashes.
-// The set of parameters pointing to different Constants are also computed
-// during the stable function merge. The second codegen round uses this global
-// function info to optimistically create a merged function in each module
-// context to guarantee correct transformation. Similar to the global outliner,
-// the linker's deduplication (ICF) folds the identical merged functions to save
-// the final binary size.
+// This pass defines the implementation of a function merging mechanism
+// that utilizes a stable function hash to track differences in constants and
+// create potential merge candidates. The process involves two rounds:
+// 1. The first round collects stable function hashes and identifies merge
+//    candidates with matching hashes. It also computes the set of parameters
+//    that point to different constants during the stable function merge.
+// 2. The second round leverages this collected global function information to
+//    optimistically create a merged function in each module context, ensuring
+//    correct transformation.
+// Similar to the global outliner, this approach uses the linker's deduplication
+// (ICF) to fold identical merged functions, thereby reducing the final binary
+// size. The work is inspired by the concepts discussed in the following paper:
+// https://dl.acm.org/doi/pdf/10.1145/3652032.3657575.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,9 +26,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/CGData/CodeGenData.h"
-#include "llvm/CGData/StableFunctionMap.h"
-#include "llvm/CodeGen/MachineStableHash.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/InitializePasses.h"
@@ -84,7 +84,7 @@ STATISTIC(NumAnalyzedModues, "Number of modules that are analyzed");
 STATISTIC(NumAnalyzedFunctions, "Number of functions that are analyzed");
 STATISTIC(NumEligibleFunctions, "Number of functions that are eligible");
 
-/// Returns true if the \opIdx operand of \p CI is the callee operand.
+/// Returns true if the \OpIdx operand of \p CI is the callee operand.
 static bool isCalleeOperand(const CallBase *CI, unsigned OpIdx) {
   return &CI->getCalledOperandUse() == &CI->getOperandUse(OpIdx);
 }
@@ -148,22 +148,19 @@ bool isEligibleFunction(Function *F) {
   if (F->hasFnAttribute(llvm::Attribute::NoMerge))
     return false;
 
-  if (F->hasAvailableExternallyLinkage()) {
+  if (F->hasAvailableExternallyLinkage())
     return false;
-  }
 
-  if (F->getFunctionType()->isVarArg()) {
+  if (F->getFunctionType()->isVarArg())
     return false;
-  }
 
   if (F->getCallingConv() == CallingConv::SwiftTail)
     return false;
 
-  // if function contains callsites with musttail, if we merge
+  // If function contains callsites with musttail, if we merge
   // it, the merged function will have the musttail callsite, but
   // the number of parameters can change, thus the parameter count
   // of the callsite will mismatch with the function itself.
-  // if (IgnoreMusttailFunction) {
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       const auto *CB = dyn_cast<CallBase>(&I);
@@ -203,7 +200,6 @@ static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
   return true;
 }
 
-// copy from merge functions.cpp
 static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
   Type *SrcTy = V->getType();
   if (SrcTy->isStructTy()) {
@@ -252,7 +248,8 @@ void GlobalMergeFunc::analyze(Module &M) {
 
       auto FI = llvm::StructuralHashWithDifferences(Func, ignoreOp);
 
-      // Convert the map to a vector for a serialization-friendly format.
+      // Convert the operand map to a vector for a serialization-friendly
+      // format.
       IndexOperandHashVecType IndexOperandHashes;
       for (auto &Pair : *FI.IndexOperandHashMap)
         IndexOperandHashes.emplace_back(Pair);
@@ -597,7 +594,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         // This module check is not strictly necessary as the functions can move
         // around. We just want to avoid merging functions from different
         // modules than the first one in the functon map, as they may not end up
-        // with not being ICFed.
+        // with not being ICFed by the linker.
         if (MergedModId != *FunctionMap->getNameForId(SF->ModuleNameId)) {
           ++NumMismatchedModuleIdGlobalMergeFunction;
           continue;
@@ -618,12 +615,12 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
       dbgs() << "[GlobalMergeFunc] Merging function count " << FuncMergeInfoSize
              << " in  " << ModId << "\n";
     });
+
     for (auto &FMI : FuncMergeInfos) {
       Changed = true;
 
       // We've already validated all locations of constant operands pointed by
-      // the parameters. Just use the first one to bookkeep the original
-      // constants for each parameter
+      // the parameters. Populate parameters pointing to the original constants.
       SmallVector<Constant *> Params;
       SmallVector<Type *> ParamTypes;
       for (auto &ParamLocs : ParamLocsVec) {
@@ -635,8 +632,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         ParamTypes.push_back(Opnd->getType());
       }
 
-      // Create a merged function derived from the first function in the current
-      // module context.
+      // Create a merged function derived from the current function.
       Function *MergedFunc =
           createMergedFunction(FMI, ParamTypes, ParamLocsVec);
 
@@ -647,7 +643,8 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         MergedFunc->dump();
       });
 
-      // Create a thunk to the merged function.
+      // Transform the current function into a thunk that calls the merged
+      // function.
       createThunk(FMI, Params, MergedFunc);
       LLVM_DEBUG({
         dbgs() << "[GlobalMergeFunc] Thunk generated: \n";

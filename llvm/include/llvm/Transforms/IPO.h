@@ -55,6 +55,9 @@ enum class PassSummaryAction {
   Export, ///< Export information to summary.
 };
 
+/// createGlobalMergeFuncPass - This pass generates merged instances by
+/// parameterizing distinct constants across similar functions, utilizing stable
+/// function hash information.
 Pass *createGlobalMergeFuncPass();
 
 } // End llvm namespace

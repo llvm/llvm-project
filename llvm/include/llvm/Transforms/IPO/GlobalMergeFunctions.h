@@ -5,23 +5,29 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// This file defines global merge functions pass and related data structure.
-///
+//
+// This pass defines the implementation of a function merging mechanism
+// that utilizes a stable function hash to track differences in constants and
+// identify potential merge candidates. The process involves two rounds:
+// 1. The first round collects stable function hashes and identifies merge
+//    candidates with matching hashes. It also computes the set of parameters
+//    that point to different constants during the stable function merge.
+// 2. The second round leverages this collected global function information to
+//    optimistically create a merged function in each module context, ensuring
+//    correct transformation.
+// Similar to the global outliner, this approach uses the linker's deduplication
+// (ICF) to fold identical merged functions, thereby reducing the final binary
+// size. The work is inspired by the concepts discussed in the following paper:
+// https://dl.acm.org/doi/pdf/10.1145/3652032.3657575.
+//
 //===----------------------------------------------------------------------===//
 
-#ifndef PIKA_TRANSFORMS_UTILS_GLOBALMERGEFUNCTIONS_H
-#define PIKA_TRANSFORMS_UTILS_GLOBALMERGEFUNCTIONS_H
+#ifndef LLVM_TRANSFORMS_IPO_GLOBALMERGEFUNCTIONS_H
+#define LLVM_TRANSFORMS_IPO_GLOBALMERGEFUNCTIONS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StableHashing.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CGData/StableFunctionMap.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include <map>
-#include <mutex>
 
 enum class HashFunctionMode {
   Local,
@@ -36,15 +42,10 @@ namespace llvm {
 using ParamLocs = SmallVector<IndexPair, 4>;
 // A vector of parameters
 using ParamLocsVecTy = SmallVector<ParamLocs, 8>;
-// A map of stable hash to a vector of stable functions
 
-/// GlobalMergeFunc finds functions which only differ by constants in
-/// certain instructions, e.g. resulting from specialized functions of layout
-/// compatible types.
-/// Unlike PikaMergeFunc that directly compares IRs, this uses stable function
-/// hash to find the merge candidate. Similar to the global outliner, we can run
-/// codegen twice to collect function merge candidate in the first round, and
-/// merge functions globally in the second round.
+/// GlobalMergeFunc is a ModulePass that implements a function merging mechanism
+/// using stable function hashes. It identifies and merges functions with
+/// matching hashes across modules to optimize binary size.
 class GlobalMergeFunc : public ModulePass {
   HashFunctionMode MergerMode = HashFunctionMode::Local;
 
@@ -69,9 +70,9 @@ public:
   /// Emit LocalFunctionMap into __llvm_merge section.
   void emitFunctionMap(Module &M);
 
-  /// Merge functions in the module using the global function map.
+  /// Merge functions in the module using the given function map.
   bool merge(Module &M, const StableFunctionMap *FunctionMap);
 };
 
 } // end namespace llvm
-#endif // PIKA_TRANSFORMS_UTILS_GLOBALMERGEFUNCTIONS_H
+#endif // LLVM_TRANSFORMS_IPO_GLOBALMERGEFUNCTIONS_H
