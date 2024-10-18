@@ -334,6 +334,7 @@ struct TemplateParameterListBuilder {
 
   template<typename element_type> requires
   is_typed_resource_element_compatible<element_type>
+
   struct RWBuffer {
       element_type Val;
   };
