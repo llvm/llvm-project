@@ -160,9 +160,9 @@ bool LoongArchPreRAExpandPseudo::expandMI(
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_TLS_GD_LARGE:
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoLA_TLS_DESC_PC:
+  case LoongArch::PseudoLA_TLS_DESC:
     return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_TLS_DESC_PC_LARGE:
+  case LoongArch::PseudoLA_TLS_DESC_LARGE:
     return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, /*Large=*/true);
   case LoongArch::PseudoCALL:
   case LoongArch::PseudoCALL_MEDIUM:

@@ -1927,8 +1927,8 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   }
 
   return getTLSDescAddr(N, DAG,
-                        Large ? LoongArch::PseudoLA_TLS_DESC_PC_LARGE
-                              : LoongArch::PseudoLA_TLS_DESC_PC,
+                        Large ? LoongArch::PseudoLA_TLS_DESC_LARGE
+                              : LoongArch::PseudoLA_TLS_DESC,
                         Large);
 }
 
