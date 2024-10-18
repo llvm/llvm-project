@@ -19562,12 +19562,65 @@ performLastTrueTestVectorCombine(SDNode *N,
 }
 
 static SDValue
+performLastActiveExtractEltCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const AArch64Subtarget *Subtarget) {
+  SDValue Index = N->getOperand(1);
+  // FIXME: Make this more generic. Should be a utility func somewhere?
+  if (Index.getOpcode() == ISD::ZERO_EXTEND)
+    Index = Index.getOperand(0);
+
+  // Looking for an add of an inverted value.
+  if (Index.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  SDValue Size = Index.getOperand(1);
+
+  if (Size.getOpcode() == ISD::TRUNCATE)
+    Size = Size.getOperand(0);
+
+  // Check that we're looking at the size of the overall vector...
+  // FIXME: What about VSL codegen?
+  if (Size.getOpcode() != ISD::VSCALE)
+    return SDValue();
+
+  unsigned NElts = N->getOperand(0)->getValueType(0).getVectorElementCount().getKnownMinValue();
+  if (Size.getConstantOperandVal(0) != NElts)
+    return SDValue();
+
+  SDValue Invert = Index.getOperand(0);
+  if (Invert.getOpcode() != ISD::XOR)
+    return SDValue();
+
+  if (!Invert.getConstantOperandAPInt(1).isAllOnes())
+    return SDValue();
+
+  SDValue LZeroes = Invert.getOperand(0);
+  if (LZeroes.getOpcode() == ISD::TRUNCATE)
+    LZeroes = LZeroes.getOperand(0);
+
+  // Check that we're looking at a cttz.elts from a reversed predicate...
+  if (LZeroes.getOpcode() != AArch64ISD::CTTZ_ELTS)
+    return SDValue();
+
+  SDValue Pred = LZeroes.getOperand(0);
+  if (Pred.getOpcode() != ISD::VECTOR_REVERSE)
+    return SDValue();
+
+  // Matched a LASTB pattern.
+  return DCI.DAG.getNode(AArch64ISD::LASTB, SDLoc(N), N->getValueType(0),
+                         Pred.getOperand(0), N->getOperand(0));
+}
+
+static SDValue
 performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64Subtarget *Subtarget) {
   assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
   if (SDValue Res = performFirstTrueTestVectorCombine(N, DCI, Subtarget))
     return Res;
   if (SDValue Res = performLastTrueTestVectorCombine(N, DCI, Subtarget))
+    return Res;
+  if (SDValue Res = performLastActiveExtractEltCombine(N, DCI, Subtarget))
     return Res;
 
   SelectionDAG &DAG = DCI.DAG;
@@ -24412,6 +24465,50 @@ static SDValue foldCSELOfCSEL(SDNode *Op, SelectionDAG &DAG) {
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, L, R, CCValue, Cond);
 }
 
+static SDValue foldCSELOfLASTB(SDNode *N, SelectionDAG &DAG) {
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  AArch64CC::CondCode CC =
+      static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+  SDValue PTAny = N->getOperand(3);
+
+  // FIXME: Handle the inverse?
+  if (Op0.getOpcode() != AArch64ISD::LASTB)
+    return SDValue();
+
+  if (PTAny.getOpcode() != AArch64ISD::PTEST_ANY)
+    return SDValue();
+
+  // Get the predicate...
+  SDValue LBPred = Op0.getOperand(0);
+
+  // Look through reinterprets...
+  SDValue PTestPG = PTAny.getOperand(0);
+  if (PTestPG.getOpcode() == AArch64ISD::REINTERPRET_CAST)
+    PTestPG = PTestPG.getOperand(0);
+
+  SDValue PTestOp = PTAny.getOperand(1);
+  if (PTestOp.getOpcode() == AArch64ISD::REINTERPRET_CAST)
+    PTestOp = PTestOp.getOperand(0);
+
+  // And compare against the csel cmp.
+  // Make sure the same predicate is used.
+  if (PTestOp != LBPred)
+    return SDValue();
+
+  // Make sure that PG for the test is either the same as the input or
+  // an explicit ptrue.
+  // FIXME:... look for ptrue_all instead of just ptrue...
+  if (PTestPG != LBPred && PTestPG.getOpcode() != AArch64ISD::PTRUE)
+    return SDValue();
+
+  if (CC != AArch64CC::NE)
+    return SDValue();
+
+  return DAG.getNode(AArch64ISD::CLASTB_N, SDLoc(N), N->getValueType(0),
+                     LBPred, Op1, Op0.getOperand(1));
+}
+
 // Optimize CSEL instructions
 static SDValue performCSELCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -24427,6 +24524,9 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL cttz(X), 0, ne(X, 0) -> AND cttz bitwidth-1
   if (SDValue Folded = foldCSELofCTTZ(N, DAG))
 		return Folded;
+
+  if (SDValue CLastB = foldCSELOfLASTB(N, DAG))
+    return CLastB;
 
   return performCONDCombine(N, DCI, DAG, 2, 3);
 }
