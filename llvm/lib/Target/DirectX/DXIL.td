@@ -293,6 +293,11 @@ class Attributes<Version ver = DXIL1_0, list<DXILAttribute> attrs> {
   list<DXILAttribute> op_attrs = attrs;
 }
 
+class IntrinsicSelect<Intrinsic intr, list<string> extra_args> {
+  Intrinsic Intr = intr;
+  list<string> ExtraArgs = extra_args;
+}
+
 // Abstraction DXIL Operation
 class DXILOp<int opcode, DXILOpClass opclass> {
   // A short description of the operation
@@ -306,6 +311,8 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
   // LLVM Intrinsic DXIL Operation maps to
   Intrinsic LLVMIntrinsic = ?;
+
+  list<IntrinsicSelect> intrinsic_selects = [];
 
   // Result type of the op
   DXILOpParamType result;
@@ -819,4 +826,18 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Barrier : DXILOp<80, barrier> {
+  let Doc = "inserts a memory barrier in the shader";
+  let intrinsic_selects = [
+    IntrinsicSelect<
+        int_dx_group_memory_barrier_with_group_sync,
+        [ "OpBuilder.getIRB().getInt32((unsigned)BarrierMode::SyncThreadGroup | (unsigned)BarrierMode::TGSMFence)" ]>,
+  ];
+
+  let arguments = [Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [compute, library]>];
+  let attributes = [Attributes<DXIL1_0, []>];
 }

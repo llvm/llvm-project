@@ -33,6 +33,11 @@ using namespace llvm::dxil;
 
 namespace {
 
+struct DXILIntrinsicSelect {
+  StringRef Intrinsic;
+  SmallVector<StringRef, 4> ExtraArgs;
+};
+
 struct DXILOperationDesc {
   std::string OpName; // name of DXIL operation
   int OpCode;         // ID of DXIL operation
@@ -43,8 +48,7 @@ struct DXILOperationDesc {
   SmallVector<const Record *> OverloadRecs;
   SmallVector<const Record *> StageRecs;
   SmallVector<const Record *> AttrRecs;
-  StringRef Intrinsic; // The llvm intrinsic map to OpName. Default is "" which
-                       // means no map exists
+  SmallVector<DXILIntrinsicSelect> IntrinsicSelects;
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
   int OverloadParamIndex;             // Index of parameter with overload type.
@@ -158,14 +162,43 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
                            OpName);
   }
 
-  const RecordVal *RV = R->getValue("LLVMIntrinsic");
-  if (RV && RV->getValue()) {
-    if (DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
-      auto *IntrinsicDef = DI->getDef();
-      auto DefName = IntrinsicDef->getName();
-      assert(DefName.starts_with("int_") && "invalid intrinsic name");
-      // Remove the int_ from intrinsic name.
-      Intrinsic = DefName.substr(4);
+  auto GetIntrinsicName = [](const RecordVal *RV) -> StringRef {
+    if (RV && RV->getValue()) {
+      if (DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
+        auto *IntrinsicDef = DI->getDef();
+        auto DefName = IntrinsicDef->getName();
+        assert(DefName.starts_with("int_") && "invalid intrinsic name");
+        // Remove the int_ from intrinsic name.
+        return DefName.substr(4);
+      }
+    }
+    return "";
+  };
+
+  {
+    DXILIntrinsicSelect IntrSelect;
+    IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("LLVMIntrinsic"));
+    if (IntrSelect.Intrinsic.size())
+      IntrinsicSelects.emplace_back(std::move(IntrSelect));
+  }
+
+  Recs = R->getValueAsListOfDefs("intrinsic_selects");
+  if (Recs.size()) {
+    if (IntrinsicSelects.size()) {
+      PrintFatalError(R,
+                      Twine("LLVMIntrinsic and intrinsic_match cannot be both "
+                            "defined for DXIL operation - ") +
+                          OpName);
+    } else {
+      for (const Record *R : Recs) {
+        DXILIntrinsicSelect IntrSelect;
+        IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("Intr"));
+        auto ExtraArgs = R->getValueAsListOfStrings("ExtraArgs");
+        for (StringRef Arg : ExtraArgs) {
+          IntrSelect.ExtraArgs.push_back(Arg);
+        }
+        IntrinsicSelects.emplace_back(std::move(IntrSelect));
+      }
     }
   }
 }
@@ -378,10 +411,17 @@ static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
   OS << "#ifdef DXIL_OP_INTRINSIC\n";
   OS << "\n";
   for (const auto &Op : Ops) {
-    if (Op.Intrinsic.empty())
+    if (Op.IntrinsicSelects.empty()) {
       continue;
-    OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
-       << ", Intrinsic::" << Op.Intrinsic << ")\n";
+    }
+    for (const DXILIntrinsicSelect &MappedIntr : Op.IntrinsicSelects) {
+      OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
+         << ", Intrinsic::" << MappedIntr.Intrinsic << ", (ArrayRef<Value *> {";
+      for (const StringRef &Arg : MappedIntr.ExtraArgs) {
+        OS << Arg << ", ";
+      }
+      OS << "}))\n";
+    }
   }
   OS << "\n";
   OS << "#undef DXIL_OP_INTRINSIC\n";
