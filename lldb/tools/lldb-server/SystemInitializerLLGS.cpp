@@ -15,7 +15,7 @@ using HostObjectFile = ObjectFileMachO;
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 using HostObjectFile = ObjectFilePECOFF;
 #elif defined(_AIX)
-#include "Plugins/ObjectFile/ELF/ObjectFileXCOFF.h"
+#include "Plugins/ObjectFile/XCOFF/ObjectFileXCOFF.h"
 using HostObjectFile = ObjectFileXCOFF;
 #else
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
