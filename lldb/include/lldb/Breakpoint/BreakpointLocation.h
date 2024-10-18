@@ -283,7 +283,7 @@ public:
 
   /// Returns the breakpoint location ID.
   lldb::break_id_t GetID() const { return m_loc_id; }
-  
+
   // Set the line entry that should be shown to users for this location.
   // It is up to the caller to verify that this is a valid entry to show.
   // The current use of this is to distinguish among line entries from a
@@ -291,7 +291,7 @@ public:
   void SetPreferredLineEntry(const LineEntry &line_entry) {
     m_preferred_line_entry = line_entry;
   }
-  
+
   const std::optional<LineEntry> GetPreferredLineEntry() {
     return m_preferred_line_entry;
   }
@@ -319,7 +319,7 @@ protected:
   /// It also takes care of decrementing the ignore counters.
   /// If it returns false we should continue, otherwise stop.
   bool IgnoreCountShouldStop();
-  
+
   // If this location knows that the virtual stack frame it represents is
   // not frame 0, return the suggested stack frame instead.  This will happen
   // when the location's address contains a "virtual inlined call stack" and the
@@ -393,13 +393,14 @@ private:
   lldb::break_id_t m_loc_id; ///< Breakpoint location ID.
   StoppointHitCounter m_hit_counter; ///< Number of times this breakpoint
                                      /// location has been hit.
-  std::optional<LineEntry> m_preferred_line_entry; // If this exists, use it to print the stop
-                                    // description rather than the LineEntry 
-                                    // m_address resolves to directly.  Use this
-                                    // for instance when the location was given
-                                    // somewhere in the virtual inlined call
-                                    // stack since the Address always resolves 
-                                    // to the lowest entry in the stack.
+  std::optional<LineEntry>
+      m_preferred_line_entry; // If this exists, use it to print the stop
+                              // description rather than the LineEntry
+                              // m_address resolves to directly.  Use this
+                              // for instance when the location was given
+                              // somewhere in the virtual inlined call
+                              // stack since the Address always resolves
+                              // to the lowest entry in the stack.
 
   void SetShouldResolveIndirectFunctions(bool do_resolve) {
     m_should_resolve_indirect_functions = do_resolve;

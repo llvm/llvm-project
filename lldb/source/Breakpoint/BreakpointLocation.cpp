@@ -508,7 +508,7 @@ void BreakpointLocation::GetDescription(Stream *s,
         s->PutCString("re-exported target = ");
       else
         s->PutCString("where = ");
-        
+
       // If there's a preferred line entry for printing, use that.
       bool show_function_info = true;
       if (GetPreferredLineEntry()) {
@@ -520,7 +520,8 @@ void BreakpointLocation::GetDescription(Stream *s,
         show_function_info = false;
       }
       sc.DumpStopContext(s, m_owner.GetTarget().GetProcessSP().get(), m_address,
-                         false, true, false, show_function_info, show_function_info, show_function_info);
+                         false, true, false, show_function_info,
+                         show_function_info, show_function_info);
     } else {
       if (sc.module_sp) {
         s->EOL();
@@ -670,7 +671,7 @@ void BreakpointLocation::SendBreakpointLocationChangedEvent(
   }
 }
 
-std::optional<uint32_t>  BreakpointLocation::GetSuggestedStackFrameIndex() {
+std::optional<uint32_t> BreakpointLocation::GetSuggestedStackFrameIndex() {
   if (!GetPreferredLineEntry())
     return {};
   LineEntry preferred = *GetPreferredLineEntry();
@@ -682,12 +683,13 @@ std::optional<uint32_t>  BreakpointLocation::GetSuggestedStackFrameIndex() {
   // case.
   if (!LineEntry::Compare(sc.line_entry, preferred))
     return {};
-  
+
   if (!sc.block)
     return {};
 
   // Blocks have their line info in Declaration form, so make one here:
-  Declaration preferred_decl(preferred.GetFile(), preferred.line, preferred.column);
+  Declaration preferred_decl(preferred.GetFile(), preferred.line,
+                             preferred.column);
 
   uint32_t depth = 0;
   Block *inlined_block = sc.block->GetContainingInlinedBlock();
@@ -695,8 +697,8 @@ std::optional<uint32_t>  BreakpointLocation::GetSuggestedStackFrameIndex() {
     // If we've moved to a block that this isn't the start of, that's not
     // our inlining info or call site, so we can stop here.
     Address start_address;
-    if (!inlined_block->GetStartAddress(start_address) 
-        || start_address != m_address)
+    if (!inlined_block->GetStartAddress(start_address) ||
+        start_address != m_address)
       return {};
 
     const InlineFunctionInfo *info = inlined_block->GetInlinedFunctionInfo();
@@ -710,7 +712,6 @@ std::optional<uint32_t>  BreakpointLocation::GetSuggestedStackFrameIndex() {
     depth++;
   }
   return {};
-  
 }
 
 void BreakpointLocation::SwapLocation(BreakpointLocationSP swap_from) {

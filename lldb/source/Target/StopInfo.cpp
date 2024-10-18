@@ -247,7 +247,8 @@ public:
     return m_description.c_str();
   }
 
-  std::optional<uint32_t> GetSuggestedStackFrameIndex(bool inlined_stack) override {
+  std::optional<uint32_t>
+  GetSuggestedStackFrameIndex(bool inlined_stack) override {
     if (!inlined_stack)
       return {};
 
@@ -258,10 +259,10 @@ public:
         thread_sp->GetProcess()->GetBreakpointSiteList().FindByID(m_value));
     if (!bp_site_sp)
       return {};
-      
+
     return bp_site_sp->GetSuggestedStackFrameIndex();
   }
-  
+
 protected:
   bool ShouldStop(Event *event_ptr) override {
     // This just reports the work done by PerformAction or the synchronous
@@ -1180,9 +1181,9 @@ public:
     else
       return m_description.c_str();
   }
-  
-  std::optional<uint32_t> GetSuggestedStackFrameIndex(bool inlined_stack) override
-  {
+
+  std::optional<uint32_t>
+  GetSuggestedStackFrameIndex(bool inlined_stack) override {
     // Trace only knows how to adjust inlined stacks:
     if (!inlined_stack)
       return {};
@@ -1201,7 +1202,7 @@ public:
     if (!block_ptr->GetRangeContainingAddress(pc_address, containing_range) ||
         pc_address != containing_range.GetBaseAddress())
       return {};
-      
+
     int num_inlined_functions = 0;
 
     for (Block *container_ptr = block_ptr->GetInlinedParent();
@@ -1218,7 +1219,6 @@ public:
     inlined_stack = true;
     return num_inlined_functions + 1;
   }
-
 };
 
 // StopInfoException

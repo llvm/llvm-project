@@ -85,14 +85,14 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     return;
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  
+
   m_current_inlined_pc = LLDB_INVALID_ADDRESS;
   m_current_inlined_depth = UINT32_MAX;
 
   StopInfoSP stop_info_sp = m_thread.GetStopInfo();
   if (!stop_info_sp)
     return;
-    
+
   bool inlined = true;
   auto inline_depth = stop_info_sp->GetSuggestedStackFrameIndex(inlined);
   // We're only adjusting the inlined stack here.
@@ -745,27 +745,28 @@ void StackFrameList::SelectMostRelevantFrame() {
   bool found_relevant = false;
   if (stop_info_sp) {
     // Here we're only asking the stop info if it wants to adjust the real stack
-    // index.  We have to ask about the m_inlined_stack_depth in 
+    // index.  We have to ask about the m_inlined_stack_depth in
     // Thread::ShouldStop since the plans need to reason with that info.
     bool inlined = false;
-    std::optional<uint32_t> stack_opt = stop_info_sp->GetSuggestedStackFrameIndex(inlined);
+    std::optional<uint32_t> stack_opt =
+        stop_info_sp->GetSuggestedStackFrameIndex(inlined);
     if (stack_opt) {
       stack_idx = *stack_opt;
       found_relevant = true;
     }
   }
-  
+
   frame_sp = GetFrameAtIndex(stack_idx);
   if (!frame_sp)
-    LLDB_LOG(log, "Stop info suggested relevant frame {0} but it didn't exist", 
+    LLDB_LOG(log, "Stop info suggested relevant frame {0} but it didn't exist",
              stack_idx);
   else if (found_relevant)
     LLDB_LOG(log, "Setting selected frame from stop info to {0}", stack_idx);
   // Note, we don't have to worry about "inlined" frames here, because we've
-  // already calculated the inlined frame in Thread::ShouldStop, and 
+  // already calculated the inlined frame in Thread::ShouldStop, and
   // SetSelectedFrame will take care of that adjustment for us.
   SetSelectedFrame(frame_sp.get());
-  
+
   if (!found_relevant)
     LLDB_LOG(log, "No relevant frame!");
 }

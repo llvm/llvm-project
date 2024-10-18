@@ -340,17 +340,17 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
   }
 
   BreakpointLocationSP bp_loc_sp(AddLocation(line_start));
-  // If the address that we resolved the location to returns a different 
+  // If the address that we resolved the location to returns a different
   // LineEntry from the one in the incoming SC, we're probably dealing with an
   // inlined call site, so set that as the preferred LineEntry:
   LineEntry resolved_entry;
-  if (!skipped_prologue && bp_loc_sp && 
+  if (!skipped_prologue && bp_loc_sp &&
       line_start.CalculateSymbolContextLineEntry(resolved_entry) &&
       LineEntry::Compare(resolved_entry, sc.line_entry)) {
-      // FIXME: The function name will also be wrong here.  Do we need to record
-      // that as well, or can we figure that out again when we report this
-      // breakpoint location.
-      bp_loc_sp->SetPreferredLineEntry(sc.line_entry);
+    // FIXME: The function name will also be wrong here.  Do we need to record
+    // that as well, or can we figure that out again when we report this
+    // breakpoint location.
+    bp_loc_sp->SetPreferredLineEntry(sc.line_entry);
   }
   if (log && bp_loc_sp && !GetBreakpoint()->IsInternal()) {
     StreamString s;

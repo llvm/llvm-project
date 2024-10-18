@@ -169,7 +169,7 @@ public:
   ///
   /// \see lldb::DescriptionLevel
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
-  
+
   // This runs through all the breakpoint locations owning this site and returns
   // the greatest of their suggested stack frame indexes.  This only handles
   // inlined stack changes.
