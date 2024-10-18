@@ -18,6 +18,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -321,50 +322,87 @@ protected:
 /// external AST source itself.
 template<typename T, typename OffsT, T* (ExternalASTSource::*Get)(OffsT Offset)>
 struct LazyOffsetPtr {
-  /// Either a pointer to an AST node or the offset within the
-  /// external AST source where the AST node can be found.
-  ///
-  /// If the low bit is clear, a pointer to the AST node. If the low
-  /// bit is set, the upper 63 bits are the offset.
-  mutable uint64_t Ptr = 0;
+  /// Storage for a pointer or an offset, for the case where pointers are 64
+  /// bits wide. The least-significant bit is used as the discriminator. If the
+  /// bit is clear, a pointer to the AST node. If the bit is set, the upper 63
+  /// bits are the offset.
+  union StorageType64 {
+    StorageType64(uint64_t Offset) : ShiftedOffset((Offset << 1) | 1) {
+      assert(isOffset());
+    }
+    StorageType64(T *Ptr) : Pointer(Ptr) { assert(!isOffset()); }
+
+    bool isOffset() { return llvm::bit_cast<uint64_t>(*this) & 1; }
+    uint64_t offset() { return ShiftedOffset >> 1; }
+    T *&pointer() { return Pointer; }
+
+    uint64_t ShiftedOffset;
+    T *Pointer;
+  };
+
+  /// Storage for a pointer or an offset, for the case where pointers are not 64
+  /// bits wide.
+  union StorageType32 {
+    StorageType32(uint64_t Off) : Offset{true, Off} {}
+    StorageType32(T *Ptr) : Pointer{false, Ptr} {}
+
+    bool isOffset() { return Offset.IsOffset; }
+    uint64_t offset() { return Offset.Offset; }
+    T *&pointer() { return Pointer.Pointer; }
+
+    struct OffsetType {
+      uint64_t IsOffset : 1;
+      uint64_t Offset : 63;
+    } Offset;
+    struct PointerType {
+      uint64_t IsOffset : 1;
+      T *Pointer;
+    } Pointer;
+  };
+
+  mutable std::conditional_t<sizeof(uint64_t) == sizeof(T *), StorageType64,
+                             StorageType32>
+      Storage;
 
 public:
-  LazyOffsetPtr() = default;
-  explicit LazyOffsetPtr(T *Ptr) : Ptr(reinterpret_cast<uint64_t>(Ptr)) {}
+  LazyOffsetPtr() : LazyOffsetPtr(nullptr) {}
+  explicit LazyOffsetPtr(T *Ptr) : Storage(Ptr) {}
 
-  explicit LazyOffsetPtr(uint64_t Offset) : Ptr((Offset << 1) | 0x01) {
-    assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
+  explicit LazyOffsetPtr(uint64_t Offset) : Storage(Offset) {
+    assert(Offset == Storage.offset() && "Offsets must require < 63 bits");
     if (Offset == 0)
-      Ptr = 0;
+      Storage = nullptr;
   }
 
   LazyOffsetPtr &operator=(T *Ptr) {
-    this->Ptr = reinterpret_cast<uint64_t>(Ptr);
+    Storage = Ptr;
     return *this;
   }
 
   LazyOffsetPtr &operator=(uint64_t Offset) {
-    assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
     if (Offset == 0)
-      Ptr = 0;
-    else
-      Ptr = (Offset << 1) | 0x01;
-
+      Storage = nullptr;
+    else {
+      Storage = Offset;
+      assert(Offset == Storage.offset() && "Offsets must require < 63 bits");
+    }
     return *this;
   }
 
   /// Whether this pointer is non-NULL.
   ///
   /// This operation does not require the AST node to be deserialized.
-  explicit operator bool() const { return Ptr != 0; }
+  explicit operator bool() const {
+    return Storage.isOffset() || Storage.pointer();
+  }
 
   /// Whether this pointer is non-NULL.
   ///
   /// This operation does not require the AST node to be deserialized.
-  bool isValid() const { return Ptr != 0; }
+  bool isValid() const { return operator bool(); }
 
   /// Whether this pointer is currently stored as an offset.
-  bool isOffset() const { return Ptr & 0x01; }
+  bool isOffset() const { return Storage.isOffset(); }
 
   /// Retrieve the pointer to the AST node that this lazy pointer points to.
   ///
@@ -375,17 +413,18 @@ public:
     if (isOffset()) {
       assert(Source &&
              "Cannot deserialize a lazy pointer without an AST source");
-      Ptr = reinterpret_cast<uint64_t>((Source->*Get)(OffsT(Ptr >> 1)));
+      Storage = (Source->*Get)(static_cast<OffsT>(Storage.offset()));
     }
-    return reinterpret_cast<T*>(Ptr);
+    return Storage.pointer();
   }
 
   /// Retrieve the address of the AST node pointer. Deserializes the pointee if
-  /// necessary.
+  /// necessary. This function should not exist, and we would like to remove it.
+  /// Do not add new calls to it.
   T **getAddressOfPointer(ExternalASTSource *Source) const {
     // Ensure the integer is in pointer form.
     (void)get(Source);
-    return reinterpret_cast<T**>(&Ptr);
+    return &Storage.pointer();
   }
 };
 
