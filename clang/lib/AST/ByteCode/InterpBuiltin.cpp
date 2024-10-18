@@ -563,6 +563,20 @@ static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_abs(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Val = peekToAPSInt(S.Stk, ArgT);
+  if (Val ==
+      APSInt(APInt::getSignedMinValue(Val.getBitWidth()), /*IsUnsigned=*/false))
+    return false;
+  if (Val.isNegative())
+    Val.negate();
+  pushInteger(S, Val, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
                                      const Function *Func,
@@ -1805,6 +1819,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fabsl:
   case Builtin::BI__builtin_fabsf128:
     if (!interp__builtin_fabs(S, OpPC, Frame, F))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_abs:
+  case Builtin::BI__builtin_labs:
+  case Builtin::BI__builtin_llabs:
+    if (!interp__builtin_abs(S, OpPC, Frame, F, Call))
       return false;
     break;
 
