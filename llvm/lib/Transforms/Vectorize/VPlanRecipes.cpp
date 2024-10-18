@@ -92,7 +92,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
-  case VPWidenCastEVLSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenLoadEVLSC:
@@ -139,7 +138,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
-  case VPWidenCastEVLSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
@@ -180,7 +178,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
-  case VPWidenCastEVLSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
@@ -1557,56 +1554,12 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
       dyn_cast_if_present<Instruction>(getUnderlyingValue()));
 }
 
-void VPWidenCastEVLRecipe::execute(VPTransformState &State) {
-  unsigned Opcode = getOpcode();
-  State.setDebugLocFrom(getDebugLoc());
-  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                          "explicit vector length.");
-
-  assert(State.get(getOperand(0), 0)->getType()->isVectorTy() &&
-         "VPWidenCastEVLRecipe should not be used for scalars");
-
-  // TODO: add more cast instruction, eg: fptoint/inttofp/inttoptr/fptofp
-  if (Opcode == Instruction::SExt || Opcode == Instruction::ZExt ||
-      Opcode == Instruction::Trunc) {
-    Value *SrcVal = State.get(getOperand(0), 0);
-    VectorType *SrcTy = cast<VectorType>(SrcVal->getType());
-    VectorType *DsType =
-        VectorType::get(getResultType(), SrcTy->getElementCount());
-
-    IRBuilderBase &BuilderIR = State.Builder;
-    VectorBuilder Builder(BuilderIR);
-    Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
-
-    Builder.setMask(Mask).setEVL(State.get(getEVL(), 0, /*NeedsScalar=*/true));
-    Value *VPInst =
-        Builder.createVectorInstruction(Opcode, DsType, {SrcVal}, "vp.cast");
-    if (VPInst) {
-      if (auto *VecOp = dyn_cast<CastInst>(VPInst))
-        VecOp->copyIRFlags(getUnderlyingInstr());
-    }
-    State.set(this, VPInst, 0);
-    State.addMetadata(VPInst,
-                      dyn_cast_or_null<Instruction>(getUnderlyingValue()));
-  }
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-CAST ";
   printAsOperand(O, SlotTracker);
   O << " = " << Instruction::getOpcodeName(Opcode) << " ";
-  printFlags(O);
-  printOperands(O, SlotTracker);
-  O << " to " << *getResultType();
-}
-
-void VPWidenCastEVLRecipe::print(raw_ostream &O, const Twine &Indent,
-                                 VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-VP ";
-  printAsOperand(O, SlotTracker);
-  O << " = vp." << Instruction::getOpcodeName(getOpcode()) << " ";
   printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();

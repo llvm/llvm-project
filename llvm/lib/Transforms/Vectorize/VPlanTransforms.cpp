@@ -1477,15 +1477,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                   return nullptr;
                 return new VPWidenEVLRecipe(*W, EVL);
               })
-              .Case<VPWidenCastRecipe>(
-                  [&](VPWidenCastRecipe *W) -> VPRecipeBase * {
-                    unsigned Opcode = W->getOpcode();
-                    if (Opcode != Instruction::SExt &&
-                        Opcode != Instruction::ZExt &&
-                        Opcode != Instruction::Trunc)
-                      return nullptr;
-                    return new VPWidenCastEVLRecipe(*W, EVL);
-                  })
               .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
