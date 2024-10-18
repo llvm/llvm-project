@@ -22,6 +22,23 @@ namespace llvm::sandboxir {
 cl::opt<unsigned> SeedBundleSizeLimit(
     "sbvec-seed-bundle-size-limit", cl::init(32), cl::Hidden,
     cl::desc("Limit the size of the seed bundle to cap compilation time."));
+cl::opt<bool>
+    DisableStoreSeeds("sbvec-disable-store-seeds", cl::init(false), cl::Hidden,
+                      cl::desc("Don't collect store seed instructions."));
+cl::opt<bool>
+    DisableLoadSeeds("sbvec-disable-load-seeds", cl::init(true), cl::Hidden,
+                     cl::desc("Don't collect load seed instructions."));
+
+#define LoadSeedsDef "loads"
+#define StoreSeedsDef "stores"
+cl::opt<std::string>
+    ForceSeed("sbvec-force-seeds", cl::init(""), cl::Hidden,
+              cl::desc("Enable only this type of seeds. This can be one "
+                       "of: '" LoadSeedsDef "','" StoreSeedsDef "'."));
+cl::opt<unsigned> SeedGroupsLimit(
+    "sbvec-seed-groups-limit", cl::init(256), cl::Hidden,
+    cl::desc("Limit the number of collected seeds groups in a BB to "
+             "cap compilation time."));
 
 MutableArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
                                                     unsigned MaxVecRegBits,
@@ -130,5 +147,75 @@ void SeedContainer::print(raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void SeedContainer::dump() const { print(dbgs()); }
 #endif // NDEBUG
+
+template <typename LoadOrStoreT> static bool isValidMemSeed(LoadOrStoreT *LSI) {
+  if (LSI->isSimple())
+    return true;
+  auto *Ty = Utils::getExpectedType(LSI);
+  // Omit types that are architecturally unvectorizable
+  if (Ty->isX86_FP80Ty() || Ty->isPPC_FP128Ty())
+    return false;
+  // Omit vector types without compile-time-known lane counts
+  if (isa<ScalableVectorType>(Ty))
+    return false;
+  if (auto *VTy = dyn_cast<FixedVectorType>(Ty))
+    return VectorType::isValidElementType(VTy->getElementType());
+  return VectorType::isValidElementType(Ty);
+}
+
+template bool isValidMemSeed(LoadInst *LSI);
+template bool isValidMemSeed<StoreInst>(StoreInst *LSI);
+
+SeedCollector::SeedCollector(BasicBlock *SBBB, ScalarEvolution &SE)
+    : StoreSeeds(SE), LoadSeeds(SE), BB(SBBB), Ctx(BB->getContext()) {
+  // TODO: Register a callback for updating the Collector datastructures upon
+  // instr removal
+
+  bool CollectStores = !DisableStoreSeeds;
+  bool CollectLoads = !DisableLoadSeeds;
+  if (LLVM_UNLIKELY(!ForceSeed.empty())) {
+    CollectStores = false;
+    CollectLoads = false;
+    // Enable only the selected one.
+    if (ForceSeed == StoreSeedsDef)
+      CollectStores = true;
+    else if (ForceSeed == LoadSeedsDef)
+      CollectLoads = true;
+    else {
+      errs() << "Bad argument '" << ForceSeed << "' in -" << ForceSeed.ArgStr
+             << "='" << ForceSeed << "'.\n";
+      errs() << "Description: " << ForceSeed.HelpStr << "\n";
+      exit(1);
+    }
+  }
+  // Actually collect the seeds.
+  for (auto &I : *BB) {
+    if (StoreInst *SI = dyn_cast<StoreInst>(&I))
+      if (CollectStores && isValidMemSeed(SI))
+        StoreSeeds.insert(SI);
+    if (LoadInst *LI = dyn_cast<LoadInst>(&I))
+      if (CollectLoads && isValidMemSeed(LI))
+        LoadSeeds.insert(LI);
+    // Cap compilation time.
+    if (totalNumSeedGroups() > SeedGroupsLimit)
+      break;
+  }
+}
+
+SeedCollector::~SeedCollector() {
+  // TODO: Unregister the callback for updating the seed datastructures upon
+  // instr removal
+}
+
+#ifndef NDEBUG
+void SeedCollector::print(raw_ostream &OS) const {
+  OS << "=== StoreSeeds ===\n";
+  StoreSeeds.print(OS);
+  OS << "=== LoadSeeds ===\n";
+  LoadSeeds.print(OS);
+}
+
+void SeedCollector::dump() const { print(dbgs()); }
+#endif
 
 } // namespace llvm::sandboxir
