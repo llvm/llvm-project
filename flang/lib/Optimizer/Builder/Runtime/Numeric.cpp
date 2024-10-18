@@ -284,7 +284,7 @@ struct ForcedSpacing16 {
   }
 };
 
-/// Generate call to Exponent instrinsic runtime routine.
+/// Generate call to Exponent intrinsic runtime routine.
 mlir::Value fir::runtime::genExponent(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Type resultType,
                                       mlir::Value x) {
@@ -320,7 +320,7 @@ mlir::Value fir::runtime::genExponent(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
-/// Generate call to Fraction instrinsic runtime routine.
+/// Generate call to Fraction intrinsic runtime routine.
 mlir::Value fir::runtime::genFraction(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Value x) {
   mlir::func::FuncOp func;
@@ -596,7 +596,7 @@ mlir::Value fir::runtime::genSelectedRealKind(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
-/// Generate call to Set_exponent instrinsic runtime routine.
+/// Generate call to Set_exponent intrinsic runtime routine.
 mlir::Value fir::runtime::genSetExponent(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Value x,
                                          mlir::Value i) {

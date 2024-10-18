@@ -2115,7 +2115,6 @@ void llvm::updateProfileCallee(
 static void
 inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
-  Module *Mod = CB.getModule();
   assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
   bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
        IsUnsafeClaimRV = !IsRetainRV;
@@ -2147,9 +2146,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         //   call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
-          Function *IFn =
-              Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::objc_release);
-          Builder.CreateCall(IFn, RetOpnd, "");
+          Builder.CreateIntrinsic(Intrinsic::objc_release, {}, RetOpnd);
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -2183,9 +2180,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Function *IFn =
-          Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::objc_retain);
-      Builder.CreateCall(IFn, RetOpnd, "");
+      Builder.CreateIntrinsic(Intrinsic::objc_retain, {}, RetOpnd);
     }
   }
 }
@@ -3120,8 +3115,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         else
           Builder.CreateRet(NewDeoptCall);
         // Since the ret type is changed, remove the incompatible attributes.
-        NewDeoptCall->removeRetAttrs(
-            AttributeFuncs::typeIncompatible(NewDeoptCall->getType()));
+        NewDeoptCall->removeRetAttrs(AttributeFuncs::typeIncompatible(
+            NewDeoptCall->getType(), NewDeoptCall->getRetAttributes()));
       }
 
       // Leave behind the normal returns so we can merge control flow.
