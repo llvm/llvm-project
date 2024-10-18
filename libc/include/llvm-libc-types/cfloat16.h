@@ -10,7 +10,8 @@
 #define LLVM_LIBC_TYPES_CFLOAT16_H
 
 #if defined(__FLT16_MANT_DIG__) &&                                             \
-    (!defined(__GNUC__) || __GNUC__ >= 13 || (defined(__clang__) && __clang_major__ >= 14)) &&            \
+    (!defined(__GNUC__) || __GNUC__ >= 13 ||                                   \
+     (defined(__clang__) && __clang_major__ >= 14)) &&                         \
     !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv) &&              \
     !defined(_WIN32)
 #define LIBC_TYPES_HAS_CFLOAT16
