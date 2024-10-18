@@ -1799,6 +1799,47 @@ void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc) {
     unwrap<Instruction>(Inst)->setDebugLoc(DebugLoc());
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateLabel(
+    LLVMDIBuilderRef Builder,
+    LLVMMetadataRef Context, const char *Name, size_t NameLen,
+    LLVMMetadataRef File, unsigned LineNo, LLVMBool AlwaysPreserve) {
+  return wrap(unwrap(Builder)->createLabel(
+    unwrapDI<DIScope>(Context), StringRef(Name, NameLen),
+    unwrapDI<DIFile>(File), LineNo, AlwaysPreserve));
+}
+
+LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef LabelInfo,
+    LLVMMetadataRef Location, LLVMValueRef InsertBefore) {
+  DbgInstPtr DbgInst = unwrap(Builder)->insertLabel(
+    unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
+    unwrap<Instruction>(InsertBefore));
+  // This assert will fail if the module is in the old debug info format.
+  // This function should only be called if the module is in the new
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
+  assert(isa<DbgRecord *>(DbgInst) &&
+         "Function unexpectedly in old debug info format");
+  return wrap(cast<DbgRecord *>(DbgInst));
+}
+
+LLVMDbgRecordRef LLVMDIBuilderInsertLabelAtEnd(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef LabelInfo,
+    LLVMMetadataRef Location, LLVMBasicBlockRef InsertAtEnd) {
+  DbgInstPtr DbgInst = unwrap(Builder)->insertLabel(
+    unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
+    unwrap(InsertAtEnd));
+  // This assert will fail if the module is in the old debug info format.
+  // This function should only be called if the module is in the new
+  // debug info format.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
+  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
+  assert(isa<DbgRecord *>(DbgInst) &&
+         "Function unexpectedly in old debug info format");
+  return wrap(cast<DbgRecord *>(DbgInst));
+}
+
 LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
   switch(unwrap(Metadata)->getMetadataID()) {
 #define HANDLE_METADATA_LEAF(CLASS) \
