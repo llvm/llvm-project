@@ -737,6 +737,17 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   int64_t a = r.addend;
   switch (r.expr) {
   case R_ABS:
+    // pcalau12i,addi.d => pcaddi
+    // With relaxation applied, the relocation type of the third
+    // reloc entry which corresponds to the addi.d insn is converted
+    // from R_LARCH_PCALA_LO12 to R_LARCH_PCREL20_S2.
+    if (r.type == R_LARCH_PCREL20_S2) {
+      if (r.sym->hasFlag(NEEDS_PLT))
+        return r.sym->getPltVA(ctx) + a - p;
+      else
+        return r.sym->getVA(a) - p;
+    }
+    [[fallthrough]];
   case R_DTPREL:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
