@@ -114,6 +114,11 @@ void initializeSMEABIPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
+
+namespace ARM64AS {
+enum : unsigned { PTR32_SPTR = 270, PTR32_UPTR = 271, PTR64 = 272 };
+}
+
 } // end namespace llvm
 
 #endif
