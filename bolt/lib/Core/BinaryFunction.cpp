@@ -111,6 +111,10 @@ cl::opt<bool>
                             cl::desc("try to preserve basic block alignment"),
                             cl::cat(BoltOptCategory));
 
+static cl::opt<bool> PrintOffsets("print-offsets",
+                                  cl::desc("print basic block offsets"),
+                                  cl::Hidden, cl::cat(BoltOptCategory));
+
 static cl::opt<bool> PrintOutputAddressRange(
     "print-output-address-range",
     cl::desc(
@@ -540,6 +544,11 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
 
       if (BB->isLandingPad())
         OS << "  Landing Pad\n";
+
+      if (opts::PrintOffsets && BB->getOutputStartAddress()) {
+        OS << "  OutputOffset: 0x"
+           << Twine::utohexstr(BB->getOutputStartAddress()) << '\n';
+      }
 
       uint64_t BBExecCount = BB->getExecutionCount();
       if (hasValidProfile()) {
@@ -4549,6 +4558,9 @@ void BinaryFunction::printLoopInfo(raw_ostream &OS) const {
 }
 
 bool BinaryFunction::isAArch64Veneer() const {
+  if (hasNameRegex("__AArch64.*Thunk.*"))
+    return true;
+
   if (empty() || hasIslandsInfo())
     return false;
 

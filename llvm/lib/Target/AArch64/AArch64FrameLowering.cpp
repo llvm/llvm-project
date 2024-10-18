@@ -1953,12 +1953,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // pointer bump above.
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
-    // Move past instructions generated to calculate VG
-    if (requiresSaveVG(MF))
-      while (isVGInstruction(MBBI))
-        ++MBBI;
-
-    if (CombineSPBump)
+    if (CombineSPBump &&
+        // Only fix-up frame-setup load/store instructions.
+        (!requiresSaveVG(MF) || !isVGInstruction(MBBI)))
       fixupCalleeSaveRestoreStackOffset(*MBBI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);
     ++MBBI;
