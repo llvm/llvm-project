@@ -719,6 +719,12 @@ DXILResourceMap::DXILResourceMap(
     if (Resources.empty() || RI != Resources.back())
       Resources.push_back(RI);
     CallMap[CI] = Resources.size() - 1;
+
+    // Build ResUseToHandleMap
+    for (auto it = CI->users().begin(); it != CI->users().end(); ++it) {
+      CallInst *CI_Use = dyn_cast<CallInst>(*it);
+      ResUseToHandleMap[CI_Use] = CI;
+    }
   }
 
   unsigned Size = Resources.size();
@@ -744,6 +750,23 @@ DXILResourceMap::DXILResourceMap(
   }
 }
 
+void DXILResourceMap::updateResourceMap(CallInst *origCallInst,
+                                        CallInst *newCallInst) {
+  assert((origCallInst != nullptr) && (newCallInst != nullptr) &&
+         (origCallInst != newCallInst));
+
+  CallMap.try_emplace(newCallInst, CallMap[origCallInst]);
+  CallMap.erase(origCallInst);
+
+  // Update ResUseToHandleMap since Resource Handle changed
+  for (auto it = origCallInst->users().begin();
+       it != origCallInst->users().end();
+       ++it) {
+    CallInst *CI_Use = dyn_cast<CallInst>(*it);
+    ResUseToHandleMap[CI_Use] = newCallInst;
+  }
+}
+
 void DXILResourceMap::print(raw_ostream &OS) const {
   for (unsigned I = 0, E = Resources.size(); I != E; ++I) {
     OS << "Binding " << I << ":\n";
@@ -754,6 +777,14 @@ void DXILResourceMap::print(raw_ostream &OS) const {
   for (const auto &[CI, Index] : CallMap) {
     OS << "Call bound to " << Index << ":";
     CI->print(OS);
+    OS << "\n";
+  }
+
+  for (const auto &[ResUse, ResHandle] : ResUseToHandleMap) {
+    OS << "\n";
+    OS << "Resource " << CallMap.find(ResHandle)->second;
+    OS << " is used by ";
+    ResUse->print(OS);
     OS << "\n";
   }
 }
