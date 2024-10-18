@@ -390,6 +390,9 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       ConstAlways = true;
     break;
   }
+  case Builtin::BI__builtin_fmaf16:
+    llvm_unreachable("Builtin::BI__builtin_fmaf16 NYI");
+    break;
   default:
     break;
   }
@@ -435,6 +438,36 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   if (GenerateIntrinsics) {
     switch (BuiltinIDIfNoAsmLabel) {
+    case Builtin::BIacos:
+    case Builtin::BIacosf:
+    case Builtin::BIacosl:
+    case Builtin::BI__builtin_acos:
+    case Builtin::BI__builtin_acosf:
+    case Builtin::BI__builtin_acosf16:
+    case Builtin::BI__builtin_acosl:
+    case Builtin::BI__builtin_acosf128:
+      llvm_unreachable("Builtin::BIacos like NYI");
+
+    case Builtin::BIasin:
+    case Builtin::BIasinf:
+    case Builtin::BIasinl:
+    case Builtin::BI__builtin_asin:
+    case Builtin::BI__builtin_asinf:
+    case Builtin::BI__builtin_asinf16:
+    case Builtin::BI__builtin_asinl:
+    case Builtin::BI__builtin_asinf128:
+      llvm_unreachable("Builtin::BIasin like NYI");
+
+    case Builtin::BIatan:
+    case Builtin::BIatanf:
+    case Builtin::BIatanl:
+    case Builtin::BI__builtin_atan:
+    case Builtin::BI__builtin_atanf:
+    case Builtin::BI__builtin_atanf16:
+    case Builtin::BI__builtin_atanl:
+    case Builtin::BI__builtin_atanf128:
+      llvm_unreachable("Builtin::BIatan like NYI");
+
     case Builtin::BIceil:
     case Builtin::BIceilf:
     case Builtin::BIceill:
@@ -455,7 +488,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     case Builtin::BI__builtin_copysignf16:
     case Builtin::BI__builtin_copysignf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("BI__builtin_copysignf16 like NYI");
 
     case Builtin::BIcos:
     case Builtin::BIcosf:
@@ -467,6 +500,16 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_cosf128:
       assert(!MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::CosOp>(*this, *E);
+
+    case Builtin::BIcosh:
+    case Builtin::BIcoshf:
+    case Builtin::BIcoshl:
+    case Builtin::BI__builtin_cosh:
+    case Builtin::BI__builtin_coshf:
+    case Builtin::BI__builtin_coshf16:
+    case Builtin::BI__builtin_coshl:
+    case Builtin::BI__builtin_coshf128:
+      llvm_unreachable("Builtin::BIcosh like NYI");
 
     case Builtin::BIexp:
     case Builtin::BIexpf:
@@ -489,6 +532,13 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_exp2f128:
       assert(!MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::Exp2Op>(*this, *E);
+
+    case Builtin::BI__builtin_exp10:
+    case Builtin::BI__builtin_exp10f:
+    case Builtin::BI__builtin_exp10f16:
+    case Builtin::BI__builtin_exp10l:
+    case Builtin::BI__builtin_exp10f128:
+      llvm_unreachable("BI__builtin_exp10 like NYI");
 
     case Builtin::BIfabs:
     case Builtin::BIfabsf:
@@ -518,7 +568,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaf16:
     case Builtin::BI__builtin_fmal:
     case Builtin::BI__builtin_fmaf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("Builtin::BIfma like NYI");
 
     case Builtin::BIfmax:
     case Builtin::BIfmaxf:
@@ -531,7 +581,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     case Builtin::BI__builtin_fmaxf16:
     case Builtin::BI__builtin_fmaxf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("BI__builtin_fmaxf16 like NYI");
 
     case Builtin::BIfmin:
     case Builtin::BIfminf:
@@ -544,7 +594,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     case Builtin::BI__builtin_fminf16:
     case Builtin::BI__builtin_fminf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("BI__builtin_fminf16 like NYI");
 
     // fmod() is a special-case. It maps to the frem instruction rather than an
     // LLVM intrinsic.
@@ -559,7 +609,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     case Builtin::BI__builtin_fmodf16:
     case Builtin::BI__builtin_fmodf128:
-      llvm_unreachable("NYI");
+    case Builtin::BI__builtin_elementwise_fmod:
+      llvm_unreachable("BI__builtin_fmodf16 like NYI");
 
     case Builtin::BIlog:
     case Builtin::BIlogf:
@@ -615,7 +666,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     case Builtin::BI__builtin_powf16:
     case Builtin::BI__builtin_powf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("BI__builtin_powf16 like NYI");
 
     case Builtin::BIrint:
     case Builtin::BIrintf:
@@ -636,6 +687,16 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_roundl:
     case Builtin::BI__builtin_roundf128:
       return buildUnaryFPBuiltin<mlir::cir::RoundOp>(*this, *E);
+
+    case Builtin::BIroundeven:
+    case Builtin::BIroundevenf:
+    case Builtin::BIroundevenl:
+    case Builtin::BI__builtin_roundeven:
+    case Builtin::BI__builtin_roundevenf:
+    case Builtin::BI__builtin_roundevenf16:
+    case Builtin::BI__builtin_roundevenl:
+    case Builtin::BI__builtin_roundevenf128:
+      llvm_unreachable("Builtin::BIroundeven like NYI");
 
     case Builtin::BIsin:
     case Builtin::BIsinf:
@@ -659,6 +720,29 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       assert(!MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::SqrtOp>(*this, *E);
 
+    case Builtin::BI__builtin_elementwise_sqrt:
+      llvm_unreachable("BI__builtin_elementwise_sqrt NYI");
+
+    case Builtin::BItan:
+    case Builtin::BItanf:
+    case Builtin::BItanl:
+    case Builtin::BI__builtin_tan:
+    case Builtin::BI__builtin_tanf:
+    case Builtin::BI__builtin_tanf16:
+    case Builtin::BI__builtin_tanl:
+    case Builtin::BI__builtin_tanf128:
+      llvm_unreachable("Builtin::BItan like NYI");
+
+    case Builtin::BItanh:
+    case Builtin::BItanhf:
+    case Builtin::BItanhl:
+    case Builtin::BI__builtin_tanh:
+    case Builtin::BI__builtin_tanhf:
+    case Builtin::BI__builtin_tanhf16:
+    case Builtin::BI__builtin_tanhl:
+    case Builtin::BI__builtin_tanhf128:
+      llvm_unreachable("Builtin::BItanh like NYI");
+
     case Builtin::BItrunc:
     case Builtin::BItruncf:
     case Builtin::BItruncl:
@@ -679,7 +763,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           *this, *E);
 
     case Builtin::BI__builtin_lroundf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("BI__builtin_lroundf128 NYI");
 
     case Builtin::BIllround:
     case Builtin::BIllroundf:
@@ -691,7 +775,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           *this, *E);
 
     case Builtin::BI__builtin_llroundf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("BI__builtin_llroundf128 NYI");
 
     case Builtin::BIlrint:
     case Builtin::BIlrintf:
@@ -703,7 +787,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                                           *E);
 
     case Builtin::BI__builtin_lrintf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("BI__builtin_lrintf128 NYI");
 
     case Builtin::BIllrint:
     case Builtin::BIllrintf:
@@ -715,7 +799,14 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           *this, *E);
 
     case Builtin::BI__builtin_llrintf128:
-      llvm_unreachable("NYI");
+      llvm_unreachable("BI__builtin_llrintf128 NYI");
+
+    case Builtin::BI__builtin_ldexp:
+    case Builtin::BI__builtin_ldexpf:
+    case Builtin::BI__builtin_ldexpl:
+    case Builtin::BI__builtin_ldexpf16:
+    case Builtin::BI__builtin_ldexpf128:
+      llvm_unreachable("Builtin::BI__builtin_ldexp NYI");
 
     default:
       break;
@@ -726,62 +817,11 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   default:
     break;
 
-  case Builtin::BI__builtin_complex: {
-    mlir::Value Real = buildScalarExpr(E->getArg(0));
-    mlir::Value Imag = buildScalarExpr(E->getArg(1));
-    mlir::Value Complex =
-        builder.createComplexCreate(getLoc(E->getExprLoc()), Real, Imag);
-    return RValue::getComplex(Complex);
-  }
-
-  case Builtin::BI__builtin_creal:
-  case Builtin::BI__builtin_crealf:
-  case Builtin::BI__builtin_creall:
-  case Builtin::BIcreal:
-  case Builtin::BIcrealf:
-  case Builtin::BIcreall: {
-    mlir::Value ComplexVal = buildComplexExpr(E->getArg(0));
-    mlir::Value Real =
-        builder.createComplexReal(getLoc(E->getExprLoc()), ComplexVal);
-    return RValue::get(Real);
-  }
-
-  case Builtin::BI__builtin_cimag:
-  case Builtin::BI__builtin_cimagf:
-  case Builtin::BI__builtin_cimagl:
-  case Builtin::BIcimag:
-  case Builtin::BIcimagf:
-  case Builtin::BIcimagl: {
-    mlir::Value ComplexVal = buildComplexExpr(E->getArg(0));
-    mlir::Value Real =
-        builder.createComplexImag(getLoc(E->getExprLoc()), ComplexVal);
-    return RValue::get(Real);
-  }
-
-  case Builtin::BI__builtin_conj:
-  case Builtin::BI__builtin_conjf:
-  case Builtin::BI__builtin_conjl:
-  case Builtin::BIconj:
-  case Builtin::BIconjf:
-  case Builtin::BIconjl: {
-    mlir::Value ComplexVal = buildComplexExpr(E->getArg(0));
-    mlir::Value Conj = builder.createUnaryOp(
-        getLoc(E->getExprLoc()), mlir::cir::UnaryOpKind::Not, ComplexVal);
-    return RValue::getComplex(Conj);
-  }
-
   case Builtin::BI__builtin___CFStringMakeConstantString:
   case Builtin::BI__builtin___NSStringMakeConstantString:
-    llvm_unreachable("NYI");
+    llvm_unreachable("BI__builtin___CFStringMakeConstantString like NYI");
 
-  case Builtin::BIprintf:
-    if (getTarget().getTriple().isNVPTX() ||
-        getTarget().getTriple().isAMDGCN()) {
-      llvm_unreachable("NYI");
-    }
-    break;
-
-  // C stdarg builtins.
+    // C stdarg builtins.
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__va_start:
@@ -797,6 +837,110 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto srcPtr = buildVAListRef(E->getArg(1)).getPointer();
     builder.create<mlir::cir::VACopyOp>(dstPtr.getLoc(), dstPtr, srcPtr);
     return {};
+  }
+
+  case Builtin::BIabs:
+  case Builtin::BIlabs:
+  case Builtin::BIllabs:
+  case Builtin::BI__builtin_abs:
+  case Builtin::BI__builtin_labs:
+  case Builtin::BI__builtin_llabs:
+    llvm_unreachable("Builtin::BIabs like NYI");
+
+  case Builtin::BI__builtin_complex: {
+    mlir::Value Real = buildScalarExpr(E->getArg(0));
+    mlir::Value Imag = buildScalarExpr(E->getArg(1));
+    mlir::Value Complex =
+        builder.createComplexCreate(getLoc(E->getExprLoc()), Real, Imag);
+    return RValue::getComplex(Complex);
+  }
+
+  case Builtin::BI__builtin_conj:
+  case Builtin::BI__builtin_conjf:
+  case Builtin::BI__builtin_conjl:
+  case Builtin::BIconj:
+  case Builtin::BIconjf:
+  case Builtin::BIconjl: {
+    mlir::Value ComplexVal = buildComplexExpr(E->getArg(0));
+    mlir::Value Conj = builder.createUnaryOp(
+        getLoc(E->getExprLoc()), mlir::cir::UnaryOpKind::Not, ComplexVal);
+    return RValue::getComplex(Conj);
+  }
+
+  case Builtin::BI__builtin_creal:
+  case Builtin::BI__builtin_crealf:
+  case Builtin::BI__builtin_creall:
+  case Builtin::BIcreal:
+  case Builtin::BIcrealf:
+  case Builtin::BIcreall: {
+    mlir::Value ComplexVal = buildComplexExpr(E->getArg(0));
+    mlir::Value Real =
+        builder.createComplexReal(getLoc(E->getExprLoc()), ComplexVal);
+    return RValue::get(Real);
+  }
+
+  case Builtin::BI__builtin_preserve_access_index:
+    llvm_unreachable("Builtin::BI__builtin_preserve_access_index NYI");
+
+  case Builtin::BI__builtin_cimag:
+  case Builtin::BI__builtin_cimagf:
+  case Builtin::BI__builtin_cimagl:
+  case Builtin::BIcimag:
+  case Builtin::BIcimagf:
+  case Builtin::BIcimagl: {
+    mlir::Value ComplexVal = buildComplexExpr(E->getArg(0));
+    mlir::Value Real =
+        builder.createComplexImag(getLoc(E->getExprLoc()), ComplexVal);
+    return RValue::get(Real);
+  }
+
+  case Builtin::BI__builtin_clrsb:
+  case Builtin::BI__builtin_clrsbl:
+  case Builtin::BI__builtin_clrsbll:
+    return buildBuiltinBitOp<mlir::cir::BitClrsbOp>(*this, E, std::nullopt);
+
+  case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctz:
+  case Builtin::BI__builtin_ctzl:
+  case Builtin::BI__builtin_ctzll:
+  case Builtin::BI__builtin_ctzg:
+    return buildBuiltinBitOp<mlir::cir::BitCtzOp>(*this, E, BCK_CTZPassedZero);
+
+  case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clz:
+  case Builtin::BI__builtin_clzl:
+  case Builtin::BI__builtin_clzll:
+  case Builtin::BI__builtin_clzg:
+    return buildBuiltinBitOp<mlir::cir::BitClzOp>(*this, E, BCK_CLZPassedZero);
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    return buildBuiltinBitOp<mlir::cir::BitFfsOp>(*this, E, std::nullopt);
+
+  case Builtin::BI__builtin_parity:
+  case Builtin::BI__builtin_parityl:
+  case Builtin::BI__builtin_parityll:
+    return buildBuiltinBitOp<mlir::cir::BitParityOp>(*this, E, std::nullopt);
+
+  case Builtin::BI__lzcnt16:
+  case Builtin::BI__lzcnt:
+  case Builtin::BI__lzcnt64:
+    llvm_unreachable("BI__lzcnt16 like NYI");
+
+  case Builtin::BI__popcnt16:
+  case Builtin::BI__popcnt:
+  case Builtin::BI__popcnt64:
+  case Builtin::BI__builtin_popcount:
+  case Builtin::BI__builtin_popcountl:
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
+    return buildBuiltinBitOp<mlir::cir::BitPopcountOp>(*this, E, std::nullopt);
+
+  case Builtin::BI__builtin_unpredictable: {
+    if (CGM.getCodeGenOpts().OptimizationLevel != 0)
+      assert(!MissingFeatures::insertBuiltinUnpredictable());
+    return RValue::get(buildScalarExpr(E->getArg(0)));
   }
 
   case Builtin::BI__builtin_expect:
@@ -830,11 +974,6 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         ExpectedValue, ProbAttr);
 
     return RValue::get(result);
-  }
-  case Builtin::BI__builtin_unpredictable: {
-    if (CGM.getCodeGenOpts().OptimizationLevel != 0)
-      assert(!MissingFeatures::insertBuiltinUnpredictable());
-    return RValue::get(buildScalarExpr(E->getArg(0)));
   }
 
   case Builtin::BI__builtin_assume_aligned: {
@@ -875,174 +1014,11 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(nullptr);
   }
 
-  case Builtin::BI__builtin_prefetch: {
-    auto evaluateOperandAsInt = [&](const Expr *Arg) {
-      Expr::EvalResult Res;
-      [[maybe_unused]] bool EvalSucceed =
-          Arg->EvaluateAsInt(Res, CGM.getASTContext());
-      assert(EvalSucceed && "expression should be able to evaluate as int");
-      return Res.Val.getInt().getZExtValue();
-    };
+  case Builtin::BI__builtin_allow_runtime_check:
+    llvm_unreachable("BI__builtin_allow_runtime_check NYI");
 
-    bool IsWrite = false;
-    if (E->getNumArgs() > 1)
-      IsWrite = evaluateOperandAsInt(E->getArg(1));
-
-    int Locality = 0;
-    if (E->getNumArgs() > 2)
-      Locality = evaluateOperandAsInt(E->getArg(2));
-
-    mlir::Value Address = buildScalarExpr(E->getArg(0));
-    builder.create<mlir::cir::PrefetchOp>(getLoc(E->getSourceRange()), Address,
-                                          Locality, IsWrite);
-    return RValue::get(nullptr);
-  }
-
-  case Builtin::BI__builtin___clear_cache: {
-    mlir::Type voidTy = mlir::cir::VoidType::get(builder.getContext());
-    mlir::Value begin =
-        builder.createPtrBitcast(buildScalarExpr(E->getArg(0)), voidTy);
-    mlir::Value end =
-        builder.createPtrBitcast(buildScalarExpr(E->getArg(1)), voidTy);
-    builder.create<mlir::cir::ClearCacheOp>(getLoc(E->getSourceRange()), begin,
-                                            end);
-    return RValue::get(nullptr);
-  }
-
-  // C++ std:: builtins.
-  case Builtin::BImove:
-  case Builtin::BImove_if_noexcept:
-  case Builtin::BIforward:
-  case Builtin::BIas_const:
-    return RValue::get(buildLValue(E->getArg(0)).getPointer());
-  case Builtin::BI__GetExceptionInfo: {
-    llvm_unreachable("NYI");
-  }
-
-  case Builtin::BI__fastfail:
-    llvm_unreachable("NYI");
-
-  case Builtin::BI__builtin_coro_id:
-  case Builtin::BI__builtin_coro_promise:
-  case Builtin::BI__builtin_coro_resume:
-  case Builtin::BI__builtin_coro_noop:
-  case Builtin::BI__builtin_coro_destroy:
-  case Builtin::BI__builtin_coro_done:
-  case Builtin::BI__builtin_coro_alloc:
-  case Builtin::BI__builtin_coro_begin:
-  case Builtin::BI__builtin_coro_end:
-  case Builtin::BI__builtin_coro_suspend:
-  case Builtin::BI__builtin_coro_align:
-    llvm_unreachable("NYI");
-
-  case Builtin::BI__builtin_coro_frame: {
-    return buildCoroutineFrame();
-  }
-  case Builtin::BI__builtin_coro_free:
-  case Builtin::BI__builtin_coro_size: {
-    GlobalDecl gd{FD};
-    mlir::Type ty = CGM.getTypes().GetFunctionType(
-        CGM.getTypes().arrangeGlobalDeclaration(GD));
-    const auto *ND = cast<NamedDecl>(GD.getDecl());
-    auto fnOp =
-        CGM.GetOrCreateCIRFunction(ND->getName(), ty, gd, /*ForVTable=*/false,
-                                   /*DontDefer=*/false);
-    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
-    return buildCall(E->getCallee()->getType(), CIRGenCallee::forDirect(fnOp),
-                     E, ReturnValue);
-  }
-  case Builtin::BI__builtin_dynamic_object_size: {
-    // Fallthrough below, assert until we have a testcase.
-    llvm_unreachable("NYI");
-  }
-  case Builtin::BI__builtin_object_size: {
-    unsigned Type =
-        E->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
-    auto ResType =
-        mlir::dyn_cast<mlir::cir::IntType>(ConvertType(E->getType()));
-    assert(ResType && "not sure what to do?");
-
-    // We pass this builtin onto the optimizer so that it can figure out the
-    // object size in more complex cases.
-    bool IsDynamic = BuiltinID == Builtin::BI__builtin_dynamic_object_size;
-    return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
-                                             /*EmittedE=*/nullptr, IsDynamic));
-  }
-  case Builtin::BI__builtin_unreachable: {
-    buildUnreachable(E->getExprLoc());
-
-    // We do need to preserve an insertion point.
-    builder.createBlock(builder.getBlock()->getParent());
-
-    return RValue::get(nullptr);
-  }
-  case Builtin::BI__builtin_trap: {
-    builder.create<mlir::cir::TrapOp>(getLoc(E->getExprLoc()));
-
-    // Note that cir.trap is a terminator so we need to start a new block to
-    // preserve the insertion point.
-    builder.createBlock(builder.getBlock()->getParent());
-
-    return RValue::get(nullptr);
-  }
-  case Builtin::BImemcpy:
-  case Builtin::BI__builtin_memcpy:
-  case Builtin::BImempcpy:
-  case Builtin::BI__builtin_mempcpy: {
-    Address Dest = buildPointerWithAlignment(E->getArg(0));
-    Address Src = buildPointerWithAlignment(E->getArg(1));
-    mlir::Value SizeVal = buildScalarExpr(E->getArg(2));
-    buildNonNullArgCheck(RValue::get(Dest.getPointer()),
-                         E->getArg(0)->getType(), E->getArg(0)->getExprLoc(),
-                         FD, 0);
-    buildNonNullArgCheck(RValue::get(Src.getPointer()), E->getArg(1)->getType(),
-                         E->getArg(1)->getExprLoc(), FD, 1);
-    builder.createMemCpy(getLoc(E->getSourceRange()), Dest.getPointer(),
-                         Src.getPointer(), SizeVal);
-    if (BuiltinID == Builtin::BImempcpy ||
-        BuiltinID == Builtin::BI__builtin_mempcpy)
-      llvm_unreachable("mempcpy is NYI");
-    else
-      return RValue::get(Dest.getPointer());
-  }
-
-  case Builtin::BI__builtin_clrsb:
-  case Builtin::BI__builtin_clrsbl:
-  case Builtin::BI__builtin_clrsbll:
-    return buildBuiltinBitOp<mlir::cir::BitClrsbOp>(*this, E, std::nullopt);
-
-  case Builtin::BI__builtin_ctzs:
-  case Builtin::BI__builtin_ctz:
-  case Builtin::BI__builtin_ctzl:
-  case Builtin::BI__builtin_ctzll:
-  case Builtin::BI__builtin_ctzg:
-    return buildBuiltinBitOp<mlir::cir::BitCtzOp>(*this, E, BCK_CTZPassedZero);
-
-  case Builtin::BI__builtin_clzs:
-  case Builtin::BI__builtin_clz:
-  case Builtin::BI__builtin_clzl:
-  case Builtin::BI__builtin_clzll:
-  case Builtin::BI__builtin_clzg:
-    return buildBuiltinBitOp<mlir::cir::BitClzOp>(*this, E, BCK_CLZPassedZero);
-
-  case Builtin::BI__builtin_ffs:
-  case Builtin::BI__builtin_ffsl:
-  case Builtin::BI__builtin_ffsll:
-    return buildBuiltinBitOp<mlir::cir::BitFfsOp>(*this, E, std::nullopt);
-
-  case Builtin::BI__builtin_parity:
-  case Builtin::BI__builtin_parityl:
-  case Builtin::BI__builtin_parityll:
-    return buildBuiltinBitOp<mlir::cir::BitParityOp>(*this, E, std::nullopt);
-
-  case Builtin::BI__popcnt16:
-  case Builtin::BI__popcnt:
-  case Builtin::BI__popcnt64:
-  case Builtin::BI__builtin_popcount:
-  case Builtin::BI__builtin_popcountl:
-  case Builtin::BI__builtin_popcountll:
-  case Builtin::BI__builtin_popcountg:
-    return buildBuiltinBitOp<mlir::cir::BitPopcountOp>(*this, E, std::nullopt);
+  case Builtin::BI__arithmetic_fence:
+    llvm_unreachable("BI__arithmetic_fence NYI");
 
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
@@ -1054,6 +1030,12 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(builder.create<mlir::cir::ByteswapOp>(
         getLoc(E->getSourceRange()), arg));
   }
+
+  case Builtin::BI__builtin_bitreverse8:
+  case Builtin::BI__builtin_bitreverse16:
+  case Builtin::BI__builtin_bitreverse32:
+  case Builtin::BI__builtin_bitreverse64:
+    llvm_unreachable("BI__builtin_bitreverse8 like NYI");
 
   case Builtin::BI__builtin_rotateleft8:
   case Builtin::BI__builtin_rotateleft16:
@@ -1113,6 +1095,251 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_dynamic_object_size: {
+    // Fallthrough below, assert until we have a testcase.
+    llvm_unreachable("BI__builtin_dynamic_object_size NYI");
+  }
+  case Builtin::BI__builtin_object_size: {
+    unsigned Type =
+        E->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    auto ResType =
+        mlir::dyn_cast<mlir::cir::IntType>(ConvertType(E->getType()));
+    assert(ResType && "not sure what to do?");
+
+    // We pass this builtin onto the optimizer so that it can figure out the
+    // object size in more complex cases.
+    bool IsDynamic = BuiltinID == Builtin::BI__builtin_dynamic_object_size;
+    return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
+                                             /*EmittedE=*/nullptr, IsDynamic));
+  }
+
+  case Builtin::BI__builtin_prefetch: {
+    auto evaluateOperandAsInt = [&](const Expr *Arg) {
+      Expr::EvalResult Res;
+      [[maybe_unused]] bool EvalSucceed =
+          Arg->EvaluateAsInt(Res, CGM.getASTContext());
+      assert(EvalSucceed && "expression should be able to evaluate as int");
+      return Res.Val.getInt().getZExtValue();
+    };
+
+    bool IsWrite = false;
+    if (E->getNumArgs() > 1)
+      IsWrite = evaluateOperandAsInt(E->getArg(1));
+
+    int Locality = 0;
+    if (E->getNumArgs() > 2)
+      Locality = evaluateOperandAsInt(E->getArg(2));
+
+    mlir::Value Address = buildScalarExpr(E->getArg(0));
+    builder.create<mlir::cir::PrefetchOp>(getLoc(E->getSourceRange()), Address,
+                                          Locality, IsWrite);
+    return RValue::get(nullptr);
+  }
+  case Builtin::BI__builtin_readcyclecounter:
+    llvm_unreachable("BI__builtin_readcyclecounter NYI");
+  case Builtin::BI__builtin_readsteadycounter:
+    llvm_unreachable("BI__builtin_readsteadycounter NYI");
+
+  case Builtin::BI__builtin___clear_cache: {
+    mlir::Type voidTy = mlir::cir::VoidType::get(builder.getContext());
+    mlir::Value begin =
+        builder.createPtrBitcast(buildScalarExpr(E->getArg(0)), voidTy);
+    mlir::Value end =
+        builder.createPtrBitcast(buildScalarExpr(E->getArg(1)), voidTy);
+    builder.create<mlir::cir::ClearCacheOp>(getLoc(E->getSourceRange()), begin,
+                                            end);
+    return RValue::get(nullptr);
+  }
+  case Builtin::BI__builtin_trap: {
+    builder.create<mlir::cir::TrapOp>(getLoc(E->getExprLoc()));
+
+    // Note that cir.trap is a terminator so we need to start a new block to
+    // preserve the insertion point.
+    builder.createBlock(builder.getBlock()->getParent());
+
+    return RValue::get(nullptr);
+  }
+  case Builtin::BI__builtin_verbose_trap:
+    llvm_unreachable("BI__builtin_verbose_trap NYI");
+  case Builtin::BI__debugbreak:
+    llvm_unreachable("BI__debugbreak NYI");
+  case Builtin::BI__builtin_unreachable: {
+    buildUnreachable(E->getExprLoc());
+
+    // We do need to preserve an insertion point.
+    builder.createBlock(builder.getBlock()->getParent());
+
+    return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_powi:
+  case Builtin::BI__builtin_powif:
+  case Builtin::BI__builtin_powil:
+    llvm_unreachable("BI__builtin_powi like NYI");
+
+  case Builtin::BI__builtin_frexp:
+  case Builtin::BI__builtin_frexpf:
+  case Builtin::BI__builtin_frexpf128:
+  case Builtin::BI__builtin_frexpf16:
+    llvm_unreachable("BI__builtin_frexp like NYI");
+
+  case Builtin::BI__builtin_isgreater:
+  case Builtin::BI__builtin_isgreaterequal:
+  case Builtin::BI__builtin_isless:
+  case Builtin::BI__builtin_islessequal:
+  case Builtin::BI__builtin_islessgreater:
+  case Builtin::BI__builtin_isunordered:
+    llvm_unreachable("BI__builtin_isgreater and BI__builtin_isless like NYI");
+
+  case Builtin::BI__builtin_isnan:
+    llvm_unreachable("BI__builtin_isnan NYI");
+
+  case Builtin::BI__builtin_issignaling:
+    llvm_unreachable("BI__builtin_issignaling NYI");
+
+  case Builtin::BI__builtin_isinf:
+    llvm_unreachable("BI__builtin_isinf NYI");
+
+  case Builtin::BIfinite:
+  case Builtin::BI__finite:
+  case Builtin::BIfinitef:
+  case Builtin::BI__finitef:
+  case Builtin::BIfinitel:
+  case Builtin::BI__finitel:
+  case Builtin::BI__builtin_isfinite:
+    llvm_unreachable("Builtin::BIfinite like NYI");
+
+  case Builtin::BI__builtin_isnormal:
+    llvm_unreachable("BI__builtin_isnormal NYI");
+
+  case Builtin::BI__builtin_issubnormal:
+    llvm_unreachable("BI__builtin_issubnormal NYI");
+
+  case Builtin::BI__builtin_iszero:
+    llvm_unreachable("BI__builtin_iszero NYI");
+
+  case Builtin::BI__builtin_isfpclass:
+    llvm_unreachable("BI__builtin_isfpclass NYI");
+
+  case Builtin::BI__builtin_nondeterministic_value:
+    llvm_unreachable("BI__builtin_nondeterministic_value NYI");
+
+  case Builtin::BI__builtin_elementwise_abs:
+    llvm_unreachable("BI__builtin_elementwise_abs NYI");
+
+  case Builtin::BI__builtin_elementwise_acos:
+    llvm_unreachable("BI__builtin_elementwise_acos NYI");
+  case Builtin::BI__builtin_elementwise_asin:
+    llvm_unreachable("BI__builtin_elementwise_asin NYI");
+  case Builtin::BI__builtin_elementwise_atan:
+    llvm_unreachable("BI__builtin_elementwise_atan NYI");
+  case Builtin::BI__builtin_elementwise_atan2:
+    llvm_unreachable("BI__builtin_elementwise_atan2 NYI");
+  case Builtin::BI__builtin_elementwise_ceil:
+    llvm_unreachable("BI__builtin_elementwise_ceil NYI");
+  case Builtin::BI__builtin_elementwise_exp:
+    llvm_unreachable("BI__builtin_elementwise_exp NYI");
+  case Builtin::BI__builtin_elementwise_exp2:
+    llvm_unreachable("BI__builtin_elementwise_exp2 NYI");
+  case Builtin::BI__builtin_elementwise_log:
+    llvm_unreachable("BI__builtin_elementwise_log NYI");
+  case Builtin::BI__builtin_elementwise_log2:
+    llvm_unreachable("BI__builtin_elementwise_log2 NYI");
+  case Builtin::BI__builtin_elementwise_log10:
+    llvm_unreachable("BI__builtin_elementwise_log10 NYI");
+  case Builtin::BI__builtin_elementwise_pow:
+    llvm_unreachable("BI__builtin_elementwise_pow NYI");
+  case Builtin::BI__builtin_elementwise_bitreverse:
+    llvm_unreachable("BI__builtin_elementwise_bitreverse NYI");
+  case Builtin::BI__builtin_elementwise_cos:
+    llvm_unreachable("BI__builtin_elementwise_cos NYI");
+  case Builtin::BI__builtin_elementwise_cosh:
+    llvm_unreachable("BI__builtin_elementwise_cosh NYI");
+  case Builtin::BI__builtin_elementwise_floor:
+    llvm_unreachable("BI__builtin_elementwise_floor NYI");
+  case Builtin::BI__builtin_elementwise_popcount:
+    llvm_unreachable("BI__builtin_elementwise_popcount NYI");
+  case Builtin::BI__builtin_elementwise_roundeven:
+    llvm_unreachable("BI__builtin_elementwise_roundeven NYI");
+  case Builtin::BI__builtin_elementwise_round:
+    llvm_unreachable("BI__builtin_elementwise_round NYI");
+  case Builtin::BI__builtin_elementwise_rint:
+    llvm_unreachable("BI__builtin_elementwise_rint NYI");
+  case Builtin::BI__builtin_elementwise_nearbyint:
+    llvm_unreachable("BI__builtin_elementwise_nearbyint NYI");
+  case Builtin::BI__builtin_elementwise_sin:
+    llvm_unreachable("BI__builtin_elementwise_sin NYI");
+  case Builtin::BI__builtin_elementwise_sinh:
+    llvm_unreachable("BI__builtin_elementwise_sinh NYI");
+  case Builtin::BI__builtin_elementwise_tan:
+    llvm_unreachable("BI__builtin_elementwise_tan NYI");
+  case Builtin::BI__builtin_elementwise_tanh:
+    llvm_unreachable("BI__builtin_elementwise_tanh NYI");
+  case Builtin::BI__builtin_elementwise_trunc:
+    llvm_unreachable("BI__builtin_elementwise_trunc NYI");
+  case Builtin::BI__builtin_elementwise_canonicalize:
+    llvm_unreachable("BI__builtin_elementwise_canonicalize NYI");
+  case Builtin::BI__builtin_elementwise_copysign:
+    llvm_unreachable("BI__builtin_elementwise_copysign NYI");
+  case Builtin::BI__builtin_elementwise_fma:
+    llvm_unreachable("BI__builtin_elementwise_fma NYI");
+  case Builtin::BI__builtin_elementwise_add_sat:
+  case Builtin::BI__builtin_elementwise_sub_sat:
+    llvm_unreachable("BI__builtin_elementwise_add/sub_sat NYI");
+
+  case Builtin::BI__builtin_elementwise_max:
+    llvm_unreachable("BI__builtin_elementwise_max NYI");
+  case Builtin::BI__builtin_elementwise_min:
+    llvm_unreachable("BI__builtin_elementwise_min NYI");
+
+  case Builtin::BI__builtin_elementwise_maximum:
+    llvm_unreachable("BI__builtin_elementwise_maximum NYI");
+
+  case Builtin::BI__builtin_elementwise_minimum:
+    llvm_unreachable("BI__builtin_elementwise_minimum NYI");
+
+  case Builtin::BI__builtin_reduce_max:
+    llvm_unreachable("BI__builtin_reduce_max NYI");
+
+  case Builtin::BI__builtin_reduce_min:
+    llvm_unreachable("BI__builtin_reduce_min NYI");
+
+  case Builtin::BI__builtin_reduce_add:
+    llvm_unreachable("BI__builtin_reduce_add NYI");
+  case Builtin::BI__builtin_reduce_mul:
+    llvm_unreachable("BI__builtin_reduce_mul NYI");
+  case Builtin::BI__builtin_reduce_xor:
+    llvm_unreachable("BI__builtin_reduce_xor NYI");
+  case Builtin::BI__builtin_reduce_or:
+    llvm_unreachable("BI__builtin_reduce_or NYI");
+  case Builtin::BI__builtin_reduce_and:
+    llvm_unreachable("BI__builtin_reduce_and NYI");
+  case Builtin::BI__builtin_reduce_maximum:
+    llvm_unreachable("BI__builtin_reduce_maximum NYI");
+  case Builtin::BI__builtin_reduce_minimum:
+    llvm_unreachable("BI__builtin_reduce_minimum NYI");
+
+  case Builtin::BI__builtin_matrix_transpose:
+    llvm_unreachable("BI__builtin_matrix_transpose NYI");
+
+  case Builtin::BI__builtin_matrix_column_major_load:
+    llvm_unreachable("BI__builtin_matrix_column_major_load NYI");
+
+  case Builtin::BI__builtin_matrix_column_major_store:
+    llvm_unreachable("BI__builtin_matrix_column_major_store NYI");
+
+  case Builtin::BI__builtin_isinf_sign:
+    llvm_unreachable("BI__builtin_isinf_sign NYI");
+
+  case Builtin::BI__builtin_flt_rounds:
+    llvm_unreachable("BI__builtin_flt_rounds NYI");
+
+  case Builtin::BI__builtin_set_flt_rounds:
+    llvm_unreachable("BI__builtin_set_flt_rounds NYI");
+
+  case Builtin::BI__builtin_fpclassify:
+    llvm_unreachable("BI__builtin_fpclassify NYI");
+
   case Builtin::BIalloca:
   case Builtin::BI_alloca:
   case Builtin::BI__builtin_alloca_uninitialized:
@@ -1157,8 +1384,118 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         builder.createBitcast(AllocaAddr, builder.getVoidPtrTy()));
   }
 
+  case Builtin::BI__builtin_alloca_with_align_uninitialized:
+  case Builtin::BI__builtin_alloca_with_align:
+    llvm_unreachable("BI__builtin_alloca_with_align like NYI");
+
+  case Builtin::BIbzero:
+  case Builtin::BI__builtin_bzero:
+    llvm_unreachable("BIbzero like NYI");
+
+  case Builtin::BIbcopy:
+  case Builtin::BI__builtin_bcopy:
+    llvm_unreachable("BIbcopy like NYI");
+
+  case Builtin::BImemcpy:
+  case Builtin::BI__builtin_memcpy:
+  case Builtin::BImempcpy:
+  case Builtin::BI__builtin_mempcpy: {
+    Address Dest = buildPointerWithAlignment(E->getArg(0));
+    Address Src = buildPointerWithAlignment(E->getArg(1));
+    mlir::Value SizeVal = buildScalarExpr(E->getArg(2));
+    buildNonNullArgCheck(RValue::get(Dest.getPointer()),
+                         E->getArg(0)->getType(), E->getArg(0)->getExprLoc(),
+                         FD, 0);
+    buildNonNullArgCheck(RValue::get(Src.getPointer()), E->getArg(1)->getType(),
+                         E->getArg(1)->getExprLoc(), FD, 1);
+    builder.createMemCpy(getLoc(E->getSourceRange()), Dest.getPointer(),
+                         Src.getPointer(), SizeVal);
+    if (BuiltinID == Builtin::BImempcpy ||
+        BuiltinID == Builtin::BI__builtin_mempcpy)
+      llvm_unreachable("mempcpy is NYI");
+    else
+      return RValue::get(Dest.getPointer());
+  }
+
+  case Builtin::BI__builtin_memcpy_inline:
+    llvm_unreachable("BI__builtin_memcpy_inline NYI");
+
+  case Builtin::BI__builtin_char_memchr:
+    llvm_unreachable("BI__builtin_char_memchr NYI");
+
+  case Builtin::BI__builtin___memcpy_chk:
+    llvm_unreachable("BI__builtin___memcpy_chk NYI");
+
+  case Builtin::BI__builtin_objc_memmove_collectable:
+    llvm_unreachable("BI__builtin_objc_memmove_collectable NYI");
+
+  case Builtin::BI__builtin___memmove_chk:
+    llvm_unreachable("BI__builtin___memmove_chk NYI");
+
+  case Builtin::BImemmove:
+  case Builtin::BI__builtin_memmove:
+    llvm_unreachable("BImemmove like NYI");
+
+  case Builtin::BImemset:
+  case Builtin::BI__builtin_memset:
+    llvm_unreachable("BImemset like NYI");
+
+  case Builtin::BI__builtin_memset_inline:
+    llvm_unreachable("BI__builtin_memset_inline NYI");
+  case Builtin::BI__builtin___memset_chk:
+    llvm_unreachable("BI__builtin___memset_chk NYI");
+  case Builtin::BI__builtin_wmemchr:
+    llvm_unreachable("BI__builtin_wmemchr NYI");
+  case Builtin::BI__builtin_wmemcmp:
+    llvm_unreachable("BI__builtin_wmemcmp NYI");
+  case Builtin::BI__builtin_dwarf_cfa:
+    llvm_unreachable("BI__builtin_dwarf_cfa NYI");
+  case Builtin::BI__builtin_return_address:
+    llvm_unreachable("BI__builtin_return_address NYI");
+  case Builtin::BI_ReturnAddress:
+    llvm_unreachable("BI_ReturnAddress NYI");
+  case Builtin::BI__builtin_frame_address:
+    llvm_unreachable("BI__builtin_frame_address NYI");
+  case Builtin::BI__builtin_extract_return_addr:
+    llvm_unreachable("BI__builtin_extract_return_addr NYI");
+  case Builtin::BI__builtin_frob_return_addr:
+    llvm_unreachable("BI__builtin_frob_return_addr NYI");
+  case Builtin::BI__builtin_dwarf_sp_column:
+    llvm_unreachable("BI__builtin_dwarf_sp_column NYI");
+  case Builtin::BI__builtin_init_dwarf_reg_size_table:
+    llvm_unreachable("BI__builtin_init_dwarf_reg_size_table NYI");
+  case Builtin::BI__builtin_eh_return:
+    llvm_unreachable("BI__builtin_eh_return NYI");
+  case Builtin::BI__builtin_unwind_init:
+    llvm_unreachable("BI__builtin_unwind_init NYI");
+  case Builtin::BI__builtin_extend_pointer:
+    llvm_unreachable("BI__builtin_extend_pointer NYI");
+  case Builtin::BI__builtin_setjmp:
+    llvm_unreachable("BI__builtin_setjmp NYI");
+  case Builtin::BI__builtin_longjmp:
+    llvm_unreachable("BI__builtin_longjmp NYI");
+  case Builtin::BI__builtin_launder:
+    llvm_unreachable("BI__builtin_launder NYI");
+
   case Builtin::BI__sync_fetch_and_add:
+  case Builtin::BI__sync_fetch_and_sub:
+  case Builtin::BI__sync_fetch_and_or:
+  case Builtin::BI__sync_fetch_and_and:
+  case Builtin::BI__sync_fetch_and_xor:
+  case Builtin::BI__sync_fetch_and_nand:
+  case Builtin::BI__sync_add_and_fetch:
+  case Builtin::BI__sync_sub_and_fetch:
+  case Builtin::BI__sync_and_and_fetch:
+  case Builtin::BI__sync_or_and_fetch:
+  case Builtin::BI__sync_xor_and_fetch:
+  case Builtin::BI__sync_nand_and_fetch:
+  case Builtin::BI__sync_val_compare_and_swap:
+  case Builtin::BI__sync_bool_compare_and_swap:
+  case Builtin::BI__sync_lock_test_and_set:
+  case Builtin::BI__sync_lock_release:
+  case Builtin::BI__sync_swap:
     llvm_unreachable("Shouldn't make it through sema");
+
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
   case Builtin::BI__sync_fetch_and_add_4:
@@ -1167,8 +1504,6 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return buildBinaryAtomic(*this, mlir::cir::AtomicFetchKind::Add, E);
   }
 
-  case Builtin::BI__sync_fetch_and_sub:
-    llvm_unreachable("Shouldn't make it through sema");
   case Builtin::BI__sync_fetch_and_sub_1:
   case Builtin::BI__sync_fetch_and_sub_2:
   case Builtin::BI__sync_fetch_and_sub_4:
@@ -1176,6 +1511,83 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_fetch_and_sub_16: {
     return buildBinaryAtomic(*this, mlir::cir::AtomicFetchKind::Sub, E);
   }
+
+  case Builtin::BI__sync_fetch_and_or_1:
+  case Builtin::BI__sync_fetch_and_or_2:
+  case Builtin::BI__sync_fetch_and_or_4:
+  case Builtin::BI__sync_fetch_and_or_8:
+  case Builtin::BI__sync_fetch_and_or_16:
+    llvm_unreachable("BI__sync_fetch_and_or NYI");
+  case Builtin::BI__sync_fetch_and_and_1:
+  case Builtin::BI__sync_fetch_and_and_2:
+  case Builtin::BI__sync_fetch_and_and_4:
+  case Builtin::BI__sync_fetch_and_and_8:
+  case Builtin::BI__sync_fetch_and_and_16:
+    llvm_unreachable("BI__sync_fetch_and_and NYI");
+  case Builtin::BI__sync_fetch_and_xor_1:
+  case Builtin::BI__sync_fetch_and_xor_2:
+  case Builtin::BI__sync_fetch_and_xor_4:
+  case Builtin::BI__sync_fetch_and_xor_8:
+  case Builtin::BI__sync_fetch_and_xor_16:
+    llvm_unreachable("BI__sync_fetch_and_xor NYI");
+  case Builtin::BI__sync_fetch_and_nand_1:
+  case Builtin::BI__sync_fetch_and_nand_2:
+  case Builtin::BI__sync_fetch_and_nand_4:
+  case Builtin::BI__sync_fetch_and_nand_8:
+  case Builtin::BI__sync_fetch_and_nand_16:
+    llvm_unreachable("BI__sync_fetch_and_nand NYI");
+
+  // Clang extensions: not overloaded yet.
+  case Builtin::BI__sync_fetch_and_min:
+    llvm_unreachable("BI__sync_fetch_and_min NYI");
+  case Builtin::BI__sync_fetch_and_max:
+    llvm_unreachable("BI__sync_fetch_and_max NYI");
+  case Builtin::BI__sync_fetch_and_umin:
+    llvm_unreachable("BI__sync_fetch_and_umin NYI");
+  case Builtin::BI__sync_fetch_and_umax:
+    llvm_unreachable("BI__sync_fetch_and_umax NYI");
+
+  case Builtin::BI__sync_add_and_fetch_1:
+  case Builtin::BI__sync_add_and_fetch_2:
+  case Builtin::BI__sync_add_and_fetch_4:
+  case Builtin::BI__sync_add_and_fetch_8:
+  case Builtin::BI__sync_add_and_fetch_16:
+    llvm_unreachable("BI__sync_add_and_fetch like NYI");
+
+  case Builtin::BI__sync_sub_and_fetch_1:
+  case Builtin::BI__sync_sub_and_fetch_2:
+  case Builtin::BI__sync_sub_and_fetch_4:
+  case Builtin::BI__sync_sub_and_fetch_8:
+  case Builtin::BI__sync_sub_and_fetch_16:
+    llvm_unreachable("BI__sync_sub_and_fetch like NYI");
+
+  case Builtin::BI__sync_and_and_fetch_1:
+  case Builtin::BI__sync_and_and_fetch_2:
+  case Builtin::BI__sync_and_and_fetch_4:
+  case Builtin::BI__sync_and_and_fetch_8:
+  case Builtin::BI__sync_and_and_fetch_16:
+    llvm_unreachable("BI__sync_and_and_fetch like NYI");
+
+  case Builtin::BI__sync_or_and_fetch_1:
+  case Builtin::BI__sync_or_and_fetch_2:
+  case Builtin::BI__sync_or_and_fetch_4:
+  case Builtin::BI__sync_or_and_fetch_8:
+  case Builtin::BI__sync_or_and_fetch_16:
+    llvm_unreachable("BI__sync_or_and_fetch like NYI");
+
+  case Builtin::BI__sync_xor_and_fetch_1:
+  case Builtin::BI__sync_xor_and_fetch_2:
+  case Builtin::BI__sync_xor_and_fetch_4:
+  case Builtin::BI__sync_xor_and_fetch_8:
+  case Builtin::BI__sync_xor_and_fetch_16:
+    llvm_unreachable("BI__sync_xor_and_fetch like NYI");
+
+  case Builtin::BI__sync_nand_and_fetch_1:
+  case Builtin::BI__sync_nand_and_fetch_2:
+  case Builtin::BI__sync_nand_and_fetch_4:
+  case Builtin::BI__sync_nand_and_fetch_8:
+  case Builtin::BI__sync_nand_and_fetch_16:
+    llvm_unreachable("BI__sync_nand_and_fetch like NYI");
 
   case Builtin::BI__sync_val_compare_and_swap_1:
   case Builtin::BI__sync_val_compare_and_swap_2:
@@ -1190,6 +1602,71 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_bool_compare_and_swap_8:
   case Builtin::BI__sync_bool_compare_and_swap_16:
     return RValue::get(MakeAtomicCmpXchgValue(*this, E, true));
+
+  case Builtin::BI__sync_swap_1:
+  case Builtin::BI__sync_swap_2:
+  case Builtin::BI__sync_swap_4:
+  case Builtin::BI__sync_swap_8:
+  case Builtin::BI__sync_swap_16:
+    llvm_unreachable("BI__sync_swap1 like NYI");
+
+  case Builtin::BI__sync_lock_test_and_set_1:
+  case Builtin::BI__sync_lock_test_and_set_2:
+  case Builtin::BI__sync_lock_test_and_set_4:
+  case Builtin::BI__sync_lock_test_and_set_8:
+  case Builtin::BI__sync_lock_test_and_set_16:
+    llvm_unreachable("BI__sync_lock_test_and_set_1 like NYI");
+
+  case Builtin::BI__sync_lock_release_1:
+  case Builtin::BI__sync_lock_release_2:
+  case Builtin::BI__sync_lock_release_4:
+  case Builtin::BI__sync_lock_release_8:
+  case Builtin::BI__sync_lock_release_16:
+    llvm_unreachable("BI__sync_lock_release_1 like NYI");
+
+  case Builtin::BI__sync_synchronize:
+    llvm_unreachable("BI__sync_synchronize NYI");
+  case Builtin::BI__builtin_nontemporal_load:
+    llvm_unreachable("BI__builtin_nontemporal_load NYI");
+  case Builtin::BI__builtin_nontemporal_store:
+    llvm_unreachable("BI__builtin_nontemporal_store NYI");
+  case Builtin::BI__c11_atomic_is_lock_free:
+    llvm_unreachable("BI__c11_atomic_is_lock_free NYI");
+  case Builtin::BI__atomic_is_lock_free:
+    llvm_unreachable("BI__atomic_is_lock_free NYI");
+  case Builtin::BI__atomic_test_and_set:
+    llvm_unreachable("BI__atomic_test_and_set NYI");
+  case Builtin::BI__atomic_clear:
+    llvm_unreachable("BI__atomic_clear NYI");
+
+  case Builtin::BI__atomic_thread_fence:
+  case Builtin::BI__atomic_signal_fence:
+  case Builtin::BI__c11_atomic_thread_fence:
+  case Builtin::BI__c11_atomic_signal_fence:
+    llvm_unreachable("BI__atomic_thread_fence like NYI");
+
+  case Builtin::BI__builtin_signbit:
+  case Builtin::BI__builtin_signbitf:
+  case Builtin::BI__builtin_signbitl:
+    llvm_unreachable("BI__builtin_signbit like NYI");
+
+  case Builtin::BI__warn_memset_zero_len:
+    llvm_unreachable("BI__warn_memset_zero_len NYI");
+  case Builtin::BI__annotation:
+    llvm_unreachable("BI__annotation NYI");
+  case Builtin::BI__builtin_annotation:
+    llvm_unreachable("BI__builtin_annotation NYI");
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll:
+    llvm_unreachable("BI__builtin_addcb like NYI");
 
   case Builtin::BI__builtin_add_overflow:
   case Builtin::BI__builtin_sub_overflow:
@@ -1341,10 +1818,268 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(ArithResult.overflow);
   }
+
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
     return RValue::get(buildLValue(E->getArg(0)).getPointer());
+  case Builtin::BI__builtin_function_start:
+    llvm_unreachable("BI__builtin_function_start NYI");
+  case Builtin::BI__builtin_operator_new:
+    llvm_unreachable("BI__builtin_operator_new NYI");
+  case Builtin::BI__builtin_operator_delete:
+    llvm_unreachable("BI__builtin_operator_delete NYI");
+  case Builtin::BI__builtin_is_aligned:
+    llvm_unreachable("BI__builtin_is_aligned NYI");
+  case Builtin::BI__builtin_align_up:
+    llvm_unreachable("BI__builtin_align_up NYI");
+  case Builtin::BI__builtin_align_down:
+    llvm_unreachable("BI__builtin_align_down NYI");
+
+  case Builtin::BI__noop:
+    // __noop always evaluates to an integer literal zero.
+    llvm_unreachable("BI__noop NYI");
+  case Builtin::BI__builtin_call_with_static_chain:
+    llvm_unreachable("BI__builtin_call_with_static_chain NYI");
+  case Builtin::BI_InterlockedExchange8:
+  case Builtin::BI_InterlockedExchange16:
+  case Builtin::BI_InterlockedExchange:
+  case Builtin::BI_InterlockedExchangePointer:
+    llvm_unreachable("BI_InterlockedExchange8 like NYI");
+  case Builtin::BI_InterlockedCompareExchangePointer:
+  case Builtin::BI_InterlockedCompareExchangePointer_nf:
+    llvm_unreachable("BI_InterlockedCompareExchangePointer like NYI");
+  case Builtin::BI_InterlockedCompareExchange8:
+  case Builtin::BI_InterlockedCompareExchange16:
+  case Builtin::BI_InterlockedCompareExchange:
+  case Builtin::BI_InterlockedCompareExchange64:
+    llvm_unreachable("BI_InterlockedCompareExchange8 like NYI");
+  case Builtin::BI_InterlockedIncrement16:
+  case Builtin::BI_InterlockedIncrement:
+    llvm_unreachable("BI_InterlockedIncrement16 like NYI");
+  case Builtin::BI_InterlockedDecrement16:
+  case Builtin::BI_InterlockedDecrement:
+    llvm_unreachable("BI_InterlockedDecrement16 like NYI");
+  case Builtin::BI_InterlockedAnd8:
+  case Builtin::BI_InterlockedAnd16:
+  case Builtin::BI_InterlockedAnd:
+    llvm_unreachable("BI_InterlockedAnd8 like NYI");
+  case Builtin::BI_InterlockedExchangeAdd8:
+  case Builtin::BI_InterlockedExchangeAdd16:
+  case Builtin::BI_InterlockedExchangeAdd:
+    llvm_unreachable("BI_InterlockedExchangeAdd8 like NYI");
+  case Builtin::BI_InterlockedExchangeSub8:
+  case Builtin::BI_InterlockedExchangeSub16:
+  case Builtin::BI_InterlockedExchangeSub:
+    llvm_unreachable("BI_InterlockedExchangeSub8 like NYI");
+  case Builtin::BI_InterlockedOr8:
+  case Builtin::BI_InterlockedOr16:
+  case Builtin::BI_InterlockedOr:
+    llvm_unreachable("BI_InterlockedOr8 like NYI");
+  case Builtin::BI_InterlockedXor8:
+  case Builtin::BI_InterlockedXor16:
+  case Builtin::BI_InterlockedXor:
+    llvm_unreachable("BI_InterlockedXor8 like NYI");
+
+  case Builtin::BI_bittest64:
+  case Builtin::BI_bittest:
+  case Builtin::BI_bittestandcomplement64:
+  case Builtin::BI_bittestandcomplement:
+  case Builtin::BI_bittestandreset64:
+  case Builtin::BI_bittestandreset:
+  case Builtin::BI_bittestandset64:
+  case Builtin::BI_bittestandset:
+  case Builtin::BI_interlockedbittestandreset:
+  case Builtin::BI_interlockedbittestandreset64:
+  case Builtin::BI_interlockedbittestandset64:
+  case Builtin::BI_interlockedbittestandset:
+  case Builtin::BI_interlockedbittestandset_acq:
+  case Builtin::BI_interlockedbittestandset_rel:
+  case Builtin::BI_interlockedbittestandset_nf:
+  case Builtin::BI_interlockedbittestandreset_acq:
+  case Builtin::BI_interlockedbittestandreset_rel:
+  case Builtin::BI_interlockedbittestandreset_nf:
+    llvm_unreachable("BI_bittest64 like NYI");
+
+  // These builtins exist to emit regular volatile loads and stores not
+  // affected by the -fms-volatile setting.
+  case Builtin::BI__iso_volatile_load8:
+  case Builtin::BI__iso_volatile_load16:
+  case Builtin::BI__iso_volatile_load32:
+  case Builtin::BI__iso_volatile_load64:
+    llvm_unreachable("BI__iso_volatile_load8 like NYI");
+  case Builtin::BI__iso_volatile_store8:
+  case Builtin::BI__iso_volatile_store16:
+  case Builtin::BI__iso_volatile_store32:
+  case Builtin::BI__iso_volatile_store64:
+    llvm_unreachable("BI__iso_volatile_store8 like NYI");
+
+  case Builtin::BI__builtin_ptrauth_sign_constant:
+    llvm_unreachable("BI__builtin_ptrauth_sign_constant NYI");
+
+  case Builtin::BI__builtin_ptrauth_auth:
+  case Builtin::BI__builtin_ptrauth_auth_and_resign:
+  case Builtin::BI__builtin_ptrauth_blend_discriminator:
+  case Builtin::BI__builtin_ptrauth_sign_generic_data:
+  case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
+  case Builtin::BI__builtin_ptrauth_strip:
+    llvm_unreachable("BI__builtin_ptrauth_auth like NYI");
+
+  case Builtin::BI__exception_code:
+  case Builtin::BI_exception_code:
+    llvm_unreachable("BI__exception_code like NYI");
+  case Builtin::BI__exception_info:
+  case Builtin::BI_exception_info:
+    llvm_unreachable("BI__exception_info like NYI");
+  case Builtin::BI__abnormal_termination:
+  case Builtin::BI_abnormal_termination:
+    llvm_unreachable("BI__abnormal_termination like NYI");
+  case Builtin::BI_setjmpex:
+    llvm_unreachable("BI_setjmpex NYI");
+    break;
+  case Builtin::BI_setjmp:
+    llvm_unreachable("BI_setjmp NYI");
+    break;
+
+  // C++ std:: builtins.
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+  case Builtin::BIforward:
+  case Builtin::BIas_const:
+    return RValue::get(buildLValue(E->getArg(0)).getPointer());
+  case Builtin::BIforward_like:
+    llvm_unreachable("BIforward_like NYI");
+  case Builtin::BI__GetExceptionInfo:
+    llvm_unreachable("BI__GetExceptionInfo NYI");
+
+  case Builtin::BI__fastfail:
+    llvm_unreachable("BI__fastfail NYI");
+
+  case Builtin::BI__builtin_coro_id:
+  case Builtin::BI__builtin_coro_promise:
+  case Builtin::BI__builtin_coro_resume:
+  case Builtin::BI__builtin_coro_noop:
+  case Builtin::BI__builtin_coro_destroy:
+  case Builtin::BI__builtin_coro_done:
+  case Builtin::BI__builtin_coro_alloc:
+  case Builtin::BI__builtin_coro_begin:
+  case Builtin::BI__builtin_coro_end:
+  case Builtin::BI__builtin_coro_suspend:
+  case Builtin::BI__builtin_coro_align:
+    llvm_unreachable("BI__builtin_coro_id like NYI");
+
+  case Builtin::BI__builtin_coro_frame: {
+    return buildCoroutineFrame();
+  }
+  case Builtin::BI__builtin_coro_free:
+  case Builtin::BI__builtin_coro_size: {
+    GlobalDecl gd{FD};
+    mlir::Type ty = CGM.getTypes().GetFunctionType(
+        CGM.getTypes().arrangeGlobalDeclaration(GD));
+    const auto *ND = cast<NamedDecl>(GD.getDecl());
+    auto fnOp =
+        CGM.GetOrCreateCIRFunction(ND->getName(), ty, gd, /*ForVTable=*/false,
+                                   /*DontDefer=*/false);
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+    return buildCall(E->getCallee()->getType(), CIRGenCallee::forDirect(fnOp),
+                     E, ReturnValue);
+  }
+
+  case Builtin::BIread_pipe:
+  case Builtin::BIwrite_pipe:
+    llvm_unreachable("BIread_pipe and BIwrite_pipe NYI");
+
+  // OpenCL v2.0 s6.13.16 ,s9.17.3.5 - Built-in pipe reserve read and write
+  // functions
+  case Builtin::BIreserve_read_pipe:
+  case Builtin::BIreserve_write_pipe:
+  case Builtin::BIwork_group_reserve_read_pipe:
+  case Builtin::BIwork_group_reserve_write_pipe:
+  case Builtin::BIsub_group_reserve_read_pipe:
+  case Builtin::BIsub_group_reserve_write_pipe:
+    llvm_unreachable("BIreserve_read_pipe like NYI");
+
+  // OpenCL v2.0 s6.13.16, s9.17.3.5 - Built-in pipe commit read and write
+  // functions
+  case Builtin::BIcommit_read_pipe:
+  case Builtin::BIcommit_write_pipe:
+  case Builtin::BIwork_group_commit_read_pipe:
+  case Builtin::BIwork_group_commit_write_pipe:
+  case Builtin::BIsub_group_commit_read_pipe:
+  case Builtin::BIsub_group_commit_write_pipe:
+    llvm_unreachable("BIcommit_read_pipe like NYI");
+  // OpenCL v2.0 s6.13.16.4 Built-in pipe query functions
+  case Builtin::BIget_pipe_num_packets:
+  case Builtin::BIget_pipe_max_packets:
+    llvm_unreachable("BIget_pipe_num_packets like NYI");
+
+  // OpenCL v2.0 s6.13.9 - Address space qualifier functions.
+  case Builtin::BIto_global:
+  case Builtin::BIto_local:
+  case Builtin::BIto_private:
+    llvm_unreachable("Builtin::BIto_global like NYI");
+
+  // OpenCL v2.0, s6.13.17 - Enqueue kernel function.
+  // Table 6.13.17.1 specifies four overload forms of enqueue_kernel.
+  // The code below expands the builtin call to a call to one of the following
+  // functions that an OpenCL runtime library will have to provide:
+  //   __enqueue_kernel_basic
+  //   __enqueue_kernel_varargs
+  //   __enqueue_kernel_basic_events
+  //   __enqueue_kernel_events_varargs
+  case Builtin::BIenqueue_kernel:
+    llvm_unreachable("BIenqueue_kernel NYI");
+  // OpenCL v2.0 s6.13.17.6 - Kernel query functions need bitcast of block
+  // parameter.
+  case Builtin::BIget_kernel_work_group_size:
+    llvm_unreachable("BIget_kernel_work_group_size NYI");
+  case Builtin::BIget_kernel_preferred_work_group_size_multiple:
+    llvm_unreachable("BIget_kernel_preferred_work_group_size_multiple NYI");
+
+  case Builtin::BIget_kernel_max_sub_group_size_for_ndrange:
+  case Builtin::BIget_kernel_sub_group_count_for_ndrange:
+    llvm_unreachable("BIget_kernel_max_sub_group_size_for_ndrange like NYI");
+
+  case Builtin::BI__builtin_store_half:
+  case Builtin::BI__builtin_store_halff:
+    llvm_unreachable("BI__builtin_store_half like NYI");
+  case Builtin::BI__builtin_load_half:
+    llvm_unreachable("BI__builtin_load_half NYI");
+  case Builtin::BI__builtin_load_halff:
+    llvm_unreachable("BI__builtin_load_halff NYI");
+
+  case Builtin::BI__builtin_printf:
+    llvm_unreachable("BI__builtin_printf NYI");
+  case Builtin::BIprintf:
+    if (getTarget().getTriple().isNVPTX() ||
+        getTarget().getTriple().isAMDGCN()) {
+      llvm_unreachable("BIprintf NYI");
+    }
+    break;
+
+  case Builtin::BI__builtin_canonicalize:
+  case Builtin::BI__builtin_canonicalizef:
+  case Builtin::BI__builtin_canonicalizef16:
+  case Builtin::BI__builtin_canonicalizel:
+    llvm_unreachable("BI__builtin_canonicalize like NYI");
+
+  case Builtin::BI__builtin_thread_pointer:
+    llvm_unreachable("BI__builtin_thread_pointer NYI");
+  case Builtin::BI__builtin_os_log_format:
+    llvm_unreachable("BI__builtin_os_log_format NYI");
+  case Builtin::BI__xray_customevent:
+    llvm_unreachable("BI__xray_customevent NYI");
+  case Builtin::BI__xray_typedevent:
+    llvm_unreachable("BI__xray_typedevent NYI");
+
+  case Builtin::BI__builtin_ms_va_start:
+  case Builtin::BI__builtin_ms_va_end:
+    llvm_unreachable("BI__builtin_ms_va_start like NYI");
+
+  case Builtin::BI__builtin_ms_va_copy:
+    llvm_unreachable("BI__builtin_ms_va_copy NYI");
+  case Builtin::BI__builtin_get_device_side_mangled_name:
+    llvm_unreachable("BI__builtin_get_device_side_mangled_name NYI");
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
