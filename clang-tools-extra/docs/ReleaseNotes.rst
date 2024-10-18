@@ -173,6 +173,10 @@ Changes in existing checks
   fix false positive that floating point variable is only used in increment
   expression.
 
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
+  insertion location for function pointers.
+
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   avoid false positive when member initialization depends on a structured
@@ -187,9 +191,9 @@ Changes in existing checks
   false positive for C++23 deducing this.
 
 - Improved :doc:`modernize-avoid-c-arrays
-  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using ``std::span``
-  as a replacement for parameters of incomplete C array type in C++20 and 
-  ``std::array`` or ``std::vector`` before C++20.
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
+  ``std::span`` as a replacement for parameters of incomplete C array type in
+  C++20 and ``std::array`` or ``std::vector`` before C++20.
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
