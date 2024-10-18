@@ -365,8 +365,8 @@ TEST_F(SeedBundleTest, VectorStores) {
 define void @foo(ptr noalias %ptr, <2 x float> %val) {
 bb:
   %ptr0 = getelementptr float, ptr %ptr, i32 0
-  %ptr2 = getelementptr float, ptr %ptr, i32 2
-  store <2 x float> %val, ptr %ptr2
+  %ptr1 = getelementptr float, ptr %ptr, i32 2
+  store <2 x float> %val, ptr %ptr1
   store <2 x float> %val, ptr %ptr0
   ret void
 }
@@ -388,12 +388,12 @@ bb:
   // Find the stores
   auto It = std::next(BB->begin(), 2);
   // StX with X as the order by offset in memory
-  auto *St2 = &*It++;
+  auto *St1 = &*It++;
   auto *St0 = &*It++;
 
   auto StoreSeedsRange = SC.getStoreSeeds();
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
   auto &SB = *StoreSeedsRange.begin();
-  EXPECT_TRUE(std::next(StoreSeedsRange.begin()) == StoreSeedsRange.end());
   EXPECT_THAT(SB, testing::ElementsAre(St0, St2));
 }
 
@@ -431,8 +431,8 @@ bb:
   auto *St3 = &*It++;
   auto *St1 = &*It++;
 
-  auto &SB = *SC.getStoreSeeds().begin();
-  EXPECT_TRUE(std::next(SC.getStoreSeeds().begin()) ==
-              SC.getStoreSeeds().end());
+  auto StoreSeedsRange = SC.getStoreSeeds();
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
+  auto &SB = *StoreSeedsRange.begin();
   EXPECT_THAT(SB, testing::ElementsAre(St0, St1, St3));
 }

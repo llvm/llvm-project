@@ -22,19 +22,12 @@ namespace llvm::sandboxir {
 cl::opt<unsigned> SeedBundleSizeLimit(
     "sbvec-seed-bundle-size-limit", cl::init(32), cl::Hidden,
     cl::desc("Limit the size of the seed bundle to cap compilation time."));
-cl::opt<bool>
-    DisableStoreSeeds("sbvec-disable-store-seeds", cl::init(false), cl::Hidden,
-                      cl::desc("Don't collect store seed instructions."));
-cl::opt<bool>
-    DisableLoadSeeds("sbvec-disable-load-seeds", cl::init(true), cl::Hidden,
-                     cl::desc("Don't collect load seed instructions."));
-
 #define LoadSeedsDef "loads"
 #define StoreSeedsDef "stores"
-cl::opt<std::string>
-    ForceSeed("sbvec-force-seeds", cl::init(""), cl::Hidden,
-              cl::desc("Enable only this type of seeds. This can be one "
-                       "of: '" LoadSeedsDef "','" StoreSeedsDef "'."));
+cl::opt<std::string> CollectSeeds(
+    "sbvec-collect-seeds", cl::init(LoadSeedsDef "," StoreSeedsDef), cl::Hidden,
+    cl::desc("Collect these seeds. Use empty for none or a comma-separated "
+             "list of '" LoadSeedsDef "' and '" StoreSeedsDef "'."));
 cl::opt<unsigned> SeedGroupsLimit(
     "sbvec-seed-groups-limit", cl::init(256), cl::Hidden,
     cl::desc("Limit the number of collected seeds groups in a BB to "
@@ -163,31 +156,18 @@ template <typename LoadOrStoreT> static bool isValidMemSeed(LoadOrStoreT *LSI) {
   return VectorType::isValidElementType(Ty);
 }
 
-template bool isValidMemSeed(LoadInst *LSI);
+template bool isValidMemSeed<LoadInst>(LoadInst *LSI);
 template bool isValidMemSeed<StoreInst>(StoreInst *LSI);
 
-SeedCollector::SeedCollector(BasicBlock *SBBB, ScalarEvolution &SE)
-    : StoreSeeds(SE), LoadSeeds(SE), BB(SBBB), Ctx(BB->getContext()) {
-  // TODO: Register a callback for updating the Collector datastructures upon
+SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
+    : StoreSeeds(SE), LoadSeeds(SE), BB(BB), Ctx(BB->getContext()) {
+  // TODO: Register a callback for updating the Collector data structures upon
   // instr removal
 
-  bool CollectStores = !DisableStoreSeeds;
-  bool CollectLoads = !DisableLoadSeeds;
-  if (LLVM_UNLIKELY(!ForceSeed.empty())) {
-    CollectStores = false;
-    CollectLoads = false;
-    // Enable only the selected one.
-    if (ForceSeed == StoreSeedsDef)
-      CollectStores = true;
-    else if (ForceSeed == LoadSeedsDef)
-      CollectLoads = true;
-    else {
-      errs() << "Bad argument '" << ForceSeed << "' in -" << ForceSeed.ArgStr
-             << "='" << ForceSeed << "'.\n";
-      errs() << "Description: " << ForceSeed.HelpStr << "\n";
-      exit(1);
-    }
-  }
+  bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
+  bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
+  if (!CollectStores && !CollectLoads)
+    return;
   // Actually collect the seeds.
   for (auto &I : *BB) {
     if (StoreInst *SI = dyn_cast<StoreInst>(&I))
