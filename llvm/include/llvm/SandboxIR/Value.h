@@ -158,6 +158,8 @@ protected:
   friend class Utils;                 // For `Val`.
   friend class Module;                // For `Val`.
   friend class IntrinsicInst;         // For `Val`.
+  friend class Operator;              // For `Val`.
+  friend class OverflowingBinaryOperator; // For `Val`.
   // Region needs to manipulate metadata in the underlying LLVM Value, we don't
   // expose metadata in sandboxir.
   friend class Region;
