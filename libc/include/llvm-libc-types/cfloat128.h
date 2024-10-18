@@ -26,7 +26,8 @@ typedef _Complex _Float128 cfloat128;
 #define LIBC_TYPES_HAS_CFLOAT128
 typedef _Complex _Float128 cfloat128;
 #endif
-#elif __clang_major__ >= 11 && (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
+#elif __clang_major__ >= 11 &&                                                 \
+    (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
 // Use _Complex __float128 type. clang uses __SIZEOF_FLOAT128__ or __FLOAT128__
 // macro to notify the availability of __float128 type:
 // https://reviews.llvm.org/D15120
