@@ -1841,6 +1841,7 @@ bool Init(InterpState &S, CodePtr OpPC) {
     assert(false);
     return false;
   }
+  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -1852,6 +1853,7 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
+  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
