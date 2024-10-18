@@ -293,6 +293,27 @@ struct DirectMemoryAccessor {
   void Init(uptr begin, uptr end) {};
   void *LoadPtr(uptr p) const { return *reinterpret_cast<void **>(p); }
 };
+
+struct CopyMemoryAccessor {
+  void Init(uptr begin, uptr end) {
+    this->begin = begin;
+    buffer.clear();
+    buffer.resize(end - begin);
+    MemCpyAccessible(buffer.data(), reinterpret_cast<void *>(begin),
+                     buffer.size());
+  };
+
+  void *LoadPtr(uptr p) const {
+    uptr offset = p - begin;
+    CHECK_LE(offset + sizeof(void *), reinterpret_cast<uptr>(buffer.size()));
+    return *reinterpret_cast<void **>(offset +
+                                      reinterpret_cast<uptr>(buffer.data()));
+  }
+
+ private:
+  uptr begin;
+  InternalMmapVector<char> buffer;
+};
 }  // namespace
 
 // Scans the memory range, looking for byte patterns that point into allocator
@@ -535,6 +556,7 @@ static void ProcessThread(tid_t os_id, uptr sp,
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier, tid_t caller_tid,
                            uptr caller_sp) {
+  InternalMmapVector<tid_t> done_threads;
   InternalMmapVector<uptr> registers;
   InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
@@ -559,6 +581,25 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
     DirectMemoryAccessor accessor;
     ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor);
+    if (flags()->use_detached)
+      done_threads.push_back(os_id);
+  }
+
+  if (flags()->use_detached) {
+    CopyMemoryAccessor accessor;
+    InternalMmapVector<tid_t> known_threads;
+    GetRunningThreadsLocked(&known_threads);
+    Sort(done_threads.data(), done_threads.size());
+    for (tid_t os_id : known_threads) {
+      registers.clear();
+      extra_ranges.clear();
+
+      uptr i = InternalLowerBound(done_threads, os_id);
+      if (i >= done_threads.size() || done_threads[i] != os_id) {
+        uptr sp = (os_id == caller_tid) ? caller_sp : 0;
+        ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor);
+      }
+    }
   }
 
   // Add pointers reachable from ThreadContexts

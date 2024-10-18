@@ -1773,6 +1773,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  logf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    logf16_test.cpp
+  DEPENDS
+    libc.src.math.logf16
+)
+
+add_fp_unittest(
 log2_test
  NEED_MPFR
  SUITE
@@ -1796,6 +1807,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.log2f
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log2f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    log2f16_test.cpp
+  DEPENDS
+    libc.src.math.log2f16
 )
 
 add_fp_unittest(

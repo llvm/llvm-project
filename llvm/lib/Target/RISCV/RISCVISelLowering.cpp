@@ -20385,11 +20385,11 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT.isVector())
         break;
       if (VT == MVT::f16 && Subtarget.hasStdExtZhinxmin())
-        return std::make_pair(0U, &RISCV::GPRF16RegClass);
+        return std::make_pair(0U, &RISCV::GPRF16NoX0RegClass);
       if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
-        return std::make_pair(0U, &RISCV::GPRF32RegClass);
+        return std::make_pair(0U, &RISCV::GPRF32NoX0RegClass);
       if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-        return std::make_pair(0U, &RISCV::GPRPairRegClass);
+        return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
       return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
     case 'f':
       if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16)
