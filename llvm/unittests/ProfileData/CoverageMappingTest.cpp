@@ -1113,8 +1113,9 @@ TEST(CoverageMappingTest, TVIdxBuilder) {
     EXPECT_EQ(Node.Width, IndicesRefs[I].Width);
     for (int C = 0; C < 2; ++C) {
       auto Index = TheBuilder.Indices[I][C];
-      if (Node.NextIDs[C] < 0)
+      if (Node.NextIDs[C] < 0) {
         EXPECT_TRUE(Decisions.insert({Index, Node.Width}).second);
+      }
     }
 #endif
   }

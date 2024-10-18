@@ -468,9 +468,9 @@ TEST(Attributes, SetIntersect) {
     AS0 = AttributeSet::get(C0, AB0);
     Res = AS0.intersectWith(C0, AS1);
     ASSERT_EQ(Res.has_value(), CanDrop);
-    if (CanDrop)
+    if (CanDrop) {
       ASSERT_FALSE(Res->hasAttributes());
-
+    }
     AS1 = AttributeSet::get(C1, AB0);
     Res = AS0.intersectWith(C0, AS1);
     ASSERT_TRUE(Res.has_value());

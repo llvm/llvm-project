@@ -637,20 +637,23 @@ TEST_F(PatternMatchTest, CheckedInt) {
     CRes = nullptr;
     EXPECT_EQ(CheckUgt1(APVal), m_CheckedInt(CheckUgt1).match(C));
     EXPECT_EQ(CheckUgt1(APVal), m_CheckedInt(CRes, CheckUgt1).match(C));
-    if (CheckUgt1(APVal))
+    if (CheckUgt1(APVal)) {
       EXPECT_EQ(CRes, C);
+    }
 
     CRes = nullptr;
     EXPECT_EQ(CheckNonZero(APVal), m_CheckedInt(CheckNonZero).match(C));
     EXPECT_EQ(CheckNonZero(APVal), m_CheckedInt(CRes, CheckNonZero).match(C));
-    if (CheckNonZero(APVal))
+    if (CheckNonZero(APVal)) {
       EXPECT_EQ(CRes, C);
+    }
 
     CRes = nullptr;
     EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(CheckPow2).match(C));
     EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(CRes, CheckPow2).match(C));
-    if (CheckPow2(APVal))
+    if (CheckPow2(APVal)) {
       EXPECT_EQ(CRes, C);
+    }
 
   };
 
@@ -710,8 +713,9 @@ TEST_F(PatternMatchTest, CheckedInt) {
     EXPECT_EQ(Expec, m_CheckedInt(CRes, CheckFn).match(C));
     if (Expec) {
       EXPECT_NE(CRes, nullptr);
-      if (AllSame)
+      if (AllSame) {
         EXPECT_EQ(CRes, C);
+      }
     }
   };
   auto DoVecCheck = [&](ArrayRef<std::optional<int8_t>> Vals) {
