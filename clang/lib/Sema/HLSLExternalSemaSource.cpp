@@ -414,6 +414,7 @@ struct TemplateParameterListBuilder {
 
     ConceptSpecializationExpr *CSE =
         ConceptSpecializationExpr::Create(Context, CR, ImplicitCSEDecl, &CS);
+
     return CSE;
   }
 
@@ -731,12 +732,9 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
   T->setReferenced();
 
   // Create and Attach Template Parameter List to ConceptDecl
-  std::vector<NamedDecl *> TemplateParamsVec = {T};
-  llvm::ArrayRef<NamedDecl *> TemplateParams(TemplateParamsVec);
-
   clang::TemplateParameterList *ConceptParams =
-      clang::TemplateParameterList::Create(context, DeclLoc, DeclLoc,
-                                           TemplateParams, DeclLoc, nullptr);
+      clang::TemplateParameterList::Create(context, DeclLoc, DeclLoc, {T},
+                                           DeclLoc, nullptr);
 
   DeclarationName DeclName = DeclarationName(&IsValidLineVectorII);
   Expr *ConstraintExpr = getTypedBufferConstraintExpr(S, DeclLoc, T);
