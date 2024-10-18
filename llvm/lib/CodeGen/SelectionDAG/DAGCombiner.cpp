@@ -18230,42 +18230,40 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
 SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   if (VT.isVector())
-    if (SDValue FoldedVOp = SimplifyVCastOp(N, SDLoc(N)))
+    if (SDValue FoldedVOp = SimplifyVCastOp(N, DL))
       return FoldedVOp;
 
   // If this is fp_round(fpextend), don't fold it, allow ourselves to be folded.
-  if (N->hasOneUse() &&
-      N->use_begin()->getOpcode() == ISD::FP_ROUND)
+  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND)
     return SDValue();
 
   // fold (fp_extend c1fp) -> c1fp
-  if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
-    return DAG.getNode(ISD::FP_EXTEND, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FP_EXTEND, DL, VT, {N0}))
+    return C;
 
   // fold (fp_extend (fp16_to_fp op)) -> (fp16_to_fp op)
   if (N0.getOpcode() == ISD::FP16_TO_FP &&
       TLI.getOperationAction(ISD::FP16_TO_FP, VT) == TargetLowering::Legal)
-    return DAG.getNode(ISD::FP16_TO_FP, SDLoc(N), VT, N0.getOperand(0));
+    return DAG.getNode(ISD::FP16_TO_FP, DL, VT, N0.getOperand(0));
 
   // Turn fp_extend(fp_round(X, 1)) -> x since the fp_round doesn't affect the
   // value of X.
-  if (N0.getOpcode() == ISD::FP_ROUND
-      && N0.getConstantOperandVal(1) == 1) {
+  if (N0.getOpcode() == ISD::FP_ROUND && N0.getConstantOperandVal(1) == 1) {
     SDValue In = N0.getOperand(0);
     if (In.getValueType() == VT) return In;
     if (VT.bitsLT(In.getValueType()))
-      return DAG.getNode(ISD::FP_ROUND, SDLoc(N), VT,
-                         In, N0.getOperand(1));
-    return DAG.getNode(ISD::FP_EXTEND, SDLoc(N), VT, In);
+      return DAG.getNode(ISD::FP_ROUND, DL, VT, In, N0.getOperand(1));
+    return DAG.getNode(ISD::FP_EXTEND, DL, VT, In);
   }
 
   // fold (fpext (load x)) -> (fpext (fptrunc (extload x)))
   if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse() &&
       TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, VT, N0.getValueType())) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, SDLoc(N), VT,
+    SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, DL, VT,
                                      LN0->getChain(),
                                      LN0->getBasePtr(), N0.getValueType(),
                                      LN0->getMemOperand());
