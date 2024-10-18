@@ -18167,10 +18167,10 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (fp_round c1fp) -> c1fp
-  if (SDValue C =
-          DAG.FoldConstantArithmetic(ISD::FP_ROUND, SDLoc(N), VT, {N0, N1}))
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FP_ROUND, DL, VT, {N0, N1}))
     return C;
 
   // fold (fp_round (fp_extend x)) -> x
@@ -18201,12 +18201,10 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     // single-step fp_round we want to fold to.
     // In other words, double rounding isn't the same as rounding.
     // Also, this is a value preserving truncation iff both fp_round's are.
-    if (DAG.getTarget().Options.UnsafeFPMath || N0IsTrunc) {
-      SDLoc DL(N);
+    if (DAG.getTarget().Options.UnsafeFPMath || N0IsTrunc)
       return DAG.getNode(
           ISD::FP_ROUND, DL, VT, N0.getOperand(0),
           DAG.getIntPtrConstant(NIsTrunc && N0IsTrunc, DL, /*isTarget=*/true));
-    }
   }
 
   // fold (fp_round (copysign X, Y)) -> (copysign (fp_round X), Y)
@@ -18220,8 +18218,7 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     SDValue Tmp = DAG.getNode(ISD::FP_ROUND, SDLoc(N0), VT,
                               N0.getOperand(0), N1);
     AddToWorklist(Tmp.getNode());
-    return DAG.getNode(ISD::FCOPYSIGN, SDLoc(N), VT,
-                       Tmp, N0.getOperand(1));
+    return DAG.getNode(ISD::FCOPYSIGN, DL, VT, Tmp, N0.getOperand(1));
   }
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
