@@ -16,8 +16,9 @@
 using namespace llvm;
 using namespace clang;
 
+// Declare DiagnosticsTestHelper to avoid GCC warning
 namespace clang {
-   void DiagnosticsTestHelper(DiagnosticsEngine &diag);
+void DiagnosticsTestHelper(DiagnosticsEngine &diag);
 }
 
 void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
