@@ -256,7 +256,7 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
 static constexpr uint8_t OTable[] = {
   0
   )";
-  for (const auto [I, Int] : enumerate(Ints)) {
+  for (auto [I, Int] : enumerate(Ints)) {
     // Add one to the index so we emit a null bit for the invalid #0 intrinsic.
     size_t Idx = I + 1;
 
