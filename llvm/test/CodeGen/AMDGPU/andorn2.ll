@@ -25,6 +25,28 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}scalar_andn2_i32_one_sgpr
+; GCN: s_andn2_b32
+define amdgpu_kernel void @scalar_andn2_i32_one_sgpr(
+    ptr addrspace(1) %r0, i32 inreg %a, i32 inreg %b) {
+entry:
+  %nb = xor i32 %b, -1
+  %r0.val = and i32 %a, %nb
+  store i32 %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_andn2_i64_one_sgpr
+; GCN: s_andn2_b64
+define amdgpu_kernel void @scalar_andn2_i64_one_sgpr(
+    ptr addrspace(1) %r0, i64 inreg %a, i64 inreg %b) {
+entry:
+  %nb = xor i64 %b, -1
+  %r0.val = and i64 %a, %nb
+  store i64 %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
 ; GCN-LABEL: {{^}}scalar_orn2_i32_one_use
 ; GCN: s_orn2_b32
 define amdgpu_kernel void @scalar_orn2_i32_one_use(
@@ -40,6 +62,28 @@ entry:
 ; GCN: s_orn2_b64
 define amdgpu_kernel void @scalar_orn2_i64_one_use(
     ptr addrspace(1) %r0, i64 %a, i64 %b) {
+entry:
+  %nb = xor i64 %b, -1
+  %r0.val = or i64 %a, %nb
+  store i64 %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_orn2_i32_one_use_sgpr
+; GCN: s_orn2_b32
+define amdgpu_kernel void @scalar_orn2_i32_one_use_sgpr(
+    ptr addrspace(1) %r0, i32 inreg %a, i32 inreg %b) {
+entry:
+  %nb = xor i32 %b, -1
+  %r0.val = or i32 %a, %nb
+  store i32 %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_orn2_i64_one_use_sgpr
+; GCN: s_orn2_b64
+define amdgpu_kernel void @scalar_orn2_i64_one_use_sgpr(
+    ptr addrspace(1) %r0, i64 inreg %a, i64 inreg %b) {
 entry:
   %nb = xor i64 %b, -1
   %r0.val = or i64 %a, %nb
