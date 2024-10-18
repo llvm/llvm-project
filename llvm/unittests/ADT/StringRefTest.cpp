@@ -545,6 +545,30 @@ TEST(StringRefTest, Find) {
   EXPECT_EQ(3U, Str.find_last_not_of('o'));
   EXPECT_EQ(1U, Str.find_last_not_of("lo"));
   EXPECT_EQ(StringRef::npos, Str.find_last_not_of("helo"));
+
+  Str = "01234567891";
+  EXPECT_EQ(0U, Str.find_last_of("0z"));
+  EXPECT_EQ(0U, Str.find_last_of("0"));
+  EXPECT_EQ(10U, Str.find_last_of("1z"));
+  EXPECT_EQ(10U, Str.find_last_of("1"));
+  EXPECT_EQ(2U, Str.find_last_of("2z"));
+  EXPECT_EQ(2U, Str.find_last_of("2"));
+  EXPECT_EQ(3U, Str.find_last_of("3z"));
+  EXPECT_EQ(3U, Str.find_last_of("3"));
+  EXPECT_EQ(4U, Str.find_last_of("4z"));
+  EXPECT_EQ(4U, Str.find_last_of("4"));
+  EXPECT_EQ(5U, Str.find_last_of("5z"));
+  EXPECT_EQ(5U, Str.find_last_of("5"));
+  EXPECT_EQ(6U, Str.find_last_of("6z"));
+  EXPECT_EQ(6U, Str.find_last_of("6"));
+  EXPECT_EQ(7U, Str.find_last_of("7z"));
+  EXPECT_EQ(7U, Str.find_last_of("7"));
+  EXPECT_EQ(8U, Str.find_last_of("8z"));
+  EXPECT_EQ(8U, Str.find_last_of("8"));
+  EXPECT_EQ(9U, Str.find_last_of("9z"));
+  EXPECT_EQ(9U, Str.find_last_of("9"));
+  EXPECT_EQ(StringRef::npos, Str.find_last_of("az"));
+  EXPECT_EQ(StringRef::npos, Str.find_last_of("a"));
 }
 
 TEST(StringRefTest, Count) {
