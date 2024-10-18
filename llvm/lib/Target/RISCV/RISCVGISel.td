@@ -169,6 +169,15 @@ def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
 
+let Predicates = [IsRV64] in {
+// FIXME: tblgen can't import sext_inreg patterns.
+def : Pat<(sra (sexti32 (i64 GPR:$rs1)), uimm5:$shamt),
+          (SRAIW GPR:$rs1, uimm5:$shamt)>;
+// FIXME: Temporary until i32->i64 zext is no longer legal.
+def : Pat <(srl (zext GPR:$rs1), uimm5:$shamt),
+           (SRLIW GPR:$rs1, uimm5:$shamt)>;
+}
+
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
@@ -201,9 +210,6 @@ def : PatGprGpr<sub, SUBW, i32, i32>;
 def : PatGprGpr<and, AND, i32, i32>;
 def : PatGprGpr<or, OR, i32, i32>;
 def : PatGprGpr<xor, XOR, i32, i32>;
-def : PatGprGpr<shl, SLLW, i32, i32>;
-def : PatGprGpr<srl, SRLW, i32, i32>;
-def : PatGprGpr<sra, SRAW, i32, i32>;
 
 def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
@@ -213,13 +219,6 @@ def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
           (ORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
 def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
           (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
-          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
-          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
-          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
 def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
           (SRLI (i32 (SLLI $rs, (i64 (XLenSubTrailingOnes $mask)))),
@@ -270,10 +269,4 @@ def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
 def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
-
-foreach i = {1,2,3} in {
-  defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
-  def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i32 i)), GPR:$rs2)),
-            (shxadd GPR:$rs1, GPR:$rs2)>;
-}
 }

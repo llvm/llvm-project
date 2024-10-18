@@ -173,7 +173,7 @@ define i32 @packh_i32_2(i32 %a, i32 %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a0, a0, 255
 ; RV64I-NEXT:    andi a1, a1, 255
-; RV64I-NEXT:    slliw a1, a1, 8
+; RV64I-NEXT:    slli a1, a1, 8
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -181,7 +181,7 @@ define i32 @packh_i32_2(i32 %a, i32 %b) nounwind {
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    andi a0, a0, 255
 ; RV64ZBKB-NEXT:    andi a1, a1, 255
-; RV64ZBKB-NEXT:    slliw a1, a1, 8
+; RV64ZBKB-NEXT:    slli a1, a1, 8
 ; RV64ZBKB-NEXT:    or a0, a1, a0
 ; RV64ZBKB-NEXT:    ret
   %and = and i32 %a, 255
@@ -241,11 +241,11 @@ define i64 @packh_i64_2(i64 %a, i64 %b) nounwind {
 define zeroext i16 @packh_i16(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; RV64I-LABEL: packh_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a1, 8
+; RV64I-NEXT:    lui a2, 16
+; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    slli a1, a1, 8
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: packh_i16:
@@ -265,11 +265,11 @@ define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
 ; RV64I-LABEL: packh_i16_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    slliw a0, a0, 8
-; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -358,9 +358,7 @@ define signext i32 @pack_i32_allWUsers(i16 zeroext %0, i16 zeroext %1, i16 zeroe
 ; RV64ZBKB-LABEL: pack_i32_allWUsers:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    add a0, a1, a0
-; RV64ZBKB-NEXT:    lui a1, 16
-; RV64ZBKB-NEXT:    addi a1, a1, -1
-; RV64ZBKB-NEXT:    and a0, a0, a1
+; RV64ZBKB-NEXT:    zext.h a0, a0
 ; RV64ZBKB-NEXT:    slli a0, a0, 16
 ; RV64ZBKB-NEXT:    or a0, a0, a2
 ; RV64ZBKB-NEXT:    sext.w a0, a0
