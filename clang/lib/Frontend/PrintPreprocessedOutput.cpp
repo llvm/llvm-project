@@ -952,13 +952,15 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       continue;
     } else if (Tok.is(tok::annot_header_unit)) {
       // This is a header-name that has been (effectively) converted into a
-      // module-name.
+      // module-name, print them inside quote.
       // FIXME: The module name could contain non-identifier module name
-      // components. We don't have a good way to round-trip those.
+      // components and OS specific file paths components. We don't have a good
+      // way to round-trip those.
       Module *M = reinterpret_cast<Module *>(Tok.getAnnotationValue());
       std::string Name = M->getFullModuleName();
-      Callbacks->OS->write(Name.data(), Name.size());
-      Callbacks->HandleNewlinesInToken(Name.data(), Name.size());
+      *Callbacks->OS << '"';
+      Callbacks->OS->write_escaped(Name);
+      *Callbacks->OS << '"';
     } else if (Tok.is(tok::annot_embed)) {
       // Manually explode the binary data out to a stream of comma-delimited
       // integer values. If the user passed -dE, that is handled by the
