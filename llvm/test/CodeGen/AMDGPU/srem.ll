@@ -39,8 +39,8 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TAHITI-NEXT:    s_waitcnt vmcnt(0)
 ; TAHITI-NEXT:    v_readfirstlane_b32 s0, v0
 ; TAHITI-NEXT:    s_mulk_i32 s0, 0x4925
-; TAHITI-NEXT:    s_lshr_b32 s1, s0, 31
 ; TAHITI-NEXT:    s_ashr_i32 s0, s0, 17
+; TAHITI-NEXT:    s_bfe_u32 s1, s0, 0x1000f
 ; TAHITI-NEXT:    s_add_i32 s0, s0, s1
 ; TAHITI-NEXT:    s_mul_i32 s0, s0, 7
 ; TAHITI-NEXT:    v_subrev_i32_e32 v0, vcc, s0, v0
@@ -72,7 +72,7 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 22, @9, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 23, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -85,10 +85,11 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     MULLO_INT * T0.Y, PV.W, literal.x,
 ; EG-NEXT:    18725(2.623931e-41), 0(0.000000e+00)
-; EG-NEXT:     ASHR T0.W, PS, literal.x,
-; EG-NEXT:     LSHR * T1.W, PS, literal.y,
-; EG-NEXT:    17(2.382207e-44), 31(4.344025e-44)
-; EG-NEXT:     ADD_INT * T0.W, PV.W, PS,
+; EG-NEXT:     ASHR * T0.W, PS, literal.x,
+; EG-NEXT:    17(2.382207e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT * T1.W, PV.W, literal.x, 1,
+; EG-NEXT:    15(2.101948e-44), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT * T0.W, T0.W, PV.W,
 ; EG-NEXT:     MULLO_INT * T0.Y, PV.W, literal.x,
 ; EG-NEXT:    7(9.809089e-45), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
