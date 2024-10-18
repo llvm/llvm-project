@@ -199,8 +199,6 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   // set, but they do not have individual ThreadStates yet. If they ever
   // modify the ICVs beyond this point a ThreadStates will be allocated.
 
-
-  // 
   bool IsActiveParallelRegion = NumThreads*mapping::getSimdLen() > 1;
   if (!IsActiveParallelRegion) {
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident);

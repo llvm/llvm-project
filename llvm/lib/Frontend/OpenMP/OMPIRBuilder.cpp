@@ -150,8 +150,6 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
 }
 #endif
 
-Function *GLOBAL_ReductionFunc = nullptr;
-
 static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   if (T.isAMDGPU()) {
     StringRef Features =
@@ -808,7 +806,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
               "OMPIRBuilder finalization \n";
   };
 
-  if (!OffloadInfoManager.empty()) 
+  if (!OffloadInfoManager.empty())
     createOffloadEntriesAndInfoMetadata(ErrorReportFn);
 
   if (Config.EmitLLVMUsedMetaInfo.value_or(false)) {
@@ -816,7 +814,6 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
     emitUsed("llvm.compiler.used", LLVMCompilerUsed);
   }
-
 }
 
 OpenMPIRBuilder::~OpenMPIRBuilder() {
@@ -978,7 +975,9 @@ OpenMPIRBuilder::createBarrier(const LocationDescription &Loc, Directive Kind,
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-  Value *Args[] = {getOrCreateIdent(SrcLocStr, SrcLocStrSize, BarrierLocFlags)};
+  Value *Args[] = {
+      getOrCreateIdent(SrcLocStr, SrcLocStrSize, BarrierLocFlags),
+      getOrCreateThreadID(getOrCreateIdent(SrcLocStr, SrcLocStrSize))};
 
   // If we are in a cancellable parallel region, barriers are cancellation
   // points.
@@ -2086,7 +2085,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   LLVM_DEBUG(dbgs() << "After  privatization: " << *OuterFn << "\n");
   LLVM_DEBUG({
     for (auto *BB : Blocks)
-      LLVM_DEBUG(dbgs() << " PBR: " << BB->getName() << "\n");
+      dbgs() << " PBR: " << BB->getName() << "\n";
   });
 
   // Adjust the finalization stack, verify the adjustment, and call the
@@ -4060,9 +4059,6 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
-  if (ReductionInfos.size() == 0)
-    return Builder.saveIP();
-
   BasicBlock *InsertBlock = Loc.IP.getBlock();
   BasicBlock *ContinuationBlock =
       InsertBlock->splitBasicBlock(Loc.IP.getPoint(), "reduce.finalize");
@@ -4103,7 +4099,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   const DataLayout &DL = Module->getDataLayout();
   unsigned RedArrayByteSize = DL.getTypeStoreSize(RedArrayTy);
   Constant *RedArraySize = Builder.getInt64(RedArrayByteSize);
-  Function *ReductionFunc = getFreshReductionFunc(M);
+  Function *ReductionFunc = getFreshReductionFunc(*Module);
   Value *Lock = getOMPCriticalRegionLock(".reduction");
   Function *ReduceFunc = getOrCreateRuntimeFunctionPtr(
       IsNoWait ? RuntimeFunction::OMPRTL___kmpc_reduce_nowait
@@ -9369,6 +9365,7 @@ void OpenMPIRBuilder::registerTargetGlobalVariable(
     VarSize = M.getDataLayout().getPointerSize();
     Linkage = GlobalValue::WeakAnyLinkage;
   }
+
   OffloadInfoManager.registerDeviceGlobalVarEntryInfo(VarName, Addr, VarSize,
                                                       Flags, Linkage);
 }

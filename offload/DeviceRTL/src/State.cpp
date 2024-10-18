@@ -367,7 +367,6 @@ void omp_set_schedule(omp_sched_t ScheduleKind, int ChunkSize) {
 }
 
 int omp_get_ancestor_thread_num(int Level) {
-  //return returnValIfLevelIsActive(Level, mapping::getThreadIdInBlock(), 0);
   return returnValIfLevelIsActive(Level, mapping::getSimdGroup(), 0);
 }
 

@@ -1454,7 +1454,6 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     }
 
     const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(TaskRedRef)->getDecl());
-llvm::dbgs() << "Emitting " << VD->getName() << " " << VD << "\n";
     EmitVarDecl(*VD);
     EmitStoreOfScalar(ReductionDesc, GetAddrOfLocalVar(VD),
                       /*Volatile=*/false, TaskRedRef->getType());

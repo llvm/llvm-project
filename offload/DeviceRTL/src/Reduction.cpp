@@ -191,19 +191,6 @@ static int32_t nvptx_simd_reduce_nowait(void *reduce_data,
 
   return mapping::isSimdLeader();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 } // namespace
 
 extern "C" {

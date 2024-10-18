@@ -42,9 +42,9 @@ inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
 static void genericStateMachine(IdentTy *Ident) {
   uint32_t TId = mapping::getThreadIdInBlock();
 
-
   do {
     ParallelRegionFnTy WorkFn = nullptr;
+
     // Wait for the signal that we have a new work function.
     synchronize::threads(atomic::seq_cst);
 

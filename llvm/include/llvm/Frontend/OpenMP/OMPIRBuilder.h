@@ -285,7 +285,7 @@ public:
   /// Return true if a there are no entries defined.
   bool empty() const;
   /// Return number of entries defined so far.
-  unsigned size() const { return OffloadingEntriesNum /*OffloadEntriesTargetRegion.size()*/ /*OffloadingEntriesNum*/; }
+  unsigned size() const { return OffloadingEntriesNum; }
 
   OffloadEntriesInfoManager(OpenMPIRBuilder *builder) : OMPBuilder(builder) {}
 
@@ -513,11 +513,6 @@ public:
   /// \param Fn                    The function to be finalized. If not used,
   ///                              all functions are finalized.
   void finalize(Function *Fn = nullptr);
-
-  CallInst *globalizeAlloca(AllocaInst *Alloca, SmallVector<Instruction*, 32>&);
-  void globalizeParallelVars(Function *CurFn);
-  SmallPtrSet<Value*, 32> VarsNeedingGlobalization;
-  void globalizeVars(Function *CurFn);
 
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
