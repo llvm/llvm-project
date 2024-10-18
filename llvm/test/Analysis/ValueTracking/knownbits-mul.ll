@@ -72,12 +72,7 @@ define i8 @mul_high_bits_know(i8 %xx, i8 %yy) {
 define i8 @mul_high_bits_know2(i8 %xx, i8 %yy) {
 ; CHECK-LABEL: define i8 @mul_high_bits_know2(
 ; CHECK-SAME: i8 [[XX:%.*]], i8 [[YY:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX]], -2
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY]], 4
-; CHECK-NEXT:    [[Y_NONZERO:%.*]] = or disjoint i8 [[Y]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X]], [[Y_NONZERO]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[MUL]], -16
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -16
 ;
   %x = or i8 %xx, -2
   %y = and i8 %yy, 4
@@ -90,11 +85,7 @@ define i8 @mul_high_bits_know2(i8 %xx, i8 %yy) {
 define i8 @mul_high_bits_know3(i8 %xx, i8 %yy) {
 ; CHECK-LABEL: define i8 @mul_high_bits_know3(
 ; CHECK-SAME: i8 [[XX:%.*]], i8 [[YY:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX]], 124
-; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY]], 126
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[MUL]], 112
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x = or i8 %xx, -4
   %y = or i8 %yy, -2
