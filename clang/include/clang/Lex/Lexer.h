@@ -124,7 +124,7 @@ class Lexer : public PreprocessorLexer {
   //===--------------------------------------------------------------------===//
   // Context that changes as the file is lexed.
   // NOTE: any state that mutates when in raw mode must have save/restore code
-  // in Lexer::isNextPPTokenLParen.
+  // in Lexer::peekNextPPToken.
 
   // BufferPtr - Current pointer into the buffer.  This is the next character
   // to be lexed.
@@ -135,6 +135,8 @@ class Lexer : public PreprocessorLexer {
   bool IsAtStartOfLine;
 
   bool IsAtPhysicalStartOfLine;
+
+  bool IsCurrentLexingTokAtPhysicalStartOfLine;
 
   bool HasLeadingSpace;
 
@@ -609,7 +611,7 @@ private:
   /// LexTokenInternal - Internal interface to lex a preprocessing token. Called
   /// by Lex.
   ///
-  bool LexTokenInternal(Token &Result, bool TokAtPhysicalStartOfLine);
+  bool LexTokenInternal(Token &Result);
 
   bool CheckUnicodeWhitespace(Token &Result, uint32_t C, const char *CurPtr);
 
@@ -629,10 +631,10 @@ private:
     BufferPtr = TokEnd;
   }
 
-  /// isNextPPTokenLParen - Return 1 if the next unexpanded token will return a
-  /// tok::l_paren token, 0 if it is something else and 2 if there are no more
-  /// tokens in the buffer controlled by this lexer.
-  unsigned isNextPPTokenLParen();
+  /// peekNextPPToken - Return std::nullopt if there are no more tokens in the
+  /// buffer controlled by this lexer, otherwise return the next unexpanded
+  /// token.
+  std::optional<Token> peekNextPPToken();
 
   //===--------------------------------------------------------------------===//
   // Lexer character reading interfaces.
@@ -749,12 +751,9 @@ private:
   bool LexCharConstant       (Token &Result, const char *CurPtr,
                               tok::TokenKind Kind);
   bool LexEndOfFile          (Token &Result, const char *CurPtr);
-  bool SkipWhitespace        (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
-  bool SkipLineComment       (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
-  bool SkipBlockComment      (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
+  bool SkipWhitespace(Token &Result, const char *CurPtr);
+  bool SkipLineComment(Token &Result, const char *CurPtr);
+  bool SkipBlockComment(Token &Result, const char *CurPtr);
   bool SaveLineComment       (Token &Result, const char *CurPtr);
 
   bool IsStartOfConflictMarker(const char *CurPtr);
