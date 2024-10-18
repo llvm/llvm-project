@@ -102,7 +102,7 @@ CodeGenFunction::~CodeGenFunction() {
   // seems to be a reasonable spot. We do it here, as opposed to the deletion
   // time of the CodeGenModule, because we have to ensure the IR has not yet
   // been "emitted" to the outside, thus, modifications are still sensible.
-  if (CGM.getLangOpts().OpenMPIRBuilder && CurFn)
+  if ((CGM.getLangOpts().OpenMPIsTargetDevice || CGM.getLangOpts().OpenMPIRBuilder) && CurFn)
     CGM.getOpenMPRuntime().getOMPBuilder().finalize(CurFn);
 }
 
