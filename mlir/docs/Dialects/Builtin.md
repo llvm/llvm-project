@@ -15,7 +15,7 @@ extensible by design, any potential additions are heavily scrutinized.
 
 [include "Dialects/BuiltinAttributes.md"]
 
-## Location Attributes
+### Location Attributes
 
 A subset of the builtin attribute values correspond to
 [source locations](../Diagnostics.md/#source-locations), that may be attached to
@@ -23,7 +23,7 @@ Operations.
 
 [include "Dialects/BuiltinLocationAttributes.md"]
 
-## DistinctAttribute
+### DistinctAttribute
 
 A DistinctAttribute associates an attribute with a unique identifier.
 As a result, multiple DistinctAttribute instances may point to the same
@@ -53,6 +53,23 @@ This mechanism is meant to generate attributes with a unique
 identifier, which can be used to mark groups of operations that share a
 common property. For example, groups of aliasing memory operations may be
 marked using one DistinctAttribute instance per alias group.
+
+### LoadedURIDenseResourceAttr
+
+A LoadedURIDenseResourceAttr is an attribute that implements the ElementsAttr
+interface, prints & parses as URI, optional offset, size, alignment and nested
+symbol reference paramters while keeping the value represented in memory (but
+outside the context). This allows for having constants whose value are outside
+the context and (during roundtrip) the IR, but without any semantic differences.
+
+```
+luri ::= `luri` `<` string-literal
+    (`,` `::` symbol-ref-attribute)? 
+    (`,` `byte_offset` `=` integer-literal)?
+    (`,` `byte_size` `=` integer-literal)?
+    (`,` `alignment` `=` integer-literal)?
+  `>`
+```
 
 ## Operations
 
