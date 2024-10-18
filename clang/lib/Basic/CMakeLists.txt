@@ -85,6 +85,7 @@ add_clang_library(clangBasic
   SanitizerSpecialCaseList.cpp
   Sanitizers.cpp
   Sarif.cpp
+  SingleWarningStackAwareExecutor.cpp
   SourceLocation.cpp
   SourceManager.cpp
   SourceMgrAdapter.cpp
