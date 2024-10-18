@@ -587,6 +587,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
     libc.src.math.sinhf16
+    libc.src.math.tanhf16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
     libc.src.math.truncf16
