@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 
@@ -26,8 +27,14 @@ public:
   MacroBuilder(raw_ostream &Output) : Out(Output) {}
 
   /// Append a \#define line for macro of the form "\#define Name Value\n".
-  void defineMacro(const Twine &Name, const Twine &Value = "1") {
+  /// If DeprecationMsg is provided, also append a pragma to deprecate the
+  /// defined macro.
+  void defineMacro(const Twine &Name, const Twine &Value = "1",
+                   std::optional<Twine> DeprecationMsg = std::nullopt) {
     Out << "#define " << Name << ' ' << Value << '\n';
+    if (DeprecationMsg.has_value())
+      Out << "#pragma clang deprecated(" << Name << ", \""
+          << DeprecationMsg.value() << "\")\n";
   }
 
   /// Append a \#undef line for Name.  Name should be of the form XXX
