@@ -343,5 +343,12 @@ int LLVMSetDisasmOptions(LLVMDisasmContextRef DCR, uint64_t Options){
     DC->addOptions(LLVMDisassembler_Option_PrintLatency);
     Options &= ~LLVMDisassembler_Option_PrintLatency;
   }
+  if (Options & LLVMDisassembler_Option_Color) {
+    LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
+    MCInstPrinter *IP = DC->getIP();
+    IP->setUseColor(true);
+    DC->addOptions(LLVMDisassembler_Option_Color);
+    Options &= ~LLVMDisassembler_Option_Color;
+  }
   return (Options == 0);
 }
