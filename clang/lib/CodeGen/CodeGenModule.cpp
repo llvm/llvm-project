@@ -3936,9 +3936,20 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     assert(!MayBeEmittedEagerly(Global));
     addDeferredDeclToEmit(GD);
   } else {
-    // Otherwise, remember that we saw a deferred decl with this name.  The
-    // first use of the mangled name will cause it to move into
-    // DeferredDeclsToEmit.
+    // Otherwise, remember that we saw a deferred decl with this name.
+    auto DDI = DeferredDecls.find(MangledName);
+    const auto *FD = dyn_cast<FunctionDecl>(Global);
+    if (FD && DDI != DeferredDecls.end()) {
+      bool IsDefinitionAvailableExternally =
+          getContext().GetGVALinkageForFunction(FD) == GVA_AvailableExternally;
+      if (!IsDefinitionAvailableExternally && !FD->isMultiVersion() &&
+          !FD->hasAttr<OMPDeclareTargetDeclAttr>())
+        getDiags().Report(Global->getLocation(),
+                          diag::err_duplicate_mangled_name)
+            << MangledName;
+    }
+    // The first use of the mangled name will cause it to move
+    // into DeferredDeclsToEmit.
     DeferredDecls[MangledName] = GD;
   }
 }
