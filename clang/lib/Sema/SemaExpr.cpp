@@ -734,6 +734,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct)
     Cleanup.setExprNeedsCleanups(true);
 
+  if (!BoundsSafetyCheckUseOfCountAttrPtr(Res.get()))
+    return ExprError();
+
   // C++ [conv.lval]p3:
   //   If T is cv std::nullptr_t, the result is a null pointer constant.
   CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;
@@ -13642,6 +13645,27 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   QualType LHSType = LHSExpr->getType();
   QualType RHSType = CompoundType.isNull() ? RHS.get()->getType() :
                                              CompoundType;
+
+  if (RHS.isUsable()) {
+    // Even if this check fails don't return early to allow the best
+    // possible error recovery and to allow any subsequent diagnostics to
+    // work.
+    (void)BoundsSafetyCheckAssignmentToCountAttrPtr(
+        LHSType, RHS.get(), Sema::AA_Assigning, Loc,
+        [&LHSExpr]() -> std::string {
+          // In simple cases describe what is being assigned to
+          if (auto *DR = dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenCasts())) {
+            auto *II = DR->getDecl()->getDeclName().getAsIdentifierInfo();
+            if (II)
+              return II->getName().str();
+          } else if (auto *ME =
+                         dyn_cast<MemberExpr>(LHSExpr->IgnoreParenCasts())) {
+            return ME->getMemberDecl()->getQualifiedNameAsString();
+          }
+          return "";
+        });
+  }
+
   // OpenCL v1.2 s6.1.1.1 p2:
   // The half data type can only be used to declare a pointer to a buffer that
   // contains half values

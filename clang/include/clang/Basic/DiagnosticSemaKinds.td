@@ -4385,6 +4385,7 @@ def err_mismatched_visibility: Error<"visibility does not match previous declara
 def note_previous_attribute : Note<"previous attribute is here">;
 def note_conflicting_attribute : Note<"conflicting attribute is here">;
 def note_attribute : Note<"attribute is here">;
+def note_named_attribute : Note<"%0 attribute is here">;
 def err_mismatched_ms_inheritance : Error<
   "inheritance model does not match %select{definition|previous declaration}0">;
 def warn_ignored_ms_inheritance : Warning<
@@ -6643,6 +6644,42 @@ def err_counted_by_attr_pointee_unknown_size : Error<
     "%select{|. This will be an error in a future compiler version}3"
     ""
   "}2">;
+def err_counted_by_on_incomplete_type_on_assign : Error <
+  "cannot %select{"
+    "assign to %select{object|'%1'}2 that has|" // AA_Assigning,
+    "pass argument to %select{parameter|parameter '%1'}2 that has|" // AA_Passing,
+    "return|" // AA_Returning,
+    "convert to|" // AA_Converting (UNUSED)
+    "%select{|implicitly }3initialize %select{object|'%1'}2 that has|" // AA_Initializing,
+    "pass argument to parameter that has|" // AA_Sending (UNUSED)
+    "cast to|" // AA_Casting (UNUSED)
+    "pass argument to parameter that has" // AA_Passing_CFAudited (UNUSED)
+  "}0 type %4 because the pointee type %6 is incomplete and the '%5' attribute "
+  "requires the pointee type be complete when %select{"
+    "assigning|" // AA_Assigning,
+    "passing|" // AA_Passing,
+    "returning|" // AA_Returning,
+    "converting|" // AA_Converting (UNUSED)
+    "initializing|" // AA_Initializing,
+    "passing|" // AA_Sending (UNUSED)
+    "casting|" // AA_Casting (UNUSED)
+    "passing" // AA_Passing_CFAudited (UNUSED)
+  "}0; "
+  "consider providing a complete definition for %6 or using the "
+  "'__sized_by%select{|_or_null}7' attribute"
+>;
+def err_counted_by_on_incomplete_type_on_use : Error <
+  "cannot %select{"
+    "use '%1'|" // Generic expr
+    "call '%1'" // CallExpr
+  "}0 with%select{"
+    "|"       // Generic expr
+    " return" // CallExpr
+  "}0 type %2 because the pointee type %3 is incomplete "
+  "and the '%4' attribute requires the pointee type be complete in this context; "
+  "consider providing a complete definition for %3 or using the "
+  "'__sized_by%select{|_or_null}5' attribute"
+>;
 
 def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
