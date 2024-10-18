@@ -1665,7 +1665,7 @@ func.func @warp_2_distributed_dims(%laneid: index) {
 // -----
 
 func.func @warp_2_distributed_dims(%laneid: index) {
-  // expected-error@+1 {{expected expanded vector dimension #1 (8) to be a multipler of the distributed vector dimension (3)}}
+  // expected-error@+1 {{expected expanded type dimension #1 (8) to be a multipler of the distributed type dimension (3)}}
   %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x3xi32>) {
     %0 = arith.constant dense<2>: vector<4x8xi32>
     vector.yield %0 : vector<4x8xi32>
@@ -1676,7 +1676,7 @@ func.func @warp_2_distributed_dims(%laneid: index) {
 // -----
 
 func.func @warp_mismatch_rank(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected distributed vectors to have same rank and element type.}}
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected distributed types to have same rank and element type.}}
   %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
     %0 = arith.constant dense<2>: vector<128xi32>
     vector.yield %0 : vector<128xi32>
@@ -1687,7 +1687,7 @@ func.func @warp_mismatch_rank(%laneid: index) {
 // -----
 
 func.func @warp_mismatch_rank(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected vector type for distributed operands.}}
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected shaped type for distributed operands.}}
   %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (i32) {
     %0 = arith.constant dense<2>: vector<128xi32>
     vector.yield %0 : vector<128xi32>
