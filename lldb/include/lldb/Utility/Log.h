@@ -272,6 +272,12 @@ public:
   void VAFormatf(llvm::StringRef file, llvm::StringRef function,
                  const char *format, va_list args);
 
+  void Enable(const std::shared_ptr<LogHandler> &handler_sp,
+              std::optional<MaskType> flags = std::nullopt,
+              uint32_t options = 0);
+
+  void Disable(std::optional<MaskType> flags = std::nullopt);
+
 private:
   Channel &m_channel;
 
@@ -296,11 +302,6 @@ private:
     llvm::sys::ScopedReader lock(m_mutex);
     return m_handler;
   }
-
-  void Enable(const std::shared_ptr<LogHandler> &handler_sp, uint32_t options,
-              MaskType flags);
-
-  void Disable(MaskType flags);
 
   bool Dump(llvm::raw_ostream &stream);
 

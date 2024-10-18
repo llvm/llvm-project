@@ -1,6 +1,6 @@
 ! Test lowering of SIZE/SIZEOF inquiry intrinsics with assumed-ranks
 ! arguments.
-! RUN: bbc -emit-hlfir -o - %s -allow-assumed-rank | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 
 subroutine test_size_1(x)

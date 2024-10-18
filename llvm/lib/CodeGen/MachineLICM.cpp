@@ -148,13 +148,13 @@ namespace {
     DenseMap<MachineLoop *, SmallVector<MachineBasicBlock *, 8>> ExitBlockMap;
 
     bool isExitBlock(MachineLoop *CurLoop, const MachineBasicBlock *MBB) {
-      if (ExitBlockMap.contains(CurLoop))
-        return is_contained(ExitBlockMap[CurLoop], MBB);
-
-      SmallVector<MachineBasicBlock *, 8> ExitBlocks;
-      CurLoop->getExitBlocks(ExitBlocks);
-      ExitBlockMap[CurLoop] = ExitBlocks;
-      return is_contained(ExitBlocks, MBB);
+      auto [It, Inserted] = ExitBlockMap.try_emplace(CurLoop);
+      if (Inserted) {
+        SmallVector<MachineBasicBlock *, 8> ExitBlocks;
+        CurLoop->getExitBlocks(ExitBlocks);
+        It->second = ExitBlocks;
+      }
+      return is_contained(It->second, MBB);
     }
 
     // Track 'estimated' register pressure.
@@ -1010,12 +1010,8 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (RCCost == 0)
       continue;
     const int *PS = TRI->getRegClassPressureSets(RC);
-    for (; *PS != -1; ++PS) {
-      if (!Cost.contains(*PS))
-        Cost[*PS] = RCCost;
-      else
-        Cost[*PS] += RCCost;
-    }
+    for (; *PS != -1; ++PS)
+      Cost[*PS] += RCCost;
   }
   return Cost;
 }

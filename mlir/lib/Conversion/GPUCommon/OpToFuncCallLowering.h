@@ -42,9 +42,9 @@ namespace mlir {
 template <typename SourceOp>
 struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
-  explicit OpToFuncCallLowering(LLVMTypeConverter &lowering, StringRef f32Func,
-                                StringRef f64Func, StringRef f32ApproxFunc,
-                                StringRef f16Func)
+  explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
+                                StringRef f32Func, StringRef f64Func,
+                                StringRef f32ApproxFunc, StringRef f16Func)
       : ConvertOpToLLVMPattern<SourceOp>(lowering), f32Func(f32Func),
         f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func) {}
 

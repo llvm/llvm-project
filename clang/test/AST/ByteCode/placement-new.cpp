@@ -52,6 +52,20 @@ consteval auto ok4() {
 }
 static_assert(ok4() == 37);
 
+consteval int ok5() {
+  int i;
+  new (&i) int[1]{1};
+
+  struct S {
+    int a; int b;
+  } s;
+  new (&s) S[1]{{12, 13}};
+
+  return 25;
+  // return s.a + s.b; FIXME: Broken in the current interpreter.
+}
+static_assert(ok5() == 25);
+
 /// FIXME: Broken in both interpreters.
 #if 0
 consteval int ok5() {
@@ -270,4 +284,19 @@ namespace ConstructAt {
   static_assert(bad_construct_at_type()); // both-error {{not an integral constant expression}} \
                                           // both-note {{in call}}
 
+}
+
+namespace UsedToCrash {
+  struct S {
+      int* i;
+      constexpr S() : i(new int(42)) {} // #no-deallocation
+      constexpr ~S() {delete i;}
+  };
+  consteval void alloc() {
+      S* s = new S();
+      s->~S();
+      new (s) S();
+      delete s;
+  }
+  int alloc1 = (alloc(), 0);
 }

@@ -144,7 +144,7 @@ define zeroext i1 @xadd_cmp0_i64(ptr %x) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl (%esi), %eax
 ; X86-NEXT:    movl 4(%esi), %edx
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %ebx

@@ -52,7 +52,7 @@ private:
   void emit(uint32_t value, SmallVectorImpl<char> &CB) const;
   void emit(uint64_t value, SmallVectorImpl<char> &CB) const;
 
-  unsigned getHWReg(unsigned regNo) const;
+  unsigned getHWReg(MCRegister Reg) const;
 
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
@@ -145,8 +145,8 @@ void R600MCCodeEmitter::emit(uint64_t Value, SmallVectorImpl<char> &CB) const {
   support::endian::write(CB, Value, llvm::endianness::little);
 }
 
-unsigned R600MCCodeEmitter::getHWReg(unsigned RegNo) const {
-  return MRI.getEncodingValue(RegNo) & HW_REG_MASK;
+unsigned R600MCCodeEmitter::getHWReg(MCRegister Reg) const {
+  return MRI.getEncodingValue(Reg) & HW_REG_MASK;
 }
 
 uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,

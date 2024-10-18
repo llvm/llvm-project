@@ -4166,7 +4166,8 @@ public:
   llvm::AtomicRMWInst *emitAtomicRMWInst(
       llvm::AtomicRMWInst::BinOp Op, Address Addr, llvm::Value *Val,
       llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
-      llvm::SyncScope::ID SSID = llvm::SyncScope::System);
+      llvm::SyncScope::ID SSID = llvm::SyncScope::System,
+      const AtomicExpr *AE = nullptr);
 
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
@@ -4296,6 +4297,7 @@ public:
   LValue EmitCastLValue(const CastExpr *E);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
+  LValue EmitHLSLArrayAssignLValue(const BinaryOperator *E);
   void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
                           QualType Ty);
 

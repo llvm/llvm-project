@@ -675,8 +675,6 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
-  if (isa<ScalableVectorType>(VecTy) && Factor != 2)
-    return InstructionCost::getInvalid();
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
@@ -1132,6 +1130,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
   }
+  case Intrinsic::vp_merge:
+    return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
+                              ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
+                              CostKind);
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1163,8 +1165,46 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       Dst->getScalarSizeInBits() > ST->getELen())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  assert(ISD && "Invalid opcode");
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
+
+  // Handle i1 source and dest cases *before* calling logic in BasicTTI.
+  // The shared implementation doesn't model vector widening during legalization
+  // and instead assumes scalarization.  In order to scalarize an <N x i1>
+  // vector, we need to extend/trunc to/from i8.  If we don't special case
+  // this, we can get an infinite recursion cycle.
+  switch (ISD) {
+  default:
+    break;
+  case ISD::SIGN_EXTEND:
+  case ISD::ZERO_EXTEND:
+    if (Src->getScalarSizeInBits() == 1) {
+      // We do not use vsext/vzext to extend from mask vector.
+      // Instead we use the following instructions to extend from mask vector:
+      // vmv.v.i v8, 0
+      // vmerge.vim v8, v8, -1, v0 (repeated per split)
+      return getRISCVInstructionCost(RISCV::VMV_V_I, DstLT.second, CostKind) +
+             DstLT.first * getRISCVInstructionCost(RISCV::VMERGE_VIM,
+                                                   DstLT.second, CostKind) +
+             DstLT.first - 1;
+    }
+    break;
+  case ISD::TRUNCATE:
+    if (Dst->getScalarSizeInBits() == 1) {
+      // We do not use several vncvt to truncate to mask vector. So we could
+      // not use PowDiff to calculate it.
+      // Instead we use the following instructions to truncate to mask vector:
+      // vand.vi v8, v8, 1
+      // vmsne.vi v0, v8, 0
+      return SrcLT.first *
+                 getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
+                                         SrcLT.second, CostKind) +
+             SrcLT.first - 1;
+    }
+    break;
+  };
 
   // Our actual lowering for the case where a wider legal type is available
   // uses promotion to the wider type.  This is reflected in the result of
@@ -1181,22 +1221,11 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // The split cost is handled by the base getCastInstrCost
   assert((SrcLT.first == 1) && (DstLT.first == 1) && "Illegal type");
 
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  assert(ISD && "Invalid opcode");
-
   int PowDiff = (int)Log2_32(DstLT.second.getScalarSizeInBits()) -
                 (int)Log2_32(SrcLT.second.getScalarSizeInBits());
   switch (ISD) {
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
-    if (Src->getScalarSizeInBits() == 1) {
-      // We do not use vsext/vzext to extend from mask vector.
-      // Instead we use the following instructions to extend from mask vector:
-      // vmv.v.i v8, 0
-      // vmerge.vim v8, v8, -1, v0
-      return getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
-                                     DstLT.second, CostKind);
-    }
     if ((PowDiff < 1) || (PowDiff > 3))
       return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
     unsigned SExtOp[] = {RISCV::VSEXT_VF2, RISCV::VSEXT_VF4, RISCV::VSEXT_VF8};
@@ -1206,16 +1235,6 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return getRISCVInstructionCost(Op, DstLT.second, CostKind);
   }
   case ISD::TRUNCATE:
-    if (Dst->getScalarSizeInBits() == 1) {
-      // We do not use several vncvt to truncate to mask vector. So we could
-      // not use PowDiff to calculate it.
-      // Instead we use the following instructions to truncate to mask vector:
-      // vand.vi v8, v8, 1
-      // vmsne.vi v0, v8, 0
-      return getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
-                                     SrcLT.second, CostKind);
-    }
-    [[fallthrough]];
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     // Counts of narrow/widen instructions.
@@ -1514,6 +1533,11 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     Opcodes = {RISCV::VMV_S_X, RISCV::VREDAND_VS, RISCV::VMV_X_S};
     break;
   case ISD::FADD:
+    // We can't promote f16/bf16 fadd reductions.
+    if ((LT.second.getVectorElementType() == MVT::f16 &&
+         !ST->hasVInstructionsF16()) ||
+        LT.second.getVectorElementType() == MVT::bf16)
+      return InstructionCost::getInvalid();
     SplitOp = RISCV::VFADD_VV;
     Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDUSUM_VS, RISCV::VFMV_F_S};
     break;
@@ -1957,8 +1981,8 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   }
 
   auto getConstantMatCost =
-    [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
-    if (OpInfo.isUniform() && TLI->canSplatOperand(Opcode, Operand))
+      [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
+    if (OpInfo.isUniform() && canSplatOperand(Opcode, Operand))
       // Two sub-cases:
       // * Has a 5 bit immediate operand which can be splatted.
       // * Has a larger immediate which must be materialized in scalar register
@@ -2271,4 +2295,142 @@ bool RISCVTTIImpl::shouldConsiderAddressTypePromotion(
     }
   }
   return Considerable;
+}
+
+bool RISCVTTIImpl::canSplatOperand(unsigned Opcode, int Operand) const {
+  switch (Opcode) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+    return true;
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+  case Instruction::Select:
+    return Operand == 1;
+  default:
+    return false;
+  }
+}
+
+bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
+  if (!I->getType()->isVectorTy() || !ST->hasVInstructions())
+    return false;
+
+  if (canSplatOperand(I->getOpcode(), Operand))
+    return true;
+
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::fma:
+  case Intrinsic::vp_fma:
+    return Operand == 0 || Operand == 1;
+  case Intrinsic::vp_shl:
+  case Intrinsic::vp_lshr:
+  case Intrinsic::vp_ashr:
+  case Intrinsic::vp_udiv:
+  case Intrinsic::vp_sdiv:
+  case Intrinsic::vp_urem:
+  case Intrinsic::vp_srem:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::vp_ssub_sat:
+  case Intrinsic::usub_sat:
+  case Intrinsic::vp_usub_sat:
+    return Operand == 1;
+    // These intrinsics are commutative.
+  case Intrinsic::vp_add:
+  case Intrinsic::vp_mul:
+  case Intrinsic::vp_and:
+  case Intrinsic::vp_or:
+  case Intrinsic::vp_xor:
+  case Intrinsic::vp_fadd:
+  case Intrinsic::vp_fmul:
+  case Intrinsic::vp_icmp:
+  case Intrinsic::vp_fcmp:
+  case Intrinsic::smin:
+  case Intrinsic::vp_smin:
+  case Intrinsic::umin:
+  case Intrinsic::vp_umin:
+  case Intrinsic::smax:
+  case Intrinsic::vp_smax:
+  case Intrinsic::umax:
+  case Intrinsic::vp_umax:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::vp_sadd_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::vp_uadd_sat:
+    // These intrinsics have 'vr' versions.
+  case Intrinsic::vp_sub:
+  case Intrinsic::vp_fsub:
+  case Intrinsic::vp_fdiv:
+    return Operand == 0 || Operand == 1;
+  default:
+    return false;
+  }
+}
+
+/// Check if sinking \p I's operands to I's basic block is profitable, because
+/// the operands can be folded into a target instruction, e.g.
+/// splats of scalars can fold into vector instructions.
+bool RISCVTTIImpl::isProfitableToSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  using namespace llvm::PatternMatch;
+
+  if (!I->getType()->isVectorTy() || !ST->hasVInstructions())
+    return false;
+
+  // Don't sink splat operands if the target prefers it. Some targets requires
+  // S2V transfer buffers and we can run out of them copying the same value
+  // repeatedly.
+  // FIXME: It could still be worth doing if it would improve vector register
+  // pressure and prevent a vector spill.
+  if (!ST->sinkSplatOperands())
+    return false;
+
+  for (auto OpIdx : enumerate(I->operands())) {
+    if (!canSplatOperand(I, OpIdx.index()))
+      continue;
+
+    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
+    // Make sure we are not already sinking this operand
+    if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
+      continue;
+
+    // We are looking for a splat that can be sunk.
+    if (!match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
+                             m_Undef(), m_ZeroMask())))
+      continue;
+
+    // Don't sink i1 splats.
+    if (cast<VectorType>(Op->getType())->getElementType()->isIntegerTy(1))
+      continue;
+
+    // All uses of the shuffle should be sunk to avoid duplicating it across gpr
+    // and vector registers
+    for (Use &U : Op->uses()) {
+      Instruction *Insn = cast<Instruction>(U.getUser());
+      if (!canSplatOperand(Insn, U.getOperandNo()))
+        return false;
+    }
+
+    Ops.push_back(&Op->getOperandUse(0));
+    Ops.push_back(&OpIdx.value());
+  }
+  return true;
 }

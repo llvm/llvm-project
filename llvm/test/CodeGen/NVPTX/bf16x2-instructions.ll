@@ -508,21 +508,24 @@ define <2 x bfloat> @test_round(<2 x bfloat> %a) #0 {
 ; CHECK-LABEL: test_copysign(
 ; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_copysign_param_0];
 ; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_copysign_param_1];
-; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
-; CHECK-DAG:  abs.bf16        [[AW1:%rs[0-9]+]], [[A1]];
-; CHECK-DAG:  neg.bf16        [[AY1:%rs[0-9]+]], [[AW1]];
-; CHECK-DAG:  shr.u16         [[BS1:%rs[0-9]+]], [[B1]], 15;
-; CHECK-DAG:  and.b16         [[BR1:%rs[0-9]+]], [[BS1]], 1;
-; CHECK-DAG:  setp.eq.b16     [[P1:%p[0-9]+]], [[BR1]], 1;
-; CHECK-DAG:  selp.b16        [[RS1:%rs[0-9]+]], [[AY1]], [[AW1]], [[P1]]
-; CHECK-DAG:  abs.bf16        [[AW0:%rs[0-9]+]], [[A0]];
-; CHECK-DAG:  neg.bf16        [[AY0:%rs[0-9]+]], [[AW0]];
-; CHECK-DAG:  shr.u16         [[BS0:%rs[0-9]+]], [[B0]], 15;
-; CHECK-DAG:  and.b16         [[BR0:%rs[0-9]+]], [[BS0]], 1;
-; CHECK-DAG:  setp.eq.b16     [[P0:%p[0-9]+]], [[BR0]], 1;
-; CHECK-DAG:  selp.b16        [[RS0:%rs[0-9]+]], [[AY0]], [[AW0]], [[P0]]
-; CHECK-DAG:  mov.b32         [[R:%r[0-9]+]], {[[RS0]], [[RS1]]}
+; SM80-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; SM80-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
+; SM80-DAG:  abs.bf16        [[AW1:%rs[0-9]+]], [[A1]];
+; SM80-DAG:  neg.bf16        [[AY1:%rs[0-9]+]], [[AW1]];
+; SM80-DAG:  shr.u16         [[BS1:%rs[0-9]+]], [[B1]], 15;
+; SM80-DAG:  and.b16         [[BR1:%rs[0-9]+]], [[BS1]], 1;
+; SM80-DAG:  setp.eq.b16     [[P1:%p[0-9]+]], [[BR1]], 1;
+; SM80-DAG:  selp.b16        [[RS1:%rs[0-9]+]], [[AY1]], [[AW1]], [[P1]]
+; SM80-DAG:  abs.bf16        [[AW0:%rs[0-9]+]], [[A0]];
+; SM80-DAG:  neg.bf16        [[AY0:%rs[0-9]+]], [[AW0]];
+; SM80-DAG:  shr.u16         [[BS0:%rs[0-9]+]], [[B0]], 15;
+; SM80-DAG:  and.b16         [[BR0:%rs[0-9]+]], [[BS0]], 1;
+; SM80-DAG:  setp.eq.b16     [[P0:%p[0-9]+]], [[BR0]], 1;
+; SM80-DAG:  selp.b16        [[RS0:%rs[0-9]+]], [[AY0]], [[AW0]], [[P0]]
+; SM80-DAG:  mov.b32         [[R:%r[0-9]+]], {[[RS0]], [[RS1]]}
+; SM90-DAG:  and.b32         [[R1:%r[0-9]+]], [[B]], -2147450880;
+; SM90-DAG:  and.b32         [[R2:%r[0-9]+]], [[A]], 2147450879;
+; SM90-DAG:  or.b32          [[R:%r[0-9]+]], [[R2]], [[R1]];
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x bfloat> @test_copysign(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
