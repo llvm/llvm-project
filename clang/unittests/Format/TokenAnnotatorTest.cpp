@@ -3404,6 +3404,12 @@ TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[16], tok::greater, TT_TemplateCloser);
+
+  Tokens =
+      annotate("auto x{std::conditional_t<T::value == U::value, T, U>{}};");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[18], tok::greater, TT_TemplateCloser);
 }
 
 } // namespace
