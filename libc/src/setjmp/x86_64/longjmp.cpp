@@ -8,11 +8,12 @@
 
 #include "src/setjmp/longjmp.h"
 #include "include/llvm-libc-macros/offsetof-macro.h"
-#include "src/__support/OSUtil/io.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
 #include "src/setjmp/checksum.h"
-#include "src/stdlib/abort.h"
+#endif
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid file include"
@@ -20,49 +21,55 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
-extern "C" [[gnu::cold, noreturn]] void __libc_jmpbuf_corruption() {
-  write_to_stderr("invalid checksum detected in longjmp\n");
-  abort();
-}
-#define LOAD_CHKSUM_STATE_REGISTERS()                                          \
-  asm("mov %0, %%rcx\n\t" ::"m"(jmpbuf::value_mask) : "rcx");                  \
-  asm("mov %0, %%rdx\n\t" ::"m"(jmpbuf::checksum_cookie) : "rdx");
+#define CALCULATE_RETURN_VALUE()                                               \
+  "cmpl $0x1, %%esi\n\t"                                                       \
+  "adcl $0x0, %%esi\n\t"                                                       \
+  "movq %%rsi, %%rax\n\t"
 
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+#define ACCUMULATE_CHECKSUM()                                                  \
+  "mul %[checksum]\n\t"                                                        \
+  "xor %%rax, %[checksum]\n\t"                                                 \
+  "rol $%c[rotation], %[checksum]\n\t"
+
+#define LOAD_CHKSUM_STATE_REGISTERS()                                          \
+  asm("mov %[value_mask], %[mask]\n\t"                                         \
+      "mov %[checksum_cookie], %[checksum]\n\t"                                \
+      : [mask] "=r"(mask), [checksum] "=r"(checksum)                           \
+      : [value_mask] "m"(jmpbuf::value_mask), [checksum_cookie] "m"(           \
+                                                  jmpbuf::checksum_cookie));
+
+// clang-format off
 #define RESTORE_REG(DST)                                                       \
   "movq %c[" #DST "](%%rdi), %%rax\n\t"                                        \
   "movq %%rax, %%" #DST "\n\t"                                                 \
-  "xor %%rcx, %%" #DST "\n\t"                                                  \
-  "mul %%rdx\n\t"                                                              \
-  "xor %%rax, %%rdx\n\t"                                                       \
-  "rol $%c[rotation], %%rdx\n\t"
+  "xor %[mask], %%" #DST "\n\t"                                                \
+  ACCUMULATE_CHECKSUM()
 
 #define RESTORE_RIP()                                                          \
   "movq %c[rip](%%rdi), %%rax\n\t"                                             \
-  "xor %%rax, %%rcx\n\t"                                                       \
-  "mul %%rdx\n\t"                                                              \
-  "xor %%rax, %%rdx\n\t"                                                       \
-  "rol $%c[rotation], %%rdx\n\t"                                               \
-  "cmp %c[chksum](%%rdi), %%rdx\n\t"                                           \
+  "xor %%rax, %[mask]\n\t"                                                     \
+  ACCUMULATE_CHECKSUM()                                                        \
+  "cmp %c[__chksum](%%rdi), %%rdx\n\t"                                         \
   "jne __libc_jmpbuf_corruption\n\t"                                           \
-  "cmpl $0x1, %%esi\n\t"                                                       \
-  "adcl $0x0, %%esi\n\t"                                                       \
-  "movq %%rsi, %%rax\n\t"                                                      \
-  "jmp *%%rcx\n\t"
+  CALCULATE_RETURN_VALUE()                                                     \
+  "jmp *%[mask]\n\t"
+// clang-format on
 #else
 #define LOAD_CHKSUM_STATE_REGISTERS()
 #define RESTORE_REG(DST) "movq %c[" #DST "](%%rdi), %%" #DST "\n\t"
 #define RESTORE_RIP()                                                          \
-  "cmpl $0x1, %%esi\n\t"                                                       \
-  "adcl $0x0, %%esi\n\t"                                                       \
-  "movq %%rsi, %%rax\n\t"                                                      \
+  CALCULATE_RETURN_VALUE()                                                     \
   "jmpq *%c[rip](%%rdi)\n\t"
 #endif
 
-[[gnu::naked]]
-LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
+[[gnu::naked]] LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
+  // use registers to make sure values propagate correctly across the asm blocks
+  [[maybe_unused]] register __UINTPTR_TYPE__ mask asm("rcx");
+  [[maybe_unused]] register __UINT64_TYPE__ checksum asm("rdx");
+
   LOAD_CHKSUM_STATE_REGISTERS()
-  asm(
+  asm volatile(
       // clang-format off
       RESTORE_REG(rbx)
       RESTORE_REG(rbp)
@@ -73,18 +80,23 @@ LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
       RESTORE_REG(rsp)
       RESTORE_RIP()
       // clang-format on
-      ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
-      [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
-      [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
-      [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
+      : /* outputs */
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+      [mask] "+r"(mask), [checksum] "+r"(checksum)
+#endif
+      : /* inputs */
+      [rbx] "i"(offsetof(__jmp_buf, rbx)), [rbp] "i"(offsetof(__jmp_buf, rbp)),
+      [r12] "i"(offsetof(__jmp_buf, r12)), [r13] "i"(offsetof(__jmp_buf, r13)),
+      [r14] "i"(offsetof(__jmp_buf, r14)), [r15] "i"(offsetof(__jmp_buf, r15)),
+      [rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip))
 #if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
       // clang-format off
       ,[rotation] "i"(jmpbuf::ROTATION)
-      ,[chksum] "i"(offsetof(__jmp_buf, __chksum))
+      ,[__chksum] "i"(offsetof(__jmp_buf, __chksum))
   // clang-format on
 #endif
-      : "rax", "rdx", "rcx", "rsi");
+      : "rax", "rsi");
 }
 
 } // namespace LIBC_NAMESPACE_DECL

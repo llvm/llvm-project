@@ -11,7 +11,6 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
-#include "src/setjmp/checksum.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
@@ -21,6 +20,10 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
+
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+#include "src/setjmp/checksum.h"
+#endif
 
 extern "C" int main(int argc, char **argv, char **envp);
 

@@ -106,7 +106,7 @@
     },
     "LIBC_CONF_SETJMP_ENABLE_FORTIFICATION": {
       "value": true,
-      "doc": "Enable fortification for setjmp and longjmp."
+      "doc": "Protect jmp_buf by masking its contents and storing a simple checksum, to make it harder for an attacker to read meaningful information from a jmp_buf or to modify it. This is only supported on x86-64 Linux."
     }
   },
   "time": {
