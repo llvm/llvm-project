@@ -11,11 +11,9 @@ define i32 @infer_range_from_dom_equality(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[MAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX1]]
+; CHECK-NEXT:    ret i32 1
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[MAX2:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX2]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
 entry:
   %cond = icmp eq i32 %x, %y
@@ -40,11 +38,9 @@ define i32 @infer_range_from_dom_equality_ptrdiff(ptr %x, ptr %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[XI]], [[YI]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[MAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX1]]
+; CHECK-NEXT:    ret i32 1
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[MAX2:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX2]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cond = icmp eq ptr %x, %y
   %xi = ptrtoint ptr %x to i32
