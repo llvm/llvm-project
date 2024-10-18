@@ -371,6 +371,12 @@ protected:
                                     lldb::addr_t base_addr,
                                     bool base_addr_is_offset);
 
+  virtual void UpdateLoadedSectionsByType(lldb::ModuleSP module,
+                                    lldb::addr_t link_map_addr,
+                                    lldb::addr_t base_addr,
+                                    bool base_addr_is_offset,
+                                    int type_id);
+
   // Utility method so base classes can share implementation of
   // UpdateLoadedSections
   void UpdateLoadedSectionsCommon(lldb::ModuleSP module, lldb::addr_t base_addr,

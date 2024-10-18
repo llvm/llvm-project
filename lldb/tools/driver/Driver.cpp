@@ -640,7 +640,7 @@ void sigwinch_handler(int signo) {
 }
 
 void sigint_handler(int signo) {
-#ifdef _WIN32 // Restore handler as it is not persistent on Windows
+#if defined(_WIN32) || defined(_AIX) // Restore handler as it is not persistent on Windows
   signal(SIGINT, sigint_handler);
 #endif
   static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
@@ -728,8 +728,11 @@ EXAMPLES:
 
 int main(int argc, char const *argv[]) {
   // Editline uses for example iswprint which is dependent on LC_CTYPE.
+  // FIXME: this caused unexpected SIGTRAP on AIX
+#ifndef _AIX
   std::setlocale(LC_ALL, "");
   std::setlocale(LC_CTYPE, "");
+#endif
 
   // Setup LLVM signal handlers and make sure we call llvm_shutdown() on
   // destruction.
