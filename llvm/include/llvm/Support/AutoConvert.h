@@ -44,7 +44,8 @@ std::error_code disablezOSAutoConversion(int FD);
 
 /** \brief Query the z/OS enhanced ASCII auto-conversion status of a file
  * descriptor and force the conversion if the file is not tagged with a
- */ codepage.
+ * codepage.
+ */
 std::error_code enablezOSAutoConversion(int FD);
 
 /** Restore the z/OS enhanced ASCII auto-conversion for the std handle. */
