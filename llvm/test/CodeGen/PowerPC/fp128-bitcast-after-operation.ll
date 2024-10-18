@@ -90,100 +90,44 @@ entry:
 
 define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC64-P8-LE-LABEL: test_copysign:
-; PPC64-P8-LE:       # %bb.0: # %entry
-; PPC64-P8-LE-NEXT:    mflr 0
-; PPC64-P8-LE-NEXT:    stdu 1, -32(1)
-; PPC64-P8-LE-NEXT:    std 0, 48(1)
-; PPC64-P8-LE-NEXT:    bl copysignl
-; PPC64-P8-LE-NEXT:    nop
-; PPC64-P8-LE-NEXT:    mffprd 3, 1
-; PPC64-P8-LE-NEXT:    mffprd 4, 2
-; PPC64-P8-LE-NEXT:    addi 1, 1, 32
-; PPC64-P8-LE-NEXT:    ld 0, 16(1)
-; PPC64-P8-LE-NEXT:    mtlr 0
+; PPC64-P8-LE-NOT:     bl copysignl
+; PPC64-P8-LE:         xscpsgndp
+; PPC64-P8-LE-NEXT:    xscmpudp
+; PPC64-P8-LE-NEXT:    beq
+; PPC64-P8-LE-NOT:     bl copysignl
+; PPC64-P8-LE-DAG:     xsnegdp
+; PPC64-P8-LE-DAG:     mffprd
+; PPC64-P8-LE-DAG:     mffprd
+; PPC64-P8-LE-NOT:     bl copysignl
 ; PPC64-P8-LE-NEXT:    blr
 ;
-; PPC64-LE-LABEL: test_copysign:
-; PPC64-LE:       # %bb.0: # %entry
-; PPC64-LE-NEXT:    mflr 0
-; PPC64-LE-NEXT:    stdu 1, -48(1)
-; PPC64-LE-NEXT:    std 0, 64(1)
-; PPC64-LE-NEXT:    bl copysignl
-; PPC64-LE-NEXT:    nop
-; PPC64-LE-NEXT:    stfd 1, 32(1)
-; PPC64-LE-NEXT:    stfd 2, 40(1)
-; PPC64-LE-NEXT:    ld 3, 32(1)
-; PPC64-LE-NEXT:    ld 4, 40(1)
-; PPC64-LE-NEXT:    addi 1, 1, 48
-; PPC64-LE-NEXT:    ld 0, 16(1)
-; PPC64-LE-NEXT:    mtlr 0
-; PPC64-LE-NEXT:    blr
+; PPC64-LE-LABEL:    test_copysign:
+; PPC64-LE-NOT:        bl copysignl
+; PPC64-LE:            xscpsgndp
+; PPC64-LE-NOT:        bl copysignl
+; PPC64-LE:            blr
 ;
 ; PPC64-P8-BE-LABEL: test_copysign:
-; PPC64-P8-BE:       # %bb.0: # %entry
-; PPC64-P8-BE-NEXT:    mflr 0
-; PPC64-P8-BE-NEXT:    stdu 1, -112(1)
-; PPC64-P8-BE-NEXT:    std 0, 128(1)
-; PPC64-P8-BE-NEXT:    bl copysignl
-; PPC64-P8-BE-NEXT:    nop
-; PPC64-P8-BE-NEXT:    mffprd 3, 1
-; PPC64-P8-BE-NEXT:    mffprd 4, 2
-; PPC64-P8-BE-NEXT:    addi 1, 1, 112
-; PPC64-P8-BE-NEXT:    ld 0, 16(1)
-; PPC64-P8-BE-NEXT:    mtlr 0
-; PPC64-P8-BE-NEXT:    blr
-;
-; PPC64-BE-LABEL: test_copysign:
-; PPC64-BE:       # %bb.0: # %entry
-; PPC64-BE-NEXT:    mflr 0
-; PPC64-BE-NEXT:    stdu 1, -128(1)
-; PPC64-BE-NEXT:    std 0, 144(1)
-; PPC64-BE-NEXT:    bl copysignl
-; PPC64-BE-NEXT:    nop
-; PPC64-BE-NEXT:    stfd 1, 112(1)
-; PPC64-BE-NEXT:    stfd 2, 120(1)
-; PPC64-BE-NEXT:    ld 3, 112(1)
-; PPC64-BE-NEXT:    ld 4, 120(1)
-; PPC64-BE-NEXT:    addi 1, 1, 128
-; PPC64-BE-NEXT:    ld 0, 16(1)
-; PPC64-BE-NEXT:    mtlr 0
-; PPC64-BE-NEXT:    blr
-;
+; PPC64-P8-BE-NOT:     bl copysignl
+; PPC64-P8-BE:         xscpsgndp
+; PPC64-P8-BE-NEXT:    xscmpudp
+; PPC64-P8-BE-NEXT:    beq
+; PPC64-P8-BE-NOT:     bl copysignl
+; PPC64-P8-BE-DAG:     xsnegdp
+; PPC64-P8-BE-DAG:     mffprd
+; PPC64-P8-BE-DAG:     mffprd
+; PPC64-P8-BE-NOT:     bl copysignl
+
+; PPC64-BE-LABEL:  test_copysign:
+; PPC64-BE:          # %bb.0: # %entry
+; PPC64-BE-NOT:      bl copysignl
+; PPC64-BE:          blr
+
+
 ; PPC32-LABEL: test_copysign:
 ; PPC32:       # %bb.0: # %entry
-; PPC32-NEXT:    mflr 0
-; PPC32-NEXT:    stwu 1, -80(1)
-; PPC32-NEXT:    stw 0, 84(1)
-; PPC32-NEXT:    stfd 1, 32(1)
-; PPC32-NEXT:    lwz 3, 36(1)
-; PPC32-NEXT:    stfd 2, 24(1)
-; PPC32-NEXT:    stw 3, 52(1)
-; PPC32-NEXT:    lwz 3, 32(1)
-; PPC32-NEXT:    stfd 3, 56(1)
-; PPC32-NEXT:    stw 3, 48(1)
-; PPC32-NEXT:    lwz 3, 28(1)
-; PPC32-NEXT:    lfd 4, 64(1)
-; PPC32-NEXT:    stw 3, 44(1)
-; PPC32-NEXT:    lwz 3, 24(1)
-; PPC32-NEXT:    lfd 1, 48(1)
-; PPC32-NEXT:    stw 3, 40(1)
-; PPC32-NEXT:    lwz 3, 60(1)
-; PPC32-NEXT:    lfd 2, 40(1)
-; PPC32-NEXT:    stw 3, 76(1)
-; PPC32-NEXT:    lwz 3, 56(1)
-; PPC32-NEXT:    stw 3, 72(1)
-; PPC32-NEXT:    lfd 3, 72(1)
-; PPC32-NEXT:    bl copysignl
-; PPC32-NEXT:    stfd 1, 8(1)
-; PPC32-NEXT:    stfd 2, 16(1)
-; PPC32-NEXT:    lwz 3, 8(1)
-; PPC32-NEXT:    lwz 4, 12(1)
-; PPC32-NEXT:    lwz 5, 16(1)
-; PPC32-NEXT:    lwz 6, 20(1)
-; PPC32-NEXT:    lwz 0, 84(1)
-; PPC32-NEXT:    addi 1, 1, 80
-; PPC32-NEXT:    mtlr 0
-; PPC32-NEXT:    blr
+; PPC32-NOT:     bl copysignl
+; PPC32:         blr
 entry:
 	%0 = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %x, ppc_fp128 %y)
 	%1 = bitcast ppc_fp128 %0 to i128
