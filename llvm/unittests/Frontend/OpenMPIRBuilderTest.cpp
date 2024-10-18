@@ -2936,9 +2936,8 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
   const DataLayout &DL = M->getDataLayout();
   const llvm::Align TypeAlign = DL.getABITypeAlign(CriticalNamePtrTy);
   const llvm::Align PtrAlign = DL.getPointerABIAlignment(GV->getAddressSpace());
-  if (const llvm::MaybeAlign Alignment = GV->getAlign()) {
+  if (const llvm::MaybeAlign Alignment = GV->getAlign())
     EXPECT_EQ(*Alignment, std::max(TypeAlign, PtrAlign));
-  }
 }
 
 TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
