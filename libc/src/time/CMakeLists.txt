@@ -1,6 +1,6 @@
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
+# if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+#   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+# endif()
 
 add_object_library(
   time_utils
@@ -99,7 +99,6 @@ add_entrypoint_object(
   HDRS
     mktime.h
   DEPENDS
-    .time_utils
     libc.include.time
     libc.src.errno.errno
 )
@@ -137,4 +136,31 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.gettimeofday
+)
+
+add_subdirectory(strftime_core)
+
+add_entrypoint_object(
+  strftime
+  SRCS
+    strftime.cpp
+  HDRS
+    strftime.h
+  DEPENDS
+    libc.include.time
+    libc.src.time.strftime_core.strftime_main
+    libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
+  strftime_l
+  SRCS
+    strftime_l.cpp
+  HDRS
+    strftime_l.h
+  DEPENDS
+    libc.include.time
+    libc.include.locale
+    libc.src.time.strftime_core.strftime_main
+    libc.src.stdio.printf_core.writer
 )
