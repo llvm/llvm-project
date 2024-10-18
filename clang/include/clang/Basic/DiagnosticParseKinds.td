@@ -906,6 +906,10 @@ def missing_template_arg_list_after_template_kw : Extension<
   "a template argument list is expected after a name prefixed by the template "
   "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
   DefaultError;
+def warn_missing_template_arg_list_after_template_kw_deprecated : Warning<
+  "the use of the keyword template before the qualified name of a class or "
+  "alias template without a template argument list is deprecated">,
+  InGroup<DiagGroup<"warn-missing-template-arg-list-after-template-kw-deprecated-deprecated">>;
 
 def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
