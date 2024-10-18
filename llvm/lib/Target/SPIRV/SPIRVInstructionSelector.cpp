@@ -1801,9 +1801,9 @@ bool SPIRVInstructionSelector::selectWaveActiveMax(Register ResVReg,
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   // Retreive the operation to use based on input type
   bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-  auto Opcode =
-      IsFloatTy ? SPIRV::OpGroupNonUniformFMax : (IsSigned ?
-               SPIRV::OpGroupNonUniformSMax : SPIRV::OpGroupNonUniformUMax);
+  auto Opcode = IsFloatTy ? SPIRV::OpGroupNonUniformFMax
+                          : (IsSigned ? SPIRV::OpGroupNonUniformSMax
+                                      : SPIRV::OpGroupNonUniformUMax);
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
