@@ -566,6 +566,76 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   }
 }
 
+static void addPGOFlagsGPU(const ToolChain &TC, const ArgList &Args,
+                           ArgStringList &CmdArgs) {
+  const Driver &D = TC.getDriver();
+  auto *ProfileClangArg =
+      Args.getLastArg(options::OPT_fprofile_instr_generate_gpu,
+                      options::OPT_fno_profile_generate);
+  auto *ProfileLLVMArg = Args.getLastArg(options::OPT_fprofile_generate_gpu,
+                                         options::OPT_fno_profile_generate);
+  auto *ProfileUseArg = Args.getLastArg(options::OPT_fprofile_use_gpu_EQ,
+                                        options::OPT_fno_profile_instr_use);
+
+  auto *HostLLVMArg = Args.getLastArgNoClaim(options::OPT_fprofile_generate,
+                                             options::OPT_fprofile_generate_EQ);
+  auto *HostClangArg =
+      Args.getLastArgNoClaim(options::OPT_fprofile_instr_generate,
+                             options::OPT_fprofile_instr_generate_EQ);
+
+  if (ProfileClangArg &&
+      ProfileClangArg->getOption().matches(options::OPT_fno_profile_generate))
+    ProfileClangArg = nullptr;
+
+  if (ProfileLLVMArg &&
+      ProfileLLVMArg->getOption().matches(options::OPT_fno_profile_generate))
+    ProfileLLVMArg = nullptr;
+
+  if (ProfileUseArg &&
+      ProfileUseArg->getOption().matches(options::OPT_fno_profile_generate))
+    ProfileUseArg = nullptr;
+
+  if (ProfileClangArg && ProfileLLVMArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << ProfileClangArg->getSpelling() << ProfileLLVMArg->getSpelling();
+    return;
+  }
+
+  if (ProfileUseArg && ProfileClangArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << ProfileClangArg->getSpelling() << ProfileUseArg->getSpelling();
+    return;
+  }
+
+  if (ProfileUseArg && ProfileLLVMArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << ProfileLLVMArg->getSpelling() << ProfileUseArg->getSpelling();
+    return;
+  }
+
+  if (HostLLVMArg && ProfileClangArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << HostLLVMArg->getSpelling() << ProfileClangArg->getSpelling();
+    return;
+  }
+
+  if (HostClangArg && ProfileLLVMArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << HostClangArg->getSpelling() << ProfileLLVMArg->getSpelling();
+    return;
+  }
+
+  if (ProfileClangArg)
+    CmdArgs.push_back("-fprofile-instrument=clang");
+
+  if (ProfileLLVMArg)
+    CmdArgs.push_back("-fprofile-instrument=llvm");
+
+  if (ProfileUseArg)
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("-fprofile-instrument-use-path=") + ProfileUseArg->getValue()));
+}
+
 static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                    const JobAction &JA, const InputInfo &Output,
                                    const ArgList &Args, SanitizerArgs &SanArgs,
@@ -6302,10 +6372,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
                   options::OPT_fno_convergent_functions);
 
-  // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
-  // for sampling, overhead of call arc collection is way too high and there's
-  // no way to collect the output.
-  if (!Triple.isNVPTX() && !Triple.isAMDGCN())
+  // NVPTX/AMDGCN PGO is handled separately
+  // GPU targets don't have their own profiling libraries and are
+  // collected/handled by the host's profiling library
+  if (Triple.isNVPTX() || Triple.isAMDGCN())
+    addPGOFlagsGPU(TC, Args, CmdArgs);
+  else
     addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);

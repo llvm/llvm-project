@@ -1790,6 +1790,9 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
+def fprofile_instr_generate_gpu : Flag<["-"], "fprofile-instr-generate-gpu">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    HelpText<"Generate instrumented GPU device code to collect execution counts into GPU_TARGET.default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_instr_generate_EQ : Joined<["-"], "fprofile-instr-generate=">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<file>">,
     HelpText<"Generate instrumented code to collect execution counts into <file> (overridden by LLVM_PROFILE_FILE env var)">;
@@ -1826,6 +1829,9 @@ def fmcdc_max_test_vectors_EQ : Joined<["-"], "fmcdc-max-test-vectors=">,
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
+def fprofile_generate_gpu : Flag<["-"], "fprofile-generate-gpu">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    HelpText<"Generate instrumented GPU device code to collect execution counts into GPU_TARGET.default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_generate_EQ : Joined<["-"], "fprofile-generate=">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     MetaVarName<"<directory>">,
@@ -1844,6 +1850,11 @@ def fprofile_use_EQ : Joined<["-"], "fprofile-use=">,
     Visibility<[ClangOption, CLOption]>,
     MetaVarName<"<pathname>">,
     HelpText<"Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.">;
+def fprofile_use_gpu_EQ : Joined<["-"], "fprofile-use-gpu=">,
+    Group<f_Group>,
+    Visibility<[ClangOption, CLOption]>,
+    MetaVarName<"<pathname>">,
+    HelpText<"Use instrumentation data for profile-guided optimization targeting GPU">;
 def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
