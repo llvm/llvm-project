@@ -5668,6 +5668,8 @@ ExprResult Sema::BuiltinCountedByRef(ExprResult TheCallResult) {
           isArrow = false;
         }
 
+        CountFD->setBoundsSafetyCounter(true);
+
         return ExprResult(UnaryOperator::Create(
             Context, New, UO_AddrOf, Context.getPointerType(CountFD->getType()),
             VK_LValue, OK_Ordinary, Loc, false, FPOptionsOverride()));
