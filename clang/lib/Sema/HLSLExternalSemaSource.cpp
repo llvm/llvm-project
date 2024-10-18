@@ -337,17 +337,25 @@ struct TemplateParameterListBuilder {
   }
 
   /*
-  The desired result AST after this function constructs the concept
-  specialization Expression is as follows:
+  The concept specialization expression (CSE) constructed below is constructed
+  so that it matches the CSE that is constructed when parsing
+  the below C++ code:
 
-  |-ConceptSpecializationExpr 0xdd5d408 <col:42, col:75> 'bool' Concept
-  0xdd5d1c0 'is_valid_line_vector' | |-ImplicitConceptSpecializationDecl
-  0xdd5d350 <line:5:9> col:9 | | `-TemplateArgument type 'type-parameter-0-0' |
-  |   `-TemplateTypeParmType 0xdb90ba0 'type-parameter-0-0' dependent depth 0
-  index 0 | `-TemplateArgument <line:8:63> type
-  'element_type':'type-parameter-0-0' |   `-TemplateTypeParmType 0xdd5d2f0
-  'element_type' dependent depth 0 index 0 |     `-TemplateTypeParm 0xdd5d298
-  'element_type'
+  template<typename T>
+  concept is_valid_line_vector =sizeof(T) <= 16;
+
+  template<typename element_type> requires is_valid_line_vector<element_type>
+  struct RWBuffer {
+      element_type Val;
+  };
+
+  int fn() {
+      RWBuffer<int> Buf;
+  }
+
+  When dumping the AST and filtering for "RWBuffer", the resulting AST
+  structure is what we're trying to construct below, specifically the
+  CSE portion.
   */
   ConceptSpecializationExpr *getConceptSpecializationExpr(Sema &S,
                                                           ConceptDecl *CD) {
@@ -368,7 +376,7 @@ struct TemplateParameterListBuilder {
 
     // this fake TemplateTypeParmDecl is used to construct a template argument
     // that will be used to construct the ImplicitConceptSpecializationDecl
-    clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
+    TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
         Context,                          // AST context
         Context.getTranslationUnitDecl(), // DeclContext
         SourceLocation(), SourceLocation(),
@@ -383,12 +391,12 @@ struct TemplateParameterListBuilder {
     T->setDeclContext(DC);
     T->setReferenced();
 
-    clang::QualType ConceptTType = Context.getTypeDeclType(ConceptTTPD);
+    QualType ConceptTType = Context.getTypeDeclType(ConceptTTPD);
 
     // this is the 2nd template argument node in the AST above
     TemplateArgument ConceptTA = TemplateArgument(ConceptTType);
 
-    clang::QualType CSETType = Context.getTypeDeclType(T);
+    QualType CSETType = Context.getTypeDeclType(T);
 
     // this is the 1st template argument node in the AST above
     TemplateArgument CSETA = TemplateArgument(CSETType);
@@ -573,66 +581,64 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor(S, RC);
 }
 
-BinaryOperator *getSizeOfLEQ16Expr(clang::ASTContext &context,
-                                   SourceLocation NameLoc,
+BinaryOperator *getSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
                                    TemplateTypeParmDecl *T) {
   // Obtain the QualType for 'unsigned long'
-  clang::QualType unsignedLongType = context.UnsignedLongTy;
+  QualType unsignedLongType = Context.UnsignedLongTy;
 
   // Create a QualType that points to this TemplateTypeParmDecl
-  clang::QualType TType = context.getTypeDeclType(T);
+  QualType TType = Context.getTypeDeclType(T);
 
   // Create a TypeSourceInfo for the template type parameter 'T'
-  clang::TypeSourceInfo *TTypeSourceInfo =
-      context.getTrivialTypeSourceInfo(TType, NameLoc);
+  TypeSourceInfo *TTypeSourceInfo =
+      Context.getTrivialTypeSourceInfo(TType, NameLoc);
 
-  clang::UnaryExprOrTypeTraitExpr *sizeOfExpr = new (context)
-      clang::UnaryExprOrTypeTraitExpr(clang::UETT_SizeOf, TTypeSourceInfo,
-                                      unsignedLongType, NameLoc, NameLoc);
+  UnaryExprOrTypeTraitExpr *SizeOfExpr = new (Context) UnaryExprOrTypeTraitExpr(
+      UETT_SizeOf, TTypeSourceInfo, unsignedLongType, NameLoc, NameLoc);
 
   // Create an IntegerLiteral for the value '16' with size type
-  clang::QualType sizeType = context.getSizeType();
-  llvm::APInt sizeValue = llvm::APInt(context.getTypeSize(sizeType), 16);
-  clang::IntegerLiteral *sizeLiteral = new (context)
-      clang::IntegerLiteral(context, sizeValue, sizeType, NameLoc);
+  QualType SizeType = Context.getSizeType();
+  llvm::APInt SizeValue = llvm::APInt(Context.getTypeSize(SizeType), 16);
+  IntegerLiteral *sizeLiteral =
+      new (Context) IntegerLiteral(Context, SizeValue, SizeType, NameLoc);
 
-  clang::QualType BoolTy = context.BoolTy;
+  QualType BoolTy = Context.BoolTy;
 
-  clang::BinaryOperator *binaryOperator = clang::BinaryOperator::Create(
-      context, sizeOfExpr, // Left-hand side expression
-      sizeLiteral,         // Right-hand side expression
-      clang::BO_LE,        // Binary operator kind (<=)
-      BoolTy,              // Result type (bool)
-      clang::VK_LValue,    // Value kind
-      clang::OK_Ordinary,  // Object kind
-      NameLoc,             // Source location of operator
-      FPOptionsOverride());
+  BinaryOperator *binaryOperator =
+      BinaryOperator::Create(Context, SizeOfExpr, // Left-hand side expression
+                             sizeLiteral,         // Right-hand side expression
+                             BO_LE,               // Binary operator kind (<=)
+                             BoolTy,              // Result type (bool)
+                             VK_LValue,           // Value kind
+                             OK_Ordinary,         // Object kind
+                             NameLoc,             // Source location of operator
+                             FPOptionsOverride());
 
   return binaryOperator;
 }
 
 Expr *getTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
                                    TemplateTypeParmDecl *T) {
-  clang::ASTContext &context = S.getASTContext();
+  ASTContext &Context = S.getASTContext();
 
   // first get the "sizeof(T) <= 16" expression, as a binary operator
-  BinaryOperator *sizeOfLEQ16 = getSizeOfLEQ16Expr(context, NameLoc, T);
+  BinaryOperator *SizeOfLEQ16 = getSizeOfLEQ16Expr(Context, NameLoc, T);
   // TODO: add the '__builtin_hlsl_is_line_vector_layout_compatible' builtin
   // and return a binary operator that evaluates the builtin on the given
   // template type parameter 'T'
-  return sizeOfLEQ16;
+  return SizeOfLEQ16;
 }
 
 ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
   DeclContext *DC = S.CurContext;
-  clang::ASTContext &context = S.getASTContext();
+  ASTContext &Context = S.getASTContext();
   SourceLocation DeclLoc = SourceLocation();
 
   IdentifierInfo &IsValidLineVectorII =
-      context.Idents.get("is_valid_line_vector");
-  IdentifierInfo &ElementTypeII = context.Idents.get("element_type");
-  clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
-      context, context.getTranslationUnitDecl(), DeclLoc, DeclLoc,
+      Context.Idents.get("is_valid_line_vector");
+  IdentifierInfo &ElementTypeII = Context.Idents.get("element_type");
+  TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
+      Context, Context.getTranslationUnitDecl(), DeclLoc, DeclLoc,
       /*depth=*/0,
       /*position=*/0,
       /*id=*/&ElementTypeII,
@@ -643,25 +649,24 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
   T->setReferenced();
 
   // Create and Attach Template Parameter List to ConceptDecl
-  clang::TemplateParameterList *ConceptParams =
-      clang::TemplateParameterList::Create(context, DeclLoc, DeclLoc, {T},
-                                           DeclLoc, nullptr);
+  TemplateParameterList *ConceptParams = TemplateParameterList::Create(
+      Context, DeclLoc, DeclLoc, {T}, DeclLoc, nullptr);
 
   DeclarationName DeclName = DeclarationName(&IsValidLineVectorII);
   Expr *ConstraintExpr = getTypedBufferConstraintExpr(S, DeclLoc, T);
 
   // Create a ConceptDecl
-  clang::ConceptDecl *conceptDecl = clang::ConceptDecl::Create(
-      context, context.getTranslationUnitDecl(), DeclLoc, DeclName,
-      ConceptParams, ConstraintExpr);
+  ConceptDecl *CD =
+      ConceptDecl::Create(Context, Context.getTranslationUnitDecl(), DeclLoc,
+                          DeclName, ConceptParams, ConstraintExpr);
 
   // Attach the template parameter list to the ConceptDecl
-  conceptDecl->setTemplateParameters(ConceptParams);
+  CD->setTemplateParameters(ConceptParams);
 
   // Add the concept declaration to the Translation Unit Decl
-  context.getTranslationUnitDecl()->addDecl(conceptDecl);
+  Context.getTranslationUnitDecl()->addDecl(CD);
 
-  return conceptDecl;
+  return CD;
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
