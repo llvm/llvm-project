@@ -640,6 +640,20 @@ Windows Support
   When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
   allowed as VS2013 and prior allow it.
 
+- Clang now matches MSVC behavior for handling of duplicate header search paths
+  when running in Microsoft compatibility mode. Historically, Clang has
+  mimicked gcc behavior in which user search paths are ordered before
+  system search paths, user search paths that duplicate a (later) system search
+  path are ignored, and search paths that duplicate an earlier search path of
+  the same user/system kind are ignored. The MSVC behavior is that user search
+  paths are ordered before system search paths (like gcc), and search paths that
+  duplicate an earlier search path are ignored regardless of user/system kind
+  (similar to gcc, but without the preference for system search paths over
+  duplicate user search paths). These differences are observable for driver
+  invocations that pass, e.g., `-Idir1 -isystem dir2 -isystem dir1`. The gcc
+  behavior will search `dir2` before `dir1` and the MSVC behavior will search
+  `dir1` before `dir2`.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
