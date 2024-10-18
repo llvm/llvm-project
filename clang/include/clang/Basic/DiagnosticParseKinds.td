@@ -983,6 +983,9 @@ def warn_cxx23_variadic_friends : Warning<
   "variadic 'friend' declarations are incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
 
+def err_friend_concept : Error<
+  "friend declaration cannot be a concept">;
+
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
   "default member initializer for non-static data member is a C++11 "
