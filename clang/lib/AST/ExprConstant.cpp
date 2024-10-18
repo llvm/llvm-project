@@ -16314,6 +16314,8 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
       if (!EvaluateAtomic(E, nullptr, Result, Info))
         return false;
     }
+  } else if (T->isDependentType()) {
+    return false;
   } else if (Info.getLangOpts().CPlusPlus11) {
     Info.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
     return false;
