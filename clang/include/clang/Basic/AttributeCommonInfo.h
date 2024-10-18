@@ -61,7 +61,7 @@ public:
   };
   enum Kind {
 #define PARSED_ATTR(NAME) AT_##NAME,
-#include "clang/Sema/AttrParsedAttrList.inc"
+#include "clang/Basic/AttrParsedAttrList.inc"
 #undef PARSED_ATTR
     NoSemaHandlerAttribute,
     IgnoredAttribute,

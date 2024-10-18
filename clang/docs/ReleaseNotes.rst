@@ -424,6 +424,8 @@ Improvements to Clang's diagnostics
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
 
+- Clang now diagnoses the use of attribute names reserved by the C++ standard. (#GH92196).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
