@@ -57,8 +57,6 @@ define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s2, 0x10203
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
   %bswap = call i32 @llvm.bswap.i32(i32 %val) nounwind readnone
@@ -112,8 +110,6 @@ define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    v_perm_b32 v1, 0, s5, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s4, 0x10203
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <2 x i32>, ptr addrspace(1) %in, align 8
   %bswap = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %val) nounwind readnone
@@ -177,8 +173,6 @@ define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    v_perm_b32 v1, 0, s5, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s4, 0x10203
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <4 x i32>, ptr addrspace(1) %in, align 16
   %bswap = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %val) nounwind readnone
@@ -266,8 +260,6 @@ define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[8:11], 0 offset:16
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[8:11], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <8 x i32>, ptr addrspace(1) %in, align 32
   %bswap = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %val) nounwind readnone
@@ -321,8 +313,6 @@ define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    v_perm_b32 v1, 0, s4, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s5, 0x10203
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load i64, ptr addrspace(1) %in, align 8
   %bswap = call i64 @llvm.bswap.i64(i64 %val) nounwind readnone
@@ -386,8 +376,6 @@ define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    v_perm_b32 v1, 0, s4, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s5, 0x10203
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <2 x i64>, ptr addrspace(1) %in, align 16
   %bswap = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %val) nounwind readnone
@@ -475,8 +463,6 @@ define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[8:11], 0 offset:16
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[8:11], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <4 x i64>, ptr addrspace(1) %in, align 32
   %bswap = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %val) nounwind readnone

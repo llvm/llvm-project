@@ -69,8 +69,6 @@ define amdgpu_kernel void @s_brev_i16(ptr addrspace(1) noalias %out, i16 %val) #
 ; GFX11-FLAT-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FLAT-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-FLAT-NEXT:    global_store_d16_hi_b16 v0, v1, s[0:1]
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: s_brev_i16:
@@ -87,8 +85,6 @@ define amdgpu_kernel void @s_brev_i16(ptr addrspace(1) noalias %out, i16 %val) #
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
   store i16 %brev, ptr addrspace(1) %out
@@ -162,8 +158,6 @@ define amdgpu_kernel void @v_brev_i16(ptr addrspace(1) noalias %out, ptr addrspa
 ; GFX11-FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v0, v0
 ; GFX11-FLAT-NEXT:    global_store_d16_hi_b16 v1, v0, s[0:1]
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: v_brev_i16:
@@ -175,8 +169,6 @@ define amdgpu_kernel void @v_brev_i16(ptr addrspace(1) noalias %out, ptr addrspa
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_bfrev_b32_e32 v1, v1
 ; GFX11-GISEL-NEXT:    global_store_d16_hi_b16 v0, v1, s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %valptr
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
@@ -233,8 +225,6 @@ define amdgpu_kernel void @s_brev_i32(ptr addrspace(1) noalias %out, i32 %val) #
 ; GFX11-FLAT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-FLAT-NEXT:    s_mov_b32 s2, -1
 ; GFX11-FLAT-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: s_brev_i32:
@@ -248,8 +238,6 @@ define amdgpu_kernel void @s_brev_i32(ptr addrspace(1) noalias %out, i32 %val) #
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %brev = call i32 @llvm.bitreverse.i32(i32 %val) #1
   store i32 %brev, ptr addrspace(1) %out
@@ -322,8 +310,6 @@ define amdgpu_kernel void @v_brev_i32(ptr addrspace(1) noalias %out, ptr addrspa
 ; GFX11-FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v0, v0
 ; GFX11-FLAT-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: v_brev_i32:
@@ -337,8 +323,6 @@ define amdgpu_kernel void @v_brev_i32(ptr addrspace(1) noalias %out, ptr addrspa
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_bfrev_b32_e32 v0, v0
 ; GFX11-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr i32, ptr addrspace(1) %valptr, i32 %tid
@@ -405,8 +389,6 @@ define amdgpu_kernel void @s_brev_v2i32(ptr addrspace(1) noalias %out, <2 x i32>
 ; GFX11-FLAT-NEXT:    s_mov_b32 s4, s0
 ; GFX11-FLAT-NEXT:    s_mov_b32 s5, s1
 ; GFX11-FLAT-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: s_brev_v2i32:
@@ -419,8 +401,6 @@ define amdgpu_kernel void @s_brev_v2i32(ptr addrspace(1) noalias %out, <2 x i32>
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %brev = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %val) #1
   store <2 x i32> %brev, ptr addrspace(1) %out
@@ -497,8 +477,6 @@ define amdgpu_kernel void @v_brev_v2i32(ptr addrspace(1) noalias %out, ptr addrs
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v1, v1
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v0, v0
 ; GFX11-FLAT-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: v_brev_v2i32:
@@ -514,8 +492,6 @@ define amdgpu_kernel void @v_brev_v2i32(ptr addrspace(1) noalias %out, ptr addrs
 ; GFX11-GISEL-NEXT:    v_bfrev_b32_e32 v0, v0
 ; GFX11-GISEL-NEXT:    v_bfrev_b32_e32 v1, v1
 ; GFX11-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x i32>, ptr addrspace(1) %valptr, i32 %tid
@@ -575,8 +551,6 @@ define amdgpu_kernel void @s_brev_i64(ptr addrspace(1) noalias %out, i64 %val) #
 ; GFX11-FLAT-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX11-FLAT-NEXT:    s_mov_b32 s2, -1
 ; GFX11-FLAT-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: s_brev_i64:
@@ -588,8 +562,6 @@ define amdgpu_kernel void @s_brev_i64(ptr addrspace(1) noalias %out, i64 %val) #
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %brev = call i64 @llvm.bitreverse.i64(i64 %val) #1
   store i64 %brev, ptr addrspace(1) %out
@@ -666,8 +638,6 @@ define amdgpu_kernel void @v_brev_i64(ptr addrspace(1) noalias %out, ptr addrspa
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v2, v0
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v1, v1
 ; GFX11-FLAT-NEXT:    buffer_store_b64 v[1:2], off, s[0:3], 0
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: v_brev_i64:
@@ -683,8 +653,6 @@ define amdgpu_kernel void @v_brev_i64(ptr addrspace(1) noalias %out, ptr addrspa
 ; GFX11-GISEL-NEXT:    v_bfrev_b32_e32 v2, v0
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GISEL-NEXT:    global_store_b64 v0, v[1:2], s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr i64, ptr addrspace(1) %valptr, i32 %tid
@@ -756,8 +724,6 @@ define amdgpu_kernel void @s_brev_v2i64(ptr addrspace(1) noalias %out, <2 x i64>
 ; GFX11-FLAT-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FLAT-NEXT:    s_mov_b32 s2, -1
 ; GFX11-FLAT-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: s_brev_v2i64:
@@ -772,8 +738,6 @@ define amdgpu_kernel void @s_brev_v2i64(ptr addrspace(1) noalias %out, <2 x i64>
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[8:9]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %brev = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %val) #1
   store <2 x i64> %brev, ptr addrspace(1) %out
@@ -858,8 +822,6 @@ define amdgpu_kernel void @v_brev_v2i64(ptr addrspace(1) noalias %out, ptr addrs
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v2, v0
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v1, v1
 ; GFX11-FLAT-NEXT:    buffer_store_b128 v[1:4], off, s[0:3], 0
-; GFX11-FLAT-NEXT:    s_nop 0
-; GFX11-FLAT-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLAT-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: v_brev_v2i64:
@@ -877,8 +839,6 @@ define amdgpu_kernel void @v_brev_v2i64(ptr addrspace(1) noalias %out, ptr addrs
 ; GFX11-GISEL-NEXT:    v_bfrev_b32_e32 v7, v2
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GISEL-NEXT:    global_store_b128 v0, v[4:7], s[0:1]
-; GFX11-GISEL-NEXT:    s_nop 0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x i64> , ptr addrspace(1) %valptr, i32 %tid

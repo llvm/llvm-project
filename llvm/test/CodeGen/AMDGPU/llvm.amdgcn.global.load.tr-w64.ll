@@ -16,8 +16,6 @@ define amdgpu_kernel void @global_load_tr_b64_i32(ptr addrspace(1) %addr, ptr ad
 ; GFX12-NEXT:    global_load_tr_b64 v1, v0, s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[2:3]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
@@ -35,8 +33,6 @@ define amdgpu_kernel void @global_load_tr_b128_v4i16(ptr addrspace(1) %addr, ptr
 ; GFX12-NEXT:    global_load_tr_b128 v[0:1], v2, s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
@@ -54,8 +50,6 @@ define amdgpu_kernel void @global_load_tr_b128_v4f16(ptr addrspace(1) %addr, ptr
 ; GFX12-NEXT:    global_load_tr_b128 v[0:1], v2, s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
@@ -73,8 +67,6 @@ define amdgpu_kernel void @global_load_tr_b128_v4bf16(ptr addrspace(1) %addr, pt
 ; GFX12-NEXT:    global_load_tr_b128 v[0:1], v2, s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4

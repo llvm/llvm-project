@@ -76,8 +76,6 @@ define amdgpu_kernel void @constant_load_v8f32(ptr addrspace(4) noalias nocaptur
 ; GFX12-NEXT:    s_add_f32 s0, s7, s0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[10:11]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %out_ptr.promoted = load float, ptr addrspace(1) %out_ptr, align 4

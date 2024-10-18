@@ -64,8 +64,6 @@ define amdgpu_kernel void @s_uint_to_fp_i64_to_f16(ptr addrspace(1) %out, i64 %i
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = uitofp i64 %in to half
   store half %result, ptr addrspace(1) %out
@@ -147,8 +145,6 @@ define amdgpu_kernel void @v_uint_to_fp_i64_to_f16(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 1, v2
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
@@ -214,8 +210,6 @@ define amdgpu_kernel void @s_uint_to_fp_i64_to_f32(ptr addrspace(1) %out, i64 %i
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_ldexp_f32 v0, v0, s2
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = uitofp i64 %in to float
   store float %result, ptr addrspace(1) %out
@@ -294,8 +288,6 @@ define amdgpu_kernel void @v_uint_to_fp_i64_to_f32(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GFX11-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
@@ -384,8 +376,6 @@ define amdgpu_kernel void @s_uint_to_fp_v2i64_to_v2f32(ptr addrspace(1) %out, <2
 ; GFX11-NEXT:    v_ldexp_f32 v1, v0, s2
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, s3
 ; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = uitofp <2 x i64> %in to <2 x float>
   store <2 x float> %result, ptr addrspace(1) %out
@@ -546,8 +536,6 @@ define amdgpu_kernel void @v_uint_to_fp_v4i64_to_v4f32(ptr addrspace(1) %out, pt
 ; GFX11-NEXT:    v_ldexp_f32 v1, v1, v11
 ; GFX11-NEXT:    v_ldexp_f32 v0, v5, v4
 ; GFX11-NEXT:    global_store_b128 v6, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <4 x i64>, ptr addrspace(1) %in, i32 %tid
@@ -648,8 +636,6 @@ define amdgpu_kernel void @s_uint_to_fp_v2i64_to_v2f16(ptr addrspace(1) %out, <2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = uitofp <2 x i64> %in to <2 x half>
   store <2 x half> %result, ptr addrspace(1) %out
@@ -833,8 +819,6 @@ define amdgpu_kernel void @v_uint_to_fp_v4i64_to_v4f16(ptr addrspace(1) %out, pt
 ; GFX11-NEXT:    v_pack_b32_f16 v1, v0, v2
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v3, v4
 ; GFX11-NEXT:    global_store_b64 v5, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <4 x i64>, ptr addrspace(1) %in, i32 %tid
