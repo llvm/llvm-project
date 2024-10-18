@@ -17,6 +17,7 @@ void f(__SVFloat16_t, __SVFloat16_t);
 void f(__SVFloat32_t, __SVFloat32_t);
 void f(__SVFloat64_t, __SVFloat64_t);
 void f(__SVBfloat16_t, __SVBfloat16_t);
+void f(__SVMfloat8_t, __SVMfloat8_t);
 void f(__SVBool_t, __SVBool_t);
 void f(__SVCount_t, __SVCount_t);
 
@@ -150,6 +151,7 @@ void f(__clang_svboolx4_t, __clang_svboolx4_t);
 // CHECK-NEXT:    call void @_Z1fu13__SVFloat16_tS_(<vscale x 8 x half> zeroinitializer, <vscale x 8 x half> zeroinitializer)
 // CHECK-NEXT:    call void @_Z1fu13__SVFloat32_tS_(<vscale x 4 x float> zeroinitializer, <vscale x 4 x float> zeroinitializer)
 // CHECK-NEXT:    call void @_Z1fu13__SVFloat64_tS_(<vscale x 2 x double> zeroinitializer, <vscale x 2 x double> zeroinitializer)
+// CHECK-NEXT:     call void @_Z1fu13__SVMfloat8_tS_(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer)
 // CHECK-NEXT:    call void @_Z1fu14__SVBfloat16_tS_(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer)
 // CHECK-NEXT:    call void @_Z1fu10__SVBool_tS_(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer)
 // CHECK-NEXT:    call void @_Z1fu11__SVCount_tS_(target("aarch64.svcount") zeroinitializer, target("aarch64.svcount") zeroinitializer)
@@ -664,6 +666,7 @@ void f(__clang_svboolx4_t, __clang_svboolx4_t);
 // COMPAT_17-NEXT:    call void @_Z1fu13__SVFloat16_tu13__SVFloat16_t(<vscale x 8 x half> zeroinitializer, <vscale x 8 x half> zeroinitializer)
 // COMPAT_17-NEXT:    call void @_Z1fu13__SVFloat32_tu13__SVFloat32_t(<vscale x 4 x float> zeroinitializer, <vscale x 4 x float> zeroinitializer)
 // COMPAT_17-NEXT:    call void @_Z1fu13__SVFloat64_tu13__SVFloat64_t(<vscale x 2 x double> zeroinitializer, <vscale x 2 x double> zeroinitializer)
+// COMPAT_17-NEXT:    call void @_Z1fu13__SVMfloat8_tu13__SVMfloat8_t(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer)
 // COMPAT_17-NEXT:    call void @_Z1fu14__SVBFloat16_tu14__SVBFloat16_t(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer)
 // COMPAT_17-NEXT:    call void @_Z1fu10__SVBool_tu10__SVBool_t(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer)
 // COMPAT_17-NEXT:    call void @_Z1fu11__SVCount_tu11__SVCount_t(target("aarch64.svcount") zeroinitializer, target("aarch64.svcount") zeroinitializer)
@@ -1100,6 +1103,7 @@ void foo() {
   f(__SVFloat16_t(), __SVFloat16_t());
   f(__SVFloat32_t(), __SVFloat32_t());
   f(__SVFloat64_t(), __SVFloat64_t());
+  f(__SVMfloat8_t(), __SVMfloat8_t());
   f(__SVBfloat16_t(), __SVBfloat16_t());
   f(__SVBool_t(), __SVBool_t());
   f(__SVCount_t(), __SVCount_t());

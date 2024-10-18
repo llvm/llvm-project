@@ -309,6 +309,8 @@ struct APFloatBase {
   static ExponentType semanticsMaxExponent(const fltSemantics &);
   static unsigned int semanticsSizeInBits(const fltSemantics &);
   static unsigned int semanticsIntSizeInBits(const fltSemantics&, bool);
+  static bool semanticsHasZero(const fltSemantics &);
+  static bool semanticsHasSignedRepr(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
@@ -322,7 +324,38 @@ struct APFloatBase {
 
 namespace detail {
 
-class IEEEFloat final : public APFloatBase {
+using integerPart = APFloatBase::integerPart;
+using uninitializedTag = APFloatBase::uninitializedTag;
+using roundingMode = APFloatBase::roundingMode;
+using opStatus = APFloatBase::opStatus;
+using cmpResult = APFloatBase::cmpResult;
+using fltCategory = APFloatBase::fltCategory;
+using ExponentType = APFloatBase::ExponentType;
+static constexpr uninitializedTag uninitialized = APFloatBase::uninitialized;
+static constexpr roundingMode rmNearestTiesToEven =
+    APFloatBase::rmNearestTiesToEven;
+static constexpr roundingMode rmNearestTiesToAway =
+    APFloatBase::rmNearestTiesToAway;
+static constexpr roundingMode rmTowardNegative = APFloatBase::rmTowardNegative;
+static constexpr roundingMode rmTowardPositive = APFloatBase::rmTowardPositive;
+static constexpr roundingMode rmTowardZero = APFloatBase::rmTowardZero;
+static constexpr unsigned integerPartWidth = APFloatBase::integerPartWidth;
+static constexpr cmpResult cmpEqual = APFloatBase::cmpEqual;
+static constexpr cmpResult cmpLessThan = APFloatBase::cmpLessThan;
+static constexpr cmpResult cmpGreaterThan = APFloatBase::cmpGreaterThan;
+static constexpr cmpResult cmpUnordered = APFloatBase::cmpUnordered;
+static constexpr opStatus opOK = APFloatBase::opOK;
+static constexpr opStatus opInvalidOp = APFloatBase::opInvalidOp;
+static constexpr opStatus opDivByZero = APFloatBase::opDivByZero;
+static constexpr opStatus opOverflow = APFloatBase::opOverflow;
+static constexpr opStatus opUnderflow = APFloatBase::opUnderflow;
+static constexpr opStatus opInexact = APFloatBase::opInexact;
+static constexpr fltCategory fcInfinity = APFloatBase::fcInfinity;
+static constexpr fltCategory fcNaN = APFloatBase::fcNaN;
+static constexpr fltCategory fcNormal = APFloatBase::fcNormal;
+static constexpr fltCategory fcZero = APFloatBase::fcZero;
+
+class IEEEFloat final {
 public:
   /// \name Constructors
   /// @{
@@ -433,7 +466,7 @@ public:
   bool isFinite() const { return !isNaN() && !isInfinity(); }
 
   /// Returns true if and only if the float is plus or minus zero.
-  bool isZero() const { return category == fcZero; }
+  bool isZero() const { return category == fltCategory::fcZero; }
 
   /// IEEE-754R isSubnormal(): Returns true if and only if the float is a
   /// denormal.
@@ -455,7 +488,7 @@ public:
 
   fltCategory getCategory() const { return category; }
   const fltSemantics &getSemantics() const { return *semantics; }
-  bool isNonZero() const { return category != fcZero; }
+  bool isNonZero() const { return category != fltCategory::fcZero; }
   bool isFiniteNonZero() const { return isFinite() && !isZero(); }
   bool isPosZero() const { return isZero() && !isNegative(); }
   bool isNegZero() const { return isZero() && isNegative(); }
@@ -719,14 +752,14 @@ private:
 
 hash_code hash_value(const IEEEFloat &Arg);
 int ilogb(const IEEEFloat &Arg);
-IEEEFloat scalbn(IEEEFloat X, int Exp, IEEEFloat::roundingMode);
-IEEEFloat frexp(const IEEEFloat &Val, int &Exp, IEEEFloat::roundingMode RM);
+IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
+IEEEFloat frexp(const IEEEFloat &Val, int &Exp, roundingMode RM);
 
 // This mode implements more precise float in terms of two APFloats.
 // The interface and layout is designed for arbitrary underlying semantics,
 // though currently only PPCDoubleDouble semantics are supported, whose
 // corresponding underlying semantics are IEEEdouble.
-class DoubleAPFloat final : public APFloatBase {
+class DoubleAPFloat final {
   // Note: this must be the first data member.
   const fltSemantics *Semantics;
   std::unique_ptr<APFloat[]> Floats;
@@ -819,8 +852,8 @@ public:
 };
 
 hash_code hash_value(const DoubleAPFloat &Arg);
-DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp, IEEEFloat::roundingMode RM);
-DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, IEEEFloat::roundingMode);
+DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp, roundingMode RM);
+DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
 
 } // End detail namespace
 
@@ -1013,7 +1046,10 @@ public:
   ///
   /// \param Negative True iff the number should be negative.
   static APFloat getOne(const fltSemantics &Sem, bool Negative = false) {
-    return APFloat(Sem, Negative ? -1 : 1);
+    APFloat Val(Sem, 1U);
+    if (Negative)
+      Val.changeSign();
+    return Val;
   }
 
   /// Factory for Positive and Negative Infinity.
@@ -1439,6 +1475,9 @@ public:
   friend IEEEFloat;
   friend DoubleAPFloat;
 };
+
+static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
+              "Empty base class optimization is not performed.");
 
 /// See friend declarations above.
 ///

@@ -124,20 +124,20 @@ public:
   bool gotBaseSymInGotPlt = false;
 
   static constexpr RelType noneRel = 0;
-  RelType copyRel;
-  RelType gotRel;
-  RelType pltRel;
-  RelType relativeRel;
-  RelType iRelativeRel;
-  RelType symbolicRel;
-  RelType tlsDescRel;
-  RelType tlsGotRel;
-  RelType tlsModuleIndexRel;
-  RelType tlsOffsetRel;
+  RelType copyRel = 0;
+  RelType gotRel = 0;
+  RelType pltRel = 0;
+  RelType relativeRel = 0;
+  RelType iRelativeRel = 0;
+  RelType symbolicRel = 0;
+  RelType tlsDescRel = 0;
+  RelType tlsGotRel = 0;
+  RelType tlsModuleIndexRel = 0;
+  RelType tlsOffsetRel = 0;
   unsigned gotEntrySize = ctx.arg.wordsize;
-  unsigned pltEntrySize;
-  unsigned pltHeaderSize;
-  unsigned ipltEntrySize;
+  unsigned pltEntrySize = 0;
+  unsigned pltHeaderSize = 0;
+  unsigned ipltEntrySize = 0;
 
   // At least on x86_64 positions 1 and 2 are used by the first plt entry
   // to support lazy loading.
@@ -156,7 +156,7 @@ public:
 
   // A 4-byte field corresponding to one or more trap instructions, used to pad
   // executable OutputSections.
-  std::array<uint8_t, 4> trapInstr;
+  std::array<uint8_t, 4> trapInstr = {};
 
   // Stores the NOP instructions of different sizes for the target and is used
   // to pad sections that are relaxed.
@@ -239,7 +239,7 @@ void writePrefixedInst(Ctx &, uint8_t *loc, uint64_t insn);
 void addPPC64SaveRestore(Ctx &);
 uint64_t getPPC64TocBase(Ctx &ctx);
 uint64_t getAArch64Page(uint64_t expr);
-bool isAArch64BTILandingPad(Symbol &s, int64_t a);
+bool isAArch64BTILandingPad(Ctx &, Symbol &s, int64_t a);
 template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
@@ -261,20 +261,22 @@ void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                       const Symbol &sym, const Twine &msg);
 
 // Make sure that V can be represented as an N bit signed integer.
-inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {
+inline void checkInt(Ctx &ctx, uint8_t *loc, int64_t v, int n,
+                     const Relocation &rel) {
   if (v != llvm::SignExtend64(v, n))
     reportRangeError(ctx, loc, rel, Twine(v), llvm::minIntN(n),
                      llvm::maxIntN(n));
 }
 
 // Make sure that V can be represented as an N bit unsigned integer.
-inline void checkUInt(uint8_t *loc, uint64_t v, int n, const Relocation &rel) {
+inline void checkUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
+                      const Relocation &rel) {
   if ((v >> n) != 0)
     reportRangeError(ctx, loc, rel, Twine(v), 0, llvm::maxUIntN(n));
 }
 
 // Make sure that V can be represented as an N bit signed or unsigned integer.
-inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
+inline void checkIntUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                          const Relocation &rel) {
   // For the error message we should cast V to a signed integer so that error
   // messages show a small negative value rather than an extremely large one
@@ -283,7 +285,7 @@ inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
                      llvm::maxUIntN(n));
 }
 
-inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
+inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                            const Relocation &rel) {
   if ((v & (n - 1)) != 0)
     error(getErrorLoc(ctx, loc) + "improper alignment for relocation " +
@@ -292,27 +294,27 @@ inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
 }
 
 // Endianness-aware read/write.
-inline uint16_t read16(const void *p) {
+inline uint16_t read16(Ctx &ctx, const void *p) {
   return llvm::support::endian::read16(p, ctx.arg.endianness);
 }
 
-inline uint32_t read32(const void *p) {
+inline uint32_t read32(Ctx &ctx, const void *p) {
   return llvm::support::endian::read32(p, ctx.arg.endianness);
 }
 
-inline uint64_t read64(const void *p) {
+inline uint64_t read64(Ctx &ctx, const void *p) {
   return llvm::support::endian::read64(p, ctx.arg.endianness);
 }
 
-inline void write16(void *p, uint16_t v) {
+inline void write16(Ctx &ctx, void *p, uint16_t v) {
   llvm::support::endian::write16(p, v, ctx.arg.endianness);
 }
 
-inline void write32(void *p, uint32_t v) {
+inline void write32(Ctx &ctx, void *p, uint32_t v) {
   llvm::support::endian::write32(p, v, ctx.arg.endianness);
 }
 
-inline void write64(void *p, uint64_t v) {
+inline void write64(Ctx &ctx, void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, ctx.arg.endianness);
 }
 

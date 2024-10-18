@@ -81,8 +81,9 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
     // can only be handled by Analysis/ConstantFolding.cpp).
-    if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
-      return ConstantExpr::getBitCast(ConstantVector::get(V), DestPTy);
+    if (!isa<VectorType>(SrcTy))
+      if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
+        return ConstantExpr::getBitCast(ConstantVector::get(V), DestPTy);
     return nullptr;
   }
 

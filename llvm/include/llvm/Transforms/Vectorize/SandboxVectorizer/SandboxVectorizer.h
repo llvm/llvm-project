@@ -8,7 +8,10 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 
+#include <memory>
+
 #include "llvm/IR/PassManager.h"
+#include "llvm/SandboxIR/PassManager.h"
 
 namespace llvm {
 
@@ -17,10 +20,22 @@ class TargetTransformInfo;
 class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
 
-public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  // A pipeline of SandboxIR function passes run by the vectorizer.
+  sandboxir::FunctionPassManager FPM;
 
   bool runImpl(Function &F);
+
+public:
+  // Make sure the constructors/destructors are out-of-line. This works around a
+  // problem with -DBUILD_SHARED_LIBS=on where components that depend on the
+  // Vectorizer component can't find the vtable for classes like
+  // sandboxir::Pass. This way we don't have to make LLVMPasses add a direct
+  // dependency on SandboxIR.
+  SandboxVectorizerPass();
+  SandboxVectorizerPass(SandboxVectorizerPass &&);
+  ~SandboxVectorizerPass();
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm

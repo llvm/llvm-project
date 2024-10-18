@@ -131,7 +131,7 @@ struct FormatStyle {
     /// Don't align array initializer columns.
     AIAS_None
   };
-  /// if not ``None``, when using initialization for an array of structs
+  /// If not ``None``, when using initialization for an array of structs
   /// aligns the fields into columns.
   ///
   /// \note
@@ -145,11 +145,12 @@ struct FormatStyle {
   /// Alignment options.
   ///
   /// They can also be read as a whole for compatibility. The choices are:
-  /// - None
-  /// - Consecutive
-  /// - AcrossEmptyLines
-  /// - AcrossComments
-  /// - AcrossEmptyLinesAndComments
+  ///
+  /// * ``None``
+  /// * ``Consecutive``
+  /// * ``AcrossEmptyLines``
+  /// * ``AcrossComments``
+  /// * ``AcrossEmptyLinesAndComments``
   ///
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
@@ -3846,23 +3847,42 @@ struct FormatStyle {
   ReferenceAlignmentStyle ReferenceAlignment;
 
   // clang-format off
-  /// If ``true``, clang-format will attempt to re-flow comments. That is it
-  /// will touch a comment and *reflow* long comments into new lines, trying to
-  /// obey the ``ColumnLimit``.
-  /// \code
-  ///    false:
-  ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
-  ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
-  ///
-  ///    true:
-  ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-  ///    // information
-  ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-  ///     * information */
-  /// \endcode
-  /// \version 3.8
-  bool ReflowComments;
+  /// \brief Types of comment reflow style.
+  enum ReflowCommentsStyle : int8_t {
+    /// Leave comments untouched.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///         * and a misaligned second line */
+    /// \endcode
+    RCS_Never,
+    /// Only apply indentation rules, moving comments left or right, without
+    /// changing formatting inside the comments.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///     * and a misaligned second line */
+    /// \endcode
+    RCS_IndentOnly,
+    /// Apply indentation rules and reflow long comments into new lines, trying
+    /// to obey the ``ColumnLimit``.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///    // information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///     * information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///     * information and a misaligned second line */
+    /// \endcode
+    RCS_Always
+  };
   // clang-format on
+
+  /// \brief Comment reformatting style.
+  /// \version 3.8
+  ReflowCommentsStyle ReflowComments;
 
   /// Remove optional braces of control statements (``if``, ``else``, ``for``,
   /// and ``while``) in C++ according to the LLVM coding style.
@@ -3917,6 +3937,29 @@ struct FormatStyle {
   /// \endcode
   /// \version 14
   bool RemoveBracesLLVM;
+
+  /// Remove empty lines within unwrapped lines.
+  /// \code
+  ///   false:                            true:
+  ///
+  ///   int c                  vs.        int c = a + b;
+  ///
+  ///       = a + b;
+  ///
+  ///   enum : unsigned        vs.        enum : unsigned {
+  ///                                       AA = 0,
+  ///   {                                   BB
+  ///     AA = 0,                         } myEnum;
+  ///     BB
+  ///   } myEnum;
+  ///
+  ///   while (                vs.        while (true) {
+  ///                                     }
+  ///       true) {
+  ///   }
+  /// \endcode
+  /// \version 20
+  bool RemoveEmptyLinesInUnwrappedLines;
 
   /// Types of redundant parentheses to remove.
   enum RemoveParenthesesStyle : int8_t {
@@ -5212,6 +5255,8 @@ struct FormatStyle {
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
            RemoveBracesLLVM == R.RemoveBracesLLVM &&
+           RemoveEmptyLinesInUnwrappedLines ==
+               R.RemoveEmptyLinesInUnwrappedLines &&
            RemoveParentheses == R.RemoveParentheses &&
            RemoveSemicolon == R.RemoveSemicolon &&
            RequiresClausePosition == R.RequiresClausePosition &&

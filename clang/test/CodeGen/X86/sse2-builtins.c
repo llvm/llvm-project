@@ -1778,3 +1778,111 @@ __m128i test_mm_xor_si128(__m128i A, __m128i B) {
   // CHECK: xor <2 x i64> %{{.*}}, %{{.*}}
   return _mm_xor_si128(A, B);
 }
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+
+void test_constexpr() {
+  constexpr __m128d kd1 {+2.0,-1.0};
+  constexpr __m128d kd2 {-4.0,-2.0};
+  constexpr __m128d kd3 {-0.0,+0.0};
+
+  constexpr __m128 kf1 {-1.0f,+2.0f,-3.0f,+4.0f};
+
+  constexpr __m64 km1 {0x00000080FFFFFFF0ULL}; // -16,+128
+  constexpr __m128i ki1 {0x00000010FFFFFFF8ULL, 0x00000001FFFFFFFFULL}; // -8,+16,-1,1
+
+  constexpr __m128d v_mm_set_sd = _mm_set_sd(1.0);
+  static_assert(v_mm_set_sd[0] == +1.0 && v_mm_set_sd[1] == +0.0);
+
+  constexpr __m128d v_mm_set1_pd = _mm_set1_pd(2.0);
+  static_assert(v_mm_set1_pd[0] == +2.0 && v_mm_set1_pd[1] == +2.0);
+
+  constexpr __m128d v_mm_set_pd1 = _mm_set_pd1(-2.0);
+  static_assert(v_mm_set_pd1[0] == -2.0 && v_mm_set_pd1[1] == -2.0);
+
+  constexpr __m128d v_mm_set_pd = _mm_set_pd(+2.0, +3.0);
+  static_assert(v_mm_set_pd[0] == +3.0 && v_mm_set_pd[1] == +2.0);
+
+  constexpr __m128d v_mm_setr_pd = _mm_setr_pd(+2.0, +3.0);
+  static_assert(v_mm_setr_pd[0] == +2.0 && v_mm_setr_pd[1] == +3.0);
+
+  constexpr __m128d v_mm_setzero_pd = _mm_setzero_pd();
+  static_assert(v_mm_setzero_pd[0] == +0.0 && v_mm_setzero_pd[1] == +0.0);
+
+  constexpr __m128i v_mm_setzero_si128 = _mm_setzero_si128();
+  static_assert(v_mm_setzero_si128[0] == 0x0000000000000000ULL && v_mm_setzero_si128[1] == 0x0000000000000000ULL);
+
+  constexpr __m128d v_mm_add_sd = _mm_add_sd(kd1, kd2);
+  static_assert(v_mm_add_sd[0] == -2.0 && v_mm_add_sd[1] == -1.0);
+
+  constexpr __m128d v_mm_add_pd = _mm_add_pd(kd1, kd2);
+  static_assert(v_mm_add_pd[0] == -2.0 && v_mm_add_pd[1] == -3.0);
+
+  constexpr __m128d v_mm_sub_sd = _mm_sub_sd(kd1, kd2);
+  static_assert(v_mm_sub_sd[0] == +6.0 && v_mm_sub_sd[1] == -1.0);
+
+  constexpr __m128d v_mm_sub_pd = _mm_sub_pd(kd1, kd2);
+  static_assert(v_mm_sub_pd[0] == +6.0 && v_mm_sub_pd[1] == +1.0);
+
+  constexpr __m128d v_mm_mul_sd = _mm_mul_sd(kd1, kd2);
+  static_assert(v_mm_mul_sd[0] == -8.0 && v_mm_mul_sd[1] == -1.0);
+
+  constexpr __m128d v_mm_mul_pd = _mm_mul_pd(kd1, kd2);
+  static_assert(v_mm_mul_pd[0] == -8.0 && v_mm_mul_pd[1] == +2.0);
+
+  constexpr __m128d v_mm_div_sd = _mm_div_sd(kd1, kd2);
+  static_assert(v_mm_div_sd[0] == -0.5 && v_mm_div_sd[1] == -1.0);
+
+  constexpr __m128d v_mm_div_pd = _mm_div_pd(kd1, kd2);
+  static_assert(v_mm_div_pd[0] == -0.5 && v_mm_div_pd[1] == +0.5);
+
+  constexpr __m128d v_mm_and_pd = _mm_and_pd(kd1, kd3);
+  static_assert(v_mm_and_pd[0] == +0.0 && v_mm_and_pd[1] == +0.0);
+
+  constexpr __m128d v_mm_andnot_pd = _mm_andnot_pd(kd1, kd3);
+  static_assert(v_mm_andnot_pd[0] == -0.0 && v_mm_andnot_pd[1] == +0.0);
+
+  constexpr __m128d v_mm_or_pd = _mm_or_pd(kd1, kd3);
+  static_assert(v_mm_or_pd[0] == -2.0 && v_mm_or_pd[1] == -1.0);
+
+  constexpr __m128d v_mm_xor_pd = _mm_xor_pd(kd2, kd3);
+  static_assert(v_mm_xor_pd[0] == +4.0 && v_mm_xor_pd[1] == -2.0);
+
+  constexpr __m128d v_mm_cvtps_pd = _mm_cvtps_pd(kf1);
+  static_assert(v_mm_cvtps_pd[0] == -1.0 && v_mm_cvtps_pd[1] == +2.0);
+
+  constexpr __m128d v_mm_cvtepi32_pd = _mm_cvtepi32_pd(ki1);
+  static_assert(v_mm_cvtepi32_pd[0] == -8.0 && v_mm_cvtepi32_pd[1] == +16.0);
+
+  constexpr __m128 v_mm_cvtepi32_ps = _mm_cvtepi32_ps(ki1);
+  static_assert(v_mm_cvtepi32_ps[0] == -8.0f && v_mm_cvtepi32_ps[1] == +16.0f && v_mm_cvtepi32_ps[2] == -1.0f && v_mm_cvtepi32_ps[3] == +1.0f);
+
+  constexpr __m128d v_mm_cvtsi32_sd = _mm_cvtsi32_sd(kd1, 8);
+  static_assert(v_mm_cvtsi32_sd[0] == +8.0 && v_mm_cvtsi32_sd[1] == -1.0);
+
+  constexpr __m128d v_mm_cvtss_sd = _mm_cvtss_sd(kd2, kf1);
+  static_assert(v_mm_cvtss_sd[0] == -1.0 && v_mm_cvtss_sd[1] == -2.0);
+
+  constexpr __m128d v_mm_cvtpi32_pd = _mm_cvtpi32_pd(km1);
+  static_assert(v_mm_cvtpi32_pd[0] == -16.0 && v_mm_cvtpi32_pd[1] == 128.0);
+
+  static_assert(_mm_cvtsd_f64(kd2) == -4.0);
+
+  constexpr __m128d v_mm_move_sd = _mm_move_sd(kd1, kd2);
+  static_assert(v_mm_move_sd[0] == -4.0 && v_mm_move_sd[1] == -1.0);
+
+  constexpr __m128d v_mm_unpackhi_pd = _mm_unpackhi_pd(kd1, kd2);
+  static_assert(v_mm_unpackhi_pd[0] == -1.0f && v_mm_unpackhi_pd[1] == -2.0f);
+
+  constexpr __m128d v_mm_unpacklo_pd = _mm_unpacklo_pd(kd1, kd2);
+  static_assert(v_mm_unpacklo_pd[0] == +2.0f && v_mm_unpacklo_pd[1] == -4.0f);
+
+  constexpr __m128 v_mm_castpd_ps = _mm_castpd_ps(kd3);
+  static_assert(v_mm_castpd_ps[0] == -0.0f && v_mm_castpd_ps[1] == +0.0f && v_mm_castpd_ps[2] == +0.0f && v_mm_castpd_ps[3] == +0.0f);
+
+  constexpr __m128i v_mm_castpd_si128 = _mm_castpd_si128(kd3);
+  static_assert(v_mm_castpd_si128[0] == 0x8000000000000000ULL && v_mm_castpd_si128[1] == 0x0000000000000000ULL);
+}
+
+#endif
