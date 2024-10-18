@@ -117,6 +117,12 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
+if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
+  # LLVM_ENABLE_RUNTIMES.
+  list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
+endif()
+
 # The flang project is not yet part of "all" projects (see C++ requirements)
 set(LLVM_EXTRA_PROJECTS "flang")
 # List of all known projects in the mono repo
@@ -724,6 +730,10 @@ set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
 
 option(LLVM_USE_SPLIT_DWARF
   "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
+
+# Facebook T92898286
+option(LLVM_TEST_BOLT "Enable BOLT testing in non-BOLT tests that use clang" OFF)
+# End Facebook T92898286
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.

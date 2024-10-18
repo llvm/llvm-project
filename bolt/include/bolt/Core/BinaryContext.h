@@ -229,6 +229,12 @@ class BinaryContext {
   /// Functions injected by BOLT
   std::vector<BinaryFunction *> InjectedBinaryFunctions;
 
+  /// Thunk functions.
+  std::vector<BinaryFunction *> ThunkBinaryFunctions;
+
+  /// Function that precedes thunks in the binary.
+  const BinaryFunction *ThunkLocation{nullptr};
+
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
 
@@ -539,6 +545,16 @@ public:
   std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
+
+  BinaryFunction *createThunkBinaryFunction(const std::string &Name);
+
+  std::vector<BinaryFunction *> &getThunkBinaryFunctions() {
+    return ThunkBinaryFunctions;
+  }
+
+  const BinaryFunction *getThunkLocation() const { return ThunkLocation; }
+
+  void setThunkLocation(const BinaryFunction *BF) { ThunkLocation = BF; }
 
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
@@ -1339,6 +1355,10 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
+    // FIXME: hack for faster size computation on aarch64.
+    if (isAArch64())
+      return MIB->isPseudo(Inst) ? 0 : 4;
+
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
       return *Size;
 

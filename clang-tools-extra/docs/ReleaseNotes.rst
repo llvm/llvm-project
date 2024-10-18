@@ -158,7 +158,7 @@ Changes in existing checks
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
-  subtracting from a pointer.
+  subtracting from a pointer directly or when used to scale a numeric value.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
@@ -245,7 +245,7 @@ Changes in existing checks
   remove `->`, when redundant `get()` is removed.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/readability-identifier-naming>` check to
+  <clang-tidy/checks/readability/identifier-naming>` check to
   validate ``namespace`` aliases.
 
 Removed checks

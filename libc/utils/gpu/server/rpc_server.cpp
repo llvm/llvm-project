@@ -302,8 +302,8 @@ rpc_status_t handle_server_impl(
   }
   case RPC_EXIT: {
     // Send a response to the client to signal that we are ready to exit.
-    port->recv_and_send([](rpc::Buffer *) {});
-    port->recv([](rpc::Buffer *buffer) {
+    port->recv_and_send([](rpc::Buffer *, uint32_t) {});
+    port->recv([](rpc::Buffer *buffer, uint32_t) {
       int status = 0;
       std::memcpy(&status, buffer->data, sizeof(int));
       exit(status);
@@ -312,8 +312,8 @@ rpc_status_t handle_server_impl(
   }
   case RPC_ABORT: {
     // Send a response to the client to signal that we are ready to abort.
-    port->recv_and_send([](rpc::Buffer *) {});
-    port->recv([](rpc::Buffer *) {});
+    port->recv_and_send([](rpc::Buffer *, uint32_t) {});
+    port->recv([](rpc::Buffer *, uint32_t) {});
     abort();
     break;
   }
@@ -334,25 +334,25 @@ rpc_status_t handle_server_impl(
     break;
   }
   case RPC_FEOF: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
+    port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = feof(file::to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_FERROR: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
+    port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = ferror(file::to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_CLEARERR: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
+    port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       clearerr(file::to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_FSEEK: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
+    port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = fseek(file::to_stream(buffer->data[0]),
                               static_cast<long>(buffer->data[1]),
                               static_cast<int>(buffer->data[2]));
@@ -360,19 +360,19 @@ rpc_status_t handle_server_impl(
     break;
   }
   case RPC_FTELL: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
+    port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = ftell(file::to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_FFLUSH: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
+    port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = fflush(file::to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_UNGETC: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
+    port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = ungetc(static_cast<int>(buffer->data[0]),
                                file::to_stream(buffer->data[1]));
     });
@@ -429,7 +429,7 @@ rpc_status_t handle_server_impl(
     break;
   }
   case RPC_NOOP: {
-    port->recv([](rpc::Buffer *) {});
+    port->recv([](rpc::Buffer *, uint32_t) {});
     break;
   }
   default: {
@@ -552,7 +552,7 @@ uint64_t rpc_get_client_size() { return sizeof(rpc::Client); }
 
 void rpc_send(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
   auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
-  port->send([=](rpc::Buffer *buffer) {
+  port->send([=](rpc::Buffer *buffer, uint32_t) {
     callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
   });
 }
@@ -564,7 +564,7 @@ void rpc_send_n(rpc_port_t ref, const void *const *src, uint64_t *size) {
 
 void rpc_recv(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
   auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
-  port->recv([=](rpc::Buffer *buffer) {
+  port->recv([=](rpc::Buffer *buffer, uint32_t) {
     callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
   });
 }
@@ -579,7 +579,7 @@ void rpc_recv_n(rpc_port_t ref, void **dst, uint64_t *size, rpc_alloc_ty alloc,
 void rpc_recv_and_send(rpc_port_t ref, rpc_port_callback_ty callback,
                        void *data) {
   auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
-  port->recv_and_send([=](rpc::Buffer *buffer) {
+  port->recv_and_send([=](rpc::Buffer *buffer, uint32_t) {
     callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
   });
 }

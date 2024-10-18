@@ -360,6 +360,10 @@ private:
   /// True if another function body was merged into this one.
   bool HasFunctionsFoldedInto{false};
 
+  /// True if the function is used for remapping hot text and shall not be
+  /// placed on a huge page.
+  bool IsHotTextMover{false};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -1356,6 +1360,8 @@ public:
   /// Return true if the original entry point was patched.
   bool isPatched() const { return IsPatched; }
 
+  bool isHotTextMover() const { return IsHotTextMover; }
+
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
     return getJumpTableContainingAddress(Address);
@@ -1707,6 +1713,8 @@ public:
   void setIgnored();
 
   void setIsPatched(bool V) { IsPatched = V; }
+
+  void setHotTextMover(bool V) { IsHotTextMover = V; }
 
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;
