@@ -153,39 +153,39 @@ _Complex long double test_cargl(_Complex long double cld) {
 int ilogbl(long double a);
 
 // CHECK-LABEL: define dso_local i32 @test_ilogb(
-// CHECK-SAME: x86_fp80 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-SAME: x86_fp80 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK:    [[CALL:%.*]] = tail call i32 @ilogbl(x86_fp80 noundef [[A]]) #[[ATTR5]], !tbaa [[TBAA2]]
 //
 // CHECK-WIN64-LABEL: define dso_local i32 @test_ilogb(
-// CHECK-WIN64-SAME: x86_fp80 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-WIN64-SAME: x86_fp80 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-WIN64:    [[CALL:%.*]] = tail call i32 @ilogbl(x86_fp80 noundef [[A]]) #[[ATTR5]], !tbaa [[TBAA2]]
 //
 // CHECK-I686-LABEL: define dso_local i32 @test_ilogb(
-// CHECK-I686-SAME: x86_fp80 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-I686-SAME: x86_fp80 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-I686:    [[CALL:%.*]] = tail call i32 @ilogbl(x86_fp80 noundef [[A]]) #[[ATTR5]], !tbaa [[TBAA3]]
 //
 // CHECK-PPC-LABEL: define dso_local i32 @test_ilogb(
-// CHECK-PPC-SAME: ppc_fp128 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-PPC-SAME: ppc_fp128 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-PPC:    [[CALL:%.*]] = tail call i32 @ilogbl(ppc_fp128 noundef [[A]]) #[[ATTR3]], !tbaa [[TBAA2]]
 //
 // CHECK-ARM-LABEL: define dso_local i32 @test_ilogb(
-// CHECK-ARM-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-ARM-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-ARM:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR2]], !tbaa [[TBAA3]]
 //
 // CHECK-ARM-HF-LABEL: define dso_local i32 @test_ilogb(
-// CHECK-ARM-HF-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-ARM-HF-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-ARM-HF:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR2]], !tbaa [[TBAA3]]
 //
 // CHECK-THUMB-LABEL: define i32 @test_ilogb(
-// CHECK-THUMB-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-THUMB-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-THUMB:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR2]], !tbaa [[TBAA3]]
 //
 // CHECK-AARCH-LABEL: define dso_local i32 @test_ilogb(
-// CHECK-AARCH-SAME: fp128 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-AARCH-SAME: fp128 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-AARCH:    [[CALL:%.*]] = tail call i32 @ilogbl(fp128 noundef [[A]]) #[[ATTR2]], !tbaa [[TBAA2]]
 //
 // CHECK-SPIR-LABEL: define dso_local spir_func i32 @test_ilogb(
-// CHECK-SPIR-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SPIR-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-SPIR:    [[CALL:%.*]] = tail call spir_func i32 @ilogbl(double noundef [[A]]) #[[ATTR3]], !tbaa [[TBAA2]]
 //
 // CHECK-MINGW32-LABEL: define dso_local i32 @test_ilogb(
