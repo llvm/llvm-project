@@ -12,6 +12,8 @@
 //     constexpr void               // constexpr in C++26
 //     stable_sort(RandomAccessIterator first, RandomAccessIterator last);
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -234,14 +236,16 @@ int main(int, char**) {
     // run- and conditionally compile-time tests
     test_larger_sorts<256>();
     test_larger_sorts<257>();
+    test_larger_sorts<499>();
+    test_larger_sorts<500>();
 #if TEST_STD_VER >= 26
     static_assert((test_larger_sorts<256>(), true));
     static_assert((test_larger_sorts<257>(), true));
+    static_assert((test_larger_sorts<499>(), true));
+    static_assert((test_larger_sorts<500>(), true));
 #endif
 
     // only runtime tests bc. error: "constexpr evaluation hit maximum step limit"
-    test_larger_sorts<499>();
-    test_larger_sorts<500>();
     test_larger_sorts<997>();
     test_larger_sorts<1000>();
     test_larger_sorts<1009>();
