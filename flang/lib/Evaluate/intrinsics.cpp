@@ -1690,7 +1690,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // MAX and MIN (and others that map to them) allow their last argument to
   // be repeated indefinitely.  The actualForDummy vector is sized
   // and null-initialized to the non-repeated dummy argument count
-  // for other instrinsics.
+  // for other intrinsics.
   bool isMaxMin{dummyArgPatterns > 0 &&
       dummy[dummyArgPatterns - 1].optionality == Optionality::repeats};
   std::vector<ActualArgument *> actualForDummy(
