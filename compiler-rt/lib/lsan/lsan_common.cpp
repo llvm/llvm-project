@@ -294,7 +294,7 @@ struct DirectMemoryAccessor {
   void *LoadPtr(uptr p) const { return *reinterpret_cast<void **>(p); }
 };
 
-struct CopyLoader {
+struct CopyMemoryAccessor {
   void Init(uptr begin, uptr end) {
     this->begin = begin;
     buffer.clear();
@@ -585,7 +585,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   }
 
   if (flags()->use_detached) {
-    CopyLoader accessor;
+    CopyMemoryAccessor accessor;
     InternalMmapVector<tid_t> known_threads;
     GetRunningThreadsLocked(&known_threads);
     Sort(done_threads.data(), done_threads.size());
