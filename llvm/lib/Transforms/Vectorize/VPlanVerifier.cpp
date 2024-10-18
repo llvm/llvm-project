@@ -156,27 +156,22 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
              .Case<VPScalarCastRecipe>(
                  [&](const VPScalarCastRecipe *S) { return true; })
              .Case<VPInstruction>([&](const VPInstruction *I) {
-               switch (I->getOpcode()) {
-               default:
+               if (I->getOpcode() != Instruction::Add) {
                  errs()
-                     << "EVL is used in VPInstructions that are neither "
-                        "Instruction::Add nor VPInstruction::MergeUntilPivot\n";
+                     << "EVL is used as an operand in non-VPInstruction::Add\n";
                  return false;
-               case Instruction::Add:
-                 if (I->getNumUsers() != 1) {
-                   errs() << "EVL is used in VPInstruction:Add with multiple "
-                             "users\n";
-                   return false;
-                 }
-                 if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
-                   errs() << "Result of VPInstruction::Add with EVL operand is "
-                             "not used by VPEVLBasedIVPHIRecipe\n";
-                   return false;
-                 }
-                 return true;
-               case VPInstruction::MergeUntilPivot:
-                 return VerifyEVLUse(*I, 3);
                }
+               if (I->getNumUsers() != 1) {
+                 errs() << "EVL is used in VPInstruction:Add with multiple "
+                           "users\n";
+                 return false;
+               }
+               if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
+                 errs() << "Result of VPInstruction::Add with EVL operand is "
+                           "not used by VPEVLBasedIVPHIRecipe\n";
+                 return false;
+               }
+               return true;
              })
              .Default([&](const VPUser *U) {
                errs() << "EVL has unexpected user\n";
