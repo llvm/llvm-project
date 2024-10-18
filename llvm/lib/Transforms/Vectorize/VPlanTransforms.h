@@ -80,9 +80,9 @@ struct VPlanTransforms {
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
-  /// condition.
+  /// condition. If an alias mask has been set up then the checkblock won't branch to the scalar preheader.
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
-                               bool AddBranchWeights);
+                               bool AddBranchWeights, bool HasAliasMask);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -146,9 +146,14 @@ struct VPlanTransforms {
   /// creation) and instead it is handled using active-lane-mask. \p
   /// DataAndControlFlowWithoutRuntimeCheck implies \p
   /// UseActiveLaneMaskForControlFlow.
+  /// PSE is the SCEV expander used for values in runtime checks.
+  /// RTChecks refers to the pointer pairs that need aliasing elements to be
+  /// masked off each loop iteration.
   static void addActiveLaneMask(VPlan &Plan,
                                 bool UseActiveLaneMaskForControlFlow,
-                                bool DataAndControlFlowWithoutRuntimeCheck);
+                                bool DataAndControlFlowWithoutRuntimeCheck,
+                                PredicatedScalarEvolution &PSE,
+                                ArrayRef<PointerDiffInfo> RTChecks);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.
