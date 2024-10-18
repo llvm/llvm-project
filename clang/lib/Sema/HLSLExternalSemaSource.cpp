@@ -358,8 +358,8 @@ struct TemplateParameterListBuilder {
   structure is what we're trying to construct below, specifically the
   CSE portion.
   */
-  ConceptSpecializationExpr *constructConceptSpecializationExpr(Sema &S,
-                                                          ConceptDecl *CD) {
+  ConceptSpecializationExpr *
+  constructConceptSpecializationExpr(Sema &S, ConceptDecl *CD) {
     ASTContext &Context = S.getASTContext();
     SourceLocation Loc = Builder.Record->getBeginLoc();
     DeclarationNameInfo DNI(CD->getDeclName(), Loc);
@@ -582,8 +582,9 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor(S, RC);
 }
 
-BinaryOperator *constructSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
-                                   TemplateTypeParmDecl *T) {
+BinaryOperator *constructSizeOfLEQ16Expr(ASTContext &Context,
+                                         SourceLocation NameLoc,
+                                         TemplateTypeParmDecl *T) {
   // Obtain the QualType for 'unsigned long'
   QualType UnsignedLongType = Context.UnsignedLongTy;
 
@@ -619,7 +620,7 @@ BinaryOperator *constructSizeOfLEQ16Expr(ASTContext &Context, SourceLocation Nam
 }
 
 Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
-                                   TemplateTypeParmDecl *T) {
+                                         TemplateTypeParmDecl *T) {
   ASTContext &Context = S.getASTContext();
 
   // first get the "sizeof(T) <= 16" expression, as a binary operator
