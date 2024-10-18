@@ -311,3 +311,16 @@ constexpr bool change_union_member() {
   return u.b == 2;
 }
 static_assert(change_union_member());
+
+namespace PR48606 {
+  struct A { mutable int n = 0; };
+
+  constexpr bool f() {
+    A a;
+    A *p = &a;
+    p->~A();
+    std::construct_at<A>(p);
+    return true;
+  }
+  static_assert(f());
+}
