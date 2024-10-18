@@ -16,6 +16,10 @@
 using namespace llvm;
 using namespace clang;
 
+namespace clang {
+   void DiagnosticsTestHelper(DiagnosticsEngine &diag);
+}
+
 void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
   EXPECT_FALSE(diag.DiagStates.empty());
   EXPECT_TRUE(diag.DiagStatesByLoc.empty());
