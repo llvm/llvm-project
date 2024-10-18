@@ -476,7 +476,7 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
     auto initOprnd = builder.create<tensor::InsertSliceOp>(
         sourceShard.getLoc(), core, initVal, noVals, noVals, noVals,
         tgtCoreOffs, coreShape, strides);
-    auto targetShard = builder.create<UpdateHaloOp>(
+    auto updateHaloResult = builder.create<UpdateHaloOp>(
         sourceShard.getLoc(),
         RankedTensorType::get(outShape, sourceShard.getType().getElementType()),
         sourceShard, initOprnd, mesh.getSymName(),
@@ -485,9 +485,9 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
         sourceSharding.getDynamicHaloSizes(),
         sourceSharding.getStaticHaloSizes(),
         targetSharding.getDynamicHaloSizes(),
-        targetSharding.getStaticHaloSizes());
+        targetSharding.getStaticHaloSizes()).getResult();
     return std::make_tuple(
-        cast<TypedValue<ShapedType>>(targetShard.getResult()), targetSharding);
+        cast<TypedValue<ShapedType>>(updateHaloResult), targetSharding);
   }
   return std::nullopt;
 }
@@ -710,7 +710,7 @@ spmdizeOperation(ShardOp shardOp, IRMapping &spmdizationMap,
   } else {
     // Insert resharding.
     TypedValue<ShapedType> srcSpmdValue = cast<TypedValue<ShapedType>>(
-        spmdizationMap.lookup(srcShardOp.getSrc()));
+        spmdizationMap.lookup(srcShardOp));
     targetSpmdValue = reshard(builder, srcShardOp, shardOp, srcSpmdValue,
                               symbolTableCollection);
   }
