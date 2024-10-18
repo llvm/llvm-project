@@ -195,6 +195,13 @@ struct ByteArrayBuilder {
 
 bool isJumpTableCanonical(Function *F);
 
+/// Specifies how to drop type tests.
+enum class DropTestKind {
+  None,   /// Do not drop type tests (default).
+  Assume, /// Drop only llvm.assumes using type test value.
+  All,    /// Drop the type test and all uses.
+};
+
 } // end namespace lowertypetests
 
 class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
@@ -202,16 +209,17 @@ class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
 
   ModuleSummaryIndex *ExportSummary = nullptr;
   const ModuleSummaryIndex *ImportSummary = nullptr;
-  bool DropTypeTests = true;
-  bool AlwaysDropTests = false;
+  lowertypetests::DropTestKind DropTypeTests =
+      lowertypetests::DropTestKind::None;
 
 public:
   LowerTypeTestsPass() : UseCommandLine(true) {}
   LowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
                      const ModuleSummaryIndex *ImportSummary,
-                     bool DropTypeTests = false, bool AlwaysDropTests = false)
+                     lowertypetests::DropTestKind DropTypeTests =
+                         lowertypetests::DropTestKind::None)
       : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        DropTypeTests(DropTypeTests), AlwaysDropTests(AlwaysDropTests) {}
+        DropTypeTests(DropTypeTests) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
