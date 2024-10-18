@@ -1039,15 +1039,11 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
                  SourceLocToDebugLoc(R.getEnd()),
                  checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
-  // When single byte coverage mode is enabled, add a counter to loop condition.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getCond());
-
   // As long as the condition is true, go to the loop body.
   llvm::BasicBlock *LoopBody = createBasicBlock("while.body");
   if (EmitBoolCondBranch) {
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-    if (ConditionScope.requiresCleanups())
+    if (getIsCounterPair(&S).second || ConditionScope.requiresCleanups())
       ExitBlock = createBasicBlock("while.exit");
     llvm::MDNode *Weights =
         createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
@@ -1058,6 +1054,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
+      incrementProfileCounter(true, &S);
       EmitBranchThroughCleanup(LoopExit);
     }
   } else if (const Attr *A = Stmt::getLikelihoodAttr(S.getBody())) {
@@ -1075,11 +1072,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   {
     RunCleanupsScope BodyScope(*this);
     EmitBlock(LoopBody);
-    // When single byte coverage mode is enabled, add a counter to the body.
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getBody());
-    else
-      incrementProfileCounter(&S);
+    incrementProfileCounter(false, &S);
     EmitStmt(S.getBody());
   }
 
@@ -1099,13 +1092,10 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
 
   // The LoopHeader typically is just a branch if we skipped emitting
   // a branch, try to erase it.
-  if (!EmitBoolCondBranch)
+  if (!EmitBoolCondBranch) {
     SimplifyForwardingBlocks(LoopHeader.getBlock());
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
+    PGO.markStmtAsUsed(true, &S);
+  }
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1124,10 +1114,7 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
 
-  if (llvm::EnableSingleByteCoverage)
-    EmitBlockWithFallThrough(LoopBody, S.getBody());
-  else
-    EmitBlockWithFallThrough(LoopBody, &S);
+  EmitBlockWithFallThrough(LoopBody, &S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.push_back(
@@ -1139,9 +1126,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   }
 
   EmitBlock(LoopCond.getBlock());
-  // When single byte coverage mode is enabled, add a counter to loop condition.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getCond());
 
   // C99 6.8.5.2: "The evaluation of the controlling expression takes place
   // after each execution of the loop body."
@@ -1164,15 +1148,24 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
                  SourceLocToDebugLoc(R.getEnd()),
                  checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
+  auto *LoopFalse =
+      (getIsCounterPair(&S).second ? createBasicBlock("do.loopfalse")
+                                   : LoopExit.getBlock());
+
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
     Builder.CreateCondBr(
-        BoolCondVal, LoopBody, LoopExit.getBlock(),
+        BoolCondVal, LoopBody, LoopFalse,
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
   }
 
   LoopStack.pop();
+
+  if (LoopFalse != LoopExit.getBlock()) {
+    EmitBlock(LoopFalse);
+    incrementProfileCounter(true, &S, true);
+  }
 
   // Emit the exit block.
   EmitBlock(LoopExit.getBlock());
@@ -1181,11 +1174,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // emitting a branch, try to erase it.
   if (!EmitBoolCondBranch)
     SimplifyForwardingBlocks(LoopCond.getBlock());
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1247,15 +1235,10 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       BreakContinueStack.back().ContinueBlock = Continue;
     }
 
-    // When single byte coverage mode is enabled, add a counter to loop
-    // condition.
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getCond());
-
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
-    if (ForScope.requiresCleanups())
+    if (getIsCounterPair(&S).second || ForScope.requiresCleanups())
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
@@ -1274,6 +1257,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
+      incrementProfileCounter(true, &S);
       EmitBranchThroughCleanup(LoopExit);
     }
 
@@ -1281,13 +1265,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   } else {
     // Treat it as a non-zero constant.  Don't even create a new block for the
     // body, just fall into it.
+    PGO.markStmtAsUsed(true, &S);
   }
 
-  // When single byte coverage mode is enabled, add a counter to the body.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getBody());
-  else
-    incrementProfileCounter(&S);
+  incrementProfileCounter(false, &S);
+
   {
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
@@ -1299,8 +1281,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   if (S.getInc()) {
     EmitBlock(Continue.getBlock());
     EmitStmt(S.getInc());
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getInc());
   }
 
   BreakContinueStack.pop_back();
@@ -1316,11 +1296,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1358,7 +1333,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
   llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-  if (ForScope.requiresCleanups())
+  if (getIsCounterPair(&S).second || ForScope.requiresCleanups())
     ExitBlock = createBasicBlock("for.cond.cleanup");
 
   // The loop body, consisting of the specified body and the loop variable.
@@ -1376,14 +1351,12 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   if (ExitBlock != LoopExit.getBlock()) {
     EmitBlock(ExitBlock);
+    incrementProfileCounter(true, &S);
     EmitBranchThroughCleanup(LoopExit);
   }
 
   EmitBlock(ForBody);
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getBody());
-  else
-    incrementProfileCounter(&S);
+  incrementProfileCounter(false, &S);
 
   // Create a block for the increment. In case of a 'continue', we jump there.
   JumpDest Continue = getJumpDestInCurrentScope("for.inc");
@@ -1413,11 +1386,6 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
