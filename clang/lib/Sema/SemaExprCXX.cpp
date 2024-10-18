@@ -8697,6 +8697,11 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   // lambda (within a generic outer lambda), must be captured by an
   // outer lambda that is enclosed within a non-dependent context.
   CurrentLSI->visitPotentialCaptures([&](ValueDecl *Var, Expr *VarExpr) {
+    VarDecl *UnderlyingVar = Var->getPotentiallyDecomposedVarDecl();
+    if (!UnderlyingVar)
+      return;
+
+
     // If the variable is clearly identified as non-odr-used and the full
     // expression is not instantiation dependent, only then do we not
     // need to check enclosing lambda's for speculative captures.
@@ -8712,52 +8717,58 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
         !IsFullExprInstantiationDependent)
       return;
 
-    VarDecl *UnderlyingVar = Var->getPotentiallyDecomposedVarDecl();
-    if (!UnderlyingVar)
-      return;
-
-    // If we have a capture-capable lambda for the variable, go ahead and
-    // capture the variable in that lambda (and all its enclosing lambdas).
-    if (const std::optional<unsigned> Index =
-            getStackIndexOfNearestEnclosingCaptureCapableLambda(
-                S.FunctionScopes, Var, S))
-      S.MarkCaptureUsedInEnclosingContext(Var, VarExpr->getExprLoc(), *Index);
-    const bool IsVarNeverAConstantExpression =
-        VariableCanNeverBeAConstantExpression(UnderlyingVar, S.Context);
-    if (!IsFullExprInstantiationDependent || IsVarNeverAConstantExpression) {
-      // This full expression is not instantiation dependent or the variable
-      // can not be used in a constant expression - which means
-      // this variable must be odr-used here, so diagnose a
-      // capture violation early, if the variable is un-captureable.
-      // This is purely for diagnosing errors early.  Otherwise, this
-      // error would get diagnosed when the lambda becomes capture ready.
+    // we already complete the captures of lambdas when parsing.
+    // so we dont capture any new vars in template instantiation
+    if (!S.inTemplateInstantiation()) {
       QualType CaptureType, DeclRefType;
       SourceLocation ExprLoc = VarExpr->getExprLoc();
-      if (S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
-                          /*EllipsisLoc*/ SourceLocation(),
-                          /*BuildAndDiagnose*/false, CaptureType,
-                          DeclRefType, nullptr)) {
-        // We will never be able to capture this variable, and we need
-        // to be able to in any and all instantiations, so diagnose it.
+      if (!S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
+                                /*EllipsisLoc*/ SourceLocation(),
+                                /*BuildAndDiagnose*/ false, CaptureType,
+                                DeclRefType, nullptr)) {
         S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
-                          /*EllipsisLoc*/ SourceLocation(),
-                          /*BuildAndDiagnose*/true, CaptureType,
-                          DeclRefType, nullptr);
+                             /*EllipsisLoc*/ SourceLocation(),
+                             /*BuildAndDiagnose*/ true, CaptureType,
+                             DeclRefType, nullptr);
       }
     }
+
+
+     const bool IsVarNeverAConstantExpression =
+          VariableCanNeverBeAConstantExpression(UnderlyingVar, S.Context);
+      if (!IsFullExprInstantiationDependent || IsVarNeverAConstantExpression) {
+        // This full expression is not instantiation dependent or the variable
+        // can not be used in a constant expression - which means
+        // this variable must be odr-used here, so diagnose a
+        // capture violation early, if the variable is un-captureable.
+        // This is purely for diagnosing errors early.  Otherwise, this
+        // error would get diagnosed when the lambda becomes capture ready.
+        QualType CaptureType, DeclRefType;
+        SourceLocation ExprLoc = VarExpr->getExprLoc();
+        if (S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
+                                 /*EllipsisLoc*/ SourceLocation(),
+                                 /*BuildAndDiagnose*/ false, CaptureType,
+                                 DeclRefType, nullptr)) {
+          // We will never be able to capture this variable, and we need
+          // to be able to in any and all instantiations, so diagnose it.
+          S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
+                               /*EllipsisLoc*/ SourceLocation(),
+                               /*BuildAndDiagnose*/ true, CaptureType,
+                               DeclRefType, nullptr);
+        }
+      }
   });
 
   // Check if 'this' needs to be captured.
-  if (CurrentLSI->hasPotentialThisCapture()) {
+  if (CurrentLSI->hasPotentialThisCapture() && !S.inTemplateInstantiation()) {
     // If we have a capture-capable lambda for 'this', go ahead and capture
     // 'this' in that lambda (and all its enclosing lambdas).
-    if (const std::optional<unsigned> Index =
-            getStackIndexOfNearestEnclosingCaptureCapableLambda(
-                S.FunctionScopes, /*0 is 'this'*/ nullptr, S)) {
-      const unsigned FunctionScopeIndexOfCapturableLambda = *Index;
+    if (!S.CheckCXXThisCapture(CurrentLSI->PotentialThisCaptureLocation,
+                               /*Explicit*/ false, /*BuildAndDiagnose*/ false,
+                               nullptr)) {
       S.CheckCXXThisCapture(CurrentLSI->PotentialThisCaptureLocation,
                             /*Explicit*/ false, /*BuildAndDiagnose*/ true,
-                            &FunctionScopeIndexOfCapturableLambda);
+                            nullptr);
     }
   }
 
