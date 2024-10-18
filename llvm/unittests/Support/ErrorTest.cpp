@@ -10,6 +10,7 @@
 #include "llvm-c/Error.h"
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Testing/Support/Error.h"
