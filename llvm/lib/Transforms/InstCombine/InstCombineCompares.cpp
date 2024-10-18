@@ -24,6 +24,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -7688,6 +7689,29 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
 
   if (Instruction *Res = foldReductionIdiom(I, Builder, DL))
     return Res;
+
+  {
+    Value *A, *B;
+    const APInt *C;
+    ICmpInst::Predicate PredEq = ICmpInst::ICMP_EQ;
+    if (I.getPredicate() == PredEq) {
+      if (match(Op0, m_And(m_Value(A), m_APInt(C))) && match(Op1, m_One())) {
+        if (*C == APInt::getSignedMinValue(C->getBitWidth()) + 1) {
+          if (match(A, m_SExt(m_Value(B))) &&
+              B->getType()->getIntegerBitWidth() > 2) {
+            auto *InputTy = B->getType();
+            Value *AndInst = Builder.CreateAnd(
+                B,
+                ConstantInt::get(InputTy, APInt::getSignedMinValue(
+                                              InputTy->getIntegerBitWidth()) +
+                                              1));
+            return CmpInst::Create(Instruction::ICmp, PredEq, AndInst,
+                                   ConstantInt::get(InputTy, 1));
+          }
+        }
+      }
+    }
+  }
 
   return Changed ? &I : nullptr;
 }
