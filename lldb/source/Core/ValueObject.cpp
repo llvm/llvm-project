@@ -2214,7 +2214,14 @@ ValueObjectSP ValueObject::GetValueForExpressionPath(
     if (*final_task_on_target ==
         ValueObject::eExpressionPathAftermathTakeAddress) {
       Status error;
-      ValueObjectSP final_value = ret_val->AddressOf(error);
+      ValueObjectSP final_value;
+      auto address_of_valobj_sp_or_err = ret_val->AddressOf(error);
+      if (!address_of_valobj_sp_or_err)
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Object),
+                       address_of_valobj_sp_or_err.takeError(),
+                       "unable to get the address of the value object");
+      else
+        final_value = *address_of_valobj_sp_or_err;
       if (error.Fail() || !final_value.get()) {
         if (reason_to_stop)
           *reason_to_stop =
@@ -2905,7 +2912,7 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
   }
 }
 
-ValueObjectSP ValueObject::AddressOf(Status &error) {
+llvm::Expected<lldb::ValueObjectSP> ValueObject::AddressOf(Status &error) {
   if (m_addr_of_valobj_sp)
     return m_addr_of_valobj_sp;
 

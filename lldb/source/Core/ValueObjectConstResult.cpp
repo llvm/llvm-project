@@ -259,7 +259,8 @@ lldb::ValueObjectSP ValueObjectConstResult::GetSyntheticChildAtOffset(
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResult::AddressOf(Status &error) {
+llvm::Expected<lldb::ValueObjectSP>
+ValueObjectConstResult::AddressOf(Status &error) {
   return m_impl.AddressOf(error);
 }
 

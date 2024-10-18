@@ -361,8 +361,15 @@ Status Variable::GetValuesForVariableExpressionPath(
     if (error.Success()) {
       for (uint32_t i = 0; i < valobj_list.GetSize();) {
         Status tmp_error;
-        ValueObjectSP valobj_sp(
-            valobj_list.GetValueObjectAtIndex(i)->AddressOf(tmp_error));
+        ValueObjectSP valobj_sp;
+        auto address_of_valobj_sp_or_err =
+            valobj_list.GetValueObjectAtIndex(i)->AddressOf(tmp_error);
+        if (!address_of_valobj_sp_or_err)
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Object),
+                         address_of_valobj_sp_or_err.takeError(),
+                         "unable to get the address of the value object");
+        else
+          valobj_sp = *address_of_valobj_sp_or_err;
         if (tmp_error.Fail()) {
           variable_list.RemoveVariableAtIndex(i);
           valobj_list.RemoveValueObjectAtIndex(i);

@@ -786,7 +786,14 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
 
   if (m_ctx_obj) {
     Status status;
-    lldb::ValueObjectSP ctx_obj_ptr = m_ctx_obj->AddressOf(status);
+    lldb::ValueObjectSP ctx_obj_ptr;
+    auto address_of_valobj_sp_or_err = m_ctx_obj->AddressOf(status);
+    if (!address_of_valobj_sp_or_err)
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object),
+                     address_of_valobj_sp_or_err.takeError(),
+                     "unable to get the address of the value object");
+    else
+      ctx_obj_ptr = *address_of_valobj_sp_or_err;
     if (!ctx_obj_ptr || status.Fail())
       return;
 
@@ -888,7 +895,14 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
 
   if (m_ctx_obj) {
     Status status;
-    lldb::ValueObjectSP ctx_obj_ptr = m_ctx_obj->AddressOf(status);
+    lldb::ValueObjectSP ctx_obj_ptr;
+    auto address_of_valobj_sp_or_err = m_ctx_obj->AddressOf(status);
+    if (!address_of_valobj_sp_or_err)
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object),
+                     address_of_valobj_sp_or_err.takeError(),
+                     "unable to get the address of the value object");
+    else
+      ctx_obj_ptr = *address_of_valobj_sp_or_err;
     if (!ctx_obj_ptr || status.Fail())
       return;
 

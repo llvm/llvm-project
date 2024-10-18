@@ -46,7 +46,7 @@ public:
                             bool can_create,
                             ConstString name_const_str = ConstString());
 
-  lldb::ValueObjectSP AddressOf(Status &error);
+  llvm::Expected<lldb::ValueObjectSP> AddressOf(Status &error);
 
   lldb::addr_t GetLiveAddress() { return m_live_address; }
 

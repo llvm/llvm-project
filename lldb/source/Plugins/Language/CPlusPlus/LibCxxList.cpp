@@ -289,7 +289,14 @@ lldb::ChildCacheState ForwardListFrontEnd::Update() {
   AbstractListFrontEnd::Update();
 
   Status err;
-  ValueObjectSP backend_addr(m_backend.AddressOf(err));
+  ValueObjectSP backend_addr;
+  auto address_of_valobj_sp_or_err = m_backend.AddressOf(err);
+  if (!address_of_valobj_sp_or_err)
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object),
+                   address_of_valobj_sp_or_err.takeError(),
+                   "unable to get the address of the value object");
+  else
+    backend_addr = *address_of_valobj_sp_or_err;
   if (err.Fail() || !backend_addr)
     return lldb::ChildCacheState::eRefetch;
 
@@ -414,7 +421,14 @@ lldb::ChildCacheState ListFrontEnd::Update() {
   m_node_address = 0;
 
   Status err;
-  ValueObjectSP backend_addr(m_backend.AddressOf(err));
+  ValueObjectSP backend_addr;
+  auto address_of_valobj_sp_or_err = m_backend.AddressOf(err);
+  if (!address_of_valobj_sp_or_err)
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object),
+                   address_of_valobj_sp_or_err.takeError(),
+                   "unable to get the address of the value object");
+  else
+    backend_addr = *address_of_valobj_sp_or_err;
   if (err.Fail() || !backend_addr)
     return lldb::ChildCacheState::eRefetch;
   m_node_address = backend_addr->GetValueAsUnsigned(0);

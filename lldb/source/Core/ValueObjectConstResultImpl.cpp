@@ -168,7 +168,8 @@ lldb::ValueObjectSP ValueObjectConstResultImpl::GetSyntheticChildAtOffset(
       offset, type, can_create, name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {
+llvm::Expected<lldb::ValueObjectSP>
+ValueObjectConstResultImpl::AddressOf(Status &error) {
   if (m_address_of_backend.get() != nullptr)
     return m_address_of_backend;
 
