@@ -93,6 +93,11 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Custom);
   }
 
+  for (auto VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+    setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
+    setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
+  }
+
   for (auto VT : { MVT::i32, MVT::i64 }) {
     if (VT == MVT::i32 && !STI.getHasAlu32())
       continue;
@@ -291,6 +296,9 @@ void BPFTargetLowering::ReplaceNodeResults(
     else
       Msg = "unsupported atomic operation, please use 64 bit version";
     break;
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return;
   }
 
   SDLoc DL(N);
@@ -316,6 +324,10 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSDIVSREM(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::ATOMIC_LOAD:
+    return LowerATOMIC_LOAD(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    return LowerATOMIC_STORE(Op, DAG);
   }
 }
 
@@ -701,6 +713,39 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
 
   return DAG.getNode(BPFISD::SELECT_CC, DL, VTs, Ops);
+}
+
+SDValue BPFTargetLowering::LowerATOMIC_LOAD(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  const char *Msg =
+      "sequentially consistent (seq_cst) atomic load is not supported";
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  if (cast<AtomicSDNode>(N)->getMergedOrdering() ==
+      AtomicOrdering::SequentiallyConsistent)
+    fail(DL, DAG, Msg);
+
+  return Op;
+}
+
+SDValue BPFTargetLowering::LowerATOMIC_STORE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  const char *Msg =
+      "sequentially consistent (seq_cst) atomic store is not supported";
+  EVT VT = Op.getOperand(1).getValueType();
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  // Promote operand #1 (value to store) if necessary.
+  if (!isTypeLegal(VT))
+    return SDValue();
+
+  if (cast<AtomicSDNode>(N)->getMergedOrdering() ==
+      AtomicOrdering::SequentiallyConsistent)
+    fail(DL, DAG, Msg);
+
+  return Op;
 }
 
 const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
