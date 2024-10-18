@@ -4304,8 +4304,8 @@ void request_disassemble(const llvm::json::Object &request) {
   }
   lldb::addr_t addr_ptr = *addr_opt;
 
-  addr_ptr += GetSigned(arguments, "instructionOffset", 0);
-  lldb::SBAddress addr(addr_ptr, g_dap.target);
+  addr_ptr += GetSigned(arguments, "offset", 0);
+  lldb::SBAddress addr = g_dap.target.ResolveLoadAddress(addr_ptr);
   if (!addr.IsValid()) {
     response["success"] = false;
     response["message"] = "Memory reference not found in the current binary.";
@@ -4313,9 +4313,27 @@ void request_disassemble(const llvm::json::Object &request) {
     return;
   }
 
-  const auto inst_count = GetUnsigned(arguments, "instructionCount", 0);
-  lldb::SBInstructionList insts =
-      g_dap.target.ReadInstructions(addr, inst_count);
+  int64_t inst_offset = GetSigned(arguments, "instructionOffset", 0);
+  const int64_t inst_count = GetSigned(arguments, "instructionCount", 0);
+  if (inst_count < 0) {
+    response["success"] = false;
+    response["message"] = "Negative instruction count.";
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  lldb::SBInstructionList insts;
+  if (lldb::SBFunction func = addr.GetFunction()) {
+    // First try to identify the function boundaries through debug information
+    insts = func.GetInstructions(g_dap.target);
+  } else if (lldb::SBSymbol sym = addr.GetSymbol()) {
+    // Try to identify the function boundaries through the symbol table
+    insts = sym.GetInstructions(g_dap.target);
+  } else {
+    // We could not identify the function. Just disassemble starting from the
+    // provided address.
+    insts = g_dap.target.ReadInstructions(addr, inst_offset + inst_count);
+  }
 
   if (!insts.IsValid()) {
     response["success"] = false;
@@ -4324,10 +4342,46 @@ void request_disassemble(const llvm::json::Object &request) {
     return;
   }
 
+  // Find the start offset in the disassembled function
+  ssize_t offset = 0;
+  while (insts.GetInstructionAtIndex(offset).GetAddress().GetLoadAddress(
+             g_dap.target) < addr.GetLoadAddress(g_dap.target))
+    ++offset;
+  offset += inst_offset;
+
+  // Format the disassembled instructions
   const bool resolveSymbols = GetBoolean(arguments, "resolveSymbols", false);
   llvm::json::Array instructions;
-  const auto num_insts = insts.GetSize();
-  for (size_t i = 0; i < num_insts; ++i) {
+  for (ssize_t i = offset; i < inst_count + offset; ++i) {
+    // Before the range of disassembled instructions?
+    if (i < 0) {
+      auto fake_addr =
+          insts.GetInstructionAtIndex(0).GetAddress().GetLoadAddress(
+              g_dap.target) -
+          offset + i;
+      llvm::json::Object disassembled_inst{
+          {"address", "0x" + llvm::utohexstr(fake_addr)},
+          {"instruction", "Instruction before disassembled address range"},
+          {"presentationHint", "invalid"},
+      };
+      instructions.emplace_back(std::move(disassembled_inst));
+      continue;
+    }
+    // Past the range of disassembled instructions?
+    if (static_cast<uint64_t>(i) >= insts.GetSize()) {
+      auto fake_addr = insts.GetInstructionAtIndex(insts.GetSize() - 1)
+                           .GetAddress()
+                           .GetLoadAddress(g_dap.target) -
+                       offset + i - insts.GetSize();
+      llvm::json::Object disassembled_inst{
+          {"address", "0x" + llvm::utohexstr(fake_addr)},
+          {"instruction", "Instruction after disassembled address range"},
+          {"presentationHint", "invalid"},
+      };
+      instructions.emplace_back(std::move(disassembled_inst));
+      continue;
+    }
+
     lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
     auto addr = inst.GetAddress();
     const auto inst_addr = addr.GetLoadAddress(g_dap.target);
