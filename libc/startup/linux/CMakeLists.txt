@@ -88,12 +88,12 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
-if (LIBC_CONF_SETJMP_ENABLE_FORTIFICATION AND LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+if (LIBC_CONF_SETJMP_FORTIFICATION AND LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
   set(jmpbuf_fortification_deps libc.src.setjmp.checksum)  
-  set(jmpbuf_fortification_defs -DLIBC_COPT_SETJMP_ENABLE_FORTIFICATION=1)
+  set(jmpbuf_fortification_defs -DLIBC_COPT_SETJMP_FORTIFICATION=1)
 else()
   set(jmpbuf_fortification_deps)
-  set(jmpbuf_fortification_defs -DLIBC_COPT_SETJMP_ENABLE_FORTIFICATION=0)
+  set(jmpbuf_fortification_defs -DLIBC_COPT_SETJMP_FORTIFICATION=0)
 endif()
 
 add_object_library(

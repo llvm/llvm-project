@@ -11,7 +11,7 @@
 #include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 
-#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+#if LIBC_COPT_SETJMP_FORTIFICATION
 #include "src/setjmp/checksum.h"
 #endif
 
@@ -19,18 +19,8 @@
 #error "Invalid file include"
 #endif
 
-#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
-#define ACCUMULATE_CHECKSUM()                                                  \
-  "mul %[checksum]\n\t"                                                        \
-  "xor %%rax, %[checksum]\n\t"                                                 \
-  "rol $%c[rotation], %[checksum]\n\t"
-
-#define LOAD_CHKSUM_STATE_REGISTERS()                                          \
-  asm("mov %[value_mask], %[mask]\n\t"                                         \
-      "mov %[checksum_cookie], %[checksum]\n\t"                                \
-      : [mask] "=r"(mask), [checksum] "=r"(checksum)                           \
-      : [value_mask] "m"(jmpbuf::value_mask), [checksum_cookie] "m"(           \
-                                                  jmpbuf::checksum_cookie));
+#if LIBC_COPT_SETJMP_FORTIFICATION
+#include "src/setjmp/x86_64/checksum.def"
 
 #define STORE_REG(SRC)                                                         \
   "mov %%" #SRC ", %%rax\n\t"                                                  \
@@ -80,7 +70,7 @@ LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
     STORE_CHECKSUM()
       // clang-format on
       :
-#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+#if LIBC_COPT_SETJMP_FORTIFICATION
       [checksum] "+r"(checksum)
 #endif
       :
@@ -89,7 +79,7 @@ LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
       [r14] "i"(offsetof(__jmp_buf, r14)), [r15] "i"(offsetof(__jmp_buf, r15)),
       [rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip))
-#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+#if LIBC_COPT_SETJMP_FORTIFICATION
       // clang-format off
       ,[rotation] "i"(jmpbuf::ROTATION)
       ,[__chksum] "i"(offsetof(__jmp_buf, __chksum))

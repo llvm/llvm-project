@@ -21,7 +21,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+#if LIBC_COPT_SETJMP_FORTIFICATION
 #include "src/setjmp/checksum.h"
 #endif
 
@@ -135,7 +135,7 @@ void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
 
-#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+#if LIBC_COPT_SETJMP_FORTIFICATION
   jmpbuf::initialize();
 #endif
 
