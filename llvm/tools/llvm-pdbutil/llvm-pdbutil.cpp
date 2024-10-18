@@ -714,6 +714,10 @@ cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
                                     cl::sub(PdbToYamlSubcommand));
+cl::opt<std::string> PdbYamlOutputFile(
+    "yaml", cl::desc("the name of the yaml file to write (default stdout)"),
+    cl::sub(PdbToYamlSubcommand));
+
 } // namespace pdb2yaml
 
 namespace merge {
@@ -891,8 +895,35 @@ static void pdb2Yaml(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
   auto &File = loadPDB(Path, Session);
 
-  auto O = std::make_unique<YAMLOutputStyle>(File);
-
+  std::unique_ptr<YAMLOutputStyle> O;
+  std::unique_ptr<raw_fd_ostream> OutputFile;
+  if (!opts::pdb2yaml::PdbYamlOutputFile.empty()) {
+    std::error_code EC;
+    if (!sys::fs::exists(opts::pdb2yaml::PdbYamlOutputFile)) {
+      auto ParentPath =
+          sys::path::parent_path(opts::pdb2yaml::PdbYamlOutputFile);
+      if (!ParentPath.empty()) {
+        EC = sys::fs::create_directories(
+            sys::path::parent_path(opts::pdb2yaml::PdbYamlOutputFile));
+        if (EC) {
+          errs() << "Error creating directory: "
+                 << sys::path::parent_path(opts::pdb2yaml::PdbYamlOutputFile)
+                 << "\n";
+          exit(1);
+        }
+      }
+    }
+    OutputFile = std::make_unique<raw_fd_ostream>(
+        opts::pdb2yaml::PdbYamlOutputFile, EC, sys::fs::FA_Write);
+    if (EC || !OutputFile) {
+      errs() << "Error opening file for writing: "
+             << opts::pdb2yaml::PdbYamlOutputFile << "\n";
+      exit(1);
+    }
+    O = std::make_unique<YAMLOutputStyle>(File, *OutputFile);
+  } else {
+    O = std::make_unique<YAMLOutputStyle>(File);
+  }
   ExitOnErr(O->dump());
 }
 
