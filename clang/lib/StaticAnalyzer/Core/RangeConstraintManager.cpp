@@ -1953,27 +1953,27 @@ public:
       const llvm::APSInt &To, const llvm::APSInt &Adjustment) override;
 
 private:
-  RangeSet::Factory F;
+  mutable RangeSet::Factory F;
 
-  RangeSet getRange(ProgramStateRef State, SymbolRef Sym);
+  RangeSet getRange(ProgramStateRef State, SymbolRef Sym) const;
   ProgramStateRef setRange(ProgramStateRef State, SymbolRef Sym,
                            RangeSet Range);
 
   RangeSet getSymLTRange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
+                         const llvm::APSInt &Adjustment) const;
   RangeSet getSymGTRange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
+                         const llvm::APSInt &Adjustment) const;
   RangeSet getSymLERange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
+                         const llvm::APSInt &Adjustment) const;
   RangeSet getSymLERange(llvm::function_ref<RangeSet()> RS,
                          const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
+                         const llvm::APSInt &Adjustment) const;
   RangeSet getSymGERange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
+                         const llvm::APSInt &Adjustment) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -2880,21 +2880,18 @@ ConditionTruthVal RangeConstraintManager::checkNull(ProgramStateRef State,
 
 const llvm::APSInt *RangeConstraintManager::getSymVal(ProgramStateRef St,
                                                       SymbolRef Sym) const {
-  auto &MutableSelf = const_cast<RangeConstraintManager &>(*this);
-  return MutableSelf.getRange(St, Sym).getConcreteValue();
+  return getRange(St, Sym).getConcreteValue();
 }
 
 const llvm::APSInt *RangeConstraintManager::getSymMinVal(ProgramStateRef St,
                                                          SymbolRef Sym) const {
-  auto &MutableSelf = const_cast<RangeConstraintManager &>(*this);
-  RangeSet Range = MutableSelf.getRange(St, Sym);
+  RangeSet Range = getRange(St, Sym);
   return Range.isEmpty() ? nullptr : &Range.getMinValue();
 }
 
 const llvm::APSInt *RangeConstraintManager::getSymMaxVal(ProgramStateRef St,
                                                          SymbolRef Sym) const {
-  auto &MutableSelf = const_cast<RangeConstraintManager &>(*this);
-  RangeSet Range = MutableSelf.getRange(St, Sym);
+  RangeSet Range = getRange(St, Sym);
   return Range.isEmpty() ? nullptr : &Range.getMaxValue();
 }
 
@@ -3039,7 +3036,7 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
 }
 
 RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
-                                          SymbolRef Sym) {
+                                          SymbolRef Sym) const {
   return SymbolicRangeInferrer::inferRange(F, State, Sym);
 }
 
@@ -3094,10 +3091,10 @@ RangeConstraintManager::assumeSymEQ(ProgramStateRef St, SymbolRef Sym,
   return setRange(St, Sym, New);
 }
 
-RangeSet RangeConstraintManager::getSymLTRange(ProgramStateRef St,
-                                               SymbolRef Sym,
-                                               const llvm::APSInt &Int,
-                                               const llvm::APSInt &Adjustment) {
+RangeSet
+RangeConstraintManager::getSymLTRange(ProgramStateRef St, SymbolRef Sym,
+                                      const llvm::APSInt &Int,
+                                      const llvm::APSInt &Adjustment) const {
   // Before we do any real work, see if the value can even show up.
   APSIntType AdjustmentType(Adjustment);
   switch (AdjustmentType.testInRange(Int, true)) {
@@ -3131,10 +3128,10 @@ RangeConstraintManager::assumeSymLT(ProgramStateRef St, SymbolRef Sym,
   return setRange(St, Sym, New);
 }
 
-RangeSet RangeConstraintManager::getSymGTRange(ProgramStateRef St,
-                                               SymbolRef Sym,
-                                               const llvm::APSInt &Int,
-                                               const llvm::APSInt &Adjustment) {
+RangeSet
+RangeConstraintManager::getSymGTRange(ProgramStateRef St, SymbolRef Sym,
+                                      const llvm::APSInt &Int,
+                                      const llvm::APSInt &Adjustment) const {
   // Before we do any real work, see if the value can even show up.
   APSIntType AdjustmentType(Adjustment);
   switch (AdjustmentType.testInRange(Int, true)) {
@@ -3168,10 +3165,10 @@ RangeConstraintManager::assumeSymGT(ProgramStateRef St, SymbolRef Sym,
   return setRange(St, Sym, New);
 }
 
-RangeSet RangeConstraintManager::getSymGERange(ProgramStateRef St,
-                                               SymbolRef Sym,
-                                               const llvm::APSInt &Int,
-                                               const llvm::APSInt &Adjustment) {
+RangeSet
+RangeConstraintManager::getSymGERange(ProgramStateRef St, SymbolRef Sym,
+                                      const llvm::APSInt &Int,
+                                      const llvm::APSInt &Adjustment) const {
   // Before we do any real work, see if the value can even show up.
   APSIntType AdjustmentType(Adjustment);
   switch (AdjustmentType.testInRange(Int, true)) {
@@ -3208,7 +3205,7 @@ RangeConstraintManager::assumeSymGE(ProgramStateRef St, SymbolRef Sym,
 RangeSet
 RangeConstraintManager::getSymLERange(llvm::function_ref<RangeSet()> RS,
                                       const llvm::APSInt &Int,
-                                      const llvm::APSInt &Adjustment) {
+                                      const llvm::APSInt &Adjustment) const {
   // Before we do any real work, see if the value can even show up.
   APSIntType AdjustmentType(Adjustment);
   switch (AdjustmentType.testInRange(Int, true)) {
@@ -3234,10 +3231,10 @@ RangeConstraintManager::getSymLERange(llvm::function_ref<RangeSet()> RS,
   return F.intersect(Default, Lower, Upper);
 }
 
-RangeSet RangeConstraintManager::getSymLERange(ProgramStateRef St,
-                                               SymbolRef Sym,
-                                               const llvm::APSInt &Int,
-                                               const llvm::APSInt &Adjustment) {
+RangeSet
+RangeConstraintManager::getSymLERange(ProgramStateRef St, SymbolRef Sym,
+                                      const llvm::APSInt &Int,
+                                      const llvm::APSInt &Adjustment) const {
   return getSymLERange([&] { return getRange(St, Sym); }, Int, Adjustment);
 }
 
