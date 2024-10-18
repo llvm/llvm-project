@@ -320,7 +320,7 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
       New->getExceptionSpecType() == EST_DependentNoexcept) {
     const auto *OldType = Old->getType()->getAs<FunctionProtoType>();
     const auto *NewType = New->getType()->getAs<FunctionProtoType>();
-    OldType = ResolveExceptionSpec(New->getLocation(), OldType);
+    OldType = ResolveExceptionSpec(Old->getLocation(), OldType);
     if (!OldType)
       return false;
     NewType = ResolveExceptionSpec(New->getLocation(), NewType);
