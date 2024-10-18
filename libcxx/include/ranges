@@ -422,6 +422,7 @@ namespace std {
 
 #if _LIBCPP_STD_VER >= 23
 #  include <__ranges/as_rvalue_view.h>
+#  include <__ranges/cartesian_product_view.h>
 #  include <__ranges/chunk_by_view.h>
 #  include <__ranges/from_range.h>
 #  include <__ranges/repeat_view.h>
