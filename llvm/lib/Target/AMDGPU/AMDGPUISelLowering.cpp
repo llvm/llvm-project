@@ -6035,24 +6035,3 @@ bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                                Register N0, Register N1) const {
   return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
 }
-
-bool AMDGPUTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
-  if (X->isDivergent() || Y->isDivergent())
-    return false;
-
-  EVT VT = X.getValueType();
-
-  if (VT != MVT::i32 && VT != MVT::i64)
-    return false;
-
-  auto *ConstantMaskNode = dyn_cast<ConstantSDNode>(Y);
-  if (!ConstantMaskNode)
-    return false;
-
-  APInt MaskValue = ConstantMaskNode->getAPIntValue();
-
-  if (!MaskValue.isPowerOf2())
-    return false;
-
-  return true;
-}
