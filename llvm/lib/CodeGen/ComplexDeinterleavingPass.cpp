@@ -335,7 +335,6 @@ private:
   ///      i: ai - br
   NodePtr identifyAdd(Instruction *Real, Instruction *Imag);
   NodePtr identifySymmetricOperation(Instruction *Real, Instruction *Imag);
-  NodePtr identifyPartialReduction(Value *R, Value *I);
 
   NodePtr identifyNode(Value *R, Value *I);
   NodePtr identifyNode(Value *R, Value *I, bool &FromCache);
@@ -916,8 +915,6 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I, bool &FromCache) {
     return It->second;
   }
 
-  if (NodePtr CN = identifyPartialReduction(R, I))
-    return CN;
 
   bool IsReduction = RealPHI == R && (!ImagPHI || ImagPHI == I);
   if (!IsReduction && R->getType() != I->getType())
