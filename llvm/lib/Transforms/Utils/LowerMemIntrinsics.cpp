@@ -823,6 +823,48 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   }
 }
 
+static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
+                                    Value *Count, Value *SetValue,
+                                    Align DstAlign, bool IsVolatile) {
+  BasicBlock *OrigBB = InsertBefore->getParent();
+  Function *F = OrigBB->getParent();
+  const DataLayout &DL = F->getDataLayout();
+
+  Type *TypeOfCount = Count->getType();
+
+  BasicBlock *NewBB = OrigBB->splitBasicBlock(InsertBefore, "split");
+  BasicBlock *LoopBB =
+      BasicBlock::Create(F->getContext(), "storeloop", F, NewBB);
+  IRBuilder<> Builder(OrigBB->getTerminator());
+
+  Builder.CreateCondBr(
+      Builder.CreateICmpEQ(ConstantInt::get(TypeOfCount, 0), Count), NewBB,
+      LoopBB);
+  OrigBB->getTerminator()->eraseFromParent();
+
+  IRBuilder<> LoopBuilder(LoopBB);
+  PHINode *CurrentDst = LoopBuilder.CreatePHI(DstAddr->getType(), 0);
+  CurrentDst->addIncoming(DstAddr, OrigBB);
+  PHINode *LoopCount = LoopBuilder.CreatePHI(TypeOfCount, 0);
+  LoopCount->addIncoming(Count, OrigBB);
+
+  unsigned PatSize = DL.getTypeStoreSize(SetValue->getType());
+  Align PatAlign(commonAlignment(DstAlign, PatSize));
+  LoopBuilder.CreateAlignedStore(SetValue, CurrentDst, PatAlign, IsVolatile);
+
+  Value *NextDst = LoopBuilder.CreateInBoundsGEP(
+      SetValue->getType(), CurrentDst, ConstantInt::get(TypeOfCount, 1));
+  CurrentDst->addIncoming(NextDst, LoopBB);
+
+  Value *NewLoopCount =
+      LoopBuilder.CreateSub(LoopCount, ConstantInt::get(TypeOfCount, 1));
+  LoopCount->addIncoming(NewLoopCount, LoopBB);
+
+  LoopBuilder.CreateCondBr(
+      LoopBuilder.CreateICmpNE(NewLoopCount, ConstantInt::get(TypeOfCount, 0)),
+      LoopBB, NewBB);
+}
+
 static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
                              Value *CopyLen, Value *SetValue, Align DstAlign,
                              bool IsVolatile) {
@@ -961,6 +1003,16 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
 }
 
 void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
+  if (isa<MemSetPatternInst>(Memset)) {
+    return createMemSetPatternLoop(
+        /* InsertBefore */ Memset,
+        /* DstAddr */ Memset->getRawDest(),
+        /* Count */ Memset->getLength(),
+        /* SetValue */ Memset->getValue(),
+        /* Alignment */ Memset->getDestAlign().valueOrOne(),
+        Memset->isVolatile());
+  }
+
   createMemSetLoop(/* InsertBefore */ Memset,
                    /* DstAddr */ Memset->getRawDest(),
                    /* CopyLen */ Memset->getLength(),
