@@ -806,8 +806,7 @@ void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
 
   // Check to see if we're low on stack space. We can't do anything about this
   // from here, but we can at least warn the user.
-  if (isStackNearlyExhausted())
-    warnStackExhausted(Ctx.PointOfInstantiation);
+  StackHandler.warnOnStackNearlyExhausted(Ctx.PointOfInstantiation);
 }
 
 void Sema::popCodeSynthesisContext() {
