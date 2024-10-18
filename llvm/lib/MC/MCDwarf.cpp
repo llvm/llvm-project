@@ -1381,6 +1381,10 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.emitInt8(dwarf::DW_CFA_AARCH64_negate_ra_state);
     return;
 
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    Streamer.emitInt8(dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc);
+    return;
+
   case MCCFIInstruction::OpUndefined: {
     unsigned Reg = Instr.getRegister();
     Streamer.emitInt8(dwarf::DW_CFA_undefined);
