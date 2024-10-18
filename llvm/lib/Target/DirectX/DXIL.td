@@ -307,6 +307,18 @@ defset list<DXILConstant> BarrierModes = {
   def BarrierMode_AllMemoryBarrierWithGroupSync    : DXILConstant<11>;
 }
 
+defset list<DXILConstant> WaveOpKind = {
+  def WaveOpKind_Sum     : DXILConstant<0>;
+  def WaveOpKind_Product : DXILConstant<1>;
+  def WaveOpKind_Min     : DXILConstant<2>;
+  def WaveOpKind_Max     : DXILConstant<3>;
+}
+
+defset list<DXILConstant> SignedOpKind = {
+  def SignedOpKind_Signed : DXILConstant<0>;
+  def SignedOpKind_Unsigned : DXILConstant<1>;
+}
+
 // Intrinsic arg selection
 class Arg {
   int index = -1;
@@ -840,6 +852,24 @@ def CreateHandleFromBinding : DXILOp<218, createHandleFromBinding> {
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+}
+
+def WaveActiveOp : DXILOp<119, waveActiveOp> {
+  let Doc = "returns the result of the operation across waves";
+  let intrinsic_selects = [
+    IntrinsicSelect<
+        int_dx_wave_active_sum,
+        [ ArgSelect<0>, ArgI8<WaveOpKind_Sum>, ArgI8<SignedOpKind_Signed> ]>,
+    IntrinsicSelect<
+        int_dx_wave_active_usum,
+        [ ArgSelect<0>, ArgI8<WaveOpKind_Sum>, ArgI8<SignedOpKind_Unsigned> ]>,
+  ];
+
+  let arguments = [OverloadTy, Int8Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
