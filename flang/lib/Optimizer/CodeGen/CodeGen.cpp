@@ -2619,7 +2619,7 @@ private:
             dims = dimsLeft - 1;
             continue;
           }
-          cpnTy = mlir::cast<fir::SequenceType>(cpnTy).getEleTy();
+          cpnTy = mlir::cast<fir::SequenceType>(cpnTy).getElementType();
           // append array range in reverse (FIR arrays are column-major)
           offs.append(arrIdx.rbegin(), arrIdx.rend());
           arrIdx.clear();
@@ -2633,7 +2633,7 @@ private:
             arrIdx.push_back(nxtOpnd);
             continue;
           }
-          cpnTy = mlir::cast<fir::SequenceType>(cpnTy).getEleTy();
+          cpnTy = mlir::cast<fir::SequenceType>(cpnTy).getElementType();
           offs.push_back(nxtOpnd);
           continue;
         }
@@ -2808,14 +2808,14 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
   matchAndRewrite(fir::GlobalOp global, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
-    mlir::LLVM::DIGlobalVariableExpressionAttr dbgExpr;
+    llvm::SmallVector<mlir::Attribute> dbgExprs;
 
     if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(global.getLoc())) {
       if (auto gvAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DIGlobalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
-            global.getContext(), gvAttr, mlir::LLVM::DIExpressionAttr());
+        dbgExprs.push_back(mlir::LLVM::DIGlobalVariableExpressionAttr::get(
+            global.getContext(), gvAttr, mlir::LLVM::DIExpressionAttr()));
       }
     }
 
@@ -2831,7 +2831,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     llvm::ArrayRef<mlir::NamedAttribute> attrs;
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
         loc, tyAttr, isConst, linkage, global.getSymName(), initAttr, 0, 0,
-        false, false, comdat, attrs, dbgExpr);
+        false, false, comdat, attrs, dbgExprs);
 
     if (global.getAlignment() && *global.getAlignment() > 0)
       g.setAlignment(*global.getAlignment());
@@ -3373,19 +3373,7 @@ struct AbsentOpConversion : public fir::FIROpConversion<fir::AbsentOp> {
   matchAndRewrite(fir::AbsentOp absent, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type ty = convertType(absent.getType());
-    mlir::Location loc = absent.getLoc();
-
-    if (mlir::isa<fir::BoxCharType>(absent.getType())) {
-      auto structTy = mlir::cast<mlir::LLVM::LLVMStructType>(ty);
-      assert(!structTy.isOpaque() && !structTy.getBody().empty());
-      auto undefStruct = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
-      auto nullField =
-          rewriter.create<mlir::LLVM::ZeroOp>(loc, structTy.getBody()[0]);
-      rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
-          absent, undefStruct, nullField, 0);
-    } else {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(absent, ty);
-    }
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(absent, ty);
     return mlir::success();
   }
 };

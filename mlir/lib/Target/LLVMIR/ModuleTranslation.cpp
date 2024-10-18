@@ -55,6 +55,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <numeric>
 #include <optional>
 
 #define DEBUG_TYPE "llvm-dialect-to-llvm-ir"
@@ -854,8 +855,40 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
          "LLVM `immArgPositions` and MLIR `immArgAttrNames` should have equal "
          "length");
 
+  SmallVector<llvm::OperandBundleDef> opBundles;
+  size_t numOpBundleOperands = 0;
+  auto opBundleSizesAttr = cast_if_present<DenseI32ArrayAttr>(
+      intrOp->getAttr(LLVMDialect::getOpBundleSizesAttrName()));
+  auto opBundleTagsAttr = cast_if_present<ArrayAttr>(
+      intrOp->getAttr(LLVMDialect::getOpBundleTagsAttrName()));
+
+  if (opBundleSizesAttr && opBundleTagsAttr) {
+    ArrayRef<int> opBundleSizes = opBundleSizesAttr.asArrayRef();
+    assert(opBundleSizes.size() == opBundleTagsAttr.size() &&
+           "operand bundles and tags do not match");
+
+    numOpBundleOperands =
+        std::accumulate(opBundleSizes.begin(), opBundleSizes.end(), size_t(0));
+    assert(numOpBundleOperands <= intrOp->getNumOperands() &&
+           "operand bundle operands is more than the number of operands");
+
+    ValueRange operands = intrOp->getOperands().take_back(numOpBundleOperands);
+    size_t nextOperandIdx = 0;
+    opBundles.reserve(opBundleSizesAttr.size());
+
+    for (auto [opBundleTagAttr, bundleSize] :
+         llvm::zip(opBundleTagsAttr, opBundleSizes)) {
+      auto bundleTag = cast<StringAttr>(opBundleTagAttr).str();
+      auto bundleOperands = moduleTranslation.lookupValues(
+          operands.slice(nextOperandIdx, bundleSize));
+      opBundles.emplace_back(std::move(bundleTag), std::move(bundleOperands));
+      nextOperandIdx += bundleSize;
+    }
+  }
+
   // Map operands and attributes to LLVM values.
-  auto operands = moduleTranslation.lookupValues(intrOp->getOperands());
+  auto opOperands = intrOp->getOperands().drop_back(numOpBundleOperands);
+  auto operands = moduleTranslation.lookupValues(opOperands);
   SmallVector<llvm::Value *> args(immArgPositions.size() + operands.size());
   for (auto [immArgPos, immArgName] :
        llvm::zip(immArgPositions, immArgAttrNames)) {
@@ -890,7 +923,7 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   llvm::Function *llvmIntr = llvm::Intrinsic::getOrInsertDeclaration(
       module, intrinsic, overloadedTypes);
 
-  return builder.CreateCall(llvmIntr, args);
+  return builder.CreateCall(llvmIntr, args, opBundles);
 }
 
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
@@ -1056,44 +1089,48 @@ LogicalResult ModuleTranslation::convertGlobals() {
     globalsMapping.try_emplace(op, var);
 
     // Add debug information if present.
-    if (op.getDbgExpr()) {
-      llvm::DIGlobalVariableExpression *diGlobalExpr =
-          debugTranslation->translateGlobalVariableExpression(op.getDbgExpr());
-      llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
-      var->addDebugInfo(diGlobalExpr);
+    if (op.getDbgExprs()) {
+      for (auto exprAttr :
+           op.getDbgExprs()->getAsRange<DIGlobalVariableExpressionAttr>()) {
+        llvm::DIGlobalVariableExpression *diGlobalExpr =
+            debugTranslation->translateGlobalVariableExpression(exprAttr);
+        llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
+        var->addDebugInfo(diGlobalExpr);
 
-      // There is no `globals` field in DICompileUnitAttr which can be directly
-      // assigned to DICompileUnit. We have to build the list by looking at the
-      // dbgExpr of all the GlobalOps. The scope of the variable is used to get
-      // the DICompileUnit in which to add it.
-      // But there are cases where the scope of a global does not
-      // directly point to the DICompileUnit and we have to do a bit more work
-      // to get to it. Some of those cases are:
-      //
-      // 1. For the languages that support modules, the scope hierarchy can be
-      // variable -> DIModule -> DICompileUnit
-      //
-      // 2. For the Fortran common block variable, the scope hierarchy can be
-      // variable -> DICommonBlock -> DISubprogram -> DICompileUnit
-      //
-      // 3. For entities like static local variables in C or variable with
-      // SAVE attribute in Fortran, the scope hierarchy can be
-      // variable -> DISubprogram -> DICompileUnit
-      llvm::DIScope *scope = diGlobalVar->getScope();
-      if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
-        scope = mod->getScope();
-      else if (auto *cb = dyn_cast_if_present<llvm::DICommonBlock>(scope)) {
-        if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(cb->getScope()))
+        // There is no `globals` field in DICompileUnitAttr which can be
+        // directly assigned to DICompileUnit. We have to build the list by
+        // looking at the dbgExpr of all the GlobalOps. The scope of the
+        // variable is used to get the DICompileUnit in which to add it. But
+        // there are cases where the scope of a global does not directly point
+        // to the DICompileUnit and we have to do a bit more work to get to
+        // it. Some of those cases are:
+        //
+        // 1. For the languages that support modules, the scope hierarchy can
+        // be variable -> DIModule -> DICompileUnit
+        //
+        // 2. For the Fortran common block variable, the scope hierarchy can
+        // be variable -> DICommonBlock -> DISubprogram -> DICompileUnit
+        //
+        // 3. For entities like static local variables in C or variable with
+        // SAVE attribute in Fortran, the scope hierarchy can be
+        // variable -> DISubprogram -> DICompileUnit
+        llvm::DIScope *scope = diGlobalVar->getScope();
+        if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
+          scope = mod->getScope();
+        else if (auto *cb = dyn_cast_if_present<llvm::DICommonBlock>(scope)) {
+          if (auto *sp =
+                  dyn_cast_if_present<llvm::DISubprogram>(cb->getScope()))
+            scope = sp->getUnit();
+        } else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
           scope = sp->getUnit();
-      } else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
-        scope = sp->getUnit();
 
-      // Get the compile unit (scope) of the the global variable.
-      if (llvm::DICompileUnit *compileUnit =
-              dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
-        // Update the compile unit with this incoming global variable expression
-        // during the finalizing step later.
-        allGVars[compileUnit].push_back(diGlobalExpr);
+        // Get the compile unit (scope) of the the global variable.
+        if (llvm::DICompileUnit *compileUnit =
+                dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
+          // Update the compile unit with this incoming global variable
+          // expression during the finalizing step later.
+          allGVars[compileUnit].push_back(diGlobalExpr);
+        }
       }
     }
   }
@@ -1833,6 +1870,21 @@ LogicalResult ModuleTranslation::createIdentMetadata() {
   return success();
 }
 
+LogicalResult ModuleTranslation::createCommandlineMetadata() {
+  if (auto attr = mlirModule->getAttrOfType<StringAttr>(
+          LLVMDialect::getCommandlineAttrName())) {
+    StringRef cmdLine = attr;
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    llvm::NamedMDNode *nmd = llvmModule->getOrInsertNamedMetadata(
+        LLVMDialect::getCommandlineAttrName());
+    llvm::MDNode *md =
+        llvm::MDNode::get(ctx, llvm::MDString::get(ctx, cmdLine));
+    nmd->addOperand(md);
+  }
+
+  return success();
+}
+
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
   LoopAnnotationAttr attr =
@@ -1985,6 +2037,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
   if (failed(translator.createIdentMetadata()))
+    return nullptr;
+  if (failed(translator.createCommandlineMetadata()))
     return nullptr;
 
   // Convert other top-level operations if possible.

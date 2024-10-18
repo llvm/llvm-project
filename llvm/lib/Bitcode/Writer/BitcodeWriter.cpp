@@ -763,6 +763,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_CALLBACK;
   case Attribute::NoCapture:
     return bitc::ATTR_KIND_NO_CAPTURE;
+  case Attribute::NoDivergenceSource:
+    return bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE;
   case Attribute::NoDuplicate:
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoFree:
@@ -1716,6 +1718,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= 1 << bitc::GEP_NUSW;
     if (GEP->hasNoUnsignedWrap())
       Flags |= 1 << bitc::GEP_NUW;
+  } else if (const auto *ICmp = dyn_cast<ICmpInst>(V)) {
+    if (ICmp->hasSameSign())
+      Flags |= 1 << bitc::ICMP_SAME_SIGN;
   }
 
   return Flags;

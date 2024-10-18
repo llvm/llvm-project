@@ -4876,6 +4876,7 @@ cc_library(
         ":NVGPUTransformOps",
         ":NVVMTarget",
         ":NVVMToLLVM",
+        ":OpenMPToLLVM",
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
         ":SCFTransformOps",
@@ -9737,6 +9738,28 @@ cc_binary(
         "//mlir/test:TestTransforms",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
+    ],
+)
+
+cc_binary(
+    name = "mlir-rewrite",
+    srcs = ["tools/mlir-rewrite/mlir-rewrite.cpp"],
+    deps = [
+        ":AffineAnalysis",
+        ":AllExtensions",
+        ":AllPassesAndDialects",
+        ":Analysis",
+        ":AsmParser",
+        ":CastInterfaces",
+        ":Dialect",
+        ":IR",
+        ":ParseUtilities",
+        ":Parser",
+        ":Pass",
+        ":Support",
+        ":TransformUtils",
+        ":Transforms",
+        "//llvm:Support",
     ],
 )
 

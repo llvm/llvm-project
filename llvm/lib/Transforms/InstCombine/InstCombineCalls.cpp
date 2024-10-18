@@ -647,9 +647,8 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   // ctpop(x | -x) -> bitwidth - cttz(x, false)
   if (Op0->hasOneUse() &&
       match(Op0, m_c_Or(m_Value(X), m_Neg(m_Deferred(X))))) {
-    Function *F =
-        Intrinsic::getOrInsertDeclaration(II.getModule(), Intrinsic::cttz, Ty);
-    auto *Cttz = IC.Builder.CreateCall(F, {X, IC.Builder.getFalse()});
+    auto *Cttz = IC.Builder.CreateIntrinsic(Intrinsic::cttz, Ty,
+                                            {X, IC.Builder.getFalse()});
     auto *Bw = ConstantInt::get(Ty, APInt(BitWidth, BitWidth));
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Bw, Cttz));
   }
@@ -1182,11 +1181,9 @@ Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
     return nullptr;
 
   // Finally create and return the sat intrinsic, truncated to the new type
-  Function *F = Intrinsic::getOrInsertDeclaration(MinMax1.getModule(),
-                                                  IntrinsicID, NewTy);
   Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
   Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
-  Value *Sat = Builder.CreateCall(F, {AT, BT});
+  Value *Sat = Builder.CreateIntrinsic(IntrinsicID, NewTy, {AT, BT});
   return CastInst::Create(Instruction::SExt, Sat, Ty);
 }
 
@@ -3636,26 +3633,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
-  switch (IID) {
-  case Intrinsic::ctlz:
-  case Intrinsic::cttz:
-  case Intrinsic::ctpop:
-  case Intrinsic::umin:
-  case Intrinsic::umax:
-  case Intrinsic::smin:
-  case Intrinsic::smax:
-  case Intrinsic::usub_sat:
-  case Intrinsic::uadd_sat:
-  case Intrinsic::ssub_sat:
-  case Intrinsic::sadd_sat:
+  if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
+      isNotCrossLaneOperation(II))
     for (Value *Op : II->args())
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
-    [[fallthrough]];
-  default:
-    break;
-  }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II, Builder))
     return Shuf;
@@ -4168,7 +4151,8 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
     if (!CallerPAL.isEmpty() && !Caller->use_empty()) {
       AttrBuilder RAttrs(FT->getContext(), CallerPAL.getRetAttrs());
-      if (RAttrs.overlaps(AttributeFuncs::typeIncompatible(NewRetTy)))
+      if (RAttrs.overlaps(AttributeFuncs::typeIncompatible(
+              NewRetTy, CallerPAL.getRetAttrs())))
         return false;   // Attribute not compatible with transformed value.
     }
 
@@ -4214,7 +4198,8 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // Check if there are any incompatible attributes we cannot drop safely.
     if (AttrBuilder(FT->getContext(), CallerPAL.getParamAttrs(i))
             .overlaps(AttributeFuncs::typeIncompatible(
-                ParamTy, AttributeFuncs::ASK_UNSAFE_TO_DROP)))
+                ParamTy, CallerPAL.getParamAttrs(i),
+                AttributeFuncs::ASK_UNSAFE_TO_DROP)))
       return false;   // Attribute not compatible with transformed value.
 
     if (Call.isInAllocaArgument(i) ||
@@ -4252,7 +4237,8 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
   // If the return value is not being used, the type may not be compatible
   // with the existing attributes.  Wipe out any problematic attributes.
-  RAttrs.remove(AttributeFuncs::typeIncompatible(NewRetTy));
+  RAttrs.remove(
+      AttributeFuncs::typeIncompatible(NewRetTy, CallerPAL.getRetAttrs()));
 
   LLVMContext &Ctx = Call.getContext();
   AI = Call.arg_begin();
@@ -4267,7 +4253,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // Add any parameter attributes except the ones incompatible with the new
     // type. Note that we made sure all incompatible ones are safe to drop.
     AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
-        ParamTy, AttributeFuncs::ASK_SAFE_TO_DROP);
+        ParamTy, CallerPAL.getParamAttrs(i), AttributeFuncs::ASK_SAFE_TO_DROP);
     ArgAttrs.push_back(
         CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs));
   }

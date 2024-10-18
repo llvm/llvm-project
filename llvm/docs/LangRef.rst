@@ -1309,11 +1309,13 @@ Currently, only the following parameter attributes are defined:
     structure that is the return value of the function in the source
     program. This pointer must be guaranteed by the caller to be valid:
     loads and stores to the structure may be assumed by the callee not
-    to trap and to be properly aligned. This is not a valid attribute
-    for return values.
+    to trap and to be properly aligned.
 
     The sret type argument specifies the in memory type, which must be
     the same as the pointee type of the argument.
+
+    A function that accepts an ``sret`` argument must return ``void``.
+    A return value may not be ``sret``.
 
 .. _attr_elementtype:
 
@@ -2082,6 +2084,12 @@ example:
     function call, use of ``longjmp``, or other means. It is a compiler hint that
     is used at module level to improve dataflow analysis, dropped during linking,
     and has no effect on functions defined in the current module.
+``nodivergencesource``
+    A call to this function is not a source of divergence. In uniformity
+    analysis, a *source of divergence* is an instruction that generates
+    divergence even if its inputs are uniform. A call with no further information
+    would normally be considered a source of divergence; setting this attribute
+    on a function means that a call to it is not a source of divergence.
 ``noduplicate``
     This attribute indicates that calls to the function cannot be
     duplicated. A call to a ``noduplicate`` function may be moved
@@ -12323,6 +12331,7 @@ Syntax:
 ::
 
       <result> = icmp <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
+      <result> = icmp samesign <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
 
 Overview:
 """""""""
@@ -12391,6 +12400,9 @@ are compared as if they were integers.
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
 as the values being compared. Otherwise, the result is an ``i1``.
+
+If the ``samesign`` keyword is present and the operands are not of the
+same sign then the result is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""

@@ -1290,9 +1290,8 @@ public:
       if (AllowContraction) {
         // Use fmuladd for floating point operations and let the backend decide
         // if that's profitable.
-        Function *FMulAdd = Intrinsic::getOrInsertDeclaration(
-            Func.getParent(), Intrinsic::fmuladd, A->getType());
-        return Builder.CreateCall(FMulAdd, {A, B, Sum});
+        return Builder.CreateIntrinsic(Intrinsic::fmuladd, A->getType(),
+                                       {A, B, Sum});
       }
       NumComputeOps += getNumOps(A->getType());
       Value *Mul = Builder.CreateFMul(A, B);
@@ -2486,8 +2485,7 @@ public:
       if (!ExprsInSubprogram.count(V))
         return;
 
-      auto I = Shared.insert({V, {}});
-      I.first->second.insert(Leaf);
+      Shared[V].insert(Leaf);
 
       for (Value *Op : cast<Instruction>(V)->operand_values())
         collectSharedInfo(Leaf, Op, ExprsInSubprogram, Shared);
@@ -2538,14 +2536,12 @@ public:
           auto *I = cast<Instruction>(KV.first);
           DILocation *Context = I->getDebugLoc();
           while (Context) {
-            auto I =
-                Subprog2Exprs.insert({getSubprogram(Context->getScope()), {}});
-            I.first->second.push_back(KV.first);
+            Subprog2Exprs[getSubprogram(Context->getScope())].push_back(
+                KV.first);
             Context = DebugLoc(Context).getInlinedAt();
           }
         } else {
-          auto I = Subprog2Exprs.insert({nullptr, {}});
-          I.first->second.push_back(KV.first);
+          Subprog2Exprs[nullptr].push_back(KV.first);
         }
       }
       for (auto &KV : Subprog2Exprs) {

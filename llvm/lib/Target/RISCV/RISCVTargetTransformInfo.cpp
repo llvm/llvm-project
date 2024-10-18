@@ -343,6 +343,28 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,  TTI::TargetCostKind CostKind) {
                              /*AddressSpace=*/0, CostKind);
 }
 
+static bool isRepeatedConcatMask(ArrayRef<int> Mask, int &SubVectorSize) {
+  unsigned Size = Mask.size();
+  if (!isPowerOf2_32(Size))
+    return false;
+  for (unsigned I = 0; I != Size; ++I) {
+    if (static_cast<unsigned>(Mask[I]) == I)
+      continue;
+    if (Mask[I] != 0)
+      return false;
+    if (Size % I != 0)
+      return false;
+    for (unsigned J = I + 1; J != Size; ++J)
+      // Check the pattern is repeated.
+      if (static_cast<unsigned>(Mask[J]) != J % I)
+        return false;
+    SubVectorSize = I;
+    return true;
+  }
+  // That means Mask is <0, 1, 2, 3>. This is not a concatenation.
+  return false;
+}
+
 static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
                                         LLVMContext &C) {
   assert((DataVT.getScalarSizeInBits() != 8 ||
@@ -393,6 +415,29 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
               return LT.first * getRISCVInstructionCost(RISCV::VNSRL_WI,
                                                         LT.second, CostKind);
           }
+        }
+        int SubVectorSize;
+        if (LT.second.getScalarSizeInBits() != 1 &&
+            isRepeatedConcatMask(Mask, SubVectorSize)) {
+          InstructionCost Cost = 0;
+          unsigned NumSlides = Log2_32(Mask.size() / SubVectorSize);
+          // The cost of extraction from a subvector is 0 if the index is 0.
+          for (unsigned I = 0; I != NumSlides; ++I) {
+            unsigned InsertIndex = SubVectorSize * (1 << I);
+            FixedVectorType *SubTp =
+                FixedVectorType::get(Tp->getElementType(), InsertIndex);
+            FixedVectorType *DestTp =
+                FixedVectorType::getDoubleElementsVectorType(SubTp);
+            std::pair<InstructionCost, MVT> DestLT =
+                getTypeLegalizationCost(DestTp);
+            // Add the cost of whole vector register move because the
+            // destination vector register group for vslideup cannot overlap the
+            // source.
+            Cost += DestLT.first * TLI->getLMULCost(DestLT.second);
+            Cost += getShuffleCost(TTI::SK_InsertSubvector, DestTp, {},
+                                   CostKind, InsertIndex, SubTp);
+          }
+          return Cost;
         }
       }
       // vrgather + cost of generating the mask constant.
@@ -675,8 +720,6 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
-  if (isa<ScalableVectorType>(VecTy) && Factor != 2)
-    return InstructionCost::getInvalid();
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
@@ -1132,6 +1175,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
   }
+  case Intrinsic::vp_merge:
+    return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
+                              ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
+                              CostKind);
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {

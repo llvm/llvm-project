@@ -869,6 +869,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
@@ -881,6 +883,20 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
   addDashXForInput(Args, Input, CmdArgs);
+
+  bool FRecordCmdLine = false;
+  bool GRecordCmdLine = false;
+  if (shouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
+    const char *CmdLine = renderEscapedCommandLine(TC, Args);
+    if (FRecordCmdLine) {
+      CmdArgs.push_back("-record-command-line");
+      CmdArgs.push_back(CmdLine);
+    }
+    if (TC.UseDwarfDebugFlags() || GRecordCmdLine) {
+      CmdArgs.push_back("-dwarf-debug-flags");
+      CmdArgs.push_back(CmdLine);
+    }
+  }
 
   CmdArgs.push_back(Input.getFilename());
 

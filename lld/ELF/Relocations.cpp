@@ -878,7 +878,7 @@ template <bool shard = false>
 static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
                              uint64_t offsetInSec, Symbol &sym, int64_t addend,
                              RelExpr expr, RelType type) {
-  Partition &part = isec.getPartition();
+  Partition &part = isec.getPartition(ctx);
 
   if (sym.isTagged()) {
     std::lock_guard<std::mutex> lock(relocMutex);
@@ -917,7 +917,7 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
 }
 
 template <class PltSection, class GotPltSection>
-static void addPltEntry(PltSection &plt, GotPltSection &gotPlt,
+static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
   gotPlt.addEntry(sym);
@@ -1159,7 +1159,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       if (ctx.arg.emachine == EM_MIPS && rel == ctx.target->symbolicRel)
         rel = ctx.target->relativeRel;
       std::lock_guard<std::mutex> lock(relocMutex);
-      Partition &part = sec->getPartition();
+      Partition &part = sec->getPartition(ctx);
       if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
         // For a preemptible symbol, we can't use a relative relocation. For an
         // undefined symbol, we can't compute offset at link-time and use a
@@ -1756,7 +1756,7 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   directSym->allocateAux(ctx);
   auto &dyn =
       ctx.arg.androidPackDynRelocs ? *ctx.in.relaPlt : *ctx.mainPart->relaDyn;
-  addPltEntry(*ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
+  addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
               *directSym);
   sym.allocateAux(ctx);
   ctx.symAux.back().pltIdx = ctx.symAux[directSym->auxIdx].pltIdx;
@@ -1796,7 +1796,7 @@ void elf::postScanRelocations(Ctx &ctx) {
     if (flags & NEEDS_GOT)
       addGotEntry(ctx, sym);
     if (flags & NEEDS_PLT)
-      addPltEntry(*ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
+      addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                   ctx.target->pltRel, sym);
     if (flags & NEEDS_COPY) {
       if (sym.isObject()) {
@@ -2427,7 +2427,7 @@ void elf::hexagonTLSSymbolUpdate(Ctx &ctx) {
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
               if (needEntry) {
                 sym->allocateAux(ctx);
-                addPltEntry(*ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
+                addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                             ctx.target->pltRel, *sym);
                 needEntry = false;
               }

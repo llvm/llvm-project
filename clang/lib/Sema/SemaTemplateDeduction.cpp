@@ -2449,6 +2449,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::PackExpansion:
     case Type::Pipe:
     case Type::ArrayParameter:
+    case Type::HLSLAttributedResource:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -4057,11 +4058,10 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   // keep track of these diagnostics. They'll be emitted if this specialization
   // is actually used.
   if (Info.diag_begin() != Info.diag_end()) {
-    SuppressedDiagnosticsMap::iterator
-      Pos = SuppressedDiagnostics.find(Specialization->getCanonicalDecl());
-    if (Pos == SuppressedDiagnostics.end())
-        SuppressedDiagnostics[Specialization->getCanonicalDecl()]
-          .append(Info.diag_begin(), Info.diag_end());
+    auto [Pos, Inserted] =
+        SuppressedDiagnostics.try_emplace(Specialization->getCanonicalDecl());
+    if (Inserted)
+      Pos->second.append(Info.diag_begin(), Info.diag_end());
   }
 
   return TemplateDeductionResult::Success;
@@ -6843,6 +6843,16 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     MarkUsedTemplateParameters(Ctx,
                                cast<DependentBitIntType>(T)->getNumBitsExpr(),
                                OnlyDeduced, Depth, Used);
+    break;
+
+  case Type::HLSLAttributedResource:
+    MarkUsedTemplateParameters(
+        Ctx, cast<HLSLAttributedResourceType>(T)->getWrappedType(), OnlyDeduced,
+        Depth, Used);
+    if (cast<HLSLAttributedResourceType>(T)->hasContainedType())
+      MarkUsedTemplateParameters(
+          Ctx, cast<HLSLAttributedResourceType>(T)->getContainedType(),
+          OnlyDeduced, Depth, Used);
     break;
 
   // None of these types have any template parameters in them.

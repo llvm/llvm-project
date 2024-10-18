@@ -540,6 +540,10 @@ enum GetElementPtrOptionalFlags {
   GEP_NUW = 2,
 };
 
+/// ICmpOptionalFlags - Flags for serializing
+/// ICmpOptionalFlags's SubclassOptionalData contents.
+enum ICmpOptionalFlags { ICMP_SAME_SIGN = 0 };
+
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {
   ORDERING_NOTATOMIC = 0,
@@ -767,6 +771,7 @@ enum AttributeKindCodes {
   ATTR_KIND_SANITIZE_REALTIME_UNSAFE = 97,
   ATTR_KIND_CORO_ELIDE_SAFE = 98,
   ATTR_KIND_NO_EXT = 99,
+  ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
 };
 
 enum ComdatSelectionKindCodes {

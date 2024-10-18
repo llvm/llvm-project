@@ -3416,6 +3416,9 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
+  if (DiscardResult)
+    return true;
+
   const Function *Func = nullptr;
   if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
     Func = F;
@@ -3542,8 +3545,8 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
   QualType ElemType = VT->getElementType();
   PrimType ElemT = classifyPrim(ElemType);
   const Expr *Src = E->getSrcExpr();
-  PrimType SrcElemT =
-      classifyPrim(Src->getType()->castAs<VectorType>()->getElementType());
+  QualType SrcType = Src->getType();
+  PrimType SrcElemT = classifyVectorElementType(SrcType);
 
   unsigned SrcOffset = this->allocateLocalPrimitive(Src, PT_Ptr, true, false);
   if (!this->visit(Src))
@@ -3556,8 +3559,14 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
       return false;
     if (!this->emitArrayElemPop(SrcElemT, I, E))
       return false;
+
+    // Cast to the desired result element type.
     if (SrcElemT != ElemT) {
       if (!this->emitPrimCast(SrcElemT, ElemT, ElemType, E))
+        return false;
+    } else if (ElemType->isFloatingType() && SrcType != ElemType) {
+      const auto *TargetSemantics = &Ctx.getFloatSemantics(ElemType);
+      if (!this->emitCastFP(TargetSemantics, getRoundingMode(E), E))
         return false;
     }
     if (!this->emitInitElem(ElemT, I, E))
@@ -4123,10 +4132,16 @@ template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this);
 
+  // If we won't destroy the toplevel scope, check for memory leaks first.
+  if (!DestroyToplevelScope) {
+    if (!this->emitCheckAllocations(E))
+      return false;
+  }
+
   auto maybeDestroyLocals = [&]() -> bool {
     if (DestroyToplevelScope)
-      return RootScope.destroyLocals();
-    return true;
+      return RootScope.destroyLocals() && this->emitCheckAllocations(E);
+    return this->emitCheckAllocations(E);
   };
 
   // Void expressions.
@@ -4162,8 +4177,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  (void)maybeDestroyLocals();
-  return false;
+  return maybeDestroyLocals() && this->emitCheckAllocations(E) && false;
 }
 
 template <class Emitter>
@@ -4205,7 +4219,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
     DeclScope<Emitter> LS(this, VD);
     if (!this->visit(VD->getAnyInitializer()))
       return false;
-    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals();
+    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals() &&
+           this->emitCheckAllocations(VD);
   }
 
   LocalScope<Emitter> VDScope(this, VD);
@@ -4251,7 +4266,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
     return false;
   }
 
-  return VDScope.destroyLocals();
+  return VDScope.destroyLocals() && this->emitCheckAllocations(VD);
 }
 
 template <class Emitter>
@@ -4526,6 +4541,10 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
     }
   }
+  // Explicit calls to trivial destructors
+  if (const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(FuncDecl);
+      DD && DD->isTrivial())
+    return true;
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);

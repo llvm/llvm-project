@@ -61,7 +61,7 @@ define dso_local i32 @main() #0 {
   ret i32 0
 }
 
-attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
+attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="none" }
 ; CHECK-LABEL: check_boundaries:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #20
