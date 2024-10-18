@@ -12378,7 +12378,6 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
                                   MMO, IndexType);
   }
   EVT DataVT = Index.getValueType();
-  DataVT.changeVectorElementType(Inc.getValueType());
   if (refineIndexType(Index, IndexType, DataVT, DAG)) {
     return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
                                   MMO, IndexType);

@@ -2999,9 +2999,7 @@ public:
                         EVT MemVT, MachineMemOperand *MMO,
                         ISD::MemIndexType IndexType)
       : MaskedGatherScatterSDNode(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, Order, DL,
-                                  VTs, MemVT, MMO, IndexType) {
-    LSBaseSDNodeBits.AddressingMode = IndexType;
-  }
+                                  VTs, MemVT, MMO, IndexType) {}
 
   ISD::MemIndexType getIndexType() const {
     return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);

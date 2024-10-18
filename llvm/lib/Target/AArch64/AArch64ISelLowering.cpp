@@ -24092,9 +24092,8 @@ static SDValue performMaskedGatherScatterCombine(
   SDValue BasePtr = MGS->getBasePtr();
   ISD::MemIndexType IndexType = MGS->getIndexType();
 
-  if (!findMoreOptimalIndexType(MGS, BasePtr, Index, DAG)) {
+  if (!findMoreOptimalIndexType(MGS, BasePtr, Index, DAG))
     return SDValue();
-  }
 
   // Here we catch such cases early and change MGATHER's IndexType to allow
   // the use of an Index that's more legalisation friendly.
