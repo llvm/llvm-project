@@ -4905,6 +4905,10 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
   this->BaseDirectory.clear();
 
   WritingAST = false;
+
+  if (WritingModule)
+    updateModuleTimestamp(OutputFile);
+
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
     ModuleCache.addBuiltPCM(OutputFile,
