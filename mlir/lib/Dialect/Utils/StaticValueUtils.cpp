@@ -132,20 +132,16 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
   return res;
 }
 
-/// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
   auto val = getConstantIntValue(ofr);
   return val && *val == value;
 }
 
-/// Return true if all of `ofrs` are constant integers equal to `value`.
 bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
   return llvm::all_of(
       ofrs, [&](OpFoldResult ofr) { return isConstantIntValue(ofr, value); });
 }
 
-/// Return true if all of `ofrs` are constant integers equal to the
-/// corresponding value in `values`.
 bool areConstantIntValues(ArrayRef<OpFoldResult> ofrs,
                           ArrayRef<int64_t> values) {
   if (ofrs.size() != values.size())
