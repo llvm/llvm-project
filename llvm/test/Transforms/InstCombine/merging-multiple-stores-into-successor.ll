@@ -166,14 +166,13 @@ define %struct.half @one_elem_struct_merge(i1 %cond, %struct.half %a, half %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       BB0:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_HALF:%.*]] [[A:%.*]], 0
 ; CHECK-NEXT:    br label [[SINK:%.*]]
 ; CHECK:       BB1:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue [[STRUCT_HALF:%.*]] poison, half [[B:%.*]], 0
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi half [ [[TMP0]], [[BB0]] ], [ [[B:%.*]], [[BB1]] ]
-; CHECK-NEXT:    [[VAL1:%.*]] = insertvalue [[STRUCT_HALF]] poison, half [[STOREMERGE]], 0
-; CHECK-NEXT:    ret [[STRUCT_HALF]] [[VAL1]]
+; CHECK-NEXT:    [[VAL1_MERGED:%.*]] = phi [[STRUCT_HALF]] [ [[A:%.*]], [[BB0]] ], [ [[TMP0]], [[BB1]] ]
+; CHECK-NEXT:    ret [[STRUCT_HALF]] [[VAL1_MERGED]]
 ;
 entry:
   %alloca = alloca i64
