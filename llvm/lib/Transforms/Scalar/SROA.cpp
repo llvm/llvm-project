@@ -2855,8 +2855,7 @@ private:
     LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
 
     // load atomic vector would be generated, which is illegal
-    if (LI.isAtomic() &&
-        !LoadInst::isValidAtomicTy(NewAI.getAllocatedType(), DL))
+    if (LI.isAtomic() && !LoadInst::isValidAtomicTy(NewAI.getAllocatedType()))
       return false;
 
     Value *OldOp = LI.getOperand(0);

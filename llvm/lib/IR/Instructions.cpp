@@ -1247,14 +1247,10 @@ void LoadInst::AssertOK() {
          "Ptr must have pointer type.");
 }
 
-bool LoadInst::isValidAtomicTy(Type *Ty, const DataLayout &DL,
-                               AtomicOrdering AO) {
+bool LoadInst::isValidAtomicTy(Type *Ty) {
   if (!Ty->isIntOrPtrTy() && !Ty->isFloatingPointTy())
     return false;
-  if (AO == AtomicOrdering::Release || AO == AtomicOrdering::AcquireRelease)
-    return false;
-  unsigned Size = DL.getTypeSizeInBits(Ty);
-  return Size >= 8 && !(Size & (Size - 1));
+  return true;
 }
 
 static Align computeLoadStoreDefaultAlign(Type *Ty, InsertPosition Pos) {

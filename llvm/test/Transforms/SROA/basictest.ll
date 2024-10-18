@@ -1332,10 +1332,10 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    switch i32 [[SIZE:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
+; CHECK-NEXT:    i32 2, label [[BB2:%.*]]
+; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[SRC_GEP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i32 3
@@ -1971,7 +1971,7 @@ bb7:
 define i32 @load_atomic_volatile_past_end() {
 ; CHECK-LABEL: @load_atomic_volatile_past_end(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i1, align 1
-; CHECK-NEXT:    [[A_0_V:%.*]] = load atomic volatile i32, ptr [[A]] seq_cst, align 4
+; CHECK-NEXT:    [[A_0_V:%.*]] = load atomic volatile i32, ptr [[A]] seq_cst, align 1
 ; CHECK-NEXT:    ret i32 [[A_0_V]]
 ;
   %a = alloca i1, align 1
@@ -1992,9 +1992,8 @@ define i32 @load_volatile_past_end() {
 
 define i32 @load_atomic_past_end() {
 ; CHECK-LABEL: @load_atomic_past_end(
-; CHECK-NEXT:    [[A:%.*]] = alloca i1, align 1
-; CHECK-NEXT:    [[V:%.*]] = load atomic i32, ptr [[A]] seq_cst, align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    [[A_0_LOAD_EXT:%.*]] = zext i1 undef to i32
+; CHECK-NEXT:    ret i32 [[A_0_LOAD_EXT]]
 ;
   %a = alloca i1, align 1
   %v = load atomic i32, ptr %a seq_cst, align 4
