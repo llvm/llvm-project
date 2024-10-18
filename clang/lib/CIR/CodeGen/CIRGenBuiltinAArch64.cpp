@@ -2275,9 +2275,17 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
   switch (builtinID) {
   default:
     break;
+  case NEON::BI__builtin_neon_vmovl_v: {
+    mlir::cir::VectorType dTy = builder.getExtendedOrTruncatedElementVectorType(
+        vTy, false /* truncate */,
+        mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned());
+    // This cast makes sure arg type conforms intrinsic expected arg type.
+    ops[0] = builder.createBitcast(ops[0], dTy);
+    return builder.createIntCast(ops[0], ty);
+  }
   case NEON::BI__builtin_neon_vmovn_v: {
-    mlir::cir::VectorType qTy = builder.getExtendedElementVectorType(
-        vTy, mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned());
+    mlir::cir::VectorType qTy = builder.getExtendedOrTruncatedElementVectorType(
+        vTy, true, mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned());
     ops[0] = builder.createBitcast(ops[0], qTy);
     // It really is truncation in this context.
     // In CIR, integral cast op supports vector of int type truncating.
@@ -3166,15 +3174,18 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     // The prototype of builtin_neon_vqrshrun_n can be found at
     // https://developer.arm.com/architectures/instruction-sets/intrinsics/
     return buildNeonCall(
-        builder, {builder.getExtendedElementVectorType(ty, true), SInt32Ty},
+        builder,
+        {builder.getExtendedOrTruncatedElementVectorType(ty, true, true),
+         SInt32Ty},
         Ops, "llvm.aarch64.neon.sqrshrun", ty, getLoc(E->getExprLoc()));
   case NEON::BI__builtin_neon_vqshrn_n_v:
     llvm_unreachable("NYI");
   case NEON::BI__builtin_neon_vrshrn_n_v:
     return buildNeonCall(
         builder,
-        {builder.getExtendedElementVectorType(
-             vTy, mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned()),
+        {builder.getExtendedOrTruncatedElementVectorType(
+             vTy, true /* extend */,
+             mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned()),
          SInt32Ty},
         Ops, "llvm.aarch64.neon.rshrn", ty, getLoc(E->getExprLoc()));
   case NEON::BI__builtin_neon_vqrshrn_n_v:

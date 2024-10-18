@@ -6517,51 +6517,71 @@ uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
 //   return vshll_high_n_u32(a, 19);
 // }
 
-// NYI-LABEL: @test_vmovl_s8(
-// NYI:   [[VMOVL_I:%.*]] = sext <8 x i8> %a to <8 x i16>
-// NYI:   ret <8 x i16> [[VMOVL_I]]
-// int16x8_t test_vmovl_s8(int8x8_t a) {
-//   return vmovl_s8(a);
-// }
+int16x8_t test_vmovl_s8(int8x8_t a) {
+  return vmovl_s8(a);
 
-// NYI-LABEL: @test_vmovl_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
-// NYI:   [[VMOVL_I:%.*]] = sext <4 x i16> %a to <4 x i32>
-// NYI:   ret <4 x i32> [[VMOVL_I]]
-// int32x4_t test_vmovl_s16(int16x4_t a) {
-//   return vmovl_s16(a);
-// }
+  // CIR-LABEL: vmovl_s8
+  // CIR: {{%.*}} = cir.cast(integral, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!s16i x 8>
 
-// NYI-LABEL: @test_vmovl_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
-// NYI:   [[VMOVL_I:%.*]] = sext <2 x i32> %a to <2 x i64>
-// NYI:   ret <2 x i64> [[VMOVL_I]]
-// int64x2_t test_vmovl_s32(int32x2_t a) {
-//   return vmovl_s32(a);
-// }
+  // LLVM: {{.*}}test_vmovl_s8(<8 x i8>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVL_I:%.*]] = sext <8 x i8> [[A]] to <8 x i16>
+  // LLVM:  ret <8 x i16> [[VMOVL_I]]
+}
 
-// NYI-LABEL: @test_vmovl_u8(
-// NYI:   [[VMOVL_I:%.*]] = zext <8 x i8> %a to <8 x i16>
-// NYI:   ret <8 x i16> [[VMOVL_I]]
-// uint16x8_t test_vmovl_u8(uint8x8_t a) {
-//   return vmovl_u8(a);
-// }
+int32x4_t test_vmovl_s16(int16x4_t a) {
+  return vmovl_s16(a);
 
-// NYI-LABEL: @test_vmovl_u16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
-// NYI:   [[VMOVL_I:%.*]] = zext <4 x i16> %a to <4 x i32>
-// NYI:   ret <4 x i32> [[VMOVL_I]]
-// uint32x4_t test_vmovl_u16(uint16x4_t a) {
-//   return vmovl_u16(a);
-// }
+  // CIR-LABEL: vmovl_s16
+  // CIR: {{%.*}} = cir.cast(integral, {{%.*}} : !cir.vector<!s16i x 4>), !cir.vector<!s32i x 4>
 
-// NYI-LABEL: @test_vmovl_u32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
-// NYI:   [[VMOVL_I:%.*]] = zext <2 x i32> %a to <2 x i64>
-// NYI:   ret <2 x i64> [[VMOVL_I]]
-// uint64x2_t test_vmovl_u32(uint32x2_t a) {
-//   return vmovl_u32(a);
-// }
+  // LLVM: {{.*}}test_vmovl_s16(<4 x i16>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVL_I:%.*]] = sext <4 x i16> [[A]] to <4 x i32>
+  // LLVM:  ret <4 x i32> [[VMOVL_I]]
+}
+
+int64x2_t test_vmovl_s32(int32x2_t a) {
+  return vmovl_s32(a);
+
+  // CIR-LABEL: vmovl_s32
+  // CIR: {{%.*}} = cir.cast(integral, {{%.*}} : !cir.vector<!s32i x 2>), !cir.vector<!s64i x 2>
+
+  // LLVM: {{.*}}test_vmovl_s32(<2 x i32>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVL_I:%.*]] = sext <2 x i32> [[A]] to <2 x i64>
+  // LLVM:  ret <2 x i64> [[VMOVL_I]]
+}
+
+uint16x8_t test_vmovl_u8(uint8x8_t a) {
+  return vmovl_u8(a);
+
+  // CIR-LABEL: vmovl_u8
+  // CIR: {{%.*}} = cir.cast(integral, {{%.*}} : !cir.vector<!u8i x 8>), !cir.vector<!u16i x 8>
+
+  // LLVM: {{.*}}test_vmovl_u8(<8 x i8>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVL_I:%.*]] = zext <8 x i8> [[A]] to <8 x i16>
+  // LLVM:  ret <8 x i16> [[VMOVL_I]]
+}
+
+uint32x4_t test_vmovl_u16(uint16x4_t a) {
+  return vmovl_u16(a);
+
+  // CIR-LABEL: vmovl_u16
+  // CIR: {{%.*}} = cir.cast(integral, {{%.*}} : !cir.vector<!u16i x 4>), !cir.vector<!u32i x 4>
+
+  // LLVM: {{.*}}test_vmovl_u16(<4 x i16>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVL_I:%.*]] = zext <4 x i16> [[A]] to <4 x i32>
+  // LLVM:  ret <4 x i32> [[VMOVL_I]]
+}
+
+uint64x2_t test_vmovl_u32(uint32x2_t a) {
+  return vmovl_u32(a);
+
+  // CIR-LABEL: vmovl_u32
+  // CIR: {{%.*}} = cir.cast(integral, {{%.*}} : !cir.vector<!u32i x 2>), !cir.vector<!u64i x 2>
+
+  // LLVM: {{.*}}test_vmovl_u32(<2 x i32>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVL_I:%.*]] = zext <2 x i32> [[A]] to <2 x i64>
+  // LLVM:  ret <2 x i64> [[VMOVL_I]]
+}
 
 // NYI-LABEL: @test_vmovl_high_s8(
 // NYI:   [[SHUFFLE_I_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %a, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

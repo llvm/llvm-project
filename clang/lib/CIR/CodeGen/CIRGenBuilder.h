@@ -374,25 +374,41 @@ public:
   bool isInt(mlir::Type i) { return mlir::isa<mlir::cir::IntType>(i); }
 
   mlir::cir::IntType getExtendedIntTy(mlir::cir::IntType ty, bool isSigned) {
-    if (isInt8Ty(ty)) {
-      return isSigned ? getSInt16Ty() : getUInt16Ty();
+    switch (ty.getWidth()) {
+    case 8:
+      return isSigned ? typeCache.SInt16Ty : typeCache.UInt16Ty;
+    case 16:
+      return isSigned ? typeCache.SInt32Ty : typeCache.UInt32Ty;
+    case 32:
+      return isSigned ? typeCache.SInt64Ty : typeCache.UInt64Ty;
+    default:
+      llvm_unreachable("NYI");
     }
-    if (isInt16Ty(ty)) {
-      return isSigned ? getSInt32Ty() : getUInt32Ty();
-    }
-    if (isInt32Ty(ty)) {
-      return isSigned ? getSInt64Ty() : getUInt64Ty();
-    }
-    llvm_unreachable("NYI");
   }
 
-  mlir::cir::VectorType getExtendedElementVectorType(mlir::cir::VectorType vt,
-                                                     bool isSigned = false) {
+  mlir::cir::IntType getTruncatedIntTy(mlir::cir::IntType ty, bool isSigned) {
+    switch (ty.getWidth()) {
+    case 16:
+      return isSigned ? typeCache.SInt8Ty : typeCache.UInt8Ty;
+    case 32:
+      return isSigned ? typeCache.SInt16Ty : typeCache.UInt16Ty;
+    case 64:
+      return isSigned ? typeCache.SInt32Ty : typeCache.UInt32Ty;
+    default:
+      llvm_unreachable("NYI");
+    }
+  }
+
+  mlir::cir::VectorType getExtendedOrTruncatedElementVectorType(
+      mlir::cir::VectorType vt, bool isExtended, bool isSigned = false) {
     auto elementTy =
         mlir::dyn_cast_or_null<mlir::cir::IntType>(vt.getEltType());
     assert(elementTy && "expected int vector");
     return mlir::cir::VectorType::get(
-        getContext(), getExtendedIntTy(elementTy, isSigned), vt.getSize());
+        getContext(),
+        isExtended ? getExtendedIntTy(elementTy, isSigned)
+                   : getTruncatedIntTy(elementTy, isSigned),
+        vt.getSize());
   }
 
   mlir::cir::LongDoubleType
