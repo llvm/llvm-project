@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=argpromotion < %s | FileCheck %s
 
 define internal i32 @callee_basic(ptr %p) {
-; CHECK-LABEL: define {{[^@]+}}@callee_basic
+; CHECK-LABEL: define {{[^@]+}}@callee_basic.argprom
 ; CHECK-SAME: (i32 [[P_0_VAL:%.*]], i32 [[P_4_VAL:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[P_0_VAL]], [[P_4_VAL]]
 ; CHECK-NEXT:    ret i32 [[Z]]
@@ -20,7 +20,7 @@ define void @caller_basic(ptr %p) {
 ; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[P_VAL1:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @callee_basic(i32 [[P_VAL]], i32 [[P_VAL1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @callee_basic.argprom(i32 [[P_VAL]], i32 [[P_VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   call i32 @callee_basic(ptr %p)

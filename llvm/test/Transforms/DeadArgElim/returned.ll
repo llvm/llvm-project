@@ -3,14 +3,14 @@
 %Ty = type { i32, i32 }
 
 ; Validate that the argument and return value are both dead
-; CHECK-LABEL: define internal void @test1()
+; CHECK-LABEL: define internal void @test1.argelim()
 
 define internal ptr @test1(ptr %this) {
   ret ptr %this
 }
 
 ; do not keep alive the return value of a function with a dead 'returned' argument
-; CHECK-LABEL: define internal void @test2()
+; CHECK-LABEL: define internal void @test2.argelim()
 
 define internal ptr @test2(ptr returned %this) {
   ret ptr %this
@@ -20,7 +20,7 @@ define internal ptr @test2(ptr returned %this) {
 @dummy = global ptr null 
 
 ; Validate that return value is dead
-; CHECK-LABEL: define internal void @test3(ptr %this)
+; CHECK-LABEL: define internal void @test3.argelim(ptr %this)
 
 define internal ptr @test3(ptr %this) {
   store volatile ptr %this, ptr @dummy
@@ -36,7 +36,7 @@ define internal ptr @test4(ptr returned %this) {
 }
 
 ; don't do this if 'returned' is on the call site...
-; CHECK-LABEL: define internal void @test5(ptr %this)
+; CHECK-LABEL: define internal void @test5.argelim(ptr %this)
 
 define internal ptr @test5(ptr %this) {
   store volatile ptr %this, ptr @dummy
@@ -55,7 +55,7 @@ define ptr @caller(ptr %this) {
   %3 = call ptr @test3(ptr %this)
   %4 = call ptr @test4(ptr %this)
 ; ...instead, drop 'returned' form the call site
-; CHECK: call void @test5(ptr %this)
+; CHECK: call void @test5.argelim(ptr %this)
   %5 = call ptr @test5(ptr returned %this)
   %6 = call ptr @test6()
   ret ptr %this
