@@ -1972,14 +1972,18 @@ public:
 };
 
 /// Scan the function and return a list of gadgets found with provided kits.
-static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
-findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
-            bool EmitSuggestions) {
+static void findGadgets(const Stmt *S, ASTContext &Ctx,
+                        const UnsafeBufferUsageHandler &Handler,
+                        bool EmitSuggestions, FixableGadgetList &FixableGadgets,
+                        WarningGadgetList &WarningGadgets,
+                        DeclUseTracker &Tracker) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
-    FixableGadgetList FixableGadgets;
-    WarningGadgetList WarningGadgets;
-    DeclUseTracker Tracker;
+    GadgetFinderCallback(FixableGadgetList &FixableGadgets,
+                         WarningGadgetList &WarningGadgets,
+                         DeclUseTracker &Tracker)
+        : FixableGadgets(FixableGadgets), WarningGadgets(WarningGadgets),
+          Tracker(Tracker) {}
 
     void run(const MatchFinder::MatchResult &Result) override {
       // In debug mode, assert that we've found exactly one gadget.
@@ -2020,10 +2024,14 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
       assert(numFound >= 1 && "Gadgets not found in match result!");
       assert(numFound <= 1 && "Conflicting bind tags in gadgets!");
     }
+
+    FixableGadgetList &FixableGadgets;
+    WarningGadgetList &WarningGadgets;
+    DeclUseTracker &Tracker;
   };
 
   MatchFinder M;
-  GadgetFinderCallback CB;
+  GadgetFinderCallback CB{FixableGadgets, WarningGadgets, Tracker};
 
   // clang-format off
   M.addMatcher(
@@ -2068,9 +2076,7 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
     // clang-format on
   }
 
-  M.match(*D->getBody(), D->getASTContext());
-  return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets),
-          std::move(CB.Tracker)};
+  M.match(*S, Ctx);
 }
 
 // Compares AST nodes by source locations.
@@ -3614,39 +3620,9 @@ public:
   }
 };
 
-void clang::checkUnsafeBufferUsage(const Decl *D,
-                                   UnsafeBufferUsageHandler &Handler,
-                                   bool EmitSuggestions) {
-#ifndef NDEBUG
-  Handler.clearDebugNotes();
-#endif
-
-  assert(D && D->getBody());
-  // We do not want to visit a Lambda expression defined inside a method
-  // independently. Instead, it should be visited along with the outer method.
-  // FIXME: do we want to do the same thing for `BlockDecl`s?
-  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
-    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
-      return;
-  }
-
-  // Do not emit fixit suggestions for functions declared in an
-  // extern "C" block.
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    for (FunctionDecl *FReDecl : FD->redecls()) {
-      if (FReDecl->isExternC()) {
-        EmitSuggestions = false;
-        break;
-      }
-    }
-  }
-
-  WarningGadgetSets UnsafeOps;
-  FixableGadgetSets FixablesForAllVars;
-
-  auto [FixableGadgets, WarningGadgets, Tracker] =
-      findGadgets(D, Handler, EmitSuggestions);
-
+void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
+                  WarningGadgetList WarningGadgets, DeclUseTracker Tracker,
+                  UnsafeBufferUsageHandler &Handler, bool EmitSuggestions) {
   if (!EmitSuggestions) {
     // Our job is very easy without suggestions. Just warn about
     // every problematic operation and consider it done. No need to deal
@@ -3690,8 +3666,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   if (WarningGadgets.empty())
     return;
 
-  UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
-  FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
+  WarningGadgetSets UnsafeOps =
+      groupWarningGadgetsByVar(std::move(WarningGadgets));
+  FixableGadgetSets FixablesForAllVars =
+      groupFixablesByVar(std::move(FixableGadgets));
 
   std::map<const VarDecl *, FixItList> FixItsForVariableGroup;
 
@@ -3911,4 +3889,67 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                D->getASTContext());
     }
   }
+}
+
+void clang::checkUnsafeBufferUsage(const Decl *D,
+                                   UnsafeBufferUsageHandler &Handler,
+                                   bool EmitSuggestions) {
+#ifndef NDEBUG
+  Handler.clearDebugNotes();
+#endif
+
+  assert(D);
+
+  SmallVector<Stmt *> Stmts;
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // We do not want to visit a Lambda expression defined inside a method
+    // independently. Instead, it should be visited along with the outer method.
+    // FIXME: do we want to do the same thing for `BlockDecl`s?
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+      if (MD->getParent()->isLambda() && MD->getParent()->isLocalClass())
+        return;
+    }
+
+    for (FunctionDecl *FReDecl : FD->redecls()) {
+      if (FReDecl->isExternC()) {
+        // Do not emit fixit suggestions for functions declared in an
+        // extern "C" block.
+        EmitSuggestions = false;
+        break;
+      }
+    }
+
+    Stmts.push_back(FD->getBody());
+
+    if (const auto *ID = dyn_cast<CXXConstructorDecl>(D)) {
+      for (const CXXCtorInitializer *CI : ID->inits()) {
+        Stmts.push_back(CI->getInit());
+      }
+    }
+  } else if (const auto *FlD = dyn_cast<FieldDecl>(D)) {
+    // Visit in-class initializers for fields.
+    if (!FlD->hasInClassInitializer())
+      return;
+    Stmts.push_back(FlD->getInClassInitializer());
+    // In a FieldDecl there is no function body, there is only a single
+    // statement, and the suggestions machinery is not set up to handle that
+    // kind of structure yet and would give poor suggestions or likely even hit
+    // asserts.
+    EmitSuggestions = false;
+  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
+    Stmts.push_back(D->getBody());
+  }
+
+  assert(!Stmts.empty());
+
+  FixableGadgetList FixableGadgets;
+  WarningGadgetList WarningGadgets;
+  DeclUseTracker Tracker;
+  for (Stmt *S : Stmts) {
+    findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
+                WarningGadgets, Tracker);
+  }
+  applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
+               std::move(Tracker), Handler, EmitSuggestions);
 }
