@@ -105,20 +105,21 @@ public:
     return false;
   }
 
-  [[nodiscard]]
-  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+  [[nodiscard]] bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
+                                           ArrayRef<Value *> ExtraArgs) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
     return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
-      OpBuilder.getIRB().SetInsertPoint(CI);
+      SmallVector<Value *> NewArgs;
       if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
+        NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
       } else
-        Args.append(CI->arg_begin(), CI->arg_end());
+        NewArgs.append(CI->arg_begin(), CI->arg_end());
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
+      NewArgs.append(ExtraArgs.begin(), ExtraArgs.end());
+
+      OpBuilder.getIRB().SetInsertPoint(CI);
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          DXILOp, NewArgs, CI->getName(), F.getReturnType());
       if (Error E = OpCall.takeError())
         return E;
 
@@ -471,9 +472,9 @@ public:
       switch (ID) {
       default:
         continue;
-#define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
-  case Intrin:                                                                 \
-    HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
+#define DXIL_OP_INTRINSIC(OpCode, Intrin, ExtraArgs)                         \
+  case Intrin:                                                               \
+    HasErrors |= replaceFunctionWithOp(F, OpCode, ExtraArgs);                \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
