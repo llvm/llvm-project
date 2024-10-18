@@ -66,9 +66,9 @@ LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
   //
   // Once k and y are computed, we then deduce the answer by the sine of sum
   // formula:
-  //   sin(x * pi) = sin((k + y) * pi/32)
-  //           = sin(k * pi/32) * cos(y * pi/32) + sin (y * pi/32) * cos (k *
-  //           pi/32)
+  //   cos(x * pi) = cos((k + y) * pi/32)
+  //           = cos(k * pi/32) * cos(y * pi/32) 
+  //           + sin(y * pi/32) * sin(k * pi/32)
   // The values of sin(k * pi/32) and cos (k * pi/32) for k = 0...63 are
   // precomputed and stored using a vector of 64 single precision floats. sin(y
   // * pi/32) and cos(y * pi/32) are computed using degree-9 chebyshev
