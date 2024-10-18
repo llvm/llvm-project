@@ -355,7 +355,7 @@ public:
   explicit LazyOffsetPtr(uint64_t Offset) : Data() {
     assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
     if (Offset == 0)
-      SetPtr(NULL);
+      SetPtr(nullptr);
     else
       SetU64((Offset << 1) | 0x01);
   }
@@ -368,7 +368,7 @@ public:
   LazyOffsetPtr &operator=(uint64_t Offset) {
     assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
     if (Offset == 0)
-      SetPtr(NULL);
+      SetPtr(nullptr);
     else
       SetU64((Offset << 1) | 0x01);
 
@@ -378,12 +378,12 @@ public:
   /// Whether this pointer is non-NULL.
   ///
   /// This operation does not require the AST node to be deserialized.
-  explicit operator bool() const { return isOffset() || GetPtr() != NULL; }
+  explicit operator bool() const { return isOffset() || GetPtr() != nullptr; }
 
   /// Whether this pointer is non-NULL.
   ///
   /// This operation does not require the AST node to be deserialized.
-  bool isValid() const { return isOffset() || GetPtr() != NULL; }
+  bool isValid() const { return isOffset() || GetPtr() != nullptr; }
 
   /// Whether this pointer is currently stored as an offset.
   bool isOffset() const { return GetLSB() & 0x01; }
