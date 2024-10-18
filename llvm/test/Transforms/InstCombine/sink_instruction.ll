@@ -273,54 +273,50 @@ abort:
   unreachable
 }
 
-; Loads marked invariant can be sunk across critical edges.
+; Loads marked invariant can be sunk past potential memory writes.
 
-define <4 x float> @invariant_load_metadata(ptr %p, i32 %cond) {
+define i32 @invariant_load_metadata(ptr %p, i1 %cond) {
 ; CHECK-LABEL: @invariant_load_metadata(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[COND:%.*]], 0
-; CHECK-NEXT:    br i1 [[C]], label [[BLOCK:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BLOCK:%.*]], label [[END:%.*]]
 ; CHECK:       block:
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16, !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    ret <4 x float> [[V]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %v = load <4 x float>, ptr %p, !invariant.load !0
-  %c = icmp eq i32 %cond, 0
-  br i1 %c, label %block, label %end
+  %v = load i32, ptr %p, !invariant.load !0
+  br i1 %cond, label %block, label %end
 block:
   call void @fn()
   br label %end
 end:
-  ret <4 x float> %v
+  ret i32 %v
 }
 
-; Loads not marked invariant cannot be sunk across critical edges.
+; Loads not marked invariant cannot be sunk past potential memory writes.
 
-define <4 x float> @invariant_load_neg(ptr %p, i32 %cond) {
+define i32 @invariant_load_neg(ptr %p, i1 %cond) {
 ; CHECK-LABEL: @invariant_load_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[COND:%.*]], 0
-; CHECK-NEXT:    br i1 [[C]], label [[BLOCK:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BLOCK:%.*]], label [[END:%.*]]
 ; CHECK:       block:
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret <4 x float> [[V]]
+; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %v = load <4 x float>, ptr %p
-  %c = icmp eq i32 %cond, 0
-  br i1 %c, label %block, label %end
+  %v = load i32, ptr %p
+  br i1 %cond, label %block, label %end
 block:
   call void @fn()
   br label %end
 end:
-  ret <4 x float> %v
+  ret i32 %v
 }
 
 ; Loads that aren't marked invariant but used in one branch
