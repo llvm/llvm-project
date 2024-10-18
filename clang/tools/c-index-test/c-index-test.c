@@ -8,6 +8,7 @@
 #include "clang-c/Documentation.h"
 #include "clang-c/Index.h"
 #include "clang/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
