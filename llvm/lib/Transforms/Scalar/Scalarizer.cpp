@@ -737,7 +737,11 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       // This case does not seem to happen, but it is possible for
       // VectorSplit.NumPacked >= NumElems. If that happens a VectorSplit
       // is not returned and we will bailout of handling this call.
-      if (!CurrVS)
+      // The secondary bailout case is if NumPacked does not match.
+      // This can happen if ScalarizeMinBits is not set to the default.
+      // This means with certain ScalarizeMinBits intrinsics like frexp
+      // will only scalarize when the struct elements have the same bitness.
+      if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
         return false;
       if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I))
         Tys.push_back(CurrVS->SplitTy);
