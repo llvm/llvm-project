@@ -13222,6 +13222,8 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   VarDecl *var = dyn_cast<VarDecl>(DRE->getDecl());
   if (!var) return NCCK_None;
   if (var->getType().isConstQualified()) return NCCK_None;
+  if (var->getType()->isReferenceType())
+    return NCCK_None;
   assert(var->hasLocalStorage() && "capture added 'const' to non-local?");
 
   // Decide whether the first capture was for a block or a lambda.
