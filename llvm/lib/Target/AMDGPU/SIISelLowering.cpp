@@ -7061,15 +7061,14 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   }
 }
 
-SDValue SITargetLowering::combineAnd(SDValue Op,
-                                                DAGCombinerInfo &DCI) const {
+SDValue SITargetLowering::combineAnd(SDValue Op, DAGCombinerInfo &DCI) const {
   const unsigned Opc = Op.getOpcode();
   assert(Opc == ISD::AND);
 
   auto &DAG = DCI.DAG;
   SDLoc DL(Op);
 
-  if(hasAndNot(Op)) {
+  if (hasAndNot(Op)) {
     SDValue LHS = Op->getOperand(0);
     SDValue RHS = Op->getOperand(1);
 
@@ -7078,20 +7077,24 @@ SDValue SITargetLowering::combineAnd(SDValue Op,
       SDValue Y = RHS->getOperand(0);
       SDValue NotZ = RHS->getOperand(1);
 
-      if (NotZ.getOpcode() == ISD::XOR && isAllOnesConstant(NotZ->getOperand(1))) {
+      if (NotZ.getOpcode() == ISD::XOR &&
+          isAllOnesConstant(NotZ->getOperand(1))) {
         SDValue Z = NotZ->getOperand(0);
 
         if (!isa<ConstantSDNode>(Y)) {
           SDValue NotY = DAG.getNOT(DL, Y, Y.getValueType());
-          SDValue AndNotYZ = DAG.getNode(ISD::AND, DL, Y.getValueType(), NotY, Z);
-          SDValue NotAndNotYZ = DAG.getNOT(DL, AndNotYZ, AndNotYZ.getValueType());
-          SDValue NewAnd = DAG.getNode(ISD::AND, DL, Op.getValueType(), LHS, NotAndNotYZ);
+          SDValue AndNotYZ =
+              DAG.getNode(ISD::AND, DL, Y.getValueType(), NotY, Z);
+          SDValue NotAndNotYZ =
+              DAG.getNOT(DL, AndNotYZ, AndNotYZ.getValueType());
+          SDValue NewAnd =
+              DAG.getNode(ISD::AND, DL, Op.getValueType(), LHS, NotAndNotYZ);
           return NewAnd;
         }
       }
     }
   }
-    
+
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
   auto ExtTy = OpTy.changeElementType(MVT::i32);
