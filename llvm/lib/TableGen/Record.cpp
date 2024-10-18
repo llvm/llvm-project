@@ -2355,8 +2355,6 @@ DefInit *VarDefInit::instantiate() {
       R.set(Arg->getName(), Arg->getValue());
   }
 
-  NewRec->resolveReferences(R);
-
   // Add superclasses.
   for (const auto &[SC, Loc] : Class->getSuperClasses())
     NewRec->addSuperClass(SC, Loc);
@@ -2365,7 +2363,10 @@ DefInit *VarDefInit::instantiate() {
       Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
 
   // Resolve internal references and store in record keeper
-  NewRec->resolveReferences();
+  RecordResolver RR(*NewRec, &R);
+  RR.setFinal(true);
+  NewRec->resolveReferences(RR);
+
   Records.addDef(std::move(NewRecOwner));
 
   // Check the assertions.
@@ -3311,6 +3312,11 @@ Init *RecordResolver::resolve(Init *VarName) {
   Init *Val = Cache.lookup(VarName);
   if (Val)
     return Val;
+
+  if (ArgumentResolver && (Val = ArgumentResolver->resolve(VarName))) {
+    Cache[VarName] = Val;
+    return Val;
+  }
 
   if (llvm::is_contained(Stack, VarName))
     return nullptr; // prevent infinite recursion
