@@ -589,15 +589,19 @@ public:
   ///                 not be split.
   /// \param CodeGenIP is the insertion point at which the body code should be
   ///                  placed.
+  ///
+  /// \return an error, if any were triggered during execution.
   using BodyGenCallbackTy =
-      function_ref<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
+      function_ref<Error(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
   // This is created primarily for sections construct as llvm::function_ref
   // (BodyGenCallbackTy) is not storable (as described in the comments of
   // function_ref class - function_ref contains non-ownable reference
   // to the callable.
+  ///
+  /// \return an error, if any were triggered during execution.
   using StorableBodyGenCallbackTy =
-      std::function<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
+      std::function<Error(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
   /// Callback type for loop body code generation.
   ///
@@ -607,8 +611,10 @@ public:
   ///                  terminated with an unconditional branch to the loop
   ///                  latch.
   /// \param IndVar    is the induction variable usable at the insertion point.
+  ///
+  /// \return an error, if any were triggered during execution.
   using LoopBodyGenCallbackTy =
-      function_ref<void(InsertPointTy CodeGenIP, Value *IndVar)>;
+      function_ref<Error(InsertPointTy CodeGenIP, Value *IndVar)>;
 
   /// Callback type for variable privatization (think copy & default
   /// constructor).
@@ -626,9 +632,9 @@ public:
   /// \param ReplVal The replacement value, thus a copy or new created version
   ///                of \p Inner.
   ///
-  /// \returns The new insertion point where code generation continues and
-  ///          \p ReplVal the replacement value.
-  using PrivatizeCallbackTy = function_ref<InsertPointTy(
+  /// \returns The new insertion point where code generation continues or an
+  ///          error, and \p ReplVal the replacement value.
+  using PrivatizeCallbackTy = function_ref<Expected<InsertPointTy>(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &Original,
       Value &Inner, Value *&ReplVal)>;
 
@@ -1262,9 +1268,9 @@ public:
   /// \param Loc The location where the taskgroup construct was encountered.
   /// \param AllocaIP The insertion point to be used for alloca instructions.
   /// \param BodyGenCB Callback that will generate the region code.
-  InsertPointTy createTaskgroup(const LocationDescription &Loc,
-                                InsertPointTy AllocaIP,
-                                BodyGenCallbackTy BodyGenCB);
+  Expected<InsertPointTy> createTaskgroup(const LocationDescription &Loc,
+                                          InsertPointTy AllocaIP,
+                                          BodyGenCallbackTy BodyGenCB);
 
   using FileIdentifierInfoCallbackTy =
       std::function<std::tuple<std::string, uint64_t>()>;

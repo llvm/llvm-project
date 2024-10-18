@@ -2048,7 +2048,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   return Builder.saveIP();
 }
 
-OpenMPIRBuilder::InsertPointTy
+Expected<OpenMPIRBuilder::InsertPointTy>
 OpenMPIRBuilder::createTaskgroup(const LocationDescription &Loc,
                                  InsertPointTy AllocaIP,
                                  BodyGenCallbackTy BodyGenCB) {
@@ -2066,7 +2066,8 @@ OpenMPIRBuilder::createTaskgroup(const LocationDescription &Loc,
   Builder.CreateCall(TaskgroupFn, {Ident, ThreadID});
 
   BasicBlock *TaskgroupExitBB = splitBB(Builder, true, "taskgroup.exit");
-  BodyGenCB(AllocaIP, Builder.saveIP());
+  if (auto Err = BodyGenCB(AllocaIP, Builder.saveIP()))
+    return std::move(Err);
 
   Builder.SetInsertPoint(TaskgroupExitBB);
   // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup
