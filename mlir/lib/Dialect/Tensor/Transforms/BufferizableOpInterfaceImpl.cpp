@@ -640,8 +640,6 @@ struct InsertOpInterface
 template <typename InsertOpTy>
 static bool insertSliceOpRequiresRead(InsertOpTy insertSliceOp,
                                       OpOperand &opOperand) {
-  RankedTensorType destType = insertSliceOp.getDestType();
-
   // The source is always read.
   if (opOperand == insertSliceOp.getSourceMutable())
     return true;
@@ -652,16 +650,12 @@ static bool insertSliceOpRequiresRead(InsertOpTy insertSliceOp,
   // Dest is not read if it is entirely overwritten. E.g.:
   // tensor.insert_slice %a into %t[0][10][1] : ... into tensor<10xf32>
   bool allOffsetsZero =
-      llvm::all_of(insertSliceOp.getMixedOffsets(),
-                   [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); });
-  bool sizesMatchDestSizes = llvm::all_of(
-      llvm::enumerate(insertSliceOp.getMixedSizes()), [&](const auto &it) {
-        return getConstantIntValue(it.value()) ==
-               destType.getDimSize(it.index());
-      });
+      llvm::all_of(insertSliceOp.getMixedOffsets(), isZeroIndex);
+  RankedTensorType destType = insertSliceOp.getDestType();
+  bool sizesMatchDestSizes =
+      areConstantIntValues(insertSliceOp.getMixedSizes(), destType.getShape());
   bool allStridesOne =
-      llvm::all_of(insertSliceOp.getMixedStrides(),
-                   [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); });
+      areAllConstantIntValue(insertSliceOp.getMixedStrides(), 1);
   return !(allOffsetsZero && sizesMatchDestSizes && allStridesOne);
 }
 

@@ -10,6 +10,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
@@ -135,6 +136,22 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
   auto val = getConstantIntValue(ofr);
   return val && *val == value;
+}
+
+/// Return true if all of `ofrs` are constant integers equal to `value`.
+bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
+  return llvm::all_of(
+      ofrs, [&](OpFoldResult ofr) { return isConstantIntValue(ofr, value); });
+}
+
+/// Return true if all of `ofrs` are constant integers equal to the
+/// corresponding value in `values`.
+bool areConstantIntValues(ArrayRef<OpFoldResult> ofrs,
+                          ArrayRef<int64_t> values) {
+  if (ofrs.size() != values.size())
+    return false;
+  std::optional<SmallVector<int64_t>> constOfrs = getConstantIntValues(ofrs);
+  return constOfrs && llvm::equal(constOfrs.value(), values);
 }
 
 /// Return true if ofr1 and ofr2 are the same integer constant attribute values
