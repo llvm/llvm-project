@@ -1716,6 +1716,20 @@ public:
   /// Returns true if the intrinsic may write to memory.
   bool mayWriteToMemory() const { return MayWriteToMemory; }
 
+  operand_range arg_operands() {
+    unsigned argNum = VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)
+                          ? getNumOperands() - 1
+                          : getNumOperands();
+    return make_range(op_begin(), op_begin() + argNum);
+  }
+
+  const_operand_range arg_operands() const {
+    unsigned argNum = VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)
+                          ? getNumOperands() - 1
+                          : getNumOperands();
+    return make_range(op_begin(), op_begin() + argNum);
+  }
+
   /// Returns true if the intrinsic may have side-effects.
   bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 

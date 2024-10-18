@@ -1118,6 +1118,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
   }
+  // TODO: Need push a new patch
+  case Intrinsic::vp_smax:
+  case Intrinsic::vp_smin:
+  case Intrinsic::vp_umax:
+  case Intrinsic::vp_umin: {
+    // return LT.first;
+    return 1;
+  }
   // vp int cast ops.
   case Intrinsic::vp_trunc:
   case Intrinsic::vp_zext:

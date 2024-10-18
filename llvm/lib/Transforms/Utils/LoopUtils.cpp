@@ -1300,7 +1300,7 @@ Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
   Type *SrcEltTy = SrcTy->getElementType();
   Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
   Value *Ops[] = {Iden, Src};
-  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
+  return VBuilder.createSimpleIntrinsic(Id, SrcTy, Ops);
 }
 
 Value *llvm::createReduction(IRBuilderBase &B,
@@ -1343,7 +1343,7 @@ Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
   Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Value *Ops[] = {Start, Src};
-  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
+  return VBuilder.createSimpleIntrinsic(Id, SrcTy, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
