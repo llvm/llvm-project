@@ -325,9 +325,9 @@ define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT3]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[ADD:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ [[TRUNC:%.*]], [[LOOP]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ [[OR:%.*]], [[LOOP]] ], [ [[SCALAR_RECUR_INIT4]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TRUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT4]], [[SCALAR_PH]] ], [ [[OR:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OR]] = or i32 [[FOR_1]], 3
 ; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    store i32 [[FOR_2]], ptr [[DST]], align 4

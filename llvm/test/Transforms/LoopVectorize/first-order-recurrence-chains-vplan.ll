@@ -182,7 +182,7 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[EXT_X:%.+]]> = extract-from-end ir<%for.x.next>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]> = extract-from-end ir<%for.x.prev>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]>.1 = extract-from-end ir<%for.x.prev>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_C:%.+]]> = icmp eq ir<4098>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<ret>, scalar.ph
@@ -192,11 +192,11 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
-; CHECK-NEXT:   EMIT vp<[[RESUME_Y:%.+]]> = resume-phi vp<[[EXT_Y]]>, ir<0>
+; CHECK-NEXT:   EMIT vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i64 %for.x = vp<[[RESUME_X]]>
-; CHECK-NEXT: Live-out i32 %for.y = vp<[[RESUME_Y]]>
+; CHECK-NEXT: Live-out i32 %for.y = vp<[[RESUME_Y]]>.1
 ; CHECK-NEXT: }
 ;
 entry:
@@ -253,7 +253,7 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[EXT_X:%.+]]> = extract-from-end ir<%for.x.next>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]> = extract-from-end ir<%for.x.prev>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]>.1 = extract-from-end ir<%for.x.prev>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_C:%.+]]> = icmp eq ir<4098>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<ret>, scalar.ph
@@ -263,11 +263,11 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
-; CHECK-NEXT:   EMIT vp<[[RESUME_Y:%.+]]> = resume-phi vp<[[EXT_Y]]>, ir<0>
+; CHECK-NEXT:   EMIT vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i64 %for.x = vp<[[RESUME_X]]>
-; CHECK-NEXT: Live-out i32 %for.y = vp<[[RESUME_Y]]>
+; CHECK-NEXT: Live-out i32 %for.y = vp<[[RESUME_Y]]>.1
 ; CHECK-NEXT: }
 ;
 entry:
