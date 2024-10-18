@@ -551,6 +551,30 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
         return AdjustedArgs;
       };
 
+  // Remove unwanted arguments passed to the compiler
+  ArgumentsAdjuster CompilationArgsToIgnore =
+      [&Context](const CommandLineArguments &Args, StringRef Filename) {
+        ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
+        CommandLineArguments AdjustedArgs = Args;
+
+        if (Opts.CompilationArgsToRemoveRegex) {
+          for (StringRef ArgToIgnore : *Opts.CompilationArgsToRemoveRegex) {
+            llvm::Regex ArgToIgnoreRegex(ArgToIgnore);
+            AdjustedArgs.erase(
+                std::remove_if(AdjustedArgs.begin(), AdjustedArgs.end(),
+                               [&](llvm::StringRef Arg) {
+                                 return Arg.starts_with("-") &&
+                                        Arg != "-fsyntax-only" &&
+                                        ArgToIgnoreRegex.match(Arg);
+                               }),
+                AdjustedArgs.end());
+          }
+        }
+
+        return AdjustedArgs;
+      };
+
+  Tool.appendArgumentsAdjuster(CompilationArgsToIgnore);
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
   Tool.appendArgumentsAdjuster(getStripPluginsAdjuster());
   Context.setEnableProfiling(EnableCheckProfile);
