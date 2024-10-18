@@ -12,7 +12,7 @@
 //     constexpr void               // constexpr in C++26
 //     stable_sort(RandomAccessIterator first, RandomAccessIterator last);
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
 
 #include <algorithm>
 #include <array>
@@ -105,7 +105,7 @@ TEST_CONSTEXPR_CXX26 std::array<int, N> sort_already_sorted() {
 }
 
 template <int N, int M>
-std::array<int, N> sort_reversely_sorted() {
+TEST_CONSTEXPR_CXX26 std::array<int, N> sort_reversely_sorted() {
   std::array<int, N> array = sort_saw_tooth_pattern<N, M>();
   std::reverse(array.begin(), array.end());
   std::stable_sort(array.begin(), array.end());
@@ -121,7 +121,7 @@ TEST_CONSTEXPR_CXX26 std::array<int, N> sort_swapped_sorted_ranges() {
 }
 
 template <int N, int M>
-std::array<int, N> sort_reversely_swapped_sorted_ranges() {
+TEST_CONSTEXPR_CXX26 std::array<int, N> sort_reversely_swapped_sorted_ranges() {
   std::array<int, N> array = sort_saw_tooth_pattern<N, M>();
   std::reverse(array.begin(), array.end());
   std::swap_ranges(array.begin(), array.begin() + N / 2, array.begin() + N / 2);
@@ -129,25 +129,14 @@ std::array<int, N> sort_reversely_swapped_sorted_ranges() {
   return array;
 }
 
-#if TEST_STD_VER >= 26
-#  define COMPILE_OR_RUNTIME_ASSERT(func)                                                                              \
-    if consteval {                                                                                                     \
-      static_assert(func);                                                                                             \
-    } else {                                                                                                           \
-      assert(func);                                                                                                    \
-    }
-#else
-#  define COMPILE_OR_RUNTIME_ASSERT(func) assert(func);
-#endif
-
 template <int N, int M>
 TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   static_assert(N > 0, "");
   static_assert(M > 0, "");
 
   { // test saw tooth pattern
-    TEST_CONSTEXPR_CXX26 std::array<int, N> array = sort_saw_tooth_pattern<N, M>();
-    COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
+    std::array<int, N> array = sort_saw_tooth_pattern<N, M>();
+    assert(std::is_sorted(array.begin(), array.end()));
   }
 
 #if TEST_STD_VER >= 26
@@ -163,29 +152,21 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   }
 
   { // test sorted pattern
-    TEST_CONSTEXPR_CXX26 std::array<int, N> array = sort_already_sorted<N, M>();
-    COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
+    std::array<int, N> array = sort_already_sorted<N, M>();
+    assert(std::is_sorted(array.begin(), array.end()));
   }
 
-#if TEST_STD_VER >= 26
-  if !consteval
-#endif
   { // test reverse sorted pattern
-    // consteval error: "constexpr evaluation hit maximum step limit"
     std::array<int, N> array = sort_reversely_sorted<N, M>();
     assert(std::is_sorted(array.begin(), array.end()));
   }
 
   { // test swap ranges 2 pattern
-    TEST_CONSTEXPR_CXX26 std::array<int, N> array = sort_swapped_sorted_ranges<N, M>();
-    COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
+    std::array<int, N> array = sort_swapped_sorted_ranges<N, M>();
+    assert(std::is_sorted(array.begin(), array.end()));
   }
 
-#if TEST_STD_VER >= 26
-  if !consteval
-#endif
   { // test reverse swap ranges 2 pattern
-    // consteval error: "constexpr evaluation hit maximum step limit"
     std::array<int, N> array = sort_reversely_swapped_sorted_ranges<N, M>();
     assert(std::is_sorted(array.begin(), array.end()));
   }
@@ -203,14 +184,6 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   test_larger_sorts<N, N - 1>();
   test_larger_sorts<N, N>();
 }
-
-#if TEST_STD_VER >= 26
-#  define COMPILE_AND_RUNTIME_CALL(func)                                                                               \
-    func;                                                                                                              \
-    static_assert((func, true));
-#else
-#  define COMPILE_AND_RUNTIME_CALL(func) func;
-#endif
 
 int main(int, char**) {
   { // test null range
@@ -233,19 +206,17 @@ int main(int, char**) {
   }
 
   { // larger sorts
-    // run- and conditionally compile-time tests
+    // run- and compile-time tests
     test_larger_sorts<256>();
     test_larger_sorts<257>();
-    test_larger_sorts<499>();
-    test_larger_sorts<500>();
 #if TEST_STD_VER >= 26
     static_assert((test_larger_sorts<256>(), true));
     static_assert((test_larger_sorts<257>(), true));
-    static_assert((test_larger_sorts<499>(), true));
-    static_assert((test_larger_sorts<500>(), true));
 #endif
 
     // only runtime tests bc. error: "constexpr evaluation hit maximum step limit"
+    test_larger_sorts<499>();
+    test_larger_sorts<500>();
     test_larger_sorts<997>();
     test_larger_sorts<1000>();
     test_larger_sorts<1009>();
