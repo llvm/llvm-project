@@ -25,7 +25,7 @@
 #include <__utility/forward.h>
 #include <tuple>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <locale>
 #  include <sstream>
 #endif
@@ -39,7 +39,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 template <class _Tp>
 class __thread_specific_ptr;
@@ -121,7 +121,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<__thread_id> : public __unary_function<__thread
   }
 };
 
-#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  if _LIBCPP_HAS_LOCALIZATION
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
@@ -146,7 +146,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
   __sstr << __id.__id_;
   return __os << __sstr.str();
 }
-#  endif // _LIBCPP_HAS_NO_LOCALIZATION
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
 class _LIBCPP_EXPORTED_FROM_ABI thread {
   __libcpp_thread_t __t_;
@@ -255,7 +255,7 @@ thread::thread(_Fp __f) {
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x.swap(__y); }
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

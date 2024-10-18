@@ -252,7 +252,7 @@ namespace std {
 #  include <string_view>
 #  include <tuple>
 
-#  if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 #    include <cwchar>
 #  endif
 #endif

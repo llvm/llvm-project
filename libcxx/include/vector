@@ -2979,7 +2979,7 @@ erase_if(vector<_Tp, _Allocator>& __c, _Predicate __pred) {
 
 template <>
 inline constexpr bool __format::__enable_insertable<vector<char>> = true;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 #  endif
@@ -3038,7 +3038,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <cstdlib>
 #  include <iosfwd>
-#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_LOCALIZATION
 #    include <locale>
 #  endif
 #  include <tuple>

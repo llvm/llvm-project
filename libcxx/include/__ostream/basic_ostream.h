@@ -11,7 +11,7 @@
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__exception/operations.h>
 #  include <__memory/shared_ptr.h>
@@ -802,7 +802,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x) {
 
 #  if _LIBCPP_STD_VER >= 20
 
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Traits>
 basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, wchar_t) = delete;
 
@@ -821,7 +821,7 @@ basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, co
 template <class _Traits>
 basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, const char32_t*) = delete;
 
-#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 #    if _LIBCPP_HAS_CHAR8_T
 template <class _Traits>
@@ -852,7 +852,7 @@ basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const ch
 #  endif // _LIBCPP_STD_VER >= 20
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>;
 #  endif
 
@@ -860,6 +860,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___OSTREAM_BASIC_OSTREAM_H

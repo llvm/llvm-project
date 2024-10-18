@@ -816,7 +816,7 @@ typedef __char32_t char32_t;
 
 // Thread API
 // clang-format off
-#  if !defined(_LIBCPP_HAS_NO_THREADS) &&                                                                              \
+#  if _LIBCPP_HAS_THREADS &&                                                                                           \
       !defined(_LIBCPP_HAS_THREAD_API_PTHREAD) &&                                                                      \
       !defined(_LIBCPP_HAS_THREAD_API_WIN32) &&                                                                        \
       !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
@@ -842,7 +842,7 @@ typedef __char32_t char32_t;
 #    else
 #      error "No thread API"
 #    endif // _LIBCPP_HAS_THREAD_API
-#  endif   // _LIBCPP_HAS_NO_THREADS
+#  endif   // _LIBCPP_HAS_THREADS
 
 #  if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 #    if defined(__ANDROID__) && __ANDROID_API__ >= 30
@@ -860,22 +860,19 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_COND_CLOCKWAIT 0
 #  endif
 
-#  if defined(_LIBCPP_HAS_NO_THREADS) && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
-#    error _LIBCPP_HAS_THREAD_API_PTHREAD may only be defined when \
-       _LIBCPP_HAS_NO_THREADS is not defined.
+#  if !_LIBCPP_HAS_THREADS && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+#    error _LIBCPP_HAS_THREAD_API_PTHREAD may only be defined when _LIBCPP_HAS_THREADS is true.
 #  endif
 
-#  if defined(_LIBCPP_HAS_NO_THREADS) && defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
-#    error _LIBCPP_HAS_THREAD_API_EXTERNAL may not be defined when \
-       _LIBCPP_HAS_NO_THREADS is defined.
+#  if !_LIBCPP_HAS_THREADS && defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
+#    error _LIBCPP_HAS_THREAD_API_EXTERNAL may not be defined when _LIBCPP_HAS_THREADS is true.
 #  endif
 
-#  if defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK) && !defined(_LIBCPP_HAS_NO_THREADS)
-#    error _LIBCPP_HAS_NO_MONOTONIC_CLOCK may only be defined when \
-       _LIBCPP_HAS_NO_THREADS is defined.
+#  if !_LIBCPP_HAS_MONOTONIC_CLOCK && _LIBCPP_HAS_THREADS
+#    error _LIBCPP_HAS_MONOTONIC_CLOCK may only be false when _LIBCPP_HAS_THREADS is false.
 #  endif
 
-#  if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(__STDCPP_THREADS__)
+#  if _LIBCPP_HAS_THREADS && !defined(__STDCPP_THREADS__)
 #    define __STDCPP_THREADS__ 1
 #  endif
 
@@ -914,7 +911,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
-      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__) || defined(__LLVM_LIBC__)
+      _LIBCPP_HAS_MUSL_LIBC || defined(__OpenBSD__) || defined(__LLVM_LIBC__)
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif
 
@@ -986,7 +983,7 @@ typedef __char32_t char32_t;
 // When wide characters are disabled, it can be useful to have a quick way of
 // disabling it without having to resort to #if-#endif, which has a larger
 // impact on readability.
-#  if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+#  if !_LIBCPP_HAS_WIDE_CHARACTERS
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...)
 #  else
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...) __VA_ARGS__

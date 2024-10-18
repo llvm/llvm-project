@@ -189,7 +189,7 @@ template <class charT> class messages_byname;
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__algorithm/copy.h>
 #  include <__algorithm/equal.h>
@@ -590,7 +590,7 @@ int __num_get<_CharT>::__stage2_float_loop(
 }
 
 extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<wchar_t>;
 #  endif
 
@@ -1061,7 +1061,7 @@ _InputIterator num_get<_CharT, _InputIterator>::do_get(
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_get<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_get<wchar_t>;
 #  endif
 
@@ -1179,7 +1179,7 @@ void __num_put<_CharT>::__widen_and_group_float(
 }
 
 extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_put<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_put<wchar_t>;
 #  endif
 
@@ -1466,7 +1466,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<wchar_t>;
 #  endif
 
@@ -1533,7 +1533,7 @@ _LIBCPP_EXPORTED_FROM_ABI const string& __time_get_c_storage<char>::__x() const;
 template <>
 _LIBCPP_EXPORTED_FROM_ABI const string& __time_get_c_storage<char>::__X() const;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 _LIBCPP_EXPORTED_FROM_ABI const wstring* __time_get_c_storage<wchar_t>::__weeks() const;
 template <>
@@ -2002,7 +2002,7 @@ _InputIterator time_get<_CharT, _InputIterator>::do_get(
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get<wchar_t>;
 #  endif
 
@@ -2062,7 +2062,7 @@ private:
     /**/
 
 _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(char)
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(wchar_t)
 #  endif
 #  undef _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION
@@ -2098,7 +2098,7 @@ private:
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<wchar_t>;
 #  endif
 
@@ -2111,7 +2111,7 @@ protected:
   __time_put(const string& __nm);
   ~__time_put();
   void __do_put(char* __nb, char*& __ne, const tm* __tm, char __fmt, char __mod) const;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   void __do_put(wchar_t* __wb, wchar_t*& __we, const tm* __tm, char __fmt, char __mod) const;
 #  endif
 };
@@ -2187,7 +2187,7 @@ _OutputIterator time_put<_CharT, _OutputIterator>::do_put(
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put<wchar_t>;
 #  endif
 
@@ -2205,7 +2205,7 @@ protected:
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<wchar_t>;
 #  endif
 
@@ -2272,7 +2272,7 @@ const bool moneypunct<_CharT, _International>::intl;
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<char, false>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<char, true>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<wchar_t, false>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<wchar_t, true>;
 #  endif
@@ -2330,7 +2330,7 @@ _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<char, true>::init(const char*);
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<char, false>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<char, true>;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<wchar_t, false>::init(const char*);
 template <>
@@ -2398,7 +2398,7 @@ void __money_get<_CharT>::__gather_info(
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_get<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_get<wchar_t>;
 #  endif
 
@@ -2708,7 +2708,7 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_get<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_get<wchar_t>;
 #  endif
 
@@ -2886,7 +2886,7 @@ void __money_put<_CharT>::__format(
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_put<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_put<wchar_t>;
 #  endif
 
@@ -3032,7 +3032,7 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<wchar_t>;
 #  endif
 
@@ -3117,7 +3117,7 @@ void messages<_CharT>::do_close(catalog __c) const {
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages<wchar_t>;
 #  endif
 
@@ -3136,7 +3136,7 @@ protected:
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
 #  endif
 
@@ -3755,7 +3755,7 @@ _LIBCPP_POP_MACROS
 
 // NOLINTEND(libcpp-robust-against-adl)
 
-#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>

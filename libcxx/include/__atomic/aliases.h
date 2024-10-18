@@ -42,7 +42,7 @@ using atomic_char8_t = atomic<char8_t>;
 #endif
 using atomic_char16_t = atomic<char16_t>;
 using atomic_char32_t = atomic<char32_t>;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 using atomic_wchar_t = atomic<wchar_t>;
 #endif
 
