@@ -12,6 +12,7 @@ add_flang_library(FIRTransforms
   CUFAddConstructor.cpp
   CUFDeviceGlobal.cpp
   CUFOpConversion.cpp
+  CUFGPUToLLVMConversion.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   MemoryUtils.cpp
