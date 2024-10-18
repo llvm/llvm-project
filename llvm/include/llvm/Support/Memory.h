@@ -131,6 +131,23 @@ namespace sys {
     /// that has been emitted it must invalidate the instruction cache on some
     /// platforms.
     static void InvalidateInstructionCache(const void *Addr, size_t Len);
+
+  protected:
+    /// This method tells if a change of the executable status of a memory
+    /// mapping needs to re-create the mapping instead of only having its
+    /// internal protection flags modified.
+    ///
+    /// It's needed for systems enforcing a strict W^X policy like PaX's
+    /// MPROTECT or SELinux's deny_execmem.
+    ///
+    /// It's an internal helper for protectMappedMemory() and should have no
+    /// further use beside unit tests.
+    ///
+    /// \r true if a mapping needs to be recreated for a change to its
+    /// executable protection status
+    ///
+    /// Determine memory executable protection change procedure.
+    static bool execProtectionChangeNeedsNewMapping();
   };
 
   /// Owning version of MemoryBlock.
