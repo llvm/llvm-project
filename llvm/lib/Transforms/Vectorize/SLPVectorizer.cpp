@@ -18210,13 +18210,22 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       if ((VF > MinVF && ActualVF <= VF / 2) || (VF == MinVF && ActualVF < 2))
         break;
 
-      ArrayRef<Value *> Ops = VL.slice(I, ActualVF);
-      // Check that a previous iteration of this loop did not delete the Value.
-      if (llvm::any_of(Ops, [&R](Value *V) {
-            auto *I = dyn_cast<Instruction>(V);
-            return I && R.isDeleted(I);
-          }))
-        continue;
+      SmallVector<Value *> Ops(ActualVF, nullptr);
+      unsigned Idx = 0;
+      for (Value *V : VL.drop_front(I)) {
+        // Check that a previous iteration of this loop did not delete the
+        // Value.
+        if (auto *Inst = dyn_cast<Instruction>(V);
+            !Inst || !R.isDeleted(Inst)) {
+          Ops[Idx] = V;
+          ++Idx;
+          if (Idx == ActualVF)
+            break;
+        }
+      }
+      // Not enough vectorizable instructions - exit.
+      if (Idx != ActualVF)
+        break;
 
       LLVM_DEBUG(dbgs() << "SLP: Analyzing " << ActualVF << " operations "
                         << "\n");
@@ -18284,7 +18293,8 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   // Vectorize in current basic block only.
   auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
   auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
-  if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P)
+  if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P ||
+      R.isDeleted(Op0) || R.isDeleted(Op1))
     return false;
 
   // First collect all possible candidates
@@ -18297,18 +18307,18 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   if (A && B && B->hasOneUse()) {
     auto *B0 = dyn_cast<BinaryOperator>(B->getOperand(0));
     auto *B1 = dyn_cast<BinaryOperator>(B->getOperand(1));
-    if (B0 && B0->getParent() == P)
+    if (B0 && B0->getParent() == P && !R.isDeleted(B0))
       Candidates.emplace_back(A, B0);
-    if (B1 && B1->getParent() == P)
+    if (B1 && B1->getParent() == P && !R.isDeleted(B1))
       Candidates.emplace_back(A, B1);
   }
   // Try to skip A.
   if (B && A && A->hasOneUse()) {
     auto *A0 = dyn_cast<BinaryOperator>(A->getOperand(0));
     auto *A1 = dyn_cast<BinaryOperator>(A->getOperand(1));
-    if (A0 && A0->getParent() == P)
+    if (A0 && A0->getParent() == P && !R.isDeleted(A0))
       Candidates.emplace_back(A0, B);
-    if (A1 && A1->getParent() == P)
+    if (A1 && A1->getParent() == P && !R.isDeleted(A1))
       Candidates.emplace_back(A1, B);
   }
 
@@ -19763,16 +19773,16 @@ static void findBuildAggregate_rec(Instruction *LastInsertInst,
                                    TargetTransformInfo *TTI,
                                    SmallVectorImpl<Value *> &BuildVectorOpds,
                                    SmallVectorImpl<Value *> &InsertElts,
-                                   unsigned OperandOffset) {
+                                   unsigned OperandOffset, const BoUpSLP &R) {
   do {
     Value *InsertedOperand = LastInsertInst->getOperand(1);
     std::optional<unsigned> OperandIndex =
         getElementIndex(LastInsertInst, OperandOffset);
-    if (!OperandIndex)
+    if (!OperandIndex || R.isDeleted(LastInsertInst))
       return;
     if (isa<InsertElementInst, InsertValueInst>(InsertedOperand)) {
       findBuildAggregate_rec(cast<Instruction>(InsertedOperand), TTI,
-                             BuildVectorOpds, InsertElts, *OperandIndex);
+                             BuildVectorOpds, InsertElts, *OperandIndex, R);
 
     } else {
       BuildVectorOpds[*OperandIndex] = InsertedOperand;
@@ -19801,7 +19811,8 @@ static void findBuildAggregate_rec(Instruction *LastInsertInst,
 static bool findBuildAggregate(Instruction *LastInsertInst,
                                TargetTransformInfo *TTI,
                                SmallVectorImpl<Value *> &BuildVectorOpds,
-                               SmallVectorImpl<Value *> &InsertElts) {
+                               SmallVectorImpl<Value *> &InsertElts,
+                               const BoUpSLP &R) {
 
   assert((isa<InsertElementInst>(LastInsertInst) ||
           isa<InsertValueInst>(LastInsertInst)) &&
@@ -19816,7 +19827,8 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
   BuildVectorOpds.resize(*AggregateSize);
   InsertElts.resize(*AggregateSize);
 
-  findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts, 0);
+  findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts, 0,
+                         R);
   llvm::erase(BuildVectorOpds, nullptr);
   llvm::erase(InsertElts, nullptr);
   if (BuildVectorOpds.size() >= 2)
@@ -19937,7 +19949,7 @@ static bool isReductionCandidate(Instruction *I) {
 }
 
 bool SLPVectorizerPass::vectorizeHorReduction(
-    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R, TargetTransformInfo *TTI,
+    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
     SmallVectorImpl<WeakTrackingVH> &PostponedInsts) {
   if (!ShouldVectorizeHor)
     return false;
@@ -19970,7 +19982,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   Stack.emplace(SelectRoot(), 0);
   SmallPtrSet<Value *, 8> VisitedInstrs;
   bool Res = false;
-  auto &&TryToReduce = [this, TTI, &R](Instruction *Inst) -> Value * {
+  auto &&TryToReduce = [this, &R](Instruction *Inst) -> Value * {
     if (R.isAnalyzedReductionRoot(Inst))
       return nullptr;
     if (!isReductionCandidate(Inst))
@@ -20037,10 +20049,9 @@ bool SLPVectorizerPass::vectorizeHorReduction(
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Instruction *Root,
-                                                 BasicBlock *BB, BoUpSLP &R,
-                                                 TargetTransformInfo *TTI) {
+                                                 BasicBlock *BB, BoUpSLP &R) {
   SmallVector<WeakTrackingVH> PostponedInsts;
-  bool Res = vectorizeHorReduction(P, Root, BB, R, TTI, PostponedInsts);
+  bool Res = vectorizeHorReduction(P, Root, BB, R, PostponedInsts);
   Res |= tryToVectorize(PostponedInsts, R);
   return Res;
 }
@@ -20062,7 +20073,7 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<Value *, 16> BuildVectorInsts;
-  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts))
+  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts, R))
     return false;
 
   if (MaxVFOnly && BuildVectorOpds.size() == 2) {
@@ -20084,7 +20095,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
-  if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts) ||
+  if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts, R) ||
       (llvm::all_of(BuildVectorOpds, IsaPred<ExtractElementInst, UndefValue>) &&
        isFixedVectorShuffle(BuildVectorOpds, Mask)))
     return false;
@@ -20305,7 +20316,7 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
       continue;
     for (Value *Op : I->operands())
       if (auto *RootOp = dyn_cast<Instruction>(Op))
-        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
+        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R);
   }
   // Try to vectorize operands as vector bundles.
   for (CmpInst *I : CmpInsts) {
@@ -20372,7 +20383,7 @@ bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
     // pass2 - try to vectorize reductions only
     if (R.isDeleted(I))
       continue;
-    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, PostponedInsts);
     if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     // pass3 - try to match and vectorize a buildvector sequence.
@@ -20632,7 +20643,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (P->getNumIncomingValues() == 2) {
         // Try to match and vectorize a horizontal reduction.
         Instruction *Root = getReductionInstr(DT, P, BB, LI);
-        if (Root && vectorizeRootInstruction(P, Root, BB, R, TTI)) {
+        if (Root && vectorizeRootInstruction(P, Root, BB, R)) {
           Changed = true;
           It = BB->begin();
           E = BB->end();
@@ -20654,8 +20665,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         // vectorization.
         if (auto *PI = dyn_cast<Instruction>(P->getIncomingValue(I));
             PI && !IsInPostProcessInstrs(PI)) {
-          bool Res = vectorizeRootInstruction(nullptr, PI,
-                                              P->getIncomingBlock(I), R, TTI);
+          bool Res =
+              vectorizeRootInstruction(nullptr, PI, P->getIncomingBlock(I), R);
           Changed |= Res;
           if (Res && R.isDeleted(P)) {
             It = BB->begin();
@@ -20689,7 +20700,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (auto *VI = dyn_cast<Instruction>(V);
               VI && !IsInPostProcessInstrs(VI))
             // Try to match and vectorize a horizontal reduction.
-            OpsChanged |= vectorizeRootInstruction(nullptr, VI, BB, R, TTI);
+            OpsChanged |= vectorizeRootInstruction(nullptr, VI, BB, R);
         }
       }
       // Start vectorization of post-process list of instructions from the

@@ -6,7 +6,7 @@ namespace std {
 struct X { };
 
 void f() {
-  // CHECK: @_ZTS1X = linkonce_odr {{(dso_local |hidden )?}}constant
   // CHECK: @_ZTI1X = linkonce_odr {{(dso_local |hidden )?}}constant
+  // CHECK: @_ZTS1X = linkonce_odr {{(dso_local |hidden )?}}constant
   (void)typeid(X&);
 }

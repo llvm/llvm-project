@@ -340,7 +340,10 @@ public:
   // If this symbol is external weak, try to resolve it to a defined
   // symbol by searching the chain of fallback symbols. Returns the symbol if
   // successful, otherwise returns null.
-  Defined *getWeakAlias();
+  Symbol *getWeakAlias();
+  Defined *getDefinedWeakAlias() {
+    return dyn_cast_or_null<Defined>(getWeakAlias());
+  }
 
   // If this symbol is external weak, replace this object with aliased symbol.
   bool resolveWeakAlias();

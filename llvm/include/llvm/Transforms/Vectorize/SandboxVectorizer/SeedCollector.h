@@ -236,7 +236,6 @@ public:
     }
     // Iterators iterate over the bundles
     iterator &operator++() {
-      assert(VecIdx >= 0 && "Already at end!");
       ++VecIdx;
       if (VecIdx >= Vec->size()) {
         assert(MapIt != Map->end() && "Already at end!");
@@ -280,6 +279,7 @@ public:
   unsigned size() const { return Bundles.size(); }
 
 #ifndef NDEBUG
+  void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG
 };
