@@ -284,10 +284,10 @@ public:
   /// Returns the breakpoint location ID.
   lldb::break_id_t GetID() const { return m_loc_id; }
 
-  // Set the line entry that should be shown to users for this location.
-  // It is up to the caller to verify that this is a valid entry to show.
-  // The current use of this is to distinguish among line entries from a
-  // virtual inlined call stack that all share the same address.
+  /// Set the line entry that should be shown to users for this location.
+  /// It is up to the caller to verify that this is a valid entry to show.
+  /// The current use of this is to distinguish among line entries from a
+  /// virtual inlined call stack that all share the same address.
   void SetPreferredLineEntry(const LineEntry &line_entry) {
     m_preferred_line_entry = line_entry;
   }
@@ -320,14 +320,14 @@ protected:
   /// If it returns false we should continue, otherwise stop.
   bool IgnoreCountShouldStop();
 
-  // If this location knows that the virtual stack frame it represents is
-  // not frame 0, return the suggested stack frame instead.  This will happen
-  // when the location's address contains a "virtual inlined call stack" and the
-  // breakpoint was set on a file & line that are not at the bottom of that
-  // stack.  For now we key off the "preferred line entry" - looking for that
-  // in the blocks that start with the stop PC.
-  // This version of the API doesn't take an "inlined" parameter because it
-  // only changes frames in the inline stack.
+  /// If this location knows that the virtual stack frame it represents is
+  /// not frame 0, return the suggested stack frame instead.  This will happen
+  /// when the location's address contains a "virtual inlined call stack" and the
+  /// breakpoint was set on a file & line that are not at the bottom of that
+  /// stack.  For now we key off the "preferred line entry" - looking for that
+  /// in the blocks that start with the stop PC.
+  /// This version of the API doesn't take an "inlined" parameter because it
+  /// only changes frames in the inline stack.
   std::optional<uint32_t> GetSuggestedStackFrameIndex();
 
 private:
