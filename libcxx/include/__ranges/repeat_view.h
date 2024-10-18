@@ -107,10 +107,10 @@ public:
           __bound_ >= 0, "The behavior is undefined if Bound is not unreachable_sentinel_t and bound is negative");
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const { return __iterator(std::addressof(*__value_)); }
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const _LIBCPP_LIFETIMEBOUND { return __iterator(std::addressof(*__value_)); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const
-    requires(!same_as<_Bound, unreachable_sentinel_t>)
+    requires(!same_as<_Bound, unreachable_sentinel_t>) _LIBCPP_LIFETIMEBOUND
   {
     return __iterator(std::addressof(*__value_), __bound_);
   }
@@ -191,7 +191,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator[](difference_type __n) const noexcept { return *(*this + __n); }
+  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator[](difference_type __n) const noexcept _LIBCPP_LIFETIMEBOUND { return *(*this + __n); }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
     return __x.__current_ == __y.__current_;

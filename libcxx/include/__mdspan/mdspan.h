@@ -186,7 +186,7 @@ public:
     requires((is_convertible_v<_OtherIndexTypes, index_type> && ...) &&
              (is_nothrow_constructible_v<index_type, _OtherIndexTypes> && ...) &&
              (sizeof...(_OtherIndexTypes) == rank()))
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](_OtherIndexTypes... __indices) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](_OtherIndexTypes... __indices) const _LIBCPP_LIFETIMEBOUND {
     // Note the standard layouts would also check this, but user provided ones may not, so we
     // check the precondition here
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__is_multidimensional_index_in(extents(), __indices...),

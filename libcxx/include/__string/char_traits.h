@@ -131,7 +131,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char> {
   }
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
-  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
+  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     if (__n == 0)
       return nullptr;
     return std::__constexpr_memchr(__s, __a, __n);
@@ -249,7 +249,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t> : __char_traits_base<wchar_t, w
   }
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
-  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
+  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     if (__n == 0)
       return nullptr;
     return std::__constexpr_wmemchr(__s, __a, __n);

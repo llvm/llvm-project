@@ -96,7 +96,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() _LIBCPP_LIFETIMEBOUND {
     if (!__cached_begin_.__has_value()) {
       __cached_begin_.__emplace(__find_next(ranges::begin(__base_)));
     }

@@ -351,11 +351,11 @@ public:
 #endif
 
   // [string.view.iterators], iterators
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return cbegin(); }
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return cbegin(); }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT { return cend(); }
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return cend(); }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
     return std::__make_bounded_iter(data(), data(), data() + size());
 #else
@@ -363,7 +363,7 @@ public:
 #endif
   }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
     return std::__make_bounded_iter(data() + size(), data(), data() + size());
 #else
@@ -399,23 +399,23 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
 
   // [string.view.access], element access
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __pos) const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __pos) const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos < size(), "string_view[] index out of bounds"), __data_[__pos];
   }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __pos) const {
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __pos) const _LIBCPP_LIFETIMEBOUND {
     return __pos >= size() ? (__throw_out_of_range("string_view::at"), __data_[0]) : __data_[__pos];
   }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference front() const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference front() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string_view::front(): string is empty"), __data_[0];
   }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string_view::back(): string is empty"), __data_[__size_ - 1];
   }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_pointer data() const _NOEXCEPT { return __data_; }
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_pointer data() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __data_; }
 
   // [string.view.modifiers], modifiers:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI void remove_prefix(size_type __n) _NOEXCEPT {

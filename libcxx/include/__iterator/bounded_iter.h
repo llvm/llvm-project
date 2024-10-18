@@ -118,7 +118,7 @@ public:
     return std::__to_address(__current_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator[](difference_type __n) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator[](difference_type __n) const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __n >= __begin_ - __current_, "__bounded_iter::operator[]: Attempt to index an iterator past the start");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(

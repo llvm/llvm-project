@@ -329,7 +329,7 @@ public:
     requires(!same_as<_Start, _BoundSentinel> && !same_as<_BoundSentinel, unreachable_sentinel_t>)
       : iota_view(std::move(__first.__value_), std::move(__last.__bound_sentinel_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const { return __iterator{__value_}; }
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const _LIBCPP_LIFETIMEBOUND { return __iterator{__value_}; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
     if constexpr (same_as<_BoundSentinel, unreachable_sentinel_t>)

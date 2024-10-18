@@ -350,40 +350,40 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr size_type size_bytes() const noexcept { return _Extent * sizeof(element_type); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const noexcept { return _Extent == 0; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](size_type __idx) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](size_type __idx) const noexcept _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx < size(), "span<T, N>::operator[](index): index out of range");
     return __data_[__idx];
   }
 
 #  if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __index) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __index) const _LIBCPP_LIFETIMEBOUND {
     if (__index >= size())
       std::__throw_out_of_range("span");
     return __data_[__index];
   }
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T, N>::front() on empty span");
     return __data_[0];
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T, N>::back() on empty span");
     return __data_[size() - 1];
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr pointer data() const noexcept { return __data_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr pointer data() const noexcept _LIBCPP_LIFETIMEBOUND { return __data_; }
 
   // [span.iter], span iterator support
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() const noexcept _LIBCPP_LIFETIMEBOUND {
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
     return std::__make_bounded_iter(data(), data(), data() + size());
 #  else
     return iterator(data());
 #  endif
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() const noexcept _LIBCPP_LIFETIMEBOUND {
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
     return std::__make_bounded_iter(data() + size(), data(), data() + size());
 #  else
@@ -512,40 +512,40 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr size_type size_bytes() const noexcept { return __size_ * sizeof(element_type); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const noexcept { return __size_ == 0; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](size_type __idx) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](size_type __idx) const noexcept _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx < size(), "span<T>::operator[](index): index out of range");
     return __data_[__idx];
   }
 
 #  if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __index) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __index) const _LIBCPP_LIFETIMEBOUND {
     if (__index >= size())
       std::__throw_out_of_range("span");
     return __data_[__index];
   }
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T>::front() on empty span");
     return __data_[0];
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T>::back() on empty span");
     return __data_[size() - 1];
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr pointer data() const noexcept { return __data_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr pointer data() const noexcept _LIBCPP_LIFETIMEBOUND { return __data_; }
 
   // [span.iter], span iterator support
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() const noexcept _LIBCPP_LIFETIMEBOUND {
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
     return std::__make_bounded_iter(data(), data(), data() + size());
 #  else
     return iterator(data());
 #  endif
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() const noexcept _LIBCPP_LIFETIMEBOUND {
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
     return std::__make_bounded_iter(data() + size(), data(), data() + size());
 #  else
