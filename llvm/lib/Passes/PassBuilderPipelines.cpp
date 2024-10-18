@@ -1830,8 +1830,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     // Promoting by-reference arguments to by-value exposes more constants to
     // IPSCCP.
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-        PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true)));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
     MPM.addPass(
         createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
     MPM.addPass(
@@ -1849,9 +1849,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(CalledValuePropagationPass());
   }
 
-  // Now deduce any function attributes based in the current code.
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  // For higher optimization levels this Pass has just run, so don't repeat it.
+  if (Level.getSpeedupLevel() == 1) {
+    // Now deduce any function attributes based on the current code.
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  }
 
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
