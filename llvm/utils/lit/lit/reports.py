@@ -4,6 +4,7 @@ import datetime
 import itertools
 import json
 import os
+import tempfile
 
 from xml.sax.saxutils import quoteattr as quo
 
@@ -24,19 +25,11 @@ class Report(object):
 
     def write_results(self, tests, elapsed):
         if self.use_unique_output_file_name:
-            report_file = None
-            filepath = self.output_file
-            attempt = 0
-            while report_file is None:
-                try:
-                    report_file = open(filepath, "x")
-                except FileExistsError:
-                    attempt += 1
-                    # If there is an extension insert before that because most
-                    # glob patterns for these will be '*.extension'. Otherwise
-                    # add to the end of the path.
-                    path, ext = os.path.splitext(self.output_file)
-                    filepath = path + f".{attempt}" + ext
+            filename, ext = os.path.splitext(os.path.basename(self.output_file))
+            fd, _ = tempfile.mkstemp(
+                suffix=ext, prefix=f"{filename}.", dir=os.path.dirname(self.output_file)
+            )
+            report_file = os.fdopen(fd, "w")
         else:
             # Overwrite if the results already exist.
             report_file = open(self.output_file, "w")

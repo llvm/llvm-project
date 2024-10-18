@@ -6,6 +6,9 @@
 # RUN: echo "test" > %t.xunit.xml
 # RUN: not %{lit} --xunit-xml-output %t.xunit.xml %{inputs}/xunit-output
 # RUN: FileCheck < %t.xunit.xml %s --check-prefix=NEW
+# NEW:      <?xml version="1.0" encoding="UTF-8"?>
+# NEW-NEXT: <testsuites time="{{[0-9.]+}}">
+## (other tests will check the contents of the whole file)
 
 # RUN: rm -f %t.xunit*.xml
 # RUN: echo "test" > %t.xunit.xml
@@ -13,14 +16,5 @@
 # RUN: not %{lit} --xunit-xml-output %t.xunit.xml --use-unique-output-file-name %{inputs}/xunit-output
 # RUN: FileCheck < %t.xunit.xml %s --check-prefix=EXISTING
 # EXISTING: test
-## Results in a new file with "1" added.
-# RUN: FileCheck < %t.xunit.1.xml %s --check-prefix=NEW
-# NEW:      <?xml version="1.0" encoding="UTF-8"?>
-# NEW-NEXT: <testsuites time="{{[0-9.]+}}">
-## (assuming that other tests check the whole contents of the file)
-
-## The number should increment as many times as needed.
-# RUN: touch %t.xunit.2.xml %t.xunit.3.xml %t.xunit.4.xml
-
-# RUN: not %{lit} --xunit-xml-output %t.xunit.xml --use-unique-output-file-name %{inputs}/xunit-output
-# RUN: FileCheck < %t.xunit.5.xml %s --check-prefix=NEW
+## Results in a new file with some discriminator added.
+# RUN: FileCheck < %t.xunit.*.xml %s --check-prefix=NEW
