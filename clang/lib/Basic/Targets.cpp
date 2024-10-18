@@ -710,12 +710,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::dxil:
     return std::make_unique<DirectXTargetInfo>(Triple, Opts);
-  case llvm::Triple::renderscript32:
-    return std::make_unique<LinuxTargetInfo<RenderScript32TargetInfo>>(Triple,
-                                                                       Opts);
-  case llvm::Triple::renderscript64:
-    return std::make_unique<LinuxTargetInfo<RenderScript64TargetInfo>>(Triple,
-                                                                       Opts);
 
   case llvm::Triple::ve:
     return std::make_unique<LinuxTargetInfo<VETargetInfo>>(Triple, Opts);

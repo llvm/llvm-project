@@ -624,8 +624,6 @@ void CGDebugInfo::CreateCompileUnit() {
   } else if (LO.OpenCL && (!CGM.getCodeGenOpts().DebugStrictDwarf ||
                            CGM.getCodeGenOpts().DwarfVersion >= 5)) {
     LangTag = llvm::dwarf::DW_LANG_OpenCL;
-  } else if (LO.RenderScript) {
-    LangTag = llvm::dwarf::DW_LANG_GOOGLE_RenderScript;
   } else if (LO.C11 && !(CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)) {
       LangTag = llvm::dwarf::DW_LANG_C11;
   } else if (LO.C99) {
