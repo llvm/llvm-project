@@ -1767,13 +1767,12 @@ struct ForallOpSingleOrZeroIterationDimsFolder
   }
 };
 
+/// Replace all induction vars with a single trip count with their lower bound.
 struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
   using OpRewritePattern<ForallOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ForallOp op,
                                 PatternRewriter &rewriter) const override {
-    // Replace all induction vars with a single trip count with their lower
-    // bound.
     Location loc = op.getLoc();
     bool changed = false;
     for (auto [lb, ub, step, iv] :
