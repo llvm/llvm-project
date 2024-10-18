@@ -1155,6 +1155,15 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   for (unsigned I = 0; I != NumParams; ++I)
     Params.push_back(readDeclAs<ParmVarDecl>());
   FD->setParams(Reader.getContext(), Params);
+
+  // If the declaration is a SYCL kernel entry point function as indicated by
+  // the presence of a sycl_kernel_entry_point attribute, register it so that
+  // associated metadata is recreated.
+  if (!FD->isInvalidDecl() && !FD->isDependentContext() &&
+      FD->hasAttr<SYCLKernelEntryPointAttr>()) {
+    ASTContext &C = Reader.getContext();
+    C.registerSYCLEntryPointFunction(FD);
+  }
 }
 
 void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
