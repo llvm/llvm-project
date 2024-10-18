@@ -461,7 +461,17 @@ INTERCEPTOR(void *, valloc, SIZE_T size) {
   return REAL(valloc)(size);
 }
 
-#if SANITIZER_INTERCEPT_ALIGNED_ALLOC
+// aligned_alloc was introduced in OSX 10.15
+// Linking will fail when using an older SDK
+#if defined(__MAC_10_15)
+// macOS 10.15 is greater than our minimal deployment target.  To ensure we
+// generate a weak reference so the dylib continues to work on older
+// systems, we need to forward declare the intercepted function as "weak
+// imports".
+SANITIZER_WEAK_IMPORT void *aligned_alloc(SIZE_T __alignment, SIZE_T __size);
+#endif // defined(__MAC_10_15)
+
+#if SANITIZER_INTERCEPT_ALIGNED_ALLOC || SANITIZER_APPLE
 INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
   __rtsan_notify_intercepted_call("aligned_alloc");
   return REAL(aligned_alloc)(alignment, size);

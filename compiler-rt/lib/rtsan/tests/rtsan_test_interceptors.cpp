@@ -120,13 +120,17 @@ TEST(TestRtsanInterceptors, VallocDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-#if SANITIZER_INTERCEPT_ALIGNED_ALLOC
 TEST(TestRtsanInterceptors, AlignedAllocDiesWhenRealtime) {
-  auto Func = []() { EXPECT_NE(nullptr, aligned_alloc(16, 32)); };
-  ExpectRealtimeDeath(Func, "aligned_alloc");
-  ExpectNonRealtimeSurvival(Func);
-}
+#if SANITIZER_APPLE
+  if (__builtin_available(macOS 10.15, *)) {
+#endif // SANITIZER_APPLE
+    auto Func = []() { EXPECT_NE(nullptr, aligned_alloc(16, 32)); };
+    ExpectRealtimeDeath(Func, "aligned_alloc");
+    ExpectNonRealtimeSurvival(Func);
+#if SANITIZER_APPLE
+  }
 #endif
+}
 
 // free_sized and free_aligned_sized (both C23) are not yet supported
 TEST(TestRtsanInterceptors, FreeDiesWhenRealtime) {
