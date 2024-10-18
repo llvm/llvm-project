@@ -2890,6 +2890,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sqrtf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sqrtf16_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.sqrtf16
+)
+
+add_fp_unittest(
   sqrtf128_test
   SUITE
     libc-math-smoke-tests
