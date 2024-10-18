@@ -277,6 +277,12 @@ size_t LLVMDisasmInstruction(LLVMDisasmContextRef DCR, uint8_t *Bytes,
     SmallVector<char, 64> InsnStr;
     raw_svector_ostream OS(InsnStr);
     formatted_raw_ostream FormattedOS(OS);
+
+    if (DC->getOptions() & LLVMDisassembler_Option_Color) {
+      FormattedOS.enable_colors(true);
+      IP->setUseColor(true);
+    }
+
     IP->printInst(&Inst, PC, AnnotationsStr, *DC->getSubtargetInfo(),
                   FormattedOS);
 
@@ -345,8 +351,6 @@ int LLVMSetDisasmOptions(LLVMDisasmContextRef DCR, uint64_t Options){
   }
   if (Options & LLVMDisassembler_Option_Color) {
     LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
-    MCInstPrinter *IP = DC->getIP();
-    IP->setUseColor(true);
     DC->addOptions(LLVMDisassembler_Option_Color);
     Options &= ~LLVMDisassembler_Option_Color;
   }
