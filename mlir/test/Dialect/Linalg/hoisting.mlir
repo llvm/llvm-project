@@ -370,6 +370,39 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL:  func.func @no_hoisting_possibly_zero_trip_loop_eq_lb_and_ub
+func.func @no_hoisting_possibly_zero_trip_loop_eq_lb_and_ub(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb_0 is in range [%lb, 8], and %ub_0 is in range [8, %ub].
+  // Since %lb_0 could be equal to %ub_0, do not hoist.
+  %lb_0 = affine.min affine_map<(d0) -> (d0, 8)>(%lb)
+  %ub_0 = affine.max affine_map<(d0) -> (d0, 8)>(%ub)
+
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL:  func.func @hoisting_non_zero_trip_loop
 func.func @hoisting_non_zero_trip_loop(%memref0: memref<20xi32>, %lb: index, %ub: index) {
   %c0_i32 = arith.constant 0 : i32

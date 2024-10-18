@@ -232,18 +232,15 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
               ValueBoundsConstraintSet::computeConstantBound(
                   presburger::BoundType::UB, lb,
                   /*stopCondition=*/nullptr, /*closedUB=*/true);
-          if (failed(maxLb)) {
+          if (failed(maxLb))
             return;
-          }
           FailureOr<int64_t> minUb =
               ValueBoundsConstraintSet::computeConstantBound(
                   presburger::BoundType::LB, ub);
-          if (failed(minUb)) {
+          if (failed(minUb))
             return;
-          }
-          if (minUb.value() <= maxLb.value()) {
+          if (minUb.value() <= maxLb.value())
             return;
-          }
           definiteNonZeroTripCountLoops.insert(loopLike);
         }
       });
