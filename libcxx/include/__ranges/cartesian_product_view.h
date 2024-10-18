@@ -86,6 +86,18 @@ public:
   constexpr explicit cartesian_product_view(First first_base, Vs... bases)
       : bases_{std::move(first_base), std::move(bases)...} {}
 
+  constexpr iterator<false> begin()
+    requires(!__simple_view<First> || ... || !__simple_view<Vs>)
+  {
+    return iterator<false>(*this, __tuple_transform(ranges::begin, bases_));
+  }
+
+  constexpr iterator<true> begin() const
+    requires(range<const First> && ... && range<const Vs>)
+  {
+    return iterator<true>(*this, __tuple_transform(ranges::begin, bases_));
+  }
+
   constexpr auto size()
     requires(sized_range<First> && ... && sized_range<Vs>)
   {
@@ -290,7 +302,7 @@ private:
     const auto& v    = std::get<N>(parent_->bases_);
     auto& it         = std::get<N>(current_);
     const auto sz    = static_cast<difference_type>(std::ranges::size(v));
-    const auto first = begin(v);
+    const auto first = ranges::begin(v);
 
     if (sz > 0) {
       const auto idx = static_cast<difference_type>(std::distance(first, it));
