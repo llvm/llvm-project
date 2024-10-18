@@ -211,3 +211,85 @@ for.body:
 exit:
   ret void
 }
+
+define void @epilogue(i64 %count) {
+; CHECK-LABEL: 'epilogue'
+; CHECK-NEXT:  Determining loop execution counts for: @epilogue
+; CHECK-NEXT:  Loop %epilogue: backedge-taken count is (-1 + %count.epilogue)
+; CHECK-NEXT:  Loop %epilogue: constant max backedge-taken count is i64 6
+; CHECK-NEXT:  Loop %epilogue: symbolic max backedge-taken count is (-1 + %count.epilogue)
+; CHECK-NEXT:  Loop %epilogue: Trip multiple is 1
+; CHECK-NEXT:  Loop %while.body: backedge-taken count is ((-8 + %count) /u 8)
+; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is ((-8 + %count) /u 8)
+; CHECK-NEXT:  Loop %while.body: Trip multiple is 1
+entry:
+  %cmp = icmp ugt i64 %count, 7
+  br i1 %cmp, label %while.body, label %epilogue.preheader
+
+while.body:
+  %iv = phi i64 [ %sub, %while.body ], [ %count, %entry ]
+  %sub = add i64 %iv, -8
+  %exitcond.not = icmp ugt i64 %sub, 7
+  br i1 %exitcond.not, label %while.body, label %while.loopexit
+
+while.loopexit:
+  %sub.exit = phi i64 [ %sub, %while.body ]
+  br label %epilogue.preheader
+
+epilogue.preheader:
+  %count.epilogue = phi i64 [ %count, %entry ], [ %sub.exit, %while.loopexit ]
+  %epilogue.cmp = icmp eq i64 %count.epilogue, 0
+  br i1 %epilogue.cmp, label %exit, label %epilogue
+
+epilogue:
+  %iv.epilogue = phi i64 [ %dec, %epilogue ], [ %count.epilogue, %epilogue.preheader ]
+  %dec = add i64 %iv.epilogue, -1
+  %exitcond.epilogue = icmp eq i64 %dec, 0
+  br i1 %exitcond.epilogue, label %exit, label %epilogue
+
+exit:
+  ret void
+
+}
+
+define void @epilogue2(i64 %count) {
+; CHECK-LABEL: 'epilogue2'
+; CHECK-NEXT:  Determining loop execution counts for: @epilogue2
+; CHECK-NEXT:  Loop %epilogue: backedge-taken count is (-1 + %count.epilogue)
+; CHECK-NEXT:  Loop %epilogue: constant max backedge-taken count is i64 8
+; CHECK-NEXT:  Loop %epilogue: symbolic max backedge-taken count is (-1 + %count.epilogue)
+; CHECK-NEXT:  Loop %epilogue: Trip multiple is 1
+; CHECK-NEXT:  Loop %while.body: backedge-taken count is ((-8 + %count) /u 8)
+; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is ((-8 + %count) /u 8)
+; CHECK-NEXT:  Loop %while.body: Trip multiple is 1
+entry:
+  %cmp = icmp ugt i64 %count, 9
+  br i1 %cmp, label %while.body, label %epilogue.preheader
+
+while.body:
+  %iv = phi i64 [ %sub, %while.body ], [ %count, %entry ]
+  %sub = add i64 %iv, -8
+  %exitcond.not = icmp ugt i64 %sub, 7
+  br i1 %exitcond.not, label %while.body, label %while.loopexit
+
+while.loopexit:
+  %sub.exit = phi i64 [ %sub, %while.body ]
+  br label %epilogue.preheader
+
+epilogue.preheader:
+  %count.epilogue = phi i64 [ %count, %entry ], [ %sub.exit, %while.loopexit ]
+  %epilogue.cmp = icmp eq i64 %count.epilogue, 0
+  br i1 %epilogue.cmp, label %exit, label %epilogue
+
+epilogue:
+  %iv.epilogue = phi i64 [ %dec, %epilogue ], [ %count.epilogue, %epilogue.preheader ]
+  %dec = add i64 %iv.epilogue, -1
+  %exitcond.epilogue = icmp eq i64 %dec, 0
+  br i1 %exitcond.epilogue, label %exit, label %epilogue
+
+exit:
+  ret void
+
+}

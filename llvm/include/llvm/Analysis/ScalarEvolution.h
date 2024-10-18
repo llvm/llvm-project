@@ -1316,6 +1316,11 @@ public:
 
     LoopGuards(ScalarEvolution &SE) : SE(SE) {}
 
+    static LoopGuards
+    collectFromBlock(ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+                     const BasicBlock *Block, const BasicBlock *Pred,
+                     SmallPtrSet<const BasicBlock *, 8> VisitedBlocks);
+
   public:
     /// Collect rewrite map for loop guards for loop \p L, together with flags
     /// indicating if NUW and NSW can be preserved during rewriting.
