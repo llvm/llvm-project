@@ -123,6 +123,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <map>
 #include <set>
 #include <utility>
 #include <vector>
@@ -198,6 +199,8 @@ public:
   }
 
   bool runOnModule(Module &M);
+  bool runOnFunctions(std::set<Function *> &F);
+  std::map<Function *, Function *> &getDelToNewMap();
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -298,15 +301,29 @@ private:
   // dangling iterators into FnTree. The invariant that preserves this is that
   // there is exactly one mapping F -> FN for each FunctionNode FN in FnTree.
   DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
+
+  /// Deleted-New functions mapping
+  std::map<Function *, Function *> DelToNewMap;
 };
 } // end anonymous namespace
 
 PreservedAnalyses MergeFunctionsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  MergeFunctions MF;
-  if (!MF.runOnModule(M))
+  if (!MergeFunctionsPass::runOnModule(M))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
+}
+
+bool MergeFunctionsPass::runOnModule(Module &M) {
+  MergeFunctions MF;
+  return MF.runOnModule(M);
+}
+
+std::pair<bool, std::map<Function *, Function *>>
+MergeFunctionsPass::runOnFunctions(std::set<Function *> &F) {
+  MergeFunctions MF;
+  bool MergeResult = MF.runOnFunctions(F);
+  return {MergeResult, MF.getDelToNewMap()};
 }
 
 #ifndef NDEBUG
@@ -466,6 +483,47 @@ bool MergeFunctions::runOnModule(Module &M) {
   Used.clear();
 
   return Changed;
+}
+
+bool MergeFunctions::runOnFunctions(std::set<Function *> &F) {
+  bool Changed = false;
+  std::vector<std::pair<IRHash, Function *>> HashedFuncs;
+  for (Function *Func : F) {
+    if (isEligibleForMerging(*Func)) {
+      HashedFuncs.push_back({StructuralHash(*Func), Func});
+    }
+  }
+  llvm::stable_sort(HashedFuncs, less_first());
+  auto S = HashedFuncs.begin();
+  for (auto I = HashedFuncs.begin(), IE = HashedFuncs.end(); I != IE; ++I) {
+    if ((I != S && std::prev(I)->first == I->first) ||
+        (std::next(I) != IE && std::next(I)->first == I->first)) {
+      Deferred.push_back(WeakTrackingVH(I->second));
+    }
+  }
+  do {
+    std::vector<WeakTrackingVH> Worklist;
+    Deferred.swap(Worklist);
+    LLVM_DEBUG(dbgs() << "size of function: " << F.size() << '\n');
+    LLVM_DEBUG(dbgs() << "size of worklist: " << Worklist.size() << '\n');
+    for (WeakTrackingVH &I : Worklist) {
+      if (!I)
+        continue;
+      Function *F = cast<Function>(I);
+      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage()) {
+        Changed |= insert(F);
+      }
+    }
+    LLVM_DEBUG(dbgs() << "size of FnTree: " << FnTree.size() << '\n');
+  } while (!Deferred.empty());
+  FnTree.clear();
+  FNodesInTree.clear();
+  GlobalNumbers.clear();
+  return Changed;
+}
+
+std::map<Function *, Function *> &MergeFunctions::getDelToNewMap() {
+  return this->DelToNewMap;
 }
 
 // Replace direct callers of Old with New.
@@ -1004,6 +1062,7 @@ bool MergeFunctions::insert(Function *NewFunction) {
 
   Function *DeleteF = NewFunction;
   mergeTwoFunctions(OldF.getFunc(), DeleteF);
+  this->DelToNewMap.emplace(DeleteF, OldF.getFunc());
   return true;
 }
 
