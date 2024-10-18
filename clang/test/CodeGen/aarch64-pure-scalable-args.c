@@ -160,12 +160,28 @@ void test_argpass_no_z(PST *p, double dummy, svmfloat8_t u) {
 //   2     -> w2
 //   3.0   -> d5
 //   true  -> p0
-void test_argpass_no_z_tuple(PST *p, float dummy, svfloat64x4_t x) {
-  void argpass_no_z_tuple_callee(svfloat64x4_t, double, int, PST, int,
-                                 double, svbool_t);
-  argpass_no_z_tuple_callee(x, .0, 1, *p, 2, 3.0, svptrue_b64());
+void test_argpass_no_z_tuple_f64(PST *p, float dummy, svfloat64x4_t x) {
+  void argpass_no_z_tuple_f64_callee(svfloat64x4_t, double, int, PST, int,
+                                     double, svbool_t);
+  argpass_no_z_tuple_f64_callee(x, .0, 1, *p, 2, 3.0, svptrue_b64());
 }
-// CHECK: declare void @argpass_no_z_tuple_callee(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, double noundef, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
+// CHECK: declare void @argpass_no_z_tuple_f64_callee(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, double noundef, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
+
+
+// Likewise, using a different tuple.
+//   x     -> z0.d-z3.d
+//   0.0   -> d4
+//   1     -> w0
+//   *p    -> memory, address -> x1
+//   2     -> w2
+//   3.0   -> d5
+//   true  -> p0
+void test_argpass_no_z_tuple_mfp8(PST *p, float dummy, svmfloat8x4_t x) {
+  void argpass_no_z_tuple_mfp8_callee(svmfloat8x4_t, double, int, PST, int,
+                                      double, svbool_t);
+  argpass_no_z_tuple_mfp8_callee(x, .0, 1, *p, 2, 3.0, svptrue_b64());
+}
+// CHECK: declare void @argpass_no_z_tuple_mfp8_callee(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, double noundef, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
 
 
 // Not enough Z-regs (consumed by a HFA), PST passed indirectly
