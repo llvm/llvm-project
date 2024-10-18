@@ -1,4 +1,4 @@
-//===-- Half-precision log(x) function ------------------------------------===//
+//===-- Half-precision log2(x) function -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/logf16.h"
+#include "src/math/log2f16.h"
 #include "expxf16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
@@ -24,48 +24,41 @@
 namespace LIBC_NAMESPACE_DECL {
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-static constexpr size_t N_LOGF16_EXCEPTS = 5;
+static constexpr size_t N_LOG2F16_EXCEPTS = 2;
 #else
-static constexpr size_t N_LOGF16_EXCEPTS = 11;
+static constexpr size_t N_LOG2F16_EXCEPTS = 9;
 #endif
 
-static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
-    LOGF16_EXCEPTS = {{
+static constexpr fputil::ExceptValues<float16, N_LOG2F16_EXCEPTS>
+    LOG2F16_EXCEPTS = {{
 // (input, RZ output, RU offset, RD offset, RN offset)
 #ifndef LIBC_TARGET_CPU_HAS_FMA
-        // x = 0x1.61cp-13, logf16(x) = -0x1.16p+3 (RZ)
-        {0x0987U, 0xc858U, 0U, 1U, 0U},
-        // x = 0x1.f2p-12, logf16(x) = -0x1.e98p+2 (RZ)
-        {0x0fc8U, 0xc7a6U, 0U, 1U, 1U},
+        // x = 0x1.224p-1, log2f16(x) = -0x1.a34p-1 (RZ)
+        {0x3889U, 0xba8dU, 0U, 1U, 0U},
+        // x = 0x1.e34p-1, log2f16(x) = -0x1.558p-4 (RZ)
+        {0x3b8dU, 0xad56U, 0U, 1U, 0U},
 #endif
-        // x = 0x1.4d4p-9, logf16(x) = -0x1.7e4p+2 (RZ)
-        {0x1935U, 0xc5f9U, 0U, 1U, 0U},
-        // x = 0x1.5ep-8, logf16(x) = -0x1.4ecp+2 (RZ)
-        {0x1d78U, 0xc53bU, 0U, 1U, 0U},
+        // x = 0x1.e8cp-1, log2f16(x) = -0x1.128p-4 (RZ)
+        {0x3ba3U, 0xac4aU, 0U, 1U, 0U},
 #ifndef LIBC_TARGET_CPU_HAS_FMA
-        // x = 0x1.fdp-1, logf16(x) = -0x1.81p-8 (RZ)
-        {0x3bf4U, 0x9e04U, 0U, 1U, 1U},
-        // x = 0x1.fep-1, logf16(x) = -0x1.008p-8 (RZ)
-        {0x3bf8U, 0x9c02U, 0U, 1U, 0U},
+        // x = 0x1.f98p-1, log2f16(x) = -0x1.2ep-6 (RZ)
+        {0x3be6U, 0xa4b8U, 0U, 1U, 0U},
+        // x = 0x1.facp-1, log2f16(x) = -0x1.e7p-7 (RZ)
+        {0x3bebU, 0xa39cU, 0U, 1U, 1U},
 #endif
-        // x = 0x1.ffp-1, logf16(x) = -0x1.004p-9 (RZ)
-        {0x3bfcU, 0x9801U, 0U, 1U, 0U},
-        // x = 0x1.ff8p-1, logf16(x) = -0x1p-10 (RZ)
-        {0x3bfeU, 0x9400U, 0U, 1U, 1U},
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-        // x = 0x1.4c4p+1, logf16(x) = 0x1.e84p-1 (RZ)
-        {0x4131U, 0x3ba1U, 1U, 0U, 1U},
-#else
-        // x = 0x1.75p+2, logf16(x) = 0x1.c34p+0 (RZ)
-        {0x45d4U, 0x3f0dU, 1U, 0U, 0U},
-        // x = 0x1.75p+2, logf16(x) = 0x1.c34p+0 (RZ)
-        {0x45d4U, 0x3f0dU, 1U, 0U, 0U},
-        // x = 0x1.d5p+9, logf16(x) = 0x1.b5cp+2 (RZ)
-        {0x6354U, 0x46d7U, 1U, 0U, 1U},
+        // x = 0x1.fb4p-1, log2f16(x) = -0x1.b88p-7 (RZ)
+        {0x3bedU, 0xa2e2U, 0U, 1U, 1U},
+#ifndef LIBC_TARGET_CPU_HAS_FMA
+        // x = 0x1.fecp-1, log2f16(x) = -0x1.cep-9 (RZ)
+        {0x3bfbU, 0x9b38U, 0U, 1U, 1U},
+        // x = 0x1.ffcp-1, log2f16(x) = -0x1.714p-11 (RZ)
+        {0x3bffU, 0x91c5U, 0U, 1U, 1U},
+        // x = 0x1.224p+0, log2f16(x) = 0x1.72cp-3 (RZ)
+        {0x3c89U, 0x31cbU, 1U, 0U, 1U},
 #endif
     }};
 
-LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
+LLVM_LIBC_FUNCTION(float16, log2f16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 
@@ -73,7 +66,7 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
 
   // If x <= 0, or x is 1, or x is +inf, or x is NaN.
   if (LIBC_UNLIKELY(x_u == 0U || x_u == 0x3c00U || x_u >= 0x7c00U)) {
-    // log(NaN) = NaN
+    // log2(NaN) = NaN
     if (x_bits.is_nan()) {
       if (x_bits.is_signaling_nan()) {
         fputil::raise_except_if_required(FE_INVALID);
@@ -83,7 +76,7 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
       return x;
     }
 
-    // log(+/-0) = −inf
+    // log2(+/-0) = −inf
     if ((x_u & 0x7fffU) == 0U) {
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return FPBits::inf(Sign::NEG).get_val();
@@ -99,23 +92,23 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
       return FPBits::quiet_nan().get_val();
     }
 
-    // log(+inf) = +inf
+    // log2(+inf) = +inf
     return FPBits::inf().get_val();
   }
 
-  if (auto r = LOGF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
+  if (auto r = LOG2F16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
 
-  // To compute log(x), we perform the following range reduction:
+  // To compute log2(x), we perform the following range reduction:
   //   x = 2^m * 1.mant,
-  //   log(x) = m * log(2) + log(1.mant).
-  // To compute log(1.mant), let f be the highest 6 bits including the hidden
+  //   log2(x) = m + log2(1.mant).
+  // To compute log2(1.mant), let f be the highest 6 bits including the hidden
   // bit, and d be the difference (1.mant - f), i.e., the remaining 5 bits of
   // the mantissa, then:
-  //   log(1.mant) = log(f) + log(1.mant / f)
-  //               = log(f) + log(1 + d/f)
+  //   log2(1.mant) = log2(f) + log2(1.mant / f)
+  //                = log2(f) + log2(1 + d/f)
   // since d/f is sufficiently small.
-  // We store log(f) and 1/f in the lookup tables LOGF_F and ONE_OVER_F_F
+  // We store log2(f) and 1/f in the lookup tables LOG2F_F and ONE_OVER_F_F
   // respectively.
 
   int m = -FPBits::EXP_BIAS;
@@ -144,14 +137,13 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
   // Degree-3 minimax polynomial generated by Sollya with the following
   // commands:
   //   > display = hexadecimal;
-  //   > P = fpminimax(log(1 + x)/x, 2, [|SG...|], [-2^-5, 2^-5]);
+  //   > P = fpminimax(log2(1 + x)/x, 2, [|SG...|], [-2^-5, 2^-5]);
   //   > x * P;
-  float log1p_d_over_f =
-      v * fputil::polyeval(v, 0x1p+0f, -0x1.001804p-1f, 0x1.557ef6p-2f);
-  // log(1.mant) = log(f) + log(1 + d/f)
-  float log_1_mant = LOGF_F[f] + log1p_d_over_f;
-  return fputil::cast<float16>(
-      fputil::multiply_add(static_cast<float>(m), LOGF_2, log_1_mant));
+  float log2p1_d_over_f =
+      v * fputil::polyeval(v, 0x1.715476p+0f, -0x1.71771ap-1f, 0x1.ecb38ep-2f);
+  // log2(1.mant) = log2(f) + log2(1 + d/f)
+  float log2_1_mant = LOG2F_F[f] + log2p1_d_over_f;
+  return fputil::cast<float16>(static_cast<float>(m) + log2_1_mant);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
