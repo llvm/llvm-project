@@ -181,9 +181,9 @@ int llvm_cxxfilt_main(int argc, char **argv, const llvm::ToolContext &) {
 
   ParseParams = !Args.hasArg(OPT_no_params);
 
-  Types = Args.hasArg(OPT_types);
-
   Quote = Args.hasArg(OPT_quote);
+
+  Types = Args.hasArg(OPT_types);
 
   std::vector<std::string> Decorated = Args.getAllArgValues(OPT_INPUT);
   if (Decorated.empty())
