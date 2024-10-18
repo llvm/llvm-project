@@ -12,6 +12,8 @@
 
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -1585,26 +1587,27 @@ checkAssumptionForFusingConsumer(tensor::InsertSliceOp candidateSliceOp) {
 /// failure otherwise.
 static FailureOr<OpOperand *> getConsumerFromUses(Value val,
                                                   Block *containingOpBlock) {
-  // Check that the value has exactly one use which isn't a scf.yield or a
-  // tensor.parallel_insert_slice op.
   OpOperand *operand = nullptr;
   for (OpOperand &opOperand : val.getUses()) {
     Operation *consumerOp = opOperand.getOwner();
-    if (isa<scf::YieldOp, tensor::ParallelInsertSliceOp>(consumerOp))
+    // Step 1. Check if the user is tilable.
+    if (!isa<TilingInterface, DestinationStyleOpInterface>(consumerOp)) {
+      // TODO: We have to init result of consumer before scf.for, use
+      // DestinationStyleOpInterface to get result shape from init for now. Add
+      // support for other op such as op has InferTypeOpInterface.
       continue;
-    if (operand)
-      return failure();
-    // TODO: We have to init result of consumer before scf.for, use
-    //       DestinationStyleOpInterface to get result shape from init for now.
-    //       Add support for other op such as op has InferTypeOpInterface.
-    if (!isa<TilingInterface>(consumerOp) ||
-        !isa<DestinationStyleOpInterface>(consumerOp))
-      return failure();
-    if (containingOpBlock != consumerOp->getBlock())
-      return failure();
-    operand = &opOperand;
+    } else {
+      // Step 2. Check if user stay in the same block.
+      if (containingOpBlock != consumerOp->getBlock())
+        continue;
+      // Step 3. Check if user has succeeding user. Otherwise, it usually
+      // represents already tiled.
+      if (consumerOp->use_empty())
+        continue;
+      operand = &opOperand;
+      break;
+    }
   }
-
   if (operand)
     return operand;
   return failure();
@@ -1699,28 +1702,131 @@ getUntiledConsumerFromSlice(tensor::ParallelInsertSliceOp candidateSliceOp) {
   return getConsumerFromUses(resultingValue, containingOp->getBlock());
 }
 
-/// This utility currently checks whether the loop either :-
-/// 1. Yields exactly one result.
-/// 2. Has consumer op as its first user and other users to be in the same
-/// containing block as that of consumer op's. Currently we clone the loop op
-/// right before the consumer op in order to maintain a valid def-use chain.
-/// This utility thus helps ensuring that no invalid IR is formed due to the
-/// same.
-static LogicalResult checkAssumptionForLoop(Operation *loopOp,
-                                            Operation *consumerOp) {
-  // Check if the loop op yields one result.
-  if (loopOp->getNumResults() == 1)
-    return success();
-  // Check if the consumerOp is the first user of the loopOp and if other users
-  // are in the same containing block as that of consumer op's.
+/// This utility currently checks whether the first userOp of loop is NOT before
+/// the last defineOp of consumer. Currently we need to move the loop op right
+/// before a certain op in order to maintain a valid use-def chain. This utility
+/// thus helps ensuring that no invalid IR is formed. E.g.
+///
+/// ```
+/// %0 = scf.for() {
+///   ...
+/// }
+/// ...
+/// %1 = firstUserOfLoop(%0)
+/// ...
+/// %2 = lastDefOfConsumer
+/// ...
+/// %3 = consumerOp(%2)
+/// ```
+///
+/// If the `firstUserOfLoop`is before `lastDefOfConsumer`, then it would be
+/// invalid to move the loop op right before the `firstUserOfLoop`, a.k.a.
+/// use-def chain violation:
+///
+/// ```
+/// %0:2 = scf.for() {
+///    // use before define error
+///    %3 = tiledConsumerOp(%2)
+/// }
+/// %1 = firstUserOfLoop(%0)
+/// ...
+/// %2 = lastDefOfConsumer
+/// ```
+///
+/// To address this issue, this utility would try to move `lastDefOfConsumer`
+/// before `firstUserOfLoop` under intrusive mode. Then, it turns out valid as
+/// follow:
+///
+/// ```
+/// %2 = lastDefOfConsumer
+/// %0:2 = scf.for() {
+///    %3 = tiledConsumerOp(%2)
+/// }
+/// %1 = firstUserOfLoop(%0)
+/// ```
+///
+/// @param loopOp: loop operation
+/// @param consumerOp: consumer operation
+/// @param firstUserOfLoop: the first user of loopOp, which op we move the looOp
+/// right before
+/// @param intrusive: if true, it allows to move computed slice w.r.t defineOp
+/// of operands of consumerOp. The default value is True. If explicit memory
+/// barrier is required, please turn it off.
+static LogicalResult checkAssumptionForLoop(RewriterBase &rewriter,
+                                            Operation *loopOp,
+                                            Operation *consumerOp,
+                                            Operation **firstUserOfLoop,
+                                            bool intrusive = true) {
   Block *parentBlock = consumerOp->getBlock();
+  // 1. Check if loopOp and consumerOp stay in the same block.
+  if (loopOp->getBlock() != parentBlock)
+    return failure();
+
+  *firstUserOfLoop = consumerOp;
+  // 2. Find the first user of loopOp.
   for (Operation *userOp : loopOp->getUsers()) {
     if (userOp == consumerOp)
       continue;
-    if (parentBlock != userOp->getBlock() ||
-        !consumerOp->isBeforeInBlock(userOp))
+    // `ParallelInsertSlice` located inside `InParallelOp` has no same parent
+    // block with any other types of operation. Thus, just redirecting to its
+    // parent `InParallelOp`.
+    if (isa<tensor::ParallelInsertSliceOp>(userOp))
+      userOp = userOp->getParentOfType<scf::InParallelOp>();
+
+    if (parentBlock != userOp->getBlock())
       return failure();
+
+    if (userOp->isBeforeInBlock(*firstUserOfLoop))
+      *firstUserOfLoop = userOp;
   }
+
+  // 3. Find backward slice of defOfConsumer.
+  BackwardSliceOptions options;
+  DominanceInfo dominanceInfo;
+  options.inclusive = true;
+  options.omitBlockArguments = true;
+
+  for (auto operand : consumerOp->getOperands()) {
+    llvm::SetVector<Operation *> slice;
+    bool includeLoopOp = false;
+    options.filter = [&](Operation *op) {
+      if (op == loopOp) {
+        includeLoopOp = true;
+        return false;
+      }
+      // Cut off the slice to not include any operation that already dominates
+      // firstUserOfLoop.
+      return !dominanceInfo.properlyDominates(op, *firstUserOfLoop);
+    };
+    getBackwardSlice(operand, &slice, options);
+    if (!slice.empty()) {
+      // If consumerOp has one producer, which is also the user of loopOp.
+      // E.g.
+      // ```
+      //  %0 = %loopOp
+      //  %1 = consumerOp1 ins(%0)
+      //  %2 = consumerOp2 ins(%0, %1)
+      // ```
+      // We can not fuse consumerOp2 into loopOp due to UD chain, unless
+      // consumerOp1 has already been fused into loopOp before.
+      if (includeLoopOp) {
+        return rewriter.notifyMatchFailure(
+            consumerOp, "could not fuse consumer due to inevitable use-def "
+                        "chain violation");
+      }
+      if (!intrusive) {
+        // Please turn on intrusive mode, otherwise just bail out.
+        return rewriter.notifyMatchFailure(consumerOp,
+                                           "intrusive mode is not allowed");
+      }
+      mlir::topologicalSort(slice);
+      // 4. Move all computed slice before firstUserOfLoop.
+      for (auto op : slice) {
+        rewriter.moveOpBefore(op, *firstUserOfLoop);
+      }
+    }
+  }
+
   return success();
 }
 
@@ -1735,6 +1841,24 @@ static FailureOr<OpOperand *> getUntiledConsumerFromSlice(Operation *sliceOp) {
   } else {
     return failure();
   }
+}
+
+/// A utility to move the given operand to the end of use list.
+static void moveOperandToEndOfUseList(OpOperand *operand) {
+  Value::use_range uses = operand->get().getUses();
+  size_t numberUses = std::distance(uses.begin(), uses.end());
+  if (numberUses == 1)
+    return;
+  auto iter = llvm::find(uses, *operand);
+  if (iter == uses.end())
+    return;
+  unsigned index = std::distance(uses.begin(), iter);
+  SmallVector<unsigned> indices =
+      llvm::to_vector(llvm::seq<unsigned>(numberUses));
+  indices.push_back(indices[index]);
+  indices.erase(indices.begin() + index);
+  operand->get().shuffleUseList(indices);
+  return;
 }
 
 /// Implementation of fusing consumer of a single slice by computing the
@@ -1787,7 +1911,12 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
 
   LoopLikeOpInterface outerMostLoop = nestedLoops.front();
 
-  if (failed(checkAssumptionForLoop(outerMostLoop, consumerOp))) {
+  // Find suitable insertPointOp to move the whole loop structure later.
+  Operation *firstUserOfLoop = nullptr;
+  if (failed(checkAssumptionForLoop(rewriter, outerMostLoop, consumerOp,
+                                    &firstUserOfLoop))) {
+    // Prepare for next consumer.
+    moveOperandToEndOfUseList(consumerOpOperand);
     return rewriter.notifyMatchFailure(
         outerMostLoop,
         "containing loop op should either yield just one value or "
@@ -1812,9 +1941,9 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
 
   Location loc = outerMostLoop->getLoc();
 
-  // 3. Move the whole loop structure right before consumer Op, the dominance
+  // 3. Move the whole loop structure right before insertPoint, the dominance
   // should be already ensured by `checkAssumptionForLoop`.
-  rewriter.moveOpBefore(outerMostLoop, consumerOp);
+  rewriter.moveOpBefore(outerMostLoop, firstUserOfLoop);
 
   // 4. Set insertion point before terminator op of the loop and create a new
   // tensor.insert_slice. In the scf.for case this is a clone of the
