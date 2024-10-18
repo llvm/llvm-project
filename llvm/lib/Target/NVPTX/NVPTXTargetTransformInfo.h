@@ -123,6 +123,9 @@ public:
       return true;
     }
   }
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
 };
 
 } // end namespace llvm
