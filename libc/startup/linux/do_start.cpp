@@ -131,7 +131,11 @@ void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
   init_tls(tls);
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
+
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
   jmpbuf::initialize();
+#endif
+
   self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
       internal::get_thread_atexit_callback_mgr();
