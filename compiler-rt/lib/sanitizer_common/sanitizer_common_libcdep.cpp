@@ -233,7 +233,7 @@ void MemCpyAccessible(void *dest, const void *src, uptr n) {
   auto copy_or_zero = [dest, src](uptr beg, uptr end) {
     const uptr udest = reinterpret_cast<uptr>(dest);
     const uptr usrc = reinterpret_cast<uptr>(src);
-    void *d = reinterpret_cast<void *>(udest + beg - usrc);
+    void *d = reinterpret_cast<void *>(udest + (beg - usrc));
     const uptr size = end - beg;
     if (!TryMemCpy(d, reinterpret_cast<void *>(beg), size))
       internal_memset(d, 0, size);
