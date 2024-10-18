@@ -106,8 +106,14 @@ bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
 
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
   auto addressSpace = getTypeConverter()->getMemRefAddressSpace(type);
-  if (failed(addressSpace))
+  if (failed(addressSpace)) {
+    emitError(UnknownLoc::get(type.getContext()),
+              "conversion of memref memory space ")
+        << type.getMemorySpace()
+        << " to integer address space "
+           "failed. Consider adding memory space conversions.";
     return {};
+  }
   return LLVM::LLVMPointerType::get(type.getContext(), *addressSpace);
 }
 
