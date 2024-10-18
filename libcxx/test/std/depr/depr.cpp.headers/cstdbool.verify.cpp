@@ -6,18 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <ccomplex> // deprecated in C++17, removed in C++20, but still provided by libc++ as an extension
+// <cstdbool>
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// check that <cstdbool> is deprecated in C++17 and removed in C++20
+// When built with modules, <cstdbool> should be omitted.
 
-#include <ccomplex>
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: clang-modules-build
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::complex<double> d;
-    (void)d;
+#include <cstdbool>
 
-  return 0;
-}
+#if TEST_STD_VER >= 20
+// expected-warning@cstdbool:* {{<cstdbool> is removed in C++20.}}
+#else
+// expected-warning@cstdbool:* {{<cstdbool> is deprecated.}}
+#endif
