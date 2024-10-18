@@ -363,6 +363,15 @@ public:
     return false;
   }
 
+  /// Returns a boolean indicating whether two symbol contexts are equal for the
+  /// purposes of frame comparison. If the plugin has no opinion, it should
+  /// return nullopt.
+  virtual std::optional<bool>
+  AreEqualForFrameComparison(const SymbolContext &sc1,
+                             const SymbolContext &sc2) const {
+    return {};
+  }
+
   /// Returns true if this Language supports exception breakpoints on throw via
   /// a corresponding LanguageRuntime plugin.
   virtual bool SupportsExceptionBreakpointsOnThrow() const { return false; }
