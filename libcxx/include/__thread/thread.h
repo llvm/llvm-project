@@ -82,7 +82,7 @@ public:
   __thread_specific_ptr& operator=(const __thread_specific_ptr&) = delete;
   ~__thread_specific_ptr();
 
-  _LIBCPP_HIDE_FROM_ABI pointer get() const { return static_cast<_Tp*>(__libcpp_tls_get(__key_)); }
+  _LIBCPP_HIDE_FROM_ABI pointer get() const _LIBCPP_LIFETIMEBOUND { return static_cast<_Tp*>(__libcpp_tls_get(__key_)); }
   _LIBCPP_HIDE_FROM_ABI pointer operator*() const { return *get(); }
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return get(); }
   void set_pointer(pointer __p);

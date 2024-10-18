@@ -714,7 +714,7 @@ public:
 
   template <class... _Args>
     requires is_nothrow_constructible_v<_Tp, _Args...>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& emplace(_Args&&... __args) noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& emplace(_Args&&... __args) noexcept _LIBCPP_LIFETIMEBOUND {
     this->__destroy();
     this->__construct(in_place, std::forward<_Args>(__args)...);
     return this->__val();
@@ -722,7 +722,7 @@ public:
 
   template <class _Up, class... _Args>
     requires is_nothrow_constructible_v<_Tp, initializer_list<_Up>&, _Args...>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) noexcept _LIBCPP_LIFETIMEBOUND {
     this->__destroy();
     this->__construct(in_place, __il, std::forward<_Args>(__args)...);
     return this->__val();

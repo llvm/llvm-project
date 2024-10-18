@@ -245,7 +245,7 @@ public:
             class... _Args,
             class _Tp = decay_t<_ValueType>,
             class     = enable_if_t< is_constructible<_Tp, _Args...>::value && is_copy_constructible<_Tp>::value> >
-  _LIBCPP_HIDE_FROM_ABI _Tp& emplace(_Args&&...);
+  _LIBCPP_HIDE_FROM_ABI _Tp& emplace(_Args&&...) _LIBCPP_LIFETIMEBOUND;
 
   template <class _ValueType,
             class _Up,
@@ -253,7 +253,7 @@ public:
             class _Tp = decay_t<_ValueType>,
             class     = enable_if_t< is_constructible<_Tp, initializer_list<_Up>&, _Args...>::value &&
                                      is_copy_constructible<_Tp>::value> >
-  _LIBCPP_HIDE_FROM_ABI _Tp& emplace(initializer_list<_Up>, _Args&&...);
+  _LIBCPP_HIDE_FROM_ABI _Tp& emplace(initializer_list<_Up>, _Args&&...) _LIBCPP_LIFETIMEBOUND;
 
   // 6.3.3 any modifiers
   _LIBCPP_HIDE_FROM_ABI void reset() _NOEXCEPT {

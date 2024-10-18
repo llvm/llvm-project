@@ -87,7 +87,7 @@ public:
     *this += -__n;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator[](difference_type __n) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator[](difference_type __n) const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return __i_[__n];
   }
 

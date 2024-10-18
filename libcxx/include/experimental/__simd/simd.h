@@ -83,7 +83,7 @@ public:
   }
 
   // scalar access [simd.subscr]
-  _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
+  _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept _LIBCPP_LIFETIMEBOUND { return reference(__s_, __i); }
   _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }
 };
 

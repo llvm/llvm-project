@@ -275,7 +275,7 @@ public:
     return *__ptr_;
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer operator->() const _NOEXCEPT { return __ptr_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer get() const _NOEXCEPT { return __ptr_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer get() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __ptr_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 deleter_type& get_deleter() _NOEXCEPT { return __deleter_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 const deleter_type& get_deleter() const _NOEXCEPT {
     return __deleter_;
@@ -585,7 +585,7 @@ public:
                                         "unique_ptr<T[]>::operator[](index): index out of range");
     return __ptr_[__i];
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer get() const _NOEXCEPT { return __ptr_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer get() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __ptr_; }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 deleter_type& get_deleter() _NOEXCEPT { return __deleter_; }
 
