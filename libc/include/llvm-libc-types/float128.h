@@ -17,8 +17,7 @@
 //
 // TODO: Update C23 `_Float128` type detection again when clang supports it.
 //   https://github.com/llvm/llvm-project/issues/80195
-#if defined(__STDC_IEC_60559_BFP__) && !defined(__clang__) &&                  \
-    !defined(__cplusplus)
+#if defined(__STDC_IEC_60559_BFP__) && !defined(__cplusplus)
 #define LIBC_TYPES_HAS_FLOAT128
 typedef _Float128 float128;
 #elif defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)

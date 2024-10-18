@@ -18,11 +18,11 @@
 //
 // TODO: Update the complex variant of C23 `_Float128` type detection again when
 // clang supports it.
-#if defined(__STDC_IEC_60559_COMPLEX__) && !defined(__clang__)
+#if defined(__STDC_IEC_60559_COMPLEX__)
 #if !defined(__cplusplus)
 #define LIBC_TYPES_HAS_CFLOAT128
 typedef _Complex _Float128 cfloat128;
-#elif defined(__GNUC__) && __GNUC__ >= 13
+#elif __GNUC__ >= 13
 #define LIBC_TYPES_HAS_CFLOAT128
 typedef _Complex _Float128 cfloat128;
 #endif
