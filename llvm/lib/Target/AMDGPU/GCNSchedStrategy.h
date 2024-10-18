@@ -285,6 +285,8 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
 
   std::unique_ptr<GCNSchedStage> createSchedStage(GCNSchedStageID SchedStageID);
 
+  bool isGlobalMemoryObject(MachineInstr *MI) override;
+
 public:
   GCNScheduleDAGMILive(MachineSchedContext *C,
                        std::unique_ptr<MachineSchedStrategy> S);
@@ -468,6 +470,8 @@ private:
   std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
 
   bool HasIGLPInstrs = false;
+
+  bool isGlobalMemoryObject(MachineInstr *MI) override;
 
 public:
   void schedule() override;
