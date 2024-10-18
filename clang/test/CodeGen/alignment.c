@@ -45,7 +45,7 @@ void test3(packedfloat3 *p) {
   *p = (packedfloat3) { 3.2f, 2.3f, 0.1f };
 }
 // CHECK: @test3(
-// CHECK: store <4 x float> {{.*}}, align 4
+// CHECK: store <3 x float> {{.*}}, align 4
 // CHECK: ret void
 
 
