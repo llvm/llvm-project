@@ -1428,7 +1428,8 @@ let EncoderMethod = "EncodeRegMul_MinMax<4, 0, 28>",
   }
 } // end let EncoderMethod/DecoderMethod
 
-// Pairs of ZPR, sarting with an even register, split into Lo=0-14 and Hi=16-30
+// Pairs of consecutive ZPR, starting with an even register, split into
+// Lo=0-14 and Hi=16-30.
 def ZPR2Mul2_Lo : RegisterClass<"AArch64", [untyped], 128,
                                 (trunc (decimate ZSeqPairs, 2), 8)>  {
   let Size = 256;
