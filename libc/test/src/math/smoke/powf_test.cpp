@@ -192,4 +192,5 @@ TEST_F(LlvmLibcPowfTest, SpecialNumbers) {
   }
 
   EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::powf(-0.015625f, 25.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::powf(-0.015625f, 26.0f));
 }
