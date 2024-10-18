@@ -853,7 +853,7 @@ bool hasInitializesAttr(Instruction *I) {
 
 struct ArgumentInitInfo {
   unsigned Idx;
-  bool IsDeadOnUnwind;
+  bool IsDeadOrInvisibleOnUnwind;
   ConstantRangeList Inits;
 };
 
@@ -867,9 +867,9 @@ ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
     return {};
 
   // To address unwind, the function should have nounwind attribute or the
-  // arguments have dead_on_unwind attribute. Otherwise, return empty.
+  // arguments have dead or invisible on unwind. Otherwise, return empty.
   for (const auto &Arg : Args) {
-    if (!CallHasNoUnwindAttr && !Arg.IsDeadOnUnwind)
+    if (!CallHasNoUnwindAttr && !Arg.IsDeadOrInvisibleOnUnwind)
       return {};
     if (Arg.Inits.empty())
       return {};
@@ -2284,10 +2284,10 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
     // - Or the callee parameter has "dead_on_unwind" attribute.
     // - Or the argument is invisible to caller on unwind, and CB isa<CallInst>
     // which means no unwind edges from this call in the current function.
-    bool IsDeadOnUnwind =
+    bool IsDeadOrInvisibleOnUnwind =
         CB->paramHasAttr(Idx, Attribute::DeadOnUnwind) ||
         (isInvisibleToCallerOnUnwind(CurArg) && isa<CallInst>(CB));
-    ArgumentInitInfo InitInfo{Idx, IsDeadOnUnwind, Inits};
+    ArgumentInitInfo InitInfo{Idx, IsDeadOrInvisibleOnUnwind, Inits};
     bool FoundAliasing = false;
     for (auto &[Arg, AliasList] : Arguments) {
       auto AAR = BatchAA.alias(MemoryLocation::getBeforeOrAfter(Arg),
@@ -2302,8 +2302,8 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
         // unknown offset between the arguments and we insert an empty init
         // range to discard the entire initializes info while intersecting.
         FoundAliasing = true;
-        AliasList.push_back(
-            ArgumentInitInfo{Idx, IsDeadOnUnwind, ConstantRangeList()});
+        AliasList.push_back(ArgumentInitInfo{Idx, IsDeadOrInvisibleOnUnwind,
+                                             ConstantRangeList()});
       }
     }
     if (!FoundAliasing)
