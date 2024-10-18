@@ -595,7 +595,15 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
 
   auto *ProfileUseArg = getLastProfileUseArg(Args);
   auto *ProfileSampleUseArg = Args.getLastArg(
-      options::OPT_fprofile_sample_use, options::OPT_fprofile_sample_use_EQ);
+      options::OPT_fprofile_sample_use, options::OPT_fprofile_sample_use_EQ,
+      options::OPT_fauto_profile, options::OPT_fauto_profile_EQ,
+      options::OPT_fno_profile_sample_use, options::OPT_fno_auto_profile);
+
+  if (ProfileSampleUseArg &&
+      (ProfileSampleUseArg->getOption().matches(
+           options::OPT_fno_profile_sample_use) ||
+       ProfileSampleUseArg->getOption().matches(options::OPT_fno_auto_profile)))
+    ProfileSampleUseArg = nullptr;
 
   if (PGOGenerateArg && ProfileUseArg)
     D.Diag(diag::err_drv_argument_not_allowed_with)
