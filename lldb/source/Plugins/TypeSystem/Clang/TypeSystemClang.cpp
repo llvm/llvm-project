@@ -5181,6 +5181,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::SveUint64x3:
     case clang::BuiltinType::SveUint64x4:
     case clang::BuiltinType::SveMFloat8:
+    case clang::BuiltinType::SveMFloat8x2:
+    case clang::BuiltinType::SveMFloat8x3:
+    case clang::BuiltinType::SveMFloat8x4:
     case clang::BuiltinType::SveFloat16:
     case clang::BuiltinType::SveBFloat16:
     case clang::BuiltinType::SveBFloat16x2:
