@@ -9,8 +9,8 @@ define i32 @test(i1 %.b, i8 %conv18, i32 %k.promoted61) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i1> [[TMP6]] to <4 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i8>
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i8> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i8> poison, i8 [[CONV18]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i8> [[TMP8]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt <4 x i8> [[TMP7]], [[TMP9]]

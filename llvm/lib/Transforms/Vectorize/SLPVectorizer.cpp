@@ -14953,6 +14953,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         return E->VectorizedValue;
       }
 
+      if (Op->getType() != VecTy) {
+        assert((It != MinBWs.end() || getOperandEntry(E, 0)->isGather() ||
+                MinBWs.contains(getOperandEntry(E, 0))) &&
+               "Expected item in MinBWs.");
+        Op = Builder.CreateIntCast(Op, VecTy, GetOperandSignedness(0));
+      }
       Value *V = Builder.CreateFreeze(Op);
       V = FinalShuffle(V, E);
 
@@ -17095,6 +17101,8 @@ bool BoUpSLP::collectValuesToDemote(
     return TryProcessInstruction(
         BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)});
   }
+  case Instruction::Freeze:
+    return TryProcessInstruction(BitWidth, getOperandEntry(&E, 0));
   case Instruction::Shl: {
     // If we are truncating the result of this SHL, and if it's a shift of an
     // inrange amount, we can always perform a SHL in a smaller type.
