@@ -1,10 +1,10 @@
 // RUN: %clang_cc1  -fsyntax-only -Wunused-value -verify %s
 
 @interface INTF
-- (id) foo __attribute__((warn_unused_result)); 
+- (id) foo __attribute__((warn_unused_result));
 - (void) garf __attribute__((warn_unused_result)); // expected-warning {{attribute 'warn_unused_result' cannot be applied to Objective-C method without return value}}
-- (int) fee __attribute__((warn_unused_result));
-+ (int) c __attribute__((warn_unused_result));
+- (int) fee __attribute__((warn_unused_result)); // expected-note {{'fee' has been explicitly marked warn_unused_result here}}
++ (int) c __attribute__((warn_unused_result)); // expected-note {{'c' has been explicitly marked warn_unused_result here}}
 @end
 
 void foo(INTF *a) {
