@@ -238,21 +238,21 @@ public:
   /// to be removed from its parent. Note that this will also be called when
   /// reverting the creation of an instruction.
   /// \Returns a callback ID for later deregistration.
-  int registerRemoveInstrCallback(RemoveInstrCallback CB);
-  void unregisterRemoveInstrCallback(int CallbackId);
+  CallbackID registerRemoveInstrCallback(RemoveInstrCallback CB);
+  void unregisterRemoveInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called right after a SandboxIR instruction
   /// is created. Note that this will also be called when reverting the removal
   /// of an instruction.
   /// \Returns a callback ID for later deregistration.
-  int registerInsertInstrCallback(InsertInstrCallback CB);
-  void unregisterInsertInstrCallback(int CallbackId);
+  CallbackID registerInsertInstrCallback(InsertInstrCallback CB);
+  void unregisterInsertInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called when a SandboxIR instruction is about
   /// to be moved. Note that this will also be called when reverting a move.
   /// \Returns a callback ID for later deregistration.
-  int registerMoveInstrCallback(MoveInstrCallback CB);
-  void unregisterMoveInstrCallback(int CallbackId);
+  CallbackID registerMoveInstrCallback(MoveInstrCallback CB);
+  void unregisterMoveInstrCallback(CallbackID ID);
 };
 
 } // namespace llvm::sandboxir

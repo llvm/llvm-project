@@ -686,8 +686,8 @@ int Context::registerRemoveInstrCallback(RemoveInstrCallback CB) {
   return ID;
 }
 void Context::unregisterRemoveInstrCallback(CallbackID ID) {
-  [[maybe_unused]] bool erased = RemoveInstrCallbacks.erase(ID);
-  assert(erased &&
+  [[maybe_unused]] bool Erased = RemoveInstrCallbacks.erase(ID);
+  assert(Erased &&
          "Callback ID not found in RemoveInstrCallbacks during deregistration");
 }
 
@@ -697,8 +697,8 @@ int Context::registerInsertInstrCallback(InsertInstrCallback CB) {
   return ID;
 }
 void Context::unregisterInsertInstrCallback(CallbackID ID) {
-  [[maybe_unused]] bool erased = InsertInstrCallbacks.erase(ID);
-  assert(erased &&
+  [[maybe_unused]] bool Erased = InsertInstrCallbacks.erase(ID);
+  assert(Erased &&
          "Callback ID not found in InsertInstrCallbacks during deregistration");
 }
 
@@ -708,8 +708,8 @@ int Context::registerMoveInstrCallback(MoveInstrCallback CB) {
   return ID;
 }
 void Context::unregisterMoveInstrCallback(CallbackID ID) {
-  [[maybe_unused]] bool erased = MoveInstrCallbacks.erase(ID);
-  assert(erased &&
+  [[maybe_unused]] bool Erased = MoveInstrCallbacks.erase(ID);
+  assert(Erased &&
          "Callback ID not found in MoveInstrCallbacks during deregistration");
 }
 
