@@ -54,14 +54,14 @@ case the file is considered of the type ``DebugInfo``.
 
 Valid values for the ``type`` field are:
 
-* ``CoreFile``: A core file that has a checkpoint of a program's execution state.
-* ``Executable``: A normal executable.
-* ``DebugInfo``: An object file that contains only debug information.
-* ``DynamicLinker``: The platform's dynamic linker executable.
-* ``ObjectFile``: An intermediate object file.
-* ``SharedLibrary``: A shared library that can be used during execution.
-* ``StubLibrary``: A library that can be linked against but not used for execution.
-* ``JIT``: JIT code that has symbols, sections and possibly debug info.
+* ``corefile``: A core file that has a checkpoint of a program's execution state.
+* ``executable``: A normal executable.
+* ``debuginfo``: An object file that contains only debug information.
+* ``dynamicuinker``: The platform's dynamic linker executable.
+* ``objectfile``: An intermediate object file.
+* ``sharedlibrary``: A shared library that can be used during execution.
+* ``stublibrary``: A library that can be linked against but not used for execution.
+* ``jit``: JIT code that has symbols, sections and possibly debug info.
 
 
 sections
