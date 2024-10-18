@@ -449,6 +449,8 @@ public:
 
   void popCyclicPrinting();
 
+  bool hasFutureAlias(const void *opaquePointer) const;
+
   void printDimensionList(ArrayRef<int64_t> shape);
 
 protected:
@@ -547,8 +549,13 @@ private:
   bool isDeferrable : 1;
 
 public:
+  /// Used to distinguish aliases that are currently being or have previously
+  /// been printed from those that will be printed in the future, which can aid
+  /// printing mutually recursive types.
+  bool hasStartedPrinting = false;
+
   /// Used to avoid printing incomplete aliases for recursive types.
-  bool isPrinted = false;
+  bool hasFinishedPrinting = false;
 };
 
 /// This class represents a utility that initializes the set of attribute and
@@ -974,6 +981,8 @@ private:
 
   void popCyclicPrinting() override { cyclicPrintingStack.pop_back(); }
 
+  bool hasFutureAlias(const void *) const override { return false; }
+
   /// Stack of potentially cyclic mutable attributes or type currently being
   /// printed.
   SetVector<const void *> cyclicPrintingStack;
@@ -1182,6 +1191,12 @@ public:
   /// Returns success if an alias was printed, failure otherwise.
   LogicalResult getAlias(Type ty, raw_ostream &os) const;
 
+  /// Check if the given attribute or type (in the form of a type erased
+  /// pointer) will be printed as an alias in the future. Returns false if the
+  /// type has an alias that's currently being printed or has already been
+  /// printed. This enables cyclic print checking for mutual recursion.
+  bool hasFutureAlias(const void *opaquePointer) const;
+
   /// Print all of the referenced aliases that can not be resolved in a deferred
   /// manner.
   void printNonDeferredAliases(AsmPrinter::Impl &p, NewLineCounter &newLine) {
@@ -1226,11 +1241,18 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
   const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
-  if (!it->second.isPrinted)
+  if (!it->second.hasFinishedPrinting)
     return failure();
 
   it->second.print(os);
   return success();
+}
+
+bool AliasState::hasFutureAlias(const void *opaquePointer) const {
+  const auto *it = attrTypeToAlias.find(opaquePointer);
+  if (it == attrTypeToAlias.end())
+    return false;
+  return !it->second.hasStartedPrinting;
 }
 
 void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
@@ -1245,8 +1267,9 @@ void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
 
     if (alias.isTypeAlias()) {
       Type type = Type::getFromOpaquePointer(opaqueSymbol);
+      alias.hasStartedPrinting = true;
       p.printTypeImpl(type);
-      alias.isPrinted = true;
+      alias.hasFinishedPrinting = true;
     } else {
       // TODO: Support nested aliases in mutable attributes.
       Attribute attr = Attribute::getFromOpaquePointer(opaqueSymbol);
@@ -2791,6 +2814,10 @@ LogicalResult AsmPrinter::Impl::pushCyclicPrinting(const void *opaquePointer) {
 
 void AsmPrinter::Impl::popCyclicPrinting() { state.popCyclicPrinting(); }
 
+bool AsmPrinter::Impl::hasFutureAlias(const void *opaquePointer) const {
+  return state.getAliasState().hasFutureAlias(opaquePointer);
+}
+
 void AsmPrinter::Impl::printDimensionList(ArrayRef<int64_t> shape) {
   detail::printDimensionList(os, shape);
 }
@@ -2869,6 +2896,10 @@ LogicalResult AsmPrinter::pushCyclicPrinting(const void *opaquePointer) {
 }
 
 void AsmPrinter::popCyclicPrinting() { impl->popCyclicPrinting(); }
+
+bool AsmPrinter::hasFutureAlias(const void *opaquePointer) const {
+  return impl->hasFutureAlias(opaquePointer);
+}
 
 //===----------------------------------------------------------------------===//
 // Affine expressions and maps
