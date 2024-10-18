@@ -1811,6 +1811,30 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
     constantCount.erase();
 }
 
+static bool canEmitDelegateCallArgs(CIRGenFunction &CGF,
+                                    const CXXConstructorDecl *Ctor,
+                                    CXXCtorType Type, CallArgList &Args) {
+  // We can't forward a variadic call.
+  if (Ctor->isVariadic())
+    return false;
+
+  if (CGF.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+    // If the parameters are callee-cleanup, it's not safe to forward.
+    for (auto *P : Ctor->parameters())
+      if (P->needsDestruction(CGF.getContext()))
+        return false;
+
+    // Likewise if they're inalloca.
+    const CIRGenFunctionInfo &Info =
+        CGF.CGM.getTypes().arrangeCXXConstructorCall(Args, Ctor, Type, 0, 0);
+    if (Info.usesInAlloca())
+      return false;
+  }
+
+  // Anything else should be OK.
+  return true;
+}
+
 void CIRGenFunction::buildCXXConstructorCall(const clang::CXXConstructorDecl *D,
                                              clang::CXXCtorType Type,
                                              bool ForVirtualBase,
@@ -1872,7 +1896,14 @@ void CIRGenFunction::buildCXXConstructorCall(
 
   bool PassPrototypeArgs = true;
 
-  assert(!D->getInheritedConstructor() && "inheritance NYI");
+  // Check whether we can actually emit the constructor before trying to do so.
+  if (auto Inherited = D->getInheritedConstructor()) {
+    PassPrototypeArgs = getTypes().inheritingCtorHasParams(Inherited, Type);
+    if (PassPrototypeArgs && !canEmitDelegateCallArgs(*this, D, Type, Args)) {
+      llvm_unreachable("NYI");
+      return;
+    }
+  }
 
   // Insert any ABI-specific implicit constructor arguments.
   CIRGenCXXABI::AddedStructorArgCounts ExtraArgs =
@@ -1891,4 +1922,33 @@ void CIRGenFunction::buildCXXConstructorCall(
          ClassDecl->isDynamicClass() || Type == Ctor_Base ||
          !CGM.getCodeGenOpts().StrictVTablePointers &&
              "vtable assumption loads NYI");
+}
+
+void CIRGenFunction::buildInheritedCXXConstructorCall(
+    const CXXConstructorDecl *D, bool ForVirtualBase, Address This,
+    bool InheritedFromVBase, const CXXInheritedCtorInitExpr *E) {
+  CallArgList Args;
+  CallArg ThisArg(RValue::get(getAsNaturalPointerTo(
+                      This, D->getThisType()->getPointeeType())),
+                  D->getThisType());
+
+  // Forward the parameters.
+  if (InheritedFromVBase &&
+      CGM.getTarget().getCXXABI().hasConstructorVariants()) {
+    llvm_unreachable("NYI");
+  } else if (!CXXInheritedCtorInitExprArgs.empty()) {
+    // The inheriting constructor was inlined; just inject its arguments.
+    llvm_unreachable("NYI");
+  } else {
+    // The inheriting constructor was not inlined. Emit delegating arguments.
+    llvm_unreachable("NYI");
+  }
+
+  llvm_unreachable("NYI");
+}
+
+void CIRGenFunction::buildInlinedInheritingCXXConstructorCall(
+    const CXXConstructorDecl *Ctor, CXXCtorType CtorType, bool ForVirtualBase,
+    bool Delegating, CallArgList &Args) {
+  llvm_unreachable("NYI");
 }

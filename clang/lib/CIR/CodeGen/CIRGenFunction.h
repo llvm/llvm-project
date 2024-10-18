@@ -655,6 +655,24 @@ public:
   void buildCXXConstructExpr(const clang::CXXConstructExpr *E,
                              AggValueSlot Dest);
 
+  /// Emit a call to an inheriting constructor (that is, one that invokes a
+  /// constructor inherited from a base class) by inlining its definition. This
+  /// is necessary if the ABI does not support forwarding the arguments to the
+  /// base class constructor (because they're variadic or similar).
+  void buildInlinedInheritingCXXConstructorCall(const CXXConstructorDecl *Ctor,
+                                                CXXCtorType CtorType,
+                                                bool ForVirtualBase,
+                                                bool Delegating,
+                                                CallArgList &Args);
+
+  /// Emit a call to a constructor inherited from a base class, passing the
+  /// current constructor's arguments along unmodified (without even making
+  /// a copy).
+  void buildInheritedCXXConstructorCall(const CXXConstructorDecl *D,
+                                        bool ForVirtualBase, Address This,
+                                        bool InheritedFromVBase,
+                                        const CXXInheritedCtorInitExpr *E);
+
   void buildCXXConstructorCall(const clang::CXXConstructorDecl *D,
                                clang::CXXCtorType Type, bool ForVirtualBase,
                                bool Delegating, AggValueSlot ThisAVS,
@@ -919,6 +937,12 @@ public:
 
   RValue buildCallExpr(const clang::CallExpr *E,
                        ReturnValueSlot ReturnValue = ReturnValueSlot());
+
+  Address getAsNaturalAddressOf(Address Addr, QualType PointeeTy);
+
+  mlir::Value getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
+    return getAsNaturalAddressOf(Addr, PointeeType).getBasePointer();
+  }
 
   mlir::Value buildRuntimeCall(mlir::Location loc, mlir::cir::FuncOp callee,
                                ArrayRef<mlir::Value> args = {});
@@ -1936,6 +1960,10 @@ public:
                          QualType elementType, CharUnits elementAlign,
                          Destroyer *destroyer, bool checkZeroLength,
                          bool useEHCleanup);
+
+  /// The values of function arguments to use when evaluating
+  /// CXXInheritedCtorInitExprs within this context.
+  CallArgList CXXInheritedCtorInitExprArgs;
 
   // Points to the outermost active conditional control. This is used so that
   // we know if a temporary should be destroyed conditionally.

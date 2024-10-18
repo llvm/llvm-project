@@ -91,6 +91,13 @@ public:
     return PointerAndKnownNonNull.getPointer();
   }
 
+  mlir::Value getBasePointer() const {
+    // TODO(cir): Remove the version above when we catchup with OG codegen on
+    // ptr auth.
+    assert(isValid() && "pointer isn't valid");
+    return getPointer();
+  }
+
   /// Return the alignment of this pointer.
   clang::CharUnits getAlignment() const {
     // assert(isValid());
