@@ -296,7 +296,13 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+static cl::opt<std::string> InstrumentColdFuncCoveragePath(
+    "instrument-cold-function-coverage-path", cl::init(""),
+    cl::desc("File path for cold function coverage instrumentation"),
+    cl::Hidden);
+
 extern cl::opt<std::string> UseCtxProfile;
+extern cl::opt<bool> InstrumentColdFunctionCoverage;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -1182,8 +1188,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsCtxProfUse =
       !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
+  // Enable cold function coverage instrumentation if
+  // InstrumentColdFuncCoveragePath is provided.
+  const bool IsColdFuncCoverageGen = InstrumentColdFunctionCoverage =
+      IsPGOPreLink && !InstrumentColdFuncCoveragePath.empty();
+
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
-      IsCtxProfUse)
+      IsCtxProfUse || IsColdFuncCoverageGen)
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -1205,6 +1216,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       return MPM;
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
+  } else if (IsColdFuncCoverageGen) {
+    addPGOInstrPasses(
+        MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
+        /* AtomicCounterUpdate */ false, InstrumentColdFuncCoveragePath,
+        /* ProfileRemappingFile */ "", IntrusiveRefCntPtr<vfs::FileSystem>());
   }
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsCtxProfGen)
