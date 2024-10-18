@@ -478,7 +478,6 @@ functional string_view
 functional tuple
 functional typeinfo
 functional unordered_map
-functional vector
 functional version
 future array
 future atomic
