@@ -34,6 +34,7 @@ class GreedyRewriteConfig;
 #define GEN_PASS_DECL_CANONICALIZER
 #define GEN_PASS_DECL_CONTROLFLOWSINK
 #define GEN_PASS_DECL_CSEPASS
+#define GEN_PASS_DECL_DEADCODEELIMINATION
 #define GEN_PASS_DECL_INLINER
 #define GEN_PASS_DECL_LOOPINVARIANTCODEMOTION
 #define GEN_PASS_DECL_MEM2REG
@@ -111,6 +112,9 @@ createInlinerPass(llvm::StringMap<OpPassManager> opPipelines);
 std::unique_ptr<Pass>
 createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
                   std::function<void(OpPassManager &)> defaultPipelineBuilder);
+
+/// Creates an optimization pass to remove dead operations and blocks.
+std::unique_ptr<Pass> createDeadCodeEliminationPass();
 
 /// Creates an optimization pass to remove dead values.
 std::unique_ptr<Pass> createRemoveDeadValuesPass();
