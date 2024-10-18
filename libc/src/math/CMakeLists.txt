@@ -89,8 +89,11 @@ add_math_entrypoint_object(copysignf128)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
+
 add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
+add_math_entrypoint_object(coshf16)
+
 add_math_entrypoint_object(cospif)
 
 add_math_entrypoint_object(daddl)
@@ -126,6 +129,8 @@ add_math_entrypoint_object(exp2m1f16)
 add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(exp10f16)
+
+add_math_entrypoint_object(exp10m1f16)
 
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
@@ -475,9 +480,11 @@ add_math_entrypoint_object(sincosf)
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
 add_math_entrypoint_object(sinpif)
+add_math_entrypoint_object(sinpif16)
 
 add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)
+add_math_entrypoint_object(sinhf16)
 
 add_math_entrypoint_object(sqrt)
 add_math_entrypoint_object(sqrtf)
