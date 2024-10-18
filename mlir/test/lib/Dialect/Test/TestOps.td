@@ -3150,6 +3150,27 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
   }];
 }
 
+def TestOpWithPrintPropertiesHook : TEST_Op<"with_print_properties_hook"> {
+  let assemblyFormat = "`a` `=` $a attr-dict";
+  let arguments = (ins
+    I64Property:$a
+  );
+  let extraClassDeclaration = [{
+    static void printProperties(::mlir::OpAsmPrinter &p,
+                                const Properties &prop,
+                                ::mlir::ArrayRef<::llvm::StringRef>);
+  }];
+  let extraClassDefinition = [{
+    void TestOpWithPrintPropertiesHook::printProperties(
+            ::mlir::OpAsmPrinter &p, const Properties &prop,
+            ::mlir::ArrayRef<::llvm::StringRef>) {
+      // Note: we need to comply with MLIR's asm parser, so "pretend" we're
+      // printing an attribute sequence
+      p << "<{printing_through_custom_hook = true, a = " << prop.a << "}>";
+    }
+  }];
+}
+
 def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"> {
   let assemblyFormat = [{
     ($a^) : (`na`)?
