@@ -111,6 +111,8 @@ struct S {
     (void)[]<int... Is> {
       ([] {
         Is;
+        // Propagate up the flag ContainsUnexpandedParameterPack from VarDecl.
+        S var(foo<Types>);
         foo<Types>;
         bar<Values>;
       } &&
