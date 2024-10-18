@@ -73,7 +73,7 @@ void SerializeSegmentsToBuffer(ArrayRef<LoadedModule> Modules,
         CHECK(Module.uuid_size() <= MEMPROF_BUILDID_MAX_SIZE);
         Entry.BuildIdSize = Module.uuid_size();
         memcpy(Entry.BuildId, Module.uuid(), Module.uuid_size());
-        memcpy(Ptr, &Entry, sizeof(SegmentEntry));
+        memcpy(Ptr, (void *)&Entry, sizeof(SegmentEntry));
         Ptr += sizeof(SegmentEntry);
         NumSegmentsRecorded++;
       }

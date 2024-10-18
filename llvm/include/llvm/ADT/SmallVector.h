@@ -509,15 +509,15 @@ protected:
   /// starting with "Dest", constructing elements into it as needed.
   template <typename T1, typename T2>
   static void uninitialized_copy(
-      T1 *I, T1 *E, T2 *Dest,
-      std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value> * =
-          nullptr) {
+      const T1 *I, const T1 *E, T2 *Dest,
+      std::enable_if_t<std::is_same<T1, T2>::value> * = nullptr) {
     // Use memcpy for PODs iterated by pointers (which includes SmallVector
     // iterators): std::uninitialized_copy optimizes to memmove, but we can
     // use memcpy here. Note that I and E are iterators and thus might be
     // invalid for memcpy if they are equal.
     if (I != E)
-      memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+      memcpy(reinterpret_cast<void *>(Dest), reinterpret_cast<const void *>(I),
+             (E - I) * sizeof(T));
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
@@ -560,7 +560,8 @@ protected:
 public:
   void push_back(ValueParamT Elt) {
     const T *EltPtr = reserveForParamAndGetAddress(Elt);
-    memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
+    memcpy(reinterpret_cast<void *>(this->end()),
+           reinterpret_cast<const void *>(EltPtr), sizeof(T));
     this->set_size(this->size() + 1);
   }
 
