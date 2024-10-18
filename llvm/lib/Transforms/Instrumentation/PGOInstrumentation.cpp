@@ -1624,8 +1624,12 @@ void PGOUseFunc::populateCounters() {
     FuncMaxCount = std::max(FuncMaxCount, *BI->Count);
   }
 
-  // Fix the obviously inconsistent entry count.
-  if (FuncMaxCount > 0 && FuncEntryCount == 0)
+  // Fix the obviously inconsistent entry count.  A function that has all zero
+  // counters will skip populating the counters so a minimum entry count of 1
+  // makes sense.  Note that the presence of a non-zero counter does not imply
+  // FuncMaxCount is greater than zero because the only non-zero counts could
+  // be for select instrumentation which is handled later.
+  if (FuncEntryCount == 0)
     FuncEntryCount = 1;
   F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
   markFunctionAttributes(FuncEntryCount, FuncMaxCount);
