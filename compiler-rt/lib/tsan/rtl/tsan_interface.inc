@@ -38,6 +38,18 @@ void __tsan_read16(void *addr) {
   MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr, kAccessRead);
 }
 
+extern "C" void __tsan_read32(void *addr) {
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr, kAccessRead);
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr + 16, kAccessRead);
+}
+
+extern "C" void __tsan_read64(void *addr) {
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr, kAccessRead);
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr + 16, kAccessRead);
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr + 32, kAccessRead);
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr + 48, kAccessRead);
+}
+
 void __tsan_write1(void *addr) {
   MemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 1, kAccessWrite);
 }
@@ -57,6 +69,21 @@ void __tsan_write8(void *addr) {
 void __tsan_write16(void *addr) {
   MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr, kAccessWrite);
 }
+
+extern "C" void __tsan_write32(void *addr) {
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr, kAccessWrite);
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr + 16, kAccessWrite);
+}
+
+extern "C" void __tsan_write64(void *addr) {
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr, kAccessWrite);
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr + 16, kAccessWrite);
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr + 32, kAccessWrite);
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr + 48, kAccessWrite);
+}
+
+// Our vector instructions
+// TODO
 
 void __tsan_read1_pc(void *addr, void *pc) {
   MemoryAccess(cur_thread(), STRIP_PAC_PC(pc), (uptr)addr, 1, kAccessRead | kAccessExternalPC);
