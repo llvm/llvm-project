@@ -15440,9 +15440,25 @@ bool BoUpSLP::collectValuesToDemote(
                 MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL)));
       });
     };
+    auto AbsChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
+      assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+      return all_of(E.Scalars, [&](Value *V) {
+        auto *I = cast<Instruction>(V);
+        unsigned SignBits = OrigBitWidth - BitWidth;
+        APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth - 1);
+        unsigned Op0SignBits =
+            ComputeNumSignBits(I->getOperand(0), *DL, 0, AC, nullptr, DT);
+        return SignBits <= Op0SignBits &&
+               ((SignBits != Op0SignBits &&
+                 !isKnownNonNegative(I->getOperand(0), SimplifyQuery(*DL))) ||
+                MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)));
+      });
+    };
     if (ID != Intrinsic::abs) {
       Operands.push_back(getOperandEntry(&E, 1));
       CallChecker = CompChecker;
+    } else {
+      CallChecker = AbsChecker;
     }
     InstructionCost BestCost =
         std::numeric_limits<InstructionCost::CostType>::max();
