@@ -1184,8 +1184,8 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
                  "({1}Decl*){2:x}, named {3} (from "
                  "(Decl*){4:x})",
                  static_cast<void *>(to->getTranslationUnitDecl()),
-                 from->getDeclKindName(), static_cast<void *>(to), getDeclName(from),
-                 static_cast<void *>(from));
+                 from->getDeclKindName(), static_cast<void *>(to),
+                 getDeclName(from), static_cast<void *>(from));
 
         // Log the AST of the TU.
         std::string ast_string;
