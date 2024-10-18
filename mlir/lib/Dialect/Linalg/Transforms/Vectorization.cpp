@@ -250,7 +250,7 @@ private:
                            LinalgOp linalgOp,
                            std::optional<AffineMap> maybeMaskingMap);
 
-  /// Check whether this permutation map can be used for masking. Add the
+  /// Check whether this permutation map can be used for masking. At the
   /// moment we only make sure that there are no broadcast dimensions, but this
   /// might change if indexing maps evolve.
   bool isValidMaskingMap(AffineMap maskingMap) {
@@ -387,8 +387,8 @@ Value VectorizationState::getOrCreateMaskFor(
     RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
     std::optional<AffineMap> maybeMaskingMap) {
 
-  assert(!maybeMaskingMap ||
-         isValidMaskingMap(*maybeMaskingMap) && "Ill-formed masking map.");
+  assert((!maybeMaskingMap || isValidMaskingMap(*maybeMaskingMap)) &&
+         "Ill-formed masking map.");
 
   // No mask is needed if the operation is not maskable.
   auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
