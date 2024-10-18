@@ -595,7 +595,7 @@ BinaryOperator *getSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
       Context.getTrivialTypeSourceInfo(TType, NameLoc);
 
   UnaryExprOrTypeTraitExpr *sizeOfExpr = new (Context) UnaryExprOrTypeTraitExpr(
-      clang::UETT_SizeOf, TTypeSourceInfo, UnsignedLongType, NameLoc, NameLoc);
+      UETT_SizeOf, TTypeSourceInfo, UnsignedLongType, NameLoc, NameLoc);
 
   // Create an IntegerLiteral for the value '16' with size type
   QualType SizeType = Context.getSizeType();
@@ -608,10 +608,10 @@ BinaryOperator *getSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
   BinaryOperator *binaryOperator =
       BinaryOperator::Create(Context, sizeOfExpr, // Left-hand side expression
                              SizeLiteral,         // Right-hand side expression
-                             clang::BO_LE,        // Binary operator kind (<=)
+                             BO_LE,               // Binary operator kind (<=)
                              BoolTy,              // Result type (bool)
-                             clang::VK_LValue,    // Value kind
-                             clang::OK_Ordinary,  // Object kind
+                             VK_LValue,           // Value kind
+                             OK_Ordinary,         // Object kind
                              NameLoc,             // Source location of operator
                              FPOptionsOverride());
 
