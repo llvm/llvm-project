@@ -174,24 +174,45 @@ public:
   bool isAlwaysUniform(const Value *V) const;
 
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
-    if (ToAS == AMDGPUAS::FLAT_ADDRESS) {
-      switch (FromAS) {
+    // Address space casts must cast between different address spaces.
+    if (FromAS == ToAS)
+      return false;
+
+    if (FromAS == AMDGPUAS::FLAT_ADDRESS ||
+        FromAS == AMDGPUAS::GLOBAL_ADDRESS ||
+        FromAS == AMDGPUAS::CONSTANT_ADDRESS ||
+        FromAS > AMDGPUAS::MAX_AMDGPU_ADDRESS) {
+      // Casting any 64-bit AS to another 64-bit AS or to a 32-bit AS is
+      // valid.
+      switch (ToAS) {
+      case AMDGPUAS::FLAT_ADDRESS:
       case AMDGPUAS::GLOBAL_ADDRESS:
-      case AMDGPUAS::CONSTANT_ADDRESS:
-      case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
       case AMDGPUAS::LOCAL_ADDRESS:
+      case AMDGPUAS::CONSTANT_ADDRESS:
       case AMDGPUAS::PRIVATE_ADDRESS:
+      case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
         return true;
       default:
         break;
       }
-      return false;
+      if (ToAS > AMDGPUAS::MAX_AMDGPU_ADDRESS)
+        return true;
+    } else if (FromAS == AMDGPUAS::LOCAL_ADDRESS ||
+               FromAS == AMDGPUAS::PRIVATE_ADDRESS ||
+               FromAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+      // Casting from a 32-bit AS to any 64-bit AS is valid.
+      switch (ToAS) {
+      case AMDGPUAS::FLAT_ADDRESS:
+      case AMDGPUAS::GLOBAL_ADDRESS:
+      case AMDGPUAS::CONSTANT_ADDRESS:
+        return true;
+      default:
+        break;
+      }
+      if (ToAS > AMDGPUAS::MAX_AMDGPU_ADDRESS)
+        return true;
     }
-    if ((FromAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
-         ToAS == AMDGPUAS::CONSTANT_ADDRESS) ||
-        (FromAS == AMDGPUAS::CONSTANT_ADDRESS &&
-         ToAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT))
-      return true;
+    // Everything else is not valid.
     return false;
   }
 
