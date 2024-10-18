@@ -47,6 +47,9 @@ concept cartesian_product_is_bidirectional =
     (bidirectional_range<__maybe_const<Const, First>> && ... &&
      (bidirectional_range<__maybe_const<Const, Vs>> && cartesian_product_common_arg<__maybe_const<Const, Vs>>));
 
+template <class First, class... Vs>
+concept cartesian_product_is_common = cartesian_product_common_arg<First>;
+
 template <class... Vs>
 concept cartesian_product_is_sized = (sized_range<Vs> && ...);
 
@@ -72,7 +75,7 @@ concept __cartesian_product_all_random_access =
 template <input_range First, forward_range... Vs>
   requires(view<First> && ... && view<Vs>)
 class cartesian_product_view : public view_interface<cartesian_product_view<First, Vs...>> {
-public: // fixme: make private
+private:
   tuple<First, Vs...> bases_;
 
   template <bool Const>
