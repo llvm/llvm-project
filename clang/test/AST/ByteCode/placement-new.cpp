@@ -300,3 +300,27 @@ namespace UsedToCrash {
   }
   int alloc1 = (alloc(), 0);
 }
+
+constexpr bool change_union_member() {
+  union U {
+    int a;
+    int b;
+  };
+  U u = {.a = 1};
+  std::construct_at<int>(&u.b, 2);
+  return u.b == 2;
+}
+static_assert(change_union_member());
+
+namespace PR48606 {
+  struct A { mutable int n = 0; };
+
+  constexpr bool f() {
+    A a;
+    A *p = &a;
+    p->~A();
+    std::construct_at<A>(p);
+    return true;
+  }
+  static_assert(f());
+}

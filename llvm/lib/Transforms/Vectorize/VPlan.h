@@ -1414,6 +1414,9 @@ public:
   /// Returns true if this VPInstruction's operands are single scalars and the
   /// result is also a single scalar.
   bool isSingleScalar() const;
+
+  /// Returns the symbolic name assigned to the VPInstruction.
+  StringRef getName() const { return Name; }
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
