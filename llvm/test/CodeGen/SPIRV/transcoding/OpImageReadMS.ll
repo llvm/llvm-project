@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV: %[[#]] = OpImageRead %[[#]] %[[#]] %[[#]] Sample %[[#]]
 

@@ -2231,7 +2231,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   if (MI->getFlag(MachineInstr::NoConvergent) && !MCID.isConvergent())
     report("NoConvergent flag expected only on convergent instructions.", MI);
 
-  if (MI->isPHI()) {
+  if (TII->isPhiInstr(*MI)) {
     if (MF->getProperties().hasProperty(
             MachineFunctionProperties::Property::NoPHIs))
       report("Found PHI instruction with NoPHIs property set", MI);
@@ -2734,7 +2734,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     break;
 
   case MachineOperand::MO_MachineBasicBlock:
-    if (MI->isPHI() && !MO->getMBB()->isSuccessor(MI->getParent()))
+    if (TII->isPhiInstr(*MI) && !MO->getMBB()->isSuccessor(MI->getParent()))
       report("PHI operand is not in the CFG", MO, MONum);
     break;
 
@@ -2805,7 +2805,7 @@ void MachineVerifier::checkLivenessAtUse(const MachineOperand *MO,
   }
 
   LiveQueryResult LRQ = LR.Query(UseIdx);
-  bool HasValue = LRQ.valueIn() || (MI->isPHI() && LRQ.valueOut());
+  bool HasValue = LRQ.valueIn() || (TII->isPhiInstr(*MI) && LRQ.valueOut());
   // Check if we have a segment at the use, note however that we only need one
   // live subregister range, the others may be dead.
   if (!HasValue && LaneMask.none()) {
@@ -2924,7 +2924,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     // Check LiveInts liveness and kill.
     if (LiveInts && !LiveInts->isNotInMIMap(*MI)) {
       SlotIndex UseIdx;
-      if (MI->isPHI()) {
+      if (TII->isPhiInstr(*MI)) {
         // PHI use occurs on the edge, so check for live out here instead.
         UseIdx = LiveInts->getMBBEndIdx(
           MI->getOperand(MONum + 1).getMBB()).getPrevSlot();
@@ -2955,7 +2955,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
               continue;
             checkLivenessAtUse(MO, MONum, UseIdx, SR, Reg, SR.LaneMask);
             LiveQueryResult LRQ = SR.Query(UseIdx);
-            if (LRQ.valueIn() || (MI->isPHI() && LRQ.valueOut()))
+            if (LRQ.valueIn() || (TII->isPhiInstr(*MI) && LRQ.valueOut()))
               LiveInMask |= SR.LaneMask;
           }
           // At least parts of the register has to be live at the use.
@@ -2965,7 +2965,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             report_context(UseIdx);
           }
           // For PHIs all lanes should be live
-          if (MI->isPHI() && LiveInMask != MOMask) {
+          if (TII->isPhiInstr(*MI) && LiveInMask != MOMask) {
             report("Not all lanes of PHI source live at use", MO, MONum);
             report_context(*LI);
             report_context(UseIdx);
@@ -3016,7 +3016,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
         // must be live in. PHI instructions are handled separately.
         if (MInfo.regsKilled.count(Reg))
           report("Using a killed virtual register", MO, MONum);
-        else if (!MI->isPHI())
+        else if (!TII->isPhiInstr(*MI))
           MInfo.vregsLiveIn.insert(std::make_pair(Reg, MI));
       }
     }
@@ -3240,17 +3240,22 @@ void MachineVerifier::calcRegsRequired() {
         todo.insert(Pred);
     }
 
-    // Handle the PHI node.
-    for (const MachineInstr &MI : MBB.phis()) {
-      for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
+    // Handle the PHI nodes.
+    // Note: MBB.phis() only returns range containing PHI/G_PHI instructions.
+    // MachineVerifier checks MIR post-ISel, and some backends do have their own
+    // phi nodes.
+    for (const MachineInstr &MI : MBB) {
+      // PHI nodes must be the first instructions of the MBB.
+      if (!TII->isPhiInstr(MI))
+        break;
+      for (unsigned i = 0; i < TII->getNumPhiIncomingPair(MI); ++i) {
+        auto [Op, Pred] = TII->getPhiIncomingPair(MI, i);
         // Skip those Operands which are undef regs or not regs.
-        if (!MI.getOperand(i).isReg() || !MI.getOperand(i).readsReg())
+        if (!Op.isReg() || !Op.readsReg())
           continue;
 
         // Get register and predecessor for one PHI edge.
-        Register Reg = MI.getOperand(i).getReg();
-        const MachineBasicBlock *Pred = MI.getOperand(i + 1).getMBB();
-
+        Register Reg = Op.getReg();
         BBInfo &PInfo = MBBInfoMap[Pred];
         if (PInfo.addRequired(Reg))
           todo.insert(Pred);

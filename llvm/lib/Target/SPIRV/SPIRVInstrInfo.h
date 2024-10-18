@@ -54,6 +54,11 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+  bool isPhiInstr(const MachineInstr &MI) const override;
+  unsigned getNumPhiIncomingPair(const MachineInstr &MI) const override;
+  std::pair<MachineOperand, MachineBasicBlock *>
+  getPhiIncomingPair(const MachineInstr &MI, unsigned index) const override;
 };
 
 namespace SPIRV {
