@@ -5542,7 +5542,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
-  if (T.isSPARC()) {
+  if (T.isSPARC() || T.isMIPS64()) {
     // Add "-i128:128"
     std::string I64 = "-i64:64";
     std::string I128 = "-i128:128";
