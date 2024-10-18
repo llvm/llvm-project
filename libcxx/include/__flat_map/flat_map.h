@@ -84,12 +84,12 @@ class flat_map {
 
 public:
   // types
-  using key_type        = _Key;
-  using mapped_type     = _Tp;
-  using value_type      = pair<key_type, mapped_type>;
-  using key_compare     = __type_identity_t<_Compare>;
-  using reference       = pair<const key_type&, mapped_type&>;
-  using const_reference = pair<const key_type&, const mapped_type&>;
+  using key_type               = _Key;
+  using mapped_type            = _Tp;
+  using value_type             = pair<key_type, mapped_type>;
+  using key_compare            = __type_identity_t<_Compare>;
+  using reference              = pair<const key_type&, mapped_type&>;
+  using const_reference        = pair<const key_type&, const mapped_type&>;
   using size_type              = size_t;
   using difference_type        = ptrdiff_t;
   using iterator               = __iterator<false>; // see [container.requirements]
@@ -252,14 +252,21 @@ public:
   // state if an exception is thrown.
   _LIBCPP_HIDE_FROM_ABI flat_map(const flat_map&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) noexcept(
-      is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
-      is_nothrow_move_constructible_v<_Compare>) try
+  // gcc does not like the `throw` keyword in a conditional noexcept function
+  // split the move constructor into two
+  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) try
       : __containers_(std::move(__other.__containers_)), __compare_(std::move(__other.__compare_)) {
     __other.clear();
   } catch (...) {
     __other.clear();
     throw;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) noexcept
+    requires is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
+                 is_nothrow_move_constructible_v<_Compare>
+      : __containers_(std::move(__other.__containers_)), __compare_(std::move(__other.__compare_)) {
+    __other.clear();
   }
 
   template <class _Allocator>
@@ -590,8 +597,6 @@ public:
   // [flat.map.modifiers], modifiers
   template <class... _Args>
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
-  // todo: LWG
-  // insufficiently constrained. key and values need to be move constructible
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) {
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
     return __try_emplace(std::move(__pair.first), std::move(__pair.second));
@@ -809,7 +814,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI key_compare key_comp() const { return __compare_; }
   _LIBCPP_HIDE_FROM_ABI value_compare value_comp() const { return value_compare(__compare_); }
 
-  // todo: can flat_map | std::views::keys be specialised?
   _LIBCPP_HIDE_FROM_ABI const key_container_type& keys() const noexcept { return __containers_.keys; }
   _LIBCPP_HIDE_FROM_ABI const mapped_container_type& values() const noexcept { return __containers_.values; }
 
@@ -841,7 +845,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __x) const { return find(__x) != end(); }
 
   template <class _Kp>
-  // todo: spec does not say about transparent for this one. LWG issue?
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI bool contains(const _Kp& __x) const {
     return find(__x) != end();
@@ -922,6 +925,7 @@ private:
   };
 
   template <class _Allocator, class _KeyCont, class _MappedCont, class... _CompArg>
+    requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI
   flat_map(__ctor_uses_allocator_tag,
            const _Allocator& __alloc,
@@ -935,6 +939,7 @@ private:
         __compare_(std::forward<_CompArg>(__comp)...) {}
 
   template <class _Allocator, class... _CompArg>
+    requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI flat_map(__ctor_uses_allocator_empty_tag, const _Allocator& __alloc, _CompArg&&... __comp)
       : __containers_{.keys   = std::make_obj_using_allocator<key_container_type>(__alloc),
                       .values = std::make_obj_using_allocator<mapped_container_type>(__alloc)},
@@ -1183,8 +1188,6 @@ private:
   struct __key_equiv {
     _LIBCPP_HIDE_FROM_ABI __key_equiv(key_compare __c) : __comp_(__c) {}
     _LIBCPP_HIDE_FROM_ABI bool operator()(const_reference __x, const_reference __y) const {
-      // todo
-      // LWG issue ? spec uses __x.first but zip_view no longer uses pair
       return !__comp_(std::get<0>(__x), std::get<0>(__y)) && !__comp_(std::get<0>(__y), std::get<0>(__x));
     }
     key_compare __comp_;
