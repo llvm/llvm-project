@@ -81,12 +81,11 @@ class ThreadContextBase {
   virtual void OnReset() {}
   virtual void OnDetached(void *arg) {}
 
- protected:
-  ~ThreadContextBase();
-
- private:
   ThreadContextBase(const ThreadContextBase &) = delete;
   ThreadContextBase &operator=(const ThreadContextBase &) = delete;
+
+ protected:
+  ~ThreadContextBase();
 };
 
 typedef ThreadContextBase* (*ThreadContextFactory)(u32 tid);

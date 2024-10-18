@@ -98,8 +98,6 @@ void CALLBACK AlarmHandler(PVOID, BOOLEAN) {
 
 class TimerQ {
   HANDLE TimerQueue;
-  TimerQ(const TimerQ &) = delete;
-  TimerQ &operator=(const TimerQ &) = delete;
 
 public:
   TimerQ() : TimerQueue(NULL) {}
@@ -122,6 +120,9 @@ public:
       exit(1);
     }
   }
+
+  TimerQ(const TimerQ &) = delete;
+  TimerQ &operator=(const TimerQ &) = delete;
 };
 
 static TimerQ Timer;
