@@ -84,22 +84,22 @@ attributes #0 = { noinline optnone }
 ;; The first call to foo does not allocate cold memory. It should call the
 ;; original functions, which ultimately call the original allocation decorated
 ;; with a "notcold" attribute.
-; IR:   call {{.*}} @_Z3foov()
+; IR:   call {{.*}} @_Z3foov.retelim()
 ;; The second call to foo allocates cold memory. It should call cloned functions
 ;; which ultimately call a cloned allocation decorated with a "cold" attribute.
-; IR:   call {{.*}} @_Z3foov.memprof.1()
-; IR: define internal {{.*}} @_Z3barv()
+; IR:   call {{.*}} @_Z3foov.memprof.1.retelim()
+; IR: define internal {{.*}} @_Z3barv.retelim()
 ; IR:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
-; IR: define internal {{.*}} @_Z3bazv()
-; IR:   call {{.*}} @_Z3barv()
-; IR: define internal {{.*}} @_Z3foov()
-; IR:   call {{.*}} @_Z3bazv()
-; IR: define internal {{.*}} @_Z3barv.memprof.1()
+; IR: define internal {{.*}} @_Z3bazv.retelim()
+; IR:   call {{.*}} @_Z3barv.retelim()
+; IR: define internal {{.*}} @_Z3foov.retelim()
+; IR:   call {{.*}} @_Z3bazv.retelim()
+; IR: define internal {{.*}} @_Z3barv.memprof.1.retelim()
 ; IR:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
-; IR: define internal {{.*}} @_Z3bazv.memprof.1()
-; IR:   call {{.*}} @_Z3barv.memprof.1()
-; IR: define internal {{.*}} @_Z3foov.memprof.1()
-; IR:   call {{.*}} @_Z3bazv.memprof.1()
+; IR: define internal {{.*}} @_Z3bazv.memprof.1.retelim()
+; IR:   call {{.*}} @_Z3barv.memprof.1.retelim()
+; IR: define internal {{.*}} @_Z3foov.memprof.1.retelim()
+; IR:   call {{.*}} @_Z3bazv.memprof.1.retelim()
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
 
