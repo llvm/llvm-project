@@ -2199,7 +2199,7 @@ def subnsw : PatFrag<(ops node:$lhs, node:$rhs),
 }]>;
 
 multiclass MVE_VRHADD_m<MVEVectorVTInfo VTI, SDNode Op,
-                      SDPatternOperator unpred_op, Intrinsic PredInt> {
+                      DefaultAttrsIntrinsic unpred_op, Intrinsic PredInt> {
   def "" : MVE_VRHADD_Base<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
   defm : MVE_TwoOpPattern<VTI, Op, PredInt, (? (i32 VTI.Unsigned)), !cast<Instruction>(NAME)>;
@@ -2303,7 +2303,7 @@ class MVE_VHSUB_<string suffix, bit U, bits<2> size,
   : MVE_VHADDSUB<"vhsub", suffix, U, 0b1, size, pattern>;
 
 multiclass MVE_VHADD_m<MVEVectorVTInfo VTI, SDNode Op,
-                      SDPatternOperator unpred_op, Intrinsic PredInt, PatFrag add_op,
+                      DefaultAttrsIntrinsic unpred_op, Intrinsic PredInt, PatFrag add_op,
                       SDNode shift_op> {
   def "" : MVE_VHADD_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -2335,7 +2335,7 @@ defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16, avgflooru, addnuw, ARMvshruImm>;
 defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32, avgflooru, addnuw, ARMvshruImm>;
 
 multiclass MVE_VHSUB_m<MVEVectorVTInfo VTI,
-                      SDPatternOperator unpred_op, Intrinsic pred_int, PatFrag sub_op,
+                      DefaultAttrsIntrinsic unpred_op, Intrinsic pred_int, PatFrag sub_op,
                       SDNode shift_op> {
   def "" : MVE_VHSUB_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -4794,7 +4794,7 @@ class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size, bit round,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VxMULH_m<string iname, MVEVectorVTInfo VTI, SDPatternOperator unpred_op,
+multiclass MVE_VxMULH_m<string iname, MVEVectorVTInfo VTI, DefaultAttrsIntrinsic unpred_op,
                         Intrinsic PredInt, bit round> {
   def "" : MVE_VxMULH<iname, VTI.Suffix, VTI.Unsigned, VTI.Size, round>;
   defvar Inst = !cast<Instruction>(NAME);
