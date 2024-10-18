@@ -594,6 +594,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
         << PGOGenerateArg->getSpelling() << ProfileGenerateArg->getSpelling();
 
   auto *ProfileUseArg = getLastProfileUseArg(Args);
+  auto *ProfileSampleUseArg = Args.getLastArg(
+      options::OPT_fprofile_sample_use, options::OPT_fprofile_sample_use_EQ);
 
   if (PGOGenerateArg && ProfileUseArg)
     D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -674,6 +676,25 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
         llvm::sys::path::append(Path, "default.profdata");
       CmdArgs.push_back(
           Args.MakeArgString(Twine("-fprofile-instrument-use-path=") + Path));
+    }
+  }
+
+  if (ProfileSampleUseArg) {
+    if ((ProfileSampleUseArg->getOption().matches(
+             options::OPT_fprofile_sample_use) ||
+         ProfileSampleUseArg->getOption().matches(
+             options::OPT_fprofile_sample_use_EQ))) {
+      SmallString<128> Path(ProfileSampleUseArg->getNumValues() == 0
+                                ? ""
+                                : ProfileSampleUseArg->getValue());
+      if (Path.empty() || llvm::sys::fs::is_directory(Path))
+        llvm::sys::path::append(Path, "default.profdata");
+
+      if (!llvm::sys::fs::exists(Path))
+        D.Diag(diag::err_drv_no_such_file) << Path;
+
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-fprofile-sample-use=") + Path));
     }
   }
 
