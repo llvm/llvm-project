@@ -527,6 +527,14 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
           *DD->getCurrentFunction()))
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
 
+  if (Asm->OutStreamer->getGenerateFuncLineTableOffsets() &&
+      Asm->OutStreamer->getCurrentFuncFirstLineStreamSym()) {
+    addSectionLabel(
+        *SPDie, dwarf::DW_AT_LLVM_stmt_sequence,
+        Asm->OutStreamer->getCurrentFuncFirstLineStreamSym(),
+        Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol());
+  }
+
   // Only include DW_AT_frame_base in full debug info
   if (!includeMinimalInlineScopes()) {
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
