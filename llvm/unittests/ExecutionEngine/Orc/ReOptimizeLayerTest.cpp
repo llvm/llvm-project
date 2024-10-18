@@ -43,6 +43,10 @@ protected:
     if (Triple.isOSBinFormatCOFF() && Triple.isAArch64())
       GTEST_SKIP();
 
+    // SystemZ is not supported yet.
+    if (Triple.isSystemZ())
+      GTEST_SKIP();
+
     if (Triple.isPPC())
       GTEST_SKIP();
 
