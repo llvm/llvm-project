@@ -381,7 +381,6 @@ class TestInlineStepping(TestBase):
 
         self.assertTrue(result, "Got a location description")
         desc = strm.GetData()
-        print(f"Description:\n{desc}\n")
         self.assertIn(f"calling.cpp:{call_site_line_num}", desc, "Right line listed")
         # We don't get the function name right yet - so we omit it in printing.
         # Turn on this test when that is working.
