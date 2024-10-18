@@ -823,9 +823,11 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 
 // Relax pcalau12i,addi.d => pcaddi.
 static void relaxPcalaAddi(const InputSection &sec, size_t i, uint64_t loc,
-        Relocation &r_hi, uint32_t &remove) {
+                           Relocation &r_hi, uint32_t &remove) {
   const uint64_t symval =
-      (r_hi.expr == R_LOONGARCH_PLT_PAGE_PC ? r_hi.sym->getPltVA(ctx) : r_hi.sym->getVA()) + r_hi.addend;
+      (r_hi.expr == R_LOONGARCH_PLT_PAGE_PC ? r_hi.sym->getPltVA(ctx)
+                                            : r_hi.sym->getVA()) +
+      r_hi.addend;
   const int64_t dist = symval - loc;
   uint32_t pca = read32le(sec.content().data() + r_hi.offset);
   uint32_t add = read32le(sec.content().data() + r_hi.offset + 4);
@@ -833,11 +835,10 @@ static void relaxPcalaAddi(const InputSection &sec, size_t i, uint64_t loc,
 
   if (!LARCH_INSN_ADDI_D(add)
       // Is pcalau12i $rd + addi.d $rd, $rd?
-      || LARCH_GET_RD(add) != rd
-      || LARCH_GET_RJ(add) != rd
+      || LARCH_GET_RD(add) != rd ||
+      LARCH_GET_RJ(add) != rd
       // 4 bytes align
-      || symval & 0x3
-      || !isInt<22>(dist))
+      || symval & 0x3 || !isInt<22>(dist))
     return;
 
   // remove the first insn
@@ -886,8 +887,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       break;
     }
     case R_LARCH_PCALA_HI20:
-      if (isPair(relocs, i)
-          && relocs[i + 2].type == R_LARCH_PCALA_LO12)
+      if (isPair(relocs, i) && relocs[i + 2].type == R_LARCH_PCALA_LO12)
         relaxPcalaAddi(sec, i, loc, r, remove);
       break;
     }
