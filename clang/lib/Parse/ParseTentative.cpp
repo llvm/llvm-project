@@ -11,8 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/Parser.h"
 #include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Parse/Parser.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/ParsedTemplate.h"
 using namespace clang;
 
@@ -954,7 +955,7 @@ Parser::TPResult Parser::TryParsePtrOperatorSeq() {
 ///         literal-operator-id:
 ///           'operator' string-literal identifier
 ///           'operator' user-defined-string-literal
-Parser::TPResult Parser::TryParseOperatorId() {
+Parser::TPResult Parser::TryParseNonConversionOperatorId() {
   assert(Tok.is(tok::kw_operator));
   ConsumeToken();
 
@@ -1011,6 +1012,12 @@ Parser::TPResult Parser::TryParseOperatorId() {
     }
     return TPResult::True;
   }
+
+  return TPResult::False;
+}
+Parser::TPResult Parser::TryParseOperatorId() {
+  if (TPResult TPR = TryParseNonConversionOperatorId(); TPR != TPResult::False)
+    return TPR;
 
   // Maybe this is a conversion-function-id.
   bool AnyDeclSpecifiers = false;
@@ -2306,7 +2313,8 @@ Parser::TPResult Parser::TryParseBracketDeclarator() {
 /// of a template-id or simple-template-id, rather than a less-than comparison.
 /// This will often fail and produce an ambiguity, but should never be wrong
 /// if it returns True or False.
-Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip) {
+Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip,
+                                                TemplateNameKind TNK) {
   if (!TokensToSkip) {
     if (Tok.isNot(tok::less))
       return TPResult::False;
@@ -2324,6 +2332,183 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip) {
   if (!TryConsumeToken(tok::less))
     return TPResult::False;
 
+  auto TrySkipTemplateArgument = [&]() {
+    bool NextIsTemplateId = false;
+    unsigned TemplateDepth = 0;
+    while (true) {
+      switch (Tok.getKind()) {
+      case tok::eof:
+      case tok::annot_module_begin:
+      case tok::annot_module_end:
+      case tok::annot_module_include:
+      case tok::annot_repl_input_end:
+      case tok::semi:
+        return TPResult::False;
+
+      case tok::greatergreatergreater:
+        if (TemplateDepth)
+          --TemplateDepth;
+        [[fallthrough]];
+      case tok::greatergreater:
+        if (TemplateDepth)
+          --TemplateDepth;
+        [[fallthrough]];
+      case tok::greater:
+        if (TemplateDepth) {
+          ConsumeToken();
+          --TemplateDepth;
+          break;
+        }
+        [[fallthrough]];
+      case tok::comma:
+        return TPResult::True;
+
+      case tok::l_paren:
+        ConsumeParen();
+        if (!SkipUntil(tok::r_paren, StopAtSemi))
+          return TPResult::Error;
+        break;
+
+      case tok::l_brace:
+        ConsumeBrace();
+        if (!SkipUntil(tok::r_brace, StopAtSemi))
+          return TPResult::Error;
+        break;
+
+      case tok::l_square:
+        ConsumeBracket();
+        if (!SkipUntil(tok::r_square, StopAtSemi))
+          return TPResult::Error;
+        break;
+
+      case tok::question:
+        ConsumeToken();
+        if (!SkipUntil(tok::colon, StopAtSemi))
+          return TPResult::Error;
+        break;
+
+      case tok::kw_template:
+        ConsumeToken();
+        NextIsTemplateId = true;
+        continue;
+
+      case tok::identifier:
+        ConsumeToken();
+        if (Tok.is(tok::less)) {
+          if (!NextIsTemplateId)
+            return TPResult::Ambiguous;
+          ConsumeToken();
+          ++TemplateDepth;
+        }
+        break;
+
+      case tok::kw_operator:
+        if (TPResult TPR = TryParseNonConversionOperatorId();
+            TPR == TPResult::Error) {
+          return TPResult::Error;
+        } else if (TPR == TPResult::True) {
+          if (Tok.is(tok::less)) {
+            if (!NextIsTemplateId)
+              return TPResult::Ambiguous;
+            ConsumeToken();
+            ++TemplateDepth;
+          }
+        }
+        break;
+
+      case tok::kw_const_cast:
+      case tok::kw_dynamic_cast:
+      case tok::kw_reinterpret_cast:
+      case tok::kw_static_cast: {
+        ConsumeToken();
+        if (!TryConsumeToken(tok::less))
+          return TPResult::Error;
+        bool MayHaveTrailingReturnType = Tok.is(tok::kw_auto);
+
+        while (true) {
+          TPResult TPR =
+              isCXXDeclarationSpecifier(ImplicitTypenameContext::Yes);
+          if (TPR == TPResult::False)
+            break;
+          if (TPR == TPResult::Error ||
+              TryConsumeDeclarationSpecifier() == TPResult::Error)
+            return TPResult::Error;
+        }
+
+        if (TryParseDeclarator(
+                /*mayBeAbstract=*/true,
+                /*mayHaveIdentifier=*/false,
+                /*mayHaveDirectInit=*/false,
+                /*mayHaveTrailingReturnType=*/MayHaveTrailingReturnType) ==
+            TPResult::Error)
+          return TPResult::Error;
+
+        if (!TryConsumeToken(tok::greater))
+          return TPResult::Error;
+        break;
+      }
+      default:
+        ConsumeAnyToken();
+        break;
+      }
+      NextIsTemplateId = false;
+    }
+  };
+
+  bool IsNestedTemplateArgumentList = !GreaterThanIsOperator;
+  GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
+
+  while (true) {
+    // An expression cannot be followed by a braced-init-list unless
+    // its the right operand of an assignment operator.
+    if (Tok.is(tok::l_brace))
+      return TPResult::True;
+
+    if (TryAnnotateOptionalCXXScopeToken())
+      return TPResult::Error;
+
+    bool InvalidAsTemplateArgumentList = false;
+    TPResult TPR =
+        isCXXDeclarationSpecifier(ImplicitTypenameContext::No,
+                                  /*BracedCastResult=*/TPResult::Ambiguous,
+                                  &InvalidAsTemplateArgumentList);
+    if (InvalidAsTemplateArgumentList)
+      return TPResult::False;
+
+    if (TPR == TPResult::True)
+      return TPResult::True;
+
+    if (IsNestedTemplateArgumentList || TNK != TNK_Non_template)
+      break;
+
+    if (TPR == TPResult::Ambiguous)
+      TryConsumeDeclarationSpecifier();
+
+    TPR = TrySkipTemplateArgument();
+
+    if (TPR == TPResult::Error)
+      return TPResult::Error;
+    else if (TPR == TPResult::False)
+      return TPResult::False;
+
+    if (!TryConsumeToken(tok::comma)) {
+      if (Tok.is(tok::less))
+        break;
+      if (TryConsumeToken(tok::greater) && Tok.is(tok::coloncolon) &&
+          !NextToken().isOneOf(tok::kw_new, tok::kw_delete)) {
+        TentativeParsingAction TPA(*this, /*Unannotated=*/true);
+        Sema::TentativeAnalysisScope TAS(Actions);
+        if (isMissingTemplateKeywordBeforeScope(/*AnnotateInvalid=*/false)) {
+          TPA.Revert();
+          return TPResult::True;
+        }
+        TPA.Commit();
+      }
+      return TPResult::Ambiguous;
+    }
+  }
+
+#if 0
   // We can't do much to tell an expression apart from a template-argument,
   // but one good distinguishing factor is that a "decl-specifier" not
   // followed by '(' or '{' can't appear in an expression.
@@ -2334,6 +2519,7 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip) {
     return TPResult::True;
   if (InvalidAsTemplateArgumentList)
     return TPResult::False;
+#endif
 
   // FIXME: In many contexts, X<thing1, Type> can only be a
   // template-argument-list. But that's not true in general:
