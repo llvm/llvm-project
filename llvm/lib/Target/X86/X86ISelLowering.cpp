@@ -2682,7 +2682,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 }
 
 // This has so far only been implemented for 64-bit MachO.
-bool X86TargetLowering::useLoadStackGuardNode() const {
+bool X86TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
 }
 
@@ -29986,7 +29986,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
           MVT::getVectorVT(NarrowScalarVT, WideNumElts), dl, AmtWideElts);
       AmtWide = DAG.getZExtOrTrunc(AmtWide, dl, WideVT);
       // Perform the actual shift.
-      unsigned LogicalOpc = Opc == ISD::SRA ? ISD::SRL : Opc;
+      unsigned LogicalOpc = Opc == ISD::SRA ? (unsigned)ISD::SRL : Opc;
       SDValue ShiftedR = DAG.getNode(LogicalOpc, dl, WideVT, RWide, AmtWide);
       // Now we need to construct a mask which will "drop" bits that get
       // shifted past the LSB/MSB. For a logical shift left, it will look
@@ -56543,14 +56543,9 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
 
-  // TODO: Add NoOpaque handling to isConstantIntBuildVectorOrConstantInt.
   auto IsNonOpaqueConstant = [&](SDValue Op) {
-    if (SDNode *C = DAG.isConstantIntBuildVectorOrConstantInt(Op)) {
-      if (auto *Cst = dyn_cast<ConstantSDNode>(C))
-        return !Cst->isOpaque();
-      return true;
-    }
-    return false;
+    return DAG.isConstantIntBuildVectorOrConstantInt(Op,
+                                                     /*AllowOpaques*/ false);
   };
 
   // X86 can't encode an immediate LHS of a sub. See if we can push the

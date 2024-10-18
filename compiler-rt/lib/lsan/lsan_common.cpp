@@ -581,7 +581,8 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
     DirectMemoryAccessor accessor;
     ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor);
-    done_threads.push_back(os_id);
+    if (flags()->use_detached)
+      done_threads.push_back(os_id);
   }
 
   if (flags()->use_detached) {

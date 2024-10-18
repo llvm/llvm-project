@@ -17884,10 +17884,10 @@ SDValue PPCTargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
 }
 
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
-bool PPCTargetLowering::useLoadStackGuardNode() const {
-  if (!Subtarget.isTargetLinux())
-    return TargetLowering::useLoadStackGuardNode();
-  return true;
+bool PPCTargetLowering::useLoadStackGuardNode(const Module &M) const {
+  if (M.getStackProtectorGuard() == "tls" || Subtarget.isTargetLinux())
+    return true;
+  return TargetLowering::useLoadStackGuardNode(M);
 }
 
 // Override to disable global variable loading on Linux and insert AIX canary

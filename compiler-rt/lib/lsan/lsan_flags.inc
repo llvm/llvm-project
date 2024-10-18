@@ -42,7 +42,7 @@ LSAN_FLAG(bool, use_unaligned, false, "Consider unaligned pointers valid.")
 LSAN_FLAG(bool, use_poisoned, false,
           "Consider pointers found in poisoned memory to be valid.")
 LSAN_FLAG(bool, use_detached, false,
-          "Scan threads even attaching to them failed.")
+          "Scan threads even if attaching to them failed.")
 LSAN_FLAG(bool, log_pointers, false, "Debug logging")
 LSAN_FLAG(bool, log_threads, false, "Debug logging")
 LSAN_FLAG(int, tries, 1, "Debug option to repeat leak checking multiple times")

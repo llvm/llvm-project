@@ -121,7 +121,7 @@ def NOPR_bare : InstAlias<"nopr", (NOPR R0D), 0>;
 def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
 
 // An alias of BRCL 0, label
-// jgnop on att ; jlnop on hlasm
+// jgnop on gnu ; jlnop on hlasm
 def JGNOP : InstAlias<"{jgnop|jlnop}\t$RI2", (BRCLAsm 0, brtarget32:$RI2), 0>;
 
 // Fused compare-and-branch instructions.
@@ -2351,12 +2351,12 @@ def JXHG  : MnemonicAlias<"jxhg", "brxhg">;
 def JXLEG : MnemonicAlias<"jxleg", "brxlg">;
 
 def BRU   : MnemonicAlias<"bru", "j">;
-def BRUL  : MnemonicAlias<"brul", "jg", "att">;
+def BRUL  : MnemonicAlias<"brul", "jg", "gnu">;
 def BRUL_HLASM  : MnemonicAlias<"brul", "jlu", "hlasm">;
 
 foreach V = [ "E", "NE", "H", "NH", "L", "NL", "HE", "NHE", "LE", "NLE",
               "Z", "NZ", "P", "NP", "M", "NM", "LH", "NLH", "O", "NO" ] in {
   defm BRUAsm#V  : MnemonicCondBranchAlias <CV<V>, "br#", "j#">;
-  defm BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#", "att">;
+  defm BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#", "gnu">;
   defm BRUL_HLASMAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jl#", "hlasm">;
 }
