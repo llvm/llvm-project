@@ -110,15 +110,7 @@ DeclBindingInfo *ResourceBindings::addDeclBindingInfo(const VarDecl *VD,
                                                       ResourceClass ResClass) {
   assert(getDeclBindingInfo(VD, ResClass) == nullptr &&
          "DeclBindingInfo already added");
-#ifndef NDEBUG
-  // Verify that existing bindings for this decl are stored sequentially
-  // and at the end of the BindingsList
-  auto I = DeclToBindingListIndex.find(VD);
-  if (I != DeclToBindingListIndex.end()) {
-    for (unsigned Index = I->getSecond(); Index < BindingsList.size(); ++Index)
-      assert(BindingsList[Index].Decl == VD);
-  }
-#endif
+  assert(!hasBindingInfoForDecl(VD) || BindingsList.back().Decl == VD);
   // VarDecl may have multiple entries for different resource classes.
   // DeclToBindingListIndex stores the index of the first binding we saw
   // for this decl. If there are any additional ones then that index
@@ -1047,21 +1039,6 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
   return LocInfo;
 }
 
-// Returns handle type of a resource, if the type is a resource
-static const HLSLAttributedResourceType *
-findHandleTypeOnResource(const Type *Ty) {
-  // If Ty is a resource class, the first field must
-  // be the resource handle of type HLSLAttributedResourceType
-  if (RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
-    if (!RD->fields().empty()) {
-      const auto &FirstFD = RD->fields().begin();
-      return dyn_cast<HLSLAttributedResourceType>(
-          FirstFD->getType().getTypePtr());
-    }
-  }
-  return nullptr;
-}
-
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
@@ -1083,7 +1060,7 @@ void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
       continue;
 
     if (const HLSLAttributedResourceType *AttrResType =
-            findHandleTypeOnResource(Ty)) {
+            HLSLAttributedResourceType::findHandleTypeOnResource(Ty)) {
       // Add a new DeclBindingInfo to Bindings if it does not already exist
       ResourceClass RC = AttrResType->getAttrs().ResourceClass;
       DeclBindingInfo *DBI = Bindings.getDeclBindingInfo(VD, RC);
@@ -1134,7 +1111,8 @@ static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
 
   // Resource
   if (const HLSLAttributedResourceType *AttrResType =
-          findHandleTypeOnResource(VD->getType().getTypePtr())) {
+          HLSLAttributedResourceType::findHandleTypeOnResource(
+              VD->getType().getTypePtr())) {
     if (RegType == getRegisterType(AttrResType->getAttrs().ResourceClass))
       return true;
 
@@ -2377,7 +2355,7 @@ void SemaHLSL::collectResourcesOnVarDecl(VarDecl *VD) {
 
   // Resource (or array of resources)
   if (const HLSLAttributedResourceType *AttrResType =
-          findHandleTypeOnResource(Ty)) {
+          HLSLAttributedResourceType::findHandleTypeOnResource(Ty)) {
     Bindings.addDeclBindingInfo(VD, AttrResType->getAttrs().ResourceClass);
     return;
   }
