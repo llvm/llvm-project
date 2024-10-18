@@ -7061,6 +7061,81 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   }
 }
 
+SDValue SITargetLowering::combineAnd(SDValue Op,
+                                                DAGCombinerInfo &DCI) const {
+  const unsigned Opc = Op.getOpcode();
+  assert(Opc == ISD::AND);
+
+  auto &DAG = DCI.DAG;
+  SDLoc DL(Op);
+
+  if(hasAndNot(Op)) {
+    SDValue LHS = Op->getOperand(0);
+    SDValue RHS = Op->getOperand(1);
+
+    // (and LHS, (or Y, ~Z))
+    if (RHS.getOpcode() == ISD::OR && RHS.hasOneUse()) {
+      SDValue Y = RHS->getOperand(0);
+      SDValue NotZ = RHS->getOperand(1);
+
+      if (NotZ.getOpcode() == ISD::XOR && isAllOnesConstant(NotZ->getOperand(1))) {
+        SDValue Z = NotZ->getOperand(0);
+
+        if (!isa<ConstantSDNode>(Y)) {
+          SDValue NotY = DAG.getNOT(DL, Y, Y.getValueType());
+          SDValue AndNotYZ = DAG.getNode(ISD::AND, DL, Y.getValueType(), NotY, Z);
+          SDValue NotAndNotYZ = DAG.getNOT(DL, AndNotYZ, AndNotYZ.getValueType());
+          SDValue NewAnd = DAG.getNode(ISD::AND, DL, Op.getValueType(), LHS, NotAndNotYZ);
+          return NewAnd;
+        }
+      }
+    }
+  }
+    
+  EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
+                                 : Op->getOperand(0).getValueType();
+  auto ExtTy = OpTy.changeElementType(MVT::i32);
+
+  if (DCI.isBeforeLegalizeOps() ||
+      isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
+    return SDValue();
+
+  SDValue LHS;
+  SDValue RHS;
+  if (Opc == ISD::SELECT) {
+    LHS = Op->getOperand(1);
+    RHS = Op->getOperand(2);
+  } else {
+    LHS = Op->getOperand(0);
+    RHS = Op->getOperand(1);
+  }
+
+  const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
+  LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
+
+  // Special case: for shifts, the RHS always needs a zext.
+  if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
+    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
+  else
+    RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
+
+  // setcc always return i1/i1 vec so no need to truncate after.
+  if (Opc == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    return DAG.getSetCC(DL, Op.getValueType(), LHS, RHS, CC);
+  }
+
+  // For other ops, we extend the operation's return type as well so we need to
+  // truncate back to the original type.
+  SDValue NewVal;
+  if (Opc == ISD::SELECT)
+    NewVal = DAG.getNode(ISD::SELECT, DL, ExtTy, {Op->getOperand(0), LHS, RHS});
+  else
+    NewVal = DAG.getNode(Opc, DL, ExtTy, {LHS, RHS});
+
+  return DAG.getZExtOrTrunc(NewVal, DL, OpTy);
+}
+
 SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
                                                 DAGCombinerInfo &DCI) const {
   const unsigned Opc = Op.getOpcode();
@@ -15294,13 +15369,17 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
   switch (N->getOpcode()) {
+  case ISD::AND:
+    if (auto Res = combineAnd(SDValue(N, 0), DCI))
+      return Res;
+    break;
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
-  case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
   case ISD::MUL:
@@ -15408,7 +15487,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::CLAMP:
     return performClampCombine(N, DCI);
   case ISD::SCALAR_TO_VECTOR: {
-    SelectionDAG &DAG = DCI.DAG;
     EVT VT = N->getValueType(0);
 
     // v2i16 (scalar_to_vector i16:x) -> v2i16 (bitcast (any_extend i16:x))
@@ -17579,8 +17657,8 @@ SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
 }
 
 bool SITargetLowering::hasAndNot(SDValue Op) const {
-  // Return false if the operation is divergent, as AND-NOT optimization
-  // requires uniform behavior across threads.
+  // Return false if the operation is divergent, as AND-NOT is a scalar-only
+  // instruction.
   if (Op->isDivergent())
     return false;
 
