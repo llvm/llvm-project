@@ -20030,6 +20030,52 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                Alignment);
 }
 
+TEST_F(FormatTest, AlignConsecutiveDeclarationsBlockComments) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignBlockComments = true;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.BinPackArguments = false;
+
+  verifyFormat(
+      "bool SomeLongMethodName(int                longParameterNameA,\n"
+      "                        bool               /*longParameterNameB*/,\n"
+      "                        const std::string &longParameterNameC);",
+      "bool SomeLongMethodName(int longParameterNameA,\n"
+      "                        bool /*longParameterNameB*/,\n"
+      "                        const std::string &longParameterNameC);",
+      Style);
+
+  verifyFormat(
+      "const bool ret = SomeLongMethodName(4    /*parameterNameA*/,\n"
+      "                                    true /*longParameterNameB*/,\n"
+      "                                    str  /*longestParameterNameC*/);",
+      "const bool ret = SomeLongMethodName(4 /*parameterNameA*/,\n"
+      "                                    true /*longParameterNameB*/,\n"
+      "                                    str /*longestParameterNameC*/);",
+      Style);
+
+  verifyNoChange("/*,\n"
+                 "This is a multi-line block comment.\n"
+                 "That is not part of a function declaration.\n"
+                 "*/\n"
+                 "static void SomeLongMethodName()",
+                 Style);
+
+  verifyNoChange("static const unsigned int c_cMediaEntranceEntries = 31;\n"
+                 "static const unsigned int c_cMediaEmphasisEntries = 4 /* "
+                 "media effects */ + 12;\n"
+                 "static const unsigned int c_cMediaExitEntries = 32;",
+                 Style);
+
+  verifyNoChange(
+      "static bool SomeLongMethodName(int          longParameterNameA,\n"
+      "                               bool         longParameterNameB "
+      "/*=false*/,\n"
+      "                               std::string &longParameterNameC);",
+      Style);
+}
+
 TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
   FormatStyle Alignment = getLLVMStyle();
   Alignment.AllowShortCaseLabelsOnASingleLine = true;
@@ -20273,14 +20319,16 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/false,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/true}));
+                 /*PadOperators=*/true,
+                 /*AlignBlockComments=*/false}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/true,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/false}));
+                 /*PadOperators=*/false,
+                 /*AlignBlockComments=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"
