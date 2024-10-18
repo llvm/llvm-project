@@ -382,6 +382,7 @@ private:
   bool NoSignedWrap : 1;
   bool Exact : 1;
   bool Disjoint : 1;
+  bool SameSign : 1;
   bool NonNeg : 1;
   bool NoNaNs : 1;
   bool NoInfs : 1;
@@ -404,10 +405,10 @@ public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
       : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false),
-        Disjoint(false), NonNeg(false), NoNaNs(false), NoInfs(false),
-        NoSignedZeros(false), AllowReciprocal(false), AllowContract(false),
-        ApproximateFuncs(false), AllowReassociation(false), NoFPExcept(false),
-        Unpredictable(false) {}
+        Disjoint(false), SameSign(false), NonNeg(false), NoNaNs(false),
+        NoInfs(false), NoSignedZeros(false), AllowReciprocal(false),
+        AllowContract(false), ApproximateFuncs(false),
+        AllowReassociation(false), NoFPExcept(false), Unpredictable(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
@@ -425,6 +426,7 @@ public:
   void setNoSignedWrap(bool b) { NoSignedWrap = b; }
   void setExact(bool b) { Exact = b; }
   void setDisjoint(bool b) { Disjoint = b; }
+  void setSameSign(bool b) { SameSign = b; }
   void setNonNeg(bool b) { NonNeg = b; }
   void setNoNaNs(bool b) { NoNaNs = b; }
   void setNoInfs(bool b) { NoInfs = b; }
@@ -441,6 +443,7 @@ public:
   bool hasNoSignedWrap() const { return NoSignedWrap; }
   bool hasExact() const { return Exact; }
   bool hasDisjoint() const { return Disjoint; }
+  bool hasSameSign() const { return SameSign; }
   bool hasNonNeg() const { return NonNeg; }
   bool hasNoNaNs() const { return NoNaNs; }
   bool hasNoInfs() const { return NoInfs; }
@@ -455,9 +458,9 @@ public:
   bool operator==(const SDNodeFlags &Other) const {
     return NoUnsignedWrap == Other.NoUnsignedWrap &&
            NoSignedWrap == Other.NoSignedWrap && Exact == Other.Exact &&
-           Disjoint == Other.Disjoint && NonNeg == Other.NonNeg &&
-           NoNaNs == Other.NoNaNs && NoInfs == Other.NoInfs &&
-           NoSignedZeros == Other.NoSignedZeros &&
+           Disjoint == Other.Disjoint && SameSign == Other.SameSign &&
+           NonNeg == Other.NonNeg && NoNaNs == Other.NoNaNs &&
+           NoInfs == Other.NoInfs && NoSignedZeros == Other.NoSignedZeros &&
            AllowReciprocal == Other.AllowReciprocal &&
            AllowContract == Other.AllowContract &&
            ApproximateFuncs == Other.ApproximateFuncs &&
@@ -473,6 +476,7 @@ public:
     NoSignedWrap &= Flags.NoSignedWrap;
     Exact &= Flags.Exact;
     Disjoint &= Flags.Disjoint;
+    SameSign &= Flags.SameSign;
     NonNeg &= Flags.NonNeg;
     NoNaNs &= Flags.NoNaNs;
     NoInfs &= Flags.NoInfs;
@@ -1032,7 +1036,7 @@ public:
     SDNodeFlags Flags = getFlags();
     return Flags.hasNoUnsignedWrap() || Flags.hasNoSignedWrap() ||
            Flags.hasExact() || Flags.hasDisjoint() || Flags.hasNonNeg() ||
-           Flags.hasNoNaNs() || Flags.hasNoInfs();
+           Flags.hasNoNaNs() || Flags.hasNoInfs() || Flags.hasSameSign();
   }
 
   void setCFIType(uint32_t Type) { CFIType = Type; }
