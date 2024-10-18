@@ -78,6 +78,10 @@ def FeatureTailCall :
       SubtargetFeature<"tail-call", "HasTailCall", "true",
                        "Enable tail call instructions">;
 
+def FeatureWideArithmetic :
+      SubtargetFeature<"wide-arithmetic", "HasWideArithmetic", "true",
+                       "Enable wide-arithmetic instructions">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//
