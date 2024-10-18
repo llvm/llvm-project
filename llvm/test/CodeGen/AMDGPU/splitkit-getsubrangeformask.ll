@@ -351,13 +351,13 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[V_OR_B32_e64_64:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_OR_B32_e64_63]], [[V_ADD_U32_e64_28]], implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_30:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 -593, [[BUFFER_LOAD_FORMAT_X_IDXEN]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_OR_B32_e64_65:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_OR_B32_e64_64]], [[V_ADD_U32_e64_29]], implicit $exec
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef %542:sreg_64, 0, 0 :: (invariant load (s256) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef %541:sreg_64, 0, 0 :: (invariant load (s256) from `ptr addrspace(4) undef`, addrspace 4)
   ; CHECK-NEXT:   [[V_OR_B32_e64_66:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_OR_B32_e64_65]], [[V_ADD_U32_e64_30]], implicit $exec
   ; CHECK-NEXT:   [[S_ADD_I32_24:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_BUFFER_LOAD_DWORD_IMM8]], -594, implicit-def dead $scc
   ; CHECK-NEXT:   [[V_OR_B32_e64_67:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[S_ADD_I32_24]], [[V_OR_B32_e64_66]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 0, [[V_OR_B32_e64_67]], implicit $exec
   ; CHECK-NEXT:   undef [[V_CNDMASK_B32_e64_:%[0-9]+]].sub3:vreg_128 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[V_CMP_EQ_U32_e64_]], implicit $exec
-  ; CHECK-NEXT:   IMAGE_STORE_V4_V2_gfx10 [[V_CNDMASK_B32_e64_]], undef %556:vreg_64, [[S_LOAD_DWORDX8_IMM]], 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+  ; CHECK-NEXT:   IMAGE_STORE_V4_V2_gfx10 [[V_CNDMASK_B32_e64_]], undef %554:vreg_64, [[S_LOAD_DWORDX8_IMM]], 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
 .expVert:
   %0 = extractelement <31 x i32> %userData, i64 2
