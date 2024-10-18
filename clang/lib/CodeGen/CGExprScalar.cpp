@@ -4986,8 +4986,10 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
     }
 
     // 0 && RHS: If it is safe, just elide the RHS, and return 0/false.
-    if (!CGF.ContainsLabel(E->getRHS()))
+    if (!CGF.ContainsLabel(E->getRHS())) {
+      CGF.markStmtMaybeUsed(E->getRHS());
       return llvm::Constant::getNullValue(ResTy);
+    }
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
@@ -5126,8 +5128,10 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
     }
 
     // 1 || RHS: If it is safe, just elide the RHS, and return 1/true.
-    if (!CGF.ContainsLabel(E->getRHS()))
+    if (!CGF.ContainsLabel(E->getRHS())) {
+      CGF.markStmtMaybeUsed(E->getRHS());
       return llvm::ConstantInt::get(ResTy, 1);
+    }
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
@@ -5251,6 +5255,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
         CGF.incrementProfileCounter(E);
       }
       Value *Result = Visit(live);
+      CGF.markStmtMaybeUsed(dead);
 
       // If the live part is a throw expression, it acts like it has a void
       // type, so evaluating it returns a null Value*.  However, a conditional
