@@ -6279,7 +6279,13 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     if (Next && Next->is(tok::l_paren))
       return false;
     const FormatToken *Previous = Right.MatchingParen->Previous;
-    return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
+    if (!Previous)
+      return true;
+    if (Previous->isOneOf(tok::kw_for, tok::kw_while, tok::kw_switch))
+      return Style.AlignAfterOpenBracketBreak.InOtherConditionalStatements;
+    if (Previous->isIf())
+      return Style.AlignAfterOpenBracketBreak.InIfConditionalStatements;
+    return Style.AlignAfterOpenBracketBreak.Other;
   }
 
   if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&

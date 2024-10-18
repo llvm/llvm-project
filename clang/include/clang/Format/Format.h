@@ -106,6 +106,78 @@ struct FormatStyle {
   /// \version 3.8
   BracketAlignmentStyle AlignAfterOpenBracket;
 
+  /// Precise control over breaking the opening bracket of
+  /// ``AlignAfterOpenBracket``.
+  /// \code
+  ///   # Should be declared this way:
+  ///   AlignAfterOpenBracketBreak:
+  ///     InIfConditionalStatements: true
+  ///     InOtherConditionalStatements: false
+  ///     Other: true
+  /// \endcode
+  struct AlignAfterOpenBracketCustom {
+    /// Break inside if/else if statements.
+    /// \code
+    ///    true:                                  false:
+    ///    if constexpr (                   vs.   if constexpr (a ||
+    ///       a || b)                                           b)
+    /// \endcode
+    bool InIfConditionalStatements;
+    /// Break inside conditional statements not covered by preceding options.
+    /// (``for/while/switch...``).
+    /// \code
+    ///    true:                                  false:
+    ///    while (                          vs.   while (a &&
+    ///       a && b ) {                                 b) {
+    /// \endcode
+    bool InOtherConditionalStatements;
+    /// Break inside brackets not covered by preceding options.
+    /// \code
+    ///    true:                                  false:
+    ///    someLongFunction(                vs.   someLongFunction(argument1,
+    ///       argument1, argument2);                               argument2);
+    /// \endcode
+    bool Other;
+
+    AlignAfterOpenBracketCustom()
+        : InIfConditionalStatements(false), InOtherConditionalStatements(false),
+          Other(false) {}
+
+    AlignAfterOpenBracketCustom(bool InIfConditionalStatements,
+                                bool InOtherConditionalStatements, bool Other)
+        : InIfConditionalStatements(InIfConditionalStatements),
+          InOtherConditionalStatements(InOtherConditionalStatements),
+          Other(Other) {}
+
+    bool operator==(const AlignAfterOpenBracketCustom &R) const {
+      return InIfConditionalStatements == R.InIfConditionalStatements &&
+             InOtherConditionalStatements == R.InOtherConditionalStatements &&
+             Other == R.Other;
+    }
+    bool operator!=(const AlignAfterOpenBracketCustom &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Control of when ``AlignAfterOpenBracket`` breaks an opening bracket.
+  ///
+  /// If ``AlignAfterOpenBracket`` is set to ``AlwaysBreak`` or ``BlockIndent``,
+  /// use this to specify how different cases of breaking the opening brackets
+  /// should be handled. Otherwise, this is ignored. Setting any of these to
+  /// ``false`` will cause them to not break. At least one of these must be set
+  /// to ``true``, otherwise a default (backward compatible) breaking behavior
+  /// is used. This is ignored for ``Align`` and ``DontAlign``.
+  /// \code
+  ///   # Example of usage:
+  ///   AlignAfterOpenBracket: AlwaysBreak
+  ///   AlignAfterOpenBracketBreak:
+  ///     InIfConditionalStatements: true
+  ///     InOtherConditionalStatements: false
+  ///     Other: true
+  /// \endcode
+  /// \version 20
+  AlignAfterOpenBracketCustom AlignAfterOpenBracketBreak;
+
   /// Different style for aligning array initializers.
   enum ArrayInitializerAlignmentStyle : int8_t {
     /// Align array column and left justify the columns e.g.:
@@ -5127,6 +5199,7 @@ struct FormatStyle {
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
+           AlignAfterOpenBracketBreak == R.AlignAfterOpenBracketBreak &&
            AlignArrayOfStructures == R.AlignArrayOfStructures &&
            AlignConsecutiveAssignments == R.AlignConsecutiveAssignments &&
            AlignConsecutiveBitFields == R.AlignConsecutiveBitFields &&

@@ -215,6 +215,16 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
   }
 };
 
+template <> struct MappingTraits<FormatStyle::AlignAfterOpenBracketCustom> {
+  static void mapping(IO &IO, FormatStyle::AlignAfterOpenBracketCustom &Value) {
+    IO.mapOptional("InIfConditionalStatements",
+                   Value.InIfConditionalStatements);
+    IO.mapOptional("InOtherConditionalStatements",
+                   Value.InOtherConditionalStatements);
+    IO.mapOptional("Other", Value.Other);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<
     FormatStyle::BraceWrappingAfterControlStatementStyle> {
@@ -932,6 +942,8 @@ template <> struct MappingTraits<FormatStyle> {
 
     IO.mapOptional("AccessModifierOffset", Style.AccessModifierOffset);
     IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
+    IO.mapOptional("AlignAfterOpenBracketBreak",
+                   Style.AlignAfterOpenBracketBreak);
     IO.mapOptional("AlignArrayOfStructures", Style.AlignArrayOfStructures);
     IO.mapOptional("AlignConsecutiveAssignments",
                    Style.AlignConsecutiveAssignments);
@@ -1167,6 +1179,18 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.VerilogBreakBetweenInstancePorts);
     IO.mapOptional("WhitespaceSensitiveMacros",
                    Style.WhitespaceSensitiveMacros);
+
+    // If AlignAfterOpenBracket was specified but AlignAfterOpenBracketBreak
+    // was not, initialize the latter for backwards compatibility.
+    if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
+         Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
+        Style.AlignAfterOpenBracketBreak ==
+            FormatStyle::AlignAfterOpenBracketCustom()) {
+      if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak)
+        Style.AlignAfterOpenBracketBreak.InIfConditionalStatements = true;
+      Style.AlignAfterOpenBracketBreak.InOtherConditionalStatements = false;
+      Style.AlignAfterOpenBracketBreak.Other = true;
+    }
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for
@@ -1451,6 +1475,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
   LLVMStyle.AccessModifierOffset = -2;
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  LLVMStyle.AlignAfterOpenBracketBreak = {};
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
   LLVMStyle.AlignConsecutiveAssignments = {};
   LLVMStyle.AlignConsecutiveAssignments.PadOperators = true;
@@ -1760,6 +1785,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.SpacesBeforeTrailingComments = 1;
   } else if (Language == FormatStyle::LK_JavaScript) {
     GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+    GoogleStyle.AlignAfterOpenBracketBreak = {true, false, true};
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     // TODO: still under discussion whether to switch to SLS_All.

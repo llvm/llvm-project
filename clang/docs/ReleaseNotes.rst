@@ -705,6 +705,8 @@ clang-format
   multi-line comments without touching their contents, renames ``false`` to
   ``Never``, and ``true`` to ``Always``.
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
+- Adds ``AlignAfterOpenBracketBreak`` sub-options for better control of
+  ``AlignAfterOpenBracket`` with ``AlwaysBreak`` or ``BlockIndent`` modes.
 
 libclang
 --------
