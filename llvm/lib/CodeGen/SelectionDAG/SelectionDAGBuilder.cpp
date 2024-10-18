@@ -3138,7 +3138,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   SDValue Chain = DAG.getEntryNode();
-  if (TLI.useLoadStackGuardNode()) {
+  if (TLI.useLoadStackGuardNode(M)) {
     Guard = getLoadStackGuard(DAG, dl, Chain);
   } else {
     const Value *IRGuard = TLI.getSDagStackGuard(M);
@@ -7391,7 +7391,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     const Module &M = *MF.getFunction().getParent();
     EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Chain = getRoot();
-    if (TLI.useLoadStackGuardNode()) {
+    if (TLI.useLoadStackGuardNode(M)) {
       Res = getLoadStackGuard(DAG, sdl, Chain);
       Res = DAG.getPtrExtOrTrunc(Res, sdl, PtrTy);
     } else {
@@ -7411,9 +7411,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Emit code into the DAG to store the stack guard onto the stack.
     MachineFunction &MF = DAG.getMachineFunction();
     MachineFrameInfo &MFI = MF.getFrameInfo();
+    const Module &M = *MF.getFunction().getParent();
     SDValue Src, Chain = getRoot();
 
-    if (TLI.useLoadStackGuardNode())
+    if (TLI.useLoadStackGuardNode(M))
       Src = getLoadStackGuard(DAG, sdl, Chain);
     else
       Src = getValue(I.getArgOperand(0));   // The guard's value.

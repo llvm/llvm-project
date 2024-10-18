@@ -19,6 +19,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -445,7 +446,7 @@ private:
   DiagnosticsEngine &Diags;
   // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
   // has its own version.
-  bool WarnedStackExhausted = false;
+  StackExhaustionHandler StackHandler;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
@@ -2180,7 +2181,8 @@ public:
   /// Report a diagnostic.
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID) const;
 
-  void warnStackExhausted(SourceLocation Loc);
+  void runWithSufficientStackSpace(SourceLocation Loc,
+                                   llvm::function_ref<void()> Fn);
 
   IdentifierInfo *DecodeIdentifierInfo(serialization::IdentifierID ID);
 

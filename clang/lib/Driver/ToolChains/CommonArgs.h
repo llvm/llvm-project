@@ -286,6 +286,9 @@ bool shouldRecordCommandLine(const ToolChain &TC,
                              bool &FRecordCommandLine,
                              bool &GRecordCommandLine);
 
+void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
+                                        llvm::opt::ArgStringList &CmdArgs);
+
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

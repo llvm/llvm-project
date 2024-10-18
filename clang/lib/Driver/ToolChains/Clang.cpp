@@ -3650,7 +3650,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     StringRef Value = A->getValue();
     if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64() &&
         !EffectiveTriple.isARM() && !EffectiveTriple.isThumb() &&
-        !EffectiveTriple.isRISCV())
+        !EffectiveTriple.isRISCV() && !EffectiveTriple.isPPC())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     if ((EffectiveTriple.isX86() || EffectiveTriple.isARM() ||
@@ -3690,7 +3690,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
           << A->getOption().getName() << Value << "sysreg global";
       return;
     }
-    if (EffectiveTriple.isRISCV()) {
+    if (EffectiveTriple.isRISCV() || EffectiveTriple.isPPC()) {
       if (Value != "tls" && Value != "global") {
         D.Diag(diag::err_drv_invalid_value_with_suggestion)
             << A->getOption().getName() << Value << "tls global";
@@ -3711,7 +3711,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     StringRef Value = A->getValue();
     if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64() &&
         !EffectiveTriple.isARM() && !EffectiveTriple.isThumb() &&
-        !EffectiveTriple.isRISCV())
+        !EffectiveTriple.isRISCV() && !EffectiveTriple.isPPC())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     int Offset;
@@ -3731,7 +3731,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
   if (Arg *A = Args.getLastArg(options::OPT_mstack_protector_guard_reg_EQ)) {
     StringRef Value = A->getValue();
     if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64() &&
-        !EffectiveTriple.isRISCV())
+        !EffectiveTriple.isRISCV() && !EffectiveTriple.isPPC())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     if (EffectiveTriple.isX86() && (Value != "fs" && Value != "gs")) {
@@ -3746,6 +3746,16 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     if (EffectiveTriple.isRISCV() && Value != "tp") {
       D.Diag(diag::err_drv_invalid_value_with_suggestion)
           << A->getOption().getName() << Value << "tp";
+      return;
+    }
+    if (EffectiveTriple.isPPC64() && Value != "r13") {
+      D.Diag(diag::err_drv_invalid_value_with_suggestion)
+          << A->getOption().getName() << Value << "r13";
+      return;
+    }
+    if (EffectiveTriple.isPPC32() && Value != "r2") {
+      D.Diag(diag::err_drv_invalid_value_with_suggestion)
+          << A->getOption().getName() << Value << "r2";
       return;
     }
     A->render(Args, CmdArgs);
@@ -7075,16 +7085,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_ftrap_function_EQ);
 
-  // -fno-strict-overflow implies -fwrapv if it isn't disabled, but
-  // -fstrict-overflow won't turn off an explicitly enabled -fwrapv.
-  if (Arg *A = Args.getLastArg(options::OPT_fwrapv, options::OPT_fno_wrapv)) {
-    if (A->getOption().matches(options::OPT_fwrapv))
-      CmdArgs.push_back("-fwrapv");
-  } else if (Arg *A = Args.getLastArg(options::OPT_fstrict_overflow,
-                                      options::OPT_fno_strict_overflow)) {
-    if (A->getOption().matches(options::OPT_fno_strict_overflow))
-      CmdArgs.push_back("-fwrapv");
-  }
+  // Handle -f[no-]wrapv and -f[no-]strict-overflow, which are used by both
+  // clang and flang.
+  renderCommonIntegerOverflowOptions(Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_ffinite_loops,
                   options::OPT_fno_finite_loops);

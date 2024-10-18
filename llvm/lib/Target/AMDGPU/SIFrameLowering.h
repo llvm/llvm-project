@@ -72,6 +72,9 @@ public:
                                  const ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
 
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
 private:
   void emitEntryFunctionFlatScratchInit(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
@@ -97,8 +100,6 @@ private:
                   MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const;
 
 public:
-  bool hasFP(const MachineFunction &MF) const override;
-
   bool requiresStackPointerReference(const MachineFunction &MF) const;
 
   /// If '-amdgpu-spill-cfi-saved-regs' is enabled, emit RA/EXEC spills to

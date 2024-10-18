@@ -3459,7 +3459,8 @@ def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
 def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
-def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>;
+def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def fno_pointer_tbaa : Flag<["-"], "fno-pointer-tbaa">, Group<f_Group>;
 def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>, HelpText<
@@ -3475,7 +3476,8 @@ def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
 def fno_working_directory : Flag<["-"], "fno-working-directory">, Group<f_Group>;
-def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>;
+def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Synthesize retain and release calls for Objective-C pointers">;
@@ -4054,7 +4056,8 @@ defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
           "Enable optimizations based on the strict rules for"
             " overwriting polymorphic C++ objects">,
   NegFlag<SetFalse>>;
-def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
+def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def fpointer_tbaa : Flag<["-"], "fpointer-tbaa">, Group<f_Group>;
 def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
@@ -4323,7 +4326,7 @@ defm virtual_function_elimination : BoolFOption<"virtual-function-elimination",
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
 
 def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
