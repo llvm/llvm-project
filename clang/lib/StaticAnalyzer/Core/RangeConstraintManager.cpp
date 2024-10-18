@@ -1249,6 +1249,8 @@ public:
         // calculate the effective range set by intersecting the range set
         // for A - B and the negated range set of B - A.
         getRangeForNegatedSymSym(SSE),
+        // If commutative, we may have constaints for the commuted variant.
+        getRangeCommutativeSymSym(SSE),
         // If Sym is a comparison expression (except <=>),
         // find any other comparisons with the same operands.
         // See function description.
@@ -1483,6 +1485,21 @@ private:
                                                            Sym->getType());
         },
         Sym->getType());
+  }
+
+  std::optional<RangeSet> getRangeCommutativeSymSym(const SymSymExpr *SSE) {
+    auto Op = SSE->getOpcode();
+    bool IsCommutative = llvm::is_contained(
+        // ==, !=, |, &, +, *, ^
+        {BO_EQ, BO_NE, BO_Or, BO_And, BO_Add, BO_Mul, BO_Xor}, Op);
+    if (!IsCommutative)
+      return std::nullopt;
+
+    SymbolRef Commuted = State->getSymbolManager().getSymSymExpr(
+        SSE->getRHS(), Op, SSE->getLHS(), SSE->getType());
+    if (const RangeSet *Range = getConstraint(State, Commuted))
+      return *Range;
+    return std::nullopt;
   }
 
   // Returns ranges only for binary comparison operators (except <=>)
