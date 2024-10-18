@@ -221,21 +221,27 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       PtrDepth++;
       Ty = Ty->getPointeeType().getTypePtr();
     } while (Ty->isPointerType());
-    // TODO: Implement C++'s type "similarity" and consider dis-"similar"
-    // pointers distinct for non-builtin types.
+
+    SmallString<256> TyName;
     if (isa<BuiltinType>(Ty)) {
       llvm::MDNode *ScalarMD = getTypeInfoHelper(Ty);
       StringRef Name =
           cast<llvm::MDString>(
               ScalarMD->getOperand(CodeGenOpts.NewStructPathTBAA ? 2 : 0))
               ->getString();
+      TyName = Name;
+    } else if (!isa<VariableArrayType>(Ty)) {
+      // For non-builtin types use the mangled name of the canonical type.
+      llvm::raw_svector_ostream TyOut(TyName);
+      Context.createMangleContext()->mangleCanonicalTypeName(QualType(Ty, 0),
+                                                             TyOut);
+    }
+
       SmallString<256> OutName("p");
       OutName += std::to_string(PtrDepth);
       OutName += " ";
-      OutName += Name;
+      OutName += TyName;
       return createScalarTypeNode(OutName, AnyPtr, Size);
-    }
-    return AnyPtr;
   }
 
   // Accesses to arrays are accesses to objects of their element types.
