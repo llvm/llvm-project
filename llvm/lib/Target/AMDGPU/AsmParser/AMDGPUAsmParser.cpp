@@ -4588,7 +4588,9 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 
   uint64_t TSFlags = MII.get(Opc).TSFlags;
 
-  if (isGFX940() && (TSFlags & SIInstrFlags::IsDOT)) {
+  // For VOP3P DOT instructions, op_sel must be 0 if present, and op_sel_hi
+  // cannot be present.
+  if ((TSFlags & SIInstrFlags::IsDOT) && (TSFlags & SIInstrFlags::VOP3P)) {
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
     if (OpSelIdx != -1) {
       if (Inst.getOperand(OpSelIdx).getImm() != 0)
@@ -4596,6 +4598,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
     }
     int OpSelHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
     if (OpSelHiIdx != -1) {
+      // -1 is the default value for op_sel_hi
       if (Inst.getOperand(OpSelHiIdx).getImm() != -1)
         return false;
     }
