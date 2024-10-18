@@ -343,7 +343,7 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,  TTI::TargetCostKind CostKind) {
                              /*AddressSpace=*/0, CostKind);
 }
 
-static bool isRepeatedConcatMaskImpl(ArrayRef<int> Mask, int &SubVectorSize) {
+static bool isRepeatedConcatMask(ArrayRef<int> Mask, int &SubVectorSize) {
   unsigned Size = Mask.size();
   if (!isPowerOf2_32(Size))
     return false;
@@ -354,7 +354,7 @@ static bool isRepeatedConcatMaskImpl(ArrayRef<int> Mask, int &SubVectorSize) {
       return false;
     if (Size % I != 0)
       return false;
-    for (unsigned J = 0; J != Size; ++J)
+    for (unsigned J = I + 1; J != Size; ++J)
       // Check the pattern is repeated.
       if (static_cast<unsigned>(Mask[J]) != J % I)
         return false;
@@ -418,7 +418,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         }
         int SubVectorSize;
         if (LT.second.getScalarSizeInBits() != 1 &&
-            isRepeatedConcatMaskImpl(Mask, SubVectorSize)) {
+            isRepeatedConcatMask(Mask, SubVectorSize)) {
           InstructionCost Cost = 0;
           unsigned NumSlides = Log2_32(Mask.size() / SubVectorSize);
           // The cost of extraction from a subvector is 0 if the index is 0.
