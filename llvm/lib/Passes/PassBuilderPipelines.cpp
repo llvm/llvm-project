@@ -1631,8 +1631,11 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary));
 
   // If we're doing FatLTO w/ CFI enabled, we don't want the type tests in the
-  // object file.
-  MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true, true));
+  // object code, only in the bitcode section, so drop it before we run
+  // module optimization and generate machine code. If llvm.type.test() isn't in
+  // the IR, this won't do anything.
+  MPM.addPass(
+      LowerTypeTestsPass(nullptr, nullptr, lowertypetests::DropTestKind::All));
 
   // Use the ThinLTO post-link pipeline with sample profiling
   if (ThinLTO && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
