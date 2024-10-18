@@ -2162,6 +2162,36 @@ TLI_DEFINE_ENUM_INTERNAL(roundl)
 TLI_DEFINE_STRING_INTERNAL("roundl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
 
+/// double scalbln(double arg, long exp);
+TLI_DEFINE_ENUM_INTERNAL(scalbln)
+TLI_DEFINE_STRING_INTERNAL("scalbln")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Long)
+
+/// float scalblnf(float arg, long exp);
+TLI_DEFINE_ENUM_INTERNAL(scalblnf)
+TLI_DEFINE_STRING_INTERNAL("scalblnf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Long)
+
+/// long double scalblnl(long double arg, long exp);
+TLI_DEFINE_ENUM_INTERNAL(scalblnl)
+TLI_DEFINE_STRING_INTERNAL("scalblnl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, Long)
+
+/// double scalbn(double arg, int exp);
+TLI_DEFINE_ENUM_INTERNAL(scalbn)
+TLI_DEFINE_STRING_INTERNAL("scalbn")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Int)
+
+/// float scalbnf(float arg, int exp);
+TLI_DEFINE_ENUM_INTERNAL(scalbnf)
+TLI_DEFINE_STRING_INTERNAL("scalbnf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Int)
+
+/// long double scalbnl(long double arg, int exp);
+TLI_DEFINE_ENUM_INTERNAL(scalbnl)
+TLI_DEFINE_STRING_INTERNAL("scalbnl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, Int)
+
 /// int scanf(const char *restrict format, ... );
 TLI_DEFINE_ENUM_INTERNAL(scanf)
 TLI_DEFINE_STRING_INTERNAL("scanf")
