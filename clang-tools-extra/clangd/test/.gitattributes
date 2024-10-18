@@ -1,0 +1,3 @@
+input-mirror.test text eol=crlf
+too_large.test text eol=crlf
+protocol.test text eol=crlf

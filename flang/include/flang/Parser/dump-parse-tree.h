@@ -884,8 +884,10 @@ protected:
     } else if constexpr (HasSource<T>::value) {
       return x.source.ToString();
 #endif
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      return x;
+    } else if constexpr (std::is_same_v<T, int>) {
+      return std::to_string(x);
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return x ? "true" : "false";
     } else {
       return "";
     }

@@ -440,6 +440,26 @@ class VPBlockBase {
     Successors.erase(Pos);
   }
 
+  /// This function replaces one predecessor with another, useful when
+  /// trying to replace an old block in the CFG with a new one.
+  void replacePredecessor(VPBlockBase *Old, VPBlockBase *New) {
+    auto I = find(Predecessors, Old);
+    assert(I != Predecessors.end());
+    assert(Old->getParent() == New->getParent() &&
+           "replaced predecessor must have the same parent");
+    *I = New;
+  }
+
+  /// This function replaces one successor with another, useful when
+  /// trying to replace an old block in the CFG with a new one.
+  void replaceSuccessor(VPBlockBase *Old, VPBlockBase *New) {
+    auto I = find(Successors, Old);
+    assert(I != Successors.end());
+    assert(Old->getParent() == New->getParent() &&
+           "replaced successor must have the same parent");
+    *I = New;
+  }
+
 protected:
   VPBlockBase(const unsigned char SC, const std::string &N)
       : SubclassID(SC), Name(N) {}
@@ -934,6 +954,11 @@ public:
   /// Return the cost of this VPSingleDefRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print this VPSingleDefRecipe to dbgs() (for debugging).
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 /// Class to record LLVM IR flag for a recipe along with it.
@@ -1389,6 +1414,9 @@ public:
   /// Returns true if this VPInstruction's operands are single scalars and the
   /// result is also a single scalar.
   bool isSingleScalar() const;
+
+  /// Returns the symbolic name assigned to the VPInstruction.
+  StringRef getName() const { return Name; }
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
@@ -1649,6 +1677,16 @@ public:
         MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         bool MayReadFromMemory, bool MayWriteToMemory,
+                         bool MayHaveSideEffects, DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayReadFromMemory(MayReadFromMemory),
+        MayWriteToMemory(MayWriteToMemory),
+        MayHaveSideEffects(MayHaveSideEffects) {}
+
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
@@ -1686,6 +1724,8 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
 };
 
 /// A recipe for widening Call instructions using library calls.
@@ -3945,6 +3985,19 @@ public:
     assert(To && "Successor to disconnect is null.");
     From->removeSuccessor(To);
     To->removePredecessor(From);
+  }
+
+  /// Reassociate all the blocks connected to \p Old so that they now point to
+  /// \p New.
+  static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Pred : to_vector(Old->getPredecessors()))
+      Pred->replaceSuccessor(Old, New);
+    for (auto *Succ : to_vector(Old->getSuccessors()))
+      Succ->replacePredecessor(Old, New);
+    New->setPredecessors(Old->getPredecessors());
+    New->setSuccessors(Old->getSuccessors());
+    Old->clearPredecessors();
+    Old->clearSuccessors();
   }
 
   /// Return an iterator range over \p Range which only includes \p BlockTy

@@ -836,3 +836,4 @@ def CheckNewTypeMismatchArray : Opcode {
 }
 
 def IsConstantContext: Opcode;
+def CheckAllocations : Opcode;
