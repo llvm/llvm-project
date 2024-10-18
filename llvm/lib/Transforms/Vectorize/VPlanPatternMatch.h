@@ -55,6 +55,17 @@ template <typename Class> struct bind_ty {
   }
 };
 
+/// Match a specified VPValue.
+struct specificval_ty {
+  const VPValue *Val;
+
+  specificval_ty(const VPValue *V) : Val(V) {}
+
+  bool match(VPValue *VPV) const { return VPV == Val; }
+};
+
+inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
+
 /// Match a specified integer value or vector of all elements of that
 /// value. \p BitWidth optionally specifies the bitwidth the matched constant
 /// must have. If it is 0, the matched constant can have any bitwidth.
@@ -206,6 +217,39 @@ using AllBinaryRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
                        VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
 
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode,
+          typename... RecipeTys>
+struct TernaryRecipe_match {
+  Op0_t Op0;
+  Op1_t Op1;
+  Op2_t Op2;
+
+  TernaryRecipe_match(Op0_t Op0, Op1_t Op1, Op2_t Op2)
+      : Op0(Op0), Op1(Op1), Op2(Op2) {}
+
+  bool match(const VPValue *V) const {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPSingleDefRecipe *R) const {
+    return match(static_cast<const VPRecipeBase *>(R));
+  }
+
+  bool match(const VPRecipeBase *R) const {
+    if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
+      return false;
+    assert(R->getNumOperands() == 3 &&
+           "recipe with matched opcode does not have 3 operands");
+    return Op0.match(R->getOperand(0)) && Op1.match(R->getOperand(1)) &&
+           Op2.match(R->getOperand(2));
+  }
+};
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
+using TernaryVPInstruction_match =
+    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, Opcode, VPInstruction>;
+
 template <unsigned Opcode, typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Opcode>
 m_VPInstruction(const Op0_t &Op0) {
@@ -216,6 +260,12 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>
 m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
   return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
+}
+
+template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t>
+inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>
+m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t>
@@ -311,6 +361,13 @@ template <typename Op0_t, typename Op1_t>
 inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd>
 m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Instruction::Select>
+m_Select(const Op0_t &Cond, const Op1_t &LHS, const Op2_t &RHS) {
+  return m_VPInstruction<Instruction::Select, Op0_t, Op1_t, Op2_t>(Cond, LHS,
+                                                                   RHS);
 }
 
 struct VPCanonicalIVPHI_match {
