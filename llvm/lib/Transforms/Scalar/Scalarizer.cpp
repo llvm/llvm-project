@@ -732,16 +732,15 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   if (AreAllVectorsOfMatchingSize) {
     for (unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
-      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I)) {
-        std::optional<VectorSplit> CurrVS = getVectorSplit(
-            cast<FixedVectorType>(CallType->getContainedType(I)));
-        // This case does not seem to happen, but it is possible for
-        // VectorSplit.NumPacked >= NumElems. If that happens a VectorSplit
-        // is not returned and we will bailout of handling this call.
-        if (!CurrVS)
-          return false;
+      std::optional<VectorSplit> CurrVS =
+          getVectorSplit(cast<FixedVectorType>(CallType->getContainedType(I)));
+      // This case does not seem to happen, but it is possible for
+      // VectorSplit.NumPacked >= NumElems. If that happens a VectorSplit
+      // is not returned and we will bailout of handling this call.
+      if (!CurrVS)
+        return false;
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I))
         Tys.push_back(CurrVS->SplitTy);
-      }
     }
   }
   // Assumes that any vector type has the same number of elements as the return
