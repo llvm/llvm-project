@@ -2210,7 +2210,7 @@ static int64_t getIntValueFromConstOp(mlir::Value val) {
 ///     expression type.
 ///  2. Function arg types are given, not deduced from actual arg types.
 static mlir::Value
-buildCommonNeonCallPattern0(CIRGenFunction &cgf, std::string &intrincsName,
+buildCommonNeonCallPattern0(CIRGenFunction &cgf, llvm::StringRef intrincsName,
                             llvm::SmallVector<mlir::Type> argTypes,
                             llvm::SmallVectorImpl<mlir::Value> &ops,
                             mlir::Type funcResTy, const clang::CallExpr *e) {
@@ -2326,6 +2326,7 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
 
   // This second switch is for the intrinsics that might have a more generic
   // codegen solution so we can use the common codegen in future.
+  llvm::StringRef intrincsName;
   switch (builtinID) {
   default:
     llvm::errs() << getAArch64SIMDIntrinsicString(builtinID) << " ";
@@ -2333,22 +2334,27 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
 
   case NEON::BI__builtin_neon_vpadd_v:
   case NEON::BI__builtin_neon_vpaddq_v: {
-    std::string intrincsName = mlir::isa<mlir::FloatType>(vTy.getEltType())
-                                   ? "llvm.aarch64.neon.faddp"
-                                   : "llvm.aarch64.neon.addp";
-    return buildCommonNeonCallPattern0(*this, intrincsName, {vTy, vTy}, ops,
-                                       vTy, e);
+    intrincsName = mlir::isa<mlir::FloatType>(vTy.getEltType())
+                       ? "llvm.aarch64.neon.faddp"
+                       : "llvm.aarch64.neon.addp";
     break;
   }
-  case NEON::BI__builtin_neon_vqadd_v: {
-    std::string intrincsName = (intrinicId != altLLVMIntrinsic)
-                                   ? "llvm.aarch64.neon.uqadd"
-                                   : "llvm.aarch64.neon.sqadd";
-    return buildCommonNeonCallPattern0(*this, intrincsName, {vTy, vTy}, ops,
-                                       vTy, e);
+  case NEON::BI__builtin_neon_vqadd_v:
+  case NEON::BI__builtin_neon_vqaddq_v: {
+    intrincsName = (intrinicId != altLLVMIntrinsic) ? "llvm.aarch64.neon.uqadd"
+                                                    : "llvm.aarch64.neon.sqadd";
+    break;
+  }
+  case NEON::BI__builtin_neon_vqsub_v:
+  case NEON::BI__builtin_neon_vqsubq_v: {
+    intrincsName = (intrinicId != altLLVMIntrinsic) ? "llvm.aarch64.neon.uqsub"
+                                                    : "llvm.aarch64.neon.sqsub";
     break;
   }
   }
+  if (!intrincsName.empty())
+    return buildCommonNeonCallPattern0(*this, intrincsName, {vTy, vTy}, ops,
+                                       vTy, e);
   return nullptr;
 }
 
