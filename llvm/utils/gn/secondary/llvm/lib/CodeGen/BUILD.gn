@@ -82,7 +82,7 @@ static_library("CodeGen") {
     "IntrinsicLowering.cpp",
     "JMCInstrumenter.cpp",
     "KCFI.cpp",
-    "LLVMTargetMachine.cpp",
+    "CodeGenCommonTMImpl.cpp",
     "LatencyPriorityQueue.cpp",
     "LazyMachineBlockFrequencyInfo.cpp",
     "LexicalScopes.cpp",

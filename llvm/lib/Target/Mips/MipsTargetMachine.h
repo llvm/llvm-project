@@ -17,14 +17,14 @@
 #include "MipsSubtarget.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Target/TargetMachine.h"
 #include <memory>
 #include <optional>
 
 namespace llvm {
 
-class MipsTargetMachine : public LLVMTargetMachine {
+class MipsTargetMachine : public CodeGenCommonTMImpl {
   bool isLittle;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   // Selected ABI
