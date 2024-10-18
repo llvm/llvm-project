@@ -2860,8 +2860,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                                 llvm::StringLiteral("SLEEF")};
   bool NoMathErrnoWasImpliedByVecLib = false;
   const Arg *VecLibArg = nullptr;
-  // Track the arg (if any) that reenabled errno after -fveclib for diagnostics.
-  const Arg *ArgThatReenabledMathErrnoAfterVecLib = nullptr;
+  // Track the arg (if any) that enabled errno after -fveclib for diagnostics.
+  const Arg *ArgThatEnabledMathErrnoAfterVecLib = nullptr;
 
   // Handle various floating point optimization flags, mapping them to the
   // appropriate LLVM code generation flags. This is complicated by several
@@ -2972,7 +2972,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     auto CheckMathErrnoForVecLib =
         llvm::make_scope_exit([&, MathErrnoBeforeArg = MathErrno] {
           if (NoMathErrnoWasImpliedByVecLib && !MathErrnoBeforeArg && MathErrno)
-            ArgThatReenabledMathErrnoAfterVecLib = A;
+            ArgThatEnabledMathErrnoAfterVecLib = A;
         });
 
     switch (A->getOption().getID()) {
@@ -3363,8 +3363,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (MathErrno) {
     CmdArgs.push_back("-fmath-errno");
     if (NoMathErrnoWasImpliedByVecLib)
-      D.Diag(clang::diag::warn_drv_math_errno_reenabled_after_veclib)
-          << ArgThatReenabledMathErrnoAfterVecLib->getAsString(Args)
+      D.Diag(clang::diag::warn_drv_math_errno_enabled_after_veclib)
+          << ArgThatEnabledMathErrnoAfterVecLib->getAsString(Args)
           << VecLibArg->getAsString(Args);
   }
 
