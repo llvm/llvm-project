@@ -359,16 +359,18 @@ int main(int argc, char **argv) {
         auto Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
           return BB.getNameOrAsOperand() == BBName;
         });
-#else
-        auto Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
-          return BB.getName() == BBName;
-        });
-        if (Res == P.first->end() && std::isdigit(BBName)) {
+#else   
+        llvm::Function::iterator Res;
+        if (BBName.substr(0, 1) == "%") {
           Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
             std::string tmpName;
             raw_string_ostream OS(tmpName);
             BB.printAsOperand(OS, false);
             return OS.str() == BBName;
+          });
+        } else {
+          Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
+            return BB.getName() == BBName;
           });
         }
 #endif
