@@ -1202,8 +1202,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         *FOp, ICA.getArgTypes()[0], UI->getPointerAlignment(),
         UI->getOperand(1)->getType()->getPointerAddressSpace(), CostKind);
   }
-  case Intrinsic::vp_merge:
-    return 1;
   case Intrinsic::vp_select: {
     Intrinsic::ID IID = ICA.getID();
     std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
