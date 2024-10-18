@@ -115,7 +115,7 @@ llvm::Error CommandObjectMultiword::LoadUserSubcommand(
   if (error_str) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(), error_str);
   }
-  m_subcommand_dict[str_name] = cmd_obj_sp;
+  pos->second = cmd_obj_sp;
   return llvm::Error::success();
 }
 
