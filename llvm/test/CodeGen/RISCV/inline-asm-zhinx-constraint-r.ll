@@ -156,3 +156,85 @@ define half @constraint_half_abi_name(half %a) nounwind {
   %2 = tail call half asm "fadd.s $0, $1, $2", "={t0},{a0},{s0}"(half %a, half %1)
   ret half %2
 }
+
+define half @constraint_f_half(half %a) nounwind {
+; RV32ZHINX-LABEL: constraint_f_half:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    lui a1, %hi(gh)
+; RV32ZHINX-NEXT:    lh a1, %lo(gh)(a1)
+; RV32ZHINX-NEXT:    #APP
+; RV32ZHINX-NEXT:    fadd.h a0, a0, a1
+; RV32ZHINX-NEXT:    #NO_APP
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: constraint_f_half:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    lui a1, %hi(gh)
+; RV64ZHINX-NEXT:    lh a1, %lo(gh)(a1)
+; RV64ZHINX-NEXT:    #APP
+; RV64ZHINX-NEXT:    fadd.h a0, a0, a1
+; RV64ZHINX-NEXT:    #NO_APP
+; RV64ZHINX-NEXT:    ret
+;
+; RV32DINXZHINX-LABEL: constraint_f_half:
+; RV32DINXZHINX:       # %bb.0:
+; RV32DINXZHINX-NEXT:    lui a1, %hi(gh)
+; RV32DINXZHINX-NEXT:    lh a1, %lo(gh)(a1)
+; RV32DINXZHINX-NEXT:    #APP
+; RV32DINXZHINX-NEXT:    fadd.h a0, a0, a1
+; RV32DINXZHINX-NEXT:    #NO_APP
+; RV32DINXZHINX-NEXT:    ret
+;
+; RV64DINXZHINX-LABEL: constraint_f_half:
+; RV64DINXZHINX:       # %bb.0:
+; RV64DINXZHINX-NEXT:    lui a1, %hi(gh)
+; RV64DINXZHINX-NEXT:    lh a1, %lo(gh)(a1)
+; RV64DINXZHINX-NEXT:    #APP
+; RV64DINXZHINX-NEXT:    fadd.h a0, a0, a1
+; RV64DINXZHINX-NEXT:    #NO_APP
+; RV64DINXZHINX-NEXT:    ret
+  %1 = load half, ptr @gh
+  %2 = tail call half asm "fadd.h $0, $1, $2", "=f,f,f"(half %a, half %1)
+  ret half %2
+}
+
+define half @constraint_cf_half(half %a) nounwind {
+; RV32ZHINX-LABEL: constraint_cf_half:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    lui a1, %hi(gh)
+; RV32ZHINX-NEXT:    lh a1, %lo(gh)(a1)
+; RV32ZHINX-NEXT:    #APP
+; RV32ZHINX-NEXT:    fadd.h a0, a0, a1
+; RV32ZHINX-NEXT:    #NO_APP
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: constraint_cf_half:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    lui a1, %hi(gh)
+; RV64ZHINX-NEXT:    lh a1, %lo(gh)(a1)
+; RV64ZHINX-NEXT:    #APP
+; RV64ZHINX-NEXT:    fadd.h a0, a0, a1
+; RV64ZHINX-NEXT:    #NO_APP
+; RV64ZHINX-NEXT:    ret
+;
+; RV32DINXZHINX-LABEL: constraint_cf_half:
+; RV32DINXZHINX:       # %bb.0:
+; RV32DINXZHINX-NEXT:    lui a1, %hi(gh)
+; RV32DINXZHINX-NEXT:    lh a1, %lo(gh)(a1)
+; RV32DINXZHINX-NEXT:    #APP
+; RV32DINXZHINX-NEXT:    fadd.h a0, a0, a1
+; RV32DINXZHINX-NEXT:    #NO_APP
+; RV32DINXZHINX-NEXT:    ret
+;
+; RV64DINXZHINX-LABEL: constraint_cf_half:
+; RV64DINXZHINX:       # %bb.0:
+; RV64DINXZHINX-NEXT:    lui a1, %hi(gh)
+; RV64DINXZHINX-NEXT:    lh a1, %lo(gh)(a1)
+; RV64DINXZHINX-NEXT:    #APP
+; RV64DINXZHINX-NEXT:    fadd.h a0, a0, a1
+; RV64DINXZHINX-NEXT:    #NO_APP
+; RV64DINXZHINX-NEXT:    ret
+  %1 = load half, ptr @gh
+  %2 = tail call half asm "fadd.h $0, $1, $2", "=^cf,^cf,^cf"(half %a, half %1)
+  ret half %2
+}
