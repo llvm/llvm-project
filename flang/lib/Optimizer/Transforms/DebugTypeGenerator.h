@@ -43,6 +43,10 @@ private:
                                              mlir::LLVM::DIFileAttr fileAttr,
                                              mlir::LLVM::DIScopeAttr scope,
                                              fir::cg::XDeclareOp declOp);
+  mlir::LLVM::DITypeAttr convertVectorType(fir::VectorType vecTy,
+                                           mlir::LLVM::DIFileAttr fileAttr,
+                                           mlir::LLVM::DIScopeAttr scope,
+                                           fir::cg::XDeclareOp declOp);
 
   /// The 'genAllocated' is true when we want to generate 'allocated' field
   /// in the DICompositeType. It is needed for the allocatable arrays.
