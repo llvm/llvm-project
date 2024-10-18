@@ -55,6 +55,8 @@ enum class PassSummaryAction {
   Export, ///< Export information to summary.
 };
 
+Pass *createGlobalMergeFuncPass();
+
 } // End llvm namespace
 
 #endif

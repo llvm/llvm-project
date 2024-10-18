@@ -74,6 +74,7 @@
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/CFGuard.h"
+#include "llvm/Transforms/IPO/GlobalMergeFunctions.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"

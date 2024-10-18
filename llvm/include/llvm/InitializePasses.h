@@ -123,6 +123,7 @@ void initializeGCEmptyBasicBlocksPass(PassRegistry &);
 void initializeGCMachineCodeAnalysisPass(PassRegistry &);
 void initializeGCModuleInfoPass(PassRegistry &);
 void initializeGVNLegacyPassPass(PassRegistry &);
+void initializeGlobalMergeFuncPass(PassRegistry &);
 void initializeGlobalMergePass(PassRegistry &);
 void initializeGlobalsAAWrapperPassPass(PassRegistry &);
 void initializeHardwareLoopsLegacyPass(PassRegistry &);

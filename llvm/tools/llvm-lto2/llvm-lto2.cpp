@@ -28,6 +28,7 @@
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Transforms/IPO.h"
 #include <atomic>
 
 using namespace llvm;
@@ -195,6 +196,7 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
 extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern cl::opt<bool> EnableGlobalMergeFunc;
 
 static void check(Error E, std::string Msg) {
   if (!E)
@@ -373,6 +375,10 @@ static int run(int argc, char **argv) {
     errs() << '\n';
     if (DI.getSeverity() == DS_Error)
       HasErrors = true;
+  };
+  Conf.PreCodeGenPassesHook = [](legacy::PassManager &pm) {
+    if (EnableGlobalMergeFunc)
+      pm.add(createGlobalMergeFuncPass());
   };
 
   LTO::LTOKind LTOMode = LTO::LTOK_Default;
