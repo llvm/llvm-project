@@ -2385,14 +2385,14 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
     // We cannot apply the initializes attribute to DeadAccess/DeadDef.
     // It would incorrectly consider a call instruction as redundant store
     // and remove this call instruction.
+    // TODO: this conflates the existence of a MemoryLocation with being able
+    // to delete the instruction. Fix isRemovable() to consider calls with
+    // side effects that cannot be removed, e.g. calls with the initializes
+    // attribute, and remove getLocForInst(ConsiderInitializesAttr = false).
     MemoryDefWrapper DeadDefWrapper(
         cast<MemoryDef>(DeadAccess),
         getLocForInst(cast<MemoryDef>(DeadAccess)->getMemoryInst(),
                       /*ConsiderInitializesAttr=*/false));
-    // Note that we don't consider the initializes attribute for DeadAccess.
-    // The dead access would be just a regular write access, like Store
-    // instruction, and its MemoryDefWrapper would only contain one
-    // MemoryLocationWrapper.
     assert(DeadDefWrapper.DefinedLocations.size() == 1);
     MemoryLocationWrapper &DeadLocWrapper =
         DeadDefWrapper.DefinedLocations.front();
