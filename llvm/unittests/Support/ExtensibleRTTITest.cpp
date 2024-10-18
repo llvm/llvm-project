@@ -36,15 +36,24 @@ public:
   static char ID;
 };
 
+class MyMultipleInheritanceType
+    : public RTTIExtends<MyMultipleInheritanceType, MyDerivedType,
+                         MyOtherDerivedType> {
+public:
+  static char ID;
+};
+
 char MyBaseType::ID = 0;
 char MyDerivedType::ID = 0;
 char MyOtherDerivedType::ID = 0;
 char MyDeeperDerivedType::ID = 0;
+char MyMultipleInheritanceType::ID = 0;
 
 TEST(ExtensibleRTTI, isa) {
   MyBaseType B;
   MyDerivedType D;
   MyDeeperDerivedType DD;
+  MyMultipleInheritanceType MI;
 
   EXPECT_TRUE(isa<MyBaseType>(B));
   EXPECT_FALSE(isa<MyDerivedType>(B));
@@ -60,26 +69,53 @@ TEST(ExtensibleRTTI, isa) {
   EXPECT_TRUE(isa<MyDerivedType>(DD));
   EXPECT_FALSE(isa<MyOtherDerivedType>(DD));
   EXPECT_TRUE(isa<MyDeeperDerivedType>(DD));
+
+  EXPECT_TRUE(isa<MyBaseType>(MI));
+  EXPECT_TRUE(isa<MyDerivedType>(MI));
+  EXPECT_TRUE(isa<MyOtherDerivedType>(MI));
+  EXPECT_FALSE(isa<MyDeeperDerivedType>(MI));
+  EXPECT_TRUE(isa<MyMultipleInheritanceType>(MI));
 }
 
 TEST(ExtensibleRTTI, cast) {
-  MyDerivedType D;
-  MyBaseType &BD = D;
+  MyMultipleInheritanceType MI;
+  MyDerivedType &D = MI;
+  MyOtherDerivedType &OD = MI;
+  MyBaseType &B = D;
 
-  (void)cast<MyBaseType>(D);
-  (void)cast<MyBaseType>(BD);
-  (void)cast<MyDerivedType>(BD);
+  EXPECT_EQ(&cast<MyBaseType>(D), &B);
+  EXPECT_EQ(&cast<MyDerivedType>(MI), &D);
+  EXPECT_EQ(&cast<MyOtherDerivedType>(MI), &OD);
+  EXPECT_EQ(&cast<MyMultipleInheritanceType>(MI), &MI);
 }
 
 TEST(ExtensibleRTTI, dyn_cast) {
-  MyBaseType B;
-  MyDerivedType D;
+  MyMultipleInheritanceType MI;
+  MyDerivedType &D = MI;
+  MyOtherDerivedType &OD = MI;
   MyBaseType &BD = D;
+  MyBaseType &BOD = OD;
 
-  EXPECT_EQ(dyn_cast<MyDerivedType>(&B), nullptr);
-  EXPECT_EQ(dyn_cast<MyDerivedType>(&D), &D);
   EXPECT_EQ(dyn_cast<MyBaseType>(&BD), &BD);
   EXPECT_EQ(dyn_cast<MyDerivedType>(&BD), &D);
+
+  EXPECT_EQ(dyn_cast<MyBaseType>(&BOD), &BOD);
+  EXPECT_EQ(dyn_cast<MyOtherDerivedType>(&BOD), &OD);
+
+  EXPECT_EQ(dyn_cast<MyBaseType>(&D), &BD);
+  EXPECT_EQ(dyn_cast<MyDerivedType>(&D), &D);
+  EXPECT_EQ(dyn_cast<MyMultipleInheritanceType>(&D), &MI);
+
+  EXPECT_EQ(dyn_cast<MyBaseType>(&OD), &BOD);
+  EXPECT_EQ(dyn_cast<MyOtherDerivedType>(&OD), &OD);
+  EXPECT_EQ(dyn_cast<MyMultipleInheritanceType>(&OD), &MI);
+
+  EXPECT_EQ(dyn_cast<MyDerivedType>(&MI), &D);
+  EXPECT_EQ(dyn_cast<MyMultipleInheritanceType>(&MI), &MI);
+
+  EXPECT_EQ(dyn_cast<MyDerivedType>(&MI), &D);
+  EXPECT_EQ(dyn_cast<MyOtherDerivedType>(&MI), &OD);
+  EXPECT_EQ(dyn_cast<MyMultipleInheritanceType>(&MI), &MI);
 }
 
 } // namespace

@@ -81,10 +81,6 @@ public:
     return ClassID == classID();
   }
 
-  /// Check whether this instance is a subclass of QueryT.
-  template <typename QueryT>
-  bool isA() const { return isA(QueryT::classID()); }
-
 private:
   virtual void anchor();
 
@@ -110,21 +106,36 @@ private:
 ///   static char ID;
 /// };
 ///
-template <typename ThisT, typename ParentT>
-class RTTIExtends : public ParentT {
+template <typename ThisT, typename... ParentTs>
+class RTTIExtends : public ParentTs... {
 public:
   // Inherit constructors from ParentT.
-  using ParentT::ParentT;
+  using ParentTs::ParentTs...;
 
   static const void *classID() { return &ThisT::ID; }
 
   const void *dynamicClassID() const override { return &ThisT::ID; }
 
+  /// Check whether this instance is a subclass of QueryT.
+  template <typename QueryT> bool isA() const { return isA(QueryT::classID()); }
+
   bool isA(const void *const ClassID) const override {
-    return ClassID == classID() || ParentT::isA(ClassID);
+    return ClassID == classID() || parentsAreA<ParentTs...>(ClassID);
   }
 
-  static bool classof(const RTTIRoot *R) { return R->isA<ThisT>(); }
+  template <typename T> static bool classof(const T *R) {
+    return R->template isA<ThisT>();
+  }
+
+private:
+  template <typename T> bool parentsAreA(const void *const ClassID) const {
+    return T::isA(ClassID);
+  }
+
+  template <typename T, typename T2, typename... Ts>
+  bool parentsAreA(const void *const ClassID) const {
+    return T::isA(ClassID) || parentsAreA<T2, Ts...>(ClassID);
+  }
 };
 
 } // end namespace llvm
