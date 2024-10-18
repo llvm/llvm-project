@@ -1555,7 +1555,8 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
 void VPSlotTracker::assignName(const VPValue *V) {
   assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
   auto *UV = V->getUnderlyingValue();
-  if (!UV) {
+  auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe());
+  if (!UV && !(VPI && !VPI->getName().empty())) {
     VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
     NextSlot++;
     return;
@@ -1564,10 +1565,15 @@ void VPSlotTracker::assignName(const VPValue *V) {
   // Use the name of the underlying Value, wrapped in "ir<>", and versioned by
   // appending ".Number" to the name if there are multiple uses.
   std::string Name;
-  raw_string_ostream S(Name);
-  UV->printAsOperand(S, false);
+  if (UV) {
+    raw_string_ostream S(Name);
+    UV->printAsOperand(S, false);
+  } else
+    Name = VPI->getName();
+
   assert(!Name.empty() && "Name cannot be empty.");
-  std::string BaseName = (Twine("ir<") + Name + Twine(">")).str();
+  StringRef Prefix = UV ? "ir<" : "vp<%";
+  std::string BaseName = (Twine(Prefix) + Name + Twine(">")).str();
 
   // First assign the base name for V.
   const auto &[A, _] = VPValue2Name.insert({V, BaseName});
