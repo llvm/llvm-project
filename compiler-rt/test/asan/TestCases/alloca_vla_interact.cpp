@@ -3,6 +3,9 @@
 //
 // REQUIRES: stable-runtime
 
+// See https://github.com/llvm/llvm-project/issues/110956
+// XFAIL: target=sparc{{.*}}
+
 // This testcase checks correct interaction between VLAs and allocas.
 
 #include <assert.h>
