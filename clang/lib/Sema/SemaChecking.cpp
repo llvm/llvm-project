@@ -9827,6 +9827,9 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
     return IntRange(BitField->getBitWidthValue(C),
                     BitField->getType()->isUnsignedIntegerOrEnumerationType());
 
+  if (GetExprType(E)->isVoidType())
+    return IntRange{0, true};
+
   return IntRange::forValueOfType(C, GetExprType(E));
 }
 
