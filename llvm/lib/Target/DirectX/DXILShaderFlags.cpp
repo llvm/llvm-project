@@ -54,7 +54,7 @@ static DXILModuleShaderFlagsInfo computeFlags(Module &M) {
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
-  uint64_t FlagVal = (uint64_t)*this;
+  uint64_t FlagVal = (uint64_t) * this;
   OS << formatv("; Shader Flags Value: {0:x8}\n;\n", FlagVal);
   if (FlagVal == 0)
     return;
