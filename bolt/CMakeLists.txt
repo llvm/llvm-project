@@ -134,14 +134,7 @@ if (LLVM_INCLUDE_TESTS)
   endif()
 endif()
 
-set(BOLT_AARCH64_GNU_C_COMPILER aarch64-linux-gnu-gcc CACHE STRING "AArch64 GNU C compiler")
-set(BOLT_AARCH64_GNU_CXX_COMPILER aarch64-linux-gnu-g++ CACHE STRING "AArch64 GNU C++ compiler")
-set(BOLT_X86_64_GNU_C_COMPILER x86_64-linux-gnu-gcc CACHE STRING "X86 GNU C compiler")
-set(BOLT_X86_64_GNU_CXX_COMPILER x86_64-linux-gnu-g++ CACHE STRING "X86 GNU C++ compiler")
-set(BOLT_RISCV_GNU_C_COMPILER riscv64-linux-gnu-gcc CACHE STRING "RISCV GNU C compiler")
-set(BOLT_RISCV_GNU_CXX_COMPILER riscv64-linux-gnu-g++ CACHE STRING "RISCV GNU C++ compiler")
-
-function(bolt_rt_target_supported_clang target supported)
+function(bolt_rt_target_supported target supported)
 
     if(${target} STREQUAL ${HOST_NAME})
       set(${supported} TRUE PARENT_SCOPE)
@@ -170,32 +163,6 @@ function(bolt_rt_target_supported_clang target supported)
 
 endfunction()
 
-
-function(bolt_rt_target_supported_gnu target supported)
-
-    if(${target} STREQUAL ${HOST_NAME})
-      set(${supported} TRUE PARENT_SCOPE)
-      return()
-    elseif(${target} STREQUAL "X86")
-      find_program(CC_EXECUTABLE  NAMES ${BOLT_X86_64_GNU_C_COMPILER} NO_CACHE)
-      find_program(CXX_EXECUTABLE NAMES ${BOLT_X86_64_GNU_CXX_COMPILER} NO_CACHE)
-    elseif(${target} STREQUAL "AArch64")
-      find_program(CC_EXECUTABLE  NAMES ${BOLT_AARCH64_GNU_C_COMPILER} NO_CACHE)
-      find_program(CXX_EXECUTABLE NAMES ${BOLT_AARCH64_GNU_CXX_COMPILER} NO_CACHE)
-    elseif(${target} STREQUAL "RISCV")
-      find_program(CC_EXECUTABLE  NAMES ${BOLT_RISCV_GNU_C_COMPILER} NO_CACHE)
-      find_program(CXX_EXECUTABLE NAMES ${BOLT_RISCV_GNU_CXX_COMPILER} NO_CACHE)
-    endif()
-
-    if(CC_EXECUTABLE AND CXX_EXECUTABLE)
-      set(${supported} TRUE PARENT_SCOPE)
-    else()
-      set(${supported} FALSE PARENT_SCOPE)
-    endif()
-
-endfunction()
-
-
 if(BOLT_ENABLE_RUNTIME)
   if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_NAME "X86")
@@ -207,16 +174,16 @@ if(BOLT_ENABLE_RUNTIME)
 
   # Further filter BOLT runtime targets: check if the runtime can be compiled
   set(BOLT_RT_TARGETS_TO_BUILD)
-  foreach(tgt ${BOLT_TARGETS_TO_BUILD})
-    if(CMAKE_C_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*")
-      bolt_rt_target_supported_clang(${tgt} supported)
-    elseif(CMAKE_C_COMPILER_ID MATCHES ".*GNU.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*GNU.*")
-      bolt_rt_target_supported_gnu(${tgt} supported)
-    endif()
-    if(${supported})
-      list(APPEND BOLT_RT_TARGETS_TO_BUILD ${tgt})
-    endif()
-  endforeach()
+  if(CMAKE_C_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*")
+    foreach(tgt ${BOLT_TARGETS_TO_BUILD})
+        bolt_rt_target_supported(${tgt} supported)
+        if(${supported})
+          list(APPEND BOLT_RT_TARGETS_TO_BUILD ${tgt})
+        endif()
+    endforeach()
+  else()
+    message(WARNING "BOLT runtime libraries require Clang")
+  endif()
 endif()
 
 if(BOLT_ENABLE_RUNTIME)
@@ -234,38 +201,15 @@ if(BOLT_ENABLE_RUNTIME)
     cmake_path(APPEND BOLT_RT_LIBRARY_DIR ${BOLT_RT_LIBRARY_DIR} ${SUBDIR})
     file(MAKE_DIRECTORY ${BOLT_RT_LIBRARY_DIR})
 
-    # set up compilers and flags
-    if(CMAKE_C_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*")
-      set(BOLT_RT_C_COMPILER ${CMAKE_C_COMPILER})
-      set(BOLT_RT_CXX_COMPILER ${CMAKE_CXX_COMPILER})
-
-      if(${tgt} STREQUAL ${HOST_NAME})
-        set(BOLT_RT_FLAGS)
-      elseif(${tgt} STREQUAL "AArch64")
-        set(BOLT_RT_FLAGS "--target=aarch64-linux-gnu")
-      elseif(${tgt} STREQUAL "X86")
-        set(BOLT_RT_FLAGS "--target=x86_64-linux-gnu")
-      elseif(${tgt} STREQUAL "RISCV")
-        set(BOLT_RT_FLAGS "--target=riscv64-linux-gnu")
-      endif()
-
-    elseif(CMAKE_C_COMPILER_ID MATCHES ".*GNU.*" AND CMAKE_CXX_COMPILER_ID MATCHES ".*GNU.*")
+    if(${tgt} STREQUAL ${HOST_NAME})
       set(BOLT_RT_FLAGS)
-      if(${tgt} STREQUAL ${HOST_NAME})
-        set(BOLT_RT_C_COMPILER ${CMAKE_C_COMPILER})
-        set(BOLT_RT_CXX_COMPILER ${CMAKE_CXX_COMPILER})
-      elseif(${tgt} STREQUAL "AArch64")
-        set(BOLT_RT_C_COMPILER ${BOLT_AARCH64_GNU_C_COMPILER})
-        set(BOLT_RT_CXX_COMPILER ${BOLT_AARCH64_GNU_CXX_COMPILER})
-      elseif(${tgt} STREQUAL "X86")
-        set(BOLT_RT_C_COMPILER ${BOLT_X86_64_GNU_C_COMPILER})
-        set(BOLT_RT_CXX_COMPILER ${BOLT_X86_64_GNU_CXX_COMPILER})
-      elseif(${tgt} STREQUAL "RISCV")
-        set(BOLT_RT_C_COMPILER ${BOLT_RISCV_GNU_C_COMPILER})
-        set(BOLT_RT_CXX_COMPILER ${BOLT_RISCV_GNU_CXX_COMPILER})
-      endif()
+    elseif(${tgt} STREQUAL "AArch64")
+      set(BOLT_RT_FLAGS "--target=aarch64-linux-gnu")
+    elseif(${tgt} STREQUAL "X86")
+      set(BOLT_RT_FLAGS "--target=x86_64-linux-gnu")
+    elseif(${tgt} STREQUAL "RISCV")
+      set(BOLT_RT_FLAGS "--target=riscv64-linux-gnu")
     endif()
-
 
     include(ExternalProject)
     ExternalProject_Add(bolt_rt_${tgt}
@@ -273,8 +217,8 @@ if(BOLT_ENABLE_RUNTIME)
       STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-stamps
       BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-bins
       CMAKE_ARGS
-      -DCMAKE_C_COMPILER=${BOLT_RT_C_COMPILER}
-      -DCMAKE_CXX_COMPILER=${BOLT_RT_CXX_COMPILER}
+      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
       -DCMAKE_BUILD_TYPE=Release
       -DBOLT_RT_FLAGS=${BOLT_RT_FLAGS}
       -DBOLT_RT_TARGET=${tgt}
