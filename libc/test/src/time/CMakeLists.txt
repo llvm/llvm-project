@@ -173,3 +173,5 @@ add_libc_test(
     libc.src.time.clock
     libc.src.errno.errno
 )
+
+add_subdirectory(strftime_core)
