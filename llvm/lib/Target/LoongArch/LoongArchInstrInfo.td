@@ -1655,27 +1655,17 @@ let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
 def PseudoDESC_CALL : Pseudo<(outs GPR:$rd), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL GPR:$rd, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
-
 // TLSDESC
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
-    isAsmParserOnly = 1, Defs = [R1] in {
-def PseudoLA_TLS_DESC_ABS : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src),
-                                   [], "la.tls.desc", "$dst, $src">,
-                                   Requires<[IsLA32, HasLaGlobalWithAbs]>;
-def PseudoLA_TLS_DESC_ABS_LARGE : Pseudo<(outs GPR:$dst),
-                                         (ins GPR:$tmp, bare_symbol:$src), [],
-                                         "la.tls.desc", "$dst, $src">,
-                                  Requires<[IsLA64, HasLaGlobalWithAbs]>;
-def PseudoLA_TLS_DESC_PC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                                  "la.tls.desc", "$dst, $src">;
-}
-
+    isAsmParserOnly = 1, Defs = [R1] in
+def PseudoLA_TLS_DESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                               "la.tls.desc", "$dst, $src">;
 let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
     isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4] in
-def PseudoLA_TLS_DESC_PC_LARGE : Pseudo<(outs GPR:$dst),
-                                        (ins GPR:$tmp, bare_symbol:$src), [],
-                                        "la.tls.desc", "$dst, $tmp, $src">,
-                                 Requires<[IsLA64]>;
+def PseudoLA_TLS_DESC_LARGE : Pseudo<(outs GPR:$dst),
+                                     (ins GPR:$tmp, bare_symbol:$src), [],
+                                     "la.tls.desc", "$dst, $tmp, $src">,
+                              Requires<[IsLA64]>;
 
 // Load address inst alias: "la", "la.global" and "la.local".
 // Default:
