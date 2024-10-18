@@ -418,7 +418,7 @@ Improvements to Clang's diagnostics
 - The warning for an unsupported type for a named register variable is now phrased ``unsupported type for named register variable``,
   instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
   suboptimal in some way the error fails to mention (#GH111550).
-  
+
 - Clang now emits a ``-Wdepredcated-literal-operator`` diagnostic, even if the
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
@@ -537,6 +537,7 @@ Bug Fixes to C++ Support
   certain situations. (#GH47400), (#GH90896)
 - Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 - During the lookup for a base class name, non-type names are ignored. (#GH16855)
+- Fix a crash when recovering an invalid expression involving an explicit object member conversion operator. (#GH112559)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
