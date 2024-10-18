@@ -51,8 +51,6 @@ def segmented_accessor(elements, raw_segments, idx):
     return elements[start:end]
 
 
-
-
 def get_source_location():
     """
     Returns a source location from the frame just before the one whose
@@ -60,26 +58,22 @@ def get_source_location():
     """
     frame = inspect.currentframe()
     outer_frames = inspect.getouterframes(frame)
-    
+
     # Traverse the frames in reverse order, excluding the current frame
     selected_frame = None
-    for i in range(len(outer_frames)-1, -1, -1):
+    for i in range(len(outer_frames) - 1, -1, -1):
         current_frame = outer_frames[i]
-        if 'python_packages' in current_frame.filename:
+        if "python_packages" in current_frame.filename:
             # Select the frame before the one containing 'python_packages'
-            selected_frame = outer_frames[i+1] if i-1 >= 0 else current_frame
+            selected_frame = outer_frames[i + 1] if i - 1 >= 0 else current_frame
             break
     if selected_frame is None:
         # If no frame containing 'python_packages' is found, use the last frame
         selected_frame = outer_frames[-1]
-    
+
     # Create file location using the selected frame
-    file_loc = _cext.ir.Location.file(
-            selected_frame.filename,
-            selected_frame.lineno,
-            0
-        )
-    loc = _cext.ir.Location.name(selected_frame.function, childLoc = file_loc)
+    file_loc = _cext.ir.Location.file(selected_frame.filename, selected_frame.lineno, 0)
+    loc = _cext.ir.Location.name(selected_frame.function, childLoc=file_loc)
     return loc
 
 
@@ -171,10 +165,9 @@ def get_op_result_or_op_results(
     return (
         list(get_op_results_or_values(op))
         if len(op.results) > 1
-        else get_op_result_or_value(op)
-        if len(op.results) > 0
-        else op
+        else get_op_result_or_value(op) if len(op.results) > 0 else op
     )
+
 
 ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
 ResultValueT = _Union[ResultValueTypeTuple]
