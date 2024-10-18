@@ -109,7 +109,7 @@ public:
   /// \param implicitTrunc allow implicit truncation of non-zero/sign bits of
   ///                      val beyond the range of numBits
   APInt(unsigned numBits, uint64_t val, bool isSigned = false,
-        bool implicitTrunc = true)
+        bool implicitTrunc = false)
       : BitWidth(numBits) {
     if (!implicitTrunc) {
       if (isSigned) {
