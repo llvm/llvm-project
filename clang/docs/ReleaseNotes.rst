@@ -517,8 +517,7 @@ Bug Fixes to C++ Support
   certain situations. (#GH47400), (#GH90896)
 - Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 - During the lookup for a base class name, non-type names are ignored. (#GH16855)
-- Fixed an assertion failure when the default lexical access specifier was set for missing
-  primary declarations. (#GH112208)
+- Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
