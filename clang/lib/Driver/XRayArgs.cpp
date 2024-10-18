@@ -63,8 +63,8 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         << XRayInstrument->getSpelling() << Triple.str();
   }
 
-  if (Args.hasFlag(options::OPT_fxray_shared,
-                   options::OPT_fno_xray_shared, false)) {
+  if (Args.hasFlag(options::OPT_fxray_shared, options::OPT_fno_xray_shared,
+                   false)) {
     XRayShared = true;
 
     // DSO instrumentation is currently limited to x86_64
@@ -75,8 +75,8 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
 
     unsigned PICLvl = std::get<1>(tools::ParsePICArgs(TC, Args));
     if (!PICLvl) {
-      D.Diag(diag::err_opt_not_valid_without_opt)
-          << "-fxray-shared" << "-fPIC";
+      D.Diag(diag::err_opt_not_valid_without_opt) << "-fxray-shared"
+                                                  << "-fPIC";
     }
   }
 

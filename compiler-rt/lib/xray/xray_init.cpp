@@ -210,7 +210,7 @@ __xray_deregister_dso(int32_t ObjId) XRAY_NEVER_INSTRUMENT {
     return false;
   }
 
-  if (ObjId <= 0 || ObjId >= __xray_num_objects()) {
+  if (ObjId <= 0 || static_cast<uint32_t>(ObjId) >= __xray_num_objects()) {
     if (Verbosity())
       Report("Can't deregister object with ID %d: ID is invalid.\n", ObjId);
     return false;

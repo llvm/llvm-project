@@ -85,8 +85,6 @@ struct XRayTrampolines {
   void (*ExitTrampoline)();
   void (*TailExitTrampoline)();
   void (*LogArgsTrampoline)();
-  void (*CustomEventTrampoline)();
-  void (*TypedEventTrampoline)();
 
   XRayTrampolines() {
     // These resolve to the definitions in the respective executable or DSO.
@@ -94,8 +92,6 @@ struct XRayTrampolines {
     ExitTrampoline = __xray_FunctionExit;
     TailExitTrampoline = __xray_FunctionTailExit;
     LogArgsTrampoline = __xray_ArgLoggerEntry;
-    CustomEventTrampoline = __xray_CustomEvent;
-    TypedEventTrampoline = __xray_TypedEvent;
   }
 };
 
@@ -140,15 +136,14 @@ struct XRaySledMap {
 };
 
 bool patchFunctionEntry(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,
-                        void (*Trampoline)());
+                        const XRayTrampolines &Trampolines, bool LogArgs);
 bool patchFunctionExit(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,
-                       void (*Trampoline)());
+                       const XRayTrampolines &Trampolines);
 bool patchFunctionTailExit(bool Enable, uint32_t FuncId,
-                           const XRaySledEntry &Sled, void (*Trampoline)());
-bool patchCustomEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,
-                      void (*Trampoline)());
-bool patchTypedEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,
-                     void (*Trampoline)());
+                           const XRaySledEntry &Sled,
+                           const XRayTrampolines &Trampolines);
+bool patchCustomEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
+bool patchTypedEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
 
 } // namespace __xray
 
