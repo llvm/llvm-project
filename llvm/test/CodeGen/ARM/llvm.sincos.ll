@@ -107,76 +107,6 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) {
   ret { <2 x half>, <2 x half> } %result
 }
 
-define <2 x half> @test_sincos_v2f16_only_use_sin(<2 x half> %a) {
-; CHECK-LABEL: test_sincos_v2f16_only_use_sin:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    sub sp, #24
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    add r1, sp, #16
-; CHECK-NEXT:    add r2, sp, #12
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    add r1, sp, #8
-; CHECK-NEXT:    add r2, sp, #4
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr r0, [sp, #16]
-; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    ldr r1, [sp, #8]
-; CHECK-NEXT:    strh.w r0, [sp, #22]
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    strh.w r0, [sp, #20]
-; CHECK-NEXT:    add r0, sp, #20
-; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
-; CHECK-NEXT:    vmovl.u16 q8, d16
-; CHECK-NEXT:    vmov.32 r0, d16[0]
-; CHECK-NEXT:    vmov.32 r1, d16[1]
-; CHECK-NEXT:    add sp, #24
-; CHECK-NEXT:    pop {r4, pc}
-  %result = call { <2 x half>, <2 x half> } @llvm.sincos.v2f16(<2 x half> %a)
-  %result.0 = extractvalue { <2 x half>, <2 x half> } %result, 0
-  ret <2 x half> %result.0
-}
-
-define <2 x half> @test_sincos_v2f16_only_use_cos(<2 x half> %a) {
-; CHECK-LABEL: test_sincos_v2f16_only_use_cos:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    sub sp, #24
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    add r1, sp, #16
-; CHECK-NEXT:    add r2, sp, #12
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    add r1, sp, #8
-; CHECK-NEXT:    add r2, sp, #4
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr r0, [sp, #12]
-; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    ldr r1, [sp, #4]
-; CHECK-NEXT:    strh.w r0, [sp, #22]
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    strh.w r0, [sp, #20]
-; CHECK-NEXT:    add r0, sp, #20
-; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
-; CHECK-NEXT:    vmovl.u16 q8, d16
-; CHECK-NEXT:    vmov.32 r0, d16[0]
-; CHECK-NEXT:    vmov.32 r1, d16[1]
-; CHECK-NEXT:    add sp, #24
-; CHECK-NEXT:    pop {r4, pc}
-  %result = call { <2 x half>, <2 x half> } @llvm.sincos.v2f16(<2 x half> %a)
-  %result.1 = extractvalue { <2 x half>, <2 x half> } %result, 1
-  ret <2 x half> %result.1
-}
-
 define { float, float } @test_sincos_f32(float %a) {
 ; CHECK-LABEL: test_sincos_f32:
 ; CHECK:       @ %bb.0:
@@ -189,37 +119,6 @@ define { float, float } @test_sincos_f32(float %a) {
 ; CHECK-NEXT:    pop {r7, pc}
   %result = call { float, float } @llvm.sincos.f32(float %a)
   ret { float, float } %result
-}
-
-define float @test_sincos_f32_only_use_sin(float %a) {
-; CHECK-LABEL: test_sincos_f32_only_use_sin:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    add r1, sp, #4
-; CHECK-NEXT:    mov r2, sp
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr r0, [sp, #4]
-; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    pop {r7, pc}
-  %result = call { float, float } @llvm.sincos.f32(float %a)
-  %result.0 = extractvalue { float, float } %result, 0
-  ret float %result.0
-}
-
-define float @test_sincos_f32_only_use_cos(float %a) {
-; CHECK-LABEL: test_sincos_f32_only_use_cos:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    add r1, sp, #4
-; CHECK-NEXT:    mov r2, sp
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr r0, [sp], #8
-; CHECK-NEXT:    pop {r7, pc}
-  %result = call { float, float } @llvm.sincos.f32(float %a)
-  %result.1 = extractvalue { float, float } %result, 1
-  ret float %result.1
 }
 
 define { <2 x float>, <2 x float> } @test_sincos_v2f32(<2 x float> %a) {
@@ -250,58 +149,6 @@ define { <2 x float>, <2 x float> } @test_sincos_v2f32(<2 x float> %a) {
   ret { <2 x float>, <2 x float> } %result
 }
 
-define <2 x float> @test_sincos_v2f32_only_use_sin(<2 x float> %a) {
-; CHECK-LABEL: test_sincos_v2f32_only_use_sin:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vpush {d8}
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    vmov d8, r0, r1
-; CHECK-NEXT:    add r1, sp, #4
-; CHECK-NEXT:    mov r2, sp
-; CHECK-NEXT:    vmov r0, s17
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    vmov r0, s16
-; CHECK-NEXT:    add r1, sp, #12
-; CHECK-NEXT:    add r2, sp, #8
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    vldr s1, [sp, #4]
-; CHECK-NEXT:    vldr s0, [sp, #12]
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    add sp, #16
-; CHECK-NEXT:    vpop {d8}
-; CHECK-NEXT:    pop {r7, pc}
-  %result = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> %a)
-  %result.0 = extractvalue { <2 x float>, <2 x float> } %result, 0
-  ret <2 x float> %result.0
-}
-
-define <2 x float> @test_sincos_v2f32_only_use_cos(<2 x float> %a) {
-; CHECK-LABEL: test_sincos_v2f32_only_use_cos:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vpush {d8}
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    vmov d8, r0, r1
-; CHECK-NEXT:    add r1, sp, #4
-; CHECK-NEXT:    mov r2, sp
-; CHECK-NEXT:    vmov r0, s17
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    vmov r0, s16
-; CHECK-NEXT:    add r1, sp, #12
-; CHECK-NEXT:    add r2, sp, #8
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    vldr s1, [sp]
-; CHECK-NEXT:    vldr s0, [sp, #8]
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    add sp, #16
-; CHECK-NEXT:    vpop {d8}
-; CHECK-NEXT:    pop {r7, pc}
-  %result = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> %a)
-  %result.1 = extractvalue { <2 x float>, <2 x float> } %result, 1
-  ret <2 x float> %result.1
-}
-
 define { double, double } @test_sincos_f64(double %a) {
 ; CHECK-LABEL: test_sincos_f64:
 ; CHECK:       @ %bb.0:
@@ -315,37 +162,6 @@ define { double, double } @test_sincos_f64(double %a) {
 ; CHECK-NEXT:    pop {r7, pc}
   %result = call { double, double } @llvm.sincos.f64(double %a)
   ret { double, double } %result
-}
-
-define double @test_sincos_f64_only_use_sin(double %a) {
-; CHECK-LABEL: test_sincos_f64_only_use_sin:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    add r2, sp, #8
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldrd r0, r1, [sp, #8]
-; CHECK-NEXT:    add sp, #16
-; CHECK-NEXT:    pop {r7, pc}
-  %result = call { double, double } @llvm.sincos.f64(double %a)
-  %result.0 = extractvalue { double, double } %result, 0
-  ret double %result.0
-}
-
-define double @test_sincos_f64_only_use_cos(double %a) {
-; CHECK-LABEL: test_sincos_f64_only_use_cos:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    add r2, sp, #8
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldrd r0, r1, [sp], #16
-; CHECK-NEXT:    pop {r7, pc}
-  %result = call { double, double } @llvm.sincos.f64(double %a)
-  %result.1 = extractvalue { double, double } %result, 1
-  ret double %result.1
 }
 
 define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
@@ -374,63 +190,6 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
 ; CHECK-NEXT:    pop {r4, pc}
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
-}
-
-define <2 x double> @test_sincos_v2f64_only_use_sin(<2 x double> %a) {
-; CHECK-LABEL: test_sincos_v2f64_only_use_sin:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    sub sp, #36
-; CHECK-NEXT:    mov r6, r3
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    add r2, sp, #24
-; CHECK-NEXT:    add r3, sp, #16
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    add r2, sp, #8
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r7
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    vldr d16, [sp, #24]
-; CHECK-NEXT:    ldrd r0, r1, [sp, #8]
-; CHECK-NEXT:    vmov r2, r3, d16
-; CHECK-NEXT:    add sp, #36
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
-  %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
-  %result.0 = extractvalue { <2 x double>, <2 x double> } %result, 0
-  ret <2 x double> %result.0
-}
-
-define <2 x double> @test_sincos_v2f64_only_use_cos(<2 x double> %a) {
-; CHECK-LABEL: test_sincos_v2f64_only_use_cos:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    sub sp, #36
-; CHECK-NEXT:    mov r6, r3
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    add r2, sp, #24
-; CHECK-NEXT:    add r3, sp, #16
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    add r2, sp, #8
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r7
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    vldr d16, [sp, #16]
-; CHECK-NEXT:    vmov r2, r3, d16
-; CHECK-NEXT:    ldrd r0, r1, [sp], #36
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
-  %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
-  %result.1 = extractvalue { <2 x double>, <2 x double> } %result, 1
-  ret <2 x double> %result.1
 }
 
 define { fp128, fp128 } @test_sincos_f128(fp128 %a) {

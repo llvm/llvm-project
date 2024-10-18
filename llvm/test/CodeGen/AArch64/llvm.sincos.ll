@@ -237,190 +237,6 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) {
   ret { <2 x half>, <2 x half> } %result
 }
 
-define <2 x half> @test_sincos_v2f16_only_use_sin(<2 x half> %a) {
-; CHECK-LABEL: test_sincos_v2f16_only_use_sin:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    add x0, sp, #36
-; CHECK-NEXT:    add x1, sp, #32
-; CHECK-NEXT:    fcvt s0, h1
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #28
-; CHECK-NEXT:    add x1, sp, #24
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #44
-; CHECK-NEXT:    add x1, sp, #40
-; CHECK-NEXT:    mov h0, v0.h[2]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #60
-; CHECK-NEXT:    add x1, sp, #56
-; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr s0, [sp, #36]
-; CHECK-NEXT:    ldr s1, [sp, #28]
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
-; CHECK-NEXT:    fcvt h2, s0
-; CHECK-NEXT:    fcvt h0, s1
-; CHECK-NEXT:    ldr s1, [sp, #44]
-; CHECK-NEXT:    fcvt h1, s1
-; CHECK-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-NEXT:    ldr s2, [sp, #60]
-; CHECK-NEXT:    mov v0.h[2], v1.h[0]
-; CHECK-NEXT:    fcvt h1, s2
-; CHECK-NEXT:    mov v0.h[3], v1.h[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    add sp, sp, #64
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_v2f16_only_use_sin:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    sub sp, sp, #48
-; NO-LIBCALL-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; NO-LIBCALL-NEXT:    .cfi_def_cfa_offset 48
-; NO-LIBCALL-NEXT:    .cfi_offset w30, -16
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NO-LIBCALL-NEXT:    mov h1, v0.h[1]
-; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    fcvt s0, h1
-; NO-LIBCALL-NEXT:    bl sinf
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    fcvt h0, s0
-; NO-LIBCALL-NEXT:    fcvt s1, h1
-; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    fmov s0, s1
-; NO-LIBCALL-NEXT:    bl sinf
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    fcvt h2, s0
-; NO-LIBCALL-NEXT:    mov h1, v1.h[2]
-; NO-LIBCALL-NEXT:    fcvt s0, h1
-; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v2.h[1], v1.h[0]
-; NO-LIBCALL-NEXT:    str q2, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    bl sinf
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    fcvt h2, s0
-; NO-LIBCALL-NEXT:    mov h1, v1.h[3]
-; NO-LIBCALL-NEXT:    fcvt s0, h1
-; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v1.h[2], v2.h[0]
-; NO-LIBCALL-NEXT:    str q1, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    bl sinf
-; NO-LIBCALL-NEXT:    fcvt h1, s0
-; NO-LIBCALL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v0.h[3], v1.h[0]
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; NO-LIBCALL-NEXT:    add sp, sp, #48
-; NO-LIBCALL-NEXT:    ret
-  %result = call { <2 x half>, <2 x half> } @llvm.sincos.v2f16(<2 x half> %a)
-  %result.0 = extractvalue { <2 x half>, <2 x half> } %result, 0
-  ret <2 x half> %result.0
-}
-
-define <2 x half> @test_sincos_v2f16_only_use_cos(<2 x half> %a) {
-; CHECK-LABEL: test_sincos_v2f16_only_use_cos:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    add x0, sp, #36
-; CHECK-NEXT:    add x1, sp, #32
-; CHECK-NEXT:    fcvt s0, h1
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #28
-; CHECK-NEXT:    add x1, sp, #24
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #44
-; CHECK-NEXT:    add x1, sp, #40
-; CHECK-NEXT:    mov h0, v0.h[2]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #60
-; CHECK-NEXT:    add x1, sp, #56
-; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr s0, [sp, #32]
-; CHECK-NEXT:    ldr s1, [sp, #24]
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
-; CHECK-NEXT:    fcvt h2, s0
-; CHECK-NEXT:    fcvt h0, s1
-; CHECK-NEXT:    ldr s1, [sp, #40]
-; CHECK-NEXT:    fcvt h1, s1
-; CHECK-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-NEXT:    ldr s2, [sp, #56]
-; CHECK-NEXT:    mov v0.h[2], v1.h[0]
-; CHECK-NEXT:    fcvt h1, s2
-; CHECK-NEXT:    mov v0.h[3], v1.h[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    add sp, sp, #64
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_v2f16_only_use_cos:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    sub sp, sp, #48
-; NO-LIBCALL-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; NO-LIBCALL-NEXT:    .cfi_def_cfa_offset 48
-; NO-LIBCALL-NEXT:    .cfi_offset w30, -16
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NO-LIBCALL-NEXT:    mov h1, v0.h[1]
-; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    fcvt s0, h1
-; NO-LIBCALL-NEXT:    bl cosf
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    fcvt h0, s0
-; NO-LIBCALL-NEXT:    fcvt s1, h1
-; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    fmov s0, s1
-; NO-LIBCALL-NEXT:    bl cosf
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    fcvt h2, s0
-; NO-LIBCALL-NEXT:    mov h1, v1.h[2]
-; NO-LIBCALL-NEXT:    fcvt s0, h1
-; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v2.h[1], v1.h[0]
-; NO-LIBCALL-NEXT:    str q2, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    bl cosf
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    fcvt h2, s0
-; NO-LIBCALL-NEXT:    mov h1, v1.h[3]
-; NO-LIBCALL-NEXT:    fcvt s0, h1
-; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v1.h[2], v2.h[0]
-; NO-LIBCALL-NEXT:    str q1, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    bl cosf
-; NO-LIBCALL-NEXT:    fcvt h1, s0
-; NO-LIBCALL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v0.h[3], v1.h[0]
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; NO-LIBCALL-NEXT:    add sp, sp, #48
-; NO-LIBCALL-NEXT:    ret
-  %result = call { <2 x half>, <2 x half> } @llvm.sincos.v2f16(<2 x half> %a)
-  %result.1 = extractvalue { <2 x half>, <2 x half> } %result, 1
-  ret <2 x half> %result.1
-}
-
 define { float, float } @test_sincos_f32(float %a) {
 ; CHECK-LABEL: test_sincos_f32:
 ; CHECK:       // %bb.0:
@@ -456,46 +272,101 @@ define { float, float } @test_sincos_f32(float %a) {
   ret { float, float } %result
 }
 
-define float @test_sincos_f32_only_use_sin(float %a) {
-; CHECK-LABEL: test_sincos_f32_only_use_sin:
+define { <3 x float>, <3 x float> } @test_sincos_v3f32(<3 x float> %a) {
+; CHECK-LABEL: test_sincos_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    add x0, sp, #12
-; CHECK-NEXT:    add x1, sp, #8
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset w21, -24
+; CHECK-NEXT:    .cfi_offset w22, -32
+; CHECK-NEXT:    .cfi_offset w30, -48
+; CHECK-NEXT:    add x0, sp, #20
+; CHECK-NEXT:    add x1, sp, #16
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    add x0, sp, #28
+; CHECK-NEXT:    add x1, sp, #24
+; CHECK-NEXT:    add x19, sp, #28
+; CHECK-NEXT:    add x20, sp, #24
+; CHECK-NEXT:    mov s0, v0.s[1]
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    add x0, sp, #44
+; CHECK-NEXT:    add x1, sp, #40
+; CHECK-NEXT:    add x21, sp, #44
+; CHECK-NEXT:    add x22, sp, #40
+; CHECK-NEXT:    mov s0, v0.s[2]
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldp s1, s0, [sp, #16]
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ld1 { v0.s }[1], [x19]
+; CHECK-NEXT:    ld1 { v1.s }[1], [x20]
+; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ld1 { v0.s }[2], [x21]
+; CHECK-NEXT:    ld1 { v1.s }[2], [x22]
+; CHECK-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
 ;
-; NO-LIBCALL-LABEL: test_sincos_f32_only_use_sin:
+; NO-LIBCALL-LABEL: test_sincos_v3f32:
 ; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    b sinf
-  %result = call { float, float } @llvm.sincos.f32(float %a)
-  %result.0 = extractvalue { float, float } %result, 0
-  ret float %result.0
-}
-
-define float @test_sincos_f32_only_use_cos(float %a) {
-; CHECK-LABEL: test_sincos_f32_only_use_cos:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    add x0, sp, #12
-; CHECK-NEXT:    add x1, sp, #8
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr s0, [sp, #8]
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_f32_only_use_cos:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    b cosf
-  %result = call { float, float } @llvm.sincos.f32(float %a)
-  %result.1 = extractvalue { float, float } %result, 1
-  ret float %result.1
+; NO-LIBCALL-NEXT:    sub sp, sp, #80
+; NO-LIBCALL-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; NO-LIBCALL-NEXT:    .cfi_def_cfa_offset 80
+; NO-LIBCALL-NEXT:    .cfi_offset w30, -16
+; NO-LIBCALL-NEXT:    .cfi_offset b8, -24
+; NO-LIBCALL-NEXT:    .cfi_offset b9, -32
+; NO-LIBCALL-NEXT:    mov s8, v0.s[1]
+; NO-LIBCALL-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    fmov s0, s8
+; NO-LIBCALL-NEXT:    bl sinf
+; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
+; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; NO-LIBCALL-NEXT:    bl sinf
+; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
+; NO-LIBCALL-NEXT:    mov v0.s[1], v1.s[0]
+; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    mov s9, v0.s[2]
+; NO-LIBCALL-NEXT:    fmov s0, s9
+; NO-LIBCALL-NEXT:    bl sinf
+; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
+; NO-LIBCALL-NEXT:    mov v1.s[2], v0.s[0]
+; NO-LIBCALL-NEXT:    fmov s0, s8
+; NO-LIBCALL-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    bl cosf
+; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
+; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; NO-LIBCALL-NEXT:    bl cosf
+; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
+; NO-LIBCALL-NEXT:    mov v0.s[1], v1.s[0]
+; NO-LIBCALL-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    fmov s0, s9
+; NO-LIBCALL-NEXT:    bl cosf
+; NO-LIBCALL-NEXT:    fmov s2, s0
+; NO-LIBCALL-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
+; NO-LIBCALL-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; NO-LIBCALL-NEXT:    mov v1.s[2], v2.s[0]
+; NO-LIBCALL-NEXT:    add sp, sp, #80
+; NO-LIBCALL-NEXT:    ret
+  %result = call { <3 x float>, <3 x float> } @llvm.sincos.v3f32(<3 x float> %a)
+  ret { <3 x float>, <3 x float> } %result
 }
 
 define { <2 x float>, <2 x float> } @test_sincos_v2f32(<2 x float> %a) {
@@ -573,114 +444,6 @@ define { <2 x float>, <2 x float> } @test_sincos_v2f32(<2 x float> %a) {
   ret { <2 x float>, <2 x float> } %result
 }
 
-define <2 x float> @test_sincos_v2f32_only_use_sin(<2 x float> %a) {
-; CHECK-LABEL: test_sincos_v2f32_only_use_sin:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    add x0, sp, #28
-; CHECK-NEXT:    add x1, sp, #24
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #20
-; CHECK-NEXT:    add x1, sp, #16
-; CHECK-NEXT:    add x19, sp, #20
-; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr s0, [sp, #28]
-; CHECK-NEXT:    ld1 { v0.s }[1], [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    add sp, sp, #48
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_v2f32_only_use_sin:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    sub sp, sp, #48
-; NO-LIBCALL-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; NO-LIBCALL-NEXT:    .cfi_def_cfa_offset 48
-; NO-LIBCALL-NEXT:    .cfi_offset w30, -16
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    mov s0, v0.s[1]
-; NO-LIBCALL-NEXT:    bl sinf
-; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
-; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; NO-LIBCALL-NEXT:    bl sinf
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
-; NO-LIBCALL-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v0.s[1], v1.s[0]
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; NO-LIBCALL-NEXT:    add sp, sp, #48
-; NO-LIBCALL-NEXT:    ret
-  %result = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> %a)
-  %result.0 = extractvalue { <2 x float>, <2 x float> } %result, 0
-  ret <2 x float> %result.0
-}
-
-define <2 x float> @test_sincos_v2f32_only_use_cos(<2 x float> %a) {
-; CHECK-LABEL: test_sincos_v2f32_only_use_cos:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    add x0, sp, #28
-; CHECK-NEXT:    add x1, sp, #24
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #20
-; CHECK-NEXT:    add x1, sp, #16
-; CHECK-NEXT:    add x19, sp, #16
-; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldr s0, [sp, #24]
-; CHECK-NEXT:    ld1 { v0.s }[1], [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    add sp, sp, #48
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_v2f32_only_use_cos:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    sub sp, sp, #48
-; NO-LIBCALL-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; NO-LIBCALL-NEXT:    .cfi_def_cfa_offset 48
-; NO-LIBCALL-NEXT:    .cfi_offset w30, -16
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    mov s0, v0.s[1]
-; NO-LIBCALL-NEXT:    bl cosf
-; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
-; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; NO-LIBCALL-NEXT:    bl cosf
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    // kill: def $s0 killed $s0 def $q0
-; NO-LIBCALL-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v0.s[1], v1.s[0]
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; NO-LIBCALL-NEXT:    add sp, sp, #48
-; NO-LIBCALL-NEXT:    ret
-  %result = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> %a)
-  %result.1 = extractvalue { <2 x float>, <2 x float> } %result, 1
-  ret <2 x float> %result.1
-}
-
 define { double, double } @test_sincos_f64(double %a) {
 ; CHECK-LABEL: test_sincos_f64:
 ; CHECK:       // %bb.0:
@@ -717,52 +480,6 @@ define { double, double } @test_sincos_f64(double %a) {
 ; NO-LIBCALL-NEXT:    ret
   %result = call { double, double } @llvm.sincos.f64(double %a)
   ret { double, double } %result
-}
-
-define double @test_sincos_f64_only_use_sin(double %a) {
-; CHECK-LABEL: test_sincos_f64_only_use_sin:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    add x0, sp, #24
-; CHECK-NEXT:    add x1, sp, #8
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldr d0, [sp, #24]
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_f64_only_use_sin:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    b sin
-  %result = call { double, double } @llvm.sincos.f64(double %a)
-  %result.0 = extractvalue { double, double } %result, 0
-  ret double %result.0
-}
-
-define double @test_sincos_f64_only_use_cos(double %a) {
-; CHECK-LABEL: test_sincos_f64_only_use_cos:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    add x0, sp, #24
-; CHECK-NEXT:    add x1, sp, #8
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_f64_only_use_cos:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    b cos
-  %result = call { double, double } @llvm.sincos.f64(double %a)
-  %result.1 = extractvalue { double, double } %result, 1
-  ret double %result.1
 }
 
 define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
@@ -833,104 +550,4 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
 ; NO-LIBCALL-NEXT:    ret
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
-}
-
-define <2 x double> @test_sincos_v2f64_only_use_sin(<2 x double> %a) {
-; CHECK-LABEL: test_sincos_v2f64_only_use_sin:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    stp x30, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    add x0, sp, #40
-; CHECK-NEXT:    add x1, sp, #32
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #24
-; CHECK-NEXT:    add x1, sp, #16
-; CHECK-NEXT:    add x19, sp, #24
-; CHECK-NEXT:    mov d0, v0.d[1]
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldr d0, [sp, #40]
-; CHECK-NEXT:    ld1 { v0.d }[1], [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #64
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_v2f64_only_use_sin:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    sub sp, sp, #48
-; NO-LIBCALL-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; NO-LIBCALL-NEXT:    .cfi_def_cfa_offset 48
-; NO-LIBCALL-NEXT:    .cfi_offset w30, -16
-; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    mov d0, v0.d[1]
-; NO-LIBCALL-NEXT:    bl sin
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; NO-LIBCALL-NEXT:    bl sin
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NO-LIBCALL-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v0.d[1], v1.d[0]
-; NO-LIBCALL-NEXT:    add sp, sp, #48
-; NO-LIBCALL-NEXT:    ret
-  %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
-  %result.0 = extractvalue { <2 x double>, <2 x double> } %result, 0
-  ret <2 x double> %result.0
-}
-
-define <2 x double> @test_sincos_v2f64_only_use_cos(<2 x double> %a) {
-; CHECK-LABEL: test_sincos_v2f64_only_use_cos:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    stp x30, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    add x0, sp, #40
-; CHECK-NEXT:    add x1, sp, #32
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    add x0, sp, #24
-; CHECK-NEXT:    add x1, sp, #16
-; CHECK-NEXT:    add x19, sp, #16
-; CHECK-NEXT:    mov d0, v0.d[1]
-; CHECK-NEXT:    bl sincos
-; CHECK-NEXT:    ldr d0, [sp, #32]
-; CHECK-NEXT:    ld1 { v0.d }[1], [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #64
-; CHECK-NEXT:    ret
-;
-; NO-LIBCALL-LABEL: test_sincos_v2f64_only_use_cos:
-; NO-LIBCALL:       // %bb.0:
-; NO-LIBCALL-NEXT:    sub sp, sp, #48
-; NO-LIBCALL-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; NO-LIBCALL-NEXT:    .cfi_def_cfa_offset 48
-; NO-LIBCALL-NEXT:    .cfi_offset w30, -16
-; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    mov d0, v0.d[1]
-; NO-LIBCALL-NEXT:    bl cos
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; NO-LIBCALL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; NO-LIBCALL-NEXT:    bl cos
-; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NO-LIBCALL-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; NO-LIBCALL-NEXT:    mov v0.d[1], v1.d[0]
-; NO-LIBCALL-NEXT:    add sp, sp, #48
-; NO-LIBCALL-NEXT:    ret
-  %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
-  %result.1 = extractvalue { <2 x double>, <2 x double> } %result, 1
-  ret <2 x double> %result.1
 }

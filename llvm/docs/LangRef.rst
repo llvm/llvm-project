@@ -15914,9 +15914,9 @@ The '``llvm.sincos.*``' intrinsics returns the sine and cosine of the operand.
 Arguments:
 """"""""""
 
-The argument is a :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
-of floating-point values. Returns two values matching the argument type in a
-struct.
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
 
 Semantics:
 """"""""""
