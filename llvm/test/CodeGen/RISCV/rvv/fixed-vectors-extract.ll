@@ -1004,8 +1004,8 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV64M-NEXT:    lui a1, 322639
 ; RV64M-NEXT:    addiw a1, a1, -945
 ; RV64M-NEXT:    mul a0, a0, a1
-; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srai a0, a0, 34
+; RV64M-NEXT:    srliw a1, a0, 31
 ; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    ret
   %bo = sdiv <4 x i32> %x, <i32 11, i32 12, i32 13, i32 14>
