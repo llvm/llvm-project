@@ -2,25 +2,28 @@ JSON Symbol File Format
 =======================
 
 The JSON symbol file format encodes symbols in a text based, human readable
-format. JSON symbol files can be used to symbolicate programs that miss symbol
+format. JSON symbol files can be used to symbolicate programs that lack symbol
 information, for example because they have been stripped.
+
+Under the hood, the JSON symbol file format is also used by the crashlog
+script, specifically to provide symbol information for interactive crashlogs.
 
 Format
 ------
 
-The symbol file contains of a single JSON object with the following top level
+The symbol file consists of a single JSON object with the following top level
 keys:
 
-* ``triple``
-* ``uuid``
-* ``type``
-* ``sections``
-* ``symbols``
+* ``triple`` (string)
+* ``uuid`` (string)
+* ``type`` (string, optional)
+* ``sections`` (array, optional)
+* ``symbols`` (array, optional)
 
 The ``triple``, ``uuid`` and ``type`` form the header and should therefore come
 first. The ``type`` field is optional. The body consists ``sections`` and
-``symbols``, each represented as a JSON array. Both arrays are optional, and
-can be omitted and are allowed to be empty.
+``symbols``. Both arrays are optional, and can be omitted and are allowed to be
+empty.
 
 triple
 ``````
@@ -57,7 +60,7 @@ Valid values for the ``type`` field are:
 * ``corefile``: A core file that has a checkpoint of a program's execution state.
 * ``executable``: A normal executable.
 * ``debuginfo``: An object file that contains only debug information.
-* ``dynamicuinker``: The platform's dynamic linker executable.
+* ``dynamiclinker``: The platform's dynamic linker executable.
 * ``objectfile``: An intermediate object file.
 * ``sharedlibrary``: A shared library that can be used during execution.
 * ``stublibrary``: A library that can be linked against but not used for execution.
