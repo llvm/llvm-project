@@ -948,7 +948,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
        objects (e.g. derived types or classes), indicates the bounds to be copied
        of the variable. When it's an array slice it is in rank order where rank 0
        is the inner-most dimension.
-    - 'map_clauses': OpenMP map type for this map capture, for example: from, to and
+    - 'map_type': OpenMP map type for this map capture, for example: from, to and
        always. It's a bitfield composed of the OpenMP runtime flags stored in
        OpenMPOffloadMappingFlags.
     - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
