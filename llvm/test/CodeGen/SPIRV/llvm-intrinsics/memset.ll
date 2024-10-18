@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -verify-machineinstrs | FileCheck %s
 
 ; CHECK-DAG: OpDecorate %[[#Memset_p0i32:]] LinkageAttributes "spirv.llvm_memset_p0_i32" Export
 ; CHECK-DAG: OpDecorate %[[#Memset_p3i32:]] LinkageAttributes "spirv.llvm_memset_p3_i32" Export

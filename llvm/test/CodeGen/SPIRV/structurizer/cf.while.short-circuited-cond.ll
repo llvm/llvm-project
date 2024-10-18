@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s
+; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - -verify-machineinstrs | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 ;

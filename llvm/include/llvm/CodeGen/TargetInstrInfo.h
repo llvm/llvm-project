@@ -2278,6 +2278,32 @@ public:
     llvm_unreachable("unknown number of operands necessary");
   }
 
+  // This this instruction a PHI node.
+  // This function should be favored over MI.isPHI() as it allows backends to
+  // define additional PHI instructions.
+  virtual bool isPhiInstr(const MachineInstr &MI) const {
+    return MI.getOpcode() == TargetOpcode::G_PHI ||
+           MI.getOpcode() == TargetOpcode::PHI;
+  }
+
+  // Returns the number of [Value, Src] pairs this phi instruction has.
+  // Only valid to call on a phi node.
+  virtual unsigned getNumPhiIncomingPair(const MachineInstr &MI) const {
+    assert(isPhiInstr(MI));
+    // G_PHI/PHI only have a single operand before the pairs. 2 Operands per
+    // pair.
+    return (MI.getNumOperands() - 1) / 2;
+  }
+
+  // Returns the |index|'th [Value, Src] pair of this phi instruction.
+  virtual std::pair<MachineOperand, MachineBasicBlock *>
+  getPhiIncomingPair(const MachineInstr &MI, unsigned index) const {
+    // Behavior for G_PHI/PHI instructions.
+    MachineOperand Operand = MI.getOperand(index * 2 + 1);
+    MachineBasicBlock *MBB = MI.getOperand(index * 2 + 2).getMBB();
+    return {Operand, MBB};
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
