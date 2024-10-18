@@ -308,15 +308,13 @@ define void @memmove_p0_p3(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v7, 7, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 0
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v2
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
 ; CHECK-NEXT:    v_lshrrev_b64 v[5:6], 3, v[3:4]
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[7:8]
-; CHECK-NEXT:    v_cndmask_b32_e64 v10, 0, s5, vcc_lo
-; CHECK-NEXT:    v_cndmask_b32_e32 v9, 0, v2, vcc_lo
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, -1, v0, vcc_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[5:6]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[9:10], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u32_e64 v2, v9
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB2_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow40
@@ -601,15 +599,13 @@ define void @memmove_p0_p5(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v7, 15, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 0
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v2
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
 ; CHECK-NEXT:    v_lshrrev_b64 v[5:6], 4, v[3:4]
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[7:8]
-; CHECK-NEXT:    v_cndmask_b32_e64 v10, 0, s5, vcc_lo
-; CHECK-NEXT:    v_cndmask_b32_e32 v9, 0, v2, vcc_lo
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, -1, v0, vcc_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[5:6]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[9:10], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u32_e64 v2, v9
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB4_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow40
