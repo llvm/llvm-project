@@ -35,17 +35,20 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   assert(VPtr->getSubclassID() != Value::ClassID::User &&
          "Can't register a user!");
 
-  // Track creation of instructions.
-  // Please note that we don't allow the creation of detached instructions,
-  // meaning that the instructions need to be inserted into a block upon
-  // creation. This is why the tracker class combines creation and insertion.
-  if (auto *I = dyn_cast<Instruction>(VPtr.get()))
-    getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
-
   Value *V = VPtr.get();
   [[maybe_unused]] auto Pair =
       LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
   assert(Pair.second && "Already exists!");
+
+  // Track creation of instructions.
+  // Please note that we don't allow the creation of detached instructions,
+  // meaning that the instructions need to be inserted into a block upon
+  // creation. This is why the tracker class combines creation and insertion.
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
+    runInsertInstrCallbacks(I);
+  }
+
   return V;
 }
 
@@ -658,6 +661,59 @@ Module *Context::createModule(llvm::Module *LLVMM) {
     getOrCreateValue(&IFunc);
 
   return M;
+}
+
+void Context::runRemoveInstrCallbacks(Instruction *I) {
+  for (const auto &CBEntry : RemoveInstrCallbacks) {
+    CBEntry.second(I);
+  }
+}
+
+void Context::runInsertInstrCallbacks(Instruction *I) {
+  for (auto &CBEntry : InsertInstrCallbacks) {
+    CBEntry.second(I);
+  }
+}
+
+void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
+  for (auto &CBEntry : MoveInstrCallbacks) {
+    CBEntry.second(I, WhereIt);
+  }
+}
+
+int Context::NextCallbackId = 0;
+
+int Context::registerRemoveInstrCallback(RemoveInstrCallback CB) {
+  int Id = NextCallbackId++;
+  RemoveInstrCallbacks[Id] = CB;
+  return Id;
+}
+void Context::unregisterRemoveInstrCallback(int CallbackId) {
+  [[maybe_unused]] bool erased = RemoveInstrCallbacks.erase(CallbackId);
+  assert(erased &&
+         "Callback id not found in RemoveInstrCallbacks during deregistration");
+}
+
+int Context::registerInsertInstrCallback(InsertInstrCallback CB) {
+  int Id = NextCallbackId++;
+  InsertInstrCallbacks[Id] = CB;
+  return Id;
+}
+void Context::unregisterInsertInstrCallback(int CallbackId) {
+  [[maybe_unused]] bool erased = InsertInstrCallbacks.erase(CallbackId);
+  assert(erased &&
+         "Callback id not found in InsertInstrCallbacks during deregistration");
+}
+
+int Context::registerMoveInstrCallback(MoveInstrCallback CB) {
+  int Id = NextCallbackId++;
+  MoveInstrCallbacks[Id] = CB;
+  return Id;
+}
+void Context::unregisterMoveInstrCallback(int CallbackId) {
+  [[maybe_unused]] bool erased = MoveInstrCallbacks.erase(CallbackId);
+  assert(erased &&
+         "Callback id not found in MoveInstrCallbacks during deregistration");
 }
 
 } // namespace llvm::sandboxir

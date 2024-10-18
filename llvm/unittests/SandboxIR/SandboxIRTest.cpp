@@ -22,6 +22,7 @@
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
+#include "gmock/gmock-more-matchers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -5961,4 +5962,88 @@ TEST_F(SandboxIRTest, CheckClassof) {
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   EXPECT_NE(&sandboxir::CLASS::classof, &sandboxir::Instruction::classof);
 #include "llvm/SandboxIR/Values.def"
+}
+
+TEST_F(SandboxIRTest, InstructionCallbacks) {
+  parseIR(C, R"IR(
+    define void @foo(ptr %ptr, i8 %val) {
+      ret void
+    }
+  )IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  sandboxir::Argument *Ptr = F.getArg(0);
+  sandboxir::Argument *Val = F.getArg(1);
+  sandboxir::Instruction *Ret = &BB.front();
+
+  SmallVector<sandboxir::Instruction *> Inserted;
+  int InsertCbId = Ctx.registerInsertInstrCallback(
+      [&Inserted](sandboxir::Instruction *I) { Inserted.push_back(I); });
+
+  SmallVector<sandboxir::Instruction *> Removed;
+  int RemoveCbId = Ctx.registerRemoveInstrCallback(
+      [&Removed](sandboxir::Instruction *I) { Removed.push_back(I); });
+
+  // Keep the moved instruction and the instruction pointed by the Where
+  // iterator so we can check both callback arguments work as expected.
+  SmallVector<std::pair<sandboxir::Instruction *, sandboxir::Instruction *>>
+      Moved;
+  int MoveCbId = Ctx.registerMoveInstrCallback(
+      [&Moved](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
+        // Use a nullptr to signal "move to end" to keep it single. We only
+        // have a basic block in this test case anyway.
+        if (Where == Where.getNodeParent()->end())
+          Moved.push_back(std::make_pair(I, nullptr));
+        else
+          Moved.push_back(std::make_pair(I, &*Where));
+      });
+
+  Ctx.save();
+  auto *NewI = sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
+                                            Ret->getIterator(), Ctx);
+  EXPECT_THAT(Inserted, testing::ElementsAre(NewI));
+  EXPECT_THAT(Removed, testing::IsEmpty());
+  EXPECT_THAT(Moved, testing::IsEmpty());
+
+  Ret->moveBefore(NewI);
+  EXPECT_THAT(Inserted, testing::ElementsAre(NewI));
+  EXPECT_THAT(Removed, testing::IsEmpty());
+  EXPECT_THAT(Moved, testing::ElementsAre(std::make_pair(Ret, NewI)));
+
+  Ret->eraseFromParent();
+  EXPECT_THAT(Inserted, testing::ElementsAre(NewI));
+  EXPECT_THAT(Removed, testing::ElementsAre(Ret));
+  EXPECT_THAT(Moved, testing::ElementsAre(std::make_pair(Ret, NewI)));
+
+  NewI->eraseFromParent();
+  EXPECT_THAT(Inserted, testing::ElementsAre(NewI));
+  EXPECT_THAT(Removed, testing::ElementsAre(Ret, NewI));
+  EXPECT_THAT(Moved, testing::ElementsAre(std::make_pair(Ret, NewI)));
+
+  // Check that after revert the callbacks have been called for the inverse
+  // operations of the changes made so far.
+  Ctx.revert();
+  EXPECT_THAT(Inserted, testing::ElementsAre(NewI, NewI, Ret));
+  EXPECT_THAT(Removed, testing::ElementsAre(Ret, NewI, NewI));
+  EXPECT_THAT(Moved, testing::ElementsAre(std::make_pair(Ret, NewI),
+                                          std::make_pair(Ret, nullptr)));
+
+  // Check that deregistration works. Do an operation of each type after
+  // deregistering callbacks and check.
+  Inserted.clear();
+  Removed.clear();
+  Moved.clear();
+  Ctx.unregisterInsertInstrCallback(InsertCbId);
+  Ctx.unregisterRemoveInstrCallback(RemoveCbId);
+  Ctx.unregisterMoveInstrCallback(MoveCbId);
+  auto *NewI2 = sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
+                                            Ret->getIterator(), Ctx);
+  Ret->moveBefore(NewI2);
+  Ret->eraseFromParent();
+  EXPECT_THAT(Inserted, testing::IsEmpty());
+  EXPECT_THAT(Removed, testing::IsEmpty());
+  EXPECT_THAT(Moved, testing::IsEmpty());
 }

@@ -64,6 +64,8 @@ Instruction *Instruction::getPrevNode() const {
 }
 
 void Instruction::removeFromParent() {
+  Ctx.runRemoveInstrCallbacks(this);
+
   Ctx.getTracker().emplaceIfTracking<RemoveFromParent>(this);
 
   // Detach all the LLVM IR instructions from their parent BB.
@@ -73,6 +75,8 @@ void Instruction::removeFromParent() {
 
 void Instruction::eraseFromParent() {
   assert(users().empty() && "Still connected to users, can't erase!");
+
+  Ctx.runRemoveInstrCallbacks(this);
   std::unique_ptr<Value> Detached = Ctx.detach(this);
   auto LLVMInstrs = getLLVMInstrs();
 
@@ -100,6 +104,7 @@ void Instruction::moveBefore(BasicBlock &BB, const BBIterator &WhereIt) {
     // Destination is same as origin, nothing to do.
     return;
 
+  Ctx.runMoveInstrCallbacks(this, WhereIt);
   Ctx.getTracker().emplaceIfTracking<MoveInstr>(this);
 
   auto *LLVMBB = cast<llvm::BasicBlock>(BB.Val);
