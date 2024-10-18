@@ -218,7 +218,7 @@ In general, ``ScopedDisabler`` should be preferred, as it is the most performant
      - Compile-time
      - Stack
      - Very low
-     - Suppresses all sanitizer error reports in the current scope and all invoked functions.
+     - Suppresses all RTSan error reports in the current scope and all invoked functions.
    * - ``function-name-matches`` suppression
      - Run-time
      - Single function
@@ -234,7 +234,7 @@ In general, ``ScopedDisabler`` should be preferred, as it is the most performant
 ``ScopedDisabler``
 ##################
 
-At compile time, RealtimeSanitizer may be disabled for a scope using ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all sanitizer error reports are suppressed. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively.
+At compile time, RealtimeSanitizer may be disabled for a scope using ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all RTSan error reports are suppressed for that thread. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively.
 
 .. code-block:: c++
 
