@@ -193,12 +193,12 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
 
   // Create TargetMachine
   //
-
+  std::string execName = *argv[0];
   if (TargetTripleStr.empty()) {
-    errs() << *argv[0] << ": -mtriple must be specified\n";
+    errs() << execName << ": -mtriple must be specified\n";
     exit(1);
   }
-  ExitOnError ExitOnErr(std::string(*argv[0]) + ": error:");
+  ExitOnError ExitOnErr(std::string(execName) + ": error:");
   TM = ExitOnErr(codegen::createTargetMachineForTriple(
       Triple::normalize(TargetTripleStr)));
 
@@ -206,14 +206,14 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   //
 
   if (PassPipeline.empty()) {
-    errs() << *argv[0] << ": at least one pass should be specified\n";
+    errs() << execName << ": at least one pass should be specified\n";
     exit(1);
   }
 
   PassBuilder PB(TM.get());
   ModulePassManager MPM;
   if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
-    errs() << *argv[0] << ": " << toString(std::move(Err)) << "\n";
+    errs() << execName << ": " << toString(std::move(Err)) << "\n";
     exit(1);
   }
 
