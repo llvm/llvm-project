@@ -133,5 +133,15 @@ PythonObject SWIGBridge::ToSWIGWrapper(
   return ToSWIGHelper(module_spec_sb.release(), SWIGTYPE_p_lldb__SBModuleSpec);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(
+    std::unique_ptr<lldb::SBDebugger> debugger_sb) {
+  return ToSWIGHelper(debugger_sb.release(), SWIGTYPE_p_lldb__SBDebugger);
+}
+
+PythonObject SWIGBridge::ToSWIGWrapper(
+    std::unique_ptr<lldb::SBExecutionContext> exe_ctx_sb) {
+  return ToSWIGHelper(exe_ctx_sb.release(), SWIGTYPE_p_lldb__SBExecutionContext);
+}
+
 } // namespace python
 } // namespace lldb_private
