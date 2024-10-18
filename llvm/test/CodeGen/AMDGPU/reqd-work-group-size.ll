@@ -353,7 +353,7 @@ define amdgpu_kernel void @partial_load_group_size_x(ptr addrspace(1) %out) #0 !
 ; CHECK-LABEL: @partial_load_group_size_x_explicit_callsite_align(
 ; CHECK-NEXT: %dispatch.ptr = tail call align 2 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
-; CHECK-NEXT: %group.size.x.lo = load i8, ptr addrspace(4) %gep.group.size.x, align 2
+; CHECK-NEXT: %group.size.x.lo = load i8, ptr addrspace(4) %gep.group.size.x, align 4
 ; CHECK-NEXT: store i8 %group.size.x.lo, ptr addrspace(1) %out, align 1
 define amdgpu_kernel void @partial_load_group_size_x_explicit_callsite_align(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
   %dispatch.ptr = tail call align 2 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()

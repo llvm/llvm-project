@@ -1766,18 +1766,10 @@ public:
   }
 
   /// Extract the alignment of the return value.
-  MaybeAlign getRetAlign() const {
-    if (auto Align = Attrs.getRetAlignment())
-      return Align;
-    if (const Function *F = getCalledFunction())
-      return F->getAttributes().getRetAlignment();
-    return std::nullopt;
-  }
+  MaybeAlign getRetAlign() const;
 
   /// Extract the alignment for a call or parameter (0=unknown).
-  MaybeAlign getParamAlign(unsigned ArgNo) const {
-    return Attrs.getParamAlignment(ArgNo);
-  }
+  MaybeAlign getParamAlign(unsigned ArgNo) const;
 
   MaybeAlign getParamStackAlign(unsigned ArgNo) const {
     return Attrs.getParamStackAlignment(ArgNo);
@@ -1847,7 +1839,11 @@ public:
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getParamDereferenceableBytes(unsigned i) const {
-    return Attrs.getParamDereferenceableBytes(i);
+    uint64_t Bytes = Attrs.getParamDereferenceableBytes(i);
+    if (const Function *F = getCalledFunction())
+      Bytes =
+          std::max(Bytes, F->getAttributes().getParamDereferenceableBytes(i));
+    return Bytes;
   }
 
   /// Extract the number of dereferenceable_or_null bytes for a call
@@ -1865,7 +1861,11 @@ public:
   /// Extract the number of dereferenceable_or_null bytes for a
   /// parameter (0=unknown).
   uint64_t getParamDereferenceableOrNullBytes(unsigned i) const {
-    return Attrs.getParamDereferenceableOrNullBytes(i);
+    uint64_t Bytes = Attrs.getParamDereferenceableOrNullBytes(i);
+    if (const Function *F = getCalledFunction())
+      Bytes = std::max(
+          Bytes, F->getAttributes().getParamDereferenceableOrNullBytes(i));
+    return Bytes;
   }
 
   /// Extract a test mask for disallowed floating-point value classes for the
@@ -1886,9 +1886,7 @@ public:
   bool isReturnNonNull() const;
 
   /// Determine if the return value is marked with NoAlias attribute.
-  bool returnDoesNotAlias() const {
-    return Attrs.hasRetAttr(Attribute::NoAlias);
-  }
+  bool returnDoesNotAlias() const { return hasRetAttr(Attribute::NoAlias); }
 
   /// If one of the arguments has the 'returned' attribute, returns its
   /// operand value. Otherwise, return nullptr.
