@@ -1170,7 +1170,7 @@ private:
     int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
     if (isSPMDMode() && OMPX_SPMDOccupancyBasedOpt && NumTeamsEnvVar == 0) {
       unsigned NumWavesPerTeam =
-          divideCeil(NumThreads, llvm::omp::amdgpu_arch::WaveFrontSize64);
+          divideCeil(NumThreads, GenericDevice.getWarpSize());
       unsigned TotalWavesPerCU =
           MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU;
       // Per device
@@ -1268,7 +1268,8 @@ private:
   /// Follow the logic on the backend
   /// Ref:
   /// llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getOccupancyWithLocalMemSize
-  unsigned getOccupancyWithLDS(uint32_t GroupSegmentSize,
+  unsigned getOccupancyWithLDS(GenericDeviceTy &GenericDevice,
+                               uint32_t GroupSegmentSize,
                                unsigned MaxWavesPerEU,
                                uint32_t MaxFlatWorkgroupSize) const {
 
@@ -1277,8 +1278,8 @@ private:
 
     // workgroup size
     unsigned ThreadsPerWorkgroup = MaxFlatWorkgroupSize;
-    unsigned WavesPerWorkgroup = divideCeil(
-        ThreadsPerWorkgroup, llvm::omp::amdgpu_arch::WaveFrontSize64);
+    unsigned WavesPerWorkgroup =
+        divideCeil(ThreadsPerWorkgroup, GenericDevice.getWarpSize());
 
     unsigned MaxWavesPerCU = MaxWavesPerEU * llvm::omp::amdgpu_arch::SIMDPerCU;
 
@@ -5287,8 +5288,8 @@ unsigned AMDGPUKernelTy::computeMaxOccupancy(GenericDeviceTy &Device) const {
 
   // Constraint on LDS
   if (GroupSegmentSize) {
-    unsigned WaveNumByLDS = getOccupancyWithLDS(GroupSegmentSize, MaxWavesPerEU,
-                                                MaxFlatWorkgroupSize);
+    unsigned WaveNumByLDS = getOccupancyWithLDS(
+        Device, GroupSegmentSize, MaxWavesPerEU, MaxFlatWorkgroupSize);
     Occupancy = std::min(Occupancy, WaveNumByLDS);
   } else {
     // If 0 LDS required by the kernel
@@ -5326,8 +5327,7 @@ unsigned AMDGPUKernelTy::computeAchievedOccupancy(GenericDeviceTy &Device,
   unsigned MaxNumWaves = MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU;
   // Get the number of waves from the kernel launch parameters.
   unsigned AchievedNumWaves =
-      divideCeil(numThreads, llvm::omp::amdgpu_arch::WaveFrontSize64) *
-      numTeams;
+      divideCeil(numThreads, AMDDevice.getWarpSize()) * numTeams;
   // Get the number of waves per CU.
   AchievedNumWaves = divideCeil(AchievedNumWaves, Device.getNumComputeUnits());
   // Get the min waves.

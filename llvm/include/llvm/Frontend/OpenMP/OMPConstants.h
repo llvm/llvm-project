@@ -336,9 +336,6 @@ constexpr unsigned SIMDPerCU = 4;
 // Max waves each SIMD supports
 constexpr unsigned MaxWavesPerEU8 = 8;
 constexpr unsigned MaxWavesPerEU10 = 10;
-// Wavefront size
-constexpr unsigned WaveFrontSize32 = 32;
-constexpr unsigned WaveFrontSize64 = 64;
 // Number of VGPR for each thread
 constexpr unsigned VGPRNumPerThread = 512;
 // flat work group size
