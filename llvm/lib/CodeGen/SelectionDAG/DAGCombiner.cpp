@@ -18433,10 +18433,11 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
 SDValue DAGCombiner::visitFABS(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (fabs c1) -> fabs(c1)
-  if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
-    return DAG.getNode(ISD::FABS, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FABS, DL, VT, {N0}))
+    return C;
 
   // fold (fabs (fabs x)) -> (fabs x)
   if (N0.getOpcode() == ISD::FABS)
@@ -18445,7 +18446,7 @@ SDValue DAGCombiner::visitFABS(SDNode *N) {
   // fold (fabs (fneg x)) -> (fabs x)
   // fold (fabs (fcopysign x, y)) -> (fabs x)
   if (N0.getOpcode() == ISD::FNEG || N0.getOpcode() == ISD::FCOPYSIGN)
-    return DAG.getNode(ISD::FABS, SDLoc(N), VT, N0.getOperand(0));
+    return DAG.getNode(ISD::FABS, DL, VT, N0.getOperand(0));
 
   if (SDValue Cast = foldSignChangeInBitcast(N))
     return Cast;
