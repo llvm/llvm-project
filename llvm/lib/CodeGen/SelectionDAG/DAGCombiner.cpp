@@ -17368,11 +17368,9 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   MatchContextClass matcher(DAG, TLI, N);
 
   // Constant fold FMA.
-  if (isa<ConstantFPSDNode>(N0) &&
-      isa<ConstantFPSDNode>(N1) &&
-      isa<ConstantFPSDNode>(N2)) {
-    return matcher.getNode(ISD::FMA, DL, VT, N0, N1, N2);
-  }
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(N->getOpcode(), DL, VT, {N0, N1, N2}))
+    return C;
 
   // (-N0 * -N1) + N2 --> (N0 * N1) + N2
   TargetLowering::NegatibleCost CostN0 =
@@ -17488,9 +17486,8 @@ SDValue DAGCombiner::visitFMAD(SDNode *N) {
   SDLoc DL(N);
 
   // Constant fold FMAD.
-  if (isa<ConstantFPSDNode>(N0) && isa<ConstantFPSDNode>(N1) &&
-      isa<ConstantFPSDNode>(N2))
-    return DAG.getNode(ISD::FMAD, DL, VT, N0, N1, N2);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FMAD, DL, VT, {N0, N1, N2}))
+    return C;
 
   return SDValue();
 }
