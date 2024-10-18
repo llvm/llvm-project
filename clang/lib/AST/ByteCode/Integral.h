@@ -154,6 +154,18 @@ public:
     return Compare(V, RHS.V);
   }
 
+  void bitcastToMemory(std::byte *Dest) const {
+    std::memcpy(Dest, &V, sizeof(V));
+  }
+
+  static Integral bitcastFromMemory(const std::byte *Src, unsigned BitWidth) {
+    assert(BitWidth == sizeof(ReprT) * 8);
+    ReprT V;
+
+    std::memcpy(&V, Src, sizeof(ReprT));
+    return Integral(V);
+  }
+
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
