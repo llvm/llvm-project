@@ -87,8 +87,8 @@ protected:
         if (AltOpc == -1)
           continue;
 
-        // This pass is run after register coalescing, and so we're looking for
-        // a situation like this:
+        // This pass is run after Two-Address instruction pass, and so we're
+        // looking for a situation like this:
         //   ...
         //   %5 = COPY %9; VSLRC:%5,%9
         //   %5<def,tied1> = XSMADDADP %5<tied0>, %17, %16,
