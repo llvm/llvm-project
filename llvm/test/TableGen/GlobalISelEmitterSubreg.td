@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen %s -gen-global-isel -warn-on-skipped-patterns -I %p/../../include -I %p/Common -o - 2> %t.skipped | FileCheck %s
+// RUN: llvm-tblgen %s -gen-global-isel --enabled-targets=all -warn-on-skipped-patterns -I %p/../../include -I %p/Common -o - 2> %t.skipped | FileCheck %s
 // RUN: cat %t.skipped | FileCheck %s --check-prefix=SKIPPED
 
 include "llvm/Target/Target.td"

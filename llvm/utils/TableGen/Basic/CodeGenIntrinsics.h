@@ -178,17 +178,24 @@ public:
 
   explicit CodeGenIntrinsicTable(const RecordKeeper &RC);
 
-  bool empty() const { return Intrinsics.empty(); }
-  size_t size() const { return Intrinsics.size(); }
-  auto begin() const { return Intrinsics.begin(); }
-  auto end() const { return Intrinsics.end(); }
   const CodeGenIntrinsic &operator[](size_t Pos) const {
     return Intrinsics[Pos];
   }
   ArrayRef<CodeGenIntrinsic> operator[](const TargetSet &Set) const {
     return ArrayRef(&Intrinsics[Set.Offset], Set.Count);
   }
-  ArrayRef<TargetSet> getTargets() const { return Targets; }
+  ArrayRef<CodeGenIntrinsic> getAllIntrinsics() const {
+    return ArrayRef(Intrinsics);
+  }
+  ArrayRef<CodeGenIntrinsic> getEnabledIntrinsics() const {
+    return getAllIntrinsics().take_front(NumEnabledIntrinsics);
+  }
+
+  ArrayRef<TargetSet> getAllTargets() const { return Targets; }
+  ArrayRef<TargetSet> getEnabledTargets() const {
+    return getAllTargets().take_front(NumEnabledTargets);
+  }
+  static ArrayRef<std::string> getEnabledCommandLineTargets();
 
 private:
   void CheckDuplicateIntrinsics() const;
@@ -197,6 +204,8 @@ private:
 
   std::vector<CodeGenIntrinsic> Intrinsics;
   std::vector<TargetSet> Targets;
+  unsigned NumEnabledTargets = 0;
+  unsigned NumEnabledIntrinsics = 0;
 };
 
 // This class builds `CodeGenIntrinsic` on demand for a given Def.

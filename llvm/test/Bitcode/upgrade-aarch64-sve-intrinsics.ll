@@ -1,3 +1,4 @@
+; REQUIRES: aarch64-registered-target
 ; RUN: llvm-as %s -o - | llvm-dis - | FileCheck %s
 
 define <vscale x 32 x i8> @ld2.nxv32i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr) {

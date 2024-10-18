@@ -13,13 +13,20 @@
 #include "CodeGenIntrinsics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <cassert>
 using namespace llvm;
+
+cl::list<std::string> EnabledTargets(
+    "enabled-targets", cl::CommaSeparated,
+    cl::desc("Targets prefixes for enabled targets"),
+    cl::value_desc("set of target prefixes for targets that are enabled"));
 
 //===----------------------------------------------------------------------===//
 // CodeGenIntrinsic Implementation
@@ -49,22 +56,47 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   for (const Record *Def : Defs)
     Intrinsics.emplace_back(CodeGenIntrinsic(Def, Ctx));
 
-  llvm::sort(Intrinsics,
-             [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
-               // Order target independent intrinsics before target dependent
-               // ones.
-               bool LHSHasTarget = !LHS.TargetPrefix.empty();
-               bool RHSHasTarget = !RHS.TargetPrefix.empty();
+  if (EnabledTargets.empty())
+    PrintFatalError("Enabled targets not specified");
 
-               // To ensure deterministic sorted order when duplicates are
-               // present, use record ID as a tie-breaker similar to
-               // sortAndReportDuplicates in Utils.cpp.
-               unsigned LhsID = LHS.TheDef->getID();
-               unsigned RhsID = RHS.TheDef->getID();
+  StringSet<> EnabledTargetsSet(EnabledTargets);
 
-               return std::tie(LHSHasTarget, LHS.Name, LhsID) <
-                      std::tie(RHSHasTarget, RHS.Name, RhsID);
-             });
+  const bool AllEnabled = EnabledTargetsSet.contains("all");
+  if (AllEnabled && EnabledTargets.size() > 1)
+    PrintFatalError(
+        "Additional enabled targets cannot be specified with 'all'");
+
+  if (EnabledTargetsSet.contains("none")) {
+    if (EnabledTargets.size() > 1)
+      PrintFatalError(
+          "Additional enabled targets cannot be specified with 'none'");
+    EnabledTargetsSet.clear();
+  }
+
+  llvm::sort(Intrinsics, [&EnabledTargetsSet,
+                          AllEnabled](const CodeGenIntrinsic &LHS,
+                                      const CodeGenIntrinsic &RHS) {
+    // Order target independent intrinsics before target dependent ones.
+    bool LHSHasTarget = !LHS.TargetPrefix.empty();
+    bool RHSHasTarget = !RHS.TargetPrefix.empty();
+
+    // Sort enabled targets before disabled ones. Target independent ones are
+    // always considered enabled. If no --enabled-targets option is provided,
+    // all of them are enabled by default.
+    bool LHSIsDisabled = LHSHasTarget && !AllEnabled &&
+                         !EnabledTargetsSet.contains(LHS.TargetPrefix);
+    bool RHSIsDisabled = RHSHasTarget && !AllEnabled &&
+                         !EnabledTargetsSet.contains(RHS.TargetPrefix);
+
+    // To ensure deterministic sorted order when duplicates are
+    // present, use record ID as a tie-breaker similar to
+    // sortAndReportDuplicates in Utils.cpp.
+    unsigned LhsID = LHS.TheDef->getID();
+    unsigned RhsID = RHS.TheDef->getID();
+
+    return std::tie(LHSHasTarget, LHSIsDisabled, LHS.Name, LhsID) <
+           std::tie(RHSHasTarget, RHSIsDisabled, RHS.Name, RhsID);
+  });
 
   Targets.push_back({"", 0, 0});
   for (size_t I = 0, E = Intrinsics.size(); I < E; ++I)
@@ -73,10 +105,38 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
       Targets.push_back({Intrinsics[I].TargetPrefix, I, 0});
     }
   Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
+  NumEnabledTargets =
+      AllEnabled ? Targets.size() : EnabledTargetsSet.size() + 1;
+
+  // Verify that all targets provided on the command line were valid.
+  if (!AllEnabled) {
+    ArrayRef<TargetSet> KnowTargets = getAllTargets().drop_front();
+    for (const TargetSet &T : KnowTargets)
+      EnabledTargetsSet.erase(T.Name);
+
+    if (!EnabledTargetsSet.empty()) {
+      PrintFatalError([&EnabledTargetsSet, KnowTargets](raw_ostream &OS) {
+        OS << "Unknown enabled targets: ";
+        interleaveComma(EnabledTargetsSet, OS,
+                        [&OS](const auto &Entry) { OS << Entry.first(); });
+        OS << "\nKnown targets are: ";
+        interleaveComma(KnowTargets, OS,
+                        [&OS](const TargetSet &Target) { OS << Target.Name; });
+        OS << '\n';
+      });
+    }
+  }
+
+  const TargetSet &LastEnabledTarget = getEnabledTargets().back();
+  NumEnabledIntrinsics = LastEnabledTarget.Offset + LastEnabledTarget.Count;
 
   CheckDuplicateIntrinsics();
   CheckTargetIndependentIntrinsics();
   CheckOverloadSuffixConflicts();
+}
+
+ArrayRef<std::string> CodeGenIntrinsicTable::getEnabledCommandLineTargets() {
+  return EnabledTargets;
 }
 
 // Check for duplicate intrinsic names.

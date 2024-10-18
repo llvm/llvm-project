@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-global-isel -warn-on-skipped-patterns -optimize-match-table=false -I %p/../../include -I %p/Common %s -o - | FileCheck -check-prefix=GISEL %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -warn-on-skipped-patterns -optimize-match-table=false -I %p/../../include -I %p/Common %s -o - | FileCheck -check-prefix=GISEL %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"

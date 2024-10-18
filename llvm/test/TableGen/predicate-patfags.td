@@ -1,7 +1,7 @@
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s 2>&1 | FileCheck -check-prefixes=SDAG,SCUSTOM %s
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s -DHASONEUSE 2>&1 | FileCheck -check-prefixes=SDAG,SBUILTIN %s
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common %s 2>&1 | FileCheck -check-prefixes=GISEL,GCUSTOM %s
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common %s -DHASONEUSE 2>&1 | FileCheck -check-prefixes=GISEL,GBUILTIN %s
+// RUN: llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common %s 2>&1 | FileCheck -check-prefixes=SDAG,SCUSTOM %s
+// RUN: llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common %s -DHASONEUSE 2>&1 | FileCheck -check-prefixes=SDAG,SBUILTIN %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -I %p/../../include -I %p/Common %s 2>&1 | FileCheck -check-prefixes=GISEL,GCUSTOM %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -I %p/../../include -I %p/Common %s -DHASONEUSE 2>&1 | FileCheck -check-prefixes=GISEL,GBUILTIN %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"

@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s | FileCheck %s
+// RUN: llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common %s | FileCheck %s
 
 include "reg-with-subregs-common.td"
 

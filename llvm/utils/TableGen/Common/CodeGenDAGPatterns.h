@@ -1158,21 +1158,24 @@ public:
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
-        return Intrinsics[i];
+    for (const CodeGenIntrinsic &I : Intrinsics.getEnabledIntrinsics())
+      if (I.TheDef == R)
+        return I;
     llvm_unreachable("Unknown intrinsic!");
   }
 
   const CodeGenIntrinsic &getIntrinsicInfo(unsigned IID) const {
-    if (IID - 1 < Intrinsics.size())
-      return Intrinsics[IID - 1];
+    IID -= 1;
+    ArrayRef<CodeGenIntrinsic> Enabled = Intrinsics.getEnabledIntrinsics();
+    if (IID < Enabled.size())
+      return Enabled[IID];
     llvm_unreachable("Bad intrinsic ID!");
   }
 
   unsigned getIntrinsicID(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
+    ArrayRef<CodeGenIntrinsic> Enabled = Intrinsics.getEnabledIntrinsics();
+    for (unsigned i = 0, e = Enabled.size(); i != e; ++i)
+      if (Enabled[i].TheDef == R)
         return i;
     llvm_unreachable("Unknown intrinsic!");
   }

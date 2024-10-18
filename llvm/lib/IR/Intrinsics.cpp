@@ -45,12 +45,12 @@ static constexpr const char *const IntrinsicNameTable[] = {
 };
 
 StringRef Intrinsic::getBaseName(ID id) {
-  assert(id < num_intrinsics && "Invalid intrinsic ID!");
+  assert(id < Intrinsic::num_active_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[id];
 }
 
 StringRef Intrinsic::getName(ID id) {
-  assert(id < num_intrinsics && "Invalid intrinsic ID!");
+  assert(id < Intrinsic::num_active_intrinsics && "Invalid intrinsic ID!");
   assert(!Intrinsic::isOverloaded(id) &&
          "This version of getName does not support overloading");
   return getBaseName(id);
@@ -157,8 +157,7 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
 static std::string getIntrinsicNameImpl(Intrinsic::ID Id, ArrayRef<Type *> Tys,
                                         Module *M, FunctionType *FT,
                                         bool EarlyModuleCheck) {
-
-  assert(Id < Intrinsic::num_intrinsics && "Invalid intrinsic ID!");
+  assert(Id < Intrinsic::num_active_intrinsics && "Invalid intrinsic ID!");
   assert((Tys.empty() || Intrinsic::isOverloaded(Id)) &&
          "This version of getName is for overloaded intrinsics only");
   (void)EarlyModuleCheck;
@@ -453,6 +452,7 @@ void Intrinsic::getIntrinsicInfoTableEntries(
     ID id, SmallVectorImpl<IITDescriptor> &T) {
   static_assert(sizeof(IIT_Table[0]) == 2,
                 "Expect 16-bit entries in IIT_Table");
+  assert(id < Intrinsic::num_active_intrinsics);
   // Check to see if the intrinsic's type was expressible by the table.
   uint16_t TableVal = IIT_Table[id - 1];
 
@@ -610,6 +610,7 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
 }
 
 bool Intrinsic::isOverloaded(ID id) {
+  assert(id < Intrinsic::num_active_intrinsics);
 #define GET_INTRINSIC_OVERLOAD_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_OVERLOAD_TABLE

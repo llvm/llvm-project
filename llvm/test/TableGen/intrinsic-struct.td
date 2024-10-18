@@ -1,6 +1,6 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-ENUM
-// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS > /dev/null 2>&1
-// RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DENABLE_ERROR 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: llvm-tblgen -gen-intrinsic-enums --enabled-targets=all -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-ENUM
+// RUN: llvm-tblgen -gen-intrinsic-impl --enabled-targets=all -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS > /dev/null 2>&1
+// RUN: not llvm-tblgen -gen-intrinsic-impl --enabled-targets=all -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DENABLE_ERROR 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 // XFAIL: vg_leak
 

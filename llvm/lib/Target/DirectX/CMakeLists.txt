@@ -3,7 +3,7 @@ add_llvm_component_group(DirectX)
 set(LLVM_TARGET_DEFINITIONS DirectX.td)
 
 tablegen(LLVM DirectXGenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM DirectXGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM DirectXGenInstrInfo.inc -gen-instr-info ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM DirectXGenRegisterInfo.inc -gen-register-info)
 
 set(LLVM_TARGET_DEFINITIONS DXIL.td)
@@ -45,6 +45,7 @@ add_llvm_target(DirectXCodeGen
   FrontendHLSL
   MC
   SelectionDAG
+  Scalar
   Support
   Target
   TargetParser

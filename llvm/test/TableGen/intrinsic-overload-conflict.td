@@ -1,5 +1,5 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s
-// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DCONFLICT 2>&1 | FileCheck %s -DFILE=%s --check-prefix=CHECK-CONFLICT
+// RUN: llvm-tblgen -gen-intrinsic-enums --enabled-targets=all -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s
+// RUN: not llvm-tblgen -gen-intrinsic-enums --enabled-targets=all -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DCONFLICT 2>&1 | FileCheck %s -DFILE=%s --check-prefix=CHECK-CONFLICT
 
 
 include "llvm/IR/Intrinsics.td"

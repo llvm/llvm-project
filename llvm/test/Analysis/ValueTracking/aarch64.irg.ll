@@ -1,3 +1,4 @@
+; REQUIRES: aarch64-registered-target
 ; RUN: opt -S -passes=instsimplify,instcombine < %s | FileCheck %s
 
 ; CHECK-LABEL: define void @checkNonnullIrg()
