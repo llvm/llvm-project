@@ -2296,7 +2296,10 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f32,   { 1, 1, 1, 1 } },
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v16f32,  { 3, 1, 1, 1 } },
     { ISD::FP_EXTEND, MVT::v16f64,  MVT::v16f32,  { 4, 1, 1, 1 } }, // 2*vcvtps2pd+vextractf64x4
+    { ISD::FP_EXTEND, MVT::v16f32,  MVT::v16f16,  { 1, 1, 1, 1 } }, // vcvtph2ps
+    { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f16,   { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
     { ISD::FP_ROUND,  MVT::v8f32,   MVT::v8f64,   { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v16f16,  MVT::v16f32,  { 1, 1, 1, 1 } }, // vcvtps2ph
 
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
@@ -2973,6 +2976,14 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v4i32,  MVT::v2i64,  { 1, 1, 1, 1 } }, // PSHUFD
   };
 
+  static const TypeConversionCostKindTblEntry F16ConversionTbl[] = {
+    { ISD::FP_ROUND,  MVT::v8f16,   MVT::v8f32,   { 1, 1, 1, 1 } }, // vcvtps2ph
+    { ISD::FP_ROUND,  MVT::v4f16,   MVT::v4f32,   { 1, 1, 1, 1 } }, // vcvtps2ph
+    { ISD::FP_EXTEND, MVT::v8f32,   MVT::v8f16,   { 1, 1, 1, 1 } }, // vcvtph2ps
+    { ISD::FP_EXTEND, MVT::v4f32,   MVT::v4f16,   { 1, 1, 1, 1 } }, // vcvtph2ps
+    { ISD::FP_EXTEND, MVT::v4f64,   MVT::v4f16,   { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
+  };
+
   // Attempt to map directly to (simple) MVT types to let us match custom entries.
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
@@ -3029,6 +3040,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     if (ST->hasAVX()) {
       if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
+                                                     SimpleDstTy, SimpleSrcTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+    }
+
+    if (ST->hasF16C()) {
+      if (const auto *Entry = ConvertCostTableLookup(F16ConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
         if (auto KindCost = Entry->Cost[CostKind])
           return *KindCost;
@@ -3106,6 +3124,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                    LTDest.second, LTSrc.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return std::max(LTSrc.first, LTDest.first) * *KindCost;
+
+  if (ST->hasF16C()) {
+    if (const auto *Entry = ConvertCostTableLookup(F16ConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
+  }
 
   if (ST->hasSSE41())
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
