@@ -70,9 +70,9 @@ private:
   bool isStateStoreNeeded(EHPersonality Personality, CallBase &Call);
   void rewriteSetJmpCall(IRBuilder<> &Builder, Function &F, CallBase &Call,
                          Value *State);
-  int getBaseStateForBB(DenseMap<BasicBlock *, ColorVector> &BlockColors,
+  int getBaseStateForBB(BlockColorMapT &BlockColors,
                         WinEHFuncInfo &FuncInfo, BasicBlock *BB);
-  int getStateForCall(DenseMap<BasicBlock *, ColorVector> &BlockColors,
+  int getStateForCall(BlockColorMapT &BlockColors,
                       WinEHFuncInfo &FuncInfo, CallBase &Call);
 
   // Module-level type getters.
@@ -498,7 +498,7 @@ void WinEHStatePass::rewriteSetJmpCall(IRBuilder<> &Builder, Function &F,
 
 // Figure out what state we should assign calls in this block.
 int WinEHStatePass::getBaseStateForBB(
-    DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
+    BlockColorMapT &BlockColors, WinEHFuncInfo &FuncInfo,
     BasicBlock *BB) {
   int BaseState = ParentBaseState;
   auto &BBColors = BlockColors[BB];
@@ -517,7 +517,7 @@ int WinEHStatePass::getBaseStateForBB(
 
 // Calculate the state a call-site is in.
 int WinEHStatePass::getStateForCall(
-    DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
+    BlockColorMapT &BlockColors, WinEHFuncInfo &FuncInfo,
     CallBase &Call) {
   if (auto *II = dyn_cast<InvokeInst>(&Call)) {
     // Look up the state number of the EH pad this unwinds to.
@@ -637,7 +637,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     calculateWinCXXEHStateNumbers(&F, FuncInfo);
 
   // Iterate all the instructions and emit state number stores.
-  DenseMap<BasicBlock *, ColorVector> BlockColors = colorEHFunclets(F);
+  BlockColorMapT BlockColors = colorEHFunclets(F);
   ReversePostOrderTraversal<Function *> RPOT(&F);
 
   // InitialStates yields the state of the first call-site for a BasicBlock.
