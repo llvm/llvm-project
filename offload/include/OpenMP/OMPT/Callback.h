@@ -49,6 +49,8 @@ namespace omp {
 namespace target {
 namespace ompt {
 
+extern ompt_interface_fn_t ompt_device_fn_lookup(const char *s);
+
 #define declareOmptCallback(Name, Type, Code) extern Name##_t Name##_fn;
 FOREACH_OMPT_NOEMI_EVENT(declareOmptCallback)
 FOREACH_OMPT_EMI_EVENT(declareOmptCallback)
