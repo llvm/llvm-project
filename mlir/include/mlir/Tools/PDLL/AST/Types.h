@@ -146,7 +146,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a PDLL type that corresponds to a constraint. This
-/// type has no MLIR C++ API correspondance.
+/// type has no MLIR C++ API correspondence.
 class ConstraintType : public Type::TypeBase<detail::ConstraintTypeStorage> {
 public:
   using Base::Base;
@@ -231,7 +231,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a PDLL type that corresponds to a rewrite reference.
-/// This type has no MLIR C++ API correspondance.
+/// This type has no MLIR C++ API correspondence.
 class RewriteType : public Type::TypeBase<detail::RewriteTypeStorage> {
 public:
   using Base::Base;

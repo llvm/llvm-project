@@ -7,7 +7,7 @@
 // -----
 
 // Unused operation to force loading the `arithmetic` dialect for the
-// test of type inferrence.
+// test of type inference.
 arith.constant true
 
 func.func @operations(%attribute: !pdl.attribute,
