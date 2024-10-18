@@ -2913,9 +2913,8 @@ static unsigned getPriorityFromAttrString(StringRef AttrStr) {
   for (auto Attr : Attrs) {
     if (Attr.consume_front("priority=")) {
       unsigned Result;
-      if (!Attr.getAsInteger(0, Result)) {
+      if (!Attr.getAsInteger(0, Result))
         Priority = Result;
-      }
     }
   }
 
