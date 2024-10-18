@@ -16723,8 +16723,8 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE754 2008 semantics for minNum, except for handling of
-+0.0 vs -0.0. This matches the behavior of libm's fmin.
+Follows the IEEE754 2008 semantics for minNum.
+This also matches the behavior of libm's fmin.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
@@ -16766,8 +16766,8 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE754 2008 semantics for maxNum, except for handling of
-+0.0 vs -0.0. This matches the behavior of libm's fmax.
+Follows the IEEE754 2008 semantics for maxNum.
+This also matches the behavior of libm's fmax.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
