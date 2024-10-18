@@ -522,6 +522,15 @@ def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
 //  Armv9.6 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
+def FeatureLSUI: ExtensionWithMArch<"lsui", "LSUI", "FEAT_LSUI",
+  "Enable Armv9.6-A unprivileged load/store instructions">;
+
+def FeatureOCCMO: ExtensionWithMArch<"occmo", "OCCMO", "FEAT_OCCMO",
+  "Enable Armv9.6-A Outer cacheable cache maintenance operations">;
+
+def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
+  "Enable Armv9.6-A Producer Consumer Data Placement hints">;
+
 def FeatureCMPBR : ExtensionWithMArch<"cmpbr", "CMPBR", "FEAT_CMPBR",
   "Enable Armv9.6-A base compare and branch instructions">;
 
@@ -866,8 +875,10 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2],
-  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2])>;
+  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureLSUI, FeatureOCCMO,
+  FeatureSVE2p2],
+  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT,
+     FeatureLSUI, FeatureOCCMO, FeatureSVE2p2])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
