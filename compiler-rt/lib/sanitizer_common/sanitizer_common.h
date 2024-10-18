@@ -275,6 +275,8 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size);
 // the source range cannot be read, in which case the contents of `dest` are
 // undefined.
 bool TryMemCpy(void *dest, const void *src, uptr n);
+// Copies accessible memory, and zero fill inaccessible.
+void MemCpyAccessible(void *dest, const void *src, uptr n);
 
 // Error report formatting.
 const char *StripPathPrefix(const char *filepath,
