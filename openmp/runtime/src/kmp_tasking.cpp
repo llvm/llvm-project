@@ -3411,7 +3411,8 @@ static inline int __kmp_execute_tasks_template(
       if (task == NULL && use_own_tasks) { // check own queue next
         task = __kmp_remove_my_task(thread, gtid, task_team, is_constrained);
       }
-      if ((task == NULL) && (nthreads > 1)) { // Steal a task finally
+      if (__kmp_task_stealing && (task == NULL) &&
+          (nthreads > 1)) { // Steal a task finally
         int asleep = 1;
         use_own_tasks = 0;
         // Try to steal from the last place I stole from successfully.
