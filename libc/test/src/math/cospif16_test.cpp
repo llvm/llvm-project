@@ -26,13 +26,15 @@ static constexpr uint16_t NEG_STOP = 0xfc00U;
 TEST_F(LlvmLibcCospif16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cospi, x, LIBC_NAMESPACE::cospif16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cospi, x,
+                                   LIBC_NAMESPACE::cospif16(x), 0.5);
   }
 }
 
 TEST_F(LlvmLibcCospif16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cospi, x, LIBC_NAMESPACE::cospif16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cospi, x,
+                                   LIBC_NAMESPACE::cospif16(x), 0.5);
   }
 }
