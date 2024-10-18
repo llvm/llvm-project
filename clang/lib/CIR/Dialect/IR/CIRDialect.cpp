@@ -3940,6 +3940,23 @@ LogicalResult BinOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ShiftOp Definitions
+//===----------------------------------------------------------------------===//
+LogicalResult ShiftOp::verify() {
+  mlir::Operation *op = getOperation();
+  mlir::Type resType = getResult().getType();
+  bool isOp0Vec = mlir::isa<mlir::cir::VectorType>(op->getOperand(0).getType());
+  bool isOp1Vec = mlir::isa<mlir::cir::VectorType>(op->getOperand(1).getType());
+  if (isOp0Vec != isOp1Vec)
+    return emitOpError() << "input types cannot be one vector and one scalar";
+  if (isOp1Vec && op->getOperand(1).getType() != resType) {
+    return emitOpError() << "shift amount must have the type of the result "
+                         << "if it is vector shift";
+  }
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LabelOp Definitions
 //===----------------------------------------------------------------------===//
 

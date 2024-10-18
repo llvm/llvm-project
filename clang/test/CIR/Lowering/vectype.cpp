@@ -220,6 +220,24 @@ void vector_int_test(int x) {
   // CHECK: %[[#svQ:]] = llvm.extractelement %[[#sv_a]][%[[#svP:]] : i32] : vector<4xi32>
   // CHECK: %[[#svR:]] = llvm.insertelement %[[#svQ]], %[[#svN]][%[[#svO]] : i64] : vector<4xi32>
   // CHECK: llvm.store %[[#svR]], %[[#sv_v:]] {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr
+
+  // Shifts
+  vi4 w = a << b;
+  // CHECK: %[[#T198:]] = llvm.load %[[#T3]] {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T199:]] = llvm.load %[[#T5]] {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+  // CHECK: %{{[0-9]+}}  = llvm.shl %[[#T198]], %[[#T199]] : vector<4xi32>
+  vi4 y = a >> b;
+  // CHECK: %[[#T201:]] = llvm.load %[[#T3]] {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T202:]] = llvm.load %[[#T5]] {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+  // CHECK: %{{[0-9]+}}  = llvm.ashr %[[#T201]], %[[#T202]] : vector<4xi32>
+
+  vus2 z = { (unsigned short)x, (unsigned short)x };  
+  vus2 zamt = { 3, 4 };
+  // CHECK: %[[#T219:]] = llvm.mlir.constant(dense<[3, 4]> : vector<2xi16>) : vector<2xi16>
+  // CHECK: llvm.store %[[#T219]], %[[#AMT_SAVE:]] {alignment = 4 : i64} : vector<2xi16>
+  // CHECK: %[[#T221:]] = llvm.load %[[#AMT_SAVE]] {alignment = 4 : i64} : !llvm.ptr -> vector<2xi16>
+  vus2 zzz = z >> zamt;
+  // CHECK: %{{[0-9]+}}  = llvm.lshr %{{[0-9]+}}, %[[#T221]] : vector<2xi16>
 }
 
 void vector_double_test(int x, double y) {

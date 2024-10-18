@@ -2205,10 +2205,10 @@ static int64_t getIntValueFromConstOp(mlir::Value val) {
 }
 
 /// This function `buildCommonNeonCallPattern0` implements a common way
-//  to generate neon intrinsic call that has following pattern:
-//  1. There is a need to cast result of the intrinsic call back to
-//     expression type.
-//  2. Function arg types are given, not deduced from actual arg types.
+///  to generate neon intrinsic call that has following pattern:
+///  1. There is a need to cast result of the intrinsic call back to
+///     expression type.
+///  2. Function arg types are given, not deduced from actual arg types.
 static mlir::Value
 buildCommonNeonCallPattern0(CIRGenFunction &cgf, std::string &intrincsName,
                             llvm::SmallVector<mlir::Type> argTypes,
@@ -2220,6 +2220,23 @@ buildCommonNeonCallPattern0(CIRGenFunction &cgf, std::string &intrincsName,
                     cgf.getLoc(e->getExprLoc()));
   mlir::Type resultType = cgf.ConvertType(e->getType());
   return builder.createBitcast(res, resultType);
+}
+
+/// Build a constant shift amount vector of `vecTy` to shift a vector
+/// Here `shitfVal` is a constant integer that will be splated into a
+/// a const vector of `vecTy` which is the return of this function
+static mlir::Value buildNeonShiftVector(CIRGenBuilderTy &builder,
+                                        mlir::Value shiftVal,
+                                        mlir::cir::VectorType vecTy,
+                                        mlir::Location loc, bool neg) {
+  int shiftAmt = getIntValueFromConstOp(shiftVal);
+  llvm::SmallVector<mlir::Attribute> vecAttr{
+      vecTy.getSize(),
+      // ConstVectorAttr requires cir::IntAttr
+      mlir::cir::IntAttr::get(vecTy.getEltType(), shiftAmt)};
+  mlir::cir::ConstVectorAttr constVecAttr = mlir::cir::ConstVectorAttr::get(
+      vecTy, mlir::ArrayAttr::get(builder.getContext(), vecAttr));
+  return builder.create<mlir::cir::ConstantOp>(loc, vecTy, constVecAttr);
 }
 
 mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
@@ -2297,6 +2314,13 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
                              ? "llvm.aarch64.neon.sqdmulh.lane"
                              : "llvm.aarch64.neon.sqrdmulh.lane",
                          resTy, getLoc(e->getExprLoc()));
+  }
+  case NEON::BI__builtin_neon_vshl_n_v:
+  case NEON::BI__builtin_neon_vshlq_n_v: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    ops[1] = buildNeonShiftVector(builder, ops[1], vTy, loc, false);
+    return builder.create<mlir::cir::ShiftOp>(
+        loc, vTy, builder.createBitcast(ops[0], vTy), ops[1], true);
   }
   }
 

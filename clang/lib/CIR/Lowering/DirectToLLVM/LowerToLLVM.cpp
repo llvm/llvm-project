@@ -2773,24 +2773,40 @@ public:
     auto cirAmtTy =
         mlir::dyn_cast<mlir::cir::IntType>(op.getAmount().getType());
     auto cirValTy = mlir::dyn_cast<mlir::cir::IntType>(op.getValue().getType());
+
+    // Operands could also be vector type
+    auto cirAmtVTy =
+        mlir::dyn_cast<mlir::cir::VectorType>(op.getAmount().getType());
+    auto cirValVTy =
+        mlir::dyn_cast<mlir::cir::VectorType>(op.getValue().getType());
     auto llvmTy = getTypeConverter()->convertType(op.getType());
     mlir::Value amt = adaptor.getAmount();
     mlir::Value val = adaptor.getValue();
 
-    assert(cirValTy && cirAmtTy && "non-integer shift is NYI");
-    assert(cirValTy == op.getType() && "inconsistent operands' types NYI");
+    assert(((cirValTy && cirAmtTy) || (cirAmtVTy && cirValVTy)) &&
+           "shift input type must be integer or vector type, otherwise NYI");
+
+    assert((cirValTy == op.getType() || cirValVTy == op.getType()) &&
+           "inconsistent operands' types NYI");
 
     // Ensure shift amount is the same type as the value. Some undefined
     // behavior might occur in the casts below as per [C99 6.5.7.3].
-    amt = getLLVMIntCast(rewriter, amt, mlir::cast<mlir::IntegerType>(llvmTy),
-                         !cirAmtTy.isSigned(), cirAmtTy.getWidth(),
-                         cirValTy.getWidth());
+    // Vector type shift amount needs no cast as type consistency is expected to
+    // be already be enforced at CIRGen.
+    if (cirAmtTy)
+      amt = getLLVMIntCast(rewriter, amt, mlir::cast<mlir::IntegerType>(llvmTy),
+                           !cirAmtTy.isSigned(), cirAmtTy.getWidth(),
+                           cirValTy.getWidth());
 
     // Lower to the proper LLVM shift operation.
     if (op.getIsShiftleft())
       rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, llvmTy, val, amt);
     else {
-      if (cirValTy.isUnsigned())
+      bool isUnSigned =
+          cirValTy ? !cirValTy.isSigned()
+                   : !mlir::cast<mlir::cir::IntType>(cirValVTy.getEltType())
+                          .isSigned();
+      if (isUnSigned)
         rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
       else
         rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, val, amt);

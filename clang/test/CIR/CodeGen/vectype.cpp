@@ -6,7 +6,7 @@ typedef double vd2 __attribute__((vector_size(16)));
 typedef long long vll2 __attribute__((vector_size(16)));
 typedef unsigned short vus2 __attribute__((vector_size(4)));
 
-void vector_int_test(int x) {
+void vector_int_test(int x, unsigned short usx) {
 
   // Vector constant.
   vi4 a = { 1, 2, 3, 4 };
@@ -103,6 +103,22 @@ void vector_int_test(int x) {
   // CHECK: %{{[0-9]+}} = cir.vec.shuffle(%{{[0-9]+}}, %{{[0-9]+}} : !cir.vector<!s32i x 4>) [#cir.int<7> : !s64i, #cir.int<5> : !s64i, #cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<!s32i x 4>
   vi4 v = __builtin_shufflevector(a, b);
   // CHECK: %{{[0-9]+}} = cir.vec.shuffle.dynamic %{{[0-9]+}} : !cir.vector<!s32i x 4>, %{{[0-9]+}} : !cir.vector<!s32i x 4>
+
+  // Shifts
+  vi4 w = a << b;
+  // CHECK: %{{[0-9]+}} = cir.shift(left, {{%.*}} : !cir.vector<!s32i x 4>, 
+  // CHECK-SAME: {{%.*}} : !cir.vector<!s32i x 4>) -> !cir.vector<!s32i x 4>
+  vi4 y = a >> b;
+  // CHECK: %{{[0-9]+}} = cir.shift( right, {{%.*}} : !cir.vector<!s32i x 4>, 
+  // CHECK-SAME: {{%.*}} : !cir.vector<!s32i x 4>) -> !cir.vector<!s32i x 4>
+
+  vus2 z = { usx, usx };  
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : !u16i, !u16i) : !cir.vector<!u16i x 2>
+  vus2 zamt = { 3, 4 };
+  // CHECK: %{{[0-9]+}} = cir.const #cir.const_vector<[#cir.int<3> : !u16i, #cir.int<4> : !u16i]> : !cir.vector<!u16i x 2>
+  vus2 zzz = z >> zamt;
+  // CHECK: %{{[0-9]+}} = cir.shift( right, {{%.*}} : !cir.vector<!u16i x 2>, 
+  // CHECK-SAME: {{%.*}} : !cir.vector<!u16i x 2>) -> !cir.vector<!u16i x 2> 
 }
 
 void vector_double_test(int x, double y) {
