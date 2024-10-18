@@ -5624,6 +5624,10 @@ public:
                                 SourceLocation BaseLoc,
                                 SourceLocation EllipsisLoc);
 
+  /// Sets the value of "isParsingBaseSpecifiers" when parsing a
+  /// C++ class definition.
+  void SetParsingBaseSpecifiers(Decl *ClassDecl, bool To);
+
   /// Performs the actual work of attaching the given base class
   /// specifiers to a C++ class.
   bool AttachBaseSpecifiers(CXXRecordDecl *Class,

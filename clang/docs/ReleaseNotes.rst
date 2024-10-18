@@ -140,6 +140,10 @@ ABI Changes in This Version
 - Fixed the Itanium mangling of the construction vtable name. This change will introduce incompatibilities with code compiled by Clang 19 and earlier versions, unless the -fclang-abi-compat=19 option is used. (#GH108015)
 - Mangle member-like friend function templates as members of the enclosing class. (#GH110247, #GH110503)
 
+- Fixed Microsoft layout of pointer-to-members of classes when the layout is needed
+  directly or indirectly by the base classes of a class. These should use the most
+  general unspecified inheritance layout. Also affects -fcomplete-member-pointers.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
