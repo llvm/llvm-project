@@ -394,10 +394,10 @@ void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier) {
 }
 
 template <class Accessor>
-void ScanExtraStack(const InternalMmapVector<Range> &ranges, Frontier *frontier,
-                    Accessor &accessor) {
+void ScanRanges(const InternalMmapVector<Range> &ranges, Frontier *frontier,
+                const char *region_type, Accessor &accessor) {
   for (uptr i = 0; i < ranges.size(); i++) {
-    ScanForPointers(ranges[i].begin, ranges[i].end, frontier, "FAKE STACK",
+    ScanForPointers(ranges[i].begin, ranges[i].end, frontier, region_type,
                     kReachable, accessor);
   }
 }
@@ -405,7 +405,7 @@ void ScanExtraStack(const InternalMmapVector<Range> &ranges, Frontier *frontier,
 void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
                           Frontier *frontier) {
   DirectMemoryAccessor accessor;
-  ScanExtraStack(ranges, frontier, accessor);
+  ScanRanges(ranges, frontier, "FAKE STACK", accessor);
 }
 
 #  if SANITIZER_FUCHSIA
@@ -499,7 +499,7 @@ static void ProcessThread(tid_t os_id, uptr sp,
     ScanForPointers(stack_begin, stack_end, frontier, "STACK", kReachable,
                     accessor);
     GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
-    ScanExtraStack(extra_ranges, frontier, accessor);
+    ScanRanges(extra_ranges, frontier, "FAKE STACK", accessor);
   }
 
   if (flags()->use_tls) {
