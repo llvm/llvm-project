@@ -5181,7 +5181,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     // file here.
     if (Output.isFilename()) {
       CmdArgs.push_back("-o");
-      CmdArgs.push_back(Output.getFilename());
+      // Fix up the output file if it is a relative path to
+      // `-working-directory`.
+      SmallString<128> OutPath(
+          Args.getLastArgValue(options::OPT_working_directory));
+      StringRef Out = Output.getFilename();
+      if (llvm::sys::path::is_relative(Out) && !OutPath.empty()) {
+        llvm::sys::path::append(OutPath, Output.getFilename());
+        Out = OutPath.str();
+      }
+      CmdArgs.push_back(Args.MakeArgString(Out));
     }
     // FIXME: Clean up this code and factor out the common logic (see the end of
     // the function)

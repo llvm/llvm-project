@@ -19,6 +19,11 @@
 // RUN:   2>&1 | FileCheck %s --check-prefix=CACHE-HIT
 // RUN: diff %t/a/t1_working_dir.o %t/b/t2_working_dir.o
 
+/// Check using a different working directory should cache hit as long as the compilation-dirs are setup correctly and inputs are the same.
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -working-directory %t/b -o t3_working_dir.o -DNEW_FLAG -Rcompile-job-cache -fdebug-compilation-dir=%t -fcoverage-compilation-dir=%t \
+// RUN:   2>&1 | FileCheck %s --check-prefix=CACHE-HIT
+
 // Check that output path is correctly detected with - (stdout)
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
