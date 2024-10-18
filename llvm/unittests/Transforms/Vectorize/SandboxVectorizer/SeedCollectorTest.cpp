@@ -22,7 +22,25 @@
 
 using namespace llvm;
 
-struct SeedBundleTest : public testing::Test {
+// We need several LLVM data structures to collect seeds from llvm-ir, but they
+// have to be constructed as only after parsing the asm string, and most are
+// never referred to again. Constructing them as member variables is awkward,
+// because gUnit doesn't support custom constructors, so we can't pass the asm
+// string as part of test construction. They would have to go in a sub-object
+// created after parsing.
+
+#define createLLVMF(FName, AsmString)                                          \
+  parseIR(C, AsmString);                                                       \
+  Function &LLVMF = *M->getFunction(FName);                                    \
+  DominatorTree DT(LLVMF);                                                     \
+  TargetLibraryInfoImpl TLII;                                                  \
+  TargetLibraryInfo TLI(TLII);                                                 \
+  DataLayout DL(M->getDataLayout());                                           \
+  LoopInfo LI(DT);                                                             \
+  AssumptionCache AC(LLVMF);                                                   \
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+struct SeedCollectorTest : public testing::Test {
   LLVMContext C;
   std::unique_ptr<Module> M;
 
@@ -49,8 +67,8 @@ public:
   }
 };
 
-TEST_F(SeedBundleTest, SeedBundle) {
-  parseIR(C, R"IR(
+TEST_F(SeedCollectorTest, SeedBundle) {
+  createLLVMF("foo", R"IR(
 define void @foo(float %v0, i32 %i0, i16 %i1, i8 %i2) {
 bb:
   %add0 = fadd float %v0, %v0
@@ -64,10 +82,8 @@ bb:
   ret void
 }
 )IR");
-  Function &LLVMF = *M->getFunction("foo");
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
-  DataLayout DL(M->getDataLayout());
   auto *BB = &*F.begin();
   auto It = BB->begin();
   auto *I0 = &*It++;
@@ -145,8 +161,8 @@ bb:
   EXPECT_EQ(Slice4.size(), 0u);
 }
 
-TEST_F(SeedBundleTest, MemSeedBundle) {
-  parseIR(C, R"IR(
+TEST_F(SeedCollectorTest, MemSeedBundle) {
+  createLLVMF("foo", R"IR(
 define void @foo(ptr %ptrA, float %val, ptr %ptr) {
 bb:
   %gep0 = getelementptr float, ptr %ptr, i32 0
@@ -166,15 +182,6 @@ bb:
   ret void
 }
 )IR");
-  Function &LLVMF = *M->getFunction("foo");
-
-  DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
-  TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
-  LoopInfo LI(DT);
-  AssumptionCache AC(LLVMF);
-  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
 
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
@@ -206,8 +213,8 @@ bb:
   EXPECT_THAT(LB, testing::ElementsAre(L0, L1, L2, L3));
 }
 
-TEST_F(SeedBundleTest, Container) {
-  parseIR(C, R"IR(
+TEST_F(SeedCollectorTest, Container) {
+  createLLVMF("foo", R"IR(
 define void @foo(ptr %ptrA, float %val, ptr %ptrB) {
 bb:
   %gepA0 = getelementptr float, ptr %ptrA, i32 0
@@ -221,16 +228,6 @@ bb:
   ret void
 }
 )IR");
-  Function &LLVMF = *M->getFunction("foo");
-
-  DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
-  TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
-  LoopInfo LI(DT);
-  AssumptionCache AC(LLVMF);
-  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
-
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto &BB = *F.begin();
