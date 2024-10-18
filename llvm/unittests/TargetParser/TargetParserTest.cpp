@@ -1333,7 +1333,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_F8F16MM,      AArch64::AEK_LSFE,
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
-      AArch64::AEK_PCDPHINT};
+      AArch64::AEK_PCDPHINT,
+  };
 
   std::vector<StringRef> Features;
 
