@@ -151,20 +151,20 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
   auto addGenericFeatures = [&]() {
+    Features["bulk-memory"] = true;
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
+    Features["nontrapping-fptoint"] = true;
     Features["reference-types"] = true;
     Features["sign-ext"] = true;
   };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
-    Features["bulk-memory"] = true;
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
     Features["fp16"] = true;
     Features["multimemory"] = true;
-    Features["nontrapping-fptoint"] = true;
     Features["tail-call"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
   };

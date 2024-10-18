@@ -561,6 +561,122 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   return DoneMBB;
 }
 
+// Lower a `MEMCPY` instruction into a CFG triangle around a `MEMORY_COPY`
+// instuction to handle the zero-length case.
+static MachineBasicBlock *LowerMemcpy(MachineInstr &MI, DebugLoc DL,
+                                      MachineBasicBlock *BB,
+                                      const TargetInstrInfo &TII,
+				      bool Int64) {
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+
+  MachineOperand DstMem = MI.getOperand(0);
+  MachineOperand SrcMem = MI.getOperand(1);
+  MachineOperand Dst = MI.getOperand(2);
+  MachineOperand Src = MI.getOperand(3);
+  MachineOperand Len = MI.getOperand(4);
+
+  MachineOperand NoKillLen = Len;
+  NoKillLen.setIsKill(false);
+
+  unsigned Eqz = Int64 ? WebAssembly::EQZ_I64 : WebAssembly::EQZ_I32;
+
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *TrueMBB = F->CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(LLVMBB);
+
+  unsigned MemoryCopy = Int64 ? WebAssembly::MEMORY_COPY_A64 : WebAssembly::MEMORY_COPY_A32;
+
+  MachineFunction::iterator It = ++BB->getIterator();
+  F->insert(It, TrueMBB);
+  F->insert(It, DoneMBB);
+
+  // Transfer the remainder of BB and its successor edges to DoneMBB.
+  DoneMBB->splice(DoneMBB->begin(), BB, std::next(MI.getIterator()), BB->end());
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  BB->addSuccessor(TrueMBB);
+  BB->addSuccessor(DoneMBB);
+  TrueMBB->addSuccessor(DoneMBB);
+
+  unsigned EqzReg;
+  EqzReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+
+  MI.eraseFromParent();
+
+  BuildMI(BB, DL, TII.get(Eqz), EqzReg).add(NoKillLen);
+
+  BuildMI(TrueMBB, DL, TII.get(MemoryCopy))
+      .add(DstMem)
+      .add(SrcMem)
+      .add(Dst)
+      .add(Src)
+      .add(Len);
+
+  // Create the CFG triangle.
+  BuildMI(BB, DL, TII.get(WebAssembly::BR_IF)).addMBB(DoneMBB).addReg(EqzReg);
+  BuildMI(TrueMBB, DL, TII.get(WebAssembly::BR)).addMBB(DoneMBB);
+
+  return DoneMBB;
+}
+
+// Lower a `MEMSET` instruction into a CFG triangle around a `MEMORY_FILL`
+// instuction to handle the zero-length case.
+static MachineBasicBlock *LowerMemset(MachineInstr &MI, DebugLoc DL,
+                                      MachineBasicBlock *BB,
+                                      const TargetInstrInfo &TII,
+				      bool Int64) {
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+
+  MachineOperand Mem = MI.getOperand(0);
+  MachineOperand Dst = MI.getOperand(1);
+  MachineOperand Val = MI.getOperand(2);
+  MachineOperand Len = MI.getOperand(3);
+
+  MachineOperand NoKillLen = Len;
+  NoKillLen.setIsKill(false);
+
+  unsigned Eqz = Int64 ? WebAssembly::EQZ_I64 : WebAssembly::EQZ_I32;
+
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *TrueMBB = F->CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(LLVMBB);
+
+  unsigned MemoryFill = Int64 ? WebAssembly::MEMORY_FILL_A64 : WebAssembly::MEMORY_FILL_A32;
+
+  MachineFunction::iterator It = ++BB->getIterator();
+  F->insert(It, TrueMBB);
+  F->insert(It, DoneMBB);
+
+  // Transfer the remainder of BB and its successor edges to DoneMBB.
+  DoneMBB->splice(DoneMBB->begin(), BB, std::next(MI.getIterator()), BB->end());
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  BB->addSuccessor(TrueMBB);
+  BB->addSuccessor(DoneMBB);
+  TrueMBB->addSuccessor(DoneMBB);
+
+  unsigned EqzReg;
+  EqzReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+
+  MI.eraseFromParent();
+
+  BuildMI(BB, DL, TII.get(Eqz), EqzReg).add(NoKillLen);
+
+  BuildMI(TrueMBB, DL, TII.get(MemoryFill))
+      .add(Mem)
+      .add(Dst)
+      .add(Val)
+      .add(Len);
+
+  // Create the CFG triangle.
+  BuildMI(BB, DL, TII.get(WebAssembly::BR_IF)).addMBB(DoneMBB).addReg(EqzReg);
+  BuildMI(TrueMBB, DL, TII.get(WebAssembly::BR)).addMBB(DoneMBB);
+
+  return DoneMBB;
+}
+
 static MachineBasicBlock *
 LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                  const WebAssemblySubtarget *Subtarget,
@@ -718,6 +834,14 @@ MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
   case WebAssembly::FP_TO_UINT_I64_F64:
     return LowerFPToInt(MI, DL, BB, TII, true, true, true,
                         WebAssembly::I64_TRUNC_U_F64);
+  case WebAssembly::MEMCPY_A32:
+    return LowerMemcpy(MI, DL, BB, TII, false);
+  case WebAssembly::MEMCPY_A64:
+    return LowerMemcpy(MI, DL, BB, TII, true);
+  case WebAssembly::MEMSET_A32:
+    return LowerMemset(MI, DL, BB, TII, false);
+  case WebAssembly::MEMSET_A64:
+    return LowerMemset(MI, DL, BB, TII, true);
   case WebAssembly::CALL_RESULTS:
   case WebAssembly::RET_CALL_RESULTS:
     return LowerCallResults(MI, DL, BB, Subtarget, TII);
