@@ -290,7 +290,6 @@ void foo() {
 
 } // namespace local_assignment_to_global
 
-<<<<<<< HEAD
 namespace local_refcountable_checkable_object {
 
 RefCountableAndCheckable* provide_obj();
