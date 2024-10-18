@@ -14,6 +14,7 @@
 #include "AllocationOrder.h"
 #include "RegAllocBase.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -140,6 +141,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(RABasic, "regallocbasic", "Basic Register Allocator", false,
                     false)
 
@@ -182,6 +184,7 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveDebugVariables>();
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
+  AU.addRequired<ProfileSummaryInfoWrapperPass>();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequiredID(MachineDominatorsID);
@@ -312,7 +315,8 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
                      getAnalysis<LiveRegMatrix>());
   VirtRegAuxInfo VRAI(
       *MF, *LIS, *VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(),
-      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
   VRAI.calculateSpillWeightsAndHints();
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM, VRAI));
