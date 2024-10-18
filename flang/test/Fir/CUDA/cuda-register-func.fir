@@ -12,5 +12,6 @@ module attributes {gpu.container_module} {
 }
 
 // CHECK-LABEL: llvm.func internal @__cudaFortranConstructor()
-// CHECK: cuf.register_kernel @cuda_device_mod::@_QPsub_device1
-// CHECK: cuf.register_kernel @cuda_device_mod::@_QPsub_device2
+// CHECK: %[[MOD_HANDLE:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr
+// CHECK: cuf.register_kernel @cuda_device_mod::@_QPsub_device1(%[[MOD_HANDLE]] : !llvm.ptr)
+// CHECK: cuf.register_kernel @cuda_device_mod::@_QPsub_device2(%[[MOD_HANDLE]] : !llvm.ptr)
