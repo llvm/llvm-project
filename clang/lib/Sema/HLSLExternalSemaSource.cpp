@@ -358,7 +358,7 @@ struct TemplateParameterListBuilder {
   structure is what we're trying to construct below, specifically the
   CSE portion.
   */
-  ConceptSpecializationExpr *getConceptSpecializationExpr(Sema &S,
+  ConceptSpecializationExpr *constructConceptSpecializationExpr(Sema &S,
                                                           ConceptDecl *CD) {
     ASTContext &Context = S.getASTContext();
     SourceLocation Loc = Builder.Record->getBeginLoc();
@@ -432,7 +432,7 @@ struct TemplateParameterListBuilder {
     if (Params.empty())
       return Builder;
     ConceptSpecializationExpr *CSE =
-        CD ? getConceptSpecializationExpr(S, CD) : nullptr;
+        CD ? constructConceptSpecializationExpr(S, CD) : nullptr;
 
     auto *ParamList = TemplateParameterList::Create(S.Context, SourceLocation(),
                                                     SourceLocation(), Params,
@@ -582,7 +582,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor(S, RC);
 }
 
-BinaryOperator *getSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
+BinaryOperator *constructSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
                                    TemplateTypeParmDecl *T) {
   // Obtain the QualType for 'unsigned long'
   QualType UnsignedLongType = Context.UnsignedLongTy;
@@ -618,19 +618,19 @@ BinaryOperator *getSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
   return binaryOperator;
 }
 
-Expr *getTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
+Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
                                    TemplateTypeParmDecl *T) {
   ASTContext &Context = S.getASTContext();
 
   // first get the "sizeof(T) <= 16" expression, as a binary operator
-  BinaryOperator *SizeOfLEQ16 = getSizeOfLEQ16Expr(Context, NameLoc, T);
+  BinaryOperator *SizeOfLEQ16 = constructSizeOfLEQ16Expr(Context, NameLoc, T);
   // TODO: add the '__builtin_hlsl_is_line_vector_layout_compatible' builtin
   // and return a binary operator that evaluates the builtin on the given
   // template type parameter 'T'
   return SizeOfLEQ16;
 }
 
-ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
+ConceptDecl *constructTypedBufferConceptDecl(Sema &S) {
   DeclContext *DC = S.CurContext;
   ASTContext &Context = S.getASTContext();
   SourceLocation DeclLoc = SourceLocation();
@@ -654,7 +654,7 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
       Context, DeclLoc, DeclLoc, {T}, DeclLoc, nullptr);
 
   DeclarationName DeclName = DeclarationName(&IsValidLineVectorII);
-  Expr *ConstraintExpr = getTypedBufferConstraintExpr(S, DeclLoc, T);
+  Expr *ConstraintExpr = constructTypedBufferConstraintExpr(S, DeclLoc, T);
 
   // Create a ConceptDecl
   ConceptDecl *CD =
@@ -672,7 +672,7 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
-  ConceptDecl *CD = getTypedBufferConceptDecl(*SemaPtr);
+  ConceptDecl *CD = constructTypedBufferConceptDecl(*SemaPtr);
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams(*SemaPtr, {"element_type"}, CD)
