@@ -1230,11 +1230,6 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
-    // Selects elements from two vectors (second and third operand) based on a
-    // condition vector (first operand) and a pivot index (fourth operand). The
-    // lanes whose positions are greater than or equal to the pivot are taken
-    // from the third operand.
-    MergeUntilPivot,
   };
 
 private:
