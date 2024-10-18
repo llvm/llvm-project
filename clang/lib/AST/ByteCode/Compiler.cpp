@@ -4535,6 +4535,10 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
     }
   }
+  // Explicit calls to trivial destructors
+  if (const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(FuncDecl);
+      DD && DD->isTrivial())
+    return true;
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);
