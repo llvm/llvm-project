@@ -424,6 +424,8 @@ Improvements to Clang's diagnostics
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
