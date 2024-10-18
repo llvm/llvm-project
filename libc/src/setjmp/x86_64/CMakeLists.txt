@@ -6,6 +6,7 @@ add_entrypoint_object(
     ../setjmp_impl.h
   DEPENDS
     libc.hdr.types.jmp_buf
+    libc.src.setjmp.checksum
   COMPILE_OPTIONS
     -O3
 )
@@ -18,6 +19,9 @@ add_entrypoint_object(
     ../longjmp.h
   DEPENDS
     libc.hdr.types.jmp_buf
+    libc.src.stdlib.abort
+    libc.src.__support.OSUtil.osutil
+    libc.src.setjmp.checksum
   COMPILE_OPTIONS
     -O3
     -fomit-frame-pointer

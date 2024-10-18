@@ -9,37 +9,88 @@
 #include "include/llvm-libc-macros/offsetof-macro.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/setjmp/checksum.h"
 #include "src/setjmp/setjmp_impl.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86_64)
 #error "Invalid file include"
 #endif
 
-namespace LIBC_NAMESPACE_DECL {
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+#define LOAD_CHKSUM_STATE_REGISTERS()                                          \
+  asm("mov %0, %%rcx\n\t" ::"m"(jmpbuf::value_mask) : "rcx");                  \
+  asm("mov %0, %%rdx\n\t" ::"m"(jmpbuf::checksum_cookie) : "rdx");
 
+#define STORE_REG(SRC)                                                         \
+  "mov %%" #SRC ", %%rax\n\t"                                                  \
+  "xor %%rcx, %%rax\n\t"                                                       \
+  "mov %%rax, %c[" #SRC "](%%rdi)\n\t"                                         \
+  "mul %%rdx\n\t"                                                              \
+  "xor %%rax, %%rdx\n\t"                                                       \
+  "rol $%c[rotation], %%rdx\n\t"
+
+#define STORE_RSP()                                                            \
+  "lea 8(%%rsp), %%rax\n\t"                                                    \
+  "xor %%rcx, %%rax\n\t"                                                       \
+  "mov %%rax, %c[rsp](%%rdi)\n\t"                                              \
+  "mul %%rdx\n\t"                                                              \
+  "xor %%rax, %%rdx\n\t"                                                       \
+  "rolq $%c[rotation], %%rdx\n\t"
+
+#define STORE_RIP()                                                            \
+  "mov (%%rsp), %%rax\n\t"                                                     \
+  "xor %%rcx, %%rax\n\t"                                                       \
+  "mov %%rax, %c[rip](%%rdi)\n\t"                                              \
+  "mul %%rdx\n\t"                                                              \
+  "xor %%rax, %%rdx\n\t"                                                       \
+  "rolq $%c[rotation], %%rdx\n\t"
+
+#define STORE_CHECKSUM() "mov %%rdx, %c[chksum](%%rdi)\n\t"
+#else
+#define LOAD_CHKSUM_STATE_REGISTERS()
+#define STORE_REG(SRC) "mov %%" #SRC ", %c[" #SRC "](%%rdi)\n\t"
+#define STORE_RSP()                                                            \
+  "lea 8(%%rsp), %%rax\n\t"                                                    \
+  "mov %%rax, %c[rsp](%%rdi)\n\t"
+#define STORE_RIP()                                                            \
+  "mov (%%rsp), %%rax\n\t"                                                     \
+  "mov %%rax, %c[rip](%%rdi)\n\t"
+#define STORE_CHECKSUM()
+#endif
+
+namespace LIBC_NAMESPACE_DECL {
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
-  asm(R"(
-      mov %%rbx, %c[rbx](%%rdi)
-      mov %%rbp, %c[rbp](%%rdi)
-      mov %%r12, %c[r12](%%rdi)
-      mov %%r13, %c[r13](%%rdi)
-      mov %%r14, %c[r14](%%rdi)
-      mov %%r15, %c[r15](%%rdi)
-
-      lea 8(%%rsp), %%rax
-      mov %%rax, %c[rsp](%%rdi)
-
-      mov (%%rsp), %%rax
-      mov %%rax, %c[rip](%%rdi)
-
-      xorl %%eax, %%eax
-      retq)" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
+  LOAD_CHKSUM_STATE_REGISTERS()
+  asm(
+      // clang-format off
+    STORE_REG(rbx)
+    STORE_REG(rbp)
+    STORE_REG(r12)
+    STORE_REG(r13)
+    STORE_REG(r14)
+    STORE_REG(r15)
+    STORE_RSP()
+    STORE_RIP()
+    STORE_CHECKSUM()
+      // clang-format on
+      ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
       [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
       [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
       [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip))
-      : "rax");
+#if LIBC_COPT_SETJMP_ENABLE_FORTIFICATION
+      // clang-format off
+      ,[rotation] "i"(jmpbuf::ROTATION)
+      ,[chksum] "i"(offsetof(__jmp_buf, __chksum))
+  // clang-format on
+#endif
+      : "rax", "rdx");
+
+  asm(R"(
+    xorl %eax, %eax
+    retq
+  )");
 }
 
 } // namespace LIBC_NAMESPACE_DECL

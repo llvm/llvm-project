@@ -11,6 +11,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
+#include "src/setjmp/checksum.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
@@ -130,7 +131,7 @@ void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
   init_tls(tls);
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
-
+  jmpbuf::initialize();
   self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
       internal::get_thread_atexit_callback_mgr();
