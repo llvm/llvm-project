@@ -1205,13 +1205,13 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   SDValue N00 = N0.getOperand(0);
   SDValue N01 = N0.getOperand(1);
 
-  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N01))) {
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N01)) {
     SDNodeFlags NewFlags;
     if (N0.getOpcode() == ISD::ADD && N0->getFlags().hasNoUnsignedWrap() &&
         Flags.hasNoUnsignedWrap())
       NewFlags.setNoUnsignedWrap(true);
 
-    if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1))) {
+    if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
       if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, {N01, N1}))
         return DAG.getNode(Opc, DL, VT, N00, OpNode, NewFlags);
@@ -9931,10 +9931,10 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   // fold (rot* (rot* x, c2), c1)
   //   -> (rot* x, ((c1 % bitsize) +- (c2 % bitsize) + bitsize) % bitsize)
   if (NextOp == ISD::ROTL || NextOp == ISD::ROTR) {
-    SDNode *C1 = DAG.isConstantIntBuildVectorOrConstantInt(N1);
-    SDNode *C2 = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1));
-    if (C1 && C2 && C1->getValueType(0) == C2->getValueType(0)) {
-      EVT ShiftVT = C1->getValueType(0);
+    bool C1 = DAG.isConstantIntBuildVectorOrConstantInt(N1);
+    bool C2 = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1));
+    if (C1 && C2 && N1.getValueType() == N0.getOperand(1).getValueType()) {
+      EVT ShiftVT = N1.getValueType();
       bool SameSide = (N->getOpcode() == NextOp);
       unsigned CombineOp = SameSide ? ISD::ADD : ISD::SUB;
       SDValue BitsizeC = DAG.getConstant(Bitsize, dl, ShiftVT);
@@ -16805,8 +16805,8 @@ SDValue DAGCombiner::visitVP_FADD(SDNode *N) {
 SDValue DAGCombiner::visitFADD(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  SDNode *N0CFP = DAG.isConstantFPBuildVectorOrConstantFP(N0);
-  SDNode *N1CFP = DAG.isConstantFPBuildVectorOrConstantFP(N1);
+  bool N0CFP = DAG.isConstantFPBuildVectorOrConstantFP(N0);
+  bool N1CFP = DAG.isConstantFPBuildVectorOrConstantFP(N1);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
@@ -16903,10 +16903,8 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     // of rounding steps.
     if (TLI.isOperationLegalOrCustom(ISD::FMUL, VT) && !N0CFP && !N1CFP) {
       if (N0.getOpcode() == ISD::FMUL) {
-        SDNode *CFP00 =
-            DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(0));
-        SDNode *CFP01 =
-            DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(1));
+        bool CFP00 = DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(0));
+        bool CFP01 = DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(1));
 
         // (fadd (fmul x, c), x) -> (fmul x, c+1)
         if (CFP01 && !CFP00 && N0.getOperand(0) == N1) {
@@ -16926,10 +16924,8 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       }
 
       if (N1.getOpcode() == ISD::FMUL) {
-        SDNode *CFP10 =
-            DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(0));
-        SDNode *CFP11 =
-            DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(1));
+        bool CFP10 = DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(0));
+        bool CFP11 = DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(1));
 
         // (fadd x, (fmul x, c)) -> (fmul x, c+1)
         if (CFP11 && !CFP10 && N1.getOperand(0) == N0) {
@@ -16949,8 +16945,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       }
 
       if (N0.getOpcode() == ISD::FADD) {
-        SDNode *CFP00 =
-            DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(0));
+        bool CFP00 = DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(0));
         // (fadd (fadd x, x), x) -> (fmul x, 3.0)
         if (!CFP00 && N0.getOperand(0) == N0.getOperand(1) &&
             (N0.getOperand(0) == N1)) {
@@ -16960,8 +16955,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       }
 
       if (N1.getOpcode() == ISD::FADD) {
-        SDNode *CFP10 =
-            DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(0));
+        bool CFP10 = DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(0));
         // (fadd x, (fadd x, x)) -> (fmul x, 3.0)
         if (!CFP10 && N1.getOperand(0) == N1.getOperand(1) &&
             N1.getOperand(0) == N0) {
@@ -17374,11 +17368,9 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   MatchContextClass matcher(DAG, TLI, N);
 
   // Constant fold FMA.
-  if (isa<ConstantFPSDNode>(N0) &&
-      isa<ConstantFPSDNode>(N1) &&
-      isa<ConstantFPSDNode>(N2)) {
-    return matcher.getNode(ISD::FMA, DL, VT, N0, N1, N2);
-  }
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(N->getOpcode(), DL, VT, {N0, N1, N2}))
+    return C;
 
   // (-N0 * -N1) + N2 --> (N0 * N1) + N2
   TargetLowering::NegatibleCost CostN0 =
@@ -17494,9 +17486,8 @@ SDValue DAGCombiner::visitFMAD(SDNode *N) {
   SDLoc DL(N);
 
   // Constant fold FMAD.
-  if (isa<ConstantFPSDNode>(N0) && isa<ConstantFPSDNode>(N1) &&
-      isa<ConstantFPSDNode>(N2))
-    return DAG.getNode(ISD::FMAD, DL, VT, N0, N1, N2);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FMAD, DL, VT, {N0, N1, N2}))
+    return C;
 
   return SDValue();
 }
@@ -18156,8 +18147,9 @@ SDValue DAGCombiner::visitXROUND(SDNode *N) {
 
   // fold (lrint|llrint c1fp) -> c1
   // fold (lround|llround c1fp) -> c1
-  if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
-    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N0);
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(N->getOpcode(), SDLoc(N), VT, {N0}))
+    return C;
 
   return SDValue();
 }
@@ -18166,10 +18158,10 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (fp_round c1fp) -> c1fp
-  if (SDValue C =
-          DAG.FoldConstantArithmetic(ISD::FP_ROUND, SDLoc(N), VT, {N0, N1}))
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FP_ROUND, DL, VT, {N0, N1}))
     return C;
 
   // fold (fp_round (fp_extend x)) -> x
@@ -18200,12 +18192,10 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     // single-step fp_round we want to fold to.
     // In other words, double rounding isn't the same as rounding.
     // Also, this is a value preserving truncation iff both fp_round's are.
-    if (DAG.getTarget().Options.UnsafeFPMath || N0IsTrunc) {
-      SDLoc DL(N);
+    if (DAG.getTarget().Options.UnsafeFPMath || N0IsTrunc)
       return DAG.getNode(
           ISD::FP_ROUND, DL, VT, N0.getOperand(0),
           DAG.getIntPtrConstant(NIsTrunc && N0IsTrunc, DL, /*isTarget=*/true));
-    }
   }
 
   // fold (fp_round (copysign X, Y)) -> (copysign (fp_round X), Y)
@@ -18219,8 +18209,7 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     SDValue Tmp = DAG.getNode(ISD::FP_ROUND, SDLoc(N0), VT,
                               N0.getOperand(0), N1);
     AddToWorklist(Tmp.getNode());
-    return DAG.getNode(ISD::FCOPYSIGN, SDLoc(N), VT,
-                       Tmp, N0.getOperand(1));
+    return DAG.getNode(ISD::FCOPYSIGN, DL, VT, Tmp, N0.getOperand(1));
   }
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
@@ -18232,42 +18221,40 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
 SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   if (VT.isVector())
-    if (SDValue FoldedVOp = SimplifyVCastOp(N, SDLoc(N)))
+    if (SDValue FoldedVOp = SimplifyVCastOp(N, DL))
       return FoldedVOp;
 
   // If this is fp_round(fpextend), don't fold it, allow ourselves to be folded.
-  if (N->hasOneUse() &&
-      N->use_begin()->getOpcode() == ISD::FP_ROUND)
+  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND)
     return SDValue();
 
   // fold (fp_extend c1fp) -> c1fp
-  if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
-    return DAG.getNode(ISD::FP_EXTEND, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FP_EXTEND, DL, VT, {N0}))
+    return C;
 
   // fold (fp_extend (fp16_to_fp op)) -> (fp16_to_fp op)
   if (N0.getOpcode() == ISD::FP16_TO_FP &&
       TLI.getOperationAction(ISD::FP16_TO_FP, VT) == TargetLowering::Legal)
-    return DAG.getNode(ISD::FP16_TO_FP, SDLoc(N), VT, N0.getOperand(0));
+    return DAG.getNode(ISD::FP16_TO_FP, DL, VT, N0.getOperand(0));
 
   // Turn fp_extend(fp_round(X, 1)) -> x since the fp_round doesn't affect the
   // value of X.
-  if (N0.getOpcode() == ISD::FP_ROUND
-      && N0.getConstantOperandVal(1) == 1) {
+  if (N0.getOpcode() == ISD::FP_ROUND && N0.getConstantOperandVal(1) == 1) {
     SDValue In = N0.getOperand(0);
     if (In.getValueType() == VT) return In;
     if (VT.bitsLT(In.getValueType()))
-      return DAG.getNode(ISD::FP_ROUND, SDLoc(N), VT,
-                         In, N0.getOperand(1));
-    return DAG.getNode(ISD::FP_EXTEND, SDLoc(N), VT, In);
+      return DAG.getNode(ISD::FP_ROUND, DL, VT, In, N0.getOperand(1));
+    return DAG.getNode(ISD::FP_EXTEND, DL, VT, In);
   }
 
   // fold (fpext (load x)) -> (fpext (fptrunc (extload x)))
   if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse() &&
       TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, VT, N0.getValueType())) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, SDLoc(N), VT,
+    SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, DL, VT,
                                      LN0->getChain(),
                                      LN0->getBasePtr(), N0.getValueType(),
                                      LN0->getMemOperand());
@@ -18433,10 +18420,11 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
 SDValue DAGCombiner::visitFABS(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (fabs c1) -> fabs(c1)
-  if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
-    return DAG.getNode(ISD::FABS, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FABS, DL, VT, {N0}))
+    return C;
 
   // fold (fabs (fabs x)) -> (fabs x)
   if (N0.getOpcode() == ISD::FABS)
@@ -18445,7 +18433,7 @@ SDValue DAGCombiner::visitFABS(SDNode *N) {
   // fold (fabs (fneg x)) -> (fabs x)
   // fold (fabs (fcopysign x, y)) -> (fabs x)
   if (N0.getOpcode() == ISD::FNEG || N0.getOpcode() == ISD::FCOPYSIGN)
-    return DAG.getNode(ISD::FABS, SDLoc(N), VT, N0.getOperand(0));
+    return DAG.getNode(ISD::FABS, DL, VT, N0.getOperand(0));
 
   if (SDValue Cast = foldSignChangeInBitcast(N))
     return Cast;
