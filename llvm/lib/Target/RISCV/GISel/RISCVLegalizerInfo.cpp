@@ -541,9 +541,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-      .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {s32, sXLen})))
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {sXLen})))
       .widenScalarToNextPow2(1)
-      .minScalar(1, s32)
+      .minScalar(1, sXLen)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
 

@@ -96,6 +96,9 @@ def gi_sh2add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<2>">,
 def gi_sh3add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<3>">,
                       GIComplexPatternEquiv<sh3add_uw_op>;
 
+def gi_sexti32 : GIComplexOperandMatcher<s64, "selectSExtBits<32>">,
+                 GIComplexPatternEquiv<sexti32>;
+
 def gi_zexti32 : GIComplexOperandMatcher<s64, "selectZExtBits<32>">,
                  GIComplexPatternEquiv<zexti32>;
 def gi_zexti16 : GIComplexOperandMatcher<s32, "selectZExtBits<16>">,

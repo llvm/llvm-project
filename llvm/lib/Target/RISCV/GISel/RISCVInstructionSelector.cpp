@@ -87,6 +87,12 @@ private:
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
 
+  ComplexRendererFns selectSExtBits(MachineOperand &Root, unsigned Bits) const;
+  template <unsigned Bits>
+  ComplexRendererFns selectSExtBits(MachineOperand &Root) const {
+    return selectSExtBits(Root, Bits);
+  }
+
   ComplexRendererFns selectZExtBits(MachineOperand &Root, unsigned Bits) const;
   template <unsigned Bits>
   ComplexRendererFns selectZExtBits(MachineOperand &Root) const {
@@ -246,6 +252,24 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
   }
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
+                                         unsigned Bits) const {
+  if (!Root.isReg())
+    return std::nullopt;
+  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
+
+  if (RootDef->getOpcode() == TargetOpcode::G_SEXT_INREG &&
+      RootDef->getOperand(2).getImm() == Bits) {
+    return {
+        {[=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); }}};
+  }
+
+  // TODO: Use computeNumSignBits.
+
+  return std::nullopt;
 }
 
 InstructionSelector::ComplexRendererFns
