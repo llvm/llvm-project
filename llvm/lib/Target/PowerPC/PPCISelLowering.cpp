@@ -17372,8 +17372,9 @@ SDValue PPCTargetLowering::LowerFRAMEADDR(SDValue Op,
 
 Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                               const MachineFunction &MF) const {
+  bool IsPPC64 = Subtarget.isPPC64();
 
-  bool Is64Bit = Subtarget.isPPC64() && VT == LLT::scalar(64);
+  bool Is64Bit = IsPPC64 && VT == LLT::scalar(64);
   if (!Is64Bit && VT != LLT::scalar(32))
     report_fatal_error("Invalid register global variable type");
 
@@ -17381,6 +17382,12 @@ Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   if (!Reg)
     report_fatal_error(
         Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
+
+  // FIXME: These registers are not flagged as reserved and we can generate
+  // code for `-O0` but not for `-O2`.  Need followup investigation as to why.
+  if ((IsPPC64 && Reg == PPC::R2) || Reg == PPC::R0)
+    report_fatal_error(Twine("Trying to reserve an invalid register \"" +
+                             StringRef(RegName) + "\"."));
 
   // Convert GPR to GP8R register for 64bit.
   if (Is64Bit && StringRef(RegName).starts_with_insensitive("r"))
