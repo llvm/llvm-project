@@ -5,6 +5,9 @@
 // REQUIRES: target={{x86_64.*}}
 // UNSUPPORTED: i386-target-arch, internal_symbolizer
 
+// Does not link.
+// UNSUPPORTED: Darwin
+
 #include <signal.h>
 #include <stdio.h>
 
