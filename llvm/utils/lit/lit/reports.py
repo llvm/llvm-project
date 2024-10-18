@@ -24,12 +24,12 @@ class Report(object):
 
     def write_results(self, tests, elapsed):
         if self.use_unique_output_file_name:
-            file = None
+            report_file = None
             filepath = self.output_file
             attempt = 0
-            while file is None:
+            while report_file is None:
                 try:
-                    file = open(filepath, "x")
+                    report_file = open(filepath, "x")
                 except FileExistsError:
                     attempt += 1
                     # If there is an extension insert before that because most
@@ -37,13 +37,12 @@ class Report(object):
                     # add to the end of the path.
                     path, ext = os.path.splitext(self.output_file)
                     filepath = path + f".{attempt}" + ext
-
-            with file:
-                self._write_results_to_file(tests, elapsed, file)
         else:
             # Overwrite if the results already exist.
-            with open(self.output_file, "w") as file:
-                self._write_results_to_file(tests, elapsed, file)
+            report_file = open(self.output_file, "w")
+
+        with report_file:
+            self._write_results_to_file(tests, elapsed, report_file)
 
     @abc.abstractmethod
     def _write_results_to_file(self, tests, elapsed, file):
