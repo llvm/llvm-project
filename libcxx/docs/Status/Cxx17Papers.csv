@@ -71,7 +71,7 @@
 "`P0394R4 <https://wg21.link/P0394R4>`__","Hotel Parallelifornia: terminate() for Parallel Algorithms Exception Handling","2016-06 (Oulu)","|Complete|","17.0",""
 "","","","","",""
 "`P0003R5 <https://wg21.link/P0003R5>`__","Removing Deprecated Exception Specifications from C++17","2016-11 (Issaquah)","|Complete|","5.0",""
-"`P0067R5 <https://wg21.link/P0067R5>`__","Elementary string conversions, revision 5","2016-11 (Issaquah)","|Partial|","","``std::(to|from)_chars`` for integrals has been available since version 7.0. ``std::to_chars`` for ``float`` and ``double`` since version 14.0 ``std::to_chars`` for ``long double`` uses the implementation for ``double``."
+"`P0067R5 <https://wg21.link/P0067R5>`__","Elementary string conversions, revision 5","2016-11 (Issaquah)","|Partial|","","``std::(to|from)_chars`` for integrals has been available since version 7.0. ``std::to_chars`` for ``float`` and ``double`` since version 14.0 ``std::to_chars`` for ``long double`` uses the implementation for ``double``. ``std::from_chars`` for ``float`` and ``double`` since version 20.0."
 "`P0403R1 <https://wg21.link/P0403R1>`__","Literal suffixes for ``basic_string_view``\ ","2016-11 (Issaquah)","|Complete|","4.0",""
 "`P0414R2 <https://wg21.link/P0414R2>`__","Merging shared_ptr changes from Library Fundamentals to C++17","2016-11 (Issaquah)","|Complete|","11.0",""
 "`P0418R2 <https://wg21.link/P0418R2>`__","Fail or succeed: there is no atomic lattice","2016-11 (Issaquah)","","",""

@@ -22,6 +22,7 @@
 // <charconv>
 
 #include <type_traits>
+#include "test_macros.h"
 
 // Work-around for sprintf_s's usage in the Microsoft tests.
 #ifndef _WIN32

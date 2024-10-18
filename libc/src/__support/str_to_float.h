@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 
@@ -32,11 +38,21 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 template <class T> struct ExpandedFloat {
   typename fputil::FPBits<T>::StorageType mantissa;
   int32_t exponent;
 };
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 template <class T> struct FloatConvertReturn {
   ExpandedFloat<T> num = {0, 0};
   int error = 0;
@@ -637,6 +653,11 @@ template <> LIBC_INLINE constexpr int32_t get_lower_bound<double>() {
   return -(309 + 15 + 20);
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // Takes a mantissa and base 10 exponent and converts it into its closest
 // floating point type T equivalient. First we try the Eisel-Lemire algorithm,
 // then if that fails then we fall back to a more accurate algorithm for
@@ -716,6 +737,11 @@ LIBC_INLINE FloatConvertReturn<T> decimal_exp_to_float(
   return output;
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // Takes a mantissa and base 2 exponent and converts it into its closest
 // floating point type T equivalient. Since the exponent is already in the right
 // form, this is mostly just shifting and rounding. This is used for hexadecimal
