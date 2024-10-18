@@ -71,6 +71,9 @@ struct FileCloser {
   explicit FileCloser(fd_t fd) : fd(fd) {}
   ~FileCloser() { CloseFile(fd); }
   fd_t fd;
+
+  FileCloser(const FileCloser &) = delete;
+  FileCloser &operator=(const FileCloser &) = delete;
 };
 
 bool SupportsColoredOutput(fd_t fd);

@@ -83,6 +83,9 @@ struct FuzzJob {
     RmDirRecursive(CorpusDir);
     RmDirRecursive(FeaturesDir);
   }
+
+  FuzzJob(const FuzzJob &) = delete;
+  FuzzJob &operator=(const FuzzJob &) = delete;
 };
 
 struct GlobalEnv {

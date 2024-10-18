@@ -210,6 +210,9 @@ class ScopedInErrorReport {
   // with the debugger and point it to an error description.
   static ErrorDescription current_error_;
   bool halt_on_error_;
+
+  ScopedInErrorReport(const ScopedInErrorReport &) = delete;
+  ScopedInErrorReport &operator=(const ScopedInErrorReport &) = delete;
 };
 
 ErrorDescription ScopedInErrorReport::current_error_(LINKER_INITIALIZED);

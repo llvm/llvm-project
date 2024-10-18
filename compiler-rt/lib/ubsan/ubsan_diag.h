@@ -228,6 +228,9 @@ class ScopedReport {
   Location SummaryLoc;
   ErrorType Type;
 
+  ScopedReport(const ScopedReport &) = delete;
+  ScopedReport &operator=(const ScopedReport &) = delete;
+
 public:
   ScopedReport(ReportOptions Opts, Location SummaryLoc, ErrorType Type);
   ~ScopedReport();

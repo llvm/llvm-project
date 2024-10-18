@@ -72,6 +72,9 @@ class SymbolizedStackHolder {
       Stack->ClearAll();
   }
 
+  SymbolizedStackHolder(const SymbolizedStackHolder &) = delete;
+  SymbolizedStackHolder &operator=(const SymbolizedStackHolder &) = delete;
+
  public:
   explicit SymbolizedStackHolder(SymbolizedStack *Stack = nullptr)
       : Stack(Stack) {}
@@ -235,6 +238,9 @@ class Symbolizer final {
    private:
     const Symbolizer *sym_;
     int errno_;  // Backup errno in case symbolizer change the value.
+
+    SymbolizerScope(const SymbolizerScope &) = delete;
+    SymbolizerScope &operator=(const SymbolizerScope &) = delete;
   };
 };
 

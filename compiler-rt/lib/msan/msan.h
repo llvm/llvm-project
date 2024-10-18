@@ -354,6 +354,9 @@ class ScopedThreadLocalStateBackup {
   void Restore();
  private:
   u64 va_arg_overflow_size_tls;
+  ScopedThreadLocalStateBackup(const ScopedThreadLocalStateBackup &) = delete;
+  ScopedThreadLocalStateBackup &operator=(
+      const ScopedThreadLocalStateBackup &) = delete;
 };
 
 void MsanTSDInit(void (*destructor)(void *tsd));

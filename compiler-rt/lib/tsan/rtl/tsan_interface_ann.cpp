@@ -41,6 +41,9 @@ class ScopedAnnotation {
   }
  private:
   ThreadState *const thr_;
+
+  ScopedAnnotation(const ScopedAnnotation &) = delete;
+  ScopedAnnotation &operator=(const ScopedAnnotation &) = delete;
 };
 
 #define SCOPED_ANNOTATION_RET(typ, ret)                     \

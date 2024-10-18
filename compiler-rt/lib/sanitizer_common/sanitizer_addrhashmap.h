@@ -92,6 +92,9 @@ class AddrHashMap {
     bool                   created_;
     bool                   remove_;
     bool                   create_;
+
+    Handle(const Handle &) = delete;
+    Handle &operator=(const Handle &) = delete;
   };
 
   typedef void (*ForEachCallback)(const uptr key, const T &val, void *arg);

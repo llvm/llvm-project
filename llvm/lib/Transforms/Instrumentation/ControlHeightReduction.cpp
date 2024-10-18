@@ -296,6 +296,8 @@ class CHR {
       delete Scope;
     }
   }
+  CHR(const CHR &) = delete;
+  CHR &operator=(const CHR &) = delete;
 
   bool run();
 

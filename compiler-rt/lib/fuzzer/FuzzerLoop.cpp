@@ -92,6 +92,9 @@ public:
 
 private:
   std::lock_guard<std::recursive_mutex> Lock;
+
+  TraceLock(const TraceLock &) = delete;
+  TraceLock &operator=(const TraceLock &) = delete;
 };
 
 ATTRIBUTE_NO_SANITIZE_MEMORY

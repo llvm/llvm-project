@@ -47,6 +47,9 @@ class ScopedUnwinding {
  private:
   AsanThread *thread = nullptr;
   bool can_unwind = true;
+
+  ScopedUnwinding(const ScopedUnwinding &) = delete;
+  ScopedUnwinding &operator=(const ScopedUnwinding &) = delete;
 };
 
 }  // namespace

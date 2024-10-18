@@ -81,6 +81,9 @@ class ThreadContextBase {
   virtual void OnReset() {}
   virtual void OnDetached(void *arg) {}
 
+  ThreadContextBase(const ThreadContextBase &) = delete;
+  ThreadContextBase &operator=(const ThreadContextBase &) = delete;
+
  protected:
   ~ThreadContextBase();
 };

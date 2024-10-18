@@ -285,6 +285,9 @@ void EnableInThisThread();
 struct ScopedInterceptorDisabler {
   ScopedInterceptorDisabler() { DisableInThisThread(); }
   ~ScopedInterceptorDisabler() { EnableInThisThread(); }
+  ScopedInterceptorDisabler(const ScopedInterceptorDisabler &) = delete;
+  ScopedInterceptorDisabler &operator=(const ScopedInterceptorDisabler &) =
+      delete;
 };
 
 // According to Itanium C++ ABI array cookie is a one word containing

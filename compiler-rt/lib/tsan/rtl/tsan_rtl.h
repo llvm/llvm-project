@@ -128,6 +128,9 @@ struct Processor {
 struct ScopedGlobalProcessor {
   ScopedGlobalProcessor();
   ~ScopedGlobalProcessor();
+
+  ScopedGlobalProcessor(const ScopedGlobalProcessor &) = delete;
+  ScopedGlobalProcessor &operator=(const ScopedGlobalProcessor &) = delete;
 };
 #endif
 
@@ -398,6 +401,9 @@ struct ScopedIgnoreInterceptors {
     cur_thread()->ignore_interceptors--;
 #endif
   }
+  ScopedIgnoreInterceptors(const ScopedIgnoreInterceptors &) = delete;
+  ScopedIgnoreInterceptors &operator=(const ScopedIgnoreInterceptors &) =
+      delete;
 };
 
 const char *GetObjectTypeFromTag(uptr tag);
@@ -650,6 +656,9 @@ class SlotLocker {
  private:
   ThreadState *thr_;
   bool locked_;
+
+  SlotLocker(const SlotLocker &) = delete;
+  SlotLocker &operator=(const SlotLocker &) = delete;
 };
 
 class SlotUnlocker {

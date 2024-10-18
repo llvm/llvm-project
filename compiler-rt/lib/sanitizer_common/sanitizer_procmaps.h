@@ -112,6 +112,8 @@ class MemoryMappingLayout : public MemoryMappingLayoutBase {
 
  private:
   void LoadFromCache();
+  MemoryMappingLayout(const MemoryMappingLayout &) = delete;
+  MemoryMappingLayout &operator=(const MemoryMappingLayout &) = delete;
 };
 
 // Returns code range for the specified module.

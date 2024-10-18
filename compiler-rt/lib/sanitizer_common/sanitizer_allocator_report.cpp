@@ -38,6 +38,10 @@ class ScopedAllocatorErrorReport {
   const char *error_summary;
   const StackTrace* const stack;
   const SanitizerCommonDecorator d;
+
+  ScopedAllocatorErrorReport(const ScopedAllocatorErrorReport &) = delete;
+  ScopedAllocatorErrorReport &operator=(const ScopedAllocatorErrorReport &) =
+      delete;
 };
 
 void NORETURN ReportCallocOverflow(uptr count, uptr size,

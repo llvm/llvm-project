@@ -67,6 +67,9 @@ struct DDCallback {
   virtual u32 Unwind() { return 0; }
   virtual int UniqueTid() { return 0; }
 
+  RingBuffer(const RingBuffer &) = delete;
+  RingBuffer &operator=(const RingBuffer &) = delete;
+
  protected:
   ~DDCallback() {}
 };

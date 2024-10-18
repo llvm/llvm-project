@@ -86,6 +86,8 @@ bool IsInSymbolizerOrUnwider() { return is_in_symbolizer_or_unwinder; }
 struct UnwinderScope {
   UnwinderScope() { EnterSymbolizerOrUnwider(); }
   ~UnwinderScope() { ExitSymbolizerOrUnwider(); }
+  UnwinderScope(const UnwinderScope &) = delete;
+  UnwinderScope &operator=(const UnwinderScope &) = delete;
 };
 
 static Flags msan_flags;
