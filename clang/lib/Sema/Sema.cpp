@@ -220,7 +220,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
-      StackAwareExecutor(Diags), CurScope(nullptr), Ident_super(nullptr),
+      StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
       AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
@@ -564,7 +564,7 @@ Sema::~Sema() {
 
 void Sema::runWithSufficientStackSpace(SourceLocation Loc,
                                        llvm::function_ref<void()> Fn) {
-  StackAwareExecutor.runWithSufficientStackSpace(Loc, Fn);
+  StackHandler.runWithSufficientStackSpace(Loc, Fn);
 }
 
 bool Sema::makeUnavailableInSystemHeader(SourceLocation loc,

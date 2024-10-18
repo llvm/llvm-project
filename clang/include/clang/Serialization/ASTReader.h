@@ -19,7 +19,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/Stack.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -446,7 +446,7 @@ private:
   DiagnosticsEngine &Diags;
   // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
   // has its own version.
-  SingleWarningStackAwareExecutor StackAwareExecutor;
+  StackExhaustionHandler StackHandler;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.

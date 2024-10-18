@@ -47,9 +47,9 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PragmaKinds.h"
-#include "clang/Basic/SingleWarningStackAwareExecutor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/TypeTraits.h"
@@ -1181,7 +1181,7 @@ private:
   std::optional<std::unique_ptr<DarwinSDKInfo>> CachedDarwinSDKInfo;
   bool WarnedDarwinSDKInfoMissing = false;
 
-  SingleWarningStackAwareExecutor StackAwareExecutor;
+  StackExhaustionHandler StackHandler;
 
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;

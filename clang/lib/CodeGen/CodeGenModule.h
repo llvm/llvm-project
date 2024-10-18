@@ -26,7 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ProfileList.h"
-#include "clang/Basic/SingleWarningStackAwareExecutor.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -337,7 +337,7 @@ private:
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
-  SingleWarningStackAwareExecutor StackAwareExecutor;
+  StackExhaustionHandler StackHandler;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference

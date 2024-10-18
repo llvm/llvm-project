@@ -1,5 +1,5 @@
-//===--- SingleWarningStackAwareExecutor.h - A utility for warning once when
-// close to out of stack space -------*- C++ -*-===//
+//===--- StackExhaustionHandler.h - A utility for warning once when close to out
+// of stack space -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,15 +12,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_SINGLE_WARNING_STACK_AWARE_EXECUTOR_H
-#define LLVM_CLANG_BASIC_SINGLE_WARNING_STACK_AWARE_EXECUTOR_H
+#ifndef LLVM_CLANG_BASIC_STACK_EXHAUSTION_HANDLER_H
+#define LLVM_CLANG_BASIC_STACK_EXHAUSTION_HANDLER_H
 
 #include "clang/Basic/Diagnostic.h"
 
 namespace clang {
-class SingleWarningStackAwareExecutor {
+class StackExhaustionHandler {
 public:
-  SingleWarningStackAwareExecutor(DiagnosticsEngine &diags) : DiagsRef(diags) {}
+  StackExhaustionHandler(DiagnosticsEngine &diags) : DiagsRef(diags) {}
 
   /// Run some code with "sufficient" stack space. (Currently, at least 256K
   /// is guaranteed). Produces a warning if we're low on stack space and
@@ -42,4 +42,4 @@ private:
 };
 } // end namespace clang
 
-#endif // LLVM_CLANG_BASIC_SINGLE_WARNING_STACK_AWARE_EXECUTOR_H
+#endif // LLVM_CLANG_BASIC_STACK_EXHAUSTION_HANDLER_H

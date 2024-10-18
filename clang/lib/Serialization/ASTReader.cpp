@@ -9657,7 +9657,7 @@ void ASTReader::runWithSufficientStackSpace(SourceLocation Loc,
     return;
   }
 
-  StackAwareExecutor.runWithSufficientStackSpace(Loc, Fn);
+  StackHandler.runWithSufficientStackSpace(Loc, Fn);
 }
 
 /// Retrieve the identifier table associated with the
@@ -10512,7 +10512,7 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                    : cast<ASTReaderListener>(new PCHValidator(PP, *this))),
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
       PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()),
-      StackAwareExecutor(Diags), PP(PP), ContextObj(Context),
+      StackHandler(Diags), PP(PP), ContextObj(Context),
       ModuleMgr(PP.getFileManager(), ModuleCache, PCHContainerRdr,
                 PP.getHeaderSearchInfo()),
       DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
