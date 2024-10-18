@@ -66,6 +66,10 @@ static cl::opt<unsigned>
     BaseHistCntCost("aarch64-base-histcnt-cost", cl::init(8), cl::Hidden,
                     cl::desc("The cost of a histcnt instruction"));
 
+static cl::opt<unsigned> DMBLookaheadThreshold(
+    "dmb-lookahead-threshold", cl::init(10), cl::Hidden,
+    cl::desc("The number of instructions to search for a redundant dmb"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -333,8 +337,10 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
-  return (K == TargetTransformInfo::RGK_FixedWidthVector &&
-          ST->isNeonAvailable());
+  return ((K == TargetTransformInfo::RGK_FixedWidthVector &&
+           ST->isNeonAvailable()) ||
+          (K == TargetTransformInfo::RGK_ScalableVector &&
+           ST->isSVEorStreamingSVEAvailable()));
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -2150,6 +2156,31 @@ static std::optional<Instruction *> instCombineSVEInsr(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
+                                                   IntrinsicInst &II) {
+  // If this barrier is post-dominated by identical one we can remove it
+  auto *NI = II.getNextNonDebugInstruction();
+  unsigned LookaheadThreshold = DMBLookaheadThreshold;
+  auto CanSkipOver = [](Instruction *I) {
+    return !I->mayReadOrWriteMemory() && !I->mayHaveSideEffects();
+  };
+  while (LookaheadThreshold-- && CanSkipOver(NI)) {
+    auto *NIBB = NI->getParent();
+    NI = NI->getNextNonDebugInstruction();
+    if (!NI) {
+      if (auto *SuccBB = NIBB->getUniqueSuccessor())
+        NI = SuccBB->getFirstNonPHIOrDbgOrLifetime();
+      else
+        break;
+    }
+  }
+  auto *NextII = dyn_cast_or_null<IntrinsicInst>(NI);
+  if (NextII && II.isIdenticalTo(NextII))
+    return IC.eraseInstFromFunction(II);
+
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2157,6 +2188,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
+  case Intrinsic::aarch64_dmb:
+    return instCombineDMB(IC, II);
   case Intrinsic::aarch64_sve_fcvt_bf16f32_v2:
   case Intrinsic::aarch64_sve_fcvt_f16f32:
   case Intrinsic::aarch64_sve_fcvt_f16f64:

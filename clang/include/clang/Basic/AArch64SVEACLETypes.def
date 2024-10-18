@@ -115,6 +115,9 @@ SVE_VECTOR_TYPE_FLOAT("__SVFloat64_t", "__SVFloat64_t", SveFloat64, SveFloat64Ty
 
 SVE_VECTOR_TYPE_BFLOAT("__SVBfloat16_t", "__SVBfloat16_t", SveBFloat16, SveBFloat16Ty, 8, 16, 1)
 
+// This is a 8 bits opaque type.
+SVE_VECTOR_TYPE_INT("__SVMfloat8_t", "__SVMfloat8_t",  SveMFloat8, SveMFloat8Ty, 16, 8, 1, false)
+
 //
 // x2
 //
