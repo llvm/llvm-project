@@ -856,10 +856,8 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   exp2_hi_mid_dd.hi = exp2_hi_mid;
 
   double r_dd = powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd);
-  float r_f = static_cast<float>(r_dd);
 
-  // Only fix signed zeros for exact zeros results.
-  return r_dd != 0 ? r_f : r_f + 0.0f;
+  return static_cast<float>(r_dd);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
