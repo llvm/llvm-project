@@ -1,0 +1,11 @@
+add_object_library(
+  checksum
+  SRCS
+  checksum.cpp
+  HDRS
+    ../checksum.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.OSUtil.osutil
+    libc.src.stdlib.abort
+)

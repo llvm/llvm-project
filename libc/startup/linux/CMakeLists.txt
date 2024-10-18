@@ -88,6 +88,14 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
+if (LIBC_CONF_SETJMP_FORTIFICATION AND LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  set(jmpbuf_fortification_deps libc.src.setjmp.checksum)  
+  set(jmpbuf_fortification_defs -DLIBC_COPT_SETJMP_FORTIFICATION=1)
+else()
+  set(jmpbuf_fortification_deps)
+  set(jmpbuf_fortification_defs -DLIBC_COPT_SETJMP_FORTIFICATION=0)
+endif()
+
 add_object_library(
   do_start
   SRCS
@@ -104,10 +112,12 @@ add_object_library(
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.unistd.environ
+    ${jmpbuf_fortification_deps}
   COMPILE_OPTIONS
     -ffreestanding       # To avoid compiler warnings about calling the main function.
     -fno-builtin         # avoid emit unexpected calls
     -fno-stack-protector # stack protect canary is not available yet.
+    ${jmpbuf_fortification_defs}
 )
 
 # TODO: factor out crt1 into multiple objects

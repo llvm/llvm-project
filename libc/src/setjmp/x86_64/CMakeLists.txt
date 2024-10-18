@@ -6,8 +6,10 @@ add_entrypoint_object(
     ../setjmp_impl.h
   DEPENDS
     libc.hdr.types.jmp_buf
+    ${fortification_deps}
   COMPILE_OPTIONS
     -O3
+    ${fortification_defs}
 )
 
 add_entrypoint_object(
@@ -18,7 +20,9 @@ add_entrypoint_object(
     ../longjmp.h
   DEPENDS
     libc.hdr.types.jmp_buf
+    ${fortification_deps}
   COMPILE_OPTIONS
     -O3
     -fomit-frame-pointer
+    ${fortification_defs}
 )
