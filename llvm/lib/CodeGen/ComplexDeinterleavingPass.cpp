@@ -201,9 +201,7 @@ public:
     }
   }
 
-  bool AreOperandsValid() {
-    return OperandsValid;
-  }
+  bool AreOperandsValid() { return OperandsValid; }
 };
 
 class ComplexDeinterleavingGraph {
@@ -918,11 +916,11 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I, bool &FromCache) {
     return It->second;
   }
 
-  if(NodePtr CN = identifyPartialReduction(R, I))
+  if (NodePtr CN = identifyPartialReduction(R, I))
     return CN;
 
   bool IsReduction = RealPHI == R && (!ImagPHI || ImagPHI == I);
-  if(!IsReduction && R->getType() != I->getType())
+  if (!IsReduction && R->getType() != I->getType())
     return nullptr;
 
   if (NodePtr CN = identifySplat(R, I))
@@ -1450,18 +1448,20 @@ bool ComplexDeinterleavingGraph::identifyNodes(Instruction *RootI) {
   if (It != RootToNode.end()) {
     auto RootNode = It->second;
     assert(RootNode->Operation ==
-           ComplexDeinterleavingOperation::ReductionOperation || RootNode->Operation == ComplexDeinterleavingOperation::ReductionSingle);
+               ComplexDeinterleavingOperation::ReductionOperation ||
+           RootNode->Operation ==
+               ComplexDeinterleavingOperation::ReductionSingle);
     // Find out which part, Real or Imag, comes later, and only if we come to
     // the latest part, add it to OrderedRoots.
     auto *R = cast<Instruction>(RootNode->Real);
     auto *I = RootNode->Imag ? cast<Instruction>(RootNode->Imag) : nullptr;
 
     Instruction *ReplacementAnchor;
-    if(I) 
+    if (I)
       ReplacementAnchor = R->comesBefore(I) ? I : R;
-    else 
+    else
       ReplacementAnchor = R;
-    
+
     if (ReplacementAnchor != RootI)
       return false;
     OrderedRoots.push_back(RootI);
@@ -1553,7 +1553,7 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     for (size_t j = i + 1; j < OperationInstruction.size(); ++j) {
       if (Processed[j])
         continue;
-      
+
       auto *Imag = OperationInstruction[j];
       if (Real->getType() != Imag->getType())
         continue;
@@ -1588,18 +1588,20 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
 
     // We want to check that we have 2 operands, but the function attributes
     // being counted as operands bloats this value.
-    if(Real->getNumOperands() < 2)
+    if (Real->getNumOperands() < 2)
       continue;
 
     RealPHI = ReductionInfo[Real].first;
     ImagPHI = nullptr;
     PHIsFound = false;
     auto Node = identifyNode(Real->getOperand(0), Real->getOperand(1));
-    if(Node && PHIsFound) {
-      LLVM_DEBUG(dbgs() << "Identified single reduction starting from instruction: "
-                          << *Real << "/" << *ReductionInfo[Real].second << "\n");
+    if (Node && PHIsFound) {
+      LLVM_DEBUG(
+          dbgs() << "Identified single reduction starting from instruction: "
+                 << *Real << "/" << *ReductionInfo[Real].second << "\n");
       Processed[i] = true;
-      auto RootNode = prepareCompositeNode(ComplexDeinterleavingOperation::ReductionSingle, Real, nullptr);
+      auto RootNode = prepareCompositeNode(
+          ComplexDeinterleavingOperation::ReductionSingle, Real, nullptr);
       RootNode->addOperand(Node);
       RootToNode[Real] = RootNode;
       submitCompositeNode(RootNode);
@@ -2059,7 +2061,8 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
   return ReplacementNode;
 }
 
-void ComplexDeinterleavingGraph::processReductionSingle(Value *OperationReplacement, RawNodePtr Node) {
+void ComplexDeinterleavingGraph::processReductionSingle(
+    Value *OperationReplacement, RawNodePtr Node) {
   auto *Real = cast<Instruction>(Node->Real);
   auto *OldPHI = ReductionInfo[Real].first;
   auto *NewPHI = OldToNewPHI[OldPHI];
@@ -2071,21 +2074,21 @@ void ComplexDeinterleavingGraph::processReductionSingle(Value *OperationReplacem
   IRBuilder<> Builder(Incoming->getTerminator());
 
   Value *NewInit = nullptr;
-  if(auto *C = dyn_cast<Constant>(Init)) {
-    if(C->isZeroValue())
+  if (auto *C = dyn_cast<Constant>(Init)) {
+    if (C->isZeroValue())
       NewInit = Constant::getNullValue(NewVTy);
   }
 
   if (!NewInit)
     NewInit = Builder.CreateIntrinsic(Intrinsic::vector_interleave2, NewVTy,
-                                          {Init, Constant::getNullValue(VTy)});
+                                      {Init, Constant::getNullValue(VTy)});
 
   NewPHI->addIncoming(NewInit, Incoming);
   NewPHI->addIncoming(OperationReplacement, BackEdge);
 
   auto *FinalReduction = ReductionInfo[Real].second;
   Builder.SetInsertPoint(&*FinalReduction->getParent()->getFirstInsertionPt());
-  // TODO Ensure that the `AddReduce` here matches the original, found in `FinalReduction`
+
   auto *AddReduce = Builder.CreateAddReduce(OperationReplacement);
   FinalReduction->replaceAllUsesWith(AddReduce);
 }
@@ -2151,7 +2154,8 @@ void ComplexDeinterleavingGraph::replaceNodes() {
       ReductionInfo[RootImag].first->removeIncomingValue(BackEdge);
       DeadInstrRoots.push_back(RootReal);
       DeadInstrRoots.push_back(RootImag);
-    } else if(RootNode->Operation == ComplexDeinterleavingOperation::ReductionSingle) {
+    } else if (RootNode->Operation ==
+               ComplexDeinterleavingOperation::ReductionSingle) {
       auto *RootInst = cast<Instruction>(RootNode->Real);
       ReductionInfo[RootInst].first->removeIncomingValue(BackEdge);
       DeadInstrRoots.push_back(ReductionInfo[RootInst].second);
