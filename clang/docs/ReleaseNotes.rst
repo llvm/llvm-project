@@ -99,6 +99,26 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
+- Clang will now correctly not consider pointers to non classes for covariance
+  and disallow changing return type to a type that doesn't have the same or less cv-qualifications.
+
+  .. code-block:: c++
+
+    struct A {
+      virtual const int *f() const;
+      virtual const std::string *g() const;
+    };
+    struct B : A {
+      // Return type has less cv-qualification but doesn't point to a class.
+      // Error will be generated.
+      int *f() const override;
+
+      // Return type doesn't have more cv-qualification also not the same or
+      // less cv-qualification.
+      // Error will be generated.
+      volatile std::string *g() const override;
+    };
+
 - The warning ``-Wdeprecated-literal-operator`` is now on by default, as this is
   something that WG21 has shown interest in removing from the language. The
   result is that anyone who is compiling with ``-Werror`` should see this
@@ -252,6 +272,7 @@ Non-comprehensive list of changes in this release
   ``__builtin_signbit`` can now be used in constant expressions.
 - Plugins can now define custom attributes that apply to statements
   as well as declarations.
+- ``__builtin_abs`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -599,11 +620,18 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- In the ARM Target, the frame pointer (FP) of a leaf function can be retained
+  by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
+  in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
+  the ``-momit-leaf-frame-pointer`` option.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- clang-cl now supports ``/std:c++23preview`` which enables C++23 features.
 
 - Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
   Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.
@@ -672,8 +700,10 @@ clang-format
 - Adds ``BreakBinaryOperations`` option.
 - Adds ``TemplateNames`` option.
 - Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
-- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of multi-line comments
-  without touching their contents, renames ``false`` to ``Never``, and ``true`` to ``Always``.
+- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of
+  multi-line comments without touching their contents, renames ``false`` to
+  ``Never``, and ``true`` to ``Always``.
+- Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 
 libclang
 --------

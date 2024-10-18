@@ -33,7 +33,7 @@ static Register getFPReg(const CSKYSubtarget &STI) { return CSKY::R8; }
 // callee saved register to save the value.
 static Register getBPReg(const CSKYSubtarget &STI) { return CSKY::R7; }
 
-bool CSKYFrameLowering::hasFP(const MachineFunction &MF) const {
+bool CSKYFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
