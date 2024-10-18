@@ -272,6 +272,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64GlobalsTaggingPass(*PR);
 }
 
+void AArch64TargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+
 //===----------------------------------------------------------------------===//
 // AArch64 Lowering public interface.
 //===----------------------------------------------------------------------===//

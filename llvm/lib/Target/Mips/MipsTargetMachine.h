@@ -36,6 +36,9 @@ class MipsTargetMachine : public LLVMTargetMachine {
 
   mutable StringMap<std::unique_ptr<MipsSubtarget>> SubtargetMap;
 
+  /// clear target specific SubtargetMap.
+  void clearSubtargetMap() override;
+
 public:
   MipsTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, const TargetOptions &Options,
