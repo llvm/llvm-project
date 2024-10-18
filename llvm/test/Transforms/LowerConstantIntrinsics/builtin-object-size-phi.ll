@@ -117,3 +117,133 @@ if.end:
   %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 true, i1 true, i1 false)
   ret i64 %size
 }
+
+define i64 @pick_negative_offset(i32 %n) {
+; CHECK-LABEL: @pick_negative_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BUFFER0:%.*]] = alloca i8, i64 20, align 1
+; CHECK-NEXT:    [[OFFSETED0:%.*]] = getelementptr i8, ptr [[BUFFER0]], i64 20
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[BUFFER1:%.*]] = alloca i8, i64 20, align 1
+; CHECK-NEXT:    [[OFFSETED1:%.*]] = getelementptr i8, ptr [[BUFFER1]], i64 20
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[OFFSETED1]], [[IF_ELSE]] ], [ [[OFFSETED0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[POFFSETED:%.*]] = getelementptr i8, ptr [[P]], i64 -4
+; CHECK-NEXT:    ret i64 4
+;
+entry:
+  %buffer0 = alloca i8, i64 20
+  %offseted0 = getelementptr i8, ptr %buffer0, i64 20
+  %cond = icmp eq i32 %n, 0
+  br i1 %cond, label %if.else, label %if.end
+
+if.else:
+  %buffer1 = alloca i8, i64 20
+  %offseted1 = getelementptr i8, ptr %buffer1, i64 20
+  br label %if.end
+
+if.end:
+  %p = phi ptr [ %offseted1, %if.else ], [ %offseted0, %entry ]
+  %poffseted = getelementptr i8, ptr %p, i64 -4
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %poffseted, i1 false, i1 false, i1 false)
+  ret i64 %size
+}
+
+define i64 @pick_negative_offset_with_nullptr(i32 %n) {
+; CHECK-LABEL: @pick_negative_offset_with_nullptr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BUFFER0:%.*]] = alloca i8, i64 20, align 1
+; CHECK-NEXT:    [[OFFSETED0:%.*]] = getelementptr i8, ptr [[BUFFER0]], i64 20
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[P0:%.*]] = phi ptr [ [[OFFSETED0]], [[ENTRY:%.*]] ], [ null, [[IF_ELSE]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi ptr [ null, [[IF_ELSE]] ], [ [[OFFSETED0]], [[ENTRY]] ]
+; CHECK-NEXT:    [[P0OFFSETED:%.*]] = getelementptr i8, ptr [[P0]], i64 -4
+; CHECK-NEXT:    [[P1OFFSETED:%.*]] = getelementptr i8, ptr [[P1]], i64 -4
+; CHECK-NEXT:    ret i64 4
+;
+entry:
+  %buffer0 = alloca i8, i64 20
+  %offseted0 = getelementptr i8, ptr %buffer0, i64 20
+  %cond = icmp eq i32 %n, 0
+  br i1 %cond, label %if.else, label %if.end
+
+if.else:
+  br label %if.end
+
+if.end:
+  %p0 = phi ptr [ %offseted0, %entry ], [ null, %if.else ]
+  %p1 = phi ptr [ null, %if.else ], [ %offseted0, %entry ]
+  %p0offseted = getelementptr i8, ptr %p0, i64 -4
+  %p1offseted = getelementptr i8, ptr %p1, i64 -4
+  %size0 = call i64 @llvm.objectsize.i64.p0(ptr %p0offseted, i1 false, i1 false, i1 false)
+  %size1 = call i64 @llvm.objectsize.i64.p0(ptr %p1offseted, i1 false, i1 false, i1 false)
+  %size = select i1 %cond, i64 %size0, i64 %size1
+  ret i64 %size
+}
+
+define i64 @pick_negative_offset_with_unsized_nullptr(i32 %n) {
+; CHECK-LABEL: @pick_negative_offset_with_unsized_nullptr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BUFFER0:%.*]] = alloca i8, i64 20, align 1
+; CHECK-NEXT:    [[OFFSETED0:%.*]] = getelementptr i8, ptr [[BUFFER0]], i64 20
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[P0:%.*]] = phi ptr [ [[OFFSETED0]], [[ENTRY:%.*]] ], [ null, [[IF_ELSE]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi ptr [ null, [[IF_ELSE]] ], [ [[OFFSETED0]], [[ENTRY]] ]
+; CHECK-NEXT:    [[P0OFFSETED:%.*]] = getelementptr i8, ptr [[P0]], i64 -4
+; CHECK-NEXT:    [[P1OFFSETED:%.*]] = getelementptr i8, ptr [[P1]], i64 -4
+; CHECK-NEXT:    ret i64 -1
+;
+entry:
+  %buffer0 = alloca i8, i64 20
+  %offseted0 = getelementptr i8, ptr %buffer0, i64 20
+  %cond = icmp eq i32 %n, 0
+  br i1 %cond, label %if.else, label %if.end
+
+if.else:
+  br label %if.end
+
+if.end:
+  %p0 = phi ptr [ %offseted0, %entry ], [ null, %if.else ]
+  %p1 = phi ptr [ null, %if.else ], [ %offseted0, %entry ]
+  %p0offseted = getelementptr i8, ptr %p0, i64 -4
+  %p1offseted = getelementptr i8, ptr %p1, i64 -4
+  %size0 = call i64 @llvm.objectsize.i64.p0(ptr %p0offseted, i1 false, i1 true, i1 false)
+  %size1 = call i64 @llvm.objectsize.i64.p0(ptr %p1offseted, i1 false, i1 true, i1 false)
+  %size = select i1 %cond, i64 %size0, i64 %size1
+  ret i64 %size
+}
+
+define i64 @chain_pick_negative_offset_with_nullptr(i32 %x) {
+; CHECK-LABEL: @chain_pick_negative_offset_with_nullptr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARRAY:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 8
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], ptr [[P]], ptr null
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[COND]], i64 8
+; CHECK-NEXT:    [[COND6:%.*]] = select i1 [[C]], ptr [[P4]], ptr null
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr i8, ptr [[COND6]], i64 -4
+; CHECK-NEXT:    ret i64 4
+;
+entry:
+  %array = alloca [4 x i32]
+  %c = icmp eq i32 %x, 0
+  %p = getelementptr i8, ptr %array, i64 8
+  %cond = select i1 %c, ptr %p, ptr null
+  %p4 = getelementptr i8, ptr %cond, i64 8
+  %cond6 = select i1 %c, ptr %p4, ptr null
+  %p7 = getelementptr i8, ptr %cond6, i64 -4
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %p7, i1 false, i1 false, i1 false)
+  ret i64 %size
+}

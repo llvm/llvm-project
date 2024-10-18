@@ -570,6 +570,14 @@ static APInt getSizeWithOverflow(const SizeOffsetAPInt &Data) {
   return Size - Offset;
 }
 
+static SizeOffsetAPInt applyConstantOffset(SizeOffsetAPInt SOT,
+                                           APInt ConstantOffset) {
+  if (ConstantOffset.isZero())
+    return SOT;
+  return {SOT.Size, SOT.Offset.getBitWidth() > 1 ? SOT.Offset + ConstantOffset
+                                                 : SOT.Offset};
+}
+
 /// Compute the size of the object pointed by Ptr. Returns true and the
 /// object size in Size if successful, and false otherwise.
 /// If RoundToAlign is true, then Size is rounded up to the alignment of
@@ -697,7 +705,8 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   // the index type size and if we stripped address space casts we have to
   // readjust the APInt as we pass it upwards in order for the APInt to match
   // the type the caller passed in.
-  APInt Offset(InitialIntTyBits, 0);
+
+  APInt Offset = APInt{InitialIntTyBits, 0};
   V = V->stripAndAccumulateConstantOffsets(
       DL, Offset, /* AllowNonInbounds */ true, /* AllowInvariantGroup */ true);
 
@@ -706,7 +715,14 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   IntTyBits = DL.getIndexTypeSizeInBits(V->getType());
   Zero = APInt::getZero(IntTyBits);
 
+  APInt PrevConstantOffset = ConstantOffset;
+
+  if (!::CheckedZextOrTrunc(ConstantOffset, InitialIntTyBits))
+    return ObjectSizeOffsetVisitor::unknown();
+
+  ConstantOffset += Offset;
   SizeOffsetAPInt SOT = computeValue(V);
+  ConstantOffset = PrevConstantOffset;
 
   bool IndexTypeSizeChanged = InitialIntTyBits != IntTyBits;
   if (!IndexTypeSizeChanged && Offset.isZero())
@@ -722,9 +738,9 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::computeImpl(Value *V) {
         !::CheckedZextOrTrunc(SOT.Offset, InitialIntTyBits))
       SOT.Offset = APInt();
   }
+
   // If the computed offset is "unknown" we cannot add the stripped offset.
-  return {SOT.Size,
-          SOT.Offset.getBitWidth() > 1 ? SOT.Offset + Offset : SOT.Offset};
+  return applyConstantOffset(SOT, Offset);
 }
 
 SizeOffsetAPInt ObjectSizeOffsetVisitor::computeValue(Value *V) {
@@ -983,18 +999,28 @@ ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetAPInt LHS,
                                            SizeOffsetAPInt RHS) {
   if (!LHS.bothKnown() || !RHS.bothKnown())
     return ObjectSizeOffsetVisitor::unknown();
+  SizeOffsetAPInt AdjustedLHS = applyConstantOffset(LHS, ConstantOffset);
+  SizeOffsetAPInt AdjustedRHS = applyConstantOffset(RHS, ConstantOffset);
 
   switch (Options.EvalMode) {
   case ObjectSizeOpts::Mode::Min:
-    return (getSizeWithOverflow(LHS).slt(getSizeWithOverflow(RHS))) ? LHS : RHS;
+    return (getSizeWithOverflow(AdjustedLHS)
+                .slt(getSizeWithOverflow(AdjustedRHS)))
+               ? LHS
+               : RHS;
   case ObjectSizeOpts::Mode::Max:
-    return (getSizeWithOverflow(LHS).sgt(getSizeWithOverflow(RHS))) ? LHS : RHS;
+    return (getSizeWithOverflow(AdjustedLHS)
+                .sgt(getSizeWithOverflow(AdjustedRHS)))
+               ? LHS
+               : RHS;
   case ObjectSizeOpts::Mode::ExactSizeFromOffset:
-    return (getSizeWithOverflow(LHS).eq(getSizeWithOverflow(RHS)))
+    return (getSizeWithOverflow(AdjustedLHS)
+                .eq(getSizeWithOverflow(AdjustedRHS)))
                ? LHS
                : ObjectSizeOffsetVisitor::unknown();
   case ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset:
-    return LHS == RHS ? LHS : ObjectSizeOffsetVisitor::unknown();
+    return AdjustedLHS == AdjustedRHS ? LHS
+                                      : ObjectSizeOffsetVisitor::unknown();
   }
   llvm_unreachable("missing an eval mode");
 }
@@ -1002,11 +1028,14 @@ ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetAPInt LHS,
 SizeOffsetAPInt ObjectSizeOffsetVisitor::visitPHINode(PHINode &PN) {
   if (PN.getNumIncomingValues() == 0)
     return ObjectSizeOffsetVisitor::unknown();
+
   auto IncomingValues = PN.incoming_values();
+
   return std::accumulate(IncomingValues.begin() + 1, IncomingValues.end(),
                          computeImpl(*IncomingValues.begin()),
                          [this](SizeOffsetAPInt LHS, Value *VRHS) {
-                           return combineSizeOffset(LHS, computeImpl(VRHS));
+                           SizeOffsetAPInt RHS = computeImpl(VRHS);
+                           return combineSizeOffset(LHS, RHS);
                          });
 }
 
