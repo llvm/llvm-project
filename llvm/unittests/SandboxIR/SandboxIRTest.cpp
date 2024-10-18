@@ -5980,18 +5980,18 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   sandboxir::Instruction *Ret = &BB.front();
 
   SmallVector<sandboxir::Instruction *> Inserted;
-  int InsertCbId = Ctx.registerInsertInstrCallback(
+  auto InsertCbId = Ctx.registerInsertInstrCallback(
       [&Inserted](sandboxir::Instruction *I) { Inserted.push_back(I); });
 
   SmallVector<sandboxir::Instruction *> Removed;
-  int RemoveCbId = Ctx.registerRemoveInstrCallback(
+  auto RemoveCbId = Ctx.registerRemoveInstrCallback(
       [&Removed](sandboxir::Instruction *I) { Removed.push_back(I); });
 
   // Keep the moved instruction and the instruction pointed by the Where
   // iterator so we can check both callback arguments work as expected.
   SmallVector<std::pair<sandboxir::Instruction *, sandboxir::Instruction *>>
       Moved;
-  int MoveCbId = Ctx.registerMoveInstrCallback(
+  auto MoveCbId = Ctx.registerMoveInstrCallback(
       [&Moved](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
         // Use a nullptr to signal "move to end" to keep it single. We only
         // have a basic block in this test case anyway.
@@ -6040,7 +6040,7 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   Ctx.unregisterRemoveInstrCallback(RemoveCbId);
   Ctx.unregisterMoveInstrCallback(MoveCbId);
   auto *NewI2 = sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
-                                            Ret->getIterator(), Ctx);
+                                             Ret->getIterator(), Ctx);
   Ret->moveBefore(NewI2);
   Ret->eraseFromParent();
   EXPECT_THAT(Inserted, testing::IsEmpty());

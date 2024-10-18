@@ -664,56 +664,53 @@ Module *Context::createModule(llvm::Module *LLVMM) {
 }
 
 void Context::runRemoveInstrCallbacks(Instruction *I) {
-  for (const auto &CBEntry : RemoveInstrCallbacks) {
+  for (const auto &CBEntry : RemoveInstrCallbacks)
     CBEntry.second(I);
-  }
 }
 
 void Context::runInsertInstrCallbacks(Instruction *I) {
-  for (auto &CBEntry : InsertInstrCallbacks) {
+  for (auto &CBEntry : InsertInstrCallbacks)
     CBEntry.second(I);
-  }
 }
 
 void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
-  for (auto &CBEntry : MoveInstrCallbacks) {
+  for (auto &CBEntry : MoveInstrCallbacks)
     CBEntry.second(I, WhereIt);
-  }
 }
 
-int Context::NextCallbackId = 0;
+Context::CallbackID Context::NextCallbackID = 0;
 
 int Context::registerRemoveInstrCallback(RemoveInstrCallback CB) {
-  int Id = NextCallbackId++;
-  RemoveInstrCallbacks[Id] = CB;
-  return Id;
+  CallbackID ID = NextCallbackID++;
+  RemoveInstrCallbacks[ID] = CB;
+  return ID;
 }
-void Context::unregisterRemoveInstrCallback(int CallbackId) {
-  [[maybe_unused]] bool erased = RemoveInstrCallbacks.erase(CallbackId);
+void Context::unregisterRemoveInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool erased = RemoveInstrCallbacks.erase(ID);
   assert(erased &&
-         "Callback id not found in RemoveInstrCallbacks during deregistration");
+         "Callback ID not found in RemoveInstrCallbacks during deregistration");
 }
 
 int Context::registerInsertInstrCallback(InsertInstrCallback CB) {
-  int Id = NextCallbackId++;
-  InsertInstrCallbacks[Id] = CB;
-  return Id;
+  CallbackID ID = NextCallbackID++;
+  InsertInstrCallbacks[ID] = CB;
+  return ID;
 }
-void Context::unregisterInsertInstrCallback(int CallbackId) {
-  [[maybe_unused]] bool erased = InsertInstrCallbacks.erase(CallbackId);
+void Context::unregisterInsertInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool erased = InsertInstrCallbacks.erase(ID);
   assert(erased &&
-         "Callback id not found in InsertInstrCallbacks during deregistration");
+         "Callback ID not found in InsertInstrCallbacks during deregistration");
 }
 
 int Context::registerMoveInstrCallback(MoveInstrCallback CB) {
-  int Id = NextCallbackId++;
-  MoveInstrCallbacks[Id] = CB;
-  return Id;
+  CallbackID ID = NextCallbackID++;
+  MoveInstrCallbacks[ID] = CB;
+  return ID;
 }
-void Context::unregisterMoveInstrCallback(int CallbackId) {
-  [[maybe_unused]] bool erased = MoveInstrCallbacks.erase(CallbackId);
+void Context::unregisterMoveInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool erased = MoveInstrCallbacks.erase(ID);
   assert(erased &&
-         "Callback id not found in MoveInstrCallbacks during deregistration");
+         "Callback ID not found in MoveInstrCallbacks during deregistration");
 }
 
 } // namespace llvm::sandboxir

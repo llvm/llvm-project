@@ -34,6 +34,9 @@ public:
   using MoveInstrCallback =
       std::function<void(Instruction *, const BBIterator &)>;
 
+  /// An ID for a registered callback. Used for deregistration.
+  using CallbackID = int;
+
 protected:
   LLVMContext &LLVMCtx;
   friend class Type;        // For LLVMCtx.
@@ -63,18 +66,18 @@ protected:
 
   /// Callbacks called when an IR instruction is about to get removed. Keys are
   /// used as IDs for deregistration.
-  DenseMap<int, RemoveInstrCallback> RemoveInstrCallbacks;
+  DenseMap<CallbackID, RemoveInstrCallback> RemoveInstrCallbacks;
   /// Callbacks called when an IR instruction is about to get inserted. Keys are
   /// used as IDs for deregistration.
-  DenseMap<int, InsertInstrCallback> InsertInstrCallbacks;
+  DenseMap<CallbackID, InsertInstrCallback> InsertInstrCallbacks;
   /// Callbacks called when an IR instruction is about to get moved. Keys are
   /// used as IDs for deregistration.
-  DenseMap<int, MoveInstrCallback> MoveInstrCallbacks;
+  DenseMap<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
 
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
   /// registration/deregistration.
-  static int NextCallbackId;
+  static CallbackID NextCallbackID;
 
   /// Remove \p V from the maps and returns the unique_ptr.
   std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
