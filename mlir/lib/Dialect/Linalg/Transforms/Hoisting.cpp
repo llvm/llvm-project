@@ -221,24 +221,23 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
         std::optional<SmallVector<OpFoldResult>> ubs =
             loopLike.getLoopUpperBounds();
         // If loop bounds cannot be found, assume possibly zero trip count.
-        if (!lbs || !ubs) {
+        if (!lbs || !ubs)
           return;
-        }
+
         // Otherwise, use ValueBounds to find the maximum lower bound and
         // minimum upper bound. If the bounds are found, and maxLb is less
         // than the minUb, then the loop will not have zero trip count.
         for (auto [lb, ub] : llvm::zip_equal(lbs.value(), ubs.value())) {
           FailureOr<int64_t> maxLb =
               ValueBoundsConstraintSet::computeConstantBound(
-                  presburger::BoundType::UB, /*var=*/lb,
+                  presburger::BoundType::UB, lb,
                   /*stopCondition=*/nullptr, /*closedUB=*/true);
           if (failed(maxLb)) {
             return;
           }
           FailureOr<int64_t> minUb =
               ValueBoundsConstraintSet::computeConstantBound(
-                  presburger::BoundType::LB, /*var=*/ub,
-                  /*stopCondition=*/nullptr);
+                  presburger::BoundType::LB, ub);
           if (failed(minUb)) {
             return;
           }
