@@ -196,9 +196,7 @@ std::optional<bool> isUncountedPtr(const QualType T) {
   return false;
 }
 
-std::optional<bool> isUnsafePtr(const Type *T) {
-  assert(T);
-
+std::optional<bool> isUnsafePtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
       return isUncounted(CXXRD) || isUnchecked(CXXRD);
@@ -228,23 +226,13 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
     // Ref<T> -> T conversion
     // FIXME: Currently allowing any Ref<T> -> whatever cast.
     if (isRefType(className)) {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-        if (auto *targetConversionType =
-                maybeRefToRawOperator->getConversionType().getTypePtrOrNull()) {
-          return isUnsafePtr(targetConversionType);
-        }
-      }
+      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType());
     }
 
     if (isCheckedPtr(className)) {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-        if (auto *targetConversionType =
-                maybeRefToRawOperator->getConversionType().getTypePtrOrNull()) {
-          return isUnsafePtr(targetConversionType);
-        }
-      }
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
-        return isUncountedPtr(maybeRefToRawOperator->getConversionType());
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType());
     }
   }
   return false;
