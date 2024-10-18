@@ -1997,23 +1997,6 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 
       return EmitFromMemory(V, Ty);
     }
-
-    // Handle vectors of size 3 like size 4 for better performance.
-    const llvm::Type *EltTy = Addr.getElementType();
-    const auto *VTy = cast<llvm::FixedVectorType>(EltTy);
-
-    if (!CGM.getCodeGenOpts().PreserveVec3Type && VTy->getNumElements() == 3) {
-
-      llvm::VectorType *vec4Ty =
-          llvm::FixedVectorType::get(VTy->getElementType(), 4);
-      Address Cast = Addr.withElementType(vec4Ty);
-      // Now load value.
-      llvm::Value *V = Builder.CreateLoad(Cast, Volatile, "loadVec4");
-
-      // Shuffle vector to get vec3.
-      V = Builder.CreateShuffleVector(V, ArrayRef<int>{0, 1, 2}, "extractVec");
-      return EmitFromMemory(V, Ty);
-    }
   }
 
   // Atomic operations have to be done on integral types.
@@ -2140,24 +2123,6 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     if (GV->isThreadLocal())
       Addr = Addr.withPointer(Builder.CreateThreadLocalAddress(GV),
                               NotKnownNonNull);
-
-  llvm::Type *SrcTy = Value->getType();
-  if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
-    auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
-    if (!CGM.getCodeGenOpts().PreserveVec3Type) {
-      // Handle vec3 special.
-      if (VecTy && !ClangVecTy->isExtVectorBoolType() &&
-          cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
-        // Our source is a vec3, do a shuffle vector to make it a vec4.
-        Value = Builder.CreateShuffleVector(Value, ArrayRef<int>{0, 1, 2, -1},
-                                            "extractVec");
-        SrcTy = llvm::FixedVectorType::get(VecTy->getElementType(), 4);
-      }
-      if (Addr.getElementType() != SrcTy) {
-        Addr = Addr.withElementType(SrcTy);
-      }
-    }
-  }
 
   Value = EmitToMemory(Value, Ty);
 

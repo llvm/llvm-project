@@ -419,7 +419,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
                                   long long int i1, long long int i2, short si,
                                   _BitInt(31) bi1, _BitInt(31) bi2) {
-  
+
 
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
   // CHECK-NEXT: call i64 @llvm.bitreverse.i64(i64 [[I1]])
@@ -992,13 +992,10 @@ void test_builtin_elementwise_fma(float f32, double f64,
 
 
   // FIXME: Are we really still doing the 3 vector load workaround
-  // CHECK:      [[V3F64_LOAD_0:%.+]] = load <4 x double>, ptr %v3f64.addr
-  // CHECK-NEXT: [[V3F64_0:%.+]] = shufflevector
-  // CHECK-NEXT: [[V3F64_LOAD_1:%.+]] = load <4 x double>, ptr %v3f64.addr
-  // CHECK-NEXT: [[V3F64_1:%.+]] = shufflevector
-  // CHECK-NEXT: [[V3F64_LOAD_2:%.+]] = load <4 x double>, ptr %v3f64.addr
-  // CHECK-NEXT: [[V3F64_2:%.+]] = shufflevector
-    // CHECK-NEXT: call <3 x double> @llvm.fma.v3f64(<3 x double> [[V3F64_0]], <3 x double> [[V3F64_1]], <3 x double> [[V3F64_2]])
+  // CHECK:      [[V3F64_LOAD_0:%.+]] = load <3 x double>, ptr %v3f64.addr
+  // CHECK-NEXT: [[V3F64_LOAD_1:%.+]] = load <3 x double>, ptr %v3f64.addr
+  // CHECK-NEXT: [[V3F64_LOAD_2:%.+]] = load <3 x double>, ptr %v3f64.addr
+    // CHECK-NEXT: call <3 x double> @llvm.fma.v3f64(<3 x double> [[V3F64_LOAD_0]], <3 x double> [[V3F64_LOAD_1]], <3 x double> [[V3F64_LOAD_2]])
   v3f64 = __builtin_elementwise_fma(v3f64, v3f64, v3f64);
 
   // CHECK:      [[F64_0:%.+]] = load double, ptr %f64.addr
