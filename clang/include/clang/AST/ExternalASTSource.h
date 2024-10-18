@@ -326,25 +326,25 @@ struct LazyOffsetPtr {
   ///
   /// If the low bit is clear, a pointer to the AST node. If the low
   /// bit is set, the upper 63 bits are the offset.
-  mutable uint64_t Ptr = 0;
+  mutable uintptr_t Ptr = 0;
 
 public:
   LazyOffsetPtr() = default;
-  explicit LazyOffsetPtr(T *Ptr) : Ptr(reinterpret_cast<uint64_t>(Ptr)) {}
+  explicit LazyOffsetPtr(T *Ptr) : Ptr(reinterpret_cast<uintptr_t>(Ptr)) {}
 
-  explicit LazyOffsetPtr(uint64_t Offset) : Ptr((Offset << 1) | 0x01) {
-    assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
+  explicit LazyOffsetPtr(uintptr_t Offset) : Ptr((Offset << 1) | 0x01) {
+    assert((Offset << 1 >> 1) == Offset && "Offsets must fit in addressable bits");
     if (Offset == 0)
       Ptr = 0;
   }
 
   LazyOffsetPtr &operator=(T *Ptr) {
-    this->Ptr = reinterpret_cast<uint64_t>(Ptr);
+    this->Ptr = reinterpret_cast<uintptr_t>(Ptr);
     return *this;
   }
 
-  LazyOffsetPtr &operator=(uint64_t Offset) {
-    assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
+  LazyOffsetPtr &operator=(uintptr_t Offset) {
+    assert((Offset << 1 >> 1) == Offset && "Offsets must fit in addressable bits");
     if (Offset == 0)
       Ptr = 0;
     else
@@ -375,7 +375,7 @@ public:
     if (isOffset()) {
       assert(Source &&
              "Cannot deserialize a lazy pointer without an AST source");
-      Ptr = reinterpret_cast<uint64_t>((Source->*Get)(OffsT(Ptr >> 1)));
+      Ptr = reinterpret_cast<uintptr_t>((Source->*Get)(OffsT(Ptr >> 1)));
     }
     return reinterpret_cast<T*>(Ptr);
   }
