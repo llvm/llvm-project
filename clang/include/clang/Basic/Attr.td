@@ -411,7 +411,6 @@ def SYCL : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
-def RenderScript : LangOpt<"RenderScript">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
 def ObjCAutoRefCount : LangOpt<"ObjCAutoRefCount">;
@@ -1627,14 +1626,6 @@ def OpenCLNoSVM : Attr {
   let Documentation = [OpenCLNoSVMDocs];
   let LangOpts = [OpenCL];
   let ASTNode = 0;
-}
-
-def RenderScriptKernel : Attr {
-  let Spellings = [GNU<"kernel">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [RenderScriptKernelAttributeDocs];
-  let LangOpts = [RenderScript];
-  let SimpleHandler = 1;
 }
 
 def Deprecated : InheritableAttr {
