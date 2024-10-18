@@ -10,6 +10,11 @@ void test(pthread_mutex_t *mtx) {
   int ret = pthread_mutex_destroy(mtx);
   clang_analyzer_printState();
   // CHECK:    { "checker": "alpha.core.PthreadLockBase", "messages": [
+  // CHECK-NEXT:      "Mutex event:", 
+  // CHECK-NEXT:      "Kind: : Destroy", 
+  // CHECK-NEXT:      "Semantics: PthreadSemantics", 
+  // CHECK-NEXT:      "Library: Pthread", 
+  // CHECK-NEXT:      "Mutex region: SymRegion{reg_$[[REG:[0-9]+]]<pthread_mutex_t * mtx>}", 
   // CHECK-NEXT:      "Mutex states:",
   // CHECK-NEXT:      "SymRegion{reg_$[[REG:[0-9]+]]<pthread_mutex_t * mtx>}: not tracked, possibly destroyed",
   // CHECK-NEXT:      "Mutexes in unresolved possibly destroyed state:",
