@@ -4,27 +4,25 @@
 define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; CHECK-LIBCALL-LABEL: test_fadd:
 ; CHECK-LIBCALL:       # %bb.0:
-; CHECK-LIBCALL-NEXT:    addiu $sp, $sp, -40
-; CHECK-LIBCALL-NEXT:    sdc1 $f20, 32($sp) # 8-byte Folded Spill
-; CHECK-LIBCALL-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
-; CHECK-LIBCALL-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
-; CHECK-LIBCALL-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
-; CHECK-LIBCALL-NEXT:    move $17, $4
-; CHECK-LIBCALL-NEXT:    lhu $4, 0($4)
+; CHECK-LIBCALL-NEXT:    addiu $sp, $sp, -32
+; CHECK-LIBCALL-NEXT:    sdc1 $f20, 24($sp) # 8-byte Folded Spill
+; CHECK-LIBCALL-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; CHECK-LIBCALL-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
+; CHECK-LIBCALL-NEXT:    move $16, $4
+; CHECK-LIBCALL-NEXT:    lhu $4, 0($5)
 ; CHECK-LIBCALL-NEXT:    jal __gnu_h2f_ieee
-; CHECK-LIBCALL-NEXT:    move $16, $5
+; CHECK-LIBCALL-NEXT:    nop
 ; CHECK-LIBCALL-NEXT:    lhu $4, 0($16)
 ; CHECK-LIBCALL-NEXT:    jal __gnu_h2f_ieee
 ; CHECK-LIBCALL-NEXT:    mov.s $f20, $f0
 ; CHECK-LIBCALL-NEXT:    jal __gnu_f2h_ieee
-; CHECK-LIBCALL-NEXT:    add.s $f12, $f20, $f0
-; CHECK-LIBCALL-NEXT:    sh $2, 0($17)
-; CHECK-LIBCALL-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
-; CHECK-LIBCALL-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
-; CHECK-LIBCALL-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
-; CHECK-LIBCALL-NEXT:    ldc1 $f20, 32($sp) # 8-byte Folded Reload
+; CHECK-LIBCALL-NEXT:    add.s $f12, $f0, $f20
+; CHECK-LIBCALL-NEXT:    sh $2, 0($16)
+; CHECK-LIBCALL-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
+; CHECK-LIBCALL-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; CHECK-LIBCALL-NEXT:    ldc1 $f20, 24($sp) # 8-byte Folded Reload
 ; CHECK-LIBCALL-NEXT:    jr $ra
-; CHECK-LIBCALL-NEXT:    addiu $sp, $sp, 40
+; CHECK-LIBCALL-NEXT:    addiu $sp, $sp, 32
   %a = load half, ptr %p, align 2
   %b = load half, ptr %q, align 2
   %r = fadd half %a, %b
@@ -258,5 +256,46 @@ define void @test_vec_fptrunc_double(<4 x double> %a, ptr %p) nounwind {
   %b = fptrunc <4 x double> %a to <4 x half>
   store <4 x half> %b, ptr %p, align 8
   ret void
+}
+
+define half @test_fadd_fadd(half %a, half %b, half %c) {
+; CHECK-LIBCALL-LABEL: test_fadd_fadd:
+; CHECK-LIBCALL:       # %bb.0:
+; CHECK-LIBCALL-NEXT:    addiu $sp, $sp, -40
+; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 40
+; CHECK-LIBCALL-NEXT:    sdc1 $f20, 32($sp) # 8-byte Folded Spill
+; CHECK-LIBCALL-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; CHECK-LIBCALL-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
+; CHECK-LIBCALL-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
+; CHECK-LIBCALL-NEXT:    .cfi_offset 52, -8
+; CHECK-LIBCALL-NEXT:    .cfi_offset 53, -4
+; CHECK-LIBCALL-NEXT:    .cfi_offset 31, -12
+; CHECK-LIBCALL-NEXT:    .cfi_offset 17, -16
+; CHECK-LIBCALL-NEXT:    .cfi_offset 16, -20
+; CHECK-LIBCALL-NEXT:    move $16, $6
+; CHECK-LIBCALL-NEXT:    move $17, $4
+; CHECK-LIBCALL-NEXT:    jal __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT:    move $4, $5
+; CHECK-LIBCALL-NEXT:    mov.s $f20, $f0
+; CHECK-LIBCALL-NEXT:    jal __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT:    move $4, $17
+; CHECK-LIBCALL-NEXT:    jal __gnu_f2h_ieee
+; CHECK-LIBCALL-NEXT:    add.s $f12, $f0, $f20
+; CHECK-LIBCALL-NEXT:    jal __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT:    move $4, $2
+; CHECK-LIBCALL-NEXT:    mov.s $f20, $f0
+; CHECK-LIBCALL-NEXT:    jal __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT:    move $4, $16
+; CHECK-LIBCALL-NEXT:    jal __gnu_f2h_ieee
+; CHECK-LIBCALL-NEXT:    add.s $f12, $f20, $f0
+; CHECK-LIBCALL-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
+; CHECK-LIBCALL-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
+; CHECK-LIBCALL-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
+; CHECK-LIBCALL-NEXT:    ldc1 $f20, 32($sp) # 8-byte Folded Reload
+; CHECK-LIBCALL-NEXT:    jr $ra
+; CHECK-LIBCALL-NEXT:    addiu $sp, $sp, 40
+    %d = fadd half %a, %b
+    %e = fadd half %d, %c
+    ret half %e
 }
 
