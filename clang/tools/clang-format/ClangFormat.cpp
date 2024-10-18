@@ -511,7 +511,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replaces = Replaces.merge(FormatChanges);
   if (OutputXML || DryRun) {
     if (DryRun) {
-      return (Replaces.size() > IsJson ? 1 : 0) &&
+      return Replaces.size() > (IsJson ? 1 : 0) &&
              emitReplacementWarnings(Replaces, AssumedFileName, Code);
     }
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
