@@ -43,12 +43,19 @@ struct InstCombineOptions {
     MaxIterations = Value;
     return *this;
   }
+
+  /// Only enable skipping when two versions of parameters are exactly the same.
+  bool isCompatibleWith(const InstCombineOptions &LastOption) const {
+    return VerifyFixpoint == LastOption.VerifyFixpoint &&
+           MaxIterations == LastOption.MaxIterations;
+  }
 };
 
 class InstCombinePass : public PassInfoMixin<InstCombinePass> {
 private:
   InstructionWorklist Worklist;
   InstCombineOptions Options;
+  static char ID;
 
 public:
   explicit InstCombinePass(InstCombineOptions Opts = {});
