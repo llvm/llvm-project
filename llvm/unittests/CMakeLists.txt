@@ -14,6 +14,11 @@ function(add_llvm_target_unittest test_dir_name)
   add_llvm_unittest(${test_dir_name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
 endfunction()
 
+# GCC may emit false positive warnings against LLVM's style guide.
+if (CMAKE_COMPILER_IS_GNUCXX)
+  list(APPEND LLVM_COMPILE_FLAGS "-Wno-dangling-else")
+endif ()
+
 add_subdirectory(ADT)
 add_subdirectory(Analysis)
 add_subdirectory(AsmParser)
