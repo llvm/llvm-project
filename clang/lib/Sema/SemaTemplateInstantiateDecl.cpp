@@ -4124,6 +4124,11 @@ Decl *TemplateDeclInstantiator::VisitImplicitConceptSpecializationDecl(
 }
 
 Decl *
+TemplateDeclInstantiator::VisitFunctionParmPackDecl(FunctionParmPackDecl *D) {
+  llvm_unreachable("Function param packs cannot reside inside a template");
+}
+
+Decl *
 TemplateDeclInstantiator::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
   return RequiresExprBodyDecl::Create(SemaRef.Context, D->getDeclContext(),
                                       D->getBeginLoc());

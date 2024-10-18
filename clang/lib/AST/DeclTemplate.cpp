@@ -1131,6 +1131,43 @@ void ImplicitConceptSpecializationDecl::setTemplateArguments(
 }
 
 //===----------------------------------------------------------------------===//
+// FunctionParmPackDecl Implementation
+//===----------------------------------------------------------------------===//
+FunctionParmPackDecl::FunctionParmPackDecl(DeclContext *DC,
+                                           SourceLocation StartLoc,
+                                           NamedDecl *Pattern,
+                                           ArrayRef<VarDecl *> ExpandedParams)
+    : Decl(FunctionParmPack, DC, StartLoc), Pattern(Pattern),
+      NumExpansions(ExpandedParams.size()) {
+  std::uninitialized_copy(ExpandedParams.begin(), ExpandedParams.end(),
+                          getTrailingObjects<VarDecl *>());
+}
+
+FunctionParmPackDecl *
+FunctionParmPackDecl::Create(ASTContext &C, DeclContext *DC,
+                             SourceLocation StartLoc, NamedDecl *Pattern,
+                             ArrayRef<VarDecl *> ExpandedParams) {
+  return new (C, DC, additionalSizeToAlloc<VarDecl *>(ExpandedParams.size()))
+      FunctionParmPackDecl(DC, StartLoc, Pattern, ExpandedParams);
+}
+
+FunctionParmPackDecl *
+FunctionParmPackDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                         unsigned NumExpansions) {
+  return new (C, ID, additionalSizeToAlloc<VarDecl *>(NumExpansions))
+      FunctionParmPackDecl(/*DC=*/nullptr, SourceLocation(),
+                           /*Pattern=*/nullptr,
+                           SmallVector<VarDecl *>(NumExpansions, nullptr));
+}
+
+void FunctionParmPackDecl::setExpandedParams(
+    ArrayRef<VarDecl *> ExpandedParams) {
+  assert(ExpandedParams.size() == NumExpansions);
+  std::uninitialized_copy(ExpandedParams.begin(), ExpandedParams.end(),
+                          getTrailingObjects<VarDecl *>());
+}
+
+//===----------------------------------------------------------------------===//
 // ClassTemplatePartialSpecializationDecl Implementation
 //===----------------------------------------------------------------------===//
 void ClassTemplatePartialSpecializationDecl::anchor() {}

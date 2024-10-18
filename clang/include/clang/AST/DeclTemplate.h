@@ -3257,6 +3257,43 @@ public:
   friend class ASTDeclReader;
 };
 
+class FunctionParmPackDecl final
+    : public Decl,
+      private llvm::TrailingObjects<FunctionParmPackDecl, VarDecl *> {
+  friend TrailingObjects;
+  friend class ASTDeclReader;
+
+  /// The function parameter pack which was referenced.
+  NamedDecl *Pattern;
+
+  unsigned NumExpansions;
+
+  FunctionParmPackDecl(DeclContext *DC, SourceLocation StartLoc,
+                       NamedDecl *Pattern, ArrayRef<VarDecl *> ExpandedParams);
+
+  void setExpandedParams(ArrayRef<VarDecl *> ExpandedParams);
+
+public:
+  static FunctionParmPackDecl *Create(ASTContext &C, DeclContext *DC,
+                                      SourceLocation StartLoc,
+                                      NamedDecl *Pattern,
+                                      ArrayRef<VarDecl *> ExpandedParams);
+
+  static FunctionParmPackDecl *
+  CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned NumExpansions);
+
+  ArrayRef<VarDecl *> getExpandedParams() const {
+    return ArrayRef<VarDecl *>(getTrailingObjects<VarDecl *>(), NumExpansions);
+  }
+
+  unsigned getNumExpansions() const { return NumExpansions; }
+
+  NamedDecl *getPattern() const { return Pattern; }
+
+  static bool classofKind(Kind K) { return K == FunctionParmPack; }
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+};
+
 /// A template parameter object.
 ///
 /// Template parameter objects represent values of class type used as template
