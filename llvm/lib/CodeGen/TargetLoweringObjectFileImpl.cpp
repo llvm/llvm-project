@@ -1677,6 +1677,22 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
       Name == getInstrProfSectionName(IPSK_covname, Triple::COFF,
                                       /*AddSegmentInfo=*/false))
     Kind = SectionKind::getMetadata();
+
+  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
+  if (GV && GV->hasImplicitSection()) {
+    auto Attrs = GV->getAttributes();
+    if (Attrs.hasAttribute("bss-section") && Kind.isBSS()) {
+      Name = Attrs.getAttribute("bss-section").getValueAsString();
+    } else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()) {
+      Name = Attrs.getAttribute("rodata-section").getValueAsString();
+    } else if (Attrs.hasAttribute("relro-section") &&
+               Kind.isReadOnlyWithRel()) {
+      Name = Attrs.getAttribute("relro-section").getValueAsString();
+    } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
+      Name = Attrs.getAttribute("data-section").getValueAsString();
+    }
+  }
+
   int Selection = 0;
   unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
   StringRef COMDATSymName = "";
@@ -2378,12 +2394,27 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
   StringRef SectionName = GO->getSection();
 
   // Handle the XCOFF::TD case first, then deal with the rest.
-  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO))
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO)) {
     if (GVar->hasAttribute("toc-data"))
       return getContext().getXCOFFSection(
           SectionName, Kind,
           XCOFF::CsectProperties(/*MappingClass*/ XCOFF::XMC_TD, XCOFF::XTY_SD),
           /* MultiSymbolsAllowed*/ true);
+
+    if (GVar->hasImplicitSection()) {
+      auto Attrs = GVar->getAttributes();
+      if (Attrs.hasAttribute("bss-section") && Kind.isBSS()) {
+        SectionName = Attrs.getAttribute("bss-section").getValueAsString();
+      } else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()) {
+        SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
+      } else if (Attrs.hasAttribute("relro-section") &&
+                 Kind.isReadOnlyWithRel()) {
+        SectionName = Attrs.getAttribute("relro-section").getValueAsString();
+      } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
+        SectionName = Attrs.getAttribute("data-section").getValueAsString();
+      }
+    }
+  }
 
   XCOFF::StorageMappingClass MappingClass;
   if (Kind.isText())
