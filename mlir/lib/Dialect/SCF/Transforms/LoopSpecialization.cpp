@@ -206,12 +206,11 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
   return success();
 }
 
-/// When the `peelFront` option is set as true, the first iteration of the loop
-/// is peeled off. This function rewrites the original scf::ForOp as two
-/// scf::ForOp Ops, the first scf::ForOp corresponds to the first iteration of
-/// the loop which can be canonicalized away in the following optimization. The
-/// second loop Op contains the remaining iteration, and the new lower bound is
-/// the original lower bound plus the number of steps.
+/// Rewrites the original scf::ForOp as two scf::ForOp Ops, the first scf::ForOp
+/// corresponds to the first iteration of the loop which can be canonicalized
+/// away in the following optimization. The second loop Op contains the
+/// remaining iteration, and the new lower bound is the original lower bound
+/// plus the number of steps.
 LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
   RewriterBase::InsertionGuard guard(b);
