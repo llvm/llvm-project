@@ -234,8 +234,6 @@ public:
   /// @name ToolChain Implementation
   /// {
 
-  types::ID LookupTypeForExtension(StringRef Ext) const override;
-
   bool HasNativeLLVMSupport() const override;
 
   llvm::opt::DerivedArgList *
