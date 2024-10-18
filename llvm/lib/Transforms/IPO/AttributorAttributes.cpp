@@ -9157,44 +9157,58 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     return MDNode::get(Ctx, LowAndHigh);
   }
 
-  /// Return true if \p Assumed is included in \p KnownRanges.
-  static bool isBetterRange(const ConstantRange &Assumed, MDNode *KnownRanges) {
-
+  /// Return true if \p Assumed is included in ranges from instruction \p I.
+  static bool isBetterRange(const ConstantRange &Assumed,
+                            const Instruction &I) {
     if (Assumed.isFullSet())
       return false;
 
-    if (!KnownRanges)
-      return true;
+    std::optional<ConstantRange> Known;
 
-    // If multiple ranges are annotated in IR, we give up to annotate assumed
-    // range for now.
+    if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      Known = CB->getRange();
+    } else if (MDNode *KnownRanges = I.getMetadata(LLVMContext::MD_range)) {
+      // If multiple ranges are annotated in IR, we give up to annotate assumed
+      // range for now.
 
-    // TODO:  If there exists a known range which containts assumed range, we
-    // can say assumed range is better.
-    if (KnownRanges->getNumOperands() > 2)
-      return false;
+      // TODO:  If there exists a known range which containts assumed range, we
+      // can say assumed range is better.
+      if (KnownRanges->getNumOperands() > 2)
+        return false;
 
-    ConstantInt *Lower =
-        mdconst::extract<ConstantInt>(KnownRanges->getOperand(0));
-    ConstantInt *Upper =
-        mdconst::extract<ConstantInt>(KnownRanges->getOperand(1));
+      ConstantInt *Lower =
+          mdconst::extract<ConstantInt>(KnownRanges->getOperand(0));
+      ConstantInt *Upper =
+          mdconst::extract<ConstantInt>(KnownRanges->getOperand(1));
 
-    ConstantRange Known(Lower->getValue(), Upper->getValue());
-    return Known.contains(Assumed) && Known != Assumed;
+      Known.emplace(Lower->getValue(), Upper->getValue());
+    }
+    return !Known || (*Known != Assumed && Known->contains(Assumed));
   }
 
   /// Helper function to set range metadata.
   static bool
   setRangeMetadataIfisBetterRange(Instruction *I,
                                   const ConstantRange &AssumedConstantRange) {
-    auto *OldRangeMD = I->getMetadata(LLVMContext::MD_range);
-    if (isBetterRange(AssumedConstantRange, OldRangeMD)) {
-      if (!AssumedConstantRange.isEmptySet()) {
-        I->setMetadata(LLVMContext::MD_range,
-                       getMDNodeForConstantRange(I->getType(), I->getContext(),
-                                                 AssumedConstantRange));
-        return true;
-      }
+    if (isBetterRange(AssumedConstantRange, *I)) {
+      I->setMetadata(LLVMContext::MD_range,
+                     getMDNodeForConstantRange(I->getType(), I->getContext(),
+                                               AssumedConstantRange));
+      return true;
+    }
+    return false;
+  }
+  /// Helper function to set range return attribute.
+  static bool
+  setRangeRetAttrIfisBetterRange(Attributor &A, const IRPosition &IRP,
+                                 Instruction *I,
+                                 const ConstantRange &AssumedConstantRange) {
+    if (isBetterRange(AssumedConstantRange, *I)) {
+      A.manifestAttrs(IRP,
+                      Attribute::get(I->getContext(), Attribute::Range,
+                                     AssumedConstantRange),
+                      /*ForceReplace*/ true);
+      return true;
     }
     return false;
   }
@@ -9211,8 +9225,12 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
       if (Instruction *I = dyn_cast<Instruction>(&V)) {
         assert(I == getCtxI() && "Should not annotate an instruction which is "
                                  "not the context instruction");
-        if (isa<CallInst>(I) || isa<LoadInst>(I))
+        if (isa<LoadInst>(I))
           if (setRangeMetadataIfisBetterRange(I, AssumedConstantRange))
+            Changed = ChangeStatus::CHANGED;
+        if (isa<CallInst>(I))
+          if (setRangeRetAttrIfisBetterRange(A, getIRPosition(), I,
+                                             AssumedConstantRange))
             Changed = ChangeStatus::CHANGED;
       }
     }
@@ -9609,10 +9627,11 @@ struct AAValueConstantRangeCallSiteReturned
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    // If it is a load instruction with range metadata, use the metadata.
-    if (CallInst *CI = dyn_cast<CallInst>(&getAssociatedValue()))
-      if (auto *RangeMD = CI->getMetadata(LLVMContext::MD_range))
-        intersectKnown(getConstantRangeFromMetadata(*RangeMD));
+    // If it is a call instruction with range attribute, use the range.
+    if (CallInst *CI = dyn_cast<CallInst>(&getAssociatedValue())) {
+      if (std::optional<ConstantRange> Range = CI->getRange())
+        intersectKnown(*Range);
+    }
 
     AAValueConstantRangeImpl::initialize(A);
   }
