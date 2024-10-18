@@ -1024,6 +1024,7 @@ protected:
   /// @}
 };
 
+/// Declare the friend function for testing to avoid GCC warning.
 void DiagnosticsTestHelper(DiagnosticsEngine &);
 
 /// RAII class that determines when any errors have occurred
