@@ -60,7 +60,7 @@ bool PredIterator::operator==(const PredIterator &Other) const {
 
 #ifndef NDEBUG
 void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
-  OS << *I << " USuccs:" << UnscheduledSuccs << "\n";
+  OS << *I << " USuccs:" << UnscheduledSuccs << " Sched:" << Scheduled << "\n";
 }
 void DGNode::dump() const { print(dbgs()); }
 void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
@@ -249,6 +249,10 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
   // Walk over all instructions in "BotInterval" and update the counter
   // of operands that are in "TopInterval".
   for (Instruction &BotI : BotInterval) {
+    auto *BotN = getNode(&BotI);
+    // Skip scheduled nodes.
+    if (BotN->scheduled())
+      continue;
     for (Value *Op : BotI.operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
@@ -286,7 +290,9 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
         MemDGNodeIntervalBuilder::getBotMemDGNode(TopInterval, *this);
     MemDGNode *LinkBotN =
         MemDGNodeIntervalBuilder::getTopMemDGNode(BotInterval, *this);
-    assert(LinkTopN->comesBefore(LinkBotN) && "Wrong order!");
+    assert((LinkTopN == nullptr || LinkBotN == nullptr ||
+            LinkTopN->comesBefore(LinkBotN)) &&
+           "Wrong order!");
     if (LinkTopN != nullptr && LinkBotN != nullptr) {
       LinkTopN->setNextNode(LinkBotN);
       LinkBotN->setPrevNode(LinkTopN);

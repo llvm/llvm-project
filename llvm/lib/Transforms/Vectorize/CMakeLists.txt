@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/Passes/RegionsFromMetadata.cpp
   SandboxVectorizer/SandboxVectorizer.cpp
   SandboxVectorizer/SandboxVectorizerPassBuilder.cpp
+  SandboxVectorizer/Scheduler.cpp
   SandboxVectorizer/SeedCollector.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
