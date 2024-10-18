@@ -237,6 +237,7 @@ public:
         .Case("exit", true)
         .Case("lock", true)
         .Case("ld_pseudo", true)
+        .Case("store_release", true)
         .Default(false);
   }
 
@@ -273,6 +274,7 @@ public:
         .Case("cmpxchg_64", true)
         .Case("cmpxchg32_32", true)
         .Case("addr_space_cast", true)
+        .Case("load_acquire", true)
         .Default(false);
   }
 };

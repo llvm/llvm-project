@@ -48,6 +48,13 @@ def BPF_END  : BPFArithOp<0xd>;
 def BPF_XCHG    : BPFArithOp<0xe>;
 def BPF_CMPXCHG : BPFArithOp<0xf>;
 
+class BPFAtomicLoadStoreOp<bits<4> val> {
+  bits<4> Value = val;
+}
+
+def BPF_LOAD_ACQ : BPFAtomicLoadStoreOp<0x1>;
+def BPF_STORE_REL : BPFAtomicLoadStoreOp<0xb>;
+
 class BPFEndDir<bits<1> val> {
   bits<1> Value = val;
 }
