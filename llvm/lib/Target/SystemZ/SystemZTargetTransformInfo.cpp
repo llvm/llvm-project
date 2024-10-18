@@ -85,67 +85,28 @@ static void getNumGEPIndexUses(const Value *V, unsigned &NumGEPIdxUses) {
       getNumGEPIndexUses(SExtI, NumGEPIdxUses);
     else if (const auto *ZExtI = dyn_cast<ZExtInst>(U))
       getNumGEPIndexUses(ZExtI, NumGEPIdxUses);
-    else if (const auto *TruncI = dyn_cast<TruncInst>(U))
-      getNumGEPIndexUses(TruncI, NumGEPIdxUses);  // XXX Effective?
     else if (isa<GetElementPtrInst>(U))
       NumGEPIdxUses++;
   }
 }
 
-// Only one load? one store?
-// Only constants?
+// Return true if Arg is used in a Load; Add/Sub; Store sequence.
 static bool looksLikeIVUpdate(const Function *F, const Value *Arg) {
-  assert(Arg->getType()->isPointerTy() && "Expecting alloca (ptr).");
-  // Load *Arg -> Add/Sub Constant -> Store *Arg
-  unsigned IVUpdates = 0;
-  unsigned NumLoads = 0;
-  unsigned NumStores = 0;
-  unsigned NumCalls = 0;
-  unsigned NumOthers = 0;
-  for (const User *U : Arg->users()) {
-    if (const auto *LI = dyn_cast<LoadInst>(U)) {
-      if (!LI->getType()->isIntegerTy()) {
-        NumOthers++;
-        continue;
-      }
-      NumLoads++;
-      for (const User *U2 : LI->users()) {
-        const Instruction *LdUser = cast<Instruction>(U2);
-        if ((LdUser->getOpcode() == Instruction::Add) // &&
-             // (isa<Constant>(LdUser->getOperand(0)) ||
-             //  isa<Constant>(LdUser->getOperand(1))))
-            ||
-            (LdUser->getOpcode() == Instruction::Sub) // &&
-             // isa<Constant>(LdUser->getOperand(1)))
-          ) {
-          for (const User *U3 : LdUser->users())
-            if (const auto *SI = dyn_cast<StoreInst>(U3))
-              if (SI->getPointerOperand() == Arg)
-                IVUpdates++;
+  assert(Arg->getType()->isPointerTy() && "Expecting ptr arg.");
+  for (const User *ArgU : Arg->users())
+    if (const auto *LoadI = dyn_cast<LoadInst>(ArgU))
+      if (LoadI->getType()->isIntegerTy())
+        for (const User *LdU : LoadI->users()) {
+          const Instruction *AddSubI = cast<Instruction>(LdU);
+          if (AddSubI->getOpcode() == Instruction::Add ||
+              AddSubI->getOpcode() == Instruction::Sub)
+            for (const User *ASU : AddSubI->users())
+              if (const auto *StoreI = dyn_cast<StoreInst>(ASU))
+                if (StoreI->getPointerOperand() == Arg)
+                  return true;
         }
-      }
-    }
-    else if (isa<StoreInst>(U))
-      NumStores++;
-    else if (isa<CallBase>(U))
-      NumCalls++;
-    else
-      NumOthers++;
-  }
-  dbgs() << " IVUpdates: " << IVUpdates
-         << " NumLoads: " << NumLoads
-         << " NumStores: " << NumStores
-         << " NumCalls: " << NumCalls
-         << " NumOthers: " << NumOthers;
-
-  return IVUpdates > 0; //  && NumStores == IVUpdates;
+  return false;
 }
-
-#include "llvm/IR/Dominators.h"
-#include "llvm/Analysis/LoopInfo.h"
-static cl::opt<bool> ONLYINLOOPS("onlyinloops", cl::init(false));
-static cl::opt<unsigned> NUMGEPIDX("numgepidx", cl::init(0));
-static cl::opt<bool> ONLYIVUPDATES("onlyivupdates", cl::init(true));
 
 unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   unsigned Bonus = 0;
@@ -154,46 +115,6 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   if (!Callee)
     return 0;
   const Module *M = Caller->getParent();
-
-  // if (strcmp(Caller->getName().data(), "_Z6searchP7state_tiiiii") == 0 &&
-  //     strcmp(Callee->getName().data(), "_ZL15remove_one_fastPiS_S_i") == 0) {
-  //   if (!ONLYINLOOPS)
-  //     return 1000;
-  //   else {
-  //     DominatorTree DT(*(const_cast<Function *>(Caller)));
-  //     LoopInfo LI(DT);
-  //     const BasicBlock *CallBB = CB->getParent();
-  //     if (LI.getLoopFor(CallBB) != nullptr)
-  //       return 1000;
-  //   }
-  // }
-
-  // Give bonus for an integer alloca which is used as a GEP index in
-  // caller....XXX
-  for (unsigned OpIdx = 0; OpIdx != Callee->arg_size(); ++OpIdx) {
-    Value *CallerArg = CB->getArgOperand(OpIdx);
-    Argument *CalleeArg = Callee->getArg(OpIdx);
-    if (const AllocaInst *AI = dyn_cast<AllocaInst>(CallerArg))
-      if (AI->getAllocatedType()->isIntegerTy() && !AI->isArrayAllocation()) {
-        unsigned NumGEPIdxUses = 0;
-        getNumGEPIndexUses(CallerArg, NumGEPIdxUses);
-        dbgs() << "ALLOCA-ARG: "
-               << Caller->getName().data() << " / "
-               << Callee->getName().data() << " : "
-               << *AI->getAllocatedType()
-               << " NumGEPIdxUses: " << NumGEPIdxUses
-               << " IV: ";
-        bool IsIVUpdate = looksLikeIVUpdate(Callee, CalleeArg);
-        DominatorTree DT(*(const_cast<Function *>(Caller)));
-        LoopInfo LI(DT);
-        bool InLoop = (LI.getLoopFor(CB->getParent()) != nullptr);
-        dbgs() << " InLoop: " << InLoop << "\n";
-        if ((NumGEPIdxUses > NUMGEPIDX) &&
-            (IsIVUpdate || !ONLYIVUPDATES) &&
-            (InLoop || !ONLYINLOOPS))
-          return 1000;
-      }
-  }
 
   // Increase the threshold if an incoming argument is used only as a memcpy
   // source.
@@ -243,6 +164,22 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   if (NumStores > 10)
     Bonus += NumStores * 50;
   Bonus = std::min(Bonus, unsigned(1000));
+
+  // Give bonus for an integer alloca which is used as a GEP index in caller
+  // and is updated like an IV in memory in callee. This will help LSR.
+  for (unsigned OpIdx = 0; OpIdx != Callee->arg_size(); ++OpIdx) {
+    Value *CallerArg = CB->getArgOperand(OpIdx);
+    Argument *CalleeArg = Callee->getArg(OpIdx);
+    if (const AllocaInst *AI = dyn_cast<AllocaInst>(CallerArg))
+      if (AI->getAllocatedType()->isIntegerTy() && !AI->isArrayAllocation()) {
+        unsigned NumGEPIdxUses = 0;
+        getNumGEPIndexUses(AI, NumGEPIdxUses);
+        if (NumGEPIdxUses && looksLikeIVUpdate(Callee, CalleeArg)) {
+          Bonus = 1000;
+          break;
+        }
+      }
+  }
 
   LLVM_DEBUG(if (Bonus)
                dbgs() << "++ SZTTI Adding inlining bonus: " << Bonus << "\n";);
