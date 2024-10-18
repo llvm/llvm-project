@@ -1424,7 +1424,7 @@ void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc);
  * \param NameLen         Length of variable name.
  * \param File            The file to create the label in.
  * \param LineNo          Line Number.
- * \param AlwaysPreserve  Preserve the label even if the optimizer wants to remove it.
+ * \param AlwaysPreserve  Preserve the label regardless of optimization.
  *
  * @see llvm::DIBuilder::createLabel()
  */
