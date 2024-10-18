@@ -657,9 +657,7 @@ class VectorWithTrailingDimScalableOfSizeAndType<list<int> allowedTrailingSizes,
    ShapedTypeWithNthDimOfSize<-1, allowedTrailingSizes>.summary,
   "::mlir::VectorType">;
 
-def AnyVector : VectorOf<[AnyType]>;
-// Temporary vector type clone that allows gradual transition to 0-D vectors.
-def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
+def AnyVector : VectorOfAnyRankOf<[AnyType]>;
 
 def AnyFixedVector : FixedVectorOf<[AnyType]>;
 
