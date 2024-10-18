@@ -523,18 +523,19 @@ static const Expr *SubstituteExceptionSpecWithoutEvaluation(
     Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
     const Expr *ExceptionSpec) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(),
-      /*Final=*/false, /*Innermost=*/std::nullopt,
-      /*RelativeToPrimary=*/true, /*ForConstraintInstantiation=*/true);
+      DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
+      /*Innermost=*/std::nullopt,
+      /*RelativeToPrimary=*/true,
+      /*ForConstraintInstantiation=*/true);
 
-  if (!MLTAL.getNumSubstitutedLevels())
+  if (MLTAL.getNumSubstitutedLevels() == 0)
     return ExceptionSpec;
 
   Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/false);
 
+  auto *FD = const_cast<FunctionDecl *>(DeclInfo.getDecl()->getAsFunction());
   Sema::InstantiatingTemplate Inst(
-      S, DeclInfo.getLocation(),
-      const_cast<FunctionDecl *>(DeclInfo.getDecl()->getAsFunction()),
+      S, DeclInfo.getLocation(), FD,
       Sema::InstantiatingTemplate::ExceptionSpecification());
   if (Inst.isInvalid())
     return nullptr;
@@ -544,11 +545,31 @@ static const Expr *SubstituteExceptionSpecWithoutEvaluation(
   // this may happen while we're comparing two templates' constraint
   // equivalence.
   LocalInstantiationScope ScopeForParameters(S);
-  if (auto *FD = DeclInfo.getDecl()->getAsFunction())
-    for (auto *PVD : FD->parameters())
-      ScopeForParameters.InstantiatedLocal(PVD, PVD);
 
-  std::optional<Sema::CXXThisScopeRAII> ThisScope;
+  for (auto *PVD : FD->parameters()) {
+    if (!PVD->isParameterPack()) {
+      ScopeForParameters.InstantiatedLocal(PVD, PVD);
+      continue;
+    }
+    // This is hacky: we're mapping the parameter pack to a size-of-1 argument
+    // to avoid building SubstTemplateTypeParmPackTypes for
+    // PackExpansionTypes. The SubstTemplateTypeParmPackType node would
+    // otherwise reference the AssociatedDecl of the template arguments, which
+    // is, in this case, the template declaration.
+    //
+    // However, as we are in the process of comparing potential
+    // re-declarations, the canonical declaration is the declaration itself at
+    // this point. So if we didn't expand these packs, we would end up with an
+    // incorrect profile difference because we will be profiling the
+    // canonical types!
+    //
+    // FIXME: Improve the "no-transform" machinery in FindInstantiatedDecl so
+    // that we can eliminate the Scope in the cases where the declarations are
+    // not necessarily instantiated. It would also benefit the noexcept
+    // specifier comparison.
+    ScopeForParameters.MakeInstantiatedLocalArgPack(PVD);
+    ScopeForParameters.InstantiatedLocalPackArg(PVD, PVD);
+  }
 
   // See TreeTransform::RebuildTemplateSpecializationType. A context scope is
   // essential for having an injected class as the canonical type for a template
@@ -557,12 +578,12 @@ static const Expr *SubstituteExceptionSpecWithoutEvaluation(
   // template specializations can be profiled to the same value, which makes it
   // possible that e.g. constraints involving C<Class<T>> and C<Class> are
   // perceived identical.
-  std::optional<Sema::ContextRAII> ContextScope;
-  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext())) {
-    ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
-    ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
-                         /*NewThisContext=*/false);
-  }
+  Sema::ContextRAII ContextScope(S, FD);
+
+  auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  Sema::CXXThisScopeRAII ThisScope(
+      S, MD ? MD->getParent() : nullptr,
+      MD ? MD->getMethodQualifiers() : Qualifiers{}, MD != nullptr);
 
   EnterExpressionEvaluationContext ConstantEvaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
