@@ -364,11 +364,11 @@ define i64 @andnot_bswap_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    notl %eax
-; X86-NOBMI-NEXT:    notl %edx
-; X86-NOBMI-NEXT:    bswapl %edx
 ; X86-NOBMI-NEXT:    bswapl %eax
+; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    bswapl %edx
+; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    retl
 ;
@@ -385,8 +385,8 @@ define i64 @andnot_bswap_i64(i64 %a0, i64 %a1) nounwind {
 ; X64-NOBMI-LABEL: andnot_bswap_i64:
 ; X64-NOBMI:       # %bb.0:
 ; X64-NOBMI-NEXT:    movq %rsi, %rax
-; X64-NOBMI-NEXT:    notq %rax
 ; X64-NOBMI-NEXT:    bswapq %rax
+; X64-NOBMI-NEXT:    notq %rax
 ; X64-NOBMI-NEXT:    andq %rdi, %rax
 ; X64-NOBMI-NEXT:    retq
 ;
@@ -405,8 +405,8 @@ define i32 @andnot_bswap_i32(i32 %a0, i32 %a1) nounwind {
 ; X86-NOBMI-LABEL: andnot_bswap_i32:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    bswapl %eax
+; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    retl
 ;
@@ -420,8 +420,8 @@ define i32 @andnot_bswap_i32(i32 %a0, i32 %a1) nounwind {
 ; X64-NOBMI-LABEL: andnot_bswap_i32:
 ; X64-NOBMI:       # %bb.0:
 ; X64-NOBMI-NEXT:    movl %esi, %eax
-; X64-NOBMI-NEXT:    notl %eax
 ; X64-NOBMI-NEXT:    bswapl %eax
+; X64-NOBMI-NEXT:    notl %eax
 ; X64-NOBMI-NEXT:    andl %edi, %eax
 ; X64-NOBMI-NEXT:    retq
 ;
@@ -439,21 +439,28 @@ define i32 @andnot_bswap_i32(i32 %a0, i32 %a1) nounwind {
 define i16 @andnot_bswap_i16(i16 %a0, i16 %a1) nounwind {
 ; X86-LABEL: andnot_bswap_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    notl %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    notl %eax
 ; X86-NEXT:    andw {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: andnot_bswap_i16:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    notl %eax
-; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    retq
+; X64-NOBMI-LABEL: andnot_bswap_i16:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %esi, %eax
+; X64-NOBMI-NEXT:    rolw $8, %ax
+; X64-NOBMI-NEXT:    notl %eax
+; X64-NOBMI-NEXT:    andl %edi, %eax
+; X64-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: andnot_bswap_i16:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    rolw $8, %si
+; X64-BMI-NEXT:    andnl %edi, %esi, %eax
+; X64-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-BMI-NEXT:    retq
   %not = xor i16 %a1, -1
   %bswap = tail call i16 @llvm.bswap.i16(i16 %not)
   %and = and i16 %bswap, %a0
@@ -567,8 +574,25 @@ define i64 @andnot_bitreverse_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    bswapl %eax
+; X86-NOBMI-NEXT:    movl %eax, %edx
+; X86-NOBMI-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
+; X86-NOBMI-NEXT:    shll $4, %edx
+; X86-NOBMI-NEXT:    shrl $4, %eax
+; X86-NOBMI-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X86-NOBMI-NEXT:    orl %edx, %eax
+; X86-NOBMI-NEXT:    movl %eax, %edx
+; X86-NOBMI-NEXT:    andl $858993459, %edx # imm = 0x33333333
+; X86-NOBMI-NEXT:    shrl $2, %eax
+; X86-NOBMI-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X86-NOBMI-NEXT:    leal (%eax,%edx,4), %eax
+; X86-NOBMI-NEXT:    movl %eax, %edx
+; X86-NOBMI-NEXT:    andl $1431655765, %edx # imm = 0x55555555
+; X86-NOBMI-NEXT:    shrl %eax
+; X86-NOBMI-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; X86-NOBMI-NEXT:    leal (%eax,%edx,2), %eax
 ; X86-NOBMI-NEXT:    notl %eax
-; X86-NOBMI-NEXT:    notl %ecx
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    bswapl %ecx
 ; X86-NOBMI-NEXT:    movl %ecx, %edx
 ; X86-NOBMI-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
@@ -586,24 +610,7 @@ define i64 @andnot_bitreverse_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NOBMI-NEXT:    shrl %ecx
 ; X86-NOBMI-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
 ; X86-NOBMI-NEXT:    leal (%ecx,%edx,2), %edx
-; X86-NOBMI-NEXT:    bswapl %eax
-; X86-NOBMI-NEXT:    movl %eax, %ecx
-; X86-NOBMI-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; X86-NOBMI-NEXT:    shll $4, %ecx
-; X86-NOBMI-NEXT:    shrl $4, %eax
-; X86-NOBMI-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; X86-NOBMI-NEXT:    orl %ecx, %eax
-; X86-NOBMI-NEXT:    movl %eax, %ecx
-; X86-NOBMI-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; X86-NOBMI-NEXT:    shrl $2, %eax
-; X86-NOBMI-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; X86-NOBMI-NEXT:    leal (%eax,%ecx,4), %eax
-; X86-NOBMI-NEXT:    movl %eax, %ecx
-; X86-NOBMI-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; X86-NOBMI-NEXT:    shrl %eax
-; X86-NOBMI-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; X86-NOBMI-NEXT:    leal (%eax,%ecx,2), %eax
-; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    retl
 ;
@@ -651,7 +658,6 @@ define i64 @andnot_bitreverse_i64(i64 %a0, i64 %a1) nounwind {
 ;
 ; X64-NOBMI-LABEL: andnot_bitreverse_i64:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    notq %rsi
 ; X64-NOBMI-NEXT:    bswapq %rsi
 ; X64-NOBMI-NEXT:    movq %rsi, %rax
 ; X64-NOBMI-NEXT:    shrq $4, %rax
@@ -672,6 +678,7 @@ define i64 @andnot_bitreverse_i64(i64 %a0, i64 %a1) nounwind {
 ; X64-NOBMI-NEXT:    shrq %rax
 ; X64-NOBMI-NEXT:    andq %rcx, %rax
 ; X64-NOBMI-NEXT:    leaq (%rax,%rdx,2), %rax
+; X64-NOBMI-NEXT:    notq %rax
 ; X64-NOBMI-NEXT:    andq %rdi, %rax
 ; X64-NOBMI-NEXT:    retq
 ;
@@ -709,7 +716,6 @@ define i32 @andnot_bitreverse_i32(i32 %a0, i32 %a1) nounwind {
 ; X86-NOBMI-LABEL: andnot_bitreverse_i32:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    bswapl %eax
 ; X86-NOBMI-NEXT:    movl %eax, %ecx
 ; X86-NOBMI-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
@@ -727,6 +733,7 @@ define i32 @andnot_bitreverse_i32(i32 %a0, i32 %a1) nounwind {
 ; X86-NOBMI-NEXT:    shrl %eax
 ; X86-NOBMI-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X86-NOBMI-NEXT:    leal (%eax,%ecx,2), %eax
+; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    retl
 ;
@@ -756,7 +763,6 @@ define i32 @andnot_bitreverse_i32(i32 %a0, i32 %a1) nounwind {
 ; X64-NOBMI-LABEL: andnot_bitreverse_i32:
 ; X64-NOBMI:       # %bb.0:
 ; X64-NOBMI-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NOBMI-NEXT:    notl %esi
 ; X64-NOBMI-NEXT:    bswapl %esi
 ; X64-NOBMI-NEXT:    movl %esi, %eax
 ; X64-NOBMI-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
@@ -774,6 +780,7 @@ define i32 @andnot_bitreverse_i32(i32 %a0, i32 %a1) nounwind {
 ; X64-NOBMI-NEXT:    shrl %eax
 ; X64-NOBMI-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X64-NOBMI-NEXT:    leal (%rax,%rcx,2), %eax
+; X64-NOBMI-NEXT:    notl %eax
 ; X64-NOBMI-NEXT:    andl %edi, %eax
 ; X64-NOBMI-NEXT:    retq
 ;
@@ -808,8 +815,7 @@ define i32 @andnot_bitreverse_i32(i32 %a0, i32 %a1) nounwind {
 define i16 @andnot_bitreverse_i16(i16 %a0, i16 %a1) nounwind {
 ; X86-LABEL: andnot_bitreverse_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    notl %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $8, %ax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F
@@ -827,34 +833,59 @@ define i16 @andnot_bitreverse_i16(i16 %a0, i16 %a1) nounwind {
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    andl $21845, %eax # imm = 0x5555
 ; X86-NEXT:    leal (%eax,%ecx,2), %eax
+; X86-NEXT:    notl %eax
 ; X86-NEXT:    andw {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: andnot_bitreverse_i16:
-; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    notl %esi
-; X64-NEXT:    rolw $8, %si
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    andl $3855, %eax # imm = 0xF0F
-; X64-NEXT:    shll $4, %eax
-; X64-NEXT:    shrl $4, %esi
-; X64-NEXT:    andl $3855, %esi # imm = 0xF0F
-; X64-NEXT:    orl %eax, %esi
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    andl $13107, %eax # imm = 0x3333
-; X64-NEXT:    shrl $2, %esi
-; X64-NEXT:    andl $13107, %esi # imm = 0x3333
-; X64-NEXT:    leal (%rsi,%rax,4), %eax
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    andl $21845, %ecx # imm = 0x5555
-; X64-NEXT:    shrl %eax
-; X64-NEXT:    andl $21845, %eax # imm = 0x5555
-; X64-NEXT:    leal (%rax,%rcx,2), %eax
-; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    retq
+; X64-NOBMI-LABEL: andnot_bitreverse_i16:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NOBMI-NEXT:    rolw $8, %si
+; X64-NOBMI-NEXT:    movl %esi, %eax
+; X64-NOBMI-NEXT:    andl $3855, %eax # imm = 0xF0F
+; X64-NOBMI-NEXT:    shll $4, %eax
+; X64-NOBMI-NEXT:    shrl $4, %esi
+; X64-NOBMI-NEXT:    andl $3855, %esi # imm = 0xF0F
+; X64-NOBMI-NEXT:    orl %eax, %esi
+; X64-NOBMI-NEXT:    movl %esi, %eax
+; X64-NOBMI-NEXT:    andl $13107, %eax # imm = 0x3333
+; X64-NOBMI-NEXT:    shrl $2, %esi
+; X64-NOBMI-NEXT:    andl $13107, %esi # imm = 0x3333
+; X64-NOBMI-NEXT:    leal (%rsi,%rax,4), %eax
+; X64-NOBMI-NEXT:    movl %eax, %ecx
+; X64-NOBMI-NEXT:    andl $21845, %ecx # imm = 0x5555
+; X64-NOBMI-NEXT:    shrl %eax
+; X64-NOBMI-NEXT:    andl $21845, %eax # imm = 0x5555
+; X64-NOBMI-NEXT:    leal (%rax,%rcx,2), %eax
+; X64-NOBMI-NEXT:    notl %eax
+; X64-NOBMI-NEXT:    andl %edi, %eax
+; X64-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: andnot_bitreverse_i16:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-BMI-NEXT:    rolw $8, %si
+; X64-BMI-NEXT:    movl %esi, %eax
+; X64-BMI-NEXT:    andl $3855, %eax # imm = 0xF0F
+; X64-BMI-NEXT:    shll $4, %eax
+; X64-BMI-NEXT:    shrl $4, %esi
+; X64-BMI-NEXT:    andl $3855, %esi # imm = 0xF0F
+; X64-BMI-NEXT:    orl %eax, %esi
+; X64-BMI-NEXT:    movl %esi, %eax
+; X64-BMI-NEXT:    andl $13107, %eax # imm = 0x3333
+; X64-BMI-NEXT:    shrl $2, %esi
+; X64-BMI-NEXT:    andl $13107, %esi # imm = 0x3333
+; X64-BMI-NEXT:    leal (%rsi,%rax,4), %eax
+; X64-BMI-NEXT:    movl %eax, %ecx
+; X64-BMI-NEXT:    andl $21845, %ecx # imm = 0x5555
+; X64-BMI-NEXT:    shrl %eax
+; X64-BMI-NEXT:    andl $21845, %eax # imm = 0x5555
+; X64-BMI-NEXT:    leal (%rax,%rcx,2), %eax
+; X64-BMI-NEXT:    andnl %edi, %eax, %eax
+; X64-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-BMI-NEXT:    retq
   %not = xor i16 %a1, -1
   %bitrev = tail call i16 @llvm.bitreverse.i16(i16 %not)
   %and = and i16 %bitrev, %a0
@@ -865,7 +896,6 @@ define i8 @andnot_bitreverse_i8(i8 %a0, i8 %a1) nounwind {
 ; X86-LABEL: andnot_bitreverse_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    notb %al
 ; X86-NEXT:    rolb $4, %al
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    andb $51, %cl
@@ -879,12 +909,12 @@ define i8 @andnot_bitreverse_i8(i8 %a0, i8 %a1) nounwind {
 ; X86-NEXT:    shrb %al
 ; X86-NEXT:    andb $85, %al
 ; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    notb %al
 ; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: andnot_bitreverse_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    notb %sil
 ; X64-NEXT:    rolb $4, %sil
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    andb $51, %al
@@ -898,6 +928,7 @@ define i8 @andnot_bitreverse_i8(i8 %a0, i8 %a1) nounwind {
 ; X64-NEXT:    shrb %al
 ; X64-NEXT:    andb $85, %al
 ; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    notb %al
 ; X64-NEXT:    andb %dil, %al
 ; X64-NEXT:    retq
   %not = xor i8 %a1, -1
