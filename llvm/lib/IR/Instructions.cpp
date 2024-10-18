@@ -1247,6 +1247,13 @@ void LoadInst::AssertOK() {
          "Ptr must have pointer type.");
 }
 
+bool LoadInst::isValidAtomicTy(Type *Ty, const DataLayout &DL) {
+  if (!Ty->isIntOrPtrTy() && !Ty->isFloatingPointTy())
+    return false;
+  unsigned Size = DL.getTypeSizeInBits(Ty);
+  return Size >= 8 && !(Size & (Size - 1));
+}
+
 static Align computeLoadStoreDefaultAlign(Type *Ty, InsertPosition Pos) {
   assert(Pos.isValid() &&
          "Insertion position cannot be null when alignment not provided!");
