@@ -70,7 +70,10 @@ void mlir::tblgen::emitSummary(StringRef summary, raw_ostream &os) {
 // nested in the op definition.
 void mlir::tblgen::emitDescription(StringRef description, raw_ostream &os) {
   raw_indented_ostream ros(os);
-  ros.printReindented(description.rtrim(" \t"));
+  StringRef trimmed = description.rtrim(" \t");
+  ros.printReindented(trimmed);
+  if (!trimmed.ends_with("\n"))
+    ros << "\n";
 }
 
 void mlir::tblgen::emitDescriptionComment(StringRef description,
