@@ -1788,7 +1788,17 @@ __kmp_invoke_microtask:
 
 #endif /* KMP_ARCH_PPC64 */
 
-#if KMP_ARCH_RISCV64
+#if KMP_ARCH_RISCV32 || KMP_ARCH_RISCV64
+
+#if KMP_ARCH_RISCV32
+#define REG_L lw
+#define REG_S sw
+#define SZREG 4
+#else
+#define REG_L ld
+#define REG_S sd
+#define SZREG 8
+#endif
 
 //------------------------------------------------------------------------
 //
@@ -1846,13 +1856,13 @@ __kmp_invoke_microtask:
 	.cfi_startproc
 
 	// First, save ra and fp
-	addi	sp, sp, -16
-	sd	ra, 8(sp)
-	sd	fp, 0(sp)
-	addi	fp, sp, 16
+	addi	sp, sp, -2*SZREG
+	REG_S	ra, 1*SZREG(sp)
+	REG_S	fp, 0*SZREG(sp)
+	addi	fp, sp, 2*SZREG
 	.cfi_def_cfa	fp, 0
-	.cfi_offset	ra, -8
-	.cfi_offset	fp, -16
+	.cfi_offset	ra, -1*SZREG
+	.cfi_offset	fp, -2*SZREG
 
 	// Compute the dynamic stack size:
 	//
@@ -1887,7 +1897,7 @@ __kmp_invoke_microtask:
 
 #if OMPT_SUPPORT
 	// Save frame pointer into exit_frame
-	sd	fp, 0(a5)
+	REG_S	fp, 0(a5)
 #endif
 
 	// Prepare arguments for the pkfn function (first 8 using a0-a7 registers)
@@ -1899,35 +1909,35 @@ __kmp_invoke_microtask:
 	addi	a1, fp, __tid
 
 	beqz	t3, .L_kmp_3
-	ld	a2, 0(t4)
+	REG_L	a2, 0*SZREG(t4)
 
 	addi	t3, t3, -1
 	beqz	t3, .L_kmp_3
-	ld	a3, 8(t4)
+	REG_L	a3, 1*SZREG(t4)
 
 	addi	t3, t3, -1
 	beqz	t3, .L_kmp_3
-	ld	a4, 16(t4)
+	REG_L	a4, 2*SZREG(t4)
 
 	addi	t3, t3, -1
 	beqz	t3, .L_kmp_3
-	ld	a5, 24(t4)
+	REG_L	a5, 3*SZREG(t4)
 
 	addi	t3, t3, -1
 	beqz	t3, .L_kmp_3
-	ld	a6, 32(t4)
+	REG_L	a6, 4*SZREG(t4)
 
 	addi	t3, t3, -1
 	beqz	t3, .L_kmp_3
-	ld	a7, 40(t4)
+	REG_L	a7, 5*SZREG(t4)
 
 	// Prepare any additional argument passed through the stack
-	addi	t4, t4, 48
+	addi	t4, t4, 6*SZREG
 	mv	t1, sp
 	j .L_kmp_2
 .L_kmp_1:
-	ld	t2, 0(t4)
-	sd	t2, 0(t1)
+	REG_L	t2, 0*SZREG(t4)
+	REG_S	t2, 0*SZREG(t1)
 	addi	t4, t4, 8
 	addi	t1, t1, 8
 .L_kmp_2:
@@ -1942,10 +1952,10 @@ __kmp_invoke_microtask:
 
 	addi	a0, zero, 1
 
-	addi	sp, fp, -16
-	ld	fp, 0(sp)
-	ld	ra, 8(sp)
-	addi	sp, sp, 16
+	addi	sp, fp, -2*SZREG
+	REG_L	fp, 0*SZREG(sp)
+	REG_L	ra, 1*SZREG(sp)
+	addi	sp, sp, 2*SZREG
 	ret
 .Lfunc_end0:
 	.size	__kmp_invoke_microtask, .Lfunc_end0-__kmp_invoke_microtask
@@ -1953,7 +1963,7 @@ __kmp_invoke_microtask:
 
 // -- End  __kmp_invoke_microtask
 
-#endif /* KMP_ARCH_RISCV64 */
+#endif /* KMP_ARCH_RISCV32 || KMP_ARCH_RISCV64 */
 
 #if KMP_ARCH_LOONGARCH64
 
@@ -2475,8 +2485,8 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 #endif /* KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32 */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||                   \
-    KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE ||                 \
-    KMP_ARCH_S390X
+    KMP_ARCH_RISCV32 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
+	KMP_ARCH_VE || KMP_ARCH_S390X
 #ifndef KMP_PREFIX_UNDERSCORE
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
@@ -2491,8 +2501,8 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),8
 #endif
 #endif /* KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||
-          KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE || 
-          KMP_ARCH_S390X */
+          KMP_ARCH_RISCV32 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||
+		  KMP_ARCH_VE || KMP_ARCH_S390X */
 
 #if KMP_OS_LINUX
 # if KMP_ARCH_ARM || KMP_ARCH_AARCH64
