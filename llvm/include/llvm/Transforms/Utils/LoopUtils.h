@@ -614,6 +614,11 @@ addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander, bool HoistRuntimeChecks = false);
 
+LLVM_ABI Value *addSafeEltsRuntimeChecks(Instruction *Loc,
+                                         ArrayRef<PointerDiffInfo> Checks,
+                                         SCEVExpander &Expander,
+                                         ElementCount VF);
+
 LLVM_ABI Value *addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC);

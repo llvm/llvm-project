@@ -528,6 +528,7 @@ public:
     switch (R->getVPDefID()) {
     case VPRecipeBase::VPDerivedIVSC:
     case VPRecipeBase::VPEVLBasedIVPHISC:
+    case VPRecipeBase::VPAliasLaneMaskSC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPExpressionSC:
     case VPRecipeBase::VPInstructionSC:
@@ -1030,6 +1031,7 @@ public:
     // during unrolling.
     ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
+    PopCount,
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
@@ -3431,6 +3433,59 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
     // happen with opaque pointers.
     return Op == getAddr() && isConsecutive() && Op != getStoredValue();
   }
+};
+
+// Given a pointer A that is being loaded from, and pointer B that is being
+// stored to, both with unknown lengths, create a mask that disables
+// elements which could overlap across a loop iteration. For example, if A
+// is X and B is X + 2 with VF being 4, only the first two elements of the
+// loaded vector can be stored since they don't overlap with the stored
+// vector. %a.vec = load %a ; = [s, t, u, v]
+// [...]
+// store %b, %a.vec ; only s and t can be stored as their addresses don't
+// overlap with %a + (VF - 1)
+class VPAliasLaneMaskRecipe : public VPSingleDefRecipe {
+
+public:
+  VPAliasLaneMaskRecipe(VPValue *Src, VPValue *Sink, unsigned ElementSize,
+                        bool WriteAfterRead)
+      : VPSingleDefRecipe(VPDef::VPAliasLaneMaskSC, {Src, Sink}),
+        ElementSize(ElementSize), WriteAfterRead(WriteAfterRead) {}
+
+  ~VPAliasLaneMaskRecipe() override = default;
+
+  VPAliasLaneMaskRecipe *clone() override {
+    return new VPAliasLaneMaskRecipe(getSourceValue(), getSinkValue(),
+                                     ElementSize, WriteAfterRead);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPAliasLaneMaskSC);
+
+  void execute(VPTransformState &State) override;
+
+  /// Get the VPValue* for the pointer being read from
+  VPValue *getSourceValue() const { return getOperand(0); }
+
+  // Get the size of the element(s) accessed by the pointers
+  unsigned getAccessedElementSize() const { return ElementSize; }
+
+  /// Get the VPValue* for the pointer being stored to
+  VPValue *getSinkValue() const { return getOperand(1); }
+
+  bool isWriteAfterRead() const { return WriteAfterRead; }
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+private:
+  unsigned ElementSize;
+  bool WriteAfterRead;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// Recipe to expand a SCEV expression.
