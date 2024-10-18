@@ -355,9 +355,23 @@ int main(int argc, char **argv) {
       for (StringRef BBName : P.second) {
         // The function has been materialized, so add its matching basic blocks
         // to the block extractor list, or fail if a name is not found.
+#ifndef NDEBUG
+        auto Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
+          return BB.getNameOrAsOperand() == BBName;
+        });
+#else
         auto Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
           return BB.getName() == BBName;
         });
+        if (Res == P.first->end() && std::isdigit(BBName)) {
+          Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
+            std::string tmpName;
+            raw_string_ostream OS(tmpName);
+            BB.printAsOperand(OS, false);
+            return OS.str() == BBName;
+          });
+        }
+#endif
         if (Res == P.first->end()) {
           errs() << argv[0] << ": function " << P.first->getName()
                  << " doesn't contain a basic block named '" << BBName
