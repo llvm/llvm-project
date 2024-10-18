@@ -1081,10 +1081,9 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
     TranslatedPtr = {replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false};
-  } else {
+  } else if (ShouldCheckWrap) {
     // Skip wrap checking when translating pointers.
-    if (ShouldCheckWrap)
-      return false;
+    return false;
   }
 
   for (auto [PtrExpr, NeedsFreeze] : TranslatedPtrs) {
