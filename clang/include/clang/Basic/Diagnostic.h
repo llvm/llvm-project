@@ -1024,6 +1024,8 @@ protected:
   /// @}
 };
 
+void DiagnosticsTestHelper(DiagnosticsEngine &);
+
 /// RAII class that determines when any errors have occurred
 /// between the time the instance was created and the time it was
 /// queried.
