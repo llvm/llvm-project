@@ -424,6 +424,8 @@ Improvements to Clang's diagnostics
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

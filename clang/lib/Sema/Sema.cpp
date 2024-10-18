@@ -1455,11 +1455,17 @@ void Sema::ActOnEndOfTranslationUnit() {
           if (FD->getDescribedFunctionTemplate())
             Diag(DiagD->getLocation(), diag::warn_unused_template)
                 << /*function=*/0 << DiagD << DiagRange;
-          else
-            Diag(DiagD->getLocation(), isa<CXXMethodDecl>(DiagD)
-                                           ? diag::warn_unused_member_function
-                                           : diag::warn_unused_function)
-                << DiagD << DiagRange;
+          else {
+            if (isa<CXXConstructorDecl>(DiagD))
+              Diag(DiagD->getLocation(), diag::warn_unused_member_function)
+                  << /*constructor=*/0 << DiagRange;
+            else if (isa<CXXMethodDecl>(DiagD))
+              Diag(DiagD->getLocation(), diag::warn_unused_member_function)
+                  << /*member function=*/1 << DiagD << DiagRange;
+            else
+              Diag(DiagD->getLocation(), diag::warn_unused_function)
+                  << DiagD << DiagRange;
+          }
         }
       } else {
         const VarDecl *DiagD = cast<VarDecl>(*I)->getDefinition();
