@@ -50,7 +50,9 @@ public:
 
 private:
   bool bundleIdxLdSt(MachineInstr *MI);
+  const TargetRegisterInfo *TRI;
   const SIInstrInfo *STI;
+  bool NeedsAlignedVGPRs;
 };
 
 } // End anonymous namespace.
@@ -93,6 +95,17 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     if (STI->getNamedOperand(*StoreMI, AMDGPU::OpName::data_op)->getReg() !=
         DefReg)
       continue;
+
+    if (NeedsAlignedVGPRs && MI->getOpcode() != AMDGPU::V_LOAD_IDX &&
+        AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Def.getOperandNo()) > 4) {
+      // Do not bundle instructions with odd offsets to ensure proper register
+      // alignment.
+      unsigned Offset =
+          STI->getNamedOperand(*StoreMI, AMDGPU::OpName::offset)->getImm();
+      if (Offset & 1)
+        continue;
+    }
+
     MachineOperand *IdxOp = STI->getNamedOperand(*StoreMI, AMDGPU::OpName::idx);
     IdxList.insert(IdxOp->getReg());
     Worklist.push_back(StoreMI);
@@ -137,7 +150,16 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     // on replacement with staging registers
     if (!MRI->hasOneNonDBGUse(UseReg))
       continue;
-    MachineOperand *IdxOp = STI->getNamedOperand(*UseMI, AMDGPU::OpName::idx);
+
+    if (NeedsAlignedVGPRs &&
+        AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Use.getOperandNo()) > 4) {
+      // Do not bundle instructions with odd offsets to ensure proper register
+      // alignment.
+      unsigned Offset =
+          STI->getNamedOperand(*UseMI, AMDGPU::OpName::offset)->getImm();
+      if (Offset & 1)
+        continue;
+    }
 
     // Do not move any V_LOAD_IDX past a V_STORE_IDX because they may alias
     // TODO-GFX13 make this more precise by checking idx and offset
@@ -153,6 +175,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     if (AliasConflict)
       continue;
 
+    MachineOperand *IdxOp = STI->getNamedOperand(*UseMI, AMDGPU::OpName::idx);
     if (!IdxList.count(IdxOp->getReg())) {
       // TODO-GFX13 Need to implement idx0 saving and restoring in
       // AMDGPUIdxRegAlloc to support 4 unique indexes
@@ -182,13 +205,14 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  STI = ST.getInstrInfo();
-
   if (!ST.hasVGPRIndexingRegisters())
     return false;
 
-  bool Changed = false;
+  TRI = ST.getRegisterInfo();
+  STI = ST.getInstrInfo();
+  NeedsAlignedVGPRs = ST.needsAlignedVGPRs();
 
+  bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (auto &MI : MBB) {
       Changed = bundleIdxLdSt(&MI);

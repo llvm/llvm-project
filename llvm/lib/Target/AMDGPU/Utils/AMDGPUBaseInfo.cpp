@@ -367,7 +367,11 @@ struct VOP3CDPPAsmOnlyInfo {
   uint16_t Opcode;
 };
 
-struct VOPMInfo {
+struct VOPMAsmOnlyInfo {
+  uint16_t Opcode;
+};
+
+struct VOPMPseudoInfo {
   uint16_t Opcode;
 };
 
@@ -428,8 +432,10 @@ struct FP8DstByteSelInfo {
 #define GET_VOPCAsmOnlyInfoTable_IMPL
 #define GET_VOP3CAsmOnlyInfoTable_DECL
 #define GET_VOP3CAsmOnlyInfoTable_IMPL
-#define GET_VOPMInfoTable_DECL
-#define GET_VOPMInfoTable_IMPL
+#define GET_VOPMAsmOnlyInfoTable_DECL
+#define GET_VOPMAsmOnlyInfoTable_IMPL
+#define GET_VOPMPseudoInfoTable_DECL
+#define GET_VOPMPseudoInfoTable_IMPL
 #define GET_VOPDComponentTable_DECL
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
@@ -543,7 +549,9 @@ bool isVOPC64DPP(unsigned Opc) {
 
 bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
-bool isVOPM(unsigned Opc) { return isVOPMOpcodeHelper(Opc); }
+bool isVOPMAsmOnly(unsigned Opc) { return isVOPMAsmOnlyOpcodeHelper(Opc); }
+
+bool isVOPMPseudo(unsigned Opc) { return isVOPMPsuedoOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
@@ -3369,34 +3377,44 @@ MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
 
 std::pair<const unsigned *, const unsigned *>
 getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
-  static const unsigned VOPOps[4] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
-                                     AMDGPU::OpName::src2,
-                                     AMDGPU::OpName::vdst};
-  static const unsigned VDSOps[4] = {
+
+#define DEFAULT_VALUES_3                                                       \
+  AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,                  \
+      AMDGPU::OpName::OPERAND_LAST
+  static const unsigned VOPOps[7] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                                     AMDGPU::OpName::src2, AMDGPU::OpName::vdst,
+                                     DEFAULT_VALUES_3};
+  static const unsigned VDSOps[7] = {
       AMDGPU::OpName::addr, AMDGPU::OpName::data0, AMDGPU::OpName::data1,
-      AMDGPU::OpName::vdst};
-  static const unsigned FLATOps[4] = {
+      AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
+  static const unsigned FLATOps[7] = {
       AMDGPU::OpName::vaddr, AMDGPU::OpName::vdata,
-      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdst};
-  static const unsigned BUFOps[4] = {
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
+  static const unsigned BUFOps[7] = {
       AMDGPU::OpName::vaddr, AMDGPU::OpName::OPERAND_LAST,
-      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdata};
-  static const unsigned VIMGOps[4] = {
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdata, DEFAULT_VALUES_3};
+  static const unsigned VIMGOps[7] = {
       AMDGPU::OpName::vaddr0, AMDGPU::OpName::vaddr1, AMDGPU::OpName::vaddr2,
-      AMDGPU::OpName::vdata};
-  static const unsigned VEXPOps[4] = {
+      AMDGPU::OpName::vdata, DEFAULT_VALUES_3};
+  static const unsigned VEXPOps[7] = {
       AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,
-      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST};
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,
+      DEFAULT_VALUES_3};
 
   // For VOPD instructions MSB of a corresponding Y component operand VGPR
   // address is supposed to match X operand, otherwise VOPD shall not be
   // combined.
-  static const unsigned VOPDOpsX[4] = {
+  static const unsigned VOPDOpsX[7] = {
       AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vsrc2X,
-      AMDGPU::OpName::vdstX};
-  static const unsigned VOPDOpsY[4] = {
+      AMDGPU::OpName::vdstX, DEFAULT_VALUES_3};
+  static const unsigned VOPDOpsY[7] = {
       AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
-      AMDGPU::OpName::vdstY};
+      AMDGPU::OpName::vdstY, DEFAULT_VALUES_3};
+  static const unsigned VOPMOps[7] = {
+      AMDGPU::OpName::vdst, AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+      AMDGPU::OpName::src2, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
+      AMDGPU::OpName::src5};
+#undef DEFAULT_VALUES_3
 
   unsigned TSFlags = Desc.TSFlags;
 
@@ -3433,6 +3451,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
   if (TSFlags & SIInstrFlags::VSAMPLE)
     llvm_unreachable("Sample VGPR lowering is not implemented and"
                      " these instructions are not expected on gfx1210");
+
+  if (isVOPMPseudo(Desc.getOpcode()))
+    return {VOPMOps, nullptr};
 
   return {};
 }
