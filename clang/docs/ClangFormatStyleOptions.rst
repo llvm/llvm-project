@@ -3436,7 +3436,7 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakBinaryOperations:
 
 **BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
-  The break constructor initializers style to use.
+  The break binary operations style to use.
 
   Possible values:
 
