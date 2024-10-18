@@ -46,6 +46,17 @@ add_fp_unittest(
 
 
 add_fp_unittest(
+  cospif16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cospif16_test.cpp
+  DEPENDS
+    libc.src.math.cospif16
+)
+
+add_fp_unittest(
   daddl_test
   NEED_MPFR
   SUITE
