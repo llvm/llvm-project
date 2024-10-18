@@ -345,6 +345,7 @@ struct TemplateParameterListBuilder {
   concept is_valid_line_vector =sizeof(T) <= 16;
 
   template<typename element_type> requires is_valid_line_vector<element_type>
+
   struct RWBuffer {
       element_type Val;
   };
@@ -385,7 +386,7 @@ struct TemplateParameterListBuilder {
         /*id=*/nullptr,             // Identifier for 'T'
         /*Typename=*/true,          // Indicates this is a 'typename' or 'class'
         /*ParameterPack=*/false,    // Not a parameter pack
-        /*HasTypeConstraint=*/false // Not a parameter pack
+        /*HasTypeConstraint=*/false // Has no type constraint
     );
 
     T->setDeclContext(DC);
@@ -584,7 +585,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
 BinaryOperator *getSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
                                    TemplateTypeParmDecl *T) {
   // Obtain the QualType for 'unsigned long'
-  QualType unsignedLongType = Context.UnsignedLongTy;
+  QualType UnsignedLongType = Context.UnsignedLongTy;
 
   // Create a QualType that points to this TemplateTypeParmDecl
   QualType TType = Context.getTypeDeclType(T);
@@ -593,24 +594,24 @@ BinaryOperator *getSizeOfLEQ16Expr(ASTContext &Context, SourceLocation NameLoc,
   TypeSourceInfo *TTypeSourceInfo =
       Context.getTrivialTypeSourceInfo(TType, NameLoc);
 
-  UnaryExprOrTypeTraitExpr *SizeOfExpr = new (Context) UnaryExprOrTypeTraitExpr(
-      UETT_SizeOf, TTypeSourceInfo, unsignedLongType, NameLoc, NameLoc);
+  UnaryExprOrTypeTraitExpr *sizeOfExpr = new (Context) UnaryExprOrTypeTraitExpr(
+      clang::UETT_SizeOf, TTypeSourceInfo, UnsignedLongType, NameLoc, NameLoc);
 
   // Create an IntegerLiteral for the value '16' with size type
   QualType SizeType = Context.getSizeType();
   llvm::APInt SizeValue = llvm::APInt(Context.getTypeSize(SizeType), 16);
-  IntegerLiteral *sizeLiteral =
+  IntegerLiteral *SizeLiteral =
       new (Context) IntegerLiteral(Context, SizeValue, SizeType, NameLoc);
 
   QualType BoolTy = Context.BoolTy;
 
   BinaryOperator *binaryOperator =
-      BinaryOperator::Create(Context, SizeOfExpr, // Left-hand side expression
-                             sizeLiteral,         // Right-hand side expression
-                             BO_LE,               // Binary operator kind (<=)
+      BinaryOperator::Create(Context, sizeOfExpr, // Left-hand side expression
+                             SizeLiteral,         // Right-hand side expression
+                             clang::BO_LE,        // Binary operator kind (<=)
                              BoolTy,              // Result type (bool)
-                             VK_LValue,           // Value kind
-                             OK_Ordinary,         // Object kind
+                             clang::VK_LValue,    // Value kind
+                             clang::OK_Ordinary,  // Object kind
                              NameLoc,             // Source location of operator
                              FPOptionsOverride());
 
