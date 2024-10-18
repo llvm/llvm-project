@@ -543,26 +543,26 @@ TARGET_BUILTIN(__builtin_ia32_wbinvd, "v", "n", "")
 TARGET_BUILTIN(__builtin_ia32_wbnoinvd, "v", "n", "wbnoinvd")
 
 // ADX
-TARGET_BUILTIN(__builtin_ia32_addcarryx_u32, "UcUcUiUiUi*", "n", "")
-TARGET_BUILTIN(__builtin_ia32_subborrow_u32, "UcUcUiUiUi*", "n", "")
+TARGET_BUILTIN(__builtin_ia32_addcarryx_u32, "UcUcUiUiUi*", "nE", "")
+TARGET_BUILTIN(__builtin_ia32_subborrow_u32, "UcUcUiUiUi*", "nE", "")
 
 // RDSEED
 TARGET_BUILTIN(__builtin_ia32_rdseed16_step, "UiUs*", "n", "rdseed")
 TARGET_BUILTIN(__builtin_ia32_rdseed32_step, "UiUi*", "n", "rdseed")
 
 // LZCNT
-TARGET_BUILTIN(__builtin_ia32_lzcnt_u16, "UsUs", "nc", "lzcnt")
-TARGET_BUILTIN(__builtin_ia32_lzcnt_u32, "UiUi", "nc", "lzcnt")
+TARGET_BUILTIN(__builtin_ia32_lzcnt_u16, "UsUs", "ncE", "lzcnt")
+TARGET_BUILTIN(__builtin_ia32_lzcnt_u32, "UiUi", "ncE", "lzcnt")
 
 // BMI
 TARGET_BUILTIN(__builtin_ia32_bextr_u32, "UiUiUi", "ncE", "bmi")
-TARGET_BUILTIN(__builtin_ia32_tzcnt_u16, "UsUs", "nc", "")
-TARGET_BUILTIN(__builtin_ia32_tzcnt_u32, "UiUi", "nc", "")
+TARGET_BUILTIN(__builtin_ia32_tzcnt_u16, "UsUs", "ncE", "")
+TARGET_BUILTIN(__builtin_ia32_tzcnt_u32, "UiUi", "ncE", "")
 
 // BMI2
-TARGET_BUILTIN(__builtin_ia32_bzhi_si, "UiUiUi", "nc", "bmi2")
-TARGET_BUILTIN(__builtin_ia32_pdep_si, "UiUiUi", "nc", "bmi2")
-TARGET_BUILTIN(__builtin_ia32_pext_si, "UiUiUi", "nc", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_bzhi_si, "UiUiUi", "ncE", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_pdep_si, "UiUiUi", "ncE", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_pext_si, "UiUiUi", "ncE", "bmi2")
 
 // TBM
 TARGET_BUILTIN(__builtin_ia32_bextri_u32, "UiUiIUi", "ncE", "tbm")

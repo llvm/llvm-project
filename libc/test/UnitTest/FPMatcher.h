@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/CPP/type_traits/is_complex.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
@@ -20,6 +21,8 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
+
+using LIBC_NAMESPACE::Sign;
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -58,8 +61,109 @@ public:
   }
 };
 
+template <typename T, TestCond Condition> class CFPMatcher : public Matcher<T> {
+  static_assert(
+      cpp::is_complex_v<T>,
+      "CFPMatcher can only be used with complex floating point values.");
+  static_assert(Condition == TestCond::EQ || Condition == TestCond::NE,
+                "Unsupported CFPMatcher test condition.");
+
+  T expected;
+  T actual;
+
+public:
+  CFPMatcher(T expectedValue) : expected(expectedValue) {}
+
+  template <typename CFT> bool matchComplex() {
+    CFT *actualCmplxPtr = reinterpret_cast<CFT *>(&actual);
+    CFT *expectedCmplxPtr = reinterpret_cast<CFT *>(&expected);
+    CFT actualReal = actualCmplxPtr[0];
+    CFT actualImag = actualCmplxPtr[1];
+    CFT expectedReal = expectedCmplxPtr[0];
+    CFT expectedImag = expectedCmplxPtr[1];
+    fputil::FPBits<CFT> actualRealBits(actualReal),
+        expectedRealBits(expectedReal);
+    fputil::FPBits<CFT> actualImagBits(actualImag),
+        expectedImagBits(expectedImag);
+    if (Condition == TestCond::EQ)
+      return ((actualRealBits.is_nan() && expectedRealBits.is_nan()) ||
+              (actualRealBits.uintval() == expectedRealBits.uintval())) &&
+             ((actualImagBits.is_nan() && expectedImagBits.is_nan()) ||
+              (actualImagBits.uintval() == expectedImagBits.uintval()));
+
+    // If condition == TestCond::NE.
+    if (actualRealBits.is_nan() && expectedRealBits.is_nan())
+      return !expectedRealBits.is_nan() && !expectedImagBits.is_nan();
+    if (actualRealBits.is_nan())
+      return !expectedRealBits.is_nan();
+    if (actualImagBits.is_nan())
+      return !expectedImagBits.is_nan();
+    return (expectedRealBits.is_nan() ||
+            actualRealBits.uintval() != expectedRealBits.uintval()) &&
+           (expectedImagBits.is_nan() ||
+            actualImagBits.uintval() != expectedImagBits.uintval());
+  }
+
+  template <typename CFT> void explainErrorComplex() {
+    CFT *actualCmplxPtr = reinterpret_cast<CFT *>(&actual);
+    CFT *expectedCmplxPtr = reinterpret_cast<CFT *>(&expected);
+    CFT actualReal = actualCmplxPtr[0];
+    CFT actualImag = actualCmplxPtr[1];
+    CFT expectedReal = expectedCmplxPtr[0];
+    CFT expectedImag = expectedCmplxPtr[1];
+    tlog << "Expected complex floating point value: "
+         << str(fputil::FPBits<CFT>(expectedReal)) + " + " +
+                str(fputil::FPBits<CFT>(expectedImag)) + "i"
+         << '\n';
+    tlog << "Actual complex floating point value: "
+         << str(fputil::FPBits<CFT>(actualReal)) + " + " +
+                str(fputil::FPBits<CFT>(actualImag)) + "i"
+         << '\n';
+  }
+
+  bool match(T actualValue) {
+    actual = actualValue;
+    if (cpp::is_complex_type_same<T, _Complex float>())
+      return matchComplex<float>();
+    else if (cpp::is_complex_type_same<T, _Complex double>())
+      return matchComplex<double>();
+    else if (cpp::is_complex_type_same<T, _Complex long double>())
+      return matchComplex<long double>();
+#ifdef LIBC_TYPES_HAS_CFLOAT16
+    else if (cpp::is_complex_type_same<T, cfloat16>)
+      return matchComplex<float16>();
+#endif
+#ifdef LIBC_TYPES_HAS_CFLOAT128
+    else if (cpp::is_complex_type_same<T, cfloat128>)
+      return matchComplex<float128>();
+#endif
+  }
+
+  void explainError() override {
+    if (cpp::is_complex_type_same<T, _Complex float>())
+      return explainErrorComplex<float>();
+    else if (cpp::is_complex_type_same<T, _Complex double>())
+      return explainErrorComplex<double>();
+    else if (cpp::is_complex_type_same<T, _Complex long double>())
+      return explainErrorComplex<long double>();
+#ifdef LIBC_TYPES_HAS_CFLOAT16
+    else if (cpp::is_complex_type_same<T, cfloat16>)
+      return explainErrorComplex<float16>();
+#endif
+#ifdef LIBC_TYPES_HAS_CFLOAT128
+    else if (cpp::is_complex_type_same<T, cfloat128>)
+      return explainErrorComplex<float128>();
+#endif
+  }
+};
+
 template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   return FPMatcher<T, C>(expectedValue);
+}
+
+template <TestCond C, typename T>
+CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
+  return CFPMatcher<T, C>(expectedValue);
 }
 
 template <typename T> struct FPTest : public Test {
@@ -121,6 +225,10 @@ template <typename T> struct FPTest : public Test {
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
+                          LIBC_NAMESPACE::testing::TestCond::EQ>(expected))
+
+#define EXPECT_CFP_EQ(expected, actual)                                        \
+  EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcherComplex<              \
                           LIBC_NAMESPACE::testing::TestCond::EQ>(expected))
 
 #define TEST_FP_EQ(expected, actual)                                           \

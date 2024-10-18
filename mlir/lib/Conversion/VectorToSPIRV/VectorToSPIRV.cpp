@@ -950,8 +950,8 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
 #define CL_FLOAT_MAX_MIN_OPS spirv::CLFMaxOp, spirv::CLFMinOp
 #define GL_FLOAT_MAX_MIN_OPS spirv::GLFMaxOp, spirv::GLFMinOp
 
-void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                         RewritePatternSet &patterns) {
+void mlir::populateVectorToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<
       VectorBitcastConvert, VectorBroadcastConvert,
       VectorExtractElementOpConvert, VectorExtractOpConvert,

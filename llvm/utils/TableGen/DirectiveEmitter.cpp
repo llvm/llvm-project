@@ -98,10 +98,8 @@ static void GenerateEnumClauseVal(ArrayRef<const Record *> Records,
 
     OS << "\n";
     OS << "enum class " << EnumName << " {\n";
-    for (const auto &CV : ClauseVals) {
-      ClauseVal CVal(CV);
-      OS << "  " << CV->getName() << "=" << CVal.getValue() << ",\n";
-    }
+    for (const ClauseVal CVal : ClauseVals)
+      OS << "  " << CVal.getRecordName() << "=" << CVal.getValue() << ",\n";
     OS << "};\n";
 
     if (DirLang.hasMakeEnumAvailableInNamespace()) {

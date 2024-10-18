@@ -75,6 +75,9 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       messages_, *currentCooked_, preprocessor_, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
+      .set_preprocessingOnly(options.prescanAndReformat)
+      .set_expandIncludeLines(!options.prescanAndReformat ||
+          options.expandIncludeLinesInPreprocessedOutput)
       .AddCompilerDirectiveSentinel("dir$");
   if (options.features.IsEnabled(LanguageFeature::OpenACC)) {
     prescanner.AddCompilerDirectiveSentinel("$acc");

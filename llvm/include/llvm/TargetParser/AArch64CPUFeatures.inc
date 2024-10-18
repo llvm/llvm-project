@@ -70,7 +70,7 @@ enum CPUFeatures {
   FEAT_MEMTAG3,
   FEAT_SB,
   FEAT_PREDRES,
-  FEAT_SSBS,
+  RESERVED_FEAT_SSBS, // previously used and now ABI legacy
   FEAT_SSBS2,
   FEAT_BTI,
   RESERVED_FEAT_LS64,   // previously used and now ABI legacy

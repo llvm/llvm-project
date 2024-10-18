@@ -1210,8 +1210,11 @@ public:
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for
   /// every X.  For example, this returns zero for integer multiplication.
-  /// It returns null if the operator doesn't have an absorbing element.
-  static Constant *getBinOpAbsorber(unsigned Opcode, Type *Ty);
+  /// If AllowLHSConstant is true, the LHS operand is a constant C that must be
+  /// defined as C op X = C. It returns null if the operator doesn't have
+  /// an absorbing element.
+  static Constant *getBinOpAbsorber(unsigned Opcode, Type *Ty,
+                                    bool AllowLHSConstant = false);
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
