@@ -6320,6 +6320,10 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == HLSLAttributedResource;
   }
+
+  // Returns handle type from HLSL resource, if the type is a resource
+  static const HLSLAttributedResourceType *
+  findHandleTypeOnResource(const Type *RT);
 };
 
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {

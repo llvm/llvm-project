@@ -296,22 +296,22 @@ struct DirectMemoryAccessor {
 
 struct CopyLoader {
   void Init(uptr begin, uptr end) {
+    this->begin = begin;
     buffer.clear();
     buffer.resize(end - begin);
-    offset = reinterpret_cast<uptr>(buffer.data()) - begin;
-
-    // Need a partial data?
     MemCpyAccessible(buffer.data(), reinterpret_cast<void *>(begin),
                      buffer.size());
   };
+
   void *LoadPtr(uptr p) const {
-    CHECK_LE(p + offset + sizeof(void *),
-             reinterpret_cast<uptr>(buffer.data() + buffer.size()));
-    return *reinterpret_cast<void **>(p + offset);
+    uptr offset = p - begin;
+    CHECK_LE(offset + sizeof(void *), reinterpret_cast<uptr>(buffer.size()));
+    return *reinterpret_cast<void **>(offset +
+                                      reinterpret_cast<uptr>(buffer.data()));
   }
 
  private:
-  uptr offset;
+  uptr begin;
   InternalMmapVector<char> buffer;
 };
 }  // namespace
