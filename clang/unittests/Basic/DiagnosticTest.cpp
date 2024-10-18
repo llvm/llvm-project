@@ -10,8 +10,17 @@
 #include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticLex.h"
+#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
+#include <vector>
 
 using namespace llvm;
 using namespace clang;
@@ -167,4 +176,159 @@ TEST(DiagnosticTest, storedDiagEmptyWarning) {
   // Make sure an empty warning can round-trip with \c StoredDiagnostic.
   Diags.Report(CaptureConsumer.StoredDiags.front());
 }
+
+class SuppressionMappingTest : public testing::Test {
+public:
+  SuppressionMappingTest() {
+    Diags.setClient(&CaptureConsumer, /*ShouldOwnClient=*/false);
+  }
+
+protected:
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  DiagnosticsEngine Diags{new DiagnosticIDs(), new DiagnosticOptions};
+
+  std::vector<StoredDiagnostic> takeDiags() {
+    return std::move(CaptureConsumer.StoredDiags);
+  }
+
+private:
+  class CaptureDiagnosticConsumer : public DiagnosticConsumer {
+  public:
+    std::vector<StoredDiagnostic> StoredDiags;
+
+    void HandleDiagnostic(DiagnosticsEngine::Level level,
+                          const Diagnostic &Info) override {
+      StoredDiags.push_back(StoredDiagnostic(level, Info));
+    }
+  };
+  CaptureDiagnosticConsumer CaptureConsumer;
+};
+
+MATCHER_P(WithMessage, Msg, "has diagnostic message") {
+  return arg.getMessage() == Msg;
 }
+
+TEST_F(SuppressionMappingTest, MissingMappingFile) {
+  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(takeDiags(), testing::ElementsAre(WithMessage(
+                               "no such file or directory: 'foo.txt'")));
+}
+
+TEST_F(SuppressionMappingTest, MalformedFile) {
+  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer("asdf", "foo.txt"));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(takeDiags(), testing::ElementsAre(WithMessage(
+                               "failed to process suppression mapping file "
+                               "'foo.txt' : malformed line 1: 'asdf'")));
+}
+
+TEST_F(SuppressionMappingTest, UnknownDiagName) {
+  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer("[non-existing-warning]"));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(takeDiags(),
+              testing::ElementsAre(WithMessage(
+                  "unknown warning option 'non-existing-warning'")));
+}
+
+TEST_F(SuppressionMappingTest, SuppressesGroup) {
+  llvm::StringLiteral SuppressionMappingFile = R"txt(
+  [unused]
+  src:*
+  )txt";
+  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(takeDiags(), testing::IsEmpty());
+
+  EXPECT_TRUE(
+      Diags.isSuppressedViaMapping(diag::warn_unused_function, "foo.cpp"));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_deprecated, "foo.cpp"));
+}
+
+TEST_F(SuppressionMappingTest, ExclusionsWork) {
+  llvm::StringLiteral SuppressionMappingFile = R"txt(
+  [unused]
+  src:*
+  src:*foo.cpp=emit
+  )txt";
+  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(takeDiags(), testing::IsEmpty());
+
+  EXPECT_TRUE(
+      Diags.isSuppressedViaMapping(diag::warn_unused_function, "bar.cpp"));
+  EXPECT_FALSE(
+      Diags.isSuppressedViaMapping(diag::warn_unused_function, "foo.cpp"));
+}
+
+TEST_F(SuppressionMappingTest, LongestMatchWins) {
+  llvm::StringLiteral SuppressionMappingFile = R"txt(
+  [unused]
+  src:*clang/*
+  src:*clang/lib/Sema/*=emit
+  src:*clang/lib/Sema/foo*
+  )txt";
+  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(takeDiags(), testing::IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           "clang/lib/Basic/foo.h"));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                            "clang/lib/Sema/bar.h"));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           "clang/lib/Sema/foo.h"));
+}
+
+TEST_F(SuppressionMappingTest, IsIgnored) {
+  llvm::StringLiteral SuppressionMappingFile = R"txt(
+  [unused]
+  src:*clang/*
+  )txt";
+  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  Diags.getDiagnosticOptions().Warnings = {"unused"};
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(takeDiags(), testing::IsEmpty());
+
+  FileManager FM({}, FS);
+  SourceManager SM(Diags, FM);
+
+  auto ClangID =
+      SM.createFileID(llvm::MemoryBuffer::getMemBuffer("", "clang/foo.h"));
+  auto NonClangID =
+      SM.createFileID(llvm::MemoryBuffer::getMemBuffer("", "llvm/foo.h"));
+  auto PresumedClangID =
+      SM.createFileID(llvm::MemoryBuffer::getMemBuffer("", "llvm/foo2.h"));
+  // Add a line directive to point into clang/foo.h
+  SM.AddLineNote(SM.getLocForStartOfFile(PresumedClangID), 42,
+                 SM.getLineTableFilenameID("clang/foo.h"), false, false,
+                 clang::SrcMgr::C_User);
+
+  EXPECT_TRUE(Diags.isIgnored(diag::warn_unused_function,
+                              SM.getLocForStartOfFile(ClangID)));
+  EXPECT_FALSE(Diags.isIgnored(diag::warn_unused_function,
+                               SM.getLocForStartOfFile(NonClangID)));
+  EXPECT_TRUE(Diags.isIgnored(diag::warn_unused_function,
+                              SM.getLocForStartOfFile(PresumedClangID)));
+
+  // Pretend we have a clang-diagnostic pragma to enforce the warning. Make sure
+  // suppressing mapping doesn't take over.
+  Diags.setSeverity(diag::warn_unused_function, diag::Severity::Error,
+                    SM.getLocForStartOfFile(ClangID));
+  EXPECT_FALSE(Diags.isIgnored(diag::warn_unused_function,
+                               SM.getLocForStartOfFile(ClangID)));
+}
+} // namespace

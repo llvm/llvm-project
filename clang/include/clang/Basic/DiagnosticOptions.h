@@ -108,6 +108,9 @@ public:
   /// The file to serialize diagnostics to (non-appending).
   std::string DiagnosticSerializationFile;
 
+  /// File that defines suppression mappings.
+  std::string SuppressionMappingsFile;
+
   /// The list of -W... options used to alter the diagnostic mappings, with the
   /// prefixes removed.
   std::vector<std::string> Warnings;

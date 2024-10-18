@@ -4466,6 +4466,13 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_fspell_checking,
                      options::OPT_fno_spell_checking);
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_warning_suppression_mappings_EQ)) {
+    if (!D.getVFS().exists(A->getValue()))
+      D.Diag(clang::diag::err_drv_no_such_file) << A->getValue();
+    CmdArgs.push_back(Args.MakeArgString(A->getSpelling() + A->getValue()));
+  }
 }
 
 DwarfFissionKind tools::getDebugFissionKind(const Driver &D,
