@@ -190,9 +190,13 @@ macro(add_tablegen target project)
   endif()
 
   # FIXME: Quick fix to reflect LLVM_TABLEGEN to llvm-min-tblgen
+  set(RAW_LLVM_TABLEGEN ${LLVM_TABLEGEN})
+  if(NOT "${RAW_LLVM_TABLEGEN}" STREQUAL "")
+    get_filename_component(RAW_LLVM_TABLEGEN ${RAW_LLVM_TABLEGEN} NAME_WE)
+  endif()
   if("${target}" STREQUAL "llvm-min-tblgen"
-      AND NOT "${LLVM_TABLEGEN}" STREQUAL ""
-      AND NOT "${LLVM_TABLEGEN}" STREQUAL "llvm-tblgen")
+      AND NOT "${RAW_LLVM_TABLEGEN}" STREQUAL ""
+      AND NOT "${RAW_LLVM_TABLEGEN}" STREQUAL "llvm-tblgen")
     set(${project}_TABLEGEN_DEFAULT "${LLVM_TABLEGEN}")
   endif()
 
