@@ -1179,13 +1179,12 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
       to_tag->setCompleteDefinition(from_tag->isCompleteDefinition());
 
       if (Log *log_ast = GetLog(LLDBLog::AST)) {
-        std::string name_string = getDeclName(from);
         LLDB_LOG(log_ast,
                  "==== [ClangASTImporter][TUDecl: {0:x}] Imported "
                  "({1}Decl*){2:x}, named {3} (from "
                  "(Decl*){4:x})",
                  static_cast<void *>(to->getTranslationUnitDecl()),
-                 from->getDeclKindName(), static_cast<void *>(to), name_string,
+                 from->getDeclKindName(), static_cast<void *>(to), getDeclName(from),
                  static_cast<void *>(from));
 
         // Log the AST of the TU.
