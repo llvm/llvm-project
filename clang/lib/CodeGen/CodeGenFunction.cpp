@@ -2903,7 +2903,7 @@ void CodeGenFunction::EmitMultiVersionResolver(
   }
 }
 
-static int getPriorityFromAttrString(StringRef AttrStr) {
+static unsigned getPriorityFromAttrString(StringRef AttrStr) {
   SmallVector<StringRef, 8> Attrs;
 
   AttrStr.split(Attrs, ';');
