@@ -2610,8 +2610,8 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   // waveslot limited kernel runs slower with the deallocation.
   if (!ReleaseVGPRInsts.empty() &&
       (MF.getFrameInfo().hasCalls() ||
-       AMDGPU::IsaInfo::getTotalNumVGPRs(ST) /
-               TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass) <
+       ST->getOccupancyWithNumVGPRs(
+           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
            AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
     for (MachineInstr *MI : ReleaseVGPRInsts) {
       if (ST->requiresNopBeforeDeallocVGPRs()) {
