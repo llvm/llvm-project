@@ -1244,9 +1244,8 @@ Sections:
           }
           EXPECT_EQ(PGOAnalyses, *ExpectedPGO);
           for (auto &&[BB, PGO] : llvm::zip(*BBAddrMaps, PGOAnalyses)) {
-            if (PGO.FeatEnable.BBFreq || PGO.FeatEnable.BrProb) {
+            if (PGO.FeatEnable.BBFreq || PGO.FeatEnable.BrProb)
               EXPECT_EQ(BB.getNumBBEntries(), PGO.BBEntries.size());
-            }
           }
         }
       };
