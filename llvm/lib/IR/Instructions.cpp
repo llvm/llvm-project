@@ -374,7 +374,7 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
 }
 
 std::optional<ConstantRange> CallBase::getRange() const {
-  Attribute CBRangeAttr = getRetAttr(llvm::Attribute::Range);
+  Attribute CBRangeAttr = Attrs.getRetAttr(llvm::Attribute::Range);
   Attribute FnRangeAttr{};
   if (const Function *F = getCalledFunction())
     FnRangeAttr = F->getAttributes().getRetAttr(llvm::Attribute::Range);
@@ -390,7 +390,7 @@ std::optional<ConstantRange> CallBase::getRange() const {
 
 MaybeAlign CallBase::getRetAlign() const {
   MaybeAlign CBAlign = Attrs.getRetAlignment();
-  MaybeAlign FNAlign = CBAlign;
+  MaybeAlign FNAlign{};
   if (const Function *F = getCalledFunction())
     FNAlign = F->getAttributes().getRetAlignment();
   if (!CBAlign || !FNAlign)
@@ -400,7 +400,7 @@ MaybeAlign CallBase::getRetAlign() const {
 }
 MaybeAlign CallBase::getParamAlign(unsigned ArgNo) const {
   MaybeAlign CBAlign = Attrs.getParamAlignment(ArgNo);
-  MaybeAlign FNAlign = CBAlign;
+  MaybeAlign FNAlign{};
   if (const Function *F = getCalledFunction())
     FNAlign = F->getAttributes().getParamAlignment(ArgNo);
   if (!CBAlign || !FNAlign)
