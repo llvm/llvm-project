@@ -206,6 +206,17 @@ config.substitutions.append(
     )
 )
 
+config.substitutions.append(
+    (
+        "%kill-process",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(config.clang_src_dir, "utils", "kill_process.py"),
+        ),
+    )
+)
+
 config.substitutions.append(("%host_cc", config.host_cc))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 
