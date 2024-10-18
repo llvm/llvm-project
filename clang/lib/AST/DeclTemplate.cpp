@@ -1078,10 +1078,10 @@ ConceptDecl *ConceptDecl::Create(ASTContext &C, DeclContext *DC,
                                  TemplateParameterList *Params,
                                  Expr *ConstraintExpr) {
   bool Invalid = AdoptTemplateParameterList(Params, DC);
-  auto *TD = new (C, DC) ConceptDecl(DC, L, Name, Params, ConstraintExpr);
+  auto *CD = new (C, DC) ConceptDecl(DC, L, Name, Params, ConstraintExpr);
   if (Invalid)
-    TD->setInvalidDecl();
-  return TD;
+    CD->setInvalidDecl();
+  return CD;
 }
 
 ConceptDecl *ConceptDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
