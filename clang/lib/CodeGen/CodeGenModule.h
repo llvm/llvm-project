@@ -1254,6 +1254,12 @@ public:
                         llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
                         bool Local = false, bool AssumeConvergent = false);
 
+  /// Return the extension attributes as an AttributeList after any needed
+  /// adjustments for target. The \Param Extensions list begins with the
+  /// return value and then continues with the arguments.
+  using AttrKind = llvm::Attribute::AttrKind;
+  llvm::AttributeList getTargetExtAttrs(ArrayRef<AttrKind> Extensions);
+
   /// Create a new runtime global variable with the specified type and name.
   llvm::Constant *CreateRuntimeVariable(llvm::Type *Ty,
                                         StringRef Name);
