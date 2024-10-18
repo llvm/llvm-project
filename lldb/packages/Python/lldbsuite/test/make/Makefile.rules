@@ -14,9 +14,9 @@
 # DYLIB_ONLY := YES
 #
 # When specifying one of the DYLIB_*_SOURCES variables, DYLIB_NAME
-# controls the name of the produced dylib. E.g., if set to "foo",
-# the generated dylib will be called "foo.<platform-specific-extension>",
-# which on Darwin will be "foo.dylib".
+# controls the (platform-dependent) name of the produced dylib. E.g.,
+# on Darwin, if "DYLIB_NAME := foo", the generated dylib will be called
+# "foo.dylib".
 #
 # DYLIB_NAME := foo
 #
