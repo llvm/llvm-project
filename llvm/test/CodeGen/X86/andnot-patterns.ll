@@ -7,6 +7,7 @@
 ; TODO - PR112425 - attempt to reconstruct andnot patterns through bitwise-agnostic operations
 
 declare void @use_i64(i64)
+declare void @use_i32(i32)
 
 ;
 ; Fold (and X, (rotl (not Y), Z))) -> (and X, (not (rotl Y, Z)))
@@ -132,8 +133,8 @@ define i8 @andnot_rotl_i8(i8 %a0, i8 %a1, i8 %a2) nounwind {
   ret i8 %and
 }
 
-define i64 @andnot_rotl_i64_multiuse(i64 %a0, i64 %a1, i64 %a2) nounwind {
-; X86-LABEL: andnot_rotl_i64_multiuse:
+define i64 @andnot_rotl_i64_multiuse_rot(i64 %a0, i64 %a1, i64 %a2) nounwind {
+; X86-LABEL: andnot_rotl_i64_multiuse_rot:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
@@ -171,7 +172,7 @@ define i64 @andnot_rotl_i64_multiuse(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: andnot_rotl_i64_multiuse:
+; X64-LABEL: andnot_rotl_i64_multiuse_rot:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movq %rdx, %rcx
@@ -316,6 +317,44 @@ define i8 @andnot_rotr_i8(i8 %a0, i8 %a1, i8 %a2) nounwind {
   ret i8 %and
 }
 
+define i32 @andnot_rotr_i32_multiuse_not(i32 %a0, i32 %a1, i32 %a2) nounwind {
+; X86-LABEL: andnot_rotr_i32_multiuse_not:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    notl %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    rorl %cl, %esi
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll use_i32@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: andnot_rotr_i32_multiuse_not:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movl %edx, %ecx
+; X64-NEXT:    notl %esi
+; X64-NEXT:    movl %esi, %ebx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorl %cl, %ebx
+; X64-NEXT:    andl %edi, %ebx
+; X64-NEXT:    movl %esi, %edi
+; X64-NEXT:    callq use_i32@PLT
+; X64-NEXT:    movl %ebx, %eax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+  %not = xor i32 %a1, -1
+  %rot = tail call i32 @llvm.fshr.i32(i32 %not, i32 %not, i32 %a2)
+  %and = and i32 %rot, %a0
+  call void @use_i32(i32 %not)
+  ret i32 %and
+}
+
 ;
 ; Fold (and X, (bswap (not Y)))) -> (and X, (not (bswap Y)))
 ;
@@ -419,6 +458,104 @@ define i16 @andnot_bswap_i16(i16 %a0, i16 %a1) nounwind {
   %bswap = tail call i16 @llvm.bswap.i16(i16 %not)
   %and = and i16 %bswap, %a0
   ret i16 %and
+}
+
+define i32 @andnot_bswap_i32_multiuse_bswap(i32 %a0, i32 %a1) nounwind {
+; X86-LABEL: andnot_bswap_i32_multiuse_bswap:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    notl %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    andl %eax, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll use_i32@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: andnot_bswap_i32_multiuse_bswap:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movl %edi, %ebx
+; X64-NEXT:    notl %esi
+; X64-NEXT:    bswapl %esi
+; X64-NEXT:    andl %esi, %ebx
+; X64-NEXT:    movl %esi, %edi
+; X64-NEXT:    callq use_i32@PLT
+; X64-NEXT:    movl %ebx, %eax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+  %not = xor i32 %a1, -1
+  %bswap = tail call i32 @llvm.bswap.i32(i32 %not)
+  %and = and i32 %bswap, %a0
+  call void @use_i32(i32 %bswap)
+  ret i32 %and
+}
+
+define i32 @andnot_bswap_i32_multiuse_not(i32 %a0, i32 %a1) nounwind {
+; X86-NOBMI-LABEL: andnot_bswap_i32_multiuse_not:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    pushl %esi
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    notl %eax
+; X86-NOBMI-NEXT:    movl %eax, %esi
+; X86-NOBMI-NEXT:    bswapl %esi
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %esi
+; X86-NOBMI-NEXT:    pushl %eax
+; X86-NOBMI-NEXT:    calll use_i32@PLT
+; X86-NOBMI-NEXT:    addl $4, %esp
+; X86-NOBMI-NEXT:    movl %esi, %eax
+; X86-NOBMI-NEXT:    popl %esi
+; X86-NOBMI-NEXT:    retl
+;
+; X86-BMI-LABEL: andnot_bswap_i32_multiuse_not:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    pushl %esi
+; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    movl %eax, %ecx
+; X86-BMI-NEXT:    notl %ecx
+; X86-BMI-NEXT:    bswapl %eax
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %esi
+; X86-BMI-NEXT:    pushl %ecx
+; X86-BMI-NEXT:    calll use_i32@PLT
+; X86-BMI-NEXT:    addl $4, %esp
+; X86-BMI-NEXT:    movl %esi, %eax
+; X86-BMI-NEXT:    popl %esi
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: andnot_bswap_i32_multiuse_not:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    pushq %rbx
+; X64-NOBMI-NEXT:    notl %esi
+; X64-NOBMI-NEXT:    movl %esi, %ebx
+; X64-NOBMI-NEXT:    bswapl %ebx
+; X64-NOBMI-NEXT:    andl %edi, %ebx
+; X64-NOBMI-NEXT:    movl %esi, %edi
+; X64-NOBMI-NEXT:    callq use_i32@PLT
+; X64-NOBMI-NEXT:    movl %ebx, %eax
+; X64-NOBMI-NEXT:    popq %rbx
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: andnot_bswap_i32_multiuse_not:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    pushq %rbx
+; X64-BMI-NEXT:    movl %esi, %eax
+; X64-BMI-NEXT:    notl %eax
+; X64-BMI-NEXT:    bswapl %esi
+; X64-BMI-NEXT:    andnl %edi, %esi, %ebx
+; X64-BMI-NEXT:    movl %eax, %edi
+; X64-BMI-NEXT:    callq use_i32@PLT
+; X64-BMI-NEXT:    movl %ebx, %eax
+; X64-BMI-NEXT:    popq %rbx
+; X64-BMI-NEXT:    retq
+  %not = xor i32 %a1, -1
+  %bswap = tail call i32 @llvm.bswap.i32(i32 %not)
+  %and = and i32 %bswap, %a0
+  call void @use_i32(i32 %not)
+  ret i32 %and
 }
 
 ;
