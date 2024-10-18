@@ -3250,6 +3250,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sqrtf16
+  SRCS
+    sqrtf16.cpp
+  HDRS
+    ../sqrtf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sqrtf128
   SRCS
     sqrtf128.cpp
