@@ -256,6 +256,9 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectWaveActiveCountBits(Register ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I) const;
+
   bool selectWaveReadLaneAt(Register ResVReg, const SPIRVType *ResType,
                             MachineInstr &I) const;
 
@@ -1917,6 +1920,38 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectWaveActiveCountBits(Register ResVReg,
+                                                         const SPIRVType *ResType,
+                                                         MachineInstr &I) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  Register BallotReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  SPIRVType *BallotType = GR.getOrCreateSPIRVVectorType(IntTy, 4, I, TII);
+
+  bool Result =
+      BuildMI(BB, I, I.getDebugLoc(),
+              TII.get(SPIRV::OpGroupNonUniformBallot))
+          .addDef(BallotReg)
+          .addUse(GR.getSPIRVTypeID(BallotType))
+          .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
+          .addUse(I.getOperand(2).getReg());
+
+  Result |=
+    BuildMI(BB, I, I.getDebugLoc(),
+            TII.get(SPIRV::OpGroupNonUniformBallotBitCount))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
+        .addImm(0)
+        .addUse(BallotReg)
+        .constrainAllUses(TII, TRI, RBI);
+
+  return Result;
+}
+
 bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
                                                     const SPIRVType *ResType,
                                                     MachineInstr &I) const {
@@ -2739,6 +2774,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   } break;
   case Intrinsic::spv_saturate:
     return selectSaturate(ResVReg, ResType, I);
+  case Intrinsic::spv_wave_active_countbits:
+    return selectWaveActiveCountBits(ResVReg, ResType, I);
   case Intrinsic::spv_wave_is_first_lane: {
     SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
     return BuildMI(BB, I, I.getDebugLoc(),
