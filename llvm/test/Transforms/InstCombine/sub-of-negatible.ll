@@ -1377,7 +1377,7 @@ define i8 @negate_select_of_op_vs_negated_op(i8 %x, i8 %y, i1 %c) {
 
 define i8 @negate_select_of_op_vs_negated_op_nsw(i8 %x, i8 %y, i1 %c) {
 ; CHECK-LABEL: @negate_select_of_op_vs_negated_op_nsw(
-; CHECK-NEXT:    [[T0:%.*]] = sub nsw i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 [[X]], i8 [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[T2]]
@@ -1390,7 +1390,7 @@ define i8 @negate_select_of_op_vs_negated_op_nsw(i8 %x, i8 %y, i1 %c) {
 
 define i8 @negate_select_of_op_vs_negated_op_nsw_commuted(i8 %x, i8 %y, i1 %c) {
 ; CHECK-LABEL: @negate_select_of_op_vs_negated_op_nsw_commuted(
-; CHECK-NEXT:    [[T0:%.*]] = sub nsw i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 [[T0]], i8 [[X]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[T2]]
@@ -1403,8 +1403,8 @@ define i8 @negate_select_of_op_vs_negated_op_nsw_commuted(i8 %x, i8 %y, i1 %c) {
 
 define i8 @negate_select_of_op_vs_negated_op_nsw_xyyx(i8 %x, i8 %y, i8 %z, i1 %c) {
 ; CHECK-LABEL: @negate_select_of_op_vs_negated_op_nsw_xyyx(
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i8 [[Y]], [[X]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 [[SUB2]], i8 [[SUB1]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i8 [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[T2]]
