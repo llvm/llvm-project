@@ -164,6 +164,9 @@ private:
   bool selectIntegerDot(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
+  bool selectWaveActiveMax(Register ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I, bool IsSigned) const;
+
   void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
                    int OpIdx) const;
   void renderFImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -1782,6 +1785,33 @@ bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
       .addUse(I.getOperand(3).getReg());
 }
 
+bool SPIRVInstructionSelector::selectWaveActiveMax(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I,
+                                                   bool IsSigned) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+  Register InputRegister = I.getOperand(2).getReg();
+  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
+
+  if (!InputType)
+    report_fatal_error("Input Type could not be determined.");
+
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  // Retreive the operation to use based on input type
+  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
+  auto Opcode =
+      IsFloatTy ? SPIRV::OpGroupNonUniformFMax : (IsSigned ?
+               SPIRV::OpGroupNonUniformSMax : SPIRV::OpGroupNonUniformUMax);
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
+      .addImm(SPIRV::GroupOperation::Reduce)
+      .addUse(I.getOperand(2).getReg());
+}
+
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -2559,6 +2589,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   } break;
   case Intrinsic::spv_saturate:
     return selectSaturate(ResVReg, ResType, I);
+  case Intrinsic::spv_wave_active_umax:
+    return selectWaveActiveMax(ResVReg, ResType, I, false);
+  case Intrinsic::spv_wave_active_max:
+    return selectWaveActiveMax(ResVReg, ResType, I, true);
   case Intrinsic::spv_wave_is_first_lane: {
     SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
     return BuildMI(BB, I, I.getDebugLoc(),
