@@ -47,6 +47,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTilingInterfaceTestPasses
     MLIRVectorTestPasses
     MLIRTestVectorToSPIRV
+    MLIRXeGPUTestPasses
     MLIRLLVMTestPasses
     )
   set(test_libs ${test_libs}
