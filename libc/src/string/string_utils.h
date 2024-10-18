@@ -239,11 +239,13 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
                                                           int c) {
   char ch = static_cast<char>(c);
   char *last_occurrence = nullptr;
-  for (; *src; ++src) {
+  while (true) {
     if (*src == ch)
       last_occurrence = const_cast<char *>(src);
+    if (!*src)
+      return last_occurrence;
+    ++src;
   }
-  return last_occurrence;
 }
 
 } // namespace internal
