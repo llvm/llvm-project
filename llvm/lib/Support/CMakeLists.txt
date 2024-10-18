@@ -217,6 +217,7 @@ add_llvm_component_library(LLVMSupport
   Parallel.cpp
   PluginLoader.cpp
   PrettyStackTrace.cpp
+  SYCLPropertySetIO.cpp  
   RandomNumberGenerator.cpp
   Regex.cpp
   RewriteBuffer.cpp
