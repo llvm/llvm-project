@@ -1540,6 +1540,7 @@ bool Sema::FunctionEffectDiff::shouldDiagnoseConversion(
       // matching is better.
       return true;
     }
+    break;
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return false;
@@ -1563,6 +1564,7 @@ bool Sema::FunctionEffectDiff::shouldDiagnoseRedeclaration(
       // All these forms of mismatches are diagnosed.
       return true;
     }
+    break;
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return false;
@@ -1592,6 +1594,7 @@ Sema::FunctionEffectDiff::shouldDiagnoseMethodOverride(
     case Kind::ConditionMismatch:
       return OverrideResult::Warn;
     }
+    break;
 
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
