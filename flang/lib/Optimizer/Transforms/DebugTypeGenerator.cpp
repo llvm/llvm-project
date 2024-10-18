@@ -401,6 +401,31 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
       /*associated=*/nullptr);
 }
 
+mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
+    fir::VectorType vecTy, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp) {
+  mlir::MLIRContext *context = module.getContext();
+
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
+  mlir::LLVM::DITypeAttr elemTy =
+      convertType(vecTy.getEleTy(), fileAttr, scope, declOp);
+  auto intTy = mlir::IntegerType::get(context, 64);
+  auto countAttr =
+      mlir::IntegerAttr::get(intTy, llvm::APInt(64, vecTy.getLen()));
+  auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
+      context, countAttr, /*lowerBound=*/nullptr, /*upperBound=*/nullptr,
+      /*stride=*/nullptr);
+  elements.push_back(subrangeTy);
+  mlir::Type llvmTy = llvmTypeConverter.convertType(vecTy.getEleTy());
+  uint64_t sizeInBits = dataLayout->getTypeSize(llvmTy) * vecTy.getLen() * 8;
+  return mlir::LLVM::DICompositeTypeAttr::get(
+      context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
+      /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      mlir::LLVM::DIFlags::Vector, sizeInBits, /*alignInBits=*/0, elements,
+      /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
+      /*associated=*/nullptr);
+}
+
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     fir::CharacterType charTy, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
@@ -511,6 +536,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                 /*hasDescriptor=*/false);
   } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(Ty)) {
     return convertRecordType(recTy, fileAttr, scope, declOp);
+  } else if (auto vecTy = mlir::dyn_cast_or_null<fir::VectorType>(Ty)) {
+    return convertVectorType(vecTy, fileAttr, scope, declOp);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
