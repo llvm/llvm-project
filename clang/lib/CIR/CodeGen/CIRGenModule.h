@@ -606,6 +606,10 @@ public:
   /// null constant.
   mlir::Value buildNullConstant(QualType T, mlir::Location loc);
 
+  /// Return a null constant appropriate for zero-initializing a base class with
+  /// the given type. This is usually, but not always, an LLVM null constant.
+  mlir::Value buildNullConstantForBase(const CXXRecordDecl *Record);
+
   mlir::Value buildMemberPointerConstant(const UnaryOperator *E);
 
   llvm::StringRef getMangledName(clang::GlobalDecl GD);

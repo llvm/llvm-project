@@ -76,3 +76,7 @@ mlir::cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
   return CGM.getCIRLinkageForDeclarator(Dtor, Linkage,
                                         /*IsConstantVariable=*/false);
 }
+
+std::vector<CharUnits> CIRGenCXXABI::getVBPtrOffsets(const CXXRecordDecl *RD) {
+  return std::vector<CharUnits>();
+}

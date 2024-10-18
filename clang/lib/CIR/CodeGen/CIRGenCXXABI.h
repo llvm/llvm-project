@@ -268,6 +268,9 @@ public:
   virtual RecordArgABI
   getRecordArgABI(const clang::CXXRecordDecl *RD) const = 0;
 
+  /// Gets the offsets of all the virtual base pointers in a given class.
+  virtual std::vector<CharUnits> getVBPtrOffsets(const CXXRecordDecl *RD);
+
   /// Insert any ABI-specific implicit parameters into the parameter list for a
   /// function. This generally involves extra data for constructors and
   /// destructors.

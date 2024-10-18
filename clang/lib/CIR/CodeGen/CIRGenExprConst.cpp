@@ -1957,3 +1957,14 @@ mlir::Attribute ConstantEmitter::emitNullForMemory(mlir::Location loc,
   assert(cstOp && "expected cir.const op");
   return emitForMemory(CGM, cstOp.getValue(), T);
 }
+
+static mlir::Value buildNullConstant(CIRGenModule &CGM,
+                                     const RecordDecl *record,
+                                     bool asCompleteObject) {
+  llvm_unreachable("NYI");
+}
+
+mlir::Value
+CIRGenModule::buildNullConstantForBase(const CXXRecordDecl *Record) {
+  return ::buildNullConstant(*this, Record, false);
+}

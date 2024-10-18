@@ -344,6 +344,51 @@ CIRGenFunction::buildCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
       /*IsArrow=*/false, E->getArg(0));
 }
 
+static void buildNullBaseClassInitialization(CIRGenFunction &CGF,
+                                             Address DestPtr,
+                                             const CXXRecordDecl *Base) {
+  if (Base->isEmpty())
+    return;
+
+  DestPtr = DestPtr.withElementType(CGF.UInt8Ty);
+
+  const ASTRecordLayout &Layout = CGF.getContext().getASTRecordLayout(Base);
+  CharUnits NVSize = Layout.getNonVirtualSize();
+
+  // We cannot simply zero-initialize the entire base sub-object if vbptrs are
+  // present, they are initialized by the most derived class before calling the
+  // constructor.
+  SmallVector<std::pair<CharUnits, CharUnits>, 1> Stores;
+  Stores.emplace_back(CharUnits::Zero(), NVSize);
+
+  // Each store is split by the existence of a vbptr.
+  CharUnits VBPtrWidth = CGF.getPointerSize();
+  std::vector<CharUnits> VBPtrOffsets =
+      CGF.CGM.getCXXABI().getVBPtrOffsets(Base);
+  for (CharUnits VBPtrOffset : VBPtrOffsets) {
+    // Stop before we hit any virtual base pointers located in virtual bases.
+    if (VBPtrOffset >= NVSize)
+      break;
+    std::pair<CharUnits, CharUnits> LastStore = Stores.pop_back_val();
+    CharUnits LastStoreOffset = LastStore.first;
+    CharUnits LastStoreSize = LastStore.second;
+
+    CharUnits SplitBeforeOffset = LastStoreOffset;
+    CharUnits SplitBeforeSize = VBPtrOffset - SplitBeforeOffset;
+    assert(!SplitBeforeSize.isNegative() && "negative store size!");
+    if (!SplitBeforeSize.isZero())
+      Stores.emplace_back(SplitBeforeOffset, SplitBeforeSize);
+
+    CharUnits SplitAfterOffset = VBPtrOffset + VBPtrWidth;
+    CharUnits SplitAfterSize = LastStoreSize - SplitAfterOffset;
+    assert(!SplitAfterSize.isNegative() && "negative store size!");
+    if (!SplitAfterSize.isZero())
+      Stores.emplace_back(SplitAfterOffset, SplitAfterSize);
+  }
+
+  llvm_unreachable("NYI");
+}
+
 void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
                                            AggValueSlot Dest) {
   assert(!Dest.isIgnored() && "Must have a destination!");
@@ -362,7 +407,8 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
       break;
     case CXXConstructionKind::VirtualBase:
     case CXXConstructionKind::NonVirtualBase:
-      llvm_unreachable("NYI");
+      buildNullBaseClassInitialization(*this, Dest.getAddress(),
+                                       CD->getParent());
       break;
     }
   }
