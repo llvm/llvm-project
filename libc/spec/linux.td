@@ -103,7 +103,7 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<UnsignedIntType>,
           ]
         >,
-         FunctionSpec<
+        FunctionSpec<
           "remap_file_pages",
           RetValSpec<IntType>,
           [
@@ -112,6 +112,17 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<IntType>,
             ArgSpec<SizeTType>,
             ArgSpec<IntType>,
+          ]
+        >,
+        FunctionSpec<
+          "mremap",
+          RetValSpec<VoidPtr>,
+          [
+            ArgSpec<VoidPtr>,
+            ArgSpec<SizeTType>,
+            ArgSpec<SizeTType>,
+            ArgSpec<IntType>,
+            ArgSpec<VoidPtr>,
           ]
         >,
       ]  // Functions
