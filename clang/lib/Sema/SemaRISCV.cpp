@@ -627,8 +627,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     llvm::StringMap<bool> FunctionFeatureMap;
     Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
 
-    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v")
-        && !FunctionFeatureMap.lookup("v"))
+    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v") &&
+        !FunctionFeatureMap.lookup("v"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
              << /* IsExtension */ true << TheCall->getSourceRange() << "v";
