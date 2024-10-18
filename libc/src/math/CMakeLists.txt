@@ -496,6 +496,7 @@ add_math_entrypoint_object(tanf)
 
 add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)
+add_math_entrypoint_object(tanhf16)
 
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)
