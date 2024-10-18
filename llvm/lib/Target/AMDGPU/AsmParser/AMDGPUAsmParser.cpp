@@ -195,6 +195,7 @@ public:
     ImmTyMatrixBReuse,
     ImmTyScaleSel,
     ImmTyAuxData,
+    ImmTyIdxs,
     ImmTyByteSel,
     ImmTySignedA,
     ImmTySignedB,
@@ -1247,6 +1248,7 @@ public:
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyAuxData: OS << "ImmTyAuxData"; break;
+    case ImmTyIdxs: OS << "ImmTyIdxs"; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
     case ImmTySignedA: OS << "SignedA"; break;
     case ImmTySignedB: OS << "SignedB"; break;

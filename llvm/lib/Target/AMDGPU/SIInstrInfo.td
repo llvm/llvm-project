@@ -1327,6 +1327,9 @@ def ScaleSel : NamedIntOperand<"scale_sel"> {
   let Validator = "isUInt<3>";
 }
 def AuxData : NamedIntOperand<"aux_data">;
+let PrintInHex = 1 in
+def Idxs : NamedIntOperand<"idxs">;
+def Idxs0 : DefaultOperand<Idxs, 0>;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";

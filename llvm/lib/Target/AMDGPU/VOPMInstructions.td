@@ -49,19 +49,20 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc64 {
   bits<11> src0;
   bits<11> src1;
   bits<6> aux_data;
+  bits<12> idxs;
 
   let Inst{9-0} = vdst;
-  let Inst{11-10} = ?;    // vdst_idx
+  let Inst{11-10} = idxs{1-0};    // vdst_idx
   let Inst{13} = ?;       // supr
 
   let Inst{22-15} = op;
   let Inst{31-24} = 0xdc; // encoding
 
   let Inst{42-32} = src0;
-  let Inst{44-43} = ?;    // src0_idx
+  let Inst{44-43} = idxs{5-4};    // src0_idx
 
   let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{57-56} = ?;    // src1_idx
+  let Inst{57-56} = idxs{9-8};    // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
 }
@@ -74,11 +75,12 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc96 {
   bits<10> src2;
   bits<8> ssrc;
   bits<18> aux_data;
+  bits<16> idxs;
 
   bit clamp;
 
   let Inst{9-0} = vdst;
-  let Inst{11-10} = ?;    // vdst_idx
+  let Inst{11-10} = idxs{1-0};    // vdst_idx
 
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = ?;       // supr
@@ -87,15 +89,15 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc96 {
   let Inst{31-24} = 0xdd; // encoding
 
   let Inst{42-32} = src0;
-  let Inst{44-43} = ?;    // src0_idx
+  let Inst{44-43} = idxs{5-4};    // src0_idx
 
   let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{57-56} = ?;    // src1_idx
+  let Inst{57-56} = idxs{9-8};    // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
 
   let Inst{73-64} = !if(pfl.HasSrc2, src2, ?);
-  let Inst{75-74} = ?;    // src2_idx
+  let Inst{75-74} = idxs{13-12};    // src2_idx
 
   let Inst{87-76} = !if(pfl.HasAux, aux_data{17-6}, ?); // mod1
 
@@ -111,11 +113,12 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   bits<10> src4;
   bits<8> ssrc;
   bits<26> aux_data;
+  bits<24> idxs;
 
   bit clamp;
 
   let Inst{9-0} = vdst;
-  let Inst{11-10} = ?;    // vdst_idx
+  let Inst{11-10} = idxs{1-0};      // vdst_idx
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = ?;       // supr
 
@@ -123,25 +126,25 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{31-24} = 0xde; // encoding
 
   let Inst{42-32} = src0;
-  let Inst{44-43} = ?;    // src0_idx
+  let Inst{44-43} = idxs{5-4};      // src0_idx
 
   let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{57-56} = ?;    // src1_idx
+  let Inst{57-56} = idxs{9-8};      // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
 
   let Inst{73-64} = src2;
-  let Inst{75-74} = ?;    // src2_idx
+  let Inst{75-74} = idxs{13-12};    // src2_idx
 
   let Inst{87-76} = !if(pfl.HasAux, aux_data{17-6}, ?); // mod1
 
   let Inst{95-88} = !if(pfl.HasSSrc, ssrc, ?);
 
   let Inst{105-96} = src3;
-  let Inst{107-106} = ?; // src3_idx
+  let Inst{107-106} = idxs{17-16};  // src3_idx
 
   let Inst{117-108} = !if(pfl.HasSrc4, src4, ?);
-  let Inst{119-118} = ?; // src4_idx
+  let Inst{119-118} = idxs{21-20};  // src4_idx
 
   let Inst{127-120} = !if(pfl.HasAux, aux_data{25-18}, ?); // mod2
 }
@@ -155,11 +158,12 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   bits<10> src4;
   bits<10> src5;
   bits<26> aux_data;
+  bits<28> idxs;
 
   bit clamp;
 
   let Inst{9-0} = vdst;
-  let Inst{11-10} = ?;    // vdst_idx
+  let Inst{11-10} = idxs{1-0};      // vdst_idx
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = ?;       // supr
 
@@ -167,26 +171,26 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{31-24} = 0xdf; // encoding
 
   let Inst{42-32} = src0;
-  let Inst{44-43} = ?;    // src0_idx
+  let Inst{44-43} = idxs{5-4};      // src0_idx
 
   let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{57-56} = ?;    // src1_idx
+  let Inst{57-56} = idxs{9-8};      // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
 
   let Inst{73-64} = src2;
-  let Inst{75-74} = ?;    // src2_idx
+  let Inst{75-74} = idxs{13-12};    // src2_idx
 
   let Inst{83-76} = !if(pfl.HasAux, aux_data{13-6}, ?); // mod1
 
   let Inst{93-84} = src5;
-  let Inst{95-94} = ?;   // src5_idx
+  let Inst{94-95} = idxs{25-24};    // src5_idx
 
   let Inst{105-96} = src3;
-  let Inst{107-106} = ?; // src3_idx
+  let Inst{107-106} = idxs{17-16};  // src3_idx
 
   let Inst{117-108} = !if(pfl.HasSrc4, src4, ?);
-  let Inst{119-118} = ?; // src4_idx
+  let Inst{119-118} = idxs{21-20};  // src4_idx
 
   let Inst{127-120} = !if(pfl.HasAux, aux_data{25-18}, ?); // mod2
 }
@@ -220,12 +224,12 @@ class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy,
   let DstRC = getGVGPRforVT<ArgTy[0]>.ret;
   let Src0RC64 = GSrcSimple;
   let Src1RC64 = !if(!eq(Src1VT, i64), SCSrc_b64, GSrcSimple);
-  let Ins64 = !con((ins Src0RC64:$src0), !if(HasSrc1, (ins Src1RC64:$src1), (ins)), !if(HasAux, (ins AuxData:$aux_data), (ins)));
+  let Ins64 = !con((ins Src0RC64:$src0), !if(HasSrc1, (ins Src1RC64:$src1), (ins)), !if(HasAux, (ins AuxData:$aux_data), (ins)), (ins Idxs0:$idxs));
 
   string Src1Asm = !if(HasSrc1, ", $src1", "");
   string AuxDataAsm = !if(HasAux, "$aux_data", "");
 
-  let Asm64 = "$vdst, $src0"#Src1Asm#AuxDataAsm;
+  let Asm64 = "$vdst, $src0"#Src1Asm#AuxDataAsm#"$idxs";
 }
 
 def VOPM_I64_I32_I32 : VOP2M_Profile<[i64, i32, i32, untyped]>;
@@ -236,29 +240,30 @@ def VOPM_I32_I32_I64 : VOP2M_Profile<[i32, i32, i64, untyped]>;
 
 class VOP3M_Permute_Profile<list<ValueType> ArgTy> : VOPMProfile<ArgTy, 1, 0, 0, 0> {
   let Outs64 = (outs DstRC64:$vdst, Src2RC64:$src2);
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, AuxData:$aux_data);
+  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, AuxData:$aux_data, Idxs0:$idxs);
 
-  let Asm64 = "$vdst, $src2, $src0, $src1$aux_data";
+  let Asm64 = "$vdst, $src2, $src0, $src1$aux_data$idxs";
 }
 
 def VOPM_PERMUTE_I32_I32_I32_I32 : VOP3M_Permute_Profile<[i32, i32, i32, i32]>;
 
 class Conv_Profile<list<ValueType> ArgTy, int Shape, int Filter, int Iterations> : VOPMProfile<ArgTy, 1, 1, 0, 1> {
   let Outs64 = (outs DstRC64:$vdst);
-  let Ins64 = !if(!eq(Filter,FilterType.3X3), (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, AuxData:$aux_data, Clamp0:$clamp),
-                                              (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, Src2RC64:$src5, AuxData:$aux_data, Clamp0:$clamp));
+  let Ins64 = !if(!eq(Filter,FilterType.3X3), (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs),
+                                              (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, Src2RC64:$src5, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs));
 
-  dag ConvPat = !if(!eq(Filter,FilterType.3X3), (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, timm:$aux_data, i1:$clamp),
-                                                (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, Src2VT:$src5, timm:$aux_data, i1:$clamp));
+  dag ConvIntrinsicPat = !if(!eq(Filter,FilterType.3X3), (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, timm:$aux_data, i1:$clamp),
+                                                         (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, Src2VT:$src5, timm:$aux_data, i1:$clamp));
+  dag ConvPseudoPat = !con(ConvIntrinsicPat, (ins 0));
 
   dag ConvFrag = !if(!eq(Filter,FilterType.3X3), (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$aux_data, node:$clamp),
                                                   (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5, node:$aux_data, node:$clamp));
 
-  let Asm64 = !if(!eq(Filter,FilterType.3X3), "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp",
-                                              !cond(!eq(Iterations, IterationCnt.IT_1) : "$vdst, $src0, $src1, $src2$aux_data$clamp",
-                                                    !eq(Iterations, IterationCnt.IT_2) : "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp",
-                                                    !eq(Iterations, IterationCnt.IT_3) : "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp",
-                                                    !eq(Iterations, IterationCnt.IT_4) : "$vdst, $src0, $src1, $src2, $src3, $src4, $src5$aux_data$clamp"));
+  let Asm64 = !if(!eq(Filter,FilterType.3X3), "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp$idxs",
+                                              !cond(!eq(Iterations, IterationCnt.IT_1) : "$vdst, $src0, $src1, $src2$aux_data$clamp$idxs",
+                                                    !eq(Iterations, IterationCnt.IT_2) : "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp$idxs",
+                                                    !eq(Iterations, IterationCnt.IT_3) : "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp$idxs",
+                                                    !eq(Iterations, IterationCnt.IT_4) : "$vdst, $src0, $src1, $src2, $src3, $src4, $src5$aux_data$clamp$idxs"));
 
   int PrimTy = Shape;
   int FilterTy = Filter;
@@ -345,14 +350,14 @@ class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1,
 
   field RegisterOperand SSrcOp = getVOPMSSrcForVT<ArgTy[4]>.ret;
 
-  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp),
-                           (ins Src0RC64:$src0, SSrcOp:$ssrc, AuxData:$aux_data, Clamp0:$clamp));
+  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs),
+                           (ins Src0RC64:$src0, SSrcOp:$ssrc, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs));
 
   string DestAsm = !cond(!eq(Scatter, 1) : "$vdst",
                          !eq(Scatter, 2) : "$vdst, $src2",
                          !eq(Scatter, 4) : "$vdst, $src2, $src3, $src4");
-  string SrcAsm = !if(HasSrc1, "$src0, $ssrc, $src1$aux_data$clamp",
-                               "$src0, $ssrc$aux_data$clamp");
+  string SrcAsm = !if(HasSrc1, "$src0, $ssrc, $src1$aux_data$clamp$idxs",
+                               "$src0, $ssrc$aux_data$clamp$idxs");
   let Asm64 = DestAsm#", "#SrcAsm;
 
   bit PixelShape4x2 = !or(!eq(Scatter, 2), !eq(ArgTy[0], v4f32));
@@ -387,7 +392,7 @@ class VOPM_WMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<
   let IsWMMA = 1;
   let isInt = 0;
 
-  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, Clamp0:$clamp);
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, Clamp0:$clamp, Idxs0:$idxs);
 
   let WmmaInPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
   let WmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
@@ -395,14 +400,14 @@ class VOPM_WMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<
   let WmmaInlineInPat = (ins Src0VT:$srcA, Src1VT:$srcB, (Src2VT (WMMAVISrc Src2VT:$srcC)), i1:$clamp);
   let WmmaInlineOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
 
-  let Asm64 = "$vdst, $srcA, $srcB, $srcC$clamp";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC$clamp$idxs";
 }
 
 class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {
   let IsWMMA = 1;
   let isInt = 1;
 
-  let Ins64 = (ins SignedA:$signed_a, Src0RC64:$srcA, SignedB:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, Clamp0:$clamp);
+  let Ins64 = (ins SignedA:$signed_a, Src0RC64:$srcA, SignedB:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, Clamp0:$clamp, Idxs0:$idxs);
 
   let WmmaInPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
   let WmmaOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
@@ -410,7 +415,7 @@ class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<Ar
   let WmmaInlineInPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, (Src2VT (WMMAVISrc Src2VT:$srcC)), i1:$clamp);
   let WmmaInlineOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
 
-  let Asm64 = "$vdst, $srcA, $srcB, $srcC$signed_a$signed_b$clamp";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC$signed_a$signed_b$clamp$idxs";
 }
 
 class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {
@@ -418,7 +423,7 @@ class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K> : VOPM_WMMA_Pro
   let isInt = 0;
 
   let HasAux = 1;
-  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, GVGPR_32:$src3, GVGPR_32:$src4, AuxData:$aux_data, Clamp0:$clamp);
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, GVGPR_32:$src3, GVGPR_32:$src4, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs);
 
   let WmmaInPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$src3, i32:$src4, timm:$aux_data, i1:$clamp);
   let WmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$src3, i32:$src4, timm:$aux_data, i1:$clamp);
@@ -426,7 +431,7 @@ class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K> : VOPM_WMMA_Pro
   let WmmaInlineInPat = (ins Src0VT:$srcA, Src1VT:$srcB, (Src2VT (WMMAVISrc Src2VT:$srcC)), i32:$src3, i32:$src4, timm:$aux_data, i1:$clamp);
   let WmmaInlineOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$src3, i32:$src4, timm:$aux_data, i1:$clamp);
 
-  let Asm64 = "$vdst, $srcA, $srcB, $srcC, $src3, $src4$aux_data$clamp";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC, $src3, $src4$aux_data$clamp$idxs";
 }
 
 def VOPM_WMMA_F32_F16_X16     : VOPM_WMMA_Profile_Float<[v8f32, v8f16, v8f16, v8f32], KMult.X1>;
@@ -472,22 +477,22 @@ class VOPM_SWMMAC_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMAC_Profile<Ar
 
 class VOPM_SWMMAC_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_SWMMAC_Profile<ArgTy, K> {
   let isInt = 0;
-  let Ins64 = !con((ins Src0RC64:$src0, Src1RC64:$src1, DstRC:$srcTiedDef, Src2RC64:$src2), IndexKey, (ins Clamp0:$clamp));
+  let Ins64 = !con((ins Src0RC64:$src0, Src1RC64:$src1, DstRC:$srcTiedDef, Src2RC64:$src2), IndexKey, (ins Clamp0:$clamp, Idxs0:$idxs));
 
   let SwmmacInPat  = !con((ins Src0VT:$src0, Src1VT:$src1, Src3VT:$srcTiedDef), IndexInPat, (ins i1:$clamp));
   let SwmmacOutPat = !con((ins Src0VT:$src0, Src1VT:$src1, Src3VT:$srcTiedDef), IndexOutPat, (ins i1:$clamp));
 
-  let Asm64 = "$vdst, $src0, $src1, $src2$index_key_16bit$clamp";
+  let Asm64 = "$vdst, $src0, $src1, $src2$index_key_16bit$clamp$idxs";
 }
 
 class VOPM_SWMMAC_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_SWMMAC_Profile<ArgTy, K> {
   let isInt = 1;
-  let Ins64 = !con((ins SignedA:$signed_a, Src0RC64:$src0, SignedB:$signed_b, Src1RC64:$src1, DstRC:$srcTiedDef, Src2RC64:$src2), IndexKey, (ins Clamp0:$clamp));
+  let Ins64 = !con((ins SignedA:$signed_a, Src0RC64:$src0, SignedB:$signed_b, Src1RC64:$src1, DstRC:$srcTiedDef, Src2RC64:$src2), IndexKey, (ins Clamp0:$clamp, Idxs0:$idxs));
 
   let SwmmacInPat  = !con((ins i1:$signed_a, Src0VT:$src0, i1:$signed_b, Src1VT:$src1, Src3VT:$srcTiedDef), IndexInPat, (ins i1:$clamp));
   let SwmmacOutPat = !con((ins i1:$signed_a, Src0VT:$src0, i1:$signed_b, Src1VT:$src1, Src3VT:$srcTiedDef), IndexOutPat, (ins i1:$clamp));
 
-  let Asm64 = "$vdst, $src0, $src1, $src2$signed_a$signed_b$index_key_16bit$clamp";
+  let Asm64 = "$vdst, $src0, $src1, $src2$signed_a$signed_b$index_key_16bit$clamp$idxs";
 }
 
 def VOPM_SWMMAC_F16_F16_X32   : VOPM_SWMMAC_Profile_Float<[v8f16, v8f16, v16f16, i32, v8f16], 1>;
@@ -520,8 +525,8 @@ class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> 
                      !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
                      !eq(Scatter, 4) : (outs DstRC64:$vdst, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4));
 
-  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp),
-                           (ins Src0RC64:$src0, AuxData:$aux_data, Clamp0:$clamp));
+  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs),
+                           (ins Src0RC64:$src0, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs));
 
   dag InPat = !if(HasSrc1, (ins Src0VT:$src0, Src1VT:$src1, timm:$aux_data, i1:$clamp),
                            (ins Src0VT:$src0, timm:$aux_data, i1:$clamp));
@@ -533,8 +538,8 @@ class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> 
   string DestAsm = !cond(!eq(Scatter, 1) : "$vdst",
                          !eq(Scatter, 2) : "$vdst, $src2",
                          !eq(Scatter, 4) : "$vdst, $src2, $src3, $src4");
-  string SrcAsm = !if(HasSrc1, "$src0, $src1$aux_data$clamp",
-                               "$src0$aux_data$clamp");
+  string SrcAsm = !if(HasSrc1, "$src0, $src1$aux_data$clamp$idxs",
+                               "$src0$aux_data$clamp$idxs");
   let Asm64 = DestAsm#", "#SrcAsm;
 
   int PrimTy = PixelShape;
@@ -814,14 +819,14 @@ def FmaFromTensorLayout {
 
 class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int OpLayout> : VOPMProfile<ArgTy, 1, 1, 0, 0> {
   let Outs64 = (outs DstRC64:$vdst);
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src3RC64:$src3, AuxData:$aux_data, Clamp0:$clamp);
+  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src3RC64:$src3, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs);
 
   dag FmaFromTensorInPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp);
   dag FmaFromTensorOutPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp);
 
   dag FmaFromTensorFrag = (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$aux_data, node:$clamp);
 
-  let Asm64 = "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp";
+  let Asm64 = "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp$idxs";
 
   int Layout = OpLayout;
 }
@@ -1414,27 +1419,27 @@ class 1X1_IT_4<SDPatternOperator node, Conv_Profile P> : PatFrag<P.ConvFrag, !se
 multiclass ConvPat_VOPM<string Inst, SDPatternOperator node, string ProfileName> {
   defvar P = !cast<Conv_Profile>(ProfileName);
 
-  def : GCNPat <(P.DstVT !setdagop(P.ConvPat, node)),
-                (P.DstVT !setdagop(P.ConvPat, !cast<Instruction>(Inst)))>;
+  def : GCNPat <(P.DstVT !setdagop(P.ConvIntrinsicPat, node)),
+                (P.DstVT !setdagop(P.ConvPseudoPat, !cast<Instruction>(Inst)))>;
 }
 
 multiclass ConvPat1x1Iter_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
 
   defvar P1 = !cast<Conv_Profile>(ProfilePrefix # "_ITER_1");
-  def : GCNPat <(P1.DstVT !setdagop(P1.ConvPat, 1X1_IT_1<node, P1>)),
-                (P1.DstVT !setdagop(P1.ConvPat, !cast<Instruction>(Inst # "_ITER_1")))>;
+  def : GCNPat <(P1.DstVT !setdagop(P1.ConvIntrinsicPat, 1X1_IT_1<node, P1>)),
+                (P1.DstVT !setdagop(P1.ConvPseudoPat, !cast<Instruction>(Inst # "_ITER_1")))>;
 
   defvar P2 = !cast<Conv_Profile>(ProfilePrefix # "_ITER_2");
-  def : GCNPat <(P2.DstVT !setdagop(P2.ConvPat, 1X1_IT_2<node, P2>)),
-                (P2.DstVT !setdagop(P2.ConvPat, !cast<Instruction>(Inst # "_ITER_2")))>;
+  def : GCNPat <(P2.DstVT !setdagop(P2.ConvIntrinsicPat, 1X1_IT_2<node, P2>)),
+                (P2.DstVT !setdagop(P2.ConvPseudoPat, !cast<Instruction>(Inst # "_ITER_2")))>;
 
   defvar P3 = !cast<Conv_Profile>(ProfilePrefix # "_ITER_3");
-  def : GCNPat <(P3.DstVT !setdagop(P3.ConvPat, 1X1_IT_3<node, P3>)),
-                (P3.DstVT !setdagop(P3.ConvPat, !cast<Instruction>(Inst # "_ITER_3")))>;
+  def : GCNPat <(P3.DstVT !setdagop(P3.ConvIntrinsicPat, 1X1_IT_3<node, P3>)),
+                (P3.DstVT !setdagop(P3.ConvPseudoPat, !cast<Instruction>(Inst # "_ITER_3")))>;
 
   defvar P4 = !cast<Conv_Profile>(ProfilePrefix # "_ITER_4");
-  def : GCNPat <(P4.DstVT !setdagop(P4.ConvPat, 1X1_IT_4<node, P4>)),
-                (P4.DstVT !setdagop(P4.ConvPat, !cast<Instruction>(Inst # "_ITER_4")))>;
+  def : GCNPat <(P4.DstVT !setdagop(P4.ConvIntrinsicPat, 1X1_IT_4<node, P4>)),
+                (P4.DstVT !setdagop(P4.ConvPseudoPat, !cast<Instruction>(Inst # "_ITER_4")))>;
 }
 
 multiclass ConvPatMulti1x1_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
