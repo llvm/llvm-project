@@ -1180,6 +1180,9 @@ enum : unsigned {
 
 // Section flags.
 enum : unsigned {
+  // No flag
+  SHF_NONE= 0x0,
+
   // Section data should be writable during execution.
   SHF_WRITE = 0x1,
 
