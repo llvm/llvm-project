@@ -96,9 +96,9 @@ bool patchFunctionExit(
   return true;
 }
 
-bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
-                           const XRaySledEntry &Sled,
-                           const XRayTrampolines &Trampolines) XRAY_NEVER_INSTRUMENT {
+bool patchFunctionTailExit(
+    const bool Enable, const uint32_t FuncId, const XRaySledEntry &Sled,
+    const XRayTrampolines &Trampolines) XRAY_NEVER_INSTRUMENT {
   return patchFunctionExit(Enable, FuncId, Sled, Trampolines);
 }
 
