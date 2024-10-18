@@ -3570,10 +3570,8 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
   }
 
   // Print the properties.
-  if (Attribute prop = op->getPropertiesAsAttribute()) {
-    os << " <";
-    Impl::printAttribute(prop);
-    os << '>';
+  if (op->getPropertiesStorageSize()) {
+    op->getName().printOpProperties(op, *this);
   }
 
   // Print regions.
