@@ -64,9 +64,9 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    buffer_store_dword v10, v0, s[0:3], s33 offen ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %store
-; CHECK-NEXT:    s_add_i32 s4, s33, 0x100000
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    ; implicit-def: $sgpr4
+; CHECK-NEXT:    s_add_i32 s5, s33, 0x100000
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s5 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ds_write_b32 v0, v1
