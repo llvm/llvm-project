@@ -336,22 +336,41 @@ struct TemplateParameterListBuilder {
     return *this;
   }
 
+  /*
+  The desired result AST after this function constructs the concept
+  specialization Expression is as follows:
+
+  |-ConceptSpecializationExpr 0xdd5d408 <col:42, col:75> 'bool' Concept
+  0xdd5d1c0 'is_valid_line_vector' | |-ImplicitConceptSpecializationDecl
+  0xdd5d350 <line:5:9> col:9 | | `-TemplateArgument type 'type-parameter-0-0' |
+  |   `-TemplateTypeParmType 0xdb90ba0 'type-parameter-0-0' dependent depth 0
+  index 0 | `-TemplateArgument <line:8:63> type
+  'element_type':'type-parameter-0-0' |   `-TemplateTypeParmType 0xdd5d2f0
+  'element_type' dependent depth 0 index 0 |     `-TemplateTypeParm 0xdd5d298
+  'element_type'
+  */
   ConceptSpecializationExpr *getConceptSpecializationExpr(Sema &S,
                                                           ConceptDecl *CD) {
-    ASTContext &context = S.getASTContext();
-    SourceLocation loc = Builder.Record->getBeginLoc();
-    DeclarationNameInfo DNI(CD->getDeclName(), loc);
+    ASTContext &Context = S.getASTContext();
+    SourceLocation Loc = Builder.Record->getBeginLoc();
+    DeclarationNameInfo DNI(CD->getDeclName(), Loc);
     NestedNameSpecifierLoc NNSLoc;
     DeclContext *DC = Builder.Record->getDeclContext();
-    TemplateArgumentListInfo TALI(loc, loc);
+    TemplateArgumentListInfo TALI(Loc, Loc);
 
-    // assume that the concept decl has just one template parameter
+    // Assume that the concept decl has just one template parameter
+    // This parameter should have been added when CD was constructed
+    // in getTypedBufferConceptDecl
+    assert(CD->getTemplateParameters()->size() == 1 &&
+           "unexpected concept decl parameter count");
     TemplateTypeParmDecl *ConceptTTPD = dyn_cast<TemplateTypeParmDecl>(
         CD->getTemplateParameters()->getParam(0));
 
+    // this fake TemplateTypeParmDecl is used to construct a template argument
+    // that will be used to construct the ImplicitConceptSpecializationDecl
     clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
-        context,                          // AST context
-        context.getTranslationUnitDecl(), // DeclContext
+        Context,                          // AST context
+        Context.getTranslationUnitDecl(), // DeclContext
         SourceLocation(), SourceLocation(),
         /*depth=*/0,                // Depth in the template parameter list
         /*position=*/0,             // Position in the template parameter list
@@ -364,39 +383,38 @@ struct TemplateParameterListBuilder {
     T->setDeclContext(DC);
     T->setReferenced();
 
-    clang::QualType ConceptTType = context.getTypeDeclType(ConceptTTPD);
+    clang::QualType ConceptTType = Context.getTypeDeclType(ConceptTTPD);
 
+    // this is the 2nd template argument node in the AST above
     TemplateArgument ConceptTA = TemplateArgument(ConceptTType);
 
-    std::vector<TemplateArgument> ConceptConvertedArgsVec = {ConceptTA};
-    ArrayRef<TemplateArgument> ConceptConvertedArgs = ConceptConvertedArgsVec;
+    clang::QualType CSETType = Context.getTypeDeclType(T);
 
-    clang::QualType CSETType = context.getTypeDeclType(T);
-
+    // this is the 1st template argument node in the AST above
     TemplateArgument CSETA = TemplateArgument(CSETType);
-
-    std::vector<TemplateArgument> CSEConvertedArgsVec = {CSETA};
-    ArrayRef<TemplateArgument> CSEConvertedArgs = CSEConvertedArgsVec;
 
     ImplicitConceptSpecializationDecl *ImplicitCSEDecl =
         ImplicitConceptSpecializationDecl::Create(
-            context, Builder.Record->getDeclContext(), loc, CSEConvertedArgs);
+            Context, Builder.Record->getDeclContext(), Loc, {CSETA});
 
-    const ConstraintSatisfaction CS(CD, ConceptConvertedArgs);
+    // Constraint satisfaction is used to construct the
+    // ConceptSpecailizationExpr, and represents the 2nd Template Argument,
+    // located at the bottom of the sample AST above.
+    const ConstraintSatisfaction CS(CD, {ConceptTA});
     TemplateArgumentLoc TAL = S.getTrivialTemplateArgumentLoc(
         ConceptTA, QualType(), SourceLocation());
 
     TALI.addArgument(TAL);
     const ASTTemplateArgumentListInfo *ATALI =
-        ASTTemplateArgumentListInfo::Create(context, TALI);
+        ASTTemplateArgumentListInfo::Create(Context, TALI);
 
     // In the concept reference, ATALI is what adds the extra
     // TemplateArgument node underneath CSE
-    ConceptReference *CR = ConceptReference::Create(S.getASTContext(), NNSLoc,
-                                                    loc, DNI, CD, CD, ATALI);
+    ConceptReference *CR =
+        ConceptReference::Create(Context, NNSLoc, Loc, DNI, CD, CD, ATALI);
 
     ConceptSpecializationExpr *CSE =
-        ConceptSpecializationExpr::Create(context, CR, ImplicitCSEDecl, &CS);
+        ConceptSpecializationExpr::Create(Context, CR, ImplicitCSEDecl, &CS);
 
     return CSE;
   }
@@ -625,12 +643,9 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
   T->setReferenced();
 
   // Create and Attach Template Parameter List to ConceptDecl
-  std::vector<NamedDecl *> TemplateParamsVec = {T};
-  llvm::ArrayRef<NamedDecl *> TemplateParams(TemplateParamsVec);
-
   clang::TemplateParameterList *ConceptParams =
-      clang::TemplateParameterList::Create(context, DeclLoc, DeclLoc,
-                                           TemplateParams, DeclLoc, nullptr);
+      clang::TemplateParameterList::Create(context, DeclLoc, DeclLoc, {T},
+                                           DeclLoc, nullptr);
 
   DeclarationName DeclName = DeclarationName(&IsValidLineVectorII);
   Expr *ConstraintExpr = getTypedBufferConstraintExpr(S, DeclLoc, T);
