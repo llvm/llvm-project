@@ -71,7 +71,7 @@ int Declaration::Compare(const Declaration &a, const Declaration &b) {
 }
 
 bool Declaration::FileAndLineEqual(const Declaration &declaration) const {
-  int file_compare = FileSpec::Compare(this->m_file, declaration.m_file, true);
+  int file_compare = FileSpec::Compare(this->m_file, declaration.m_file, false);
   return file_compare == 0 && this->m_line == declaration.m_line;
 }
 
