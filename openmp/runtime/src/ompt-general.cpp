@@ -121,6 +121,8 @@ static ompt_start_tool_result_t *libomptarget_ompt_result = NULL;
 
 static ompt_interface_fn_t ompt_fn_lookup(const char *s);
 
+static ompt_interface_fn_t ompt_device_fn_lookup(const char *s);
+
 OMPT_API_ROUTINE ompt_data_t *ompt_get_thread_data(void);
 
 /*****************************************************************************
