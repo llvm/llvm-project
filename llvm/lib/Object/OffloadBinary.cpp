@@ -72,6 +72,15 @@ Error extractFromObject(const ObjectFile &Obj,
   assert((Obj.isELF() || Obj.isCOFF()) && "Invalid file type");
 
   for (SectionRef Sec : Obj.sections()) {
+    Expected<StringRef> NameOrErr = Sec.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+
+    if (NameOrErr->starts_with("__CLANG_OFFLOAD_BUNDLE__"))
+      return createStringError(
+          "clang offload bundles are deprecated. Recompile with "
+          "'--no-offload-new-driver'");
+
     // ELF files contain a section with the LLVM_OFFLOADING type.
     if (Obj.isELF() &&
         static_cast<ELFSectionRef>(Sec).getType() != ELF::SHT_LLVM_OFFLOADING)
@@ -79,10 +88,6 @@ Error extractFromObject(const ObjectFile &Obj,
 
     // COFF has no section types so we rely on the name of the section.
     if (Obj.isCOFF()) {
-      Expected<StringRef> NameOrErr = Sec.getName();
-      if (!NameOrErr)
-        return NameOrErr.takeError();
-
       if (!NameOrErr->starts_with(".llvm.offloading"))
         continue;
     }
