@@ -657,7 +657,8 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
                    Flags);
 
   if (auto *CT = dyn_cast<DICompositeType>(Ty))
-    if (Ty->getName() != CT->getIdentifier())
+    if (Ty->getName() != CT->getIdentifier() &&
+        CT->getRuntimeLang() == dwarf::DW_LANG_Swift)
       DD->addAccelType(*this, CUNode->getNameTableKind(), CT->getIdentifier(),
                        TyDIE, Flags);
 

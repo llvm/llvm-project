@@ -1854,6 +1854,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     }
 
     if (Success && AttrInfo.MangledName &&
+        RuntimeLang == dwarf::DW_LANG_Swift &&
         !AttrInfo.MangledName.getString().empty() &&
         AttrInfo.MangledName != AttrInfo.Name) {
       auto Hash = djbHash(AttrInfo.MangledName.getString().data());
