@@ -5505,6 +5505,13 @@ public:
     return static_cast<RefQualifierKind>(FunctionTypeBits.RefQualifier);
   }
 
+  // Whether this is a qualified function (i.e., the type of a member function)
+  bool hasQualifiers() const {
+    return getMethodQuals() || getRefQualifier() != RQ_None;
+  }
+
+  std::string getFunctionQualifiersAsString() const;
+
   using param_type_iterator = const QualType *;
 
   ArrayRef<QualType> param_types() const {
@@ -7939,9 +7946,9 @@ inline bool QualType::isReferenceable() const {
   if (Self.isObjectType() || Self.isReferenceType())
     return true;
   if (const auto *F = Self.getAs<FunctionProtoType>())
-    return F->getMethodQuals().empty() && F->getRefQualifier() == RQ_None;
+    return !F->hasQualifiers();
 
-  return false;
+  return Self.isFunctionType();
 }
 
 inline SplitQualType QualType::split() const {

@@ -442,6 +442,9 @@ Bug Fixes in This Version
 - The warning emitted for an unsupported register variable type now points to
   the unsupported type instead of the ``register`` keyword (#GH109776).
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

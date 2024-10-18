@@ -15160,6 +15160,9 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     T = Context.getLifetimeQualifiedType(T, lifetime);
   }
 
+  if (CheckQualifiedFunctionForPointer(T, NameLoc, QFK_Pointer))
+    return nullptr;
+
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),
                                          TSInfo, SC, nullptr);

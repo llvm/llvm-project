@@ -14610,6 +14610,23 @@ public:
   QualType BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
 
+  /// Kinds of declarator that cannot contain a qualified function type.
+  ///
+  /// C++98 [dcl.fct]p4 / C++11 [dcl.fct]p6:
+  ///     a function type with a cv-qualifier or a ref-qualifier can only appear
+  ///     at the topmost level of a type.
+  ///
+  /// Parens and member pointers are permitted. We don't diagnose array and
+  /// function declarators, because they don't allow function types at all.
+  ///
+  /// The values of this enum are used in diagnostics.
+  enum QualifiedFunctionKind { QFK_BlockPointer, QFK_Pointer, QFK_Reference };
+
+  /// Check whether the type T is a qualified function type, and if it is,
+  /// diagnose that it cannot be contained within the given kind of declarator.
+  bool CheckQualifiedFunctionForPointer(QualType T, SourceLocation Loc,
+                                        QualifiedFunctionKind QFK);
+
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
