@@ -1941,14 +1941,62 @@ void CIRGenFunction::buildInheritedCXXConstructorCall(
     llvm_unreachable("NYI");
   } else {
     // The inheriting constructor was not inlined. Emit delegating arguments.
-    llvm_unreachable("NYI");
+    Args.push_back(ThisArg);
+    const auto *OuterCtor = cast<CXXConstructorDecl>(CurCodeDecl);
+    assert(OuterCtor->getNumParams() == D->getNumParams());
+    assert(!OuterCtor->isVariadic() && "should have been inlined");
+    for (const auto *Param : OuterCtor->parameters()) {
+      assert(getContext().hasSameUnqualifiedType(
+          OuterCtor->getParamDecl(Param->getFunctionScopeIndex())->getType(),
+          Param->getType()));
+      buildDelegateCallArg(Args, Param, E->getLocation());
+
+      // Forward __attribute__(pass_object_size).
+      if (Param->hasAttr<clang::PassObjectSizeAttr>()) {
+        auto *POSParam = SizeArguments[Param];
+        assert(POSParam && "missing pass_object_size value for forwarding");
+        buildDelegateCallArg(Args, POSParam, E->getLocation());
+      }
+    }
   }
 
-  llvm_unreachable("NYI");
+  buildCXXConstructorCall(D, Ctor_Base, ForVirtualBase, /*Delegating*/ false,
+                          This, Args, AggValueSlot::MayOverlap,
+                          E->getLocation(),
+                          /*NewPointerIsChecked*/ true);
 }
 
 void CIRGenFunction::buildInlinedInheritingCXXConstructorCall(
     const CXXConstructorDecl *Ctor, CXXCtorType CtorType, bool ForVirtualBase,
     bool Delegating, CallArgList &Args) {
+  GlobalDecl GD(Ctor, CtorType);
+  llvm_unreachable("NYI");
+  InlinedInheritingConstructorScope Scope(*this, GD);
+  // TODO(cir): ApplyInlineDebugLocation
+  assert(!MissingFeatures::generateDebugInfo());
+  RunCleanupsScope RunCleanups(*this);
+
+  // Save the arguments to be passed to the inherited constructor.
+  CXXInheritedCtorInitExprArgs = Args;
+
+  FunctionArgList Params;
+  QualType RetType = buildFunctionArgList(CurGD, Params);
+  FnRetTy = RetType;
+
+  // Insert any ABI-specific implicit constructor arguments.
+  CGM.getCXXABI().addImplicitConstructorArgs(*this, Ctor, CtorType,
+                                             ForVirtualBase, Delegating, Args);
+
+  // Emit a simplified prolog. We only need to emit the implicit params.
+  assert(Args.size() >= Params.size() && "too few arguments for call");
+  for (unsigned I = 0, N = Args.size(); I != N; ++I) {
+    if (I < Params.size() && isa<ImplicitParamDecl>(Params[I])) {
+      const RValue &RV =
+          Args[I].getRValue(*this, getLoc(Ctor->getSourceRange()));
+      assert(!RV.isComplex() && "complex indirect params not supported");
+      llvm_unreachable("NYI");
+    }
+  }
+
   llvm_unreachable("NYI");
 }

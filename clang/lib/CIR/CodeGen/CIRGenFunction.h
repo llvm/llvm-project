@@ -2263,6 +2263,61 @@ public:
 
   LexicalScope *currLexScope = nullptr;
 
+  class InlinedInheritingConstructorScope {
+  public:
+    InlinedInheritingConstructorScope(CIRGenFunction &CGF, GlobalDecl GD)
+        : CGF(CGF), OldCurGD(CGF.CurGD), OldCurFuncDecl(CGF.CurFuncDecl),
+          OldCurCodeDecl(CGF.CurCodeDecl),
+          OldCXXABIThisDecl(CGF.CXXABIThisDecl),
+          OldCXXABIThisValue(CGF.CXXABIThisValue),
+          OldCXXThisValue(CGF.CXXThisValue),
+          OldCXXABIThisAlignment(CGF.CXXABIThisAlignment),
+          OldCXXThisAlignment(CGF.CXXThisAlignment),
+          OldReturnValue(CGF.ReturnValue), OldFnRetTy(CGF.FnRetTy),
+          OldCXXInheritedCtorInitExprArgs(
+              std::move(CGF.CXXInheritedCtorInitExprArgs)) {
+      CGF.CurGD = GD;
+      CGF.CurFuncDecl = CGF.CurCodeDecl =
+          cast<CXXConstructorDecl>(GD.getDecl());
+      CGF.CXXABIThisDecl = nullptr;
+      CGF.CXXABIThisValue = nullptr;
+      CGF.CXXThisValue = nullptr;
+      CGF.CXXABIThisAlignment = CharUnits();
+      CGF.CXXThisAlignment = CharUnits();
+      CGF.ReturnValue = Address::invalid();
+      CGF.FnRetTy = QualType();
+      CGF.CXXInheritedCtorInitExprArgs.clear();
+    }
+    ~InlinedInheritingConstructorScope() {
+      CGF.CurGD = OldCurGD;
+      CGF.CurFuncDecl = OldCurFuncDecl;
+      CGF.CurCodeDecl = OldCurCodeDecl;
+      CGF.CXXABIThisDecl = OldCXXABIThisDecl;
+      CGF.CXXABIThisValue = OldCXXABIThisValue;
+      CGF.CXXThisValue = OldCXXThisValue;
+      CGF.CXXABIThisAlignment = OldCXXABIThisAlignment;
+      CGF.CXXThisAlignment = OldCXXThisAlignment;
+      CGF.ReturnValue = OldReturnValue;
+      CGF.FnRetTy = OldFnRetTy;
+      CGF.CXXInheritedCtorInitExprArgs =
+          std::move(OldCXXInheritedCtorInitExprArgs);
+    }
+
+  private:
+    CIRGenFunction &CGF;
+    GlobalDecl OldCurGD;
+    const Decl *OldCurFuncDecl;
+    const Decl *OldCurCodeDecl;
+    ImplicitParamDecl *OldCXXABIThisDecl;
+    mlir::Value OldCXXABIThisValue;
+    mlir::Value OldCXXThisValue;
+    CharUnits OldCXXABIThisAlignment;
+    CharUnits OldCXXThisAlignment;
+    Address OldReturnValue;
+    QualType OldFnRetTy;
+    CallArgList OldCXXInheritedCtorInitExprArgs;
+  };
+
   /// CIR build helpers
   /// -----------------
 
