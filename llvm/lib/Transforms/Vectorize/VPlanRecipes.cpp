@@ -960,24 +960,37 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     Args.push_back(Arg);
   }
 
-  // Use vector version of the intrinsic.
-  Module *M = State.Builder.GetInsertBlock()->getModule();
-  Function *VectorF =
-      Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
-  assert(VectorF && "Can't retrieve vector intrinsic.");
+  if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
+    // Use vector version of the vector predicate Intrinsic
+    IRBuilderBase &BuilderIR = State.Builder;
+    VectorBuilder VBuilder(BuilderIR);
+    Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
+    VBuilder.setMask(Mask).setEVL(Args.back());
+    Args.pop_back();
+    Value *VPInst = VBuilder.createSimpleIntrinsic(
+        VectorIntrinsicID, TysForDecl[0], Args, "vp.call");
+    if (!VPInst->getType()->isVoidTy())
+      State.set(this, VPInst);
+    State.addMetadata(VPInst,
+                      dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+  } else {
+    // Use vector version of the intrinsic.
+    Module *M = State.Builder.GetInsertBlock()->getModule();
+    Function *VectorF =
+        Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
+    assert(VectorF && "Can't retrieve vector intrinsic.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
-    CI->getOperandBundlesAsDefs(OpBundles);
+    auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    if (CI)
+      CI->getOperandBundlesAsDefs(OpBundles);
 
-  CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
-
-  setFlags(V);
-
-  if (!V->getType()->isVoidTy())
-    State.set(this, V);
-  State.addMetadata(V, CI);
+    CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+    setFlags(V);
+    if (!V->getType()->isVoidTy())
+      State.set(this, V);
+    State.addMetadata(V, CI);
+  }
 }
 
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
