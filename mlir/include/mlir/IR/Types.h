@@ -125,6 +125,7 @@ public:
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
   bool isIndex() const;
+  bool isFloat() const;
   bool isFloat4E2M1FN() const;
   bool isFloat6E2M3FN() const;
   bool isFloat6E3M2FN() const;
@@ -164,10 +165,10 @@ public:
 
   /// Return true if this is a signless integer or index type.
   bool isSignlessIntOrIndex() const;
-  /// Return true if this is a signless integer, index, or float type.
-  bool isSignlessIntOrIndexOrFloat() const;
   /// Return true of this is a signless integer or a float type.
   bool isSignlessIntOrFloat() const;
+  /// Return true if this is a signless integer, index, or float type.
+  bool isSignlessIntOrIndexOrFloat() const;
 
   /// Return true if this is an integer (of any signedness) or an index type.
   bool isIntOrIndex() const;
