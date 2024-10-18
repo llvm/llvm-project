@@ -6,4 +6,4 @@ void plugin_entry(void);
 void plugin_init(void);
 }
 
-#endif // _H_IN
+#endif // PLUGIN_H_IN
