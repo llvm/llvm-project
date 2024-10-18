@@ -3020,6 +3020,8 @@ def err_c23_constexpr_pointer_not_null : Error<
   "constexpr pointer initializer is not null">;
 
 // C++ Concepts
+def err_friend_concept : Error<
+  "friend declaration cannot be a concept">;
 def err_concept_decls_may_only_appear_in_global_namespace_scope : Error<
   "concept declarations may only appear in global or namespace scope">;
 def err_concept_no_parameters : Error<
