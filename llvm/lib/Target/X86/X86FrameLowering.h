@@ -105,7 +105,6 @@ public:
 
   void spillFPBP(MachineFunction &MF) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   bool needsFrameIndexResolution(const MachineFunction &MF) const override;
@@ -200,6 +199,9 @@ public:
   /// Return true if the function has a redzone (accessible bytes past the
   /// frame of the top of stack function) as part of it's ABI.
   bool has128ByteRedZone(const MachineFunction& MF) const;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
   bool isWin64Prologue(const MachineFunction &MF) const;

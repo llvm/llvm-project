@@ -1657,6 +1657,29 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  exp10m1f16
+  SRCS
+    exp10m1f16.cpp
+  HDRS
+    ../exp10m1f16.h
+  DEPENDS
+    .expxf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   expm1
   SRCS
     expm1.cpp
@@ -4196,6 +4219,25 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  coshf16
+  SRCS
+    coshf16.cpp
+  HDRS
+    ../coshf16.h
+  DEPENDS
+    .expxf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sinhf
   SRCS
     sinhf.cpp
@@ -4203,6 +4245,25 @@ add_entrypoint_object(
     ../sinhf.h
   DEPENDS
     .explogxf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  sinhf16
+  SRCS
+    sinhf16.cpp
+  HDRS
+    ../sinhf16.h
+  DEPENDS
+    .expxf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
@@ -5274,6 +5335,7 @@ add_header_library(
     expxf16.h
   DEPENDS
     libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
