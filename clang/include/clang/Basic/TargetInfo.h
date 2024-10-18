@@ -1505,6 +1505,10 @@ public:
   bool supportsIFunc() const {
     if (getTriple().isOSBinFormatMachO())
       return true;
+    if (getTriple().isOSWindows() && getTriple().isAArch64())
+      return true;
+    if (getTriple().getArch() == llvm::Triple::ArchType::avr)
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
