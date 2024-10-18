@@ -1847,6 +1847,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log10f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    log10f16_test.cpp
+  DEPENDS
+    libc.src.math.log10f16
+)
+
+add_fp_unittest(
 log1p_test
  NEED_MPFR
  SUITE
