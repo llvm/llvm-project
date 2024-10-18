@@ -953,6 +953,67 @@ def conv_2d_ngchw_gfchw(
 
 
 @linalg_structured_op
+def conv_2d_nhwgc_gfhwc(
+    I=TensorDef(
+        T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.G, S.C
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.KH, S.KW, S.C),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.G, S.FG, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution.
+
+    Layout:
+      * Input: NHWGC.
+      * Kernel: GFHWC.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.oh, D.ow, D.g, D.fg, D.kh, D.kw, D.c)
+    O[D.n, D.oh, D.ow, D.g, D.fg] += TypeFn.cast_signed(
+        U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.g, D.c]
+    ) * TypeFn.cast_signed(U, K[D.g, D.fg, D.kh, D.kw, D.c])
+
+
+@linalg_structured_op
+def conv_2d_nhwgc_gfhwc_q(
+    I=TensorDef(
+        T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.G, S.C
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.KH, S.KW, S.C),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.G, S.FG, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution with zero point offsets.
+
+    Layout:
+      * Input: NHWGC.
+      * Kernel: GFHWC.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output. This includes the zero
+    point offsets common to quantized operations.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.oh, D.ow, D.g, D.fg, D.kh, D.kw, D.c)
+    O[D.n, D.oh, D.ow, D.g, D.fg] += (
+        TypeFn.cast_signed(
+            U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.g, D.c]
+        )
+        - TypeFn.cast_signed(U, IZp)
+    ) * (
+        TypeFn.cast_signed(U, K[D.g, D.fg, D.kh, D.kw, D.c])
+        - TypeFn.cast_signed(U, KZp)
+    )
+
+
+@linalg_structured_op
 def conv_2d_ngchw_gfchw_q(
     I=TensorDef(
         T1, S.N, S.G, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW
