@@ -2059,7 +2059,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
           MyName = Op.Name;
 
         TiedNames[MyName] = TiedName;
-        TiedNames[TiedName] = MyName;
+        TiedNames[TiedName] = std::move(MyName);
       }
     }
   }
