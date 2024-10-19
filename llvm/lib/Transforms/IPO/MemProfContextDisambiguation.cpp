@@ -4432,7 +4432,6 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
       continue;
     for (auto &BB : F) {
       for (auto &I : BB) {
-        // Memprof and callsite metadata on memory allocations no longer needed.
         I.setMetadata(LLVMContext::MD_memprof, nullptr);
         I.setMetadata(LLVMContext::MD_callsite, nullptr);
       }
