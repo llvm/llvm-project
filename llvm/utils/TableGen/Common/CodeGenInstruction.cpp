@@ -137,7 +137,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
                           " has the same name as a previous operand!");
 
     OperandInfo &OpInfo = OperandList.emplace_back(
-        Rec, std::string(ArgName), std::string(PrintMethod),
+        Rec, std::string(ArgName), std::string(std::move(PrintMethod)),
         OperandNamespace + "::" + OperandType, MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
