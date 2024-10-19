@@ -363,6 +363,14 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
   }
 }
 
+void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
+                                         raw_ostream &O, const char *Modifier) {
+  if (auto &Op = MI->getOperand(OpNum); Op.isImm() && Op.getImm() == 0)
+    return; // don't print '+0'
+  O << "+";
+  printOperand(MI, OpNum, O);
+}
+
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
                                        raw_ostream &O, const char *Modifier) {
   const MCOperand &Op = MI->getOperand(OpNum);
