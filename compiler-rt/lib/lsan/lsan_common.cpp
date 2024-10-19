@@ -293,6 +293,27 @@ struct DirectMemoryAccessor {
   void Init(uptr begin, uptr end) {};
   void *LoadPtr(uptr p) const { return *reinterpret_cast<void **>(p); }
 };
+
+struct CopyMemoryAccessor {
+  void Init(uptr begin, uptr end) {
+    this->begin = begin;
+    buffer.clear();
+    buffer.resize(end - begin);
+    MemCpyAccessible(buffer.data(), reinterpret_cast<void *>(begin),
+                     buffer.size());
+  };
+
+  void *LoadPtr(uptr p) const {
+    uptr offset = p - begin;
+    CHECK_LE(offset + sizeof(void *), reinterpret_cast<uptr>(buffer.size()));
+    return *reinterpret_cast<void **>(offset +
+                                      reinterpret_cast<uptr>(buffer.data()));
+  }
+
+ private:
+  uptr begin;
+  InternalMmapVector<char> buffer;
+};
 }  // namespace
 
 // Scans the memory range, looking for byte patterns that point into allocator
@@ -373,10 +394,10 @@ void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier) {
 }
 
 template <class Accessor>
-void ScanExtraStack(const InternalMmapVector<Range> &ranges, Frontier *frontier,
-                    Accessor &accessor) {
+void ScanRanges(const InternalMmapVector<Range> &ranges, Frontier *frontier,
+                const char *region_type, Accessor &accessor) {
   for (uptr i = 0; i < ranges.size(); i++) {
-    ScanForPointers(ranges[i].begin, ranges[i].end, frontier, "FAKE STACK",
+    ScanForPointers(ranges[i].begin, ranges[i].end, frontier, region_type,
                     kReachable, accessor);
   }
 }
@@ -384,7 +405,7 @@ void ScanExtraStack(const InternalMmapVector<Range> &ranges, Frontier *frontier,
 void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
                           Frontier *frontier) {
   DirectMemoryAccessor accessor;
-  ScanExtraStack(ranges, frontier, accessor);
+  ScanRanges(ranges, frontier, "FAKE STACK", accessor);
 }
 
 #  if SANITIZER_FUCHSIA
@@ -478,7 +499,7 @@ static void ProcessThread(tid_t os_id, uptr sp,
     ScanForPointers(stack_begin, stack_end, frontier, "STACK", kReachable,
                     accessor);
     GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
-    ScanExtraStack(extra_ranges, frontier, accessor);
+    ScanRanges(extra_ranges, frontier, "FAKE STACK", accessor);
   }
 
   if (flags()->use_tls) {
@@ -500,13 +521,14 @@ static void ProcessThread(tid_t os_id, uptr sp,
       }
     }
 #    if SANITIZER_ANDROID
+    extra_ranges.clear();
     auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
                    void *arg) -> void {
-      ScanForPointers(
-          reinterpret_cast<uptr>(dtls_begin), reinterpret_cast<uptr>(dtls_end),
-          reinterpret_cast<Frontier *>(arg), "DTLS", kReachable, accessor);
+      reinterpret_cast<InternalMmapVector<Range> *>(arg)->push_back(
+          {reinterpret_cast<uptr>(dtls_begin),
+           reinterpret_cast<uptr>(dtls_end)});
     };
-
+    ScanRanges(extra_ranges, frontier, "DTLS", accessor);
     // FIXME: There might be a race-condition here (and in Bionic) if the
     // thread is suspended in the middle of updating its DTLS. IOWs, we
     // could scan already freed memory. (probably fine for now)
@@ -535,6 +557,7 @@ static void ProcessThread(tid_t os_id, uptr sp,
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier, tid_t caller_tid,
                            uptr caller_sp) {
+  InternalMmapVector<tid_t> done_threads;
   InternalMmapVector<uptr> registers;
   InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
@@ -559,6 +582,25 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
     DirectMemoryAccessor accessor;
     ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor);
+    if (flags()->use_detached)
+      done_threads.push_back(os_id);
+  }
+
+  if (flags()->use_detached) {
+    CopyMemoryAccessor accessor;
+    InternalMmapVector<tid_t> known_threads;
+    GetRunningThreadsLocked(&known_threads);
+    Sort(done_threads.data(), done_threads.size());
+    for (tid_t os_id : known_threads) {
+      registers.clear();
+      extra_ranges.clear();
+
+      uptr i = InternalLowerBound(done_threads, os_id);
+      if (i >= done_threads.size() || done_threads[i] != os_id) {
+        uptr sp = (os_id == caller_tid) ? caller_sp : 0;
+        ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor);
+      }
+    }
   }
 
   // Add pointers reachable from ThreadContexts
