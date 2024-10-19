@@ -16,8 +16,12 @@ define {<2 x half>, <2 x half>} @vector_deinterleave_v2f16_v4f16(<4 x half> %vec
 ;
 ; CHECK-GI-LABEL: vector_deinterleave_v2f16_v4f16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v2.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    uzp2 v1.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v2.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[1]
+; CHECK-GI-NEXT:    mov v2.h[1], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[3]
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-GI-NEXT:    fmov d0, d2
 ; CHECK-GI-NEXT:    ret
   %retval = call {<2 x half>, <2 x half>} @llvm.vector.deinterleave2.v4f16(<4 x half> %vec)

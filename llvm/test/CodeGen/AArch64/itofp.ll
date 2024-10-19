@@ -1345,18 +1345,16 @@ define <3 x double> @stofp_v3i128_v3f64(<3 x i128> %a) {
 ;
 ; CHECK-GI-LABEL: stofp_v3i128_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-GI-NEXT:    sub sp, sp, #80
+; CHECK-GI-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NEXT:    .cfi_offset w21, -24
 ; CHECK-GI-NEXT:    .cfi_offset w22, -32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -48
-; CHECK-GI-NEXT:    .cfi_offset b8, -56
-; CHECK-GI-NEXT:    .cfi_offset b9, -64
 ; CHECK-GI-NEXT:    mov x19, x2
 ; CHECK-GI-NEXT:    mov x20, x3
 ; CHECK-GI-NEXT:    mov x21, x4
@@ -1364,19 +1362,24 @@ define <3 x double> @stofp_v3i128_v3f64(<3 x i128> %a) {
 ; CHECK-GI-NEXT:    bl __floattidf
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    mov x1, x20
-; CHECK-GI-NEXT:    fmov d8, d0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floattidf
 ; CHECK-GI-NEXT:    mov x0, x21
 ; CHECK-GI-NEXT:    mov x1, x22
-; CHECK-GI-NEXT:    fmov d9, d0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floattidf
-; CHECK-GI-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q1, q3, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fmov d2, d0
-; CHECK-GI-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    fmov d0, d8
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fmov d1, d9
-; CHECK-GI-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v3.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov d1, v3.d[1]
+; CHECK-GI-NEXT:    fmov d0, d3
+; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i128> %a to <3 x double>
@@ -1422,18 +1425,16 @@ define <3 x double> @utofp_v3i128_v3f64(<3 x i128> %a) {
 ;
 ; CHECK-GI-LABEL: utofp_v3i128_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-GI-NEXT:    sub sp, sp, #80
+; CHECK-GI-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NEXT:    .cfi_offset w21, -24
 ; CHECK-GI-NEXT:    .cfi_offset w22, -32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -48
-; CHECK-GI-NEXT:    .cfi_offset b8, -56
-; CHECK-GI-NEXT:    .cfi_offset b9, -64
 ; CHECK-GI-NEXT:    mov x19, x2
 ; CHECK-GI-NEXT:    mov x20, x3
 ; CHECK-GI-NEXT:    mov x21, x4
@@ -1441,19 +1442,24 @@ define <3 x double> @utofp_v3i128_v3f64(<3 x i128> %a) {
 ; CHECK-GI-NEXT:    bl __floatuntidf
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    mov x1, x20
-; CHECK-GI-NEXT:    fmov d8, d0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floatuntidf
 ; CHECK-GI-NEXT:    mov x0, x21
 ; CHECK-GI-NEXT:    mov x1, x22
-; CHECK-GI-NEXT:    fmov d9, d0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floatuntidf
-; CHECK-GI-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q1, q3, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fmov d2, d0
-; CHECK-GI-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    fmov d0, d8
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fmov d1, d9
-; CHECK-GI-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v3.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov d1, v3.d[1]
+; CHECK-GI-NEXT:    fmov d0, d3
+; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i128> %a to <3 x double>
@@ -2009,13 +2015,16 @@ define <3 x double> @stofp_v3i32_v3f64(<3 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: stofp_v3i32_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v1.2d, v0.2s, #0
-; CHECK-GI-NEXT:    sshll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    scvtf v3.2d, v1.2d
-; CHECK-GI-NEXT:    scvtf v2.2d, v0.2d
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    sshll v0.2d, v1.2s, #0
+; CHECK-GI-NEXT:    sshll v1.2d, v2.2s, #0
+; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    scvtf v2.2d, v1.2d
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-GI-NEXT:    mov d1, v3.d[1]
-; CHECK-GI-NEXT:    fmov d0, d3
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i32> %a to <3 x double>
@@ -2037,13 +2046,16 @@ define <3 x double> @utofp_v3i32_v3f64(<3 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: utofp_v3i32_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ushll v1.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    ucvtf v3.2d, v1.2d
-; CHECK-GI-NEXT:    ucvtf v2.2d, v0.2d
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    ushll v0.2d, v1.2s, #0
+; CHECK-GI-NEXT:    ushll v1.2d, v2.2s, #0
+; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    ucvtf v2.2d, v1.2d
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-GI-NEXT:    mov d1, v3.d[1]
-; CHECK-GI-NEXT:    fmov d0, d3
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i32> %a to <3 x double>
@@ -2596,7 +2608,11 @@ define <3 x double> @stofp_v3i16_v3f64(<3 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: stofp_v3i16_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    sshll v0.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    sshll2 v1.2d, v1.4s, #0
 ; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
@@ -2626,7 +2642,11 @@ define <3 x double> @utofp_v3i16_v3f64(<3 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: utofp_v3i16_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll v0.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    ushll2 v1.2d, v1.4s, #0
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
@@ -4328,7 +4348,9 @@ define <3 x float> @stofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-GI-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -4412,7 +4434,9 @@ define <3 x float> @utofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-GI-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -4461,13 +4485,16 @@ define <3 x float> @stofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    scvtf v1.2d, v2.2d
 ; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-GI-NEXT:    fcvtn v2.2s, v2.2d
-; CHECK-GI-NEXT:    fcvtn v1.2s, v0.2d
-; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-GI-NEXT:    fcvtn v1.2s, v1.2d
+; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[0], v2.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v2.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v2.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i64> %a to <3 x float>
@@ -4493,13 +4520,16 @@ define <3 x float> @utofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    ucvtf v1.2d, v2.2d
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-GI-NEXT:    fcvtn v2.2s, v2.2d
-; CHECK-GI-NEXT:    fcvtn v1.2s, v0.2d
-; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-GI-NEXT:    fcvtn v1.2s, v1.2d
+; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[0], v2.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v2.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v2.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i64> %a to <3 x float>
@@ -4831,20 +4861,42 @@ entry:
 }
 
 define <3 x float> @stofp_v3i32_v3f32(<3 x i32> %a) {
-; CHECK-LABEL: stofp_v3i32_v3f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: stofp_v3i32_v3f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: stofp_v3i32_v3f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    scvtf v1.4s, v1.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i32> %a to <3 x float>
   ret <3 x float> %c
 }
 
 define <3 x float> @utofp_v3i32_v3f32(<3 x i32> %a) {
-; CHECK-LABEL: utofp_v3i32_v3f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: utofp_v3i32_v3f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: utofp_v3i32_v3f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    ucvtf v1.4s, v1.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i32> %a to <3 x float>
   ret <3 x float> %c
@@ -4977,22 +5029,48 @@ entry:
 }
 
 define <3 x float> @stofp_v3i16_v3f32(<3 x i16> %a) {
-; CHECK-LABEL: stofp_v3i16_v3f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: stofp_v3i16_v3f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: stofp_v3i16_v3f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    sshll v0.4s, v1.4h, #0
+; CHECK-GI-NEXT:    scvtf v1.4s, v0.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i16> %a to <3 x float>
   ret <3 x float> %c
 }
 
 define <3 x float> @utofp_v3i16_v3f32(<3 x i16> %a) {
-; CHECK-LABEL: utofp_v3i16_v3f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: utofp_v3i16_v3f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: utofp_v3i16_v3f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    ushll v0.4s, v1.4h, #0
+; CHECK-GI-NEXT:    ucvtf v1.4s, v0.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i16> %a to <3 x float>
   ret <3 x float> %c
@@ -5258,7 +5336,10 @@ define <3 x float> @stofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    scvtf v1.4s, v0.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i8> %a to <3 x float>
@@ -5288,7 +5369,10 @@ define <3 x float> @utofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    ucvtf v1.4s, v0.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i8> %a to <3 x float>
@@ -5690,11 +5774,14 @@ define <2 x half> @stofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov x1, x20
 ; CHECK-GI-NOFP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NOFP16-NEXT:    bl __floattisf
-; CHECK-GI-NOFP16-NEXT:    fcvt h1, s0
-; CHECK-GI-NOFP16-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-GI-NOFP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    add sp, sp, #48
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -5721,7 +5808,10 @@ define <2 x half> @stofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[0]
-; CHECK-GI-FP16-NEXT:    fmov d0, d1
+; CHECK-GI-FP16-NEXT:    mov h0, v1.h[1]
+; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    add sp, sp, #48
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -5803,11 +5893,14 @@ define <2 x half> @utofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov x1, x20
 ; CHECK-GI-NOFP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NOFP16-NEXT:    bl __floatuntisf
-; CHECK-GI-NOFP16-NEXT:    fcvt h1, s0
-; CHECK-GI-NOFP16-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-GI-NOFP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    add sp, sp, #48
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -5834,7 +5927,10 @@ define <2 x half> @utofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[0]
-; CHECK-GI-FP16-NEXT:    fmov d0, d1
+; CHECK-GI-FP16-NEXT:    mov h0, v1.h[1]
+; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    add sp, sp, #48
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -5927,55 +6023,63 @@ define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: stofp_v3i128_v3f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    sub sp, sp, #80
-; CHECK-GI-NOFP16-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-GI-NOFP16-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-NOFP16-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-GI-NOFP16-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-NOFP16-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w21, -24
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w22, -32
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w30, -48
+; CHECK-GI-NOFP16-NEXT:    .cfi_offset b8, -56
+; CHECK-GI-NOFP16-NEXT:    .cfi_offset b9, -64
 ; CHECK-GI-NOFP16-NEXT:    mov x19, x2
 ; CHECK-GI-NOFP16-NEXT:    mov x20, x3
 ; CHECK-GI-NOFP16-NEXT:    mov x21, x4
 ; CHECK-GI-NOFP16-NEXT:    mov x22, x5
 ; CHECK-GI-NOFP16-NEXT:    bl __floattisf
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    mov x0, x19
 ; CHECK-GI-NOFP16-NEXT:    mov x1, x20
-; CHECK-GI-NOFP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    fcvt h8, s0
 ; CHECK-GI-NOFP16-NEXT:    bl __floattisf
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    mov x0, x21
 ; CHECK-GI-NOFP16-NEXT:    mov x1, x22
-; CHECK-GI-NOFP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    fcvt h9, s0
 ; CHECK-GI-NOFP16-NEXT:    bl __floattisf
-; CHECK-GI-NOFP16-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    fmov w8, s8
 ; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-NOFP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; CHECK-GI-NOFP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.16b, v1.16b
-; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NOFP16-NEXT:    add sp, sp, #80
+; CHECK-GI-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], w8
+; CHECK-GI-NOFP16-NEXT:    fmov w8, s9
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], w8
+; CHECK-GI-NOFP16-NEXT:    fmov w8, s0
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, v1.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov w9, v1.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], w8
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], w9
+; CHECK-GI-NOFP16-NEXT:    fmov d0, d1
+; CHECK-GI-NOFP16-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v3i128_v3f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    sub sp, sp, #80
-; CHECK-GI-FP16-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-GI-FP16-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-FP16-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-GI-FP16-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-FP16-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w21, -24
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w22, -32
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w30, -48
+; CHECK-GI-FP16-NEXT:    .cfi_offset b8, -56
+; CHECK-GI-FP16-NEXT:    .cfi_offset b9, -64
 ; CHECK-GI-FP16-NEXT:    mov x19, x2
 ; CHECK-GI-FP16-NEXT:    mov x20, x3
 ; CHECK-GI-FP16-NEXT:    mov x21, x4
@@ -5983,24 +6087,28 @@ define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-GI-FP16-NEXT:    bl __floattihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x19
 ; CHECK-GI-FP16-NEXT:    mov x1, x20
-; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-FP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    fmov s8, s0
 ; CHECK-GI-FP16-NEXT:    bl __floattihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x21
 ; CHECK-GI-FP16-NEXT:    mov x1, x22
-; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    fmov s9, s0
 ; CHECK-GI-FP16-NEXT:    bl __floattihf
-; CHECK-GI-FP16-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
-; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-FP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
-; CHECK-GI-FP16-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-FP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.16b, v1.16b
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-FP16-NEXT:    add sp, sp, #80
+; CHECK-GI-FP16-NEXT:    fmov w8, s8
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    mov v1.s[0], w8
+; CHECK-GI-FP16-NEXT:    fmov w8, s9
+; CHECK-GI-FP16-NEXT:    mov v1.s[1], w8
+; CHECK-GI-FP16-NEXT:    fmov w8, s0
+; CHECK-GI-FP16-NEXT:    mov v1.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov w8, v1.s[1]
+; CHECK-GI-FP16-NEXT:    mov w9, v1.s[2]
+; CHECK-GI-FP16-NEXT:    mov v1.h[1], w8
+; CHECK-GI-FP16-NEXT:    mov v1.h[2], w9
+; CHECK-GI-FP16-NEXT:    fmov d0, d1
+; CHECK-GI-FP16-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <3 x i128> %a to <3 x half>
@@ -6092,55 +6200,63 @@ define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: utofp_v3i128_v3f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    sub sp, sp, #80
-; CHECK-GI-NOFP16-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-GI-NOFP16-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-NOFP16-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-GI-NOFP16-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-NOFP16-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w21, -24
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w22, -32
 ; CHECK-GI-NOFP16-NEXT:    .cfi_offset w30, -48
+; CHECK-GI-NOFP16-NEXT:    .cfi_offset b8, -56
+; CHECK-GI-NOFP16-NEXT:    .cfi_offset b9, -64
 ; CHECK-GI-NOFP16-NEXT:    mov x19, x2
 ; CHECK-GI-NOFP16-NEXT:    mov x20, x3
 ; CHECK-GI-NOFP16-NEXT:    mov x21, x4
 ; CHECK-GI-NOFP16-NEXT:    mov x22, x5
 ; CHECK-GI-NOFP16-NEXT:    bl __floatuntisf
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    mov x0, x19
 ; CHECK-GI-NOFP16-NEXT:    mov x1, x20
-; CHECK-GI-NOFP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    fcvt h8, s0
 ; CHECK-GI-NOFP16-NEXT:    bl __floatuntisf
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    mov x0, x21
 ; CHECK-GI-NOFP16-NEXT:    mov x1, x22
-; CHECK-GI-NOFP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NOFP16-NEXT:    fcvt h9, s0
 ; CHECK-GI-NOFP16-NEXT:    bl __floatuntisf
-; CHECK-GI-NOFP16-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    fmov w8, s8
 ; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-GI-NOFP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-NOFP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; CHECK-GI-NOFP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.16b, v1.16b
-; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NOFP16-NEXT:    add sp, sp, #80
+; CHECK-GI-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], w8
+; CHECK-GI-NOFP16-NEXT:    fmov w8, s9
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], w8
+; CHECK-GI-NOFP16-NEXT:    fmov w8, s0
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, v1.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov w9, v1.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], w8
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], w9
+; CHECK-GI-NOFP16-NEXT:    fmov d0, d1
+; CHECK-GI-NOFP16-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v3i128_v3f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    sub sp, sp, #80
-; CHECK-GI-FP16-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-GI-FP16-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-FP16-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-GI-FP16-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-FP16-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w21, -24
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w22, -32
 ; CHECK-GI-FP16-NEXT:    .cfi_offset w30, -48
+; CHECK-GI-FP16-NEXT:    .cfi_offset b8, -56
+; CHECK-GI-FP16-NEXT:    .cfi_offset b9, -64
 ; CHECK-GI-FP16-NEXT:    mov x19, x2
 ; CHECK-GI-FP16-NEXT:    mov x20, x3
 ; CHECK-GI-FP16-NEXT:    mov x21, x4
@@ -6148,24 +6264,28 @@ define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-GI-FP16-NEXT:    bl __floatuntihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x19
 ; CHECK-GI-FP16-NEXT:    mov x1, x20
-; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-FP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    fmov s8, s0
 ; CHECK-GI-FP16-NEXT:    bl __floatuntihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x21
 ; CHECK-GI-FP16-NEXT:    mov x1, x22
-; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-FP16-NEXT:    fmov s9, s0
 ; CHECK-GI-FP16-NEXT:    bl __floatuntihf
-; CHECK-GI-FP16-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
-; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-FP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
-; CHECK-GI-FP16-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-FP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.16b, v1.16b
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-FP16-NEXT:    add sp, sp, #80
+; CHECK-GI-FP16-NEXT:    fmov w8, s8
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    mov v1.s[0], w8
+; CHECK-GI-FP16-NEXT:    fmov w8, s9
+; CHECK-GI-FP16-NEXT:    mov v1.s[1], w8
+; CHECK-GI-FP16-NEXT:    fmov w8, s0
+; CHECK-GI-FP16-NEXT:    mov v1.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov w8, v1.s[1]
+; CHECK-GI-FP16-NEXT:    mov w9, v1.s[2]
+; CHECK-GI-FP16-NEXT:    mov v1.h[1], w8
+; CHECK-GI-FP16-NEXT:    mov v1.h[2], w9
+; CHECK-GI-FP16-NEXT:    fmov d0, d1
+; CHECK-GI-FP16-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <3 x i128> %a to <3 x half>
@@ -6202,6 +6322,9 @@ define <2 x half> @stofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v2i64_v2f16:
@@ -6210,6 +6333,8 @@ define <2 x half> @stofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-FP16-NEXT:    fcvt h0, d0
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d1
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -6248,6 +6373,9 @@ define <2 x half> @utofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v2i64_v2f16:
@@ -6256,6 +6384,8 @@ define <2 x half> @utofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-FP16-NEXT:    fcvt h0, d0
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d1
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -6288,7 +6418,18 @@ define <3 x half> @stofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-GI-NOFP16-NEXT:    fcvtn2 v0.4s, v1.2d
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v3i64_v3f16:
@@ -6303,8 +6444,16 @@ define <3 x half> @stofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-FP16-NEXT:    fcvt h0, d0
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d1
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-GI-FP16-NEXT:    fmov w8, s0
+; CHECK-GI-FP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-FP16-NEXT:    fmov w8, s1
+; CHECK-GI-FP16-NEXT:    mov v0.s[1], w8
+; CHECK-GI-FP16-NEXT:    fmov w8, s2
+; CHECK-GI-FP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-FP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], w9
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -6336,7 +6485,18 @@ define <3 x half> @utofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-GI-NOFP16-NEXT:    fcvtn2 v0.4s, v1.2d
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v3i64_v3f16:
@@ -6351,8 +6511,16 @@ define <3 x half> @utofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-FP16-NEXT:    fcvt h0, d0
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d1
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-GI-FP16-NEXT:    fmov w8, s0
+; CHECK-GI-FP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-FP16-NEXT:    fmov w8, s1
+; CHECK-GI-FP16-NEXT:    mov v0.s[1], w8
+; CHECK-GI-FP16-NEXT:    fmov w8, s2
+; CHECK-GI-FP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-FP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], w9
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -7184,6 +7352,9 @@ define <2 x half> @stofp_v2i32_v2f16(<2 x i32> %a) {
 ; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-GI-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <2 x i32> %a to <2 x half>
@@ -7204,6 +7375,9 @@ define <2 x half> @utofp_v2i32_v2f16(<2 x i32> %a) {
 ; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-GI-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <2 x i32> %a to <2 x half>
@@ -7211,22 +7385,62 @@ entry:
 }
 
 define <3 x half> @stofp_v3i32_v3f16(<3 x i32> %a) {
-; CHECK-LABEL: stofp_v3i32_v3f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: stofp_v3i32_v3f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: stofp_v3i32_v3f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    scvtf v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcvtn v1.4h, v0.4s
+; CHECK-GI-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i32> %a to <3 x half>
   ret <3 x half> %c
 }
 
 define <3 x half> @utofp_v3i32_v3f16(<3 x i32> %a) {
-; CHECK-LABEL: utofp_v3i32_v3f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: utofp_v3i32_v3f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: utofp_v3i32_v3f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    ucvtf v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcvtn v1.4h, v0.4s
+; CHECK-GI-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i32> %a to <3 x half>
   ret <3 x half> %c
@@ -7411,12 +7625,18 @@ define <2 x half> @stofp_v2i16_v2f16(<2 x i16> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v2i16_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <2 x i16> %a to <2 x half>
@@ -7446,12 +7666,18 @@ define <2 x half> @utofp_v2i16_v2f16(<2 x i16> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v2i16_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <2 x i16> %a to <2 x half>
@@ -7473,14 +7699,44 @@ define <3 x half> @stofp_v3i16_v3f16(<3 x i16> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: stofp_v3i16_v3f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NOFP16-NEXT:    sshll v0.4s, v1.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v3i16_v3f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-FP16-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-FP16-NEXT:    scvtf v1.4h, v1.4h
+; CHECK-GI-FP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-FP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-FP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-FP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-FP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-FP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <3 x i16> %a to <3 x half>
@@ -7502,14 +7758,44 @@ define <3 x half> @utofp_v3i16_v3f16(<3 x i16> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: utofp_v3i16_v3f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NOFP16-NEXT:    ushll v0.4s, v1.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v3i16_v3f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-FP16-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-FP16-NEXT:    ucvtf v1.4h, v1.4h
+; CHECK-GI-FP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-FP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-FP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-FP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-FP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-FP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <3 x i16> %a to <3 x half>
@@ -7933,6 +8219,9 @@ define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v2i8_v2f16:
@@ -7941,6 +8230,9 @@ define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-FP16-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-FP16-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <2 x i8> %a to <2 x half>
@@ -7984,6 +8276,9 @@ define <2 x half> @utofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v2i8_v2f16:
@@ -7992,6 +8287,9 @@ define <2 x half> @utofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-FP16-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <2 x i8> %a to <2 x half>
@@ -8034,7 +8332,18 @@ define <3 x half> @stofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v3i8_v3f16:
@@ -8043,7 +8352,18 @@ define <3 x half> @stofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-FP16-NEXT:    mov v0.b[1], w1
 ; CHECK-GI-FP16-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-FP16-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    scvtf v1.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-FP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-FP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-FP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-FP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-FP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <3 x i8> %a to <3 x half>
@@ -8084,7 +8404,18 @@ define <3 x half> @utofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NOFP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NOFP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v3i8_v3f16:
@@ -8093,7 +8424,18 @@ define <3 x half> @utofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-FP16-NEXT:    mov v0.b[1], w1
 ; CHECK-GI-FP16-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-FP16-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-FP16-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    ucvtf v1.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-FP16-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.s[0], w8
+; CHECK-GI-FP16-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-FP16-NEXT:    mov v0.s[1], w9
+; CHECK-GI-FP16-NEXT:    mov v0.s[2], w8
+; CHECK-GI-FP16-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-FP16-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], w8
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], w9
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <3 x i8> %a to <3 x half>

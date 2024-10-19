@@ -840,6 +840,14 @@ def unmerge_anyext_build_vector : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
 >;
 
+// Transform unmerge opaque vector -> extract vector elt
+def unmerge_opaque_vector : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_UNMERGE_VALUES): $root,
+  [{ return Helper.matchUnmergeValuesOfScalarAndVector(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
+>;
+
 // Transform x,y = unmerge(zext(z)) -> x = zext z; y = 0.
 def unmerge_zext_to_zext : GICombineRule<
   (defs root:$d),
@@ -855,7 +863,8 @@ def merge_combines: GICombineGroup<[
   unmerge_cst,
   unmerge_undef,
   unmerge_dead_to_trunc,
-  unmerge_zext_to_zext
+  unmerge_zext_to_zext,
+  unmerge_opaque_vector
 ]>;
 
 // Under certain conditions, transform:

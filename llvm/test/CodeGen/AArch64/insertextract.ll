@@ -299,12 +299,18 @@ define <3 x float> @insert_v3f32_c(<3 x float> %a, float %b, i32 %c) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    mov x8, sp
-; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0x3
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v2.s[2], v0.s[2]
+; CHECK-GI-NEXT:    str q2, [sp]
 ; CHECK-GI-NEXT:    str s1, [x8, x9, lsl #2]
-; CHECK-GI-NEXT:    ldr q0, [sp], #16
+; CHECK-GI-NEXT:    ldr q1, [sp], #16
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = insertelement <3 x float> %a, float %b, i32 %c
@@ -1019,12 +1025,18 @@ define <3 x i32> @insert_v3i32_c(<3 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    mov w9, w1
 ; CHECK-GI-NEXT:    mov x8, sp
-; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0x3
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    str q1, [sp]
 ; CHECK-GI-NEXT:    str w0, [x8, x9, lsl #2]
-; CHECK-GI-NEXT:    ldr q0, [sp], #16
+; CHECK-GI-NEXT:    ldr q1, [sp], #16
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = insertelement <3 x i32> %a, i32 %b, i32 %c
@@ -1578,10 +1590,13 @@ define float @extract_v3f32_c(<3 x float> %a, i32 %c) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    mov x8, sp
-; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0x3
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    str q1, [sp]
 ; CHECK-GI-NEXT:    ldr s0, [x8, x9, lsl #2]
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
@@ -2272,10 +2287,13 @@ define i32 @extract_v3i32_c(<3 x i32> %a, i32 %c) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    mov x8, sp
-; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0x3
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    str q1, [sp]
 ; CHECK-GI-NEXT:    ldr w0, [x8, x9, lsl #2]
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret

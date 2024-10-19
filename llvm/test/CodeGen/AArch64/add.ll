@@ -343,10 +343,24 @@ entry:
 }
 
 define <3 x i32> @v3i32(<3 x i32> %d, <3 x i32> %e) {
-; CHECK-LABEL: v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v3.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v2.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[2]
+; CHECK-GI-NEXT:    add v1.4s, v2.4s, v3.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %s = add <3 x i32> %d, %e
   ret <3 x i32> %s
@@ -408,8 +422,9 @@ define <3 x i64> @v3i64(<3 x i64> %d, <3 x i64> %e) {
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    add x8, x8, x9
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    add v0.2d, v0.2d, v3.2d
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret

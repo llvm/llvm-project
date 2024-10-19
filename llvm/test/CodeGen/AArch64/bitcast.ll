@@ -634,10 +634,27 @@ define <8 x i64> @bitcast_v16i32_v8i64(<16 x i32> %a, <16 x i32> %b){
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <6 x i16> @bitcast_v3i32_v6i16(<3 x i32> %a, <3 x i32> %b){
-; CHECK-LABEL: bitcast_v3i32_v6i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bitcast_v3i32_v6i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bitcast_v3i32_v6i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v3.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v2.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[2]
+; CHECK-GI-NEXT:    add v1.4s, v2.4s, v3.4s
+; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
+; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
+; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
+; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
+; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
+; CHECK-GI-NEXT:    ret
   %c = add <3 x i32> %a, %b
   %d = bitcast <3 x i32> %c to <6 x i16>
   ret <6 x i16> %d

@@ -375,10 +375,15 @@ define amdgpu_cs <3 x i8> @abs_vgpr_v3i8(<3 x i8>  %arg) {
 define amdgpu_cs <2 x i16> @abs_sgpr_v2i16(<2 x i16> inreg %arg) {
 ; GFX6-LABEL: abs_sgpr_v2i16:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX6-NEXT:    s_sext_i32_i16 s1, s1
-; GFX6-NEXT:    s_abs_i32 s0, s0
+; GFX6-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX6-NEXT:    s_abs_i32 s1, s1
+; GFX6-NEXT:    s_abs_i32 s0, s0
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX6-NEXT:    s_or_b32 s0, s0, s1
+; GFX6-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: abs_sgpr_v2i16:
@@ -415,6 +420,11 @@ define amdgpu_cs <2 x i16> @abs_vgpr_v2i16(<2 x i16> %arg) {
 ; GFX6-NEXT:    v_max_i32_e32 v0, v0, v2
 ; GFX6-NEXT:    v_sub_i32_e32 v2, vcc, 0, v1
 ; GFX6-NEXT:    v_max_i32_e32 v1, v1, v2
+; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    ; return to shader part epilog

@@ -48,10 +48,21 @@ define <2 x i32> @test_signed_v2f32_v2i32(<2 x float> %f) {
 }
 
 define <3 x i32> @test_signed_v3f32_v3i32(<3 x float> %f) {
-; CHECK-LABEL: test_signed_v3f32_v3i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_signed_v3f32_v3i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_signed_v3f32_v3i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
     %x = call <3 x i32> @llvm.fptosi.sat.v3f32.v3i32(<3 x float> %f)
     ret <3 x i32> %x
 }
@@ -320,7 +331,10 @@ define <3 x i32> @test_signed_v3f64_v3i32(<3 x double> %f) {
 ; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    uzp1 v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    ret
     %x = call <3 x i32> @llvm.fptosi.sat.v3f64.v3i32(<3 x double> %f)
     ret <3 x i32> %x
@@ -383,36 +397,35 @@ define <5 x i32> @test_signed_v5f64_v5i32(<5 x double> %f) {
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-GI-NEXT:    fcvtzs v3.2d, v4.2d
+; CHECK-GI-NEXT:    fcvtzs v4.2d, v4.2d
 ; CHECK-GI-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-GI-NEXT:    fcvtzs v1.2d, v2.2d
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI12_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI12_0
-; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
+; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    cmgt v5.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v5.16b
+; CHECK-GI-NEXT:    cmgt v5.2d, v2.2d, v4.2d
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI12_0]
+; CHECK-GI-NEXT:    bit v2.16b, v4.16b, v5.16b
+; CHECK-GI-NEXT:    cmgt v6.2d, v0.2d, v3.2d
+; CHECK-GI-NEXT:    cmgt v7.2d, v1.2d, v3.2d
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v6.16b
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v7.16b
 ; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    ldr q5, [x8, :lo12:.LCPI12_0]
-; CHECK-GI-NEXT:    bit v2.16b, v3.16b, v4.16b
-; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, v5.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v1.2d, v5.2d
-; CHECK-GI-NEXT:    bif v0.16b, v5.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v5.16b, v4.16b
-; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v5.2d
-; CHECK-GI-NEXT:    bif v2.16b, v5.16b, v3.16b
-; CHECK-GI-NEXT:    mov d3, v0.d[1]
-; CHECK-GI-NEXT:    mov d4, v1.d[1]
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    fmov x2, d1
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    // kill: def $w2 killed $w2 killed $x2
-; CHECK-GI-NEXT:    fmov x4, d2
-; CHECK-GI-NEXT:    fmov x1, d3
-; CHECK-GI-NEXT:    fmov x3, d4
-; CHECK-GI-NEXT:    // kill: def $w4 killed $w4 killed $x4
-; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 killed $x1
-; CHECK-GI-NEXT:    // kill: def $w3 killed $w3 killed $x3
+; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mov v1.16b, v4.16b
+; CHECK-GI-NEXT:    bsl v1.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    mov s2, v0.s[1]
+; CHECK-GI-NEXT:    mov s3, v0.s[2]
+; CHECK-GI-NEXT:    mov s4, v0.s[3]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    mov v1.s[0], v1.s[0]
+; CHECK-GI-NEXT:    fmov w1, s2
+; CHECK-GI-NEXT:    fmov w2, s3
+; CHECK-GI-NEXT:    fmov w3, s4
+; CHECK-GI-NEXT:    fmov w4, s1
 ; CHECK-GI-NEXT:    ret
     %x = call <5 x i32> @llvm.fptosi.sat.v5f64.v5i32(<5 x double> %f)
     ret <5 x i32> %x
@@ -431,49 +444,49 @@ define <6 x i32> @test_signed_v6f64_v6i32(<6 x double> %f) {
 ;
 ; CHECK-GI-LABEL: test_signed_v6f64_v6i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    adrp x8, .LCPI13_1
+; CHECK-GI-NEXT:    mov v4.d[1], v5.d[0]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-GI-NEXT:    mov v4.d[1], v5.d[0]
 ; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI13_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
+; CHECK-GI-NEXT:    ldr q6, [x8, :lo12:.LCPI13_0]
+; CHECK-GI-NEXT:    fcvtzs v1.2d, v4.2d
 ; CHECK-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-GI-NEXT:    fcvtzs v1.2d, v2.2d
-; CHECK-GI-NEXT:    fcvtzs v2.2d, v4.2d
+; CHECK-GI-NEXT:    fcvtzs v2.2d, v2.2d
+; CHECK-GI-NEXT:    cmgt v4.2d, v3.2d, v1.2d
+; CHECK-GI-NEXT:    cmgt v5.2d, v3.2d, v2.2d
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v4.16b
 ; CHECK-GI-NEXT:    cmgt v4.2d, v3.2d, v0.2d
-; CHECK-GI-NEXT:    cmgt v5.2d, v3.2d, v1.2d
-; CHECK-GI-NEXT:    cmgt v6.2d, v3.2d, v2.2d
+; CHECK-GI-NEXT:    bif v2.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v4.16b
-; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
-; CHECK-GI-NEXT:    bif v2.16b, v3.16b, v6.16b
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    cmgt v4.2d, v0.2d, v3.2d
-; CHECK-GI-NEXT:    cmgt v5.2d, v1.2d, v3.2d
-; CHECK-GI-NEXT:    cmgt v6.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v4.16b
-; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
-; CHECK-GI-NEXT:    bif v2.16b, v3.16b, v6.16b
-; CHECK-GI-NEXT:    mov d3, v0.d[1]
-; CHECK-GI-NEXT:    mov d4, v1.d[1]
-; CHECK-GI-NEXT:    mov d5, v2.d[1]
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    fmov x2, d1
-; CHECK-GI-NEXT:    fmov x4, d2
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    // kill: def $w2 killed $w2 killed $x2
-; CHECK-GI-NEXT:    // kill: def $w4 killed $w4 killed $x4
-; CHECK-GI-NEXT:    fmov x1, d3
-; CHECK-GI-NEXT:    fmov x3, d4
-; CHECK-GI-NEXT:    fmov x5, d5
-; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 killed $x1
-; CHECK-GI-NEXT:    // kill: def $w3 killed $w3 killed $x3
-; CHECK-GI-NEXT:    // kill: def $w5 killed $w5 killed $x5
+; CHECK-GI-NEXT:    cmgt v3.2d, v1.2d, v6.2d
+; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v6.2d
+; CHECK-GI-NEXT:    bif v1.16b, v6.16b, v3.16b
+; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, v6.2d
+; CHECK-GI-NEXT:    bif v2.16b, v6.16b, v4.16b
+; CHECK-GI-NEXT:    bif v0.16b, v6.16b, v3.16b
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
+; CHECK-GI-NEXT:    mov v1.s[0], v1.s[0]
+; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    fmov x8, d3
+; CHECK-GI-NEXT:    mov v1.s[1], w8
+; CHECK-GI-NEXT:    mov s2, v0.s[1]
+; CHECK-GI-NEXT:    mov s3, v0.s[2]
+; CHECK-GI-NEXT:    mov s4, v0.s[3]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    mov s5, v1.s[1]
+; CHECK-GI-NEXT:    fmov w1, s2
+; CHECK-GI-NEXT:    fmov w2, s3
+; CHECK-GI-NEXT:    fmov w3, s4
+; CHECK-GI-NEXT:    fmov w4, s1
+; CHECK-GI-NEXT:    fmov w5, s5
 ; CHECK-GI-NEXT:    ret
     %x = call <6 x i32> @llvm.fptosi.sat.v6f64.v6i32(<6 x double> %f)
     ret <6 x i32> %x
@@ -902,14 +915,17 @@ define <3 x i32> @test_signed_v3f128_v3i32(<3 x fp128> %f) {
 ; CHECK-GI-NEXT:    mov w19, w0
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    bl __unordtf2
-; CHECK-GI-NEXT:    mov v0.s[0], w21
+; CHECK-GI-NEXT:    mov v1.s[0], w21
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    csel w8, wzr, w19, ne
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #112] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x22, x21, [sp, #96] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v0.s[1], w23
+; CHECK-GI-NEXT:    mov v1.s[1], w23
 ; CHECK-GI-NEXT:    ldp x30, x23, [sp, #80] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    add sp, sp, #128
 ; CHECK-GI-NEXT:    ret
     %x = call <3 x i32> @llvm.fptosi.sat.v3f128.v3i32(<3 x fp128> %f)
@@ -1221,11 +1237,24 @@ define <2 x i32> @test_signed_v2f16_v2i32(<2 x half> %f) {
 }
 
 define <3 x i32> @test_signed_v3f16_v3i32(<3 x half> %f) {
-; CHECK-LABEL: test_signed_v3f16_v3i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_signed_v3f16_v3i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-SD-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_signed_v3f16_v3i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    fcvtl v0.4s, v1.4h
+; CHECK-GI-NEXT:    fcvtzs v1.4s, v0.4s
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
     %x = call <3 x i32> @llvm.fptosi.sat.v3f16.v3i32(<3 x half> %f)
     ret <3 x i32> %x
 }
@@ -1256,18 +1285,22 @@ define <5 x i32> @test_signed_v5f16_v5i32(<5 x half> %f) {
 ;
 ; CHECK-GI-LABEL: test_signed_v5f16_v5i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
 ; CHECK-GI-NEXT:    mov v0.h[0], v0.h[4]
-; CHECK-GI-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-GI-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NEXT:    mov s2, v1.s[1]
+; CHECK-GI-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-GI-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-GI-NEXT:    mov s2, v1.s[1]
 ; CHECK-GI-NEXT:    mov s3, v1.s[2]
 ; CHECK-GI-NEXT:    mov s4, v1.s[3]
 ; CHECK-GI-NEXT:    fmov w0, s1
+; CHECK-GI-NEXT:    fmov w4, s0
 ; CHECK-GI-NEXT:    fmov w1, s2
 ; CHECK-GI-NEXT:    fmov w2, s3
-; CHECK-GI-NEXT:    fmov w4, s0
 ; CHECK-GI-NEXT:    fmov w3, s4
 ; CHECK-GI-NEXT:    ret
     %x = call <5 x i32> @llvm.fptosi.sat.v5f16.v5i32(<5 x half> %f)
@@ -1291,22 +1324,26 @@ define <6 x i32> @test_signed_v6f16_v6i32(<6 x half> %f) {
 ;
 ; CHECK-GI-LABEL: test_signed_v6f16_v6i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[4]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[5]
-; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v2.h[0], v0.h[4]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v2.h[1], v0.h[5]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
+; CHECK-GI-NEXT:    fcvtl v0.4s, v1.4h
+; CHECK-GI-NEXT:    fcvtl v1.4s, v2.4h
 ; CHECK-GI-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-GI-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-GI-NEXT:    mov s2, v0.s[1]
 ; CHECK-GI-NEXT:    mov s3, v0.s[2]
-; CHECK-GI-NEXT:    mov s4, v0.s[3]
+; CHECK-GI-NEXT:    mov s4, v1.s[1]
+; CHECK-GI-NEXT:    mov s5, v0.s[3]
 ; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    mov s5, v1.s[1]
+; CHECK-GI-NEXT:    fmov w4, s1
 ; CHECK-GI-NEXT:    fmov w1, s2
 ; CHECK-GI-NEXT:    fmov w2, s3
-; CHECK-GI-NEXT:    fmov w3, s4
-; CHECK-GI-NEXT:    fmov w4, s1
-; CHECK-GI-NEXT:    fmov w5, s5
+; CHECK-GI-NEXT:    fmov w5, s4
+; CHECK-GI-NEXT:    fmov w3, s5
 ; CHECK-GI-NEXT:    ret
     %x = call <6 x i32> @llvm.fptosi.sat.v6f16.v6i32(<6 x half> %f)
     ret <6 x i32> %x
@@ -1330,23 +1367,27 @@ define <7 x i32> @test_signed_v7f16_v7i32(<7 x half> %f) {
 ;
 ; CHECK-GI-LABEL: test_signed_v7f16_v7i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[4]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[5]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[6]
-; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v2.h[0], v0.h[4]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v2.h[1], v0.h[5]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v2.h[2], v0.h[6]
+; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
+; CHECK-GI-NEXT:    fcvtl v0.4s, v1.4h
+; CHECK-GI-NEXT:    fcvtl v1.4s, v2.4h
 ; CHECK-GI-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-GI-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-GI-NEXT:    mov s2, v0.s[1]
 ; CHECK-GI-NEXT:    mov s3, v0.s[2]
 ; CHECK-GI-NEXT:    mov s4, v0.s[3]
-; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    mov s5, v1.s[1]
 ; CHECK-GI-NEXT:    mov s6, v1.s[2]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    fmov w4, s1
 ; CHECK-GI-NEXT:    fmov w1, s2
 ; CHECK-GI-NEXT:    fmov w2, s3
 ; CHECK-GI-NEXT:    fmov w3, s4
-; CHECK-GI-NEXT:    fmov w4, s1
 ; CHECK-GI-NEXT:    fmov w5, s5
 ; CHECK-GI-NEXT:    fmov w6, s6
 ; CHECK-GI-NEXT:    ret

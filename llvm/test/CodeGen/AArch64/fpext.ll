@@ -82,9 +82,12 @@ define <3 x double> @fpext_v3f32_v3f64(<3 x float> %a) {
 ;
 ; CHECK-GI-LABEL: fpext_v3f32_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[2]
-; CHECK-GI-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-GI-NEXT:    fcvt d2, s1
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    fcvt d2, s2
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-GI-NEXT:    fcvtl v0.2d, v1.2s
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -355,10 +358,14 @@ define <3 x double> @fpext_v3f16_v3f64(<3 x half> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fcvt d0, h0
+; CHECK-GI-NEXT:    fcvt d3, h0
+; CHECK-GI-NEXT:    mov h0, v0.h[2]
 ; CHECK-GI-NEXT:    fcvt d1, h1
-; CHECK-GI-NEXT:    fcvt d2, h2
+; CHECK-GI-NEXT:    fcvt d2, h0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-GI-NEXT:    mov v3.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov d1, v3.d[1]
+; CHECK-GI-NEXT:    fmov d0, d3
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fpext <3 x half> %a to <3 x double>
@@ -403,10 +410,22 @@ entry:
 }
 
 define <3 x float> @fpext_v3f16_v3f32(<3 x half> %a) {
-; CHECK-LABEL: fpext_v3f16_v3f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fpext_v3f16_v3f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fpext_v3f16_v3f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %c = fpext <3 x half> %a to <3 x float>
   ret <3 x float> %c

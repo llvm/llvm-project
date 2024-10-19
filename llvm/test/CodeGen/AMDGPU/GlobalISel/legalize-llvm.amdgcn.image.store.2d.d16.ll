@@ -242,12 +242,23 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; UNPACKED-NEXT:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
-  ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY10]](<2 x s16>)
-  ; UNPACKED-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; UNPACKED-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-  ; UNPACKED-NEXT:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY11]](<2 x s16>)
+  ; UNPACKED-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
+  ; UNPACKED-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; UNPACKED-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; UNPACKED-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; UNPACKED-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY12]], [[C]](s32)
+  ; UNPACKED-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; UNPACKED-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST1]](<2 x s32>)
+  ; UNPACKED-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; UNPACKED-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; UNPACKED-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY13]], [[C1]](s32)
+  ; UNPACKED-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; UNPACKED-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST2]](<2 x s32>)
+  ; UNPACKED-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV5]](s32)
+  ; UNPACKED-NEXT:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY14]], [[C]](s32)
   ; UNPACKED-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; UNPACKED-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[LSHR]](s32), [[BITCAST1]](s32)
+  ; UNPACKED-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[LSHR]](s32), [[LSHR1]](s32), [[LSHR2]](s32)
   ; UNPACKED-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR2]](<3 x s32>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ;
@@ -268,26 +279,37 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX81-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX81-NEXT:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; GFX81-NEXT:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
-  ; GFX81-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY10]](<2 x s16>)
-  ; GFX81-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; GFX81-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-  ; GFX81-NEXT:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY11]](<2 x s16>)
+  ; GFX81-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
+  ; GFX81-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX81-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX81-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; GFX81-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; GFX81-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY12]], [[C]](s32)
+  ; GFX81-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX81-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST1]](<2 x s32>)
+  ; GFX81-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; GFX81-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; GFX81-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY13]], [[C1]](s32)
+  ; GFX81-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX81-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST2]](<2 x s32>)
+  ; GFX81-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV5]](s32)
+  ; GFX81-NEXT:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY14]], [[C]](s32)
   ; GFX81-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX81-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-  ; GFX81-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
-  ; GFX81-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR]], [[C]](s32)
+  ; GFX81-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; GFX81-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
+  ; GFX81-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR1]], [[C1]](s32)
   ; GFX81-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-  ; GFX81-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-  ; GFX81-NEXT:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C1]]
-  ; GFX81-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX81-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
+  ; GFX81-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; GFX81-NEXT:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR2]], [[C2]]
+  ; GFX81-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+  ; GFX81-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY15]], [[C1]](s32)
   ; GFX81-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL1]]
-  ; GFX81-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-  ; GFX81-NEXT:   [[OR2:%[0-9]+]]:_(s32) = G_OR [[C2]], [[SHL1]]
-  ; GFX81-NEXT:   [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
-  ; GFX81-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>)
-  ; GFX81-NEXT:   [[BITCAST5:%[0-9]+]]:_(<3 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<6 x s16>)
-  ; GFX81-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[BITCAST5]](<3 x s32>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
+  ; GFX81-NEXT:   [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+  ; GFX81-NEXT:   [[OR2:%[0-9]+]]:_(s32) = G_OR [[COPY15]], [[SHL1]]
+  ; GFX81-NEXT:   [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
+  ; GFX81-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
+  ; GFX81-NEXT:   [[BITCAST6:%[0-9]+]]:_(<3 x s32>) = G_BITCAST [[CONCAT_VECTORS1]](<6 x s16>)
+  ; GFX81-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[BITCAST6]](<3 x s32>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
   ; GFX81-NEXT:   S_ENDPGM 0
   ;
   ; GFX9-LABEL: name: image_store_v3f16
@@ -308,8 +330,29 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
+  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; GFX9-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY12]], [[C]](s32)
+  ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+  ; GFX9-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX9-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST1]](<2 x s32>)
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; GFX9-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY13]], [[C1]](s32)
+  ; GFX9-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+  ; GFX9-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX9-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST2]](<2 x s32>)
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV5]](s32)
+  ; GFX9-NEXT:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY14]], [[C]](s32)
+  ; GFX9-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX9-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+  ; GFX9-NEXT:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>)
+  ; GFX9-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS1]](<4 x s16>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-LABEL: name: image_store_v3f16
@@ -330,8 +373,29 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
+  ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; GFX10-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY12]], [[C]](s32)
+  ; GFX10-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+  ; GFX10-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX10-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST1]](<2 x s32>)
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; GFX10-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY13]], [[C1]](s32)
+  ; GFX10-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+  ; GFX10-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX10-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST2]](<2 x s32>)
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV5]](s32)
+  ; GFX10-NEXT:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY14]], [[C]](s32)
+  ; GFX10-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
   ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+  ; GFX10-NEXT:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>)
+  ; GFX10-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS1]](<4 x s16>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
   ; GFX10-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: image_store_v3f16
@@ -352,7 +416,28 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; GFX12-NEXT:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; GFX12-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
-  ; GFX12-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
+  ; GFX12-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX12-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX12-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; GFX12-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; GFX12-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY12]], [[C]](s32)
+  ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+  ; GFX12-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX12-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST1]](<2 x s32>)
+  ; GFX12-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; GFX12-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; GFX12-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY13]], [[C1]](s32)
+  ; GFX12-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+  ; GFX12-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[CONCAT_VECTORS]](<4 x s16>)
+  ; GFX12-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST2]](<2 x s32>)
+  ; GFX12-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV5]](s32)
+  ; GFX12-NEXT:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY14]], [[C]](s32)
+  ; GFX12-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+  ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+  ; GFX12-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+  ; GFX12-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS1]](<4 x s16>), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>), align 8, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.image.store.2d.v3f16.i32(<3 x half> %in, i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void

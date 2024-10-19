@@ -712,6 +712,9 @@ define <2 x i16> @v_lshr_v2i16(<2 x i16> %value, <2 x i16> %amount) {
 ; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v3
 ; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v1, v2, v1
+; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_lshr_v2i16:
@@ -741,8 +744,11 @@ define <2 x i16> @v_lshr_v2i16_15(<2 x i16> %value) {
 ; GFX6-LABEL: v_lshr_v2i16_15:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_bfe_u32 v0, v0, 15, 1
 ; GFX6-NEXT:    v_bfe_u32 v1, v1, 15, 1
+; GFX6-NEXT:    v_bfe_u32 v0, v0, 15, 1
+; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_lshr_v2i16_15:

@@ -236,9 +236,12 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX6-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, v3
 ; GFX6-GISEL-NEXT:    v_frexp_exp_i32_f32_e32 v5, v1
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
-; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0, v5, vcc
+; GFX6-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: test_frexp_v2f16_v2i32:
@@ -323,8 +326,11 @@ define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) {
 ; GFX6-GISEL-NEXT:    v_frexp_mant_f32_e32 v3, v1
 ; GFX6-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, v2
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
-; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_frexp_v2f16_v2i32_only_use_fract:

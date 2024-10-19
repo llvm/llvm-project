@@ -922,6 +922,10 @@ public:
   bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
                                            BuildFnTy &MatchInfo);
 
+  // unmerge_values(opaque vector) -> extract vector elt
+  bool matchUnmergeValuesOfScalarAndVector(const MachineInstr &MI,
+                                           BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;

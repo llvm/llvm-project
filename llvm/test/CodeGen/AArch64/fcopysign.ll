@@ -111,7 +111,8 @@ define <3 x double> @copysign_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-GI-NEXT:    and x9, x9, #0x8000000000000000
 ; CHECK-GI-NEXT:    fneg v1.2d, v6.2d
 ; CHECK-GI-NEXT:    orr x8, x8, x9
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    mov v2.d[0], x8
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -156,15 +157,24 @@ define <3 x float> @copysign_v3f32(<3 x float> %a, <3 x float> %b) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-GI-NEXT:    mov w9, #2147483647 // =0x7fffffff
-; CHECK-GI-NEXT:    mov v2.s[0], w9
-; CHECK-GI-NEXT:    mov v3.s[0], w8
-; CHECK-GI-NEXT:    mov v2.s[1], w9
-; CHECK-GI-NEXT:    mov v3.s[1], w8
-; CHECK-GI-NEXT:    mov v2.s[2], w9
-; CHECK-GI-NEXT:    mov v3.s[2], w8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v3.s[0], w9
+; CHECK-GI-NEXT:    mov v4.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v5.s[0], w8
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v3.s[1], w9
+; CHECK-GI-NEXT:    mov v4.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v5.s[1], w8
+; CHECK-GI-NEXT:    mov v2.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v4.s[2], v1.s[2]
+; CHECK-GI-NEXT:    mov v3.s[2], w9
+; CHECK-GI-NEXT:    mov v5.s[2], w8
+; CHECK-GI-NEXT:    and v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    and v1.16b, v4.16b, v5.16b
+; CHECK-GI-NEXT:    orr v1.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <3 x float> @llvm.copysign.v3f32(<3 x float> %a, <3 x float> %b)
@@ -203,25 +213,46 @@ define <7 x half> @copysign_v7f16(<7 x half> %a, <7 x half> %b) {
 ;
 ; CHECK-GI-LABEL: copysign_v7f16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v3.h[0], v1.h[0]
 ; CHECK-GI-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-GI-NEXT:    mov w9, #32767 // =0x7fff
-; CHECK-GI-NEXT:    fmov s2, w9
-; CHECK-GI-NEXT:    fmov s3, w8
-; CHECK-GI-NEXT:    mov v2.h[1], w9
-; CHECK-GI-NEXT:    mov v3.h[1], w8
-; CHECK-GI-NEXT:    mov v2.h[2], w9
-; CHECK-GI-NEXT:    mov v3.h[2], w8
-; CHECK-GI-NEXT:    mov v2.h[3], w9
-; CHECK-GI-NEXT:    mov v3.h[3], w8
-; CHECK-GI-NEXT:    mov v2.h[4], w9
-; CHECK-GI-NEXT:    mov v3.h[4], w8
-; CHECK-GI-NEXT:    mov v2.h[5], w9
-; CHECK-GI-NEXT:    mov v3.h[5], w8
-; CHECK-GI-NEXT:    mov v2.h[6], w9
-; CHECK-GI-NEXT:    mov v3.h[6], w8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    fmov s5, w8
+; CHECK-GI-NEXT:    fmov s4, w9
+; CHECK-GI-NEXT:    mov v2.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v5.h[1], w8
+; CHECK-GI-NEXT:    mov v3.h[1], v1.h[1]
+; CHECK-GI-NEXT:    mov v4.h[1], w9
+; CHECK-GI-NEXT:    mov v2.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v5.h[2], w8
+; CHECK-GI-NEXT:    mov v3.h[2], v1.h[2]
+; CHECK-GI-NEXT:    mov v4.h[2], w9
+; CHECK-GI-NEXT:    mov v2.h[3], v0.h[3]
+; CHECK-GI-NEXT:    mov v5.h[3], w8
+; CHECK-GI-NEXT:    mov v3.h[3], v1.h[3]
+; CHECK-GI-NEXT:    mov v4.h[3], w9
+; CHECK-GI-NEXT:    mov v2.h[4], v0.h[4]
+; CHECK-GI-NEXT:    mov v5.h[4], w8
+; CHECK-GI-NEXT:    mov v3.h[4], v1.h[4]
+; CHECK-GI-NEXT:    mov v4.h[4], w9
+; CHECK-GI-NEXT:    mov v2.h[5], v0.h[5]
+; CHECK-GI-NEXT:    mov v5.h[5], w8
+; CHECK-GI-NEXT:    mov v3.h[5], v1.h[5]
+; CHECK-GI-NEXT:    mov v4.h[5], w9
+; CHECK-GI-NEXT:    mov v2.h[6], v0.h[6]
+; CHECK-GI-NEXT:    mov v3.h[6], v1.h[6]
+; CHECK-GI-NEXT:    mov v5.h[6], w8
+; CHECK-GI-NEXT:    mov v4.h[6], w9
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    and v0.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    orr v1.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
+; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
+; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
+; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
+; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
+; CHECK-GI-NEXT:    mov v0.h[6], v1.h[6]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <7 x half> @llvm.copysign.v7f16(<7 x half> %a, <7 x half> %b)

@@ -246,10 +246,30 @@ declare <4 x i64> @llvm.bswap.v4i64(<4 x i64>)
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <3 x i16> @bswap_v3i16(<3 x i16> %a){
-; CHECK-LABEL: bswap_v3i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bswap_v3i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bswap_v3i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    rev16 v1.8b, v1.8b
+; CHECK-GI-NEXT:    umov w8, v1.h[0]
+; CHECK-GI-NEXT:    umov w9, v1.h[1]
+; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    umov w8, v1.h[2]
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
 entry:
   %res = call <3 x i16> @llvm.bswap.v3i16(<3 x i16> %a)
   ret <3 x i16> %res
@@ -257,10 +277,29 @@ entry:
 declare <3 x i16> @llvm.bswap.v3i16(<3 x i16>)
 
 define <7 x i16> @bswap_v7i16(<7 x i16> %a){
-; CHECK-LABEL: bswap_v7i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev16 v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bswap_v7i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bswap_v7i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
+; CHECK-GI-NEXT:    mov v1.h[4], v0.h[4]
+; CHECK-GI-NEXT:    mov v1.h[5], v0.h[5]
+; CHECK-GI-NEXT:    mov v1.h[6], v0.h[6]
+; CHECK-GI-NEXT:    rev16 v1.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
+; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
+; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
+; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
+; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
+; CHECK-GI-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-GI-NEXT:    ret
 entry:
   %res = call <7 x i16> @llvm.bswap.v7i16(<7 x i16> %a)
   ret <7 x i16> %res
@@ -268,10 +307,21 @@ entry:
 declare <7 x i16> @llvm.bswap.v7i16(<7 x i16>)
 
 define <3 x i32> @bswap_v3i32(<3 x i32> %a){
-; CHECK-LABEL: bswap_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev32 v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bswap_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bswap_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    rev32 v1.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %res = call <3 x i32> @llvm.bswap.v3i32(<3 x i32> %a)
   ret <3 x i32> %res

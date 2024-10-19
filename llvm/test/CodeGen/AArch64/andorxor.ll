@@ -1050,30 +1050,72 @@ entry:
 }
 
 define <3 x i32> @and_v3i32(<3 x i32> %d, <3 x i32> %e) {
-; CHECK-LABEL: and_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v3.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v2.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[2]
+; CHECK-GI-NEXT:    and v1.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %s = and <3 x i32> %d, %e
   ret <3 x i32> %s
 }
 
 define <3 x i32> @or_v3i32(<3 x i32> %d, <3 x i32> %e) {
-; CHECK-LABEL: or_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v3.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v2.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[2]
+; CHECK-GI-NEXT:    orr v1.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %s = or <3 x i32> %d, %e
   ret <3 x i32> %s
 }
 
 define <3 x i32> @xor_v3i32(<3 x i32> %d, <3 x i32> %e) {
-; CHECK-LABEL: xor_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: xor_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: xor_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v3.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v2.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[2]
+; CHECK-GI-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %s = xor <3 x i32> %d, %e
   ret <3 x i32> %s
@@ -1209,8 +1251,9 @@ define <3 x i64> @and_v3i64(<3 x i64> %d, <3 x i64> %e) {
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, x9
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1238,8 +1281,9 @@ define <3 x i64> @or_v3i64(<3 x i64> %d, <3 x i64> %e) {
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    orr x8, x8, x9
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1267,8 +1311,9 @@ define <3 x i64> @xor_v3i64(<3 x i64> %d, <3 x i64> %e) {
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    eor x8, x8, x9
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret

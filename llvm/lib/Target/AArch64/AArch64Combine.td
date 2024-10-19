@@ -322,7 +322,7 @@ def AArch64PostLegalizerCombiner
                         extractvecelt_pairwise_add, redundant_or,
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
-                        icmp_to_true_false_known_bits,
+                        icmp_to_true_false_known_bits, vector_ops_combines,
                         select_combines, fold_merge_to_zext,
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,

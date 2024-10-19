@@ -68,8 +68,20 @@ define <2 x i16> @halfinsts_add_v2i16(<2 x i16> %arg0) #1 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
   ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[COPY1]]
-  ; CHECK-NEXT:   $vgpr0 = COPY [[ADD]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[ADD1]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
+  ; CHECK-NEXT:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C]]
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST]](<2 x s16>)
+  ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C2]](s32)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST]](<2 x s16>)
+  ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[LSHR]](s32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %add = add <2 x i16> %arg0, %arg0
   ret <2 x i16> %add

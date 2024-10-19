@@ -590,14 +590,26 @@ entry:
 }
 
 define i16 @sminv_v3i16(<3 x i16> %a) {
-; CHECK-LABEL: sminv_v3i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    sminv h0, v0.4h
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sminv_v3i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-SD-NEXT:    mov v0.h[3], w8
+; CHECK-SD-NEXT:    sminv h0, v0.4h
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sminv_v3i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[3], w8
+; CHECK-GI-NEXT:    sminv h0, v1.4h
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i16 @llvm.vector.reduce.smin.v3i16(<3 x i16> %a)
   ret i16 %arg1
@@ -649,13 +661,24 @@ entry:
 }
 
 define i32 @sminv_v3i32(<3 x i32> %a) {
-; CHECK-LABEL: sminv_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
-; CHECK-NEXT:    mov v0.s[3], w8
-; CHECK-NEXT:    sminv s0, v0.4s
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sminv_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #2147483647 // =0x7fffffff
+; CHECK-SD-NEXT:    mov v0.s[3], w8
+; CHECK-SD-NEXT:    sminv s0, v0.4s
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sminv_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov w8, #2147483647 // =0x7fffffff
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[3], w8
+; CHECK-GI-NEXT:    sminv s0, v1.4s
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i32 @llvm.vector.reduce.smin.v3i32(<3 x i32> %a)
   ret i32 %arg1
@@ -954,9 +977,12 @@ define i16 @smaxv_v3i16(<3 x i16> %a) {
 ; CHECK-GI-LABEL: smaxv_v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-GI-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    smaxv h0, v0.4h
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[3], w8
+; CHECK-GI-NEXT:    smaxv h0, v1.4h
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1010,13 +1036,24 @@ entry:
 }
 
 define i32 @smaxv_v3i32(<3 x i32> %a) {
-; CHECK-LABEL: smaxv_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    mov v0.s[3], w8
-; CHECK-NEXT:    smaxv s0, v0.4s
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: smaxv_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-SD-NEXT:    mov v0.s[3], w8
+; CHECK-SD-NEXT:    smaxv s0, v0.4s
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: smaxv_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[3], w8
+; CHECK-GI-NEXT:    smaxv s0, v1.4s
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i32 @llvm.vector.reduce.smax.v3i32(<3 x i32> %a)
   ret i32 %arg1
@@ -1313,9 +1350,12 @@ define i16 @uminv_v3i16(<3 x i16> %a) {
 ; CHECK-GI-LABEL: uminv_v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    uminv h0, v0.4h
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[3], w8
+; CHECK-GI-NEXT:    uminv h0, v1.4h
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1369,13 +1409,24 @@ entry:
 }
 
 define i32 @uminv_v3i32(<3 x i32> %a) {
-; CHECK-LABEL: uminv_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    mov v0.s[3], w8
-; CHECK-NEXT:    uminv s0, v0.4s
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uminv_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-SD-NEXT:    mov v0.s[3], w8
+; CHECK-SD-NEXT:    uminv s0, v0.4s
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uminv_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[3], w8
+; CHECK-GI-NEXT:    uminv s0, v1.4s
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i32 @llvm.vector.reduce.umin.v3i32(<3 x i32> %a)
   ret i32 %arg1
@@ -1671,9 +1722,12 @@ define i16 @umaxv_v3i16(<3 x i16> %a) {
 ; CHECK-GI-LABEL: umaxv_v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-GI-NEXT:    mov w8, #0 // =0x0
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    umaxv h0, v0.4h
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
+; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[3], w8
+; CHECK-GI-NEXT:    umaxv h0, v1.4h
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1727,12 +1781,22 @@ entry:
 }
 
 define i32 @umaxv_v3i32(<3 x i32> %a) {
-; CHECK-LABEL: umaxv_v3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v0.s[3], wzr
-; CHECK-NEXT:    umaxv s0, v0.4s
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: umaxv_v3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov v0.s[3], wzr
+; CHECK-SD-NEXT:    umaxv s0, v0.4s
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: umaxv_v3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[3], wzr
+; CHECK-GI-NEXT:    umaxv s0, v1.4s
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i32 @llvm.vector.reduce.umax.v3i32(<3 x i32> %a)
   ret i32 %arg1

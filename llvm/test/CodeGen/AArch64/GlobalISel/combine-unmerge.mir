@@ -422,9 +422,12 @@ body:             |
     ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_src_vector
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $w0
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x s32>) = G_ZEXT [[COPY]](<2 x s16>)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](<2 x s32>)
-    ; CHECK-NEXT: $w0 = COPY [[UV]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[ZEXT]](<2 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[ZEXT]](<2 x s32>), [[C1]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[EVEC]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[EVEC1]](s32)
     %0:_(<2 x s16>) = COPY $w0
     %3:_(<2 x s32>) = G_ZEXT %0(<2 x s16>)
     %1:_(s32),%2:_(s32) = G_UNMERGE_VALUES %3(<2 x s32>)
@@ -539,3 +542,98 @@ body:             |
     $q0 = COPY %un1(s128)
     $q1 = COPY %un2(s128)
 ...
+
+# Check that we unmerge the opaque vector into extract vector elt
+---
+name:            test_opaque_vector_scalar
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_opaque_vector_scalar
+    ; CHECK: %opaque:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %un1:_(s64) = G_EXTRACT_VECTOR_ELT %opaque(<2 x s64>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %un2:_(s64) = G_EXTRACT_VECTOR_ELT %opaque(<2 x s64>), [[C1]](s64)
+    ; CHECK-NEXT: $x0 = COPY %un1(s64)
+    ; CHECK-NEXT: $x1 = COPY %un2(s64)
+    %opaque:_(<2 x s64>) = COPY $q0
+    %un1:_(s64), %un2:_(s64) = G_UNMERGE_VALUES %opaque(<2 x s64>)
+    $x0 = COPY %un1(s64)
+    $x1 = COPY %un2(s64)
+...
+
+# Check that we don't unmerge the opaque vector into scalars
+---
+name:            test_opaque_vector_vector
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_opaque_vector_vector
+    ; CHECK: %opaque:_(s128) = COPY $q0
+    ; CHECK-NEXT: %un1:_(s64), %un2:_(s64) = G_UNMERGE_VALUES %opaque(s128)
+    ; CHECK-NEXT: $x0 = COPY %un1(s64)
+    ; CHECK-NEXT: $x1 = COPY %un2(s64)
+    %opaque:_(s128) = COPY $q0
+    %un1:_(s64), %un2:_(s64) = G_UNMERGE_VALUES %opaque(s128)
+    $x0 = COPY %un1(s64)
+    $x1 = COPY %un2(s64)
+...
+
+# Check that we unmerge the long opaque vector into extract vector elt
+---
+name:            test_long_opaque_vector_scalar
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_long_opaque_vector_scalar
+    ; CHECK: %opaque:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %un1:_(s16) = G_EXTRACT_VECTOR_ELT %opaque(<8 x s16>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %un2:_(s16) = G_EXTRACT_VECTOR_ELT %opaque(<8 x s16>), [[C1]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: %un3:_(s16) = G_EXTRACT_VECTOR_ELT %opaque(<8 x s16>), [[C2]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: %un4:_(s16) = G_EXTRACT_VECTOR_ELT %opaque(<8 x s16>), [[C3]](s64)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: %un5:_(s16) = G_EXTRACT_VECTOR_ELT %opaque(<8 x s16>), [[C4]](s64)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+    ; CHECK-NEXT: %un6:_(s16) = G_EXTRACT_VECTOR_ELT %opaque(<8 x s16>), [[C5]](s64)
+    ; CHECK-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+    ; CHECK-NEXT: %un7:_(s16) = G_EXTRACT_VECTOR_ELT %opaque(<8 x s16>), [[C6]](s64)
+    ; CHECK-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+    ; CHECK-NEXT: %un8:_(s16) = G_EXTRACT_VECTOR_ELT %opaque(<8 x s16>), [[C7]](s64)
+    ; CHECK-NEXT: %zext1:_(s32) = G_ZEXT %un1(s16)
+    ; CHECK-NEXT: %zext2:_(s32) = G_ZEXT %un2(s16)
+    ; CHECK-NEXT: %zext3:_(s32) = G_ZEXT %un3(s16)
+    ; CHECK-NEXT: %zext4:_(s32) = G_ZEXT %un4(s16)
+    ; CHECK-NEXT: %zext5:_(s32) = G_ZEXT %un5(s16)
+    ; CHECK-NEXT: %zext6:_(s32) = G_ZEXT %un6(s16)
+    ; CHECK-NEXT: %zext7:_(s32) = G_ZEXT %un7(s16)
+    ; CHECK-NEXT: %zext8:_(s32) = G_ZEXT %un8(s16)
+    ; CHECK-NEXT: $w0 = COPY %zext1(s32)
+    ; CHECK-NEXT: $w1 = COPY %zext2(s32)
+    ; CHECK-NEXT: $w0 = COPY %zext3(s32)
+    ; CHECK-NEXT: $w1 = COPY %zext4(s32)
+    ; CHECK-NEXT: $w0 = COPY %zext5(s32)
+    ; CHECK-NEXT: $w1 = COPY %zext6(s32)
+    ; CHECK-NEXT: $w0 = COPY %zext7(s32)
+    ; CHECK-NEXT: $w1 = COPY %zext8(s32)
+    %opaque:_(<8 x s16>) = COPY $q0
+    %un1:_(s16), %un2:_(s16), %un3:_(s16), %un4:_(s16), %un5:_(s16), %un6:_(s16), %un7:_(s16), %un8:_(s16) = G_UNMERGE_VALUES %opaque(<8 x s16>)
+    %zext1:_(s32) = G_ZEXT %un1
+    %zext2:_(s32) = G_ZEXT %un2
+    %zext3:_(s32) = G_ZEXT %un3
+    %zext4:_(s32) = G_ZEXT %un4
+    %zext5:_(s32) = G_ZEXT %un5
+    %zext6:_(s32) = G_ZEXT %un6
+    %zext7:_(s32) = G_ZEXT %un7
+    %zext8:_(s32) = G_ZEXT %un8
+    $w0 = COPY %zext1(s32)
+    $w1 = COPY %zext2(s32)
+    $w0 = COPY %zext3(s32)
+    $w1 = COPY %zext4(s32)
+    $w0 = COPY %zext5(s32)
+    $w1 = COPY %zext6(s32)
+    $w0 = COPY %zext7(s32)
+    $w1 = COPY %zext8(s32)
+...
+

@@ -14,16 +14,18 @@ define <4 x i8> @global_load_v4i8_align4__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p1) :: (load (s32) from %ir.ptr, addrspace 1)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK-NEXT:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C2]](s32)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR]](s32)
-  ; CHECK-NEXT:   $vgpr2 = COPY [[LSHR1]](s32)
-  ; CHECK-NEXT:   $vgpr3 = COPY [[LSHR2]](s32)
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+  ; CHECK-NEXT:   [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C3]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[LSHR]](s32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR1]](s32)
+  ; CHECK-NEXT:   $vgpr2 = COPY [[LSHR2]](s32)
+  ; CHECK-NEXT:   $vgpr3 = COPY [[LSHR3]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %load = load <4 x i8>, ptr addrspace(1) %ptr, align 4, !range !0, !noundef !1
   ret <4 x i8> %load

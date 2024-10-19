@@ -25,10 +25,14 @@ define amdgpu_ps <4 x float> @load_2darraymsaa(<8 x i32> inreg %rsrc, i32 %s, i3
   ; GFX6-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
   ; GFX6-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2darraymsaa), 15, [[BUILD_VECTOR1]](<4 x s32>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX6-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX6-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX6-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX6-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX6-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX6-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; GFX6-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; GFX6-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; GFX6-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[UV3]](s32)
+  ; GFX6-NEXT:   $vgpr0 = COPY [[COPY12]](s32)
+  ; GFX6-NEXT:   $vgpr1 = COPY [[COPY13]](s32)
+  ; GFX6-NEXT:   $vgpr2 = COPY [[COPY14]](s32)
+  ; GFX6-NEXT:   $vgpr3 = COPY [[COPY15]](s32)
   ; GFX6-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ;
   ; GFX10NSA-LABEL: name: load_2darraymsaa
@@ -50,10 +54,14 @@ define amdgpu_ps <4 x float> @load_2darraymsaa(<8 x i32> inreg %rsrc, i32 %s, i3
   ; GFX10NSA-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2darraymsaa), 15, [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX10NSA-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10NSA-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10NSA-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10NSA-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10NSA-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10NSA-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; GFX10NSA-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; GFX10NSA-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; GFX10NSA-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[UV3]](s32)
+  ; GFX10NSA-NEXT:   $vgpr0 = COPY [[COPY12]](s32)
+  ; GFX10NSA-NEXT:   $vgpr1 = COPY [[COPY13]](s32)
+  ; GFX10NSA-NEXT:   $vgpr2 = COPY [[COPY14]](s32)
+  ; GFX10NSA-NEXT:   $vgpr3 = COPY [[COPY15]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %v = call <4 x float> @llvm.amdgcn.image.load.2darraymsaa.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %v
@@ -84,10 +92,14 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr ad
   ; GFX6-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2darraymsaa), 15, [[BUILD_VECTOR1]](<4 x s32>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX6-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
   ; GFX6-NEXT:   G_STORE [[UV4]](s32), [[MV]](p1) :: (store (s32) into %ir.out, addrspace 1)
-  ; GFX6-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX6-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX6-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX6-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX6-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; GFX6-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; GFX6-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; GFX6-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[UV3]](s32)
+  ; GFX6-NEXT:   $vgpr0 = COPY [[COPY14]](s32)
+  ; GFX6-NEXT:   $vgpr1 = COPY [[COPY15]](s32)
+  ; GFX6-NEXT:   $vgpr2 = COPY [[COPY16]](s32)
+  ; GFX6-NEXT:   $vgpr3 = COPY [[COPY17]](s32)
   ; GFX6-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ;
   ; GFX10NSA-LABEL: name: load_2darraymsaa_tfe
@@ -113,10 +125,14 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr ad
   ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2darraymsaa), 15, [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX10NSA-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
   ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[MV]](p1) :: (store (s32) into %ir.out, addrspace 1)
-  ; GFX10NSA-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10NSA-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10NSA-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10NSA-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10NSA-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
+  ; GFX10NSA-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; GFX10NSA-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
+  ; GFX10NSA-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[UV3]](s32)
+  ; GFX10NSA-NEXT:   $vgpr0 = COPY [[COPY14]](s32)
+  ; GFX10NSA-NEXT:   $vgpr1 = COPY [[COPY15]](s32)
+  ; GFX10NSA-NEXT:   $vgpr2 = COPY [[COPY16]](s32)
+  ; GFX10NSA-NEXT:   $vgpr3 = COPY [[COPY17]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2darraymsaa.sl_v4f32i32s.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue { <4 x float>, i32 } %v, 0

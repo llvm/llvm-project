@@ -157,38 +157,42 @@ define <3 x double> @frem_v3f64(<3 x double> %a, <3 x double> %b) {
 ;
 ; CHECK-GI-LABEL: frem_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str d12, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    stp d11, d10, [sp, #8] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp d9, d8, [sp, #24] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #40] // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    .cfi_offset b9, -24
-; CHECK-GI-NEXT:    .cfi_offset b10, -32
-; CHECK-GI-NEXT:    .cfi_offset b11, -40
-; CHECK-GI-NEXT:    .cfi_offset b12, -48
+; CHECK-GI-NEXT:    sub sp, sp, #80
+; CHECK-GI-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    .cfi_offset b8, -24
+; CHECK-GI-NEXT:    .cfi_offset b9, -32
+; CHECK-GI-NEXT:    .cfi_offset b10, -40
+; CHECK-GI-NEXT:    .cfi_offset b11, -48
 ; CHECK-GI-NEXT:    fmov d8, d1
 ; CHECK-GI-NEXT:    fmov d1, d3
 ; CHECK-GI-NEXT:    fmov d9, d2
 ; CHECK-GI-NEXT:    fmov d10, d4
 ; CHECK-GI-NEXT:    fmov d11, d5
 ; CHECK-GI-NEXT:    bl fmod
-; CHECK-GI-NEXT:    fmov d12, d0
-; CHECK-GI-NEXT:    fmov d0, d8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov d1, d10
+; CHECK-GI-NEXT:    fmov d0, d8
 ; CHECK-GI-NEXT:    bl fmod
-; CHECK-GI-NEXT:    fmov d8, d0
-; CHECK-GI-NEXT:    fmov d0, d9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov d1, d11
+; CHECK-GI-NEXT:    fmov d0, d9
 ; CHECK-GI-NEXT:    bl fmod
-; CHECK-GI-NEXT:    fmov d1, d8
-; CHECK-GI-NEXT:    ldp d9, d8, [sp, #24] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldp d11, d10, [sp, #8] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q1, q3, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fmov d2, d0
-; CHECK-GI-NEXT:    ldr x30, [sp, #40] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fmov d0, d12
-; CHECK-GI-NEXT:    ldr d12, [sp], #48 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-GI-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v3.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov d1, v3.d[1]
+; CHECK-GI-NEXT:    fmov d0, d3
+; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = frem <3 x double> %a, %b
@@ -420,7 +424,9 @@ define <3 x float> @frem_v3f32(<3 x float> %a, <3 x float> %b) {
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -880,7 +886,13 @@ define <7 x half> @frem_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NEXT:    ldr q2, [sp, #80] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
+; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
+; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
+; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
+; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
+; CHECK-GI-NEXT:    mov v0.h[6], v1.h[6]
 ; CHECK-GI-NEXT:    add sp, sp, #176
 ; CHECK-GI-NEXT:    ret
 entry:

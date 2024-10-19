@@ -1155,28 +1155,29 @@ define <3 x i64> @v3i64_i64(<3 x i64> %a, <3 x i64> %b, <3 x i64> %d, <3 x i64> 
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
-; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-GI-NEXT:    ldr x8, [sp]
 ; CHECK-GI-NEXT:    ldr x10, [sp, #24]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    cmgt v2.2d, v5.2d, v2.2d
-; CHECK-GI-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-GI-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-GI-NEXT:    fmov x9, d2
+; CHECK-GI-NEXT:    ldp d1, d4, [sp, #8]
+; CHECK-GI-NEXT:    cmgt v2.2d, v5.2d, v2.2d
 ; CHECK-GI-NEXT:    mov v1.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    cmgt v0.2d, v3.2d, v0.2d
+; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    sbfx x9, x9, #0, #1
 ; CHECK-GI-NEXT:    bsl v0.16b, v6.16b, v1.16b
 ; CHECK-GI-NEXT:    and x8, x8, x9
 ; CHECK-GI-NEXT:    bic x9, x10, x9
 ; CHECK-GI-NEXT:    orr x8, x8, x9
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <3 x i64> %a, %b
@@ -1227,22 +1228,37 @@ define <3 x i32> @v3i32_i32(<3 x i32> %a, <3 x i32> %b, <3 x i32> %d, <3 x i32> 
 ;
 ; CHECK-GI-LABEL: v3i32_i32:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v4.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v5.s[0], v1.s[0]
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
+; CHECK-GI-NEXT:    mov v6.s[0], w8
 ; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
-; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov v4.s[0], w8
-; CHECK-GI-NEXT:    mov v5.s[0], w9
-; CHECK-GI-NEXT:    mov v4.s[1], w8
-; CHECK-GI-NEXT:    mov v5.s[1], w9
-; CHECK-GI-NEXT:    mov v4.s[2], w8
-; CHECK-GI-NEXT:    mov v5.s[2], w9
-; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    neg v1.4s, v4.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v5.16b
-; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
-; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v4.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v5.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v6.s[1], w8
+; CHECK-GI-NEXT:    mov v4.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v5.s[2], v1.s[2]
+; CHECK-GI-NEXT:    mov v0.s[0], w9
+; CHECK-GI-NEXT:    mov v6.s[2], w8
+; CHECK-GI-NEXT:    cmgt v1.4s, v5.4s, v4.4s
+; CHECK-GI-NEXT:    mov v4.s[0], v2.s[0]
+; CHECK-GI-NEXT:    mov v5.s[0], v3.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    ushl v1.4s, v1.4s, v6.4s
+; CHECK-GI-NEXT:    neg v6.4s, v6.4s
+; CHECK-GI-NEXT:    mov v4.s[1], v2.s[1]
+; CHECK-GI-NEXT:    mov v5.s[1], v3.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], w9
+; CHECK-GI-NEXT:    sshl v1.4s, v1.4s, v6.4s
+; CHECK-GI-NEXT:    mov v4.s[2], v2.s[2]
+; CHECK-GI-NEXT:    mov v5.s[2], v3.s[2]
+; CHECK-GI-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    and v1.16b, v4.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v5.16b, v0.16b
+; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <3 x i32> %a, %b

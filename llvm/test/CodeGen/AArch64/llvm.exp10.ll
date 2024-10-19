@@ -109,11 +109,14 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s1
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    fcvt h1, s0
-; GISEL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; GISEL-NEXT:    fcvt h0, s0
+; GISEL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
 ; GISEL-NEXT:    ldr d8, [sp, #16] // 8-byte Folded Reload
-; GISEL-NEXT:    mov v0.h[1], v1.h[0]
+; GISEL-NEXT:    mov v1.h[1], v0.h[0]
+; GISEL-NEXT:    mov h0, v1.h[1]
+; GISEL-NEXT:    mov v1.h[1], v0.h[0]
+; GISEL-NEXT:    mov v0.16b, v1.16b
 ; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    add sp, sp, #32
 ; GISEL-NEXT:    ret
@@ -165,10 +168,9 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ;
 ; GISEL-LABEL: exp10_v3f16:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    sub sp, sp, #64
-; GISEL-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
-; GISEL-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
-; GISEL-NEXT:    .cfi_def_cfa_offset 64
+; GISEL-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
+; GISEL-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; GISEL-NEXT:    .cfi_def_cfa_offset 32
 ; GISEL-NEXT:    .cfi_offset w30, -16
 ; GISEL-NEXT:    .cfi_offset b8, -24
 ; GISEL-NEXT:    .cfi_offset b9, -32
@@ -178,24 +180,27 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; GISEL-NEXT:    fcvt s0, h0
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    fcvt s1, h8
-; GISEL-NEXT:    fcvt h0, s0
-; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; GISEL-NEXT:    fcvt h8, s0
 ; GISEL-NEXT:    fmov s0, s1
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    fcvt s1, h9
-; GISEL-NEXT:    fcvt h0, s0
-; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; GISEL-NEXT:    fcvt h9, s0
 ; GISEL-NEXT:    fmov s0, s1
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; GISEL-NEXT:    fmov w8, s8
 ; GISEL-NEXT:    fcvt h0, s0
-; GISEL-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
-; GISEL-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
-; GISEL-NEXT:    mov v1.h[1], v2.h[0]
-; GISEL-NEXT:    mov v1.h[2], v0.h[0]
-; GISEL-NEXT:    mov v0.16b, v1.16b
-; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; GISEL-NEXT:    add sp, sp, #64
+; GISEL-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; GISEL-NEXT:    mov v1.s[0], w8
+; GISEL-NEXT:    fmov w8, s9
+; GISEL-NEXT:    mov v1.s[1], w8
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    mov v1.s[2], w8
+; GISEL-NEXT:    mov w8, v1.s[1]
+; GISEL-NEXT:    mov w9, v1.s[2]
+; GISEL-NEXT:    mov v1.h[1], w8
+; GISEL-NEXT:    mov v1.h[2], w9
+; GISEL-NEXT:    fmov d0, d1
+; GISEL-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; GISEL-NEXT:    ret
   %r = call <3 x half> @llvm.exp10.v3f16(<3 x half> %x)
   ret <3 x half> %r
@@ -436,7 +441,9 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; GISEL-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; GISEL-NEXT:    mov v1.s[1], v2.s[0]
 ; GISEL-NEXT:    mov v1.s[2], v0.s[0]
-; GISEL-NEXT:    mov v0.16b, v1.16b
+; GISEL-NEXT:    mov v0.s[0], v1.s[0]
+; GISEL-NEXT:    mov v0.s[1], v1.s[1]
+; GISEL-NEXT:    mov v0.s[2], v1.s[2]
 ; GISEL-NEXT:    add sp, sp, #64
 ; GISEL-NEXT:    ret
   %r = call <3 x float> @llvm.exp10.v3f32(<3 x float> %x)
@@ -624,29 +631,33 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ;
 ; GISEL-LABEL: exp10_v3f64:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
-; GISEL-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; GISEL-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; GISEL-NEXT:    .cfi_def_cfa_offset 32
-; GISEL-NEXT:    .cfi_offset w30, -8
-; GISEL-NEXT:    .cfi_offset b8, -16
-; GISEL-NEXT:    .cfi_offset b9, -24
-; GISEL-NEXT:    .cfi_offset b10, -32
+; GISEL-NEXT:    sub sp, sp, #64
+; GISEL-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
+; GISEL-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; GISEL-NEXT:    .cfi_def_cfa_offset 64
+; GISEL-NEXT:    .cfi_offset w30, -16
+; GISEL-NEXT:    .cfi_offset b8, -24
+; GISEL-NEXT:    .cfi_offset b9, -32
 ; GISEL-NEXT:    fmov d8, d1
 ; GISEL-NEXT:    fmov d9, d2
 ; GISEL-NEXT:    bl exp10
-; GISEL-NEXT:    fmov d10, d0
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
+; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov d0, d8
 ; GISEL-NEXT:    bl exp10
-; GISEL-NEXT:    fmov d8, d0
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
+; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov d0, d9
 ; GISEL-NEXT:    bl exp10
-; GISEL-NEXT:    fmov d1, d8
-; GISEL-NEXT:    ldp d9, d8, [sp, #8] // 16-byte Folded Reload
-; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; GISEL-NEXT:    ldp q1, q3, [sp] // 32-byte Folded Reload
 ; GISEL-NEXT:    fmov d2, d0
-; GISEL-NEXT:    fmov d0, d10
-; GISEL-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload
+; GISEL-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; GISEL-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; GISEL-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; GISEL-NEXT:    mov v3.d[1], v1.d[0]
+; GISEL-NEXT:    mov d1, v3.d[1]
+; GISEL-NEXT:    fmov d0, d3
+; GISEL-NEXT:    add sp, sp, #64
 ; GISEL-NEXT:    ret
   %r = call <3 x double> @llvm.exp10.v3f64(<3 x double> %x)
   ret <3 x double> %r
