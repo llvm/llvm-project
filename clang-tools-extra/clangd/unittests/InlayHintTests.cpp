@@ -1514,7 +1514,7 @@ TEST(DefaultArguments, WithoutParameterNames) {
     };
     struct Foo {
       Foo(int, Baz baz = //
-              Baz{$unnamed[[}]]
+              Baz{$abbreviated[[}]]
 
           //
       ) {}
@@ -1529,7 +1529,7 @@ TEST(DefaultArguments, WithoutParameterNames) {
   )cpp";
 
   assertHints(InlayHintKind::DefaultArgument, Code,
-              ExpectedHint{"...", "unnamed", Left},
+              ExpectedHint{"...", "abbreviated", Left},
               ExpectedHint{", Baz{}", "paren", Left},
               ExpectedHint{", Baz{}", "brace1", Left},
               ExpectedHint{", Baz{}", "brace2", Left},
