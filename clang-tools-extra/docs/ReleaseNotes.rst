@@ -217,8 +217,8 @@ Changes in existing checks
   member function calls too and to only expand macros starting with ``PRI``
   and ``__PRI`` from ``<inttypes.h>`` in the format string.
 
-- New :doc:`modernize-replace-memcpy-with-stdcopy
-  <clang-tidy/checks/modernize-replace-memcpy-by-stdcopy>` check.
+- New :doc:`modernize-replace-memcpy-with-std-copy
+  <clang-tidy/checks/modernize-replace-memcpy-with-std-copy>` check.
 
   Replaces all occurrences of the C ``memcpy`` function by ``std::copy``.
 

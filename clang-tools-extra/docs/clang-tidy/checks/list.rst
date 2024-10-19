@@ -286,7 +286,7 @@ Clang-Tidy Checks
    :doc:`modernize-raw-string-literal <modernize/raw-string-literal>`, "Yes"
    :doc:`modernize-redundant-void-arg <modernize/redundant-void-arg>`, "Yes"
    :doc:`modernize-replace-auto-ptr <modernize/replace-auto-ptr>`, "Yes"
-   :doc:`modernize-replace-memcpy-with-std-copy <modernize/replace-auto-ptr>`, "Yes"
+   :doc:`modernize-replace-memcpy-with-std-copy <modernize/replace-memcpy-with-std-copy>`, "Yes"
    :doc:`modernize-replace-disallow-copy-and-assign-macro <modernize/replace-disallow-copy-and-assign-macro>`, "Yes"
    :doc:`modernize-replace-random-shuffle <modernize/replace-random-shuffle>`, "Yes"
    :doc:`modernize-return-braced-init-list <modernize/return-braced-init-list>`, "Yes"

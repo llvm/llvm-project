@@ -11,13 +11,10 @@
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
-#include <memory>
-#include <string>
-#include <vector>
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/Basic/LangOptions.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 // Replace the C memcpy function with std::copy
 class ReplaceMemcpyWithStdCopy : public ClangTidyCheck {
@@ -27,23 +24,31 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
-  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Options) override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus11;
+  }
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
+
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
+  void handleMemcpy();
+  void handleMemset();
+
   void renameFunction(DiagnosticBuilder &Diag, const CallExpr *MemcpyNode);
   void reorderArgs(DiagnosticBuilder &Diag, const CallExpr *MemcpyNode);
   void insertHeader(DiagnosticBuilder &Diag, const CallExpr *MemcpyNode,
                     SourceManager *const SM);
+  bool checkIsByteSequence(const ast_matchers::MatchFinder::MatchResult &Result,
+                           std::string_view Prefix);
 
 private:
-  std::unique_ptr<utils::IncludeInserter> Inserter;
-  utils::IncludeInserter IncludeInserter;
-  const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  utils::IncludeInserter Inserter;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REPLACE_MEMCPY_WITH_STDCOPY_H
