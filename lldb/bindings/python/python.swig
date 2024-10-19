@@ -50,7 +50,7 @@ Older swig versions will simply ignore this setting.
     import $module
 except ImportError:
     # Relative import should work if we are being loaded by Python.
-    from . import $module"
+    from .native import $module"
 %enddef
 
 // The name of the module to be created.

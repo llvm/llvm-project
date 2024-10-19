@@ -145,7 +145,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${option_install_prefix}
 )
 
-# lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
+# lib/pythonX.Y/site-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
 # which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
 # (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
 # that _lldb.so can be loaded from Python.
