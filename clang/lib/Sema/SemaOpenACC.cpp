@@ -366,6 +366,43 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     }
   }
 
+  case OpenACCClauseKind::Gang: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+    case OpenACCDirectiveKind::Routine:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Worker: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+    case OpenACCDirectiveKind::Routine:
+      return true;
+    default:
+      return false;
+    }
+  }
+  case OpenACCClauseKind::Vector: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+    case OpenACCDirectiveKind::Routine:
+      return true;
+    default:
+      return false;
+    }
+  }
+  }
+
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -459,6 +496,23 @@ class SemaOpenACCClauseVisitor {
     return nullptr;
   }
 
+  // OpenACC 3.3 2.9:
+  // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
+  // appears.
+  bool DiagIfSeqClause(SemaOpenACC::OpenACCParsedClause &Clause) {
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
+
+    if (Itr != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind() << (*Itr)->getClauseKind();
+      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+
+      return true;
+    }
+    return false;
+  }
+
 public:
   SemaOpenACCClauseVisitor(SemaOpenACC &S,
                            ArrayRef<const OpenACCClause *> ExistingClauses)
@@ -470,27 +524,6 @@ public:
 
   OpenACCClause *Visit(SemaOpenACC::OpenACCParsedClause &Clause) {
     switch (Clause.getClauseKind()) {
-  case OpenACCClauseKind::Gang:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector: {
-    // TODO OpenACC: These are only implemented enough for the 'seq' diagnostic,
-    // otherwise treats itself as unimplemented.  When we implement these, we
-    // can remove them from here.
-
-    // OpenACC 3.3 2.9:
-    // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
-    // appears.
-    const auto *Itr =
-        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
-
-    if (Itr != ExistingClauses.end()) {
-      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
-          << Clause.getClauseKind() << (*Itr)->getClauseKind();
-      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
-    }
-    return isNotImplemented();
-  }
-
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
     return Visit##CLAUSE_NAME##Clause(Clause);
@@ -1006,6 +1039,288 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIndependentClause(
                                           Clause.getEndLoc());
 }
 
+OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (DiagIfSeqClause(Clause))
+    return nullptr;
+  // Restrictions only properly implemented on 'loop' constructs, and it is
+  // the only construct that can do anything with this, so skip/treat as
+  // unimplemented for the combined constructs.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+    return isNotImplemented();
+
+  Expr *IntExpr =
+      Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr;
+  if (IntExpr) {
+    switch (SemaRef.getActiveComputeConstructInfo().Kind) {
+    case OpenACCDirectiveKind::Invalid:
+    case OpenACCDirectiveKind::Parallel:
+      // No restriction on when 'parallel' can contain an argument.
+      break;
+    case OpenACCDirectiveKind::Serial:
+      // GCC disallows this, and there is no real good reason for us to permit
+      // it, so disallow until we come up with a use case that makes sense.
+      SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_int_arg_invalid)
+          << OpenACCClauseKind::Vector << "num" << /*serial=*/3;
+      IntExpr = nullptr;
+      break;
+    case OpenACCDirectiveKind::Kernels: {
+      const auto *Itr =
+          llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
+                        llvm::IsaPred<OpenACCVectorLengthClause>);
+      if (Itr != SemaRef.getActiveComputeConstructInfo().Clauses.end()) {
+        SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_num_arg_conflict)
+            << OpenACCClauseKind::Vector << /*vector_length=*/2;
+        SemaRef.Diag((*Itr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+
+        IntExpr = nullptr;
+      }
+      break;
+    }
+    default:
+      llvm_unreachable("Non compute construct in active compute construct");
+    }
+  }
+
+  // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+  // construct, the gang clause behaves as follows. ... The region of a loop
+  // with a gang clause may not contain another loop with a gang clause unless
+  // within a nested compute region.
+  if (SemaRef.LoopGangClauseOnKernelLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+        << OpenACCClauseKind::Vector << OpenACCClauseKind::Gang
+        << /*skip kernels construct info*/ 0;
+    SemaRef.Diag(SemaRef.LoopGangClauseOnKernelLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+
+  // OpenACC 3.3 2.9.3: The region of a loop with a 'worker' clause may not
+  // contain a loop with a gang or worker clause unless within a nested compute
+  // region.
+  if (SemaRef.LoopWorkerClauseLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+        << OpenACCClauseKind::Vector << OpenACCClauseKind::Worker
+        << /*skip kernels construct info*/ 0;
+    SemaRef.Diag(SemaRef.LoopWorkerClauseLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+  // OpenACC 3.3 2.9.4: The region of a loop with a 'vector' clause may not
+  // contain a loop with a gang, worker, or vector clause unless within a nested
+  // compute region.
+  if (SemaRef.LoopVectorClauseLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+        << OpenACCClauseKind::Vector << OpenACCClauseKind::Vector
+        << /*skip kernels construct info*/ 0;
+    SemaRef.Diag(SemaRef.LoopVectorClauseLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+
+  return OpenACCVectorClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), IntExpr,
+                                     Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (DiagIfSeqClause(Clause))
+    return nullptr;
+
+  // Restrictions only properly implemented on 'loop' constructs, and it is
+  // the only construct that can do anything with this, so skip/treat as
+  // unimplemented for the combined constructs.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+    return isNotImplemented();
+
+  Expr *IntExpr =
+      Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr;
+
+  if (IntExpr) {
+    switch (SemaRef.getActiveComputeConstructInfo().Kind) {
+    case OpenACCDirectiveKind::Invalid:
+      SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_int_arg_invalid)
+          << OpenACCClauseKind::Worker << "num" << /*orphan=*/0;
+      IntExpr = nullptr;
+      break;
+    case OpenACCDirectiveKind::Parallel:
+      SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_int_arg_invalid)
+          << OpenACCClauseKind::Worker << "num" << /*parallel=*/1;
+      IntExpr = nullptr;
+      break;
+    case OpenACCDirectiveKind::Serial:
+      SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_int_arg_invalid)
+          << OpenACCClauseKind::Worker << "num" << /*serial=*/3;
+      IntExpr = nullptr;
+      break;
+    case OpenACCDirectiveKind::Kernels: {
+      const auto *Itr =
+          llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
+                        llvm::IsaPred<OpenACCNumWorkersClause>);
+      if (Itr != SemaRef.getActiveComputeConstructInfo().Clauses.end()) {
+        SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_num_arg_conflict)
+            << OpenACCClauseKind::Worker << /*num_workers=*/1;
+        SemaRef.Diag((*Itr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+
+        IntExpr = nullptr;
+      }
+      break;
+    }
+    default:
+      llvm_unreachable("Non compute construct in active compute construct");
+    }
+  }
+
+  // OpenACC 3.3 2.9.3: The region of a loop with a 'worker' clause may not
+  // contain a loop with a gang or worker clause unless within a nested compute
+  // region.
+  if (SemaRef.LoopWorkerClauseLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+        << OpenACCClauseKind::Worker << OpenACCClauseKind::Worker
+        << /*skip kernels construct info*/ 0;
+    SemaRef.Diag(SemaRef.LoopWorkerClauseLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+
+  // OpenACC 3.3 2.9.4: The region of a loop with a 'vector' clause may not
+  // contain a loop with a gang, worker, or vector clause unless within a nested
+  // compute region.
+  if (SemaRef.LoopVectorClauseLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+        << OpenACCClauseKind::Worker << OpenACCClauseKind::Vector
+        << /*skip kernels construct info*/ 0;
+    SemaRef.Diag(SemaRef.LoopVectorClauseLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+
+  return OpenACCWorkerClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), IntExpr,
+                                     Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (DiagIfSeqClause(Clause))
+    return nullptr;
+
+  // Restrictions only properly implemented on 'loop' constructs, and it is
+  // the only construct that can do anything with this, so skip/treat as
+  // unimplemented for the combined constructs.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+    return isNotImplemented();
+
+  llvm::SmallVector<OpenACCGangKind> GangKinds;
+  llvm::SmallVector<Expr *> IntExprs;
+
+  // Store the existing locations, so we can do duplicate checking.  Index is
+  // the int-value of the OpenACCGangKind enum.
+  SourceLocation ExistingElemLoc[3];
+
+  for (unsigned I = 0; I < Clause.getIntExprs().size(); ++I) {
+    OpenACCGangKind GK = Clause.getGangKinds()[I];
+    ExprResult ER = SemaRef.CheckGangExpr(GK, Clause.getIntExprs()[I]);
+
+    if (!ER.isUsable())
+      continue;
+
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... An argument with no
+    // keyword or with num keyword is only allowed when num_gangs does not
+    // appear on the kernels construct.
+    if (SemaRef.getActiveComputeConstructInfo().Kind ==
+            OpenACCDirectiveKind::Kernels &&
+        GK == OpenACCGangKind::Num) {
+      const auto *Itr =
+          llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
+                        llvm::IsaPred<OpenACCNumGangsClause>);
+
+      if (Itr != SemaRef.getActiveComputeConstructInfo().Clauses.end()) {
+        SemaRef.Diag(ER.get()->getBeginLoc(), diag::err_acc_num_arg_conflict)
+            << OpenACCClauseKind::Gang << /*num_gangs=*/0;
+        SemaRef.Diag((*Itr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+        continue;
+      }
+    }
+
+    // OpenACC 3.3 2.9: 'gang-arg-list' may have at most one num, one dim, and
+    // one static argument.
+    if (ExistingElemLoc[static_cast<unsigned>(GK)].isValid()) {
+      SemaRef.Diag(ER.get()->getBeginLoc(), diag::err_acc_gang_multiple_elt)
+          << static_cast<unsigned>(GK);
+      SemaRef.Diag(ExistingElemLoc[static_cast<unsigned>(GK)],
+                   diag::note_acc_previous_expr_here);
+      continue;
+    }
+
+    ExistingElemLoc[static_cast<unsigned>(GK)] = ER.get()->getBeginLoc();
+    GangKinds.push_back(GK);
+    IntExprs.push_back(ER.get());
+  }
+
+  // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+  // construct, the gang clause behaves as follows. ... The region of a loop
+  // with a gang clause may not contain another loop with a gang clause unless
+  // within a nested compute region.
+  if (SemaRef.LoopGangClauseOnKernelLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+        << OpenACCClauseKind::Gang << OpenACCClauseKind::Gang
+        << /*kernels construct info*/ 1;
+    SemaRef.Diag(SemaRef.LoopGangClauseOnKernelLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+
+  // OpenACC 3.3 2.9.3: The region of a loop with a 'worker' clause may not
+  // contain a loop with a gang or worker clause unless within a nested compute
+  // region.
+  if (SemaRef.LoopWorkerClauseLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+        << OpenACCClauseKind::Gang << OpenACCClauseKind::Worker
+        << /*kernels construct info*/ 1;
+    SemaRef.Diag(SemaRef.LoopWorkerClauseLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+
+  // OpenACC 3.3 2.9.4: The region of a loop with a 'vector' clause may not
+  // contain a loop with a gang, worker, or vector clause unless within a nested
+  // compute region.
+  if (SemaRef.LoopVectorClauseLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+        << OpenACCClauseKind::Gang << OpenACCClauseKind::Vector
+        << /*kernels construct info*/ 1;
+    SemaRef.Diag(SemaRef.LoopVectorClauseLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+
+  return OpenACCGangClause::Create(Ctx, Clause.getBeginLoc(),
+                                   Clause.getLParenLoc(), GangKinds, IntExprs,
+                                   Clause.getEndLoc());
+}
+
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
   // Restrictions only properly implemented on 'loop' constructs, and it is
@@ -1118,16 +1433,58 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
     SemaOpenACC &S, OpenACCDirectiveKind DK,
     ArrayRef<const OpenACCClause *> UnInstClauses,
     ArrayRef<OpenACCClause *> Clauses)
-    : SemaRef(S), WasInsideComputeConstruct(S.InsideComputeConstruct),
-      DirKind(DK), LoopRAII(SemaRef, /*PreserveDepth=*/false) {
+    : SemaRef(S), OldActiveComputeConstructInfo(S.ActiveComputeConstructInfo),
+      DirKind(DK), OldLoopGangClauseOnKernelLoc(S.LoopGangClauseOnKernelLoc),
+      OldLoopWorkerClauseLoc(S.LoopWorkerClauseLoc),
+      OldLoopVectorClauseLoc(S.LoopVectorClauseLoc),
+      LoopRAII(SemaRef, /*PreserveDepth=*/false) {
   // Compute constructs end up taking their 'loop'.
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
       DirKind == OpenACCDirectiveKind::Kernels) {
-    SemaRef.InsideComputeConstruct = true;
+    SemaRef.ActiveComputeConstructInfo.Kind = DirKind;
+    SemaRef.ActiveComputeConstructInfo.Clauses = Clauses;
     SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
+
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... The region of a loop
+    // with a gang clause may not contain another loop with a gang clause unless
+    // within a nested compute region.
+    //
+    // Implement the 'unless within a nested compute region' part.
+    SemaRef.LoopGangClauseOnKernelLoc = {};
+    SemaRef.LoopWorkerClauseLoc = {};
+    SemaRef.LoopVectorClauseLoc = {};
   } else if (DirKind == OpenACCDirectiveKind::Loop) {
     SetCollapseInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
+    SetTileInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
+
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... The region of a loop
+    // with a gang clause may not contain another loop with a gang clause unless
+    // within a nested compute region.
+    //
+    // We don't bother doing this when this is a template instantiation, as
+    // there is no reason to do these checks: the existance of a
+    // gang/kernels/etc cannot be dependent.
+    if (SemaRef.getActiveComputeConstructInfo().Kind ==
+            OpenACCDirectiveKind::Kernels &&
+        UnInstClauses.empty()) {
+      // This handles the 'outer loop' part of this.
+      auto *Itr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCGangClause>);
+      if (Itr != Clauses.end())
+        SemaRef.LoopGangClauseOnKernelLoc = (*Itr)->getBeginLoc();
+    }
+
+    if (UnInstClauses.empty()) {
+      auto *Itr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCWorkerClause>);
+      if (Itr != Clauses.end())
+        SemaRef.LoopWorkerClauseLoc = (*Itr)->getBeginLoc();
+
+      auto *Itr2 = llvm::find_if(Clauses, llvm::IsaPred<OpenACCVectorClause>);
+      if (Itr2 != Clauses.end())
+        SemaRef.LoopVectorClauseLoc = (*Itr2)->getBeginLoc();
+    }
   }
 }
 
@@ -1136,8 +1493,9 @@ void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
     ArrayRef<OpenACCClause *> Clauses) {
 
   // Reset this checking for loops that aren't covered in a RAII object.
-  SemaRef.CollapseInfo.CurLevelHasLoopAlready = false;
+  SemaRef.LoopInfo.CurLevelHasLoopAlready = false;
   SemaRef.CollapseInfo.CollapseDepthSatisfied = true;
+  SemaRef.TileInfo.TileDepthSatisfied = true;
 
   // We make sure to take an optional list of uninstantiated clauses, so that
   // we can check to make sure we don't 'double diagnose' in the event that
@@ -1176,8 +1534,32 @@ void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
       cast<ConstantExpr>(LoopCount)->getResultAsAPSInt();
 }
 
+void SemaOpenACC::AssociatedStmtRAII::SetTileInfoBeforeAssociatedStmt(
+    ArrayRef<const OpenACCClause *> UnInstClauses,
+    ArrayRef<OpenACCClause *> Clauses) {
+  // We don't diagnose if this is during instantiation, since the only thing we
+  // care about is the number of arguments, which we can figure out without
+  // instantiation, so we don't want to double-diagnose.
+  if (UnInstClauses.size() > 0)
+    return;
+  auto *TileClauseItr =
+      llvm::find_if(Clauses, llvm::IsaPred<OpenACCTileClause>);
+
+  if (Clauses.end() == TileClauseItr)
+    return;
+
+  OpenACCTileClause *TileClause = cast<OpenACCTileClause>(*TileClauseItr);
+  SemaRef.TileInfo.ActiveTile = TileClause;
+  SemaRef.TileInfo.TileDepthSatisfied = false;
+  SemaRef.TileInfo.CurTileCount = TileClause->getSizeExprs().size();
+}
+
 SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
-  SemaRef.InsideComputeConstruct = WasInsideComputeConstruct;
+  SemaRef.ActiveComputeConstructInfo = OldActiveComputeConstructInfo;
+  SemaRef.LoopGangClauseOnKernelLoc = OldLoopGangClauseOnKernelLoc;
+  SemaRef.LoopWorkerClauseLoc = OldLoopWorkerClauseLoc;
+  SemaRef.LoopVectorClauseLoc = OldLoopVectorClauseLoc;
+
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
       DirKind == OpenACCDirectiveKind::Kernels) {
@@ -1739,6 +2121,109 @@ ExprResult SemaOpenACC::CheckCollapseLoopCount(Expr *LoopCount) {
       ConstantExpr::Create(getASTContext(), LoopCount, APValue{*ICE})};
 }
 
+namespace {
+ExprResult CheckGangStaticExpr(SemaOpenACC &S, Expr *E) {
+  if (isa<OpenACCAsteriskSizeExpr>(E))
+    return E;
+  return S.ActOnIntExpr(OpenACCDirectiveKind::Invalid, OpenACCClauseKind::Gang,
+                        E->getBeginLoc(), E);
+}
+} // namespace
+
+ExprResult SemaOpenACC::CheckGangExpr(OpenACCGangKind GK, Expr *E) {
+  // Gang Expr legality depends on the associated compute construct.
+  switch (ActiveComputeConstructInfo.Kind) {
+  case OpenACCDirectiveKind::Invalid:
+  case OpenACCDirectiveKind::Parallel: {
+    switch (GK) {
+      // OpenACC 3.3 2.9.2: When the parent compute construct is a parallel
+      // construct, or an orphaned loop construct, the gang clause behaves as
+      // follows. ... The dim argument must be a constant positive integer value
+      // 1, 2, or 3.
+    case OpenACCGangKind::Dim: {
+      if (!E)
+        return ExprError();
+      ExprResult Res =
+          ActOnIntExpr(OpenACCDirectiveKind::Invalid, OpenACCClauseKind::Gang,
+                       E->getBeginLoc(), E);
+
+      if (!Res.isUsable())
+        return Res;
+
+      if (Res.get()->isInstantiationDependent())
+        return Res;
+
+      std::optional<llvm::APSInt> ICE =
+          Res.get()->getIntegerConstantExpr(getASTContext());
+
+      if (!ICE || *ICE <= 0 || ICE > 3) {
+        Diag(Res.get()->getBeginLoc(), diag::err_acc_gang_dim_value)
+            << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        return ExprError();
+      }
+
+      return ExprResult{
+          ConstantExpr::Create(getASTContext(), Res.get(), APValue{*ICE})};
+    }
+      // OpenACC 3.3 2.9.2: When the parent compute construct is a parallel
+      // construct, or an orphaned loop construct, the gang clause behaves as
+      // follows. ... The num argument is not allowed.
+    case OpenACCGangKind::Num:
+      Diag(E->getBeginLoc(), diag::err_acc_int_arg_invalid)
+          << OpenACCClauseKind::Gang << GK
+          << (/*orphan/parallel=*/ActiveComputeConstructInfo.Kind ==
+                      OpenACCDirectiveKind::Parallel
+                  ? 1
+                  : 0);
+      return ExprError();
+    case OpenACCGangKind::Static:
+      return CheckGangStaticExpr(*this, E);
+    }
+  } break;
+  case OpenACCDirectiveKind::Kernels: {
+    switch (GK) {
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... The dim argument is
+    // not allowed.
+    case OpenACCGangKind::Dim:
+      Diag(E->getBeginLoc(), diag::err_acc_int_arg_invalid)
+          << OpenACCClauseKind::Gang << GK << /*kernels=*/2;
+      return ExprError();
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... An argument with no
+    // keyword or with num keyword is only allowed when num_gangs does not
+    // appear on the kernels construct. ... The region of a loop with the gang
+    // clause may not contain another loop with a gang clause unless within a
+    // nested compute region.
+    case OpenACCGangKind::Num:
+      // This isn't allowed if there is a 'num_gangs' on the kernel construct,
+      // and makes loop-with-gang-clause ill-formed inside of this 'loop', but
+      // nothing can be enforced here.
+      return ExprResult{E};
+    case OpenACCGangKind::Static:
+      return CheckGangStaticExpr(*this, E);
+    }
+  } break;
+  case OpenACCDirectiveKind::Serial: {
+    switch (GK) {
+    // 'dim' and 'num' don't really make sense on serial, and GCC rejects them
+    // too, so we disallow them too.
+    case OpenACCGangKind::Dim:
+    case OpenACCGangKind::Num:
+      Diag(E->getBeginLoc(), diag::err_acc_int_arg_invalid)
+          << OpenACCClauseKind::Gang << GK << /*Kernels=*/3;
+      return ExprError();
+    case OpenACCGangKind::Static:
+      return CheckGangStaticExpr(*this, E);
+    }
+  } break;
+  default:
+    llvm_unreachable("Non compute construct in active compute construct?");
+  }
+
+  llvm_unreachable("Compute construct directive not handled?");
+}
+
 ExprResult SemaOpenACC::CheckTileSizeExpr(Expr *SizeExpr) {
   if (!SizeExpr)
     return ExprError();
@@ -1771,18 +2256,32 @@ void SemaOpenACC::ActOnWhileStmt(SourceLocation WhileLoc) {
   if (!getLangOpts().OpenACC)
     return;
 
-  if (!CollapseInfo.TopLevelLoopSeen)
+  if (!LoopInfo.TopLevelLoopSeen)
     return;
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
-    Diag(WhileLoc, diag::err_acc_invalid_in_collapse_loop) << /*while loop*/ 1;
+    Diag(WhileLoc, diag::err_acc_invalid_in_loop)
+        << /*while loop*/ 1 << OpenACCClauseKind::Collapse;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-         diag::note_acc_collapse_clause_here);
+         diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Collapse;
 
     // Remove the value so that we don't get cascading errors in the body. The
     // caller RAII object will restore this.
     CollapseInfo.CurCollapseCount = std::nullopt;
+  }
+
+  if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    Diag(WhileLoc, diag::err_acc_invalid_in_loop)
+        << /*while loop*/ 1 << OpenACCClauseKind::Tile;
+    assert(TileInfo.ActiveTile && "tile count without object?");
+    Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Tile;
+
+    // Remove the value so that we don't get cascading errors in the body. The
+    // caller RAII object will restore this.
+    TileInfo.CurTileCount = std::nullopt;
   }
 }
 
@@ -1790,18 +2289,32 @@ void SemaOpenACC::ActOnDoStmt(SourceLocation DoLoc) {
   if (!getLangOpts().OpenACC)
     return;
 
-  if (!CollapseInfo.TopLevelLoopSeen)
+  if (!LoopInfo.TopLevelLoopSeen)
     return;
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
-    Diag(DoLoc, diag::err_acc_invalid_in_collapse_loop) << /*do loop*/ 2;
+    Diag(DoLoc, diag::err_acc_invalid_in_loop)
+        << /*do loop*/ 2 << OpenACCClauseKind::Collapse;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-         diag::note_acc_collapse_clause_here);
+         diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Collapse;
 
     // Remove the value so that we don't get cascading errors in the body. The
     // caller RAII object will restore this.
     CollapseInfo.CurCollapseCount = std::nullopt;
+  }
+
+  if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    Diag(DoLoc, diag::err_acc_invalid_in_loop)
+        << /*do loop*/ 2 << OpenACCClauseKind::Tile;
+    assert(TileInfo.ActiveTile && "tile count without object?");
+    Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Tile;
+
+    // Remove the value so that we don't get cascading errors in the body. The
+    // caller RAII object will restore this.
+    TileInfo.CurTileCount = std::nullopt;
   }
 }
 
@@ -1810,7 +2323,7 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
     return;
 
   // Enable the while/do-while checking.
-  CollapseInfo.TopLevelLoopSeen = true;
+  LoopInfo.TopLevelLoopSeen = true;
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
 
@@ -1819,11 +2332,12 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
     // or loop nest.
     // This checks for more than 1 loop at the current level, the
     // 'depth'-satisifed checking manages the 'not zero' case.
-    if (CollapseInfo.CurLevelHasLoopAlready) {
-      Diag(ForLoc, diag::err_acc_collapse_multiple_loops);
+    if (LoopInfo.CurLevelHasLoopAlready) {
+      Diag(ForLoc, diag::err_acc_clause_multiple_loops) << /*Collapse*/ 0;
       assert(CollapseInfo.ActiveCollapse && "No collapse object?");
       Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-           diag::note_acc_collapse_clause_here);
+           diag::note_acc_active_clause_here)
+          << OpenACCClauseKind::Collapse;
     } else {
       --(*CollapseInfo.CurCollapseCount);
 
@@ -1834,13 +2348,29 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
     }
   }
 
+  if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    if (LoopInfo.CurLevelHasLoopAlready) {
+      Diag(ForLoc, diag::err_acc_clause_multiple_loops) << /*Tile*/ 1;
+      assert(TileInfo.ActiveTile && "No tile object?");
+      Diag(TileInfo.ActiveTile->getBeginLoc(),
+           diag::note_acc_active_clause_here)
+          << OpenACCClauseKind::Tile;
+    } else {
+      --(*TileInfo.CurTileCount);
+      // Once we've hit zero here, we know we have deep enough 'for' loops to
+      // get to the bottom.
+      if (*TileInfo.CurTileCount == 0)
+        TileInfo.TileDepthSatisfied = true;
+    }
+  }
+
   // Set this to 'false' for the body of this loop, so that the next level
   // checks independently.
-  CollapseInfo.CurLevelHasLoopAlready = false;
+  LoopInfo.CurLevelHasLoopAlready = false;
 }
 
 namespace {
-SourceLocation FindInterveningCodeInCollapseLoop(const Stmt *CurStmt) {
+SourceLocation FindInterveningCodeInLoop(const Stmt *CurStmt) {
   // We should diagnose on anything except `CompoundStmt`, `NullStmt`,
   // `ForStmt`, `CXXForRangeStmt`, since those are legal, and `WhileStmt` and
   // `DoStmt`, as those are caught as a violation elsewhere.
@@ -1858,8 +2388,7 @@ SourceLocation FindInterveningCodeInCollapseLoop(const Stmt *CurStmt) {
   // of compound statements, as long as there isn't any code inside.
   if (const auto *CS = dyn_cast<CompoundStmt>(CurStmt)) {
     for (const auto *ChildStmt : CS->children()) {
-      SourceLocation ChildStmtLoc =
-          FindInterveningCodeInCollapseLoop(ChildStmt);
+      SourceLocation ChildStmtLoc = FindInterveningCodeInLoop(ChildStmt);
       if (ChildStmtLoc.isValid())
         return ChildStmtLoc;
     }
@@ -1874,24 +2403,33 @@ void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
   if (!getLangOpts().OpenACC)
     return;
   // Set this to 'true' so if we find another one at this level we can diagnose.
-  CollapseInfo.CurLevelHasLoopAlready = true;
+  LoopInfo.CurLevelHasLoopAlready = true;
 
   if (!Body.isUsable())
     return;
 
-  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0 &&
-      !CollapseInfo.ActiveCollapse->hasForce()) {
-    // OpenACC 3.3: 2.9.1
-    // If the 'force' modifier does not appear, then the associated loops must
-    // be tightly nested.  If the force modifier appears, then any intervening
-    // code may be executed multiple times as needed to perform the collapse.
+  bool IsActiveCollapse = CollapseInfo.CurCollapseCount &&
+                          *CollapseInfo.CurCollapseCount > 0 &&
+                          !CollapseInfo.ActiveCollapse->hasForce();
+  bool IsActiveTile = TileInfo.CurTileCount && *TileInfo.CurTileCount > 0;
 
-    SourceLocation OtherStmtLoc = FindInterveningCodeInCollapseLoop(Body.get());
+  if (IsActiveCollapse || IsActiveTile) {
+    SourceLocation OtherStmtLoc = FindInterveningCodeInLoop(Body.get());
 
-    if (OtherStmtLoc.isValid()) {
-      Diag(OtherStmtLoc, diag::err_acc_collapse_intervening_code);
+    if (OtherStmtLoc.isValid() && IsActiveCollapse) {
+      Diag(OtherStmtLoc, diag::err_acc_intervening_code)
+          << OpenACCClauseKind::Collapse;
       Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-           diag::note_acc_collapse_clause_here);
+           diag::note_acc_active_clause_here)
+          << OpenACCClauseKind::Collapse;
+    }
+
+    if (OtherStmtLoc.isValid() && IsActiveTile) {
+      Diag(OtherStmtLoc, diag::err_acc_intervening_code)
+          << OpenACCClauseKind::Tile;
+      Diag(TileInfo.ActiveTile->getBeginLoc(),
+           diag::note_acc_active_clause_here)
+          << OpenACCClauseKind::Tile;
     }
   }
 }
@@ -1907,11 +2445,19 @@ bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
   //
   // ALL constructs are ill-formed if there is an active 'collapse'
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
-    Diag(StartLoc, diag::err_acc_invalid_in_collapse_loop)
-        << /*OpenACC Construct*/ 0 << K;
+    Diag(StartLoc, diag::err_acc_invalid_in_loop)
+        << /*OpenACC Construct*/ 0 << OpenACCClauseKind::Collapse << K;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-         diag::note_acc_collapse_clause_here);
+         diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Collapse;
+  }
+  if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    Diag(StartLoc, diag::err_acc_invalid_in_loop)
+        << /*OpenACC Construct*/ 0 << OpenACCClauseKind::Tile << K;
+    assert(TileInfo.ActiveTile && "Tile count without object?");
+    Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Tile;
   }
 
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
@@ -1948,7 +2494,7 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
     // If we are in the scope of a compute construct, add this to the list of
     // loop constructs that need assigning to the next closing compute
     // construct.
-    if (InsideComputeConstruct)
+    if (isInComputeConstruct())
       ParentlessLoopConstructs.push_back(LoopConstruct);
 
     return LoopConstruct;
@@ -1986,11 +2532,24 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
       return StmtError();
     }
 
-    if (!CollapseInfo.CollapseDepthSatisfied) {
-      Diag(DirectiveLoc, diag::err_acc_collapse_insufficient_loops);
-      assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
-      Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-           diag::note_acc_collapse_clause_here);
+    if (!CollapseInfo.CollapseDepthSatisfied || !TileInfo.TileDepthSatisfied) {
+      if (!CollapseInfo.CollapseDepthSatisfied) {
+        Diag(DirectiveLoc, diag::err_acc_insufficient_loops)
+            << OpenACCClauseKind::Collapse;
+        assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
+        Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+             diag::note_acc_active_clause_here)
+            << OpenACCClauseKind::Collapse;
+      }
+
+      if (!TileInfo.TileDepthSatisfied) {
+        Diag(DirectiveLoc, diag::err_acc_insufficient_loops)
+            << OpenACCClauseKind::Tile;
+        assert(TileInfo.ActiveTile && "Collapse count without object?");
+        Diag(TileInfo.ActiveTile->getBeginLoc(),
+             diag::note_acc_active_clause_here)
+            << OpenACCClauseKind::Tile;
+      }
       return StmtError();
     }
 

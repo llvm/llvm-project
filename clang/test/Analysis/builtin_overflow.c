@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-unknown-unknown -verify %s \
-// RUN:   -analyzer-checker=core,debug.ExprInspection
+// RUN:   -analyzer-checker=core,debug.ExprInspection,alpha.core.BoolAssignment
 
 #define __UINT_MAX__ (__INT_MAX__ * 2U + 1U)
 #define __INT_MIN__  (-__INT_MAX__ - 1)
@@ -154,4 +154,13 @@ void test_uadd_overflow_contraints(unsigned a, unsigned b)
      clang_analyzer_warnIfReached();
      return;
    }
+}
+
+void test_bool_assign(void)
+{
+    int res;
+
+    // Reproduce issue from GH#111147. __builtin_*_overflow funcions
+    // should return _Bool, but not int.
+    _Bool ret = __builtin_mul_overflow(10, 20, &res); // no crash
 }

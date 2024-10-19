@@ -122,7 +122,7 @@ void Attributes::emitAttributeProperties(raw_ostream &OS) {
     bool AllowIntersectMin = KindName == "IntAttr";
     for (auto *A : Records.getAllDerivedDefinitions(KindName)) {
       OS << "0";
-      for (Init *P : *A->getValueAsListInit("Properties")) {
+      for (const Init *P : *A->getValueAsListInit("Properties")) {
         if (!AllowIntersectAnd &&
             cast<DefInit>(P)->getDef()->getName() == "IntersectAnd")
           PrintFatalError("'IntersectAnd' only compatible with 'EnumAttr'");

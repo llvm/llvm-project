@@ -420,7 +420,7 @@ def unary_undef_to_zero: GICombineRule<
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC):$root,
+  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
@@ -1791,20 +1791,24 @@ class integer_of_opcode<Instruction castOpcode> : GICombineRule <
 
 def integer_of_truncate : integer_of_opcode<G_TRUNC>;
 
-def cast_combines: GICombineGroup<[
+def cast_of_cast_combines: GICombineGroup<[
   truncate_of_zext,
   truncate_of_sext,
   truncate_of_anyext,
-  select_of_zext,
-  select_of_anyext,
-  select_of_truncate,
   zext_of_zext,
   zext_of_anyext,
   sext_of_sext,
   sext_of_anyext,
   anyext_of_anyext,
   anyext_of_zext,
-  anyext_of_sext,
+  anyext_of_sext
+]>;
+
+def cast_combines: GICombineGroup<[
+  cast_of_cast_combines,
+  select_of_zext,
+  select_of_anyext,
+  select_of_truncate,
   buildvector_of_truncate,
   narrow_binop_add,
   narrow_binop_sub,

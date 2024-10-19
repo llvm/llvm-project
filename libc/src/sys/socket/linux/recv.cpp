@@ -22,7 +22,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, recv,
-                   (int sockfd, const void *buf, size_t len, int flags)) {
+                   (int sockfd, void *buf, size_t len, int flags)) {
 #ifdef SYS_recv
   ssize_t ret =
       LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_recv, sockfd, buf, len, flags);

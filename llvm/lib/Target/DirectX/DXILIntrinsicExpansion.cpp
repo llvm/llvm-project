@@ -56,6 +56,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_cross:
   case Intrinsic::dx_uclamp:
+  case Intrinsic::dx_degrees:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_length:
   case Intrinsic::dx_normalize:
@@ -64,6 +65,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_udot:
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
+  case Intrinsic::dx_radians:
     return true;
   }
   return false;
@@ -442,6 +444,14 @@ static Value *expandStepIntrinsic(CallInst *Orig) {
   return Builder.CreateSelect(Cond, Zero, One);
 }
 
+static Value *expandRadiansIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+  Value *PiOver180 = ConstantFP::get(Ty, llvm::numbers::pi / 180.0);
+  return Builder.CreateFMul(X, PiOver180);
+}
+
 static Intrinsic::ID getMaxForClamp(Type *ElemTy,
                                     Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
@@ -479,6 +489,14 @@ static Value *expandClampIntrinsic(CallInst *Orig,
       Ty, getMaxForClamp(Ty, ClampIntrinsic), {X, Min}, nullptr, "dx.max");
   return Builder.CreateIntrinsic(Ty, getMinForClamp(Ty, ClampIntrinsic),
                                  {MaxCall, Max}, nullptr, "dx.min");
+}
+
+static Value *expandDegreesIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+  Value *DegreesRatio = ConstantFP::get(Ty, 180.0 * llvm::numbers::inv_pi);
+  return Builder.CreateFMul(X, DegreesRatio);
 }
 
 static Value *expandSignIntrinsic(CallInst *Orig) {
@@ -540,6 +558,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_clamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
     break;
+  case Intrinsic::dx_degrees:
+    Result = expandDegreesIntrinsic(Orig);
+    break;
   case Intrinsic::dx_lerp:
     Result = expandLerpIntrinsic(Orig);
     break;
@@ -561,6 +582,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_step:
     Result = expandStepIntrinsic(Orig);
+    break;
+  case Intrinsic::dx_radians:
+    Result = expandRadiansIntrinsic(Orig);
+    break;
   }
   if (Result) {
     Orig->replaceAllUsesWith(Result);

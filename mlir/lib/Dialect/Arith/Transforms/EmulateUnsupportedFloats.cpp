@@ -41,7 +41,7 @@ struct EmulateUnsupportedFloatsPass
 };
 
 struct EmulateFloatPattern final : ConversionPattern {
-  EmulateFloatPattern(TypeConverter &converter, MLIRContext *ctx)
+  EmulateFloatPattern(const TypeConverter &converter, MLIRContext *ctx)
       : ConversionPattern(converter, Pattern::MatchAnyOpTypeTag(), 1, ctx) {}
 
   LogicalResult match(Operation *op) const override;
@@ -106,12 +106,12 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
 }
 
 void mlir::arith::populateEmulateUnsupportedFloatsPatterns(
-    RewritePatternSet &patterns, TypeConverter &converter) {
+    RewritePatternSet &patterns, const TypeConverter &converter) {
   patterns.add<EmulateFloatPattern>(converter, patterns.getContext());
 }
 
 void mlir::arith::populateEmulateUnsupportedFloatsLegality(
-    ConversionTarget &target, TypeConverter &converter) {
+    ConversionTarget &target, const TypeConverter &converter) {
   // Don't try to legalize functions and other ops that don't need expansion.
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   target.addDynamicallyLegalDialect<arith::ArithDialect>(

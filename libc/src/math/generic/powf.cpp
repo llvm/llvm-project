@@ -25,8 +25,6 @@
 #include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
 #include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
-#include <errno.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
@@ -857,9 +855,9 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
           : 0.0;
   exp2_hi_mid_dd.hi = exp2_hi_mid;
 
-  return static_cast<float>(
-             powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd)) +
-         0.0f;
+  double r_dd = powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd);
+
+  return static_cast<float>(r_dd);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

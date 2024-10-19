@@ -38,9 +38,37 @@ private:
   /// haven't had their 'parent' compute construct set yet. Entires will only be
   /// made to this list in the case where we know the loop isn't an orphan.
   llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
-  /// Whether we are inside of a compute construct, and should add loops to the
-  /// above collection.
-  bool InsideComputeConstruct = false;
+
+  struct ComputeConstructInfo {
+    /// Which type of compute construct we are inside of, which we can use to
+    /// determine whether we should add loops to the above collection.  We can
+    /// also use it to diagnose loop construct clauses.
+    OpenACCDirectiveKind Kind = OpenACCDirectiveKind::Invalid;
+    // If we have an active compute construct, stores the list of clauses we've
+    // prepared for it, so that we can diagnose limitations on child constructs.
+    ArrayRef<OpenACCClause *> Clauses;
+  } ActiveComputeConstructInfo;
+
+  bool isInComputeConstruct() const {
+    return ActiveComputeConstructInfo.Kind != OpenACCDirectiveKind::Invalid;
+  }
+
+  /// Certain clauses care about the same things that aren't specific to the
+  /// individual clause, but can be shared by a few, so store them here. All
+  /// require a 'no intervening constructs' rule, so we know they are all from
+  /// the same 'place'.
+  struct LoopCheckingInfo {
+    /// Records whether we've seen the top level 'for'. We already diagnose
+    /// later that the 'top level' is a for loop, so we use this to suppress the
+    /// 'collapse inner loop not a 'for' loop' diagnostic.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TopLevelLoopSeen : 1;
+
+    /// Records whether this 'tier' of the loop has already seen a 'for' loop,
+    /// used to diagnose if there are multiple 'for' loops at any one level.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CurLevelHasLoopAlready : 1;
+  } LoopInfo{/*TopLevelLoopSeen=*/false, /*CurLevelHasLoopAlready=*/false};
 
   /// The 'collapse' clause requires quite a bit of checking while
   /// parsing/instantiating its body, so this structure/object keeps all of the
@@ -59,27 +87,48 @@ private:
     /// else it should be 'N' minus the current depth traversed.
     std::optional<llvm::APSInt> CurCollapseCount;
 
-    /// Records whether we've seen the top level 'for'. We already diagnose
-    /// later that the 'top level' is a for loop, so we use this to suppress the
-    /// 'collapse inner loop not a 'for' loop' diagnostic.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned TopLevelLoopSeen : 1;
-
-    /// Records whether this 'tier' of the loop has already seen a 'for' loop,
-    /// used to diagnose if there are multiple 'for' loops at any one level.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned CurLevelHasLoopAlready : 1;
-
     /// Records whether we've hit a CurCollapseCount of '0' on the way down,
     /// which allows us to diagnose if the value of 'N' is too large for the
     /// current number of 'for' loops.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned CollapseDepthSatisfied : 1;
-  } CollapseInfo{nullptr, std::nullopt, /*TopLevelLoopSeen=*/false,
-                 /*CurLevelHasLoopAlready=*/false,
-                 /*CollapseDepthSatisfied=*/true};
+    bool CollapseDepthSatisfied = true;
+  } CollapseInfo;
+
+  /// The 'tile' clause requires a bit of additional checking as well, so like
+  /// the `CollapseCheckingInfo`, ensure we maintain information here too.
+  struct TileCheckingInfo {
+    OpenACCTileClause *ActiveTile = nullptr;
+
+    /// This is the number of expressions on a 'tile' clause.  This doesn't have
+    /// to be an APSInt because it isn't the result of a constexpr, just by our
+    /// own counting of elements.
+    std::optional<unsigned> CurTileCount;
+
+    /// Records whether we've hit a 'CurTileCount' of '0' on the wya down,
+    /// which allows us to diagnose if the number of arguments is too large for
+    /// the current number of 'for' loops.
+    bool TileDepthSatisfied = true;
+  } TileInfo;
 
 public:
+  ComputeConstructInfo &getActiveComputeConstructInfo() {
+    return ActiveComputeConstructInfo;
+  }
+
+  /// If there is a current 'active' loop construct with a 'gang' clause on a
+  /// 'kernel' construct, this will have the source location for it. This
+  /// permits us to implement the restriction of no further 'gang' clauses.
+  SourceLocation LoopGangClauseOnKernelLoc;
+  /// If there is a current 'active' loop construct with a 'worker' clause on it
+  /// (on any sort of construct), this has the source location for it.  This
+  /// permits us to implement the restriction of no further 'gang' or 'worker'
+  /// clauses.
+  SourceLocation LoopWorkerClauseLoc;
+  /// If there is a current 'active' loop construct with a 'vector' clause on it
+  /// (on any sort of construct), this has the source location for it.  This
+  /// permits us to implement the restriction of no further 'gang', 'vector', or
+  /// 'worker' clauses.
+  SourceLocation LoopVectorClauseLoc;
+
   // Redeclaration of the version in OpenACCClause.h.
   using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
 
@@ -130,9 +179,14 @@ public:
       Expr *LoopCount;
     };
 
+    struct GangDetails {
+      SmallVector<OpenACCGangKind> GangKinds;
+      SmallVector<Expr *> IntExprs;
+    };
+
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
                  IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails,
-                 ReductionDetails, CollapseDetails>
+                 ReductionDetails, CollapseDetails, GangDetails>
         Details = std::monostate{};
 
   public:
@@ -180,11 +234,15 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
       // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
       if ((ClauseKind == OpenACCClauseKind::Async ||
+           ClauseKind == OpenACCClauseKind::Worker ||
+           ClauseKind == OpenACCClauseKind::Vector ||
            ClauseKind == OpenACCClauseKind::Wait) &&
           std::holds_alternative<std::monostate>(Details))
         return 0;
@@ -226,8 +284,19 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Gang ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
+
+      if (ClauseKind == OpenACCClauseKind::Gang) {
+        // There might not be any gang int exprs, as this is an optional
+        // argument.
+        if (std::holds_alternative<std::monostate>(Details))
+          return {};
+        return std::get<GangDetails>(Details).IntExprs;
+      }
 
       return std::get<IntExprDetails>(Details).IntExprs;
     }
@@ -238,6 +307,16 @@ public:
 
     OpenACCReductionOperator getReductionOp() const {
       return std::get<ReductionDetails>(Details).Op;
+    }
+
+    ArrayRef<OpenACCGangKind> getGangKinds() const {
+      assert(ClauseKind == OpenACCClauseKind::Gang &&
+             "Parsed clause kind does not have gang kind");
+      // The args on gang are optional, so this might not actually hold
+      // anything.
+      if (std::holds_alternative<std::monostate>(Details))
+        return {};
+      return std::get<GangDetails>(Details).GangKinds;
     }
 
     ArrayRef<Expr *> getVarList() {
@@ -338,6 +417,8 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
@@ -347,9 +428,30 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{std::move(IntExprs)};
+    }
+
+    void setGangDetails(ArrayRef<OpenACCGangKind> GKs,
+                        ArrayRef<Expr *> IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::Gang &&
+             "Parsed Clause kind does not have gang details");
+      assert(GKs.size() == IntExprs.size() && "Mismatched kind/size?");
+
+      Details = GangDetails{{GKs.begin(), GKs.end()},
+                            {IntExprs.begin(), IntExprs.end()}};
+    }
+
+    void setGangDetails(llvm::SmallVector<OpenACCGangKind> &&GKs,
+                        llvm::SmallVector<Expr *> &&IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::Gang &&
+             "Parsed Clause kind does not have gang details");
+      assert(GKs.size() == IntExprs.size() && "Mismatched kind/size?");
+
+      Details = GangDetails{std::move(GKs), std::move(IntExprs)};
     }
 
     void setVarListDetails(ArrayRef<Expr *> VarList, bool IsReadOnly,
@@ -526,9 +628,11 @@ public:
                                    SourceLocation RBLoc);
   /// Checks the loop depth value for a collapse clause.
   ExprResult CheckCollapseLoopCount(Expr *LoopCount);
-  /// Checks a single size expr for a tile clause. 'gang' could possibly call
-  /// this, but has slightly stricter rules as to valid values.
+  /// Checks a single size expr for a tile clause.
   ExprResult CheckTileSizeExpr(Expr *SizeExpr);
+
+  // Check a single expression on a gang clause.
+  ExprResult CheckGangExpr(OpenACCGangKind GK, Expr *E);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
@@ -537,12 +641,15 @@ public:
   /// into a loop (for, etc) inside the construct.
   class LoopInConstructRAII {
     SemaOpenACC &SemaRef;
+    LoopCheckingInfo OldLoopInfo;
     CollapseCheckingInfo OldCollapseInfo;
+    TileCheckingInfo OldTileInfo;
     bool PreserveDepth;
 
   public:
     LoopInConstructRAII(SemaOpenACC &SemaRef, bool PreserveDepth = true)
-        : SemaRef(SemaRef), OldCollapseInfo(SemaRef.CollapseInfo),
+        : SemaRef(SemaRef), OldLoopInfo(SemaRef.LoopInfo),
+          OldCollapseInfo(SemaRef.CollapseInfo), OldTileInfo(SemaRef.TileInfo),
           PreserveDepth(PreserveDepth) {}
     ~LoopInConstructRAII() {
       // The associated-statement level of this should NOT preserve this, as it
@@ -551,12 +658,20 @@ public:
       bool CollapseDepthSatisified =
           PreserveDepth ? SemaRef.CollapseInfo.CollapseDepthSatisfied
                         : OldCollapseInfo.CollapseDepthSatisfied;
+      bool TileDepthSatisfied = PreserveDepth
+                                    ? SemaRef.TileInfo.TileDepthSatisfied
+                                    : OldTileInfo.TileDepthSatisfied;
       bool CurLevelHasLoopAlready =
-          PreserveDepth ? SemaRef.CollapseInfo.CurLevelHasLoopAlready
-                        : OldCollapseInfo.CurLevelHasLoopAlready;
+          PreserveDepth ? SemaRef.LoopInfo.CurLevelHasLoopAlready
+                        : OldLoopInfo.CurLevelHasLoopAlready;
+
+      SemaRef.LoopInfo = OldLoopInfo;
       SemaRef.CollapseInfo = OldCollapseInfo;
+      SemaRef.TileInfo = OldTileInfo;
+
       SemaRef.CollapseInfo.CollapseDepthSatisfied = CollapseDepthSatisified;
-      SemaRef.CollapseInfo.CurLevelHasLoopAlready = CurLevelHasLoopAlready;
+      SemaRef.TileInfo.TileDepthSatisfied = TileDepthSatisfied;
+      SemaRef.LoopInfo.CurLevelHasLoopAlready = CurLevelHasLoopAlready;
     }
   };
 
@@ -565,8 +680,11 @@ public:
   /// Loop needing its parent construct.
   class AssociatedStmtRAII {
     SemaOpenACC &SemaRef;
-    bool WasInsideComputeConstruct;
+    ComputeConstructInfo OldActiveComputeConstructInfo;
     OpenACCDirectiveKind DirKind;
+    SourceLocation OldLoopGangClauseOnKernelLoc;
+    SourceLocation OldLoopWorkerClauseLoc;
+    SourceLocation OldLoopVectorClauseLoc;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
     LoopInConstructRAII LoopRAII;
 
@@ -575,6 +693,9 @@ public:
                        ArrayRef<const OpenACCClause *>,
                        ArrayRef<OpenACCClause *>);
     void SetCollapseInfoBeforeAssociatedStmt(
+        ArrayRef<const OpenACCClause *> UnInstClauses,
+        ArrayRef<OpenACCClause *> Clauses);
+    void SetTileInfoBeforeAssociatedStmt(
         ArrayRef<const OpenACCClause *> UnInstClauses,
         ArrayRef<OpenACCClause *> Clauses);
     ~AssociatedStmtRAII();

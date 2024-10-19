@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen --print-detailed-records %s | FileCheck %s -DFILE=%basename_s
+// RUN: llvm-tblgen --print-detailed-records %s | FileCheck %s -DFILE=%{s:basename}
 
 class A<int a> {
   int Num = a;

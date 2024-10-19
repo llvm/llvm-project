@@ -104,6 +104,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_cfloat128",
+    hdrs = ["include/llvm-libc-types/cfloat128.h"],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_cfloat16",
+    hdrs = ["include/llvm-libc-types/cfloat16.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_fcntl_macros",
     hdrs = ["include/llvm-libc-macros/linux/fcntl-macros.h"],
 )
@@ -148,6 +159,9 @@ libc_support_library(
 libc_support_library(
     name = "hdr_stdio_macros",
     hdrs = ["hdr/stdio_macros.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
@@ -215,11 +229,17 @@ libc_support_library(
 libc_support_library(
     name = "types_off_t",
     hdrs = ["hdr/types/off_t.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
     name = "types_FILE",
     hdrs = ["hdr/types/FILE.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
@@ -257,6 +277,16 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_properties_os",
     hdrs = ["src/__support/macros/properties/os.h"],
+)
+
+libc_support_library(
+    name = "__support_macros_properties_complex_types",
+    hdrs = ["src/__support/macros/properties/complex_types.h"],
+    deps = [
+        ":__support_macros_properties_types",
+        ":llvm_libc_types_cfloat128",
+        ":llvm_libc_types_cfloat16",
+    ],
 )
 
 libc_support_library(
@@ -484,6 +514,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
         ":__support_macros_properties_types",
         ":llvm_libc_macros_stdfix_macros",
     ],

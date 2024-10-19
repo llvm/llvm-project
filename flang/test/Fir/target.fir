@@ -10,9 +10,8 @@
 func.func @gen4() -> complex<f32> {
   %1 = fir.undefined complex<f32>
   %2 = arith.constant 2.0 : f32
-  %3 = fir.convert %2 : (f32) -> !fir.real<4>
   %c0 = arith.constant 0 : i32
-  %4 = fir.insert_value %1, %3, [0 : index] : (complex<f32>, !fir.real<4>) -> complex<f32>
+  %4 = fir.insert_value %1, %2, [0 : index] : (complex<f32>, f32) -> complex<f32>
   %c1 = arith.constant 1 : i32
   %5 = arith.constant -42.0 : f32
   %6 = fir.insert_value %4, %5, [1 : index] : (complex<f32>, f32) -> complex<f32>

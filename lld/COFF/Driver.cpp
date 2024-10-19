@@ -1340,7 +1340,7 @@ void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
   if (!sym)
     return;
   if (auto undef = dyn_cast<Undefined>(sym))
-    def = undef->getWeakAlias();
+    def = undef->getDefinedWeakAlias();
   else
     def = dyn_cast<Defined>(sym);
   if (!def)
@@ -1376,7 +1376,7 @@ void LinkerDriver::createECExportThunks() {
       continue;
     Defined *targetSym;
     if (auto undef = dyn_cast<Undefined>(sym))
-      targetSym = undef->getWeakAlias();
+      targetSym = undef->getDefinedWeakAlias();
     else
       targetSym = dyn_cast<Defined>(sym);
     if (!targetSym)
@@ -2628,7 +2628,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
-  ctx.symtab.resolveRemainingUndefines();
+  while (ctx.symtab.resolveRemainingUndefines())
+    run();
+
   if (errorCount())
     return;
 

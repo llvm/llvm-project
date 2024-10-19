@@ -12,7 +12,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcPowfTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -191,4 +190,7 @@ TEST_F(LlvmLibcPowfTest, SpecialNumbers) {
                                   FE_UNDERFLOW);
     }
   }
+
+  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::powf(-0.015625f, 25.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::powf(-0.015625f, 26.0f));
 }

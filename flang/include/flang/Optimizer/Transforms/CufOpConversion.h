@@ -18,12 +18,14 @@ class LLVMTypeConverter;
 
 namespace mlir {
 class DataLayout;
+class SymbolTable;
 }
 
 namespace cuf {
 
-void populateCUFToFIRConversionPatterns(fir::LLVMTypeConverter &converter,
+void populateCUFToFIRConversionPatterns(const fir::LLVMTypeConverter &converter,
                                         mlir::DataLayout &dl,
+                                        const mlir::SymbolTable &symtab,
                                         mlir::RewritePatternSet &patterns);
 
 } // namespace cuf

@@ -75,7 +75,7 @@ Constant *llvm::getPredForFCmpCode(unsigned Code, Type *OpTy,
 
 std::optional<DecomposedBitTest>
 llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
-                           bool LookThruTrunc) {
+                           bool LookThruTrunc, bool AllowNonZeroC) {
   using namespace PatternMatch;
 
   const APInt *OrigC;
@@ -100,21 +100,56 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
   switch (Pred) {
   default:
     llvm_unreachable("Unexpected predicate");
-  case ICmpInst::ICMP_SLT:
+  case ICmpInst::ICMP_SLT: {
     // X < 0 is equivalent to (X & SignMask) != 0.
-    if (!C.isZero())
-      return std::nullopt;
-    Result.Mask = APInt::getSignMask(C.getBitWidth());
-    Result.Pred = ICmpInst::ICMP_NE;
-    break;
+    if (C.isZero()) {
+      Result.Mask = APInt::getSignMask(C.getBitWidth());
+      Result.C = APInt::getZero(C.getBitWidth());
+      Result.Pred = ICmpInst::ICMP_NE;
+      break;
+    }
+
+    APInt FlippedSign = C ^ APInt::getSignMask(C.getBitWidth());
+    if (FlippedSign.isPowerOf2()) {
+      // X s< 10000100 is equivalent to (X & 11111100 == 10000000)
+      Result.Mask = -FlippedSign;
+      Result.C = APInt::getSignMask(C.getBitWidth());
+      Result.Pred = ICmpInst::ICMP_EQ;
+      break;
+    }
+
+    if (FlippedSign.isNegatedPowerOf2()) {
+      // X s< 01111100 is equivalent to (X & 11111100 != 01111100)
+      Result.Mask = FlippedSign;
+      Result.C = C;
+      Result.Pred = ICmpInst::ICMP_NE;
+      break;
+    }
+
+    return std::nullopt;
+  }
   case ICmpInst::ICMP_ULT:
     // X <u 2^n is equivalent to (X & ~(2^n-1)) == 0.
-    if (!C.isPowerOf2())
-      return std::nullopt;
-    Result.Mask = -C;
-    Result.Pred = ICmpInst::ICMP_EQ;
-    break;
+    if (C.isPowerOf2()) {
+      Result.Mask = -C;
+      Result.C = APInt::getZero(C.getBitWidth());
+      Result.Pred = ICmpInst::ICMP_EQ;
+      break;
+    }
+
+    // X u< 11111100 is equivalent to (X & 11111100 != 11111100)
+    if (C.isNegatedPowerOf2()) {
+      Result.Mask = C;
+      Result.C = C;
+      Result.Pred = ICmpInst::ICMP_NE;
+      break;
+    }
+
+    return std::nullopt;
   }
+
+  if (!AllowNonZeroC && !Result.C.isZero())
+    return std::nullopt;
 
   if (Inverted)
     Result.Pred = ICmpInst::getInversePredicate(Result.Pred);
@@ -123,6 +158,7 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
   if (LookThruTrunc && match(LHS, m_Trunc(m_Value(X)))) {
     Result.X = X;
     Result.Mask = Result.Mask.zext(X->getType()->getScalarSizeInBits());
+    Result.C = Result.C.zext(X->getType()->getScalarSizeInBits());
   } else {
     Result.X = LHS;
   }

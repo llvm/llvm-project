@@ -9,7 +9,7 @@ Introduction
 ============
 RealtimeSanitizer (a.k.a. RTSan) is a real-time safety testing tool for C and C++
 projects. RTSan can be used to detect real-time violations, i.e. calls to methods
-that are not safe for use in functions with deterministic runtime requirements.
+that are not safe for use in functions with deterministic run time requirements.
 RTSan considers any function marked with the ``[[clang::nonblocking]]`` attribute
 to be a real-time function. If RTSan detects a call to ``malloc``, ``free``,
 ``pthread_mutex_lock``, or anything else that could have a non-deterministic
@@ -58,7 +58,7 @@ code.
      return 0;
    }
    # Compile and link
-   % clang++ -fsanitize=realtime -g example_realtime_violation.cpp
+   % clang++ -fsanitize=realtime example_realtime_violation.cpp
 
 If a real-time safety violation is detected in a ``[[clang::nonblocking]]``
 context, or any function invoked by that function, the program will exit with a
@@ -66,23 +66,63 @@ non-zero exit code.
 
 .. code-block:: console
 
-   % clang++ -fsanitize=realtime -g example_realtime_violation.cpp
+   % clang++ -fsanitize=realtime example_realtime_violation.cpp
    % ./a.out
-   Real-time violation: intercepted call to real-time unsafe function `malloc` in real-time context! Stack trace:
-    #0 0x000102893034 in __rtsan::PrintStackTrace() rtsan_stack.cpp:45
-    #1 0x000102892e64 in __rtsan::Context::ExpectNotRealtime(char const*) rtsan_context.cpp:78
-    #2 0x00010289397c in malloc rtsan_interceptors.cpp:286
-    #3 0x000195bd7bd0 in operator new(unsigned long)+0x1c (libc++abi.dylib:arm64+0x16bd0)
-    #4 0x5c7f00010230f07c  (<unknown module>)
-    #5 0x00010230f058 in std::__1::__libcpp_allocate[abi:ue170006](unsigned long, unsigned long) new:324
-    #6 0x00010230effc in std::__1::allocator<float>::allocate[abi:ue170006](unsigned long) allocator.h:114
-    ... snip ...
-    #10 0x00010230e4bc in std::__1::vector<float, std::__1::allocator<float>>::__append(unsigned long) vector:1162
-    #11 0x00010230dcdc in std::__1::vector<float, std::__1::allocator<float>>::resize(unsigned long) vector:1981
-    #12 0x00010230dc28 in violation() main.cpp:5
-    #13 0x00010230dd64 in main main.cpp:9
-    #14 0x0001958960dc  (<unknown module>)
-    #15 0x2f557ffffffffffc  (<unknown module>)
+   ==76290==ERROR: RealtimeSanitizer: unsafe-library-call
+   Intercepted call to real-time unsafe function `malloc` in real-time context!
+       #0 0x000102a7b884 in malloc rtsan_interceptors.cpp:426
+       #1 0x00019c326bd0 in operator new(unsigned long)+0x1c (libc++abi.dylib:arm64+0x16bd0)
+       #2 0xa30d0001024f79a8  (<unknown module>)
+       #3 0x0001024f794c in std::__1::__libcpp_allocate[abi:ne200000](unsigned long, unsigned long)+0x44
+       #4 0x0001024f78c4 in std::__1::allocator<float>::allocate[abi:ne200000](unsigned long)+0x44
+       ... snip ...
+       #9 0x0001024f6868 in std::__1::vector<float, std::__1::allocator<float>>::resize(unsigned long)+0x48
+       #10 0x0001024f67b4 in violation()+0x24
+       #11 0x0001024f68f0 in main+0x18 (a.out:arm64+0x1000028f0)
+       #12 0x00019bfe3150  (<unknown module>)
+       #13 0xed5efffffffffffc  (<unknown module>)
+
+
+Blocking functions
+------------------
+
+Calls to system library functions such as ``malloc`` are automatically caught by
+RealtimeSanitizer. Real-time programmers may also write their own blocking
+(real-time unsafe) functions that they wish RealtimeSanitizer to be aware of.
+RealtimeSanitizer will raise an error at run time if any function attributed
+with ``[[clang::blocking]]`` is called in a ``[[clang::nonblocking]]`` context.
+
+.. code-block:: console
+
+    $ cat example_blocking_violation.cpp
+    #include <atomic>
+    #include <thread>
+
+    std::atomic<bool> has_permission{false};
+
+    int wait_for_permission() [[clang::blocking]] {
+      while (has_permission.load() == false)
+        std::this_thread::yield();
+      return 0;
+    }
+
+    int real_time_function() [[clang::nonblocking]] {
+      return wait_for_permission();
+    }
+
+    int main() {
+      return real_time_function();
+    }
+
+    $ clang++ -fsanitize=realtime example_blocking_violation.cpp && ./a.out
+    ==76131==ERROR: RealtimeSanitizer: blocking-call
+    Call to blocking function `wait_for_permission()` in real-time context!
+        #0 0x0001000c3db0 in wait_for_permission()+0x10 (a.out:arm64+0x100003db0)
+        #1 0x0001000c3e3c in real_time_function()+0x10 (a.out:arm64+0x100003e3c)
+        #2 0x0001000c3e68 in main+0x10 (a.out:arm64+0x100003e68)
+        #3 0x00019bfe3150  (<unknown module>)
+        #4 0x5a27fffffffffffc  (<unknown module>)
+
 
 Run-time flags
 --------------
@@ -159,7 +199,7 @@ Disabling
 
 In some circumstances, you may want to suppress error reporting in a specific scope.
 
-In C++, this is achieved via  ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all sanitizer error reports are suppressed. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively. 
+In C++, this is achieved via  ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all sanitizer error reports are suppressed. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively.
 
 .. code-block:: c++
 
@@ -174,7 +214,7 @@ In C++, this is achieved via  ``__rtsan::ScopedDisabler``. Within the scope wher
 
 If RealtimeSanitizer is not enabled at compile time (i.e., the code is not compiled with the ``-fsanitize=realtime`` flag), the ``ScopedDisabler`` is compiled as a no-op.
 
-In C, you can use the ``__rtsan_disable()`` and ``rtsan_enable()`` functions to manually disable and re-enable RealtimeSanitizer checks. 
+In C, you can use the ``__rtsan_disable()`` and ``rtsan_enable()`` functions to manually disable and re-enable RealtimeSanitizer checks.
 
 .. code-block:: c++
 

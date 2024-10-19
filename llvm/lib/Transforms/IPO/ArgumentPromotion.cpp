@@ -101,7 +101,8 @@ using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
   if (Offset != 0) {
-    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
+    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset,
+                   /*isSigned=*/true);
     Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt(APOffset));
   }
   return Ptr;
@@ -491,10 +492,7 @@ static bool isArgUnmodifiedByAllCalls(Argument *Arg,
                                       FunctionAnalysisManager &FAM) {
   for (User *U : Arg->getParent()->users()) {
 
-    // Bail if we find an unexpected (non CallInst) use of the function.
-    auto *Call = dyn_cast<CallInst>(U);
-    if (!Call)
-      return false;
+    auto *Call = cast<CallBase>(U);
 
     MemoryLocation Loc =
         MemoryLocation::getForArgument(Call, Arg->getArgNo(), nullptr);
