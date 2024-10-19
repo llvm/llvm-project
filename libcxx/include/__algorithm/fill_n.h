@@ -101,13 +101,22 @@ __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
   return __first;
 }
 
+template <class _Tp>
+struct __fill_n_segment {
+  const _Tp& __value_;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __fill_n_segment(const _Tp& __value) : __value_(__value) {}
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR void operator()(_Tp& __val) const { __val = __value_; }
+};
+
 template <class _OutputIterator,
           class _Size,
           class _Tp,
           __enable_if_t<__is_segmented_iterator<_OutputIterator>::value, int> >
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
-  std::for_each(__first, __first + __n, [__value](_Tp& __val) { __val = __value; });
+  std::for_each(__first, __first + __n, __fill_n_segment<_Tp>(__value));
   return __n > 0 ? __first + __n : __first;
 }
 
