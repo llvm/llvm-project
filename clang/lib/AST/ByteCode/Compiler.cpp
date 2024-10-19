@@ -2728,7 +2728,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
     if (std::optional<unsigned> LocalIndex =
-            allocateLocal(Inner, E->getExtendingDecl())) {
+            allocateLocal(E, Inner->getType(), E->getExtendingDecl())) {
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
@@ -2868,6 +2868,11 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
+
+  if (!Initializing) {
+    unsigned StringIndex = P.createGlobalString(E->getFunctionName(), E);
+    return this->emitGetPtrGlobal(StringIndex, E);
+  }
 
   return this->delegate(E->getFunctionName());
 }
@@ -3406,11 +3411,14 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   if (!this->visit(Arg))
     return false;
 
-  return this->emitFree(E->isArrayForm(), E);
+  return this->emitFree(E->isArrayForm(), E->isGlobalDelete(), E);
 }
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
+  if (DiscardResult)
+    return true;
+
   const Function *Func = nullptr;
   if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
     Func = F;
@@ -3537,8 +3545,8 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
   QualType ElemType = VT->getElementType();
   PrimType ElemT = classifyPrim(ElemType);
   const Expr *Src = E->getSrcExpr();
-  PrimType SrcElemT =
-      classifyPrim(Src->getType()->castAs<VectorType>()->getElementType());
+  QualType SrcType = Src->getType();
+  PrimType SrcElemT = classifyVectorElementType(SrcType);
 
   unsigned SrcOffset = this->allocateLocalPrimitive(Src, PT_Ptr, true, false);
   if (!this->visit(Src))
@@ -3551,8 +3559,14 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
       return false;
     if (!this->emitArrayElemPop(SrcElemT, I, E))
       return false;
+
+    // Cast to the desired result element type.
     if (SrcElemT != ElemT) {
       if (!this->emitPrimCast(SrcElemT, ElemT, ElemType, E))
+        return false;
+    } else if (ElemType->isFloatingType() && SrcType != ElemType) {
+      const auto *TargetSemantics = &Ctx.getFloatSemantics(ElemType);
+      if (!this->emitCastFP(TargetSemantics, getRoundingMode(E), E))
         return false;
     }
     if (!this->emitInitElem(ElemT, I, E))
@@ -3586,8 +3600,9 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   }
   for (unsigned I = 0; I != NumOutputElems; ++I) {
     APSInt ShuffleIndex = E->getShuffleMaskIdx(Ctx.getASTContext(), I);
+    assert(ShuffleIndex >= -1);
     if (ShuffleIndex == -1)
-      return this->emitInvalid(E); // FIXME: Better diagnostic.
+      return this->emitInvalidShuffleVectorIndex(I, E);
 
     assert(ShuffleIndex < (NumInputElems * 2));
     if (!this->emitGetLocal(PT_Ptr,
@@ -4028,7 +4043,8 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
 
 template <class Emitter>
 std::optional<unsigned>
-Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
+Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
+                                 const ValueDecl *ExtendingDecl) {
   // Make sure we don't accidentally register the same decl twice.
   if ([[maybe_unused]] const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
@@ -4036,7 +4052,6 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
     assert(!Locals.contains(VD));
   }
 
-  QualType Ty;
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
@@ -4049,7 +4064,8 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
   }
   if (auto *E = Src.dyn_cast<const Expr *>()) {
     IsTemporary = true;
-    Ty = E->getType();
+    if (Ty.isNull())
+      Ty = E->getType();
   }
 
   Descriptor *D = P.createDescriptor(
@@ -4116,10 +4132,16 @@ template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this);
 
+  // If we won't destroy the toplevel scope, check for memory leaks first.
+  if (!DestroyToplevelScope) {
+    if (!this->emitCheckAllocations(E))
+      return false;
+  }
+
   auto maybeDestroyLocals = [&]() -> bool {
     if (DestroyToplevelScope)
-      return RootScope.destroyLocals();
-    return true;
+      return RootScope.destroyLocals() && this->emitCheckAllocations(E);
+    return this->emitCheckAllocations(E);
   };
 
   // Void expressions.
@@ -4155,8 +4177,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  (void)maybeDestroyLocals();
-  return false;
+  return maybeDestroyLocals() && this->emitCheckAllocations(E) && false;
 }
 
 template <class Emitter>
@@ -4198,7 +4219,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
     DeclScope<Emitter> LS(this, VD);
     if (!this->visit(VD->getAnyInitializer()))
       return false;
-    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals();
+    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals() &&
+           this->emitCheckAllocations(VD);
   }
 
   LocalScope<Emitter> VDScope(this, VD);
@@ -4244,7 +4266,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
     return false;
   }
 
-  return VDScope.destroyLocals();
+  return VDScope.destroyLocals() && this->emitCheckAllocations(VD);
 }
 
 template <class Emitter>
@@ -4519,6 +4541,10 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
     }
   }
+  // Explicit calls to trivial destructors
+  if (const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(FuncDecl);
+      DD && DD->isTrivial())
+    return true;
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);
@@ -6004,6 +6030,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
+
+    if (D->getType()->isReferenceType())
+      return false; // FIXME: Do we need to emit InvalidDeclRef?
   }
 
   // In case we need to re-visit a declaration.
@@ -6040,9 +6069,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         const auto typeShouldBeVisited = [&](QualType T) -> bool {
           if (T.isConstant(Ctx.getASTContext()))
             return true;
-          if (const auto *RT = T->getAs<ReferenceType>())
-            return RT->getPointeeType().isConstQualified();
-          return false;
+          return T->isReferenceType();
         };
 
         // DecompositionDecls are just proxies for us.
@@ -6058,9 +6085,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         // other words, we're evaluating the initializer, just to know if we can
         // evaluate the initializer.
         if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
-            VD->getInit() && !VD->getInit()->isValueDependent() &&
-            VD->evaluateValue())
-          return revisit(VD);
+            VD->getInit() && !VD->getInit()->isValueDependent()) {
+
+          if (VD->evaluateValue())
+            return revisit(VD);
+          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E), E);
+        }
       }
     } else {
       if (const auto *VD = dyn_cast<VarDecl>(D);

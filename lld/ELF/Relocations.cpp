@@ -381,8 +381,8 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool isRO = isReadOnly<ELFT>(ss);
-  BssSection *sec =
-      make<BssSection>(isRO ? ".bss.rel.ro" : ".bss", symSize, ss.alignment);
+  BssSection *sec = make<BssSection>(ctx, isRO ? ".bss.rel.ro" : ".bss",
+                                     symSize, ss.alignment);
   OutputSection *osec = (isRO ? ctx.in.bssRelRo : ctx.in.bss)->getParent();
 
   // At this point, sectionBases has been migrated to sections. Append sec to
@@ -392,7 +392,7 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
     osec->commands.push_back(make<InputSectionDescription>(""));
   auto *isd = cast<InputSectionDescription>(osec->commands.back());
   isd->sections.push_back(sec);
-  osec->commitSection(ctx, sec);
+  osec->commitSection(sec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
@@ -878,7 +878,7 @@ template <bool shard = false>
 static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
                              uint64_t offsetInSec, Symbol &sym, int64_t addend,
                              RelExpr expr, RelType type) {
-  Partition &part = isec.getPartition();
+  Partition &part = isec.getPartition(ctx);
 
   if (sym.isTagged()) {
     std::lock_guard<std::mutex> lock(relocMutex);
@@ -917,11 +917,11 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
 }
 
 template <class PltSection, class GotPltSection>
-static void addPltEntry(PltSection &plt, GotPltSection &gotPlt,
+static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
   gotPlt.addEntry(sym);
-  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(),
+  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
                 sym.isPreemptible ? DynamicReloc::AgainstSymbol
                                   : DynamicReloc::AddendOnlyWithTargetVA,
                 sym, 0, R_ABS});
@@ -929,7 +929,7 @@ static void addPltEntry(PltSection &plt, GotPltSection &gotPlt,
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
   ctx.in.got->addEntry(sym);
-  uint64_t off = sym.getGotOffset();
+  uint64_t off = sym.getGotOffset(ctx);
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
@@ -950,7 +950,7 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
   ctx.in.got->addEntry(sym);
-  uint64_t off = sym.getGotOffset();
+  uint64_t off = sym.getGotOffset(ctx);
   if (!sym.isPreemptible && !ctx.arg.shared) {
     ctx.in.got->addConstant({R_TPREL, ctx.target->symbolicRel, off, 0, &sym});
     return;
@@ -1159,7 +1159,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       if (ctx.arg.emachine == EM_MIPS && rel == ctx.target->symbolicRel)
         rel = ctx.target->relativeRel;
       std::lock_guard<std::mutex> lock(relocMutex);
-      Partition &part = sec->getPartition();
+      Partition &part = sec->getPartition(ctx);
       if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
         // For a preemptible symbol, we can't use a relative relocation. For an
         // undefined symbol, we can't compute offset at link-time and use a
@@ -1753,19 +1753,19 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // --pack-relative-relocs=android+relr is enabled. Work around this by placing
   // IRELATIVE in .rela.plt.
   auto *directSym = makeDefined(cast<Defined>(sym));
-  directSym->allocateAux();
+  directSym->allocateAux(ctx);
   auto &dyn =
       ctx.arg.androidPackDynRelocs ? *ctx.in.relaPlt : *ctx.mainPart->relaDyn;
-  addPltEntry(*ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
+  addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
               *directSym);
-  sym.allocateAux();
+  sym.allocateAux(ctx);
   ctx.symAux.back().pltIdx = ctx.symAux[directSym->auxIdx].pltIdx;
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
     d.section = ctx.in.iplt.get();
-    d.value = d.getPltIdx() * ctx.target->ipltEntrySize;
+    d.value = d.getPltIdx(ctx) * ctx.target->ipltEntrySize;
     d.size = 0;
     // It's important to set the symbol type here so that dynamic loaders
     // don't try to call the PLT as if it were an ifunc resolver.
@@ -1791,12 +1791,12 @@ void elf::postScanRelocations(Ctx &ctx) {
 
     if (!sym.needsDynReloc())
       return;
-    sym.allocateAux();
+    sym.allocateAux(ctx);
 
     if (flags & NEEDS_GOT)
       addGotEntry(ctx, sym);
     if (flags & NEEDS_PLT)
-      addPltEntry(*ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
+      addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                   ctx.target->pltRel, sym);
     if (flags & NEEDS_COPY) {
       if (sym.isObject()) {
@@ -1809,7 +1809,7 @@ void elf::postScanRelocations(Ctx &ctx) {
         if (!sym.isDefined()) {
           replaceWithDefined(sym, *ctx.in.plt,
                              ctx.target->pltHeaderSize +
-                                 ctx.target->pltEntrySize * sym.getPltIdx(),
+                                 ctx.target->pltEntrySize * sym.getPltIdx(ctx),
                              0);
           sym.setFlags(NEEDS_COPY);
           if (ctx.arg.emachine == EM_PPC) {
@@ -1855,12 +1855,12 @@ void elf::postScanRelocations(Ctx &ctx) {
     if (flags & NEEDS_TLSGD_TO_IE) {
       got->addEntry(sym);
       ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsGotRel, *got,
-                                            sym.getGotOffset(), sym);
+                                            sym.getGotOffset(ctx), sym);
     }
     if (flags & NEEDS_GOT_DTPREL) {
       got->addEntry(sym);
       got->addConstant(
-          {R_ABS, ctx.target->tlsOffsetRel, sym.getGotOffset(), 0, &sym});
+          {R_ABS, ctx.target->tlsOffsetRel, sym.getGotOffset(ctx), 0, &sym});
     }
 
     if ((flags & NEEDS_TLSIE) && !(flags & NEEDS_TLSGD_TO_IE))
@@ -2020,15 +2020,14 @@ static void forEachInputSectionDescription(
 // This may invalidate any output section offsets stored outside of InputSection
 void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
   forEachInputSectionDescription(
-      outputSections,
-      [&, &ctx = ctx](OutputSection *os, InputSectionDescription *isd) {
+      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
         if (isd->thunkSections.empty())
           return;
 
         // Remove any zero sized precreated Thunks.
         llvm::erase_if(isd->thunkSections,
-                       [&ctx](const std::pair<ThunkSection *, uint32_t> &ts) {
-                         return ts.first->getSize(ctx) == 0;
+                       [](const std::pair<ThunkSection *, uint32_t> &ts) {
+                         return ts.first->getSize() == 0;
                        });
 
         // ISD->ThunkSections contains all created ThunkSections, including
@@ -2081,7 +2080,7 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
   for (std::pair<ThunkSection *, uint32_t> tp : isd->thunkSections) {
     ThunkSection *ts = tp.first;
     uint64_t tsBase = os->addr + ts->outSecOff - pcBias;
-    uint64_t tsLimit = tsBase + ts->getSize(ctx);
+    uint64_t tsLimit = tsBase + ts->getSize();
     if (ctx.target->inBranchRange(rel.type, src,
                                   (src > tsLimit) ? tsBase : tsLimit))
       return ts;
@@ -2185,7 +2184,7 @@ void ThunkCreator::createInitialThunkSections(
 ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
                                             InputSectionDescription *isd,
                                             uint64_t off) {
-  auto *ts = make<ThunkSection>(os, off);
+  auto *ts = make<ThunkSection>(ctx, os, off);
   ts->partition = os->partition;
   if ((ctx.arg.fixCortexA53Errata843419 || ctx.arg.fixCortexA8) &&
       !isd->sections.empty()) {
@@ -2247,7 +2246,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   // offset + addend) pair. We may revert the relocation back to its original
   // non-Thunk target, so we cannot fold offset + addend.
   if (auto *d = dyn_cast<Defined>(rel.sym))
-    if (!d->isInPlt() && d->section)
+    if (!d->isInPlt(ctx) && d->section)
       thunkVec = &thunkedSymbolsBySectionAndAddend[{{d->section, d->value},
                                                     keyAddend}];
   if (!thunkVec)
@@ -2286,7 +2285,7 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
       return true;
     rel.sym = &t->destination;
     rel.addend = t->addend;
-    if (rel.sym->isInPlt())
+    if (rel.sym->isInPlt(ctx))
       rel.expr = toPlt(rel.expr);
   }
   return false;
@@ -2427,8 +2426,8 @@ void elf::hexagonTLSSymbolUpdate(Ctx &ctx) {
           for (Relocation &rel : isec->relocs())
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
               if (needEntry) {
-                sym->allocateAux();
-                addPltEntry(*ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
+                sym->allocateAux(ctx);
+                addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                             ctx.target->pltRel, *sym);
                 needEntry = false;
               }

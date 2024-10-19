@@ -233,12 +233,6 @@ class RVBUnaryR<bits<7> funct7, bits<3> funct3,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBUnary<bits<12> imm12, bits<3> funct3,
-               RISCVOpcode opcode, string opcodestr>
-    : RVInstIUnary<imm12, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1),
-                   opcodestr, "$rd, $rs1">;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVBShift_ri<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
                   string opcodestr>
     : RVInstIShift<imm11_7, funct3, opcode, (outs GPR:$rd),
@@ -333,27 +327,27 @@ def XPERM8 : ALU_rr<0b0010100, 0b100, "xperm8">,
 } // Predicates = [HasStdExtZbkx]
 
 let Predicates = [HasStdExtZbb], IsSignExtendingOpW = 1 in {
-def CLZ  : RVBUnary<0b011000000000, 0b001, OPC_OP_IMM, "clz">,
+def CLZ  : Unary_r<0b011000000000, 0b001, "clz">,
            Sched<[WriteCLZ, ReadCLZ]>;
-def CTZ  : RVBUnary<0b011000000001, 0b001, OPC_OP_IMM, "ctz">,
+def CTZ  : Unary_r<0b011000000001, 0b001, "ctz">,
            Sched<[WriteCTZ, ReadCTZ]>;
-def CPOP : RVBUnary<0b011000000010, 0b001, OPC_OP_IMM, "cpop">,
+def CPOP : Unary_r<0b011000000010, 0b001, "cpop">,
            Sched<[WriteCPOP, ReadCPOP]>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbb, IsRV64], IsSignExtendingOpW = 1 in {
-def CLZW   : RVBUnary<0b011000000000, 0b001, OPC_OP_IMM_32, "clzw">,
-             Sched<[WriteCLZ32, ReadCLZ32]>;
-def CTZW   : RVBUnary<0b011000000001, 0b001, OPC_OP_IMM_32, "ctzw">,
-             Sched<[WriteCTZ32, ReadCTZ32]>;
-def CPOPW  : RVBUnary<0b011000000010, 0b001, OPC_OP_IMM_32, "cpopw">,
-             Sched<[WriteCPOP32, ReadCPOP32]>;
+def CLZW  : UnaryW_r<0b011000000000, 0b001, "clzw">,
+            Sched<[WriteCLZ32, ReadCLZ32]>;
+def CTZW  : UnaryW_r<0b011000000001, 0b001, "ctzw">,
+            Sched<[WriteCTZ32, ReadCTZ32]>;
+def CPOPW : UnaryW_r<0b011000000010, 0b001, "cpopw">,
+            Sched<[WriteCPOP32, ReadCPOP32]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbb], IsSignExtendingOpW = 1 in {
-def SEXT_B : RVBUnary<0b011000000100, 0b001, OPC_OP_IMM, "sext.b">,
+def SEXT_B : Unary_r<0b011000000100, 0b001, "sext.b">,
              Sched<[WriteIALU, ReadIALU]>;
-def SEXT_H : RVBUnary<0b011000000101, 0b001, OPC_OP_IMM, "sext.h">,
+def SEXT_H : Unary_r<0b011000000101, 0b001, "sext.h">,
              Sched<[WriteIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbb]
 
@@ -403,28 +397,28 @@ def ZEXT_H_RV64 : RVBUnaryR<0b0000100, 0b100, OPC_OP_32, "zext.h">,
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV32] in {
-def REV8_RV32 : RVBUnary<0b011010011000, 0b101, OPC_OP_IMM, "rev8">,
+def REV8_RV32 : Unary_r<0b011010011000, 0b101, "rev8">,
                 Sched<[WriteREV8, ReadREV8]>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV32]
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
-def REV8_RV64 : RVBUnary<0b011010111000, 0b101, OPC_OP_IMM, "rev8">,
+def REV8_RV64 : Unary_r<0b011010111000, 0b101, "rev8">,
                 Sched<[WriteREV8, ReadREV8]>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbb] in {
-def ORC_B : RVBUnary<0b001010000111, 0b101, OPC_OP_IMM, "orc.b">,
+def ORC_B : Unary_r<0b001010000111, 0b101, "orc.b">,
             Sched<[WriteORCB, ReadORCB]>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbkb] in
-def BREV8 : RVBUnary<0b011010000111, 0b101, OPC_OP_IMM, "brev8">,
+def BREV8 : Unary_r<0b011010000111, 0b101, "brev8">,
             Sched<[WriteBREV8, ReadBREV8]>;
 
 let Predicates = [HasStdExtZbkb, IsRV32] in {
-def ZIP_RV32   : RVBUnary<0b000010001111, 0b001, OPC_OP_IMM, "zip">,
+def ZIP_RV32   : Unary_r<0b000010001111, 0b001, "zip">,
                  Sched<[WriteZIP, ReadZIP]>;
-def UNZIP_RV32 : RVBUnary<0b000010001111, 0b101, OPC_OP_IMM, "unzip">,
+def UNZIP_RV32 : Unary_r<0b000010001111, 0b101, "unzip">,
                  Sched<[WriteZIP, ReadZIP]>;
 } // Predicates = [HasStdExtZbkb, IsRV32]
 

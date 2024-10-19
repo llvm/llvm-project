@@ -31,7 +31,7 @@ bool MemIndex::fuzzyFind(
   trace::Span Tracer("MemIndex fuzzyFind");
 
   TopN<std::pair<float, const Symbol *>> Top(
-      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
+      Req.Limit.value_or(std::numeric_limits<size_t>::max()));
   FuzzyMatcher Filter(Req.Query);
   bool More = false;
   for (const auto &Pair : Index) {

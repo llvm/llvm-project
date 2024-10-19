@@ -15,7 +15,7 @@ define i64 @rotate64(i64 %a, i32 %b) {
 ; CHECK-NEXT:    shr.u64 %rd2, %rd1, 61;
 ; CHECK-NEXT:    shl.b64 %rd3, %rd1, 3;
 ; CHECK-NEXT:    or.b64 %rd4, %rd3, %rd2;
-; CHECK-NEXT:    st.param.b64 [func_retval0+0], %rd4;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %val = tail call i64 @llvm.nvvm.rotate.b64(i64 %a, i32 3)
   ret i64 %val
@@ -31,7 +31,7 @@ define i64 @rotateright64(i64 %a, i32 %b) {
 ; CHECK-NEXT:    shl.b64 %rd2, %rd1, 61;
 ; CHECK-NEXT:    shr.u64 %rd3, %rd1, 3;
 ; CHECK-NEXT:    or.b64 %rd4, %rd3, %rd2;
-; CHECK-NEXT:    st.param.b64 [func_retval0+0], %rd4;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %val = tail call i64 @llvm.nvvm.rotate.right.b64(i64 %a, i32 3)
   ret i64 %val

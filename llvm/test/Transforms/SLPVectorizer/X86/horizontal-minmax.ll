@@ -980,10 +980,10 @@ define i32 @maxi8_wrong_parent(i32) {
 ; SSE4-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
 ; SSE4-NEXT:    [[TMP6:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 7), align 4
 ; SSE4-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP4]])
-; SSE4-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 [[TMP7]], [[TMP2]]
-; SSE4-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP7]], i32 [[TMP2]]
-; SSE4-NEXT:    [[OP_RDX2:%.*]] = icmp sgt i32 [[TMP5]], [[TMP6]]
-; SSE4-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i32 [[TMP5]], i32 [[TMP6]]
+; SSE4-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 [[TMP7]], [[TMP5]]
+; SSE4-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP7]], i32 [[TMP5]]
+; SSE4-NEXT:    [[OP_RDX2:%.*]] = icmp sgt i32 [[TMP6]], [[TMP2]]
+; SSE4-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i32 [[TMP6]], i32 [[TMP2]]
 ; SSE4-NEXT:    [[OP_RDX4:%.*]] = icmp sgt i32 [[OP_RDX1]], [[OP_RDX3]]
 ; SSE4-NEXT:    [[OP_RDX5:%.*]] = select i1 [[OP_RDX4]], i32 [[OP_RDX1]], i32 [[OP_RDX3]]
 ; SSE4-NEXT:    [[OP_RDX6:%.*]] = icmp sgt i32 [[OP_RDX5]], [[TMP3]]
@@ -999,10 +999,10 @@ define i32 @maxi8_wrong_parent(i32) {
 ; AVX-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
 ; AVX-NEXT:    [[TMP6:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 7), align 4
 ; AVX-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP4]])
-; AVX-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 [[TMP7]], [[TMP2]]
-; AVX-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP7]], i32 [[TMP2]]
-; AVX-NEXT:    [[OP_RDX2:%.*]] = icmp sgt i32 [[TMP5]], [[TMP6]]
-; AVX-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i32 [[TMP5]], i32 [[TMP6]]
+; AVX-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 [[TMP7]], [[TMP5]]
+; AVX-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP7]], i32 [[TMP5]]
+; AVX-NEXT:    [[OP_RDX2:%.*]] = icmp sgt i32 [[TMP6]], [[TMP2]]
+; AVX-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i32 [[TMP6]], i32 [[TMP2]]
 ; AVX-NEXT:    [[OP_RDX4:%.*]] = icmp sgt i32 [[OP_RDX1]], [[OP_RDX3]]
 ; AVX-NEXT:    [[OP_RDX5:%.*]] = select i1 [[OP_RDX4]], i32 [[OP_RDX1]], i32 [[OP_RDX3]]
 ; AVX-NEXT:    [[OP_RDX6:%.*]] = icmp sgt i32 [[OP_RDX5]], [[TMP3]]
@@ -1013,11 +1013,11 @@ define i32 @maxi8_wrong_parent(i32) {
 ; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @arr, align 16
 ; THRESH-NEXT:    br label [[PP:%.*]]
 ; THRESH:       pp:
-; THRESH-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
-; THRESH-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 4), align 16
-; THRESH-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> [[TMP4]], i64 4)
-; THRESH-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP5]], <2 x i32> [[TMP2]], i64 0)
-; THRESH-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP6]], <2 x i32> [[TMP3]], i64 2)
+; THRESH-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
+; THRESH-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
+; THRESH-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> [[TMP3]], i64 0)
+; THRESH-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP5]], <2 x i32> [[TMP4]], i64 4)
+; THRESH-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP6]], <2 x i32> [[TMP2]], i64 6)
 ; THRESH-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP7]])
 ; THRESH-NEXT:    ret i32 [[TMP8]]
 ;
