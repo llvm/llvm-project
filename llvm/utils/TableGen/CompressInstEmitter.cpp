@@ -523,7 +523,7 @@ getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
     }
 
     if (IsOr)
-      AnyOfFeatureSets.insert(AnyOfSet);
+      AnyOfFeatureSets.insert(std::move(AnyOfSet));
   }
 }
 
