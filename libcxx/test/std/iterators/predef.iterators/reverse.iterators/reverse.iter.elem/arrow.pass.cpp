@@ -25,6 +25,7 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 20
+// C++20 bidirectional_iterator that does not satisfy the Cpp17BidirectionalIterator named requirement.
 template <class It>
 class cpp20_bidirectional_iterator_with_arrow {
   It it_;
