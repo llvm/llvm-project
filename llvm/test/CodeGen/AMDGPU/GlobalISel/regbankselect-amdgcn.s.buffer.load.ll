@@ -2115,7 +2115,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
-  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %42, %bb.3
+  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %26, %bb.3
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2172,7 +2172,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
-  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %41, %bb.3
+  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %25, %bb.3
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2237,7 +2237,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
-  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %43, %bb.3
+  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %27, %bb.3
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2294,7 +2294,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
-  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %41, %bb.3
+  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %25, %bb.3
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2357,7 +2357,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
-  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %43, %bb.3
+  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %27, %bb.3
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2414,7 +2414,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
-  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %41, %bb.3
+  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %25, %bb.3
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2476,7 +2476,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
-  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %42, %bb.3
+  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %26, %bb.3
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2534,7 +2534,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
-  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %42, %bb.3
+  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %26, %bb.3
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2596,7 +2596,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
-  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %42, %bb.3
+  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %26, %bb.3
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2654,7 +2654,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
-  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %42, %bb.3
+  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %26, %bb.3
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2716,7 +2716,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
-  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %42, %bb.3
+  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %26, %bb.3
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2774,7 +2774,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
-  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %42, %bb.3
+  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %26, %bb.3
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2835,7 +2835,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
-  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %42, %bb.3
+  ; GFX7-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.1, %26, %bb.3
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
@@ -2891,7 +2891,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
-  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %41, %bb.3
+  ; GFX12-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF]], %bb.1, %25, %bb.3
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec

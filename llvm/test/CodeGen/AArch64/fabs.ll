@@ -174,41 +174,13 @@ define <7 x half> @fabs_v7f16(<7 x half> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fabs_v7f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[4], v0.h[4]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[5], v0.h[5]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[6], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mvni v0.8h, #128, lsl #8
-; CHECK-GI-NOFP16-NEXT:    and v1.16b, v1.16b, v0.16b
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-GI-NOFP16-NEXT:    mvni v1.8h, #128, lsl #8
+; CHECK-GI-NOFP16-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fabs_v7f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-FP16-NEXT:    mov v1.h[4], v0.h[4]
-; CHECK-GI-FP16-NEXT:    mov v1.h[5], v0.h[5]
-; CHECK-GI-FP16-NEXT:    mov v1.h[6], v0.h[6]
-; CHECK-GI-FP16-NEXT:    fabs v1.8h, v1.8h
-; CHECK-GI-FP16-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-GI-FP16-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-GI-FP16-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-GI-FP16-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-GI-FP16-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-GI-FP16-NEXT:    fabs v0.8h, v0.8h
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = call <7 x half> @llvm.fabs.v7f16(<7 x half> %a)

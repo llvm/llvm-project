@@ -815,13 +815,7 @@ define <7 x half> @powi_v7f16(<7 x half> %a, i32 %b) {
 ; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-GI-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #160
 ; CHECK-GI-NEXT:    ret
 entry:

@@ -647,13 +647,7 @@ define <6 x i16> @bitcast_v3i32_v6i16(<3 x i32> %a, <3 x i32> %b){
 ; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
 ; CHECK-GI-NEXT:    mov v2.s[2], v0.s[2]
 ; CHECK-GI-NEXT:    mov v3.s[2], v1.s[2]
-; CHECK-GI-NEXT:    add v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
+; CHECK-GI-NEXT:    add v0.4s, v2.4s, v3.4s
 ; CHECK-GI-NEXT:    ret
   %c = add <3 x i32> %a, %b
   %d = bitcast <3 x i32> %c to <6 x i16>

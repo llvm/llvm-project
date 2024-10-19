@@ -238,38 +238,20 @@ define <7 x i8> @load_v7i8(ptr %ptr){
 ;
 ; CHECK-GI-LABEL: load_v7i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldrb w8, [x0]
-; CHECK-GI-NEXT:    ldrb w9, [x0, #1]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    ldrb w8, [x0, #2]
-; CHECK-GI-NEXT:    mov v0.h[1], w9
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    ldrb w8, [x0, #3]
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    ldrb w8, [x0, #4]
-; CHECK-GI-NEXT:    mov v0.h[4], w8
-; CHECK-GI-NEXT:    ldrb w8, [x0, #5]
-; CHECK-GI-NEXT:    mov v0.h[5], w8
-; CHECK-GI-NEXT:    ldrb w8, [x0, #6]
-; CHECK-GI-NEXT:    mov v0.h[6], w8
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[3]
-; CHECK-GI-NEXT:    mov h3, v0.h[4]
-; CHECK-GI-NEXT:    mov h4, v0.h[5]
-; CHECK-GI-NEXT:    mov h5, v0.h[6]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov h1, v0.h[2]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.b[2], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.b[3], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov v0.b[4], w8
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    mov v0.b[5], w8
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    mov v0.b[6], w8
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    ldr b1, [x0, #1]
+; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-NEXT:    ldr b1, [x0, #2]
+; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-NEXT:    ldr b1, [x0, #3]
+; CHECK-GI-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-GI-NEXT:    ldr b1, [x0, #4]
+; CHECK-GI-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-GI-NEXT:    ldr b1, [x0, #5]
+; CHECK-GI-NEXT:    mov v0.b[5], v1.b[0]
+; CHECK-GI-NEXT:    ldr b1, [x0, #6]
+; CHECK-GI-NEXT:    mov v0.b[6], v1.b[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
     %a = load <7 x i8>, ptr %ptr
@@ -307,26 +289,19 @@ define <7 x i16> @load_v7i16(ptr %ptr){
 ;
 ; CHECK-GI-LABEL: load_v7i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    ldr h0, [x0, #2]
+; CHECK-GI-NEXT:    ldr h0, [x0]
+; CHECK-GI-NEXT:    add x8, x0, #2
+; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
 ; CHECK-GI-NEXT:    add x8, x0, #4
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[0]
-; CHECK-GI-NEXT:    ld1 { v1.h }[2], [x8]
+; CHECK-GI-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-GI-NEXT:    add x8, x0, #6
-; CHECK-GI-NEXT:    ld1 { v1.h }[3], [x8]
+; CHECK-GI-NEXT:    ld1 { v0.h }[3], [x8]
 ; CHECK-GI-NEXT:    add x8, x0, #8
-; CHECK-GI-NEXT:    ld1 { v1.h }[4], [x8]
+; CHECK-GI-NEXT:    ld1 { v0.h }[4], [x8]
 ; CHECK-GI-NEXT:    add x8, x0, #10
-; CHECK-GI-NEXT:    ld1 { v1.h }[5], [x8]
+; CHECK-GI-NEXT:    ld1 { v0.h }[5], [x8]
 ; CHECK-GI-NEXT:    add x8, x0, #12
-; CHECK-GI-NEXT:    ld1 { v1.h }[6], [x8]
-; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-GI-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-GI-NEXT:    ld1 { v0.h }[6], [x8]
 ; CHECK-GI-NEXT:    ret
     %a = load <7 x i16>, ptr %ptr
     ret <7 x i16> %a

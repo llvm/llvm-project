@@ -277,29 +277,10 @@ entry:
 declare <3 x i16> @llvm.bswap.v3i16(<3 x i16>)
 
 define <7 x i16> @bswap_v7i16(<7 x i16> %a){
-; CHECK-SD-LABEL: bswap_v7i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev16 v0.16b, v0.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bswap_v7i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-NEXT:    mov v1.h[4], v0.h[4]
-; CHECK-GI-NEXT:    mov v1.h[5], v0.h[5]
-; CHECK-GI-NEXT:    mov v1.h[6], v0.h[6]
-; CHECK-GI-NEXT:    rev16 v1.16b, v1.16b
-; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-GI-NEXT:    mov v0.h[6], v1.h[6]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bswap_v7i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-NEXT:    ret
 entry:
   %res = call <7 x i16> @llvm.bswap.v7i16(<7 x i16> %a)
   ret <7 x i16> %res

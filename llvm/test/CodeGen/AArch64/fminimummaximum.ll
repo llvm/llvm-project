@@ -692,68 +692,32 @@ define <7 x half> @min_v7f16(<7 x half> %a, <7 x half> %b) {
 ;
 ; CHECK-NOFP16-GI-LABEL: min_v7f16:
 ; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    mov v2.h[0], v0.h[0]
-; CHECK-NOFP16-GI-NEXT:    mov v3.h[0], v1.h[0]
+; CHECK-NOFP16-GI-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-NOFP16-GI-NEXT:    fcvtl v3.4s, v1.4h
 ; CHECK-NOFP16-GI-NEXT:    mov v4.h[0], v0.h[4]
-; CHECK-NOFP16-GI-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-NOFP16-GI-NEXT:    mov v3.h[1], v1.h[1]
-; CHECK-NOFP16-GI-NEXT:    mov v4.h[1], v0.h[5]
-; CHECK-NOFP16-GI-NEXT:    mov v2.h[2], v0.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v3.h[2], v1.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v4.h[2], v0.h[6]
-; CHECK-NOFP16-GI-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-NOFP16-GI-NEXT:    mov v3.h[3], v1.h[3]
-; CHECK-NOFP16-GI-NEXT:    fcvtl v0.4s, v4.4h
-; CHECK-NOFP16-GI-NEXT:    fcvtl v2.4s, v2.4h
-; CHECK-NOFP16-GI-NEXT:    fcvtl v3.4s, v3.4h
 ; CHECK-NOFP16-GI-NEXT:    fmin v2.4s, v2.4s, v3.4s
 ; CHECK-NOFP16-GI-NEXT:    mov v3.h[0], v1.h[4]
+; CHECK-NOFP16-GI-NEXT:    mov v4.h[1], v0.h[5]
 ; CHECK-NOFP16-GI-NEXT:    mov v3.h[1], v1.h[5]
 ; CHECK-NOFP16-GI-NEXT:    fcvtn v2.4h, v2.4s
+; CHECK-NOFP16-GI-NEXT:    mov v4.h[2], v0.h[6]
 ; CHECK-NOFP16-GI-NEXT:    mov v3.h[2], v1.h[6]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[0], v2.h[0]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[0], v2.h[0]
+; CHECK-NOFP16-GI-NEXT:    fcvtl v1.4s, v4.4h
 ; CHECK-NOFP16-GI-NEXT:    fcvtl v3.4s, v3.4h
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[1], v2.h[1]
-; CHECK-NOFP16-GI-NEXT:    fmin v0.4s, v0.4s, v3.4s
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[2], v2.h[2]
-; CHECK-NOFP16-GI-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[3], v2.h[3]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[4], v0.h[0]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[5], v0.h[1]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[6], v0.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], v2.h[1]
+; CHECK-NOFP16-GI-NEXT:    fmin v1.4s, v1.4s, v3.4s
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], v2.h[2]
+; CHECK-NOFP16-GI-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[3], v2.h[3]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[4], v1.h[0]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[5], v1.h[1]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[6], v1.h[2]
 ; CHECK-NOFP16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: min_v7f16:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    mov v2.h[0], v0.h[0]
-; CHECK-FP16-GI-NEXT:    mov v3.h[0], v1.h[0]
-; CHECK-FP16-GI-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-FP16-GI-NEXT:    mov v3.h[1], v1.h[1]
-; CHECK-FP16-GI-NEXT:    mov v2.h[2], v0.h[2]
-; CHECK-FP16-GI-NEXT:    mov v3.h[2], v1.h[2]
-; CHECK-FP16-GI-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-FP16-GI-NEXT:    mov v3.h[3], v1.h[3]
-; CHECK-FP16-GI-NEXT:    mov v2.h[4], v0.h[4]
-; CHECK-FP16-GI-NEXT:    mov v3.h[4], v1.h[4]
-; CHECK-FP16-GI-NEXT:    mov v2.h[5], v0.h[5]
-; CHECK-FP16-GI-NEXT:    mov v3.h[5], v1.h[5]
-; CHECK-FP16-GI-NEXT:    mov v2.h[6], v0.h[6]
-; CHECK-FP16-GI-NEXT:    mov v3.h[6], v1.h[6]
-; CHECK-FP16-GI-NEXT:    fmin v1.8h, v2.8h, v3.8h
-; CHECK-FP16-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-FP16-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-FP16-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-FP16-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-FP16-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-FP16-GI-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-FP16-GI-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-FP16-GI-NEXT:    fmin v0.8h, v0.8h, v1.8h
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %c = call <7 x half> @llvm.minimum.v7f16(<7 x half> %a, <7 x half> %b)
@@ -826,68 +790,32 @@ define <7 x half> @max_v7f16(<7 x half> %a, <7 x half> %b) {
 ;
 ; CHECK-NOFP16-GI-LABEL: max_v7f16:
 ; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    mov v2.h[0], v0.h[0]
-; CHECK-NOFP16-GI-NEXT:    mov v3.h[0], v1.h[0]
+; CHECK-NOFP16-GI-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-NOFP16-GI-NEXT:    fcvtl v3.4s, v1.4h
 ; CHECK-NOFP16-GI-NEXT:    mov v4.h[0], v0.h[4]
-; CHECK-NOFP16-GI-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-NOFP16-GI-NEXT:    mov v3.h[1], v1.h[1]
-; CHECK-NOFP16-GI-NEXT:    mov v4.h[1], v0.h[5]
-; CHECK-NOFP16-GI-NEXT:    mov v2.h[2], v0.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v3.h[2], v1.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v4.h[2], v0.h[6]
-; CHECK-NOFP16-GI-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-NOFP16-GI-NEXT:    mov v3.h[3], v1.h[3]
-; CHECK-NOFP16-GI-NEXT:    fcvtl v0.4s, v4.4h
-; CHECK-NOFP16-GI-NEXT:    fcvtl v2.4s, v2.4h
-; CHECK-NOFP16-GI-NEXT:    fcvtl v3.4s, v3.4h
 ; CHECK-NOFP16-GI-NEXT:    fmax v2.4s, v2.4s, v3.4s
 ; CHECK-NOFP16-GI-NEXT:    mov v3.h[0], v1.h[4]
+; CHECK-NOFP16-GI-NEXT:    mov v4.h[1], v0.h[5]
 ; CHECK-NOFP16-GI-NEXT:    mov v3.h[1], v1.h[5]
 ; CHECK-NOFP16-GI-NEXT:    fcvtn v2.4h, v2.4s
+; CHECK-NOFP16-GI-NEXT:    mov v4.h[2], v0.h[6]
 ; CHECK-NOFP16-GI-NEXT:    mov v3.h[2], v1.h[6]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[0], v2.h[0]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[0], v2.h[0]
+; CHECK-NOFP16-GI-NEXT:    fcvtl v1.4s, v4.4h
 ; CHECK-NOFP16-GI-NEXT:    fcvtl v3.4s, v3.4h
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[1], v2.h[1]
-; CHECK-NOFP16-GI-NEXT:    fmax v0.4s, v0.4s, v3.4s
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[2], v2.h[2]
-; CHECK-NOFP16-GI-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[3], v2.h[3]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[4], v0.h[0]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[5], v0.h[1]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[6], v0.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-NOFP16-GI-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], v2.h[1]
+; CHECK-NOFP16-GI-NEXT:    fmax v1.4s, v1.4s, v3.4s
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], v2.h[2]
+; CHECK-NOFP16-GI-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[3], v2.h[3]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[4], v1.h[0]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[5], v1.h[1]
+; CHECK-NOFP16-GI-NEXT:    mov v0.h[6], v1.h[2]
 ; CHECK-NOFP16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: max_v7f16:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    mov v2.h[0], v0.h[0]
-; CHECK-FP16-GI-NEXT:    mov v3.h[0], v1.h[0]
-; CHECK-FP16-GI-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-FP16-GI-NEXT:    mov v3.h[1], v1.h[1]
-; CHECK-FP16-GI-NEXT:    mov v2.h[2], v0.h[2]
-; CHECK-FP16-GI-NEXT:    mov v3.h[2], v1.h[2]
-; CHECK-FP16-GI-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-FP16-GI-NEXT:    mov v3.h[3], v1.h[3]
-; CHECK-FP16-GI-NEXT:    mov v2.h[4], v0.h[4]
-; CHECK-FP16-GI-NEXT:    mov v3.h[4], v1.h[4]
-; CHECK-FP16-GI-NEXT:    mov v2.h[5], v0.h[5]
-; CHECK-FP16-GI-NEXT:    mov v3.h[5], v1.h[5]
-; CHECK-FP16-GI-NEXT:    mov v2.h[6], v0.h[6]
-; CHECK-FP16-GI-NEXT:    mov v3.h[6], v1.h[6]
-; CHECK-FP16-GI-NEXT:    fmax v1.8h, v2.8h, v3.8h
-; CHECK-FP16-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-FP16-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-FP16-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-FP16-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-FP16-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-FP16-GI-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-FP16-GI-NEXT:    mov v0.h[6], v1.h[6]
+; CHECK-FP16-GI-NEXT:    fmax v0.8h, v0.8h, v1.8h
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %c = call <7 x half> @llvm.maximum.v7f16(<7 x half> %a, <7 x half> %b)

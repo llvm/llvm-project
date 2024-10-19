@@ -355,66 +355,10 @@ entry:
 declare <3 x i8> @llvm.abs.v3i8(<3 x i8>, i1)
 
 define <7 x i8> @abs_v7i8(<7 x i8> %a){
-; CHECK-SD-LABEL: abs_v7i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    abs v0.8b, v0.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: abs_v7i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov b1, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[4]
-; CHECK-GI-NEXT:    mov v2.b[3], v1.b[0]
-; CHECK-GI-NEXT:    mov b1, v0.b[5]
-; CHECK-GI-NEXT:    mov b0, v0.b[6]
-; CHECK-GI-NEXT:    mov v2.b[4], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[5], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[6], v0.b[0]
-; CHECK-GI-NEXT:    abs v0.8b, v2.8b
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    mov b3, v0.b[3]
-; CHECK-GI-NEXT:    mov b4, v0.b[4]
-; CHECK-GI-NEXT:    mov b5, v0.b[6]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov b1, v0.b[5]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    mov v0.h[4], w8
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.h[5], w8
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    mov v0.h[6], w8
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[3]
-; CHECK-GI-NEXT:    mov h3, v0.h[4]
-; CHECK-GI-NEXT:    mov h4, v0.h[5]
-; CHECK-GI-NEXT:    mov h5, v0.h[6]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov h1, v0.h[2]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.b[2], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.b[3], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov v0.b[4], w8
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    mov v0.b[5], w8
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    mov v0.b[6], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: abs_v7i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    abs v0.8b, v0.8b
+; CHECK-NEXT:    ret
 entry:
   %res = call <7 x i8> @llvm.abs.v7i8(<7 x i8> %a, i1 0)
   ret <7 x i8> %res
@@ -453,29 +397,10 @@ entry:
 declare <3 x i16> @llvm.abs.v3i16(<3 x i16>, i1)
 
 define <7 x i16> @abs_v7i16(<7 x i16> %a){
-; CHECK-SD-LABEL: abs_v7i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    abs v0.8h, v0.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: abs_v7i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-NEXT:    mov v1.h[4], v0.h[4]
-; CHECK-GI-NEXT:    mov v1.h[5], v0.h[5]
-; CHECK-GI-NEXT:    mov v1.h[6], v0.h[6]
-; CHECK-GI-NEXT:    abs v1.8h, v1.8h
-; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v0.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v0.h[5], v1.h[5]
-; CHECK-GI-NEXT:    mov v0.h[6], v1.h[6]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: abs_v7i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    abs v0.8h, v0.8h
+; CHECK-NEXT:    ret
 entry:
   %res = call <7 x i16> @llvm.abs.v7i16(<7 x i16> %a, i1 0)
   ret <7 x i16> %res

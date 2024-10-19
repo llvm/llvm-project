@@ -544,62 +544,12 @@ define <7 x i8> @shufflevector_v7i8(<7 x i8> %a, <7 x i8> %b) {
 ; CHECK-GI-LABEL: shufflevector_v7i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov b2, v0.b[1]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov b4, v0.b[3]
-; CHECK-GI-NEXT:    mov b5, v0.b[4]
-; CHECK-GI-NEXT:    mov b6, v0.b[5]
-; CHECK-GI-NEXT:    mov b7, v1.b[3]
-; CHECK-GI-NEXT:    mov b16, v1.b[4]
-; CHECK-GI-NEXT:    mov b17, v1.b[5]
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov b2, v0.b[6]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov b3, v1.b[1]
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    mov b4, v1.b[2]
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov b3, v1.b[6]
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    fmov w9, s4
-; CHECK-GI-NEXT:    mov v0.h[4], w8
-; CHECK-GI-NEXT:    fmov w8, s6
-; CHECK-GI-NEXT:    mov v1.h[2], w9
-; CHECK-GI-NEXT:    fmov w9, s7
-; CHECK-GI-NEXT:    mov v0.h[5], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v1.h[3], w9
-; CHECK-GI-NEXT:    mov v0.h[6], w8
-; CHECK-GI-NEXT:    fmov w8, s16
-; CHECK-GI-NEXT:    mov v1.h[4], w8
-; CHECK-GI-NEXT:    fmov w8, s17
-; CHECK-GI-NEXT:    mov h4, v0.h[3]
-; CHECK-GI-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NEXT:    mov h0, v0.h[5]
-; CHECK-GI-NEXT:    mov v1.h[5], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    fmov w9, s4
-; CHECK-GI-NEXT:    mov v2.b[1], w9
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    mov v1.h[6], w8
-; CHECK-GI-NEXT:    mov v2.b[2], w9
-; CHECK-GI-NEXT:    mov h0, v1.h[1]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov h3, v1.h[3]
-; CHECK-GI-NEXT:    mov v2.b[3], w8
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov h0, v1.h[5]
-; CHECK-GI-NEXT:    mov v2.b[4], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov v2.b[5], w8
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v2.b[6], w8
-; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    adrp x8, .LCPI31_0
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI31_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
     %c = shufflevector <7 x i8> %a, <7 x i8> %b, <7 x i32> <i32 1, i32 3, i32 5, i32 7, i32 8, i32 10, i32 12>
     ret <7 x i8> %c
@@ -645,27 +595,11 @@ define <7 x i16> @shufflevector_v7i16(<7 x i16> %a, <7 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: shufflevector_v7i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v2.h[0], v0.h[0]
-; CHECK-GI-NEXT:    mov v3.h[0], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v3.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v2.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v3.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-GI-NEXT:    mov v3.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v2.h[4], v0.h[4]
-; CHECK-GI-NEXT:    mov v3.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v2.h[5], v0.h[5]
-; CHECK-GI-NEXT:    mov v3.h[5], v1.h[5]
-; CHECK-GI-NEXT:    mov v2.h[6], v0.h[6]
-; CHECK-GI-NEXT:    mov v3.h[6], v1.h[6]
-; CHECK-GI-NEXT:    mov v0.h[0], v2.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v2.h[3]
-; CHECK-GI-NEXT:    mov v0.h[2], v2.h[5]
-; CHECK-GI-NEXT:    mov v0.h[3], v3.h[0]
-; CHECK-GI-NEXT:    mov v0.h[4], v3.h[1]
-; CHECK-GI-NEXT:    mov v0.h[5], v3.h[3]
-; CHECK-GI-NEXT:    mov v0.h[6], v3.h[5]
+; CHECK-GI-NEXT:    adrp x8, .LCPI33_0
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI33_0]
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
     %c = shufflevector <7 x i16> %a, <7 x i16> %b, <7 x i32> <i32 1, i32 3, i32 5, i32 7, i32 8, i32 10, i32 12>
     ret <7 x i16> %c
@@ -714,47 +648,11 @@ define <3 x i8> @shufflevector_v3i8_zeroes(<3 x i8> %a, <3 x i8> %b) {
 }
 
 define <7 x i8> @shufflevector_v7i8_zeroes(<7 x i8> %a, <7 x i8> %b) {
-; CHECK-SD-LABEL: shufflevector_v7i8_zeroes:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.8b, v0.b[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shufflevector_v7i8_zeroes:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    mov b3, v0.b[3]
-; CHECK-GI-NEXT:    mov b4, v0.b[4]
-; CHECK-GI-NEXT:    mov b5, v0.b[6]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov b1, v0.b[5]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    mov v0.h[4], w8
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.h[5], w8
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    mov v0.h[6], w8
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    fmov w10, s0
-; CHECK-GI-NEXT:    fmov w11, s0
-; CHECK-GI-NEXT:    fmov w12, s0
-; CHECK-GI-NEXT:    fmov w13, s0
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v0.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[3], w10
-; CHECK-GI-NEXT:    mov v0.b[4], w11
-; CHECK-GI-NEXT:    mov v0.b[5], w12
-; CHECK-GI-NEXT:    mov v0.b[6], w13
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shufflevector_v7i8_zeroes:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-NEXT:    ret
     %c = shufflevector <7 x i8> %a, <7 x i8> %b, <7 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
     ret <7 x i8> %c
 }
@@ -785,28 +683,10 @@ define <3 x i16> @shufflevector_v3i16_zeroes(<3 x i16> %a, <3 x i16> %b) {
 }
 
 define <7 x i16> @shufflevector_v7i16_zeroes(<7 x i16> %a, <7 x i16> %b) {
-; CHECK-SD-LABEL: shufflevector_v7i16_zeroes:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v0.8h, v0.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shufflevector_v7i16_zeroes:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-NEXT:    mov v1.h[4], v0.h[4]
-; CHECK-GI-NEXT:    mov v1.h[5], v0.h[5]
-; CHECK-GI-NEXT:    mov v1.h[6], v0.h[6]
-; CHECK-GI-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[4], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[5], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[6], v1.h[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shufflevector_v7i16_zeroes:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
     %c = shufflevector <7 x i16> %a, <7 x i16> %b, <7 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
     ret <7 x i16> %c
 }

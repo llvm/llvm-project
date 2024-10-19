@@ -113,7 +113,7 @@ bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
 bool CombinerHelper::matchUnmergeValuesOfScalarAndVector(const MachineInstr &MI,
                                                          BuildFnTy &MatchInfo) {
 
-  constexpr unsigned MAX_NUM_DEFS_LIMIT = 8;
+  constexpr unsigned MAX_NUM_DEFS_LIMIT = 4;
 
   //  %opaque:_(<2 x s64>) = G_OPAQUE
   //  %un1:_(s64), %un2:_(s64) = G_UNMERGE_VALUES %opaque(<2 x s64>)
