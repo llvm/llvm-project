@@ -142,6 +142,19 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
 #undef RET_CASE
 }
 
+/// Get rounding mode to use in evaluation of the specified expression.
+///
+/// If rounding mode is unknown at compile time, still try to evaluate the
+/// expression. If the result is exact, it does not depend on rounding mode.
+/// So return "tonearest" mode instead of "dynamic".
+static llvm::RoundingMode getActiveRoundingMode(InterpState &S, const Expr *E) {
+  llvm::RoundingMode RM =
+      E->getFPFeaturesInEffect(S.getLangOpts()).getRoundingMode();
+  if (RM == llvm::RoundingMode::Dynamic)
+    RM = llvm::RoundingMode::NearestTiesToEven;
+  return RM;
+}
+
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
@@ -546,6 +559,22 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
 
   APSInt I = peekToAPSInt(S.Stk, getIntPrimType(S), Offset);
   pushInteger(S, I, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_fma(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  const Floating &X = getParam<Floating>(Frame, 0);
+  const Floating &Y = getParam<Floating>(Frame, 1);
+  const Floating &Z = getParam<Floating>(Frame, 2);
+  Floating Result;
+
+  llvm::RoundingMode RM = getActiveRoundingMode(S, Call);
+  Floating::mul(X, Y, RM, &Result);
+  Floating::add(Result, Z, RM, &Result);
+
+  S.Stk.push<Floating>(Result);
   return true;
 }
 
@@ -1811,6 +1840,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
   case Builtin::BI__builtin_fpclassify:
     if (!interp__builtin_fpclassify(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf128:
+    if (!interp__builtin_fma(S, OpPC, Frame, F, Call))
       return false;
     break;
 
