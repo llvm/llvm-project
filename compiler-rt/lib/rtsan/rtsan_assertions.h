@@ -15,6 +15,7 @@
 #include "rtsan/rtsan.h"
 #include "rtsan/rtsan_context.h"
 #include "rtsan/rtsan_diagnostics.h"
+#include "rtsan/rtsan_stats.h"
 #include "rtsan/rtsan_suppressions.h"
 
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -28,6 +29,11 @@ void ExpectNotRealtime(Context &context, const DiagnosticsInfo &info,
   if (context.InRealtimeContext() && !context.IsBypassed()) {
     ScopedBypass sb{context};
 
+    if (IsFunctionSuppressed(info.func_name)) {
+      IncrementSuppressedCount();
+      return;
+    }
+
     __sanitizer::BufferedStackTrace stack;
 
     // We use the unwind_on_fatal flag here because of precedent with other
@@ -35,8 +41,10 @@ void ExpectNotRealtime(Context &context, const DiagnosticsInfo &info,
     stack.Unwind(info.pc, info.bp, nullptr,
                  __sanitizer::common_flags()->fast_unwind_on_fatal);
 
-    if (IsStackTraceSuppressed(stack))
+    if (IsStackTraceSuppressed(stack)) {
+      IncrementSuppressedCount();
       return;
+    }
 
     OnViolation(stack, info);
   }
