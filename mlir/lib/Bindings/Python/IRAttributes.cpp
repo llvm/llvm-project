@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iostream>
-
 #include <optional>
 #include <string_view>
 #include <utility>
-#include <memory>
 
 #include "IRModule.h"
 
@@ -995,7 +992,7 @@ private:
       } else if (format == "?") {
         // i1
         // The i1 type needs to be bit-packed, so we will handle it seperately
-        return getAttributeFromBufferBoolean(view, explicitShape, context);
+        return getAttributeFromBufferBoolBitpack(view, explicitShape, context);
       } else if (isSignedIntegerFormat(format)) {
         if (view.itemsize == 4) {
           // i32
@@ -1047,17 +1044,21 @@ private:
       }
     }
 
-    return mlirDenseElementsAttrRawBufferGet(getShapedType(bulkLoadElementType, explicitShape, view), view.len, view.buf);
+    MlirType type = getShapedType(bulkLoadElementType, explicitShape, view);
+    return mlirDenseElementsAttrRawBufferGet(type, view.len, view.buf);
   }
 
-  static MlirAttribute getAttributeFromBufferBoolean(Py_buffer& view,
-                                                     std::optional<std::vector<int64_t>> explicitShape,
-                                                     MlirContext& context) {
+  // There is a complication for boolean numpy arrays, as numpy represent them as
+  // 8 bits per boolean, whereas MLIR bitpacks them into 8 booleans per byte.
+  // This function does the bit-packing respecting endianess.
+  static MlirAttribute getAttributeFromBufferBoolBitpack(Py_buffer& view,
+                                                         std::optional<std::vector<int64_t>> explicitShape,
+                                                         MlirContext& context) {
     // First read the content of the python buffer as u8's, to correct for endianess
-    MlirAttribute intermediateAttr = mlirDenseElementsAttrRawBufferGet(
-      getShapedType(mlirIntegerTypeUnsignedGet(context, 8), explicitShape, view), view.len, view.buf);
+    MlirType byteType = getShapedType(mlirIntegerTypeUnsignedGet(context, 8), explicitShape, view);
+    MlirAttribute intermediateAttr = mlirDenseElementsAttrRawBufferGet(byteType, view.len, view.buf);
 
-    // Pack the boolean array according to the i8 bitpacking layout
+    // Pack the boolean array according to the i1 bitpacking layout
     const int numPackedBytes = (view.len + 7) / 8;
     SmallVector<uint8_t, 8> bitpacked(numPackedBytes);
     for (int byteNum = 0; byteNum < numPackedBytes; byteNum++) {
@@ -1070,8 +1071,8 @@ private:
       bitpacked[byteNum] = byte;
     }
 
-    return mlirDenseElementsAttrRawBufferGet(getShapedType(
-      mlirIntegerTypeGet(context, 1), explicitShape, view), numPackedBytes, bitpacked.data());
+    MlirType bitpackedType = getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
+    return mlirDenseElementsAttrRawBufferGet(bitpackedType, numPackedBytes, bitpacked.data());
   }
 
   template <typename Type>
@@ -1145,7 +1146,6 @@ public:
     bool isUnsigned = mlirIntegerTypeIsUnsigned(type);
     if (isUnsigned) {
       if (width == 1) {
-        std::cerr << "Loading unsigned i1 values at position: " << pos << std::endl;
         return mlirDenseElementsAttrGetBoolValue(*this, pos);
       }
       if (width == 8) {
@@ -1162,7 +1162,6 @@ public:
       }
     } else {
       if (width == 1) {
-        std::cerr << "Loading signed i1 values at position: " << pos << std::endl;
         return mlirDenseElementsAttrGetBoolValue(*this, pos);
       }
       if (width == 8) {

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iostream>
-
 #include "mlir/IR/BuiltinAttributes.h"
 #include "AttributeDetail.h"
 #include "mlir/IR/AffineMap.h"
@@ -1090,8 +1088,6 @@ bool DenseElementsAttr::isValidRawBuffer(ShapedType type,
     }
 
     // This is a valid non-splat buffer if it has the right size.
-    std::cerr << "Raw buffer width: " << rawBufferWidth << std::endl;
-    std::cerr << "Aligned to width: " << llvm::alignTo<8>(numElements) << std::endl;
     return rawBufferWidth == llvm::alignTo<8>(numElements);
   }
 
