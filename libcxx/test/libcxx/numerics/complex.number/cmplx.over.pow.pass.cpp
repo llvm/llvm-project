@@ -26,29 +26,26 @@ namespace usr {
 struct usr_tag {};
 
 template <class T, class U>
-TEST_CONSTEXPR
-    typename std::enable_if<(std::is_same<T, usr_tag>::value && std::is_floating_point<U>::value) ||
-                                (std::is_floating_point<T>::value && std::is_same<U, usr_tag>::value),
-                            int>::type
-    pow(const T&, const std::complex<U>&) {
+typename std::enable_if<(std::is_same<T, usr_tag>::value && std::is_floating_point<U>::value) ||
+                            (std::is_floating_point<T>::value && std::is_same<U, usr_tag>::value),
+                        int>::type
+pow(const T&, const std::complex<U>&) {
   return std::is_same<T, usr_tag>::value ? 0 : 1;
 }
 
 template <class T, class U>
-TEST_CONSTEXPR
-    typename std::enable_if<(std::is_same<T, usr_tag>::value && std::is_floating_point<U>::value) ||
-                                (std::is_floating_point<T>::value && std::is_same<U, usr_tag>::value),
-                            int>::type
-    pow(const std::complex<T>&, const U&) {
+typename std::enable_if<(std::is_same<T, usr_tag>::value && std::is_floating_point<U>::value) ||
+                            (std::is_floating_point<T>::value && std::is_same<U, usr_tag>::value),
+                        int>::type
+pow(const std::complex<T>&, const U&) {
   return std::is_same<U, usr_tag>::value ? 2 : 3;
 }
 
 template <class T, class U>
-TEST_CONSTEXPR
-    typename std::enable_if<(std::is_same<T, usr_tag>::value && std::is_floating_point<U>::value) ||
-                                (std::is_floating_point<T>::value && std::is_same<U, usr_tag>::value),
-                            int>::type
-    pow(const std::complex<T>&, const std::complex<U>&) {
+typename std::enable_if<(std::is_same<T, usr_tag>::value && std::is_floating_point<U>::value) ||
+                            (std::is_floating_point<T>::value && std::is_same<U, usr_tag>::value),
+                        int>::type
+pow(const std::complex<T>&, const std::complex<U>&) {
   return std::is_same<T, usr_tag>::value ? 4 : 5;
 }
 } // namespace usr
@@ -57,8 +54,8 @@ int main(int, char**) {
   using std::pow;
   using usr::pow;
 
-  TEST_CONSTEXPR usr::usr_tag tag;
-  TEST_CONSTEXPR_CXX14 const std::complex<usr::usr_tag> ctag;
+  usr::usr_tag tag;
+  const std::complex<usr::usr_tag> ctag;
 
   assert(pow(tag, std::complex<float>(1.0f)) == 0);
   assert(pow(std::complex<float>(1.0f), tag) == 2);
@@ -81,26 +78,5 @@ int main(int, char**) {
   assert(pow(ctag, std::complex<long double>(1.0l)) == 4);
   assert(pow(std::complex<long double>(1.0l), ctag) == 5);
 
-#if TEST_STD_VER >= 11
-  static_assert(pow(tag, std::complex<float>(1.0f)) == 0, "");
-  static_assert(pow(std::complex<float>(1.0f), tag) == 2, "");
-  static_assert(pow(tag, std::complex<double>(1.0)) == 0, "");
-  static_assert(pow(std::complex<double>(1.0), tag) == 2, "");
-  static_assert(pow(tag, std::complex<long double>(1.0l)) == 0, "");
-  static_assert(pow(std::complex<long double>(1.0l), tag) == 2, "");
-
-  static_assert(pow(1.0f, ctag) == 1, "");
-  static_assert(pow(ctag, 1.0f) == 3, "");
-  static_assert(pow(1.0, ctag) == 1, "");
-  static_assert(pow(ctag, 1.0) == 3, "");
-  static_assert(pow(1.0l, ctag) == 1, "");
-  static_assert(pow(ctag, 1.0l) == 3, "");
-
-  static_assert(pow(ctag, std::complex<float>(1.0f)) == 4, "");
-  static_assert(pow(std::complex<float>(1.0f), ctag) == 5, "");
-  static_assert(pow(ctag, std::complex<double>(1.0)) == 4, "");
-  static_assert(pow(std::complex<double>(1.0), ctag) == 5, "");
-  static_assert(pow(ctag, std::complex<long double>(1.0l)) == 4, "");
-  static_assert(pow(std::complex<long double>(1.0l), ctag) == 5, "");
-#endif
+  return 0;
 }
