@@ -546,3 +546,17 @@ void testAlsoNonMoveable() {
 }
 
 } // namespace issue_62550
+
+namespace GH111450 {
+struct Status;
+
+struct Error {
+    Error(const Status& S);
+};
+
+struct Result {
+  Error E;
+  Result(Status&& S) : E(std::move(S)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
+};
+} // namespace GH111450

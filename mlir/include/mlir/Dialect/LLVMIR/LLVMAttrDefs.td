@@ -471,6 +471,10 @@ def LLVM_DIGlobalVariableExpressionAttr
   let constBuilderCall = "$0";
 }
 
+def DIGlobalVariableExpressionArrayAttr :
+  TypedArrayAttrBase<LLVM_DIGlobalVariableExpressionAttr,
+  "an array of variable expressions">;
+
 //===----------------------------------------------------------------------===//
 // DIGlobalVariableAttr
 //===----------------------------------------------------------------------===//
@@ -697,6 +701,22 @@ def LLVM_DISubrangeAttr : LLVM_Attr<"DISubrange", "di_subrange", /*traits=*/[],
     OptionalParameter<"::mlir::Attribute">:$lowerBound,
     OptionalParameter<"::mlir::Attribute">:$upperBound,
     OptionalParameter<"::mlir::Attribute">:$stride
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DICommonBlockAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DICommonBlockAttr : LLVM_Attr<"DICommonBlock", "di_common_block",
+                                       /*traits=*/[], "DIScopeAttr"> {
+  let parameters = (ins
+    "DIScopeAttr":$scope,
+    OptionalParameter<"DIGlobalVariableAttr">:$decl,
+    "StringAttr":$name,
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"unsigned">:$line
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }

@@ -1841,6 +1841,7 @@ bool Init(InterpState &S, CodePtr OpPC) {
     assert(false);
     return false;
   }
+  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -1852,6 +1853,7 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
+  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -1863,13 +1865,24 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.peek<Pointer>().atIndex(Idx);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
   if (Ptr.isUnknownSizeArray())
     return false;
-  if (!CheckInit(S, OpPC, Ptr))
+
+  // In the unlikely event that we're initializing the first item of
+  // a non-array, skip the atIndex().
+  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+    Ptr.initialize();
+    new (&Ptr.deref<T>()) T(Value);
+    return true;
+  }
+
+  const Pointer &ElemPtr = Ptr.atIndex(Idx);
+  if (!CheckInit(S, OpPC, ElemPtr))
     return false;
-  Ptr.initialize();
-  new (&Ptr.deref<T>()) T(Value);
+  ElemPtr.initialize();
+  new (&ElemPtr.deref<T>()) T(Value);
   return true;
 }
 
@@ -1877,13 +1890,23 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>().atIndex(Idx);
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.isUnknownSizeArray())
     return false;
-  if (!CheckInit(S, OpPC, Ptr))
+
+  // In the unlikely event that we're initializing the first item of
+  // a non-array, skip the atIndex().
+  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+    Ptr.initialize();
+    new (&Ptr.deref<T>()) T(Value);
+    return true;
+  }
+
+  const Pointer &ElemPtr = Ptr.atIndex(Idx);
+  if (!CheckInit(S, OpPC, ElemPtr))
     return false;
-  Ptr.initialize();
-  new (&Ptr.deref<T>()) T(Value);
+  ElemPtr.initialize();
+  new (&ElemPtr.deref<T>()) T(Value);
   return true;
 }
 
@@ -2976,65 +2999,16 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
   return true;
 }
 
-bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B);
-static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
-  if (!CheckDynamicMemoryAllocation(S, OpPC))
-    return false;
-
-  const Expr *Source = nullptr;
-  const Block *BlockToDelete = nullptr;
-  {
-    // Extra scope for this so the block doesn't have this pointer
-    // pointing to it when we destroy it.
-    const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-    // Deleteing nullptr is always fine.
-    if (Ptr.isZero())
-      return true;
-
-    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
-          << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
-      return false;
-    }
-
-    Source = Ptr.getDeclDesc()->asExpr();
-    BlockToDelete = Ptr.block();
-
-    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
-      return false;
-  }
-  assert(Source);
-  assert(BlockToDelete);
-
-  // Invoke destructors before deallocating the memory.
-  if (!RunDestructors(S, OpPC, BlockToDelete))
-    return false;
-
-  DynamicAllocator &Allocator = S.getAllocator();
-  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
-  std::optional<DynamicAllocator::Form> AllocForm =
-      Allocator.getAllocationForm(Source);
-
-  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
-    // Nothing has been deallocated, this must be a double-delete.
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_double_delete);
-    return false;
-  }
-
-  assert(AllocForm);
-  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
-                                          ? DynamicAllocator::Form::Array
-                                          : DynamicAllocator::Form::NonArray;
-  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
-                             Source);
-}
+bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
+          bool IsGlobalDelete);
 
 static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
   return true;
+}
+
+static inline bool CheckAllocations(InterpState &S, CodePtr OpPC) {
+  return S.maybeDiagnoseDanglingAllocations();
 }
 
 /// Check if the initializer and storage types of a placement-new expression

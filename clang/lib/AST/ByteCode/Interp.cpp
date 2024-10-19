@@ -348,6 +348,13 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (D->isConstexpr())
     return true;
 
+  // If we're evaluating the initializer for a constexpr variable in C23, we may
+  // only read other contexpr variables. Abort here since this one isn't
+  // constexpr.
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(S.EvaluatingDecl);
+      VD && VD->isConstexpr() && S.getLangOpts().C23)
+    return Invalid(S, OpPC);
+
   QualType T = D->getType();
   bool IsConstant = T.isConstant(S.getASTContext());
   if (T->isIntegralOrEnumerationType()) {
@@ -964,7 +971,7 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
+static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(B);
   const Descriptor *Desc = B->getDescriptor();
 
@@ -987,6 +994,88 @@ bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
 
   assert(Desc->isRecord());
   return runRecordDestructor(S, OpPC, Pointer(const_cast<Block *>(B)), Desc);
+}
+
+bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
+          bool IsGlobalDelete) {
+  if (!CheckDynamicMemoryAllocation(S, OpPC))
+    return false;
+
+  const Expr *Source = nullptr;
+  const Block *BlockToDelete = nullptr;
+  {
+    // Extra scope for this so the block doesn't have this pointer
+    // pointing to it when we destroy it.
+    Pointer Ptr = S.Stk.pop<Pointer>();
+
+    // Deleteing nullptr is always fine.
+    if (Ptr.isZero())
+      return true;
+
+    // Remove base casts.
+    while (Ptr.isBaseClass())
+      Ptr = Ptr.getBase();
+
+    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
+          << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
+      return false;
+    }
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+
+    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
+      return false;
+
+    // For a class type with a virtual destructor, the selected operator delete
+    // is the one looked up when building the destructor.
+    QualType AllocType = Ptr.getType();
+    if (!DeleteIsArrayForm && !IsGlobalDelete) {
+      auto getVirtualOperatorDelete = [](QualType T) -> const FunctionDecl * {
+        if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+          if (const CXXDestructorDecl *DD = RD->getDestructor())
+            return DD->isVirtual() ? DD->getOperatorDelete() : nullptr;
+        return nullptr;
+      };
+
+      if (const FunctionDecl *VirtualDelete =
+              getVirtualOperatorDelete(AllocType);
+          VirtualDelete &&
+          !VirtualDelete->isReplaceableGlobalAllocationFunction()) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_new_non_replaceable)
+            << isa<CXXMethodDecl>(VirtualDelete) << VirtualDelete;
+        return false;
+      }
+    }
+  }
+  assert(Source);
+  assert(BlockToDelete);
+
+  // Invoke destructors before deallocating the memory.
+  if (!RunDestructors(S, OpPC, BlockToDelete))
+    return false;
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+  std::optional<DynamicAllocator::Form> AllocForm =
+      Allocator.getAllocationForm(Source);
+
+  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+    // Nothing has been deallocated, this must be a double-delete.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_delete);
+    return false;
+  }
+
+  assert(AllocForm);
+  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
+                                          ? DynamicAllocator::Form::Array
+                                          : DynamicAllocator::Form::NonArray;
+  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
+                             Source);
 }
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,

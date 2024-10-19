@@ -50,6 +50,16 @@ public:
     return const_cast<Instruction *>(I);
   }
 
+  /// \Returns the base Value for load or store instruction \p LSI.
+  template <typename LoadOrStoreT>
+  static Value *getMemInstructionBase(const LoadOrStoreT *LSI) {
+    static_assert(std::is_same_v<LoadOrStoreT, LoadInst> ||
+                      std::is_same_v<LoadOrStoreT, StoreInst>,
+                  "Expected sandboxir::Load or sandboxir::Store!");
+    return LSI->Ctx.getOrCreateValue(
+        getUnderlyingObject(LSI->getPointerOperand()->Val));
+  }
+
   /// \Returns the number of bits required to represent the operands or return
   /// value of \p V in \p DL.
   static unsigned getNumBits(Value *V, const DataLayout &DL) {

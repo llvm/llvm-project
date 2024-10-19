@@ -1291,6 +1291,9 @@ bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
+#define GET_REGISTER_MATCHER
+#include "PPCGenAsmMatcher.inc"
+
 MCRegister PPCAsmParser::matchRegisterName(int64_t &IntVal) {
   if (getParser().getTok().is(AsmToken::Percent))
     getParser().Lex(); // Eat the '%'.
@@ -1298,55 +1301,25 @@ MCRegister PPCAsmParser::matchRegisterName(int64_t &IntVal) {
   if (!getParser().getTok().is(AsmToken::Identifier))
     return MCRegister();
 
-  MCRegister RegNo;
   StringRef Name = getParser().getTok().getString();
+  MCRegister RegNo = MatchRegisterName(Name);
+  if (!RegNo)
+    return RegNo;
+
+  Name.substr(Name.find_first_of("1234567890")).getAsInteger(10, IntVal);
+
+  // MatchRegisterName doesn't seem to have special handling for 64bit vs 32bit
+  // register types.
   if (Name.equals_insensitive("lr")) {
     RegNo = isPPC64() ? PPC::LR8 : PPC::LR;
     IntVal = 8;
   } else if (Name.equals_insensitive("ctr")) {
     RegNo = isPPC64() ? PPC::CTR8 : PPC::CTR;
     IntVal = 9;
-  } else if (Name.equals_insensitive("vrsave")) {
-    RegNo = PPC::VRSAVE;
+  } else if (Name.equals_insensitive("vrsave"))
     IntVal = 256;
-  } else if (Name.starts_with_insensitive("r") &&
-             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
+  else if (Name.starts_with_insensitive("r"))
     RegNo = isPPC64() ? XRegs[IntVal] : RRegs[IntVal];
-  } else if (Name.starts_with_insensitive("f") &&
-             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-    RegNo = FRegs[IntVal];
-  } else if (Name.starts_with_insensitive("vs") &&
-             !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
-    RegNo = VSRegs[IntVal];
-  } else if (Name.starts_with_insensitive("v") &&
-             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-    RegNo = VRegs[IntVal];
-  } else if (Name.starts_with_insensitive("cr") &&
-             !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = CRRegs[IntVal];
-  } else if (Name.starts_with_insensitive("acc") &&
-             !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = ACCRegs[IntVal];
-  } else if (Name.starts_with_insensitive("wacc_hi") &&
-             !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = ACCRegs[IntVal];
-  } else if (Name.starts_with_insensitive("wacc") &&
-             !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = WACCRegs[IntVal];
-  } else if (Name.starts_with_insensitive("dmrrowp") &&
-             !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 32) {
-    RegNo = DMRROWpRegs[IntVal];
-  } else if (Name.starts_with_insensitive("dmrrow") &&
-             !Name.substr(6).getAsInteger(10, IntVal) && IntVal < 64) {
-    RegNo = DMRROWRegs[IntVal];
-  } else if (Name.starts_with_insensitive("dmrp") &&
-             !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 4) {
-    RegNo = DMRROWpRegs[IntVal];
-  } else if (Name.starts_with_insensitive("dmr") &&
-             !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = DMRRegs[IntVal];
-  } else
-    return MCRegister();
 
   getParser().Lex();
   return RegNo;
@@ -1874,7 +1847,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {
   RegisterMCAsmParser<PPCAsmParser> D(getThePPC64LETarget());
 }
 
-#define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "PPCGenAsmMatcher.inc"

@@ -87,6 +87,8 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_124;
   if (raw_version < 12060)
     return CudaVersion::CUDA_125;
+  if (raw_version < 12070)
+    return CudaVersion::CUDA_126;
   return CudaVersion::NEW;
 }
 
@@ -632,8 +634,8 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::vector<StringRef> Features;
   getNVPTXTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
                          Features);
-  for (StringRef Feature : Features)
-    CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
+  CmdArgs.push_back(
+      Args.MakeArgString("--plugin-opt=-mattr=" + llvm::join(Features, ",")));
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
@@ -669,6 +671,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(126, 85);
     CASE_CUDA_VERSION(125, 85);
     CASE_CUDA_VERSION(124, 84);
     CASE_CUDA_VERSION(123, 83);
@@ -691,6 +694,10 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     CASE_CUDA_VERSION(91, 61);
     CASE_CUDA_VERSION(90, 60);
 #undef CASE_CUDA_VERSION
+  // TODO: Use specific CUDA version once it's public.
+  case clang::CudaVersion::NEW:
+    PtxFeature = "+ptx86";
+    break;
   default:
     PtxFeature = "+ptx42";
   }
