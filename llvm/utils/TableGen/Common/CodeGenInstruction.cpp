@@ -180,7 +180,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
     } else if (!EncoderMethod.empty()) {
       // If we have no explicit sub-op dag, but have an top-level encoder
       // method, the single encoder will multiple sub-ops, itself.
-      OpInfo.EncoderMethodNames[0] = EncoderMethod;
+      OpInfo.EncoderMethodNames[0] = std::move(EncoderMethod);
       for (unsigned j = 1; j < NumOps; ++j)
         OpInfo.DoNotEncode[j] = true;
     }
