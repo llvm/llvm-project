@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
+
 #include <optional>
 #include <string_view>
 #include <utility>
+#include <memory>
 
 #include "IRModule.h"
 
@@ -757,14 +760,7 @@ public:
       throw py::error_already_set();
     }
     auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
-    SmallVector<int64_t> shape;
-    if (explicitShape) {
-      shape.append(explicitShape->begin(), explicitShape->end());
-    } else {
-      shape.append(view.shape, view.shape + view.ndim);
-    }
 
-    MlirAttribute encodingAttr = mlirAttributeGetNull();
     MlirContext context = contextWrapper->get();
 
     // Detect format codes that are suitable for bulk loading. This includes
@@ -773,6 +769,7 @@ public:
     // other exotics which do not have a direct representation in the buffer
     // protocol (i.e. complex, etc).
     std::optional<MlirType> bulkLoadElementType;
+    bool kasperTest = false;
     if (explicitType) {
       bulkLoadElementType = *explicitType;
     } else {
@@ -789,6 +786,10 @@ public:
         // f16
         assert(view.itemsize == 2 && "mismatched array itemsize");
         bulkLoadElementType = mlirF16TypeGet(context);
+      } else if (format == "?") {
+        // i1
+        kasperTest = true;
+        bulkLoadElementType = mlirIntegerTypeGet(context, 1);
       } else if (isSignedIntegerFormat(format)) {
         if (view.itemsize == 4) {
           // i32
@@ -840,20 +841,46 @@ public:
       }
     }
 
-    MlirType shapedType;
-    if (mlirTypeIsAShaped(*bulkLoadElementType)) {
-      if (explicitShape) {
-        throw std::invalid_argument("Shape can only be specified explicitly "
-                                    "when the type is not a shaped type.");
-      }
-      shapedType = *bulkLoadElementType;
-    } else {
-      shapedType = mlirRankedTensorTypeGet(shape.size(), shape.data(),
-                                           *bulkLoadElementType, encodingAttr);
-    }
     size_t rawBufferSize = view.len;
-    MlirAttribute attr =
-        mlirDenseElementsAttrRawBufferGet(shapedType, rawBufferSize, view.buf);
+    MlirAttribute attr;
+    if (kasperTest) {
+      std::cerr << "Buffer content:" << std::endl;
+      for (int i = 0; i < view.len; i++) {
+        std::cerr << (int)*((char*)view.buf + i) << std::endl;
+      }
+
+      std::cerr << "Constructing intermediate buffer..." << std::endl;
+      // First read the content of the python buffer as u8's, to correct for endianess
+      MlirAttribute intermediateAttr = mlirDenseElementsAttrRawBufferGet(
+        getShapedType(mlirIntegerTypeUnsignedGet(context, 8), explicitShape, view), rawBufferSize, view.buf);
+
+      std::cerr << "Endian corrected buffer content:" << std::endl;
+      for (int i = 0; i < view.len; i++) {
+        std::cerr << (int) mlirDenseElementsAttrGetUInt8Value(intermediateAttr, i) << std::endl;
+      }
+
+      // Pack the boolean array according to the i8 bitpacking layout
+      const int numPackedBytes = (view.len + 7) / 8;
+      SmallVector<uint8_t, 8> bitpacked(numPackedBytes);
+      for (int byteNum = 0; byteNum < numPackedBytes; byteNum++) {
+        uint8_t byte = 0;
+        for (int bitNr = 0; 8 * byteNum + bitNr < view.len; bitNr++) {
+          int pos = 8 * byteNum + bitNr;
+          uint8_t boolVal = mlirDenseElementsAttrGetUInt8Value(intermediateAttr, pos) << bitNr;
+          byte |= boolVal;
+        }
+        bitpacked[byteNum] = byte;
+      }
+
+      std::cerr << "Bitpacked: " << std::endl;
+      for (int i = 0; i < numPackedBytes; i++) {
+        std::cerr << (int)*((uint8_t*)bitpacked.data() + i) << std::endl;
+      }
+
+      attr = mlirDenseElementsAttrRawBufferGet(getShapedType(bulkLoadElementType, explicitShape, view), numPackedBytes, bitpacked.data());
+    } else {
+      attr = mlirDenseElementsAttrRawBufferGet(getShapedType(bulkLoadElementType, explicitShape, view), rawBufferSize, view.buf);
+    }
     if (mlirAttributeIsNull(attr)) {
       throw std::invalid_argument(
           "DenseElementsAttr could not be constructed from the given buffer. "
@@ -963,6 +990,20 @@ public:
         // unsigned i16
         return bufferInfo<uint16_t>(shapedType);
       }
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 1) {
+      // i1 / bool type
+      if (!m_boolBuffer.has_value()) {
+        // TODO(knielsen): Handle endianess
+        int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
+        std::cerr << "Allocating a buffer with #elements = " << numBooleans << std::endl;
+        m_boolBuffer = SmallVector<uint8_t, 8>(numBooleans);
+        // TODO(knielsen): Bit unpack!
+        if (numBooleans > 0) {
+          m_boolBuffer.value()[0] = 0b10101011;
+        }
+      }
+      return bufferInfo<uint8_t>(shapedType, "?", m_boolBuffer.value().data());
     }
 
     // TODO: Currently crashes the program.
@@ -1016,14 +1057,44 @@ private:
            code == 'q';
   }
 
+  static MlirType getShapedType(std::optional<MlirType> bulkLoadElementType,
+                                std::optional<std::vector<int64_t>> explicitShape,
+                                Py_buffer& view) {
+    SmallVector<int64_t> shape;
+    if (explicitShape) {
+      shape.append(explicitShape->begin(), explicitShape->end());
+    } else {
+      shape.append(view.shape, view.shape + view.ndim);
+    }
+
+    MlirType shapedType;
+    if (mlirTypeIsAShaped(*bulkLoadElementType)) {
+      if (explicitShape) {
+        throw std::invalid_argument("Shape can only be specified explicitly "
+                                    "when the type is not a shaped type.");
+      }
+      return *bulkLoadElementType;
+    } else {
+      MlirAttribute encodingAttr = mlirAttributeGetNull();
+      return mlirRankedTensorTypeGet(shape.size(), shape.data(),
+                                     *bulkLoadElementType, encodingAttr);
+    }
+  }
+
+  std::optional<SmallVector<uint8_t, 8>> m_boolBuffer;
+
   template <typename Type>
   py::buffer_info bufferInfo(MlirType shapedType,
-                             const char *explicitFormat = nullptr) {
+                             const char *explicitFormat = nullptr,
+                             Type* dataOverride = nullptr) {
     intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the data for the buffer_info.
     // Buffer is configured for read-only access below.
     Type *data = static_cast<Type *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
+    if (dataOverride != nullptr) {
+      data = dataOverride;
+    }
     // Prepare the shape for the buffer_info.
     SmallVector<intptr_t, 4> shape;
     for (intptr_t i = 0; i < rank; ++i)
@@ -1083,6 +1154,7 @@ public:
     bool isUnsigned = mlirIntegerTypeIsUnsigned(type);
     if (isUnsigned) {
       if (width == 1) {
+        std::cerr << "Loading unsigned i1 values at position: " << pos << std::endl;
         return mlirDenseElementsAttrGetBoolValue(*this, pos);
       }
       if (width == 8) {
@@ -1099,6 +1171,7 @@ public:
       }
     } else {
       if (width == 1) {
+        std::cerr << "Loading signed i1 values at position: " << pos << std::endl;
         return mlirDenseElementsAttrGetBoolValue(*this, pos);
       }
       if (width == 8) {

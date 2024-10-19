@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
+
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Support.h"
 #include "mlir/CAPI/AffineMap.h"
@@ -527,8 +529,11 @@ MlirAttribute mlirDenseElementsAttrRawBufferGet(MlirType shapedType,
                               rawBufferSize);
   bool isSplat = false;
   if (!DenseElementsAttr::isValidRawBuffer(shapedTypeCpp, rawBufferCpp,
-                                           isSplat))
+                                           isSplat)) {
+    std::cerr << "NULL POINTER!!!" << std::endl;
     return mlirAttributeGetNull();
+  }
+  std::cerr << "Pointer looks ok..." << std::endl;
   return wrap(DenseElementsAttr::getFromRawBuffer(shapedTypeCpp, rawBufferCpp));
 }
 
@@ -588,7 +593,7 @@ MlirAttribute mlirDenseElementsAttrBoolGet(MlirType shapedType,
                                            const int *elements) {
   SmallVector<bool, 8> values(elements, elements + numElements);
   return wrap(DenseElementsAttr::get(llvm::cast<ShapedType>(unwrap(shapedType)),
-                                     values));
+                                    values));
 }
 
 /// Creates a dense attribute with elements of the type deduced by templates.
