@@ -39,5 +39,25 @@ static constexpr cpp::array<cpp::string_view, NUM_MONTHS>
     abbreviated_month_names = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
+static constexpr cpp::string_view out_of_bound_str =
+    "?"; // From glibc output ? when days out of range
+
+LIBC_INLINE cpp::string_view safe_day_name(int day) {
+  return (day < 0 || day > 6) ? out_of_bound_str : day_names[day];
+}
+
+LIBC_INLINE cpp::string_view safe_abbreviated_day_name(int day) {
+  return (day < 0 || day > 6) ? out_of_bound_str : abbreviated_day_names[day];
+}
+
+LIBC_INLINE cpp::string_view safe_month_name(int month) {
+  return (month < 0 || month > 11) ? out_of_bound_str : month_names[month];
+}
+
+LIBC_INLINE cpp::string_view safe_abbreviated_month_name(int month) {
+  return (month < 0 || month > 11) ? out_of_bound_str
+                                   : abbreviated_month_names[month];
+}
+
 } // namespace strftime_core
 } // namespace LIBC_NAMESPACE_DECL

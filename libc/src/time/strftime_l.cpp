@@ -12,13 +12,18 @@
 #include "src/errno/libc_errno.h"
 #include "src/time/time_utils.h"
 
+#include "src/stdio/printf_core/writer.h"
+#include "src/time/strftime_core/strftime_main.h"
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, strftime_l,
-                   (char *__restrict, size_t, const char *__restrict,
-                    const struct tm *, locale_t)) {
-  // TODO: Implement this for the default locale.
-  return -1;
+                   (char *__restrict buffer, size_t buffsz,
+                    const char *__restrict format, const struct tm *timeptr,
+                    locale_t)) {
+  printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::Writer writer(&wb);
+  strftime_core::strftime_main(&writer, format, timeptr);
+  return writer.get_chars_written();
 }
 
 } // namespace LIBC_NAMESPACE_DECL
