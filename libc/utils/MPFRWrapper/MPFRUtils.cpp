@@ -256,8 +256,11 @@ public:
     return result;
 #else
     if (mpfr_integer_p(value)) {
-      auto d = mpfr_get_si(value, mpfr_rounding);
-      mpfr_set_si(result.value, (d & 1) ? -1 : 1, mpfr_rounding);
+      mpz_t integer;
+      mpz_init(integer);
+      mpfr_get_z(integer, value, mpfr_rounding);
+
+      mpfr_set_si(result.value, (mpz_tstbit(integer, 0)) ? -1 : 1, mpfr_rounding);
       return result;
     }
 
