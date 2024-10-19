@@ -58,7 +58,7 @@ double g19 = __builtin_fma(1.0, 1.0, 1.0);
 float g20 = __builtin_fmaf(1.0f, 1.0f, 1.0f);
 long double g21 = __builtin_fmal(1.0L, 1.0L, 1.0L);
 #if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
-__float128 g21_2 = __builtin_fma(1.0q, 1.0q, 1.0q);
+__float128 g21_2 = __builtin_fmaf128(1.0q, 1.0q, 1.0q);
 #endif
 
 char classify_nan     [__builtin_fpclassify(+1, -1, -1, -1, -1, __builtin_nan(""))];

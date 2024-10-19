@@ -15325,9 +15325,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
 
     llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
-    Result.multiply(Y, RM);
-    Result.add(Z, RM);
-    return true;
+    return Result.fusedMultiplyAdd(Y, Z, RM) == APFloat::opOK;
   }
 
   case Builtin::BI__arithmetic_fence:
