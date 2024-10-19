@@ -115,7 +115,7 @@ class CompressInstEmitter {
     CompressPat(const CodeGenInstruction &S, const CodeGenInstruction &D,
                 std::vector<const Record *> RF, IndexedMap<OpData> &SourceMap,
                 IndexedMap<OpData> &DestMap, bool IsCompressOnly)
-        : Source(S), Dest(D), PatReqFeatures(RF), SourceOperandMap(SourceMap),
+        : Source(S), Dest(D), PatReqFeatures(std::move(RF)), SourceOperandMap(SourceMap),
           DestOperandMap(DestMap), IsCompressOnly(IsCompressOnly) {}
   };
   enum EmitterType { Compress, Uncompress, CheckCompress };
