@@ -263,10 +263,9 @@ public:
 #  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __other.clear();
-    if constexpr (is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
-                  is_nothrow_move_constructible_v<_Compare>) {
-      // gcc does not like the `throw` keyword in a conditional noexcept function
-      // split the move constructor into two
+    // gcc does not like the `throw` keyword in a conditional noexcept function
+    if constexpr (!(is_nothrow_move_constructible_v<_KeyContainer> &&
+                    is_nothrow_move_constructible_v<_MappedContainer> && is_nothrow_move_constructible_v<_Compare>)) {
       throw;
     }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
