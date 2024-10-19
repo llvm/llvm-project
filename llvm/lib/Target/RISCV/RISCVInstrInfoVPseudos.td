@@ -3072,13 +3072,13 @@ multiclass VPseudoVCALUM_VM_XM_IM {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=1, Constraint=constraint,
                                 Commutable=1, TargetConstraintType=2>,
-              SchedBinary<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV", mx, forceMasked=1,
+              SchedBinary<"WriteVICALUMV", "ReadVICALUV", "ReadVICALUV", mx, forceMasked=1,
                           forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_XM<m, CarryOut=1, CarryIn=1, Constraint=constraint, TargetConstraintType=2>,
-              SchedBinary<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX", mx, forceMasked=1,
+              SchedBinary<"WriteVICALUMX", "ReadVICALUV", "ReadVICALUX", mx, forceMasked=1,
                           forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_IM<m, CarryOut=1, CarryIn=1, Constraint=constraint, TargetConstraintType=2>,
-              SchedUnary<"WriteVICALUI", "ReadVICALUV", mx, forceMasked=1,
+              SchedUnary<"WriteVICALUMI", "ReadVICALUV", mx, forceMasked=1,
                           forcePassthruRead=true>;
   }
 }
@@ -3089,11 +3089,11 @@ multiclass VPseudoVCALUM_VM_XM {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=1, Constraint=constraint,
                                 TargetConstraintType=2>,
-              SchedBinary<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV", mx, forceMasked=1,
+              SchedBinary<"WriteVICALUMV", "ReadVICALUV", "ReadVICALUV", mx, forceMasked=1,
                           forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_XM<m, CarryOut=1, CarryIn=1, Constraint=constraint,
                                 TargetConstraintType=2>,
-              SchedBinary<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX", mx, forceMasked=1,
+              SchedBinary<"WriteVICALUMX", "ReadVICALUV", "ReadVICALUX", mx, forceMasked=1,
                           forcePassthruRead=true>;
   }
 }
@@ -3104,13 +3104,13 @@ multiclass VPseudoVCALUM_V_X_I {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=0, Constraint=constraint,
                                 Commutable=1, TargetConstraintType=2>,
-              SchedBinary<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV", mx,
+              SchedBinary<"WriteVICALUMV", "ReadVICALUV", "ReadVICALUV", mx,
                           forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_XM<m, CarryOut=1, CarryIn=0, Constraint=constraint, TargetConstraintType=2>,
-              SchedBinary<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX", mx,
+              SchedBinary<"WriteVICALUMX", "ReadVICALUV", "ReadVICALUX", mx,
                           forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_IM<m, CarryOut=1, CarryIn=0, Constraint=constraint>,
-              SchedUnary<"WriteVICALUI", "ReadVICALUV", mx,
+              SchedUnary<"WriteVICALUMI", "ReadVICALUV", mx,
                           forcePassthruRead=true>;
   }
 }
@@ -3120,10 +3120,10 @@ multiclass VPseudoVCALUM_V_X {
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=0, Constraint=constraint, TargetConstraintType=2>,
-              SchedBinary<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV", mx,
+              SchedBinary<"WriteVICALUMV", "ReadVICALUV", "ReadVICALUV", mx,
                           forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_XM<m, CarryOut=1, CarryIn=0, Constraint=constraint, TargetConstraintType=2>,
-              SchedBinary<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX", mx,
+              SchedBinary<"WriteVICALUMX", "ReadVICALUV", "ReadVICALUX", mx,
                           forcePassthruRead=true>;
   }
 }
