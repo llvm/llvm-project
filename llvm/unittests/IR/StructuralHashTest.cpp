@@ -10,6 +10,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -17,6 +18,11 @@
 using namespace llvm;
 
 namespace {
+
+using testing::Contains;
+using testing::Key;
+using testing::Pair;
+using testing::SizeIs;
 
 std::unique_ptr<Module> parseIR(LLVMContext &Context, const char *IR) {
   SMDiagnostic Err;
@@ -271,16 +277,16 @@ TEST(StructuralHashTest, Differences) {
   EXPECT_EQ(FuncHashInfo1.FunctionHash, FuncHashInfo2.FunctionHash);
 
   // There are total 3 instructions.
-  EXPECT_EQ(FuncHashInfo1.IndexInstruction->size(), 3u);
-  EXPECT_EQ(FuncHashInfo2.IndexInstruction->size(), 3u);
+  EXPECT_THAT(*FuncHashInfo1.IndexInstruction, SizeIs(3));
+  EXPECT_THAT(*FuncHashInfo2.IndexInstruction, SizeIs(3));
 
   // The only 1 operand (the call target) has been ignored.
-  EXPECT_EQ(FuncHashInfo1.IndexOperandHashMap->size(), 1u);
-  EXPECT_EQ(FuncHashInfo2.IndexOperandHashMap->size(), 1u);
+  EXPECT_THAT(*FuncHashInfo1.IndexOperandHashMap, SizeIs(1u));
+  EXPECT_THAT(*FuncHashInfo2.IndexOperandHashMap, SizeIs(1u));
 
   // The index pair of instruction and operand (1, 1) is a key in the map.
-  ASSERT_TRUE(FuncHashInfo1.IndexOperandHashMap->count({1, 1}));
-  ASSERT_TRUE(FuncHashInfo2.IndexOperandHashMap->count({1, 1}));
+  ASSERT_THAT(*FuncHashInfo1.IndexOperandHashMap, Contains(Key(Pair(1, 1))));
+  ASSERT_THAT(*FuncHashInfo2.IndexOperandHashMap, Contains(Key(Pair(1, 1))));
 
   // The indexed instruciton must be the call instruction as shown in the
   // IgnoreOp above.
