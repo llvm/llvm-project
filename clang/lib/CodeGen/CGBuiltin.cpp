@@ -20486,7 +20486,7 @@ static NVPTXMmaInfo getNVPTXMmaInfo(unsigned BuiltinID) {
 }
 
 static Value *MakeLdu(unsigned IntrinsicID, CodeGenFunction &CGF,
-                         const CallExpr *E) {
+                      const CallExpr *E) {
   Value *Ptr = CGF.EmitScalarExpr(E->getArg(0));
   QualType ArgType = E->getArg(0)->getType();
   clang::CharUnits Align = CGF.CGM.getNaturalPointeeTypeAlignment(ArgType);
