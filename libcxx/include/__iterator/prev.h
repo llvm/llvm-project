@@ -39,6 +39,9 @@ prev(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n) 
   return __x;
 }
 
+// LWG 3197
+// It is unclear what the implications of "BidirectionalIterator" in the standard are.
+// However, calling std::prev(non-bidi-iterator) is obviously an error and we should catch it at compile time.
 template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _InputIter prev(_InputIter __it) {
   static_assert(__has_bidirectional_iterator_category<_InputIter>::value,
