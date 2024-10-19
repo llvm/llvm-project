@@ -546,7 +546,7 @@ ConstString CompilerType::GetMangledTypeName() const {
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetMangledTypeName(m_type);
   }
-  return ConstString();
+  return ConstString("<invalid>");
 }
 
 uint32_t CompilerType::GetTypeInfo(
