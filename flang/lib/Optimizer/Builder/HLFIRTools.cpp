@@ -878,7 +878,6 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
       lnops.loopSteps.push_back(one);
     }
     auto lnOp = builder.create<mlir::omp::LoopNestOp>(loc, lnops);
-    builder.create<mlir::omp::TerminatorOp>(loc);
     mlir::Block *block = builder.createBlock(&lnOp.getRegion());
     for (auto extent : llvm::reverse(extents))
       block->addArgument(extent.getType(), extent.getLoc());
