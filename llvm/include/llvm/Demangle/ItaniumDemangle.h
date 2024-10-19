@@ -3357,6 +3357,7 @@ const typename AbstractManglingParser<
     {"cl", OperatorInfo::Call, false, Node::Prec::Postfix, "operator()"},
     {"cm", OperatorInfo::Binary, false, Node::Prec::Comma, "operator,"},
     {"co", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator~"},
+    {"cp", OperatorInfo::Call, false, Node::Prec::Postfix, "operator()"},
     {"cv", OperatorInfo::CCast, false, Node::Prec::Cast, "operator"}, // C Cast
     {"dV", OperatorInfo::Binary, false, Node::Prec::Assign, "operator/="},
     {"da", OperatorInfo::Del, /*Ary*/ true, Node::Prec::Unary,
