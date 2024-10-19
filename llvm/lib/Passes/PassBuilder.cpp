@@ -1175,9 +1175,19 @@ Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
   return Result;
 }
 
-Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "detailed",
-                                            "StructuralHashPrinterPass");
+Expected<StructuralHashOptions>
+parseStructuralHashPrinterPassOptions(StringRef Params) {
+  if (Params.empty())
+    return StructuralHashOptions::None;
+  else if (Params == "detailed")
+    return StructuralHashOptions::Detailed;
+  else if (Params == "call-target-ignored")
+    return StructuralHashOptions::CallTargetIgnored;
+  else
+    return make_error<StringError>(
+        formatv("invalid structural hash printer parameter '{0}' ", Params)
+            .str(),
+        inconvertibleErrorCode());
 }
 
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {

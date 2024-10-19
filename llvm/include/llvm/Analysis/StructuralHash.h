@@ -13,15 +13,18 @@
 
 namespace llvm {
 
+enum class StructuralHashOptions { None, Detailed, CallTargetIgnored };
+
 /// Printer pass for  StructuralHashes
 class StructuralHashPrinterPass
     : public PassInfoMixin<StructuralHashPrinterPass> {
   raw_ostream &OS;
-  bool EnableDetailedStructuralHash;
+  const StructuralHashOptions Options;
 
 public:
-  explicit StructuralHashPrinterPass(raw_ostream &OS, bool Detailed)
-      : OS(OS), EnableDetailedStructuralHash(Detailed) {}
+  explicit StructuralHashPrinterPass(raw_ostream &OS,
+                                     StructuralHashOptions Options)
+      : OS(OS), Options(Options) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 

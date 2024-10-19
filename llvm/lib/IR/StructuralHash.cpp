@@ -110,11 +110,6 @@ public:
     }
 
     switch (C->getValueID()) {
-    case Value::UndefValueVal:
-    case Value::PoisonValueVal:
-    case Value::ConstantTokenNoneVal: {
-      return stable_hash_combine(Hashes);
-    }
     case Value::ConstantIntVal: {
       const APInt &Int = cast<ConstantInt>(C)->getValue();
       Hashes.emplace_back(hashAPInt(Int));
@@ -125,33 +120,11 @@ public:
       Hashes.emplace_back(hashAPFloat(APF));
       return stable_hash_combine(Hashes);
     }
-    case Value::ConstantArrayVal: {
-      const ConstantArray *A = cast<ConstantArray>(C);
-      for (auto &Op : A->operands()) {
-        auto H = hashConstant(cast<Constant>(Op));
-        Hashes.emplace_back(H);
-      }
-      return stable_hash_combine(Hashes);
-    }
-    case Value::ConstantStructVal: {
-      const ConstantStruct *S = cast<ConstantStruct>(C);
-      for (auto &Op : S->operands()) {
-        auto H = hashConstant(cast<Constant>(Op));
-        Hashes.emplace_back(H);
-      }
-      return stable_hash_combine(Hashes);
-    }
-    case Value::ConstantVectorVal: {
-      const ConstantVector *V = cast<ConstantVector>(C);
-      for (auto &Op : V->operands()) {
-        auto H = hashConstant(cast<Constant>(Op));
-        Hashes.emplace_back(H);
-      }
-      return stable_hash_combine(Hashes);
-    }
+    case Value::ConstantArrayVal:
+    case Value::ConstantStructVal:
+    case Value::ConstantVectorVal:
     case Value::ConstantExprVal: {
-      const ConstantExpr *E = cast<ConstantExpr>(C);
-      for (auto &Op : E->operands()) {
+      for (const auto &Op : C->operands()) {
         auto H = hashConstant(cast<Constant>(Op));
         Hashes.emplace_back(H);
       }
@@ -307,9 +280,11 @@ public:
   }
 
   uint64_t getHash() const { return Hash; }
+
   std::unique_ptr<IndexInstrMap> getIndexInstrMap() {
     return std::move(IndexInstruction);
   }
+
   std::unique_ptr<IndexOperandHashMapType> getIndexPairOpndHashMap() {
     return std::move(IndexOperandHashMap);
   }
