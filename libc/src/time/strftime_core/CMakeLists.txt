@@ -24,9 +24,14 @@ add_object_library(
     converter.cpp
   HDRS
     converter.h
+    num_converter.h
+    str_converter.h
+    composite_converter.h
   DEPENDS
     .core_structs
+    libc.src.__support.arg_list
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.printf_main
     libc.src.__support.big_int
     libc.src.__support.CPP.string_view
     libc.src.__support.float_to_string

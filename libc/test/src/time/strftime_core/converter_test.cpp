@@ -9,8 +9,11 @@
 #include "src/stdio/printf_core/writer.h"
 #include "src/time/strftime_core/converter.h"
 #include "src/time/strftime_core/core_structs.h"
+#include "src/time/strftime_core/parser.h"
 #include "test/UnitTest/Test.h"
 #include <time.h>
+
+using namespace LIBC_NAMESPACE;
 
 class LlvmLibcStrftimeConverterTest : public LIBC_NAMESPACE::testing::Test {
 protected:
@@ -59,6 +62,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, WeekdayConversion) {
   simple_conv.raw_string = "%a";
   simple_conv.conv_name = 'a';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -75,6 +80,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, AbbreviatedMonthNameConversion) {
   simple_conv.raw_string = "%b";
   simple_conv.conv_name = 'b';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -92,6 +99,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, CenturyConversion) {
   simple_conv.raw_string = "%C";
   simple_conv.conv_name = 'C';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -109,6 +118,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, DayOfMonthZeroPaddedConversion) {
   simple_conv.raw_string = "%d";
   simple_conv.conv_name = 'd';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -126,6 +137,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, DayOfMonthSpacePaddedConversion) {
   simple_conv.raw_string = "%e";
   simple_conv.conv_name = 'e';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -143,6 +156,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, FullMonthNameConversion) {
   simple_conv.raw_string = "%B";
   simple_conv.conv_name = 'B';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -160,6 +175,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, Hour12Conversion) {
   simple_conv.raw_string = "%I";
   simple_conv.conv_name = 'I';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -177,6 +194,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, Hour24PaddedConversion) {
   simple_conv.raw_string = "%H";
   simple_conv.conv_name = 'H';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -194,6 +213,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, MinuteConversion) {
   simple_conv.raw_string = "%M";
   simple_conv.conv_name = 'M';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -211,6 +232,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, AMPMConversion) {
   simple_conv.raw_string = "%p";
   simple_conv.conv_name = 'p';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -228,6 +251,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, SecondsConversion) {
   simple_conv.raw_string = "%S";
   simple_conv.conv_name = 'S';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -245,6 +270,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, FullYearConversion) {
   simple_conv.raw_string = "%Y";
   simple_conv.conv_name = 'Y';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -262,6 +289,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, TwoDigitYearConversion) {
   simple_conv.raw_string = "%y";
   simple_conv.conv_name = 'y';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -334,6 +363,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, WeekNumberSundayFirstDayConversion) {
   simple_conv.raw_string = "%U"; // Week number (Sunday is first day of week)
   simple_conv.conv_name = 'U';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -359,6 +390,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, WeekNumberMondayFirstDayConversion) {
   simple_conv.raw_string = "%W"; // Week number (Monday is first day of week)
   simple_conv.conv_name = 'W';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -384,6 +417,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, ISO8601WeekNumberConversion) {
   simple_conv.raw_string = "%V"; // ISO 8601 week number
   simple_conv.conv_name = 'V';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -408,6 +443,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, DayOfYearConversion) {
   simple_conv.raw_string = "%j"; // Day of the year
   simple_conv.conv_name = 'j';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 
@@ -431,6 +468,8 @@ TEST_F(LlvmLibcStrftimeConverterTest, ISO8601DateConversion) {
   simple_conv.raw_string = "%F"; // ISO 8601 date format
   simple_conv.conv_name = 'F';
   simple_conv.time = &time;
+  simple_conv.min_width = strftime_core::min_width(simple_conv.conv_name);
+  simple_conv.padding = strftime_core::get_padding(simple_conv.conv_name);
 
   LIBC_NAMESPACE::strftime_core::convert(&writer, simple_conv);
 

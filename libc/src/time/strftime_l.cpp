@@ -20,10 +20,13 @@ LLVM_LIBC_FUNCTION(size_t, strftime_l,
                    (char *__restrict buffer, size_t buffsz,
                     const char *__restrict format, const struct tm *timeptr,
                     locale_t)) {
-  printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0),
+                              strftime_core::overflow_write_mock, nullptr);
   printf_core::Writer writer(&wb);
-  strftime_core::strftime_main(&writer, format, timeptr);
-  return writer.get_chars_written();
+  int ret = strftime_core::strftime_main(&writer, format, timeptr);
+  if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
+    wb.buff[wb.buff_cur] = '\0';
+  return ret > 0 ? ret : 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

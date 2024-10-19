@@ -19,11 +19,13 @@ namespace LIBC_NAMESPACE_DECL {
 using namespace strftime_core;
 size_t call_strftime(char *__restrict buffer, size_t buffsz,
                      const char *__restrict format, const struct tm *timeptr) {
-
-  printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0),
+                              strftime_core::overflow_write_mock, nullptr);
   printf_core::Writer writer(&wb);
-  strftime_core::strftime_main(&writer, format, timeptr);
-  return writer.get_chars_written();
+  int ret = strftime_core::strftime_main(&writer, format, timeptr);
+  if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
+    wb.buff[wb.buff_cur] = '\0';
+  return ret > 0 ? ret : 0;
 }
 
 TEST(LlvmLibcStrftimeTest, FormatsYearMonthDayCorrectly) {
@@ -94,5 +96,18 @@ TEST(LlvmLibcStrftimeTest, FormatsTimezoneCorrectly) {
   call_strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S %Z", &time);
   EXPECT_STRNE(buffer, "");
 }
+TEST(LlvmLibcStrftimeTest, TooManyCharacters) {
+  struct tm time;
+  time.tm_year = 122; // Year 2022
+  time.tm_mon = 9;    // October
+  time.tm_mday = 15;
+  time.tm_hour = 12;
+  time.tm_min = 0;
+  time.tm_sec = 0;
+  time.tm_isdst = -1; // Use system's daylight saving time information
 
+  char buffer[10];
+  int ret = call_strftime(buffer, sizeof(buffer), "Abcdefghijklmnopq", &time);
+  EXPECT_EQ(ret, 0);
+}
 } // namespace LIBC_NAMESPACE_DECL

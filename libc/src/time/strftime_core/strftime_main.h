@@ -19,6 +19,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {
 
+// Passed to writeBuffer so error is returned if there is not enough buffer
+// space.
+LIBC_INLINE int overflow_write_mock(cpp::string_view, void *) { return -1; }
+
 int strftime_main(printf_core::Writer *writer, const char *__restrict str,
                   const struct tm *timeptr);
 

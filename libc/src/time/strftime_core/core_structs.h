@@ -26,16 +26,13 @@ struct FormatSection {
   char padding;
 };
 
-// This is the value to be returned by conversions when no error has occurred.
-constexpr int WRITE_OK = 0;
-// These are the printf return values for when an error has occurred. They are
-// all negative, and should be distinct.
-constexpr int FILE_WRITE_ERROR = -1;
-constexpr int FILE_STATUS_ERROR = -2;
-constexpr int NULLPTR_WRITE_ERROR = -3;
-constexpr int INT_CONVERSION_ERROR = -4;
-constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
-constexpr int ALLOCATION_ERROR = -6;
+#define RET_IF_RESULT_NEGATIVE(func)                                           \
+  {                                                                            \
+    int result = (func);                                                       \
+    if (result < 0)                                                            \
+      return result;                                                           \
+  }
+
 } // namespace strftime_core
 } // namespace LIBC_NAMESPACE_DECL
 

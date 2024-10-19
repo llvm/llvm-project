@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_TIME_DEF_H
+#define LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_TIME_DEF_H
+
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/string_view.h"
 
@@ -59,5 +62,16 @@ LIBC_INLINE cpp::string_view safe_abbreviated_month_name(int month) {
                                    : abbreviated_month_names[month];
 }
 
+static constexpr cpp::string_view default_timezone_name = "UTC";
+
+// TODO
+static constexpr cpp::string_view default_timezone_offset = "+0000";
+
+static constexpr cpp::string_view default_PM_str = "PM";
+
+static constexpr cpp::string_view default_AM_str = "AM";
+
 } // namespace strftime_core
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif
