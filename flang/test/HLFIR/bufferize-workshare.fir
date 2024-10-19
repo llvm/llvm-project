@@ -21,7 +21,6 @@
 // CHECK:                   hlfir.assign %[[VAL_12]] to %[[VAL_13]] temporary_lhs : i32, !fir.ref<i32>
 // CHECK:                   omp.yield
 // CHECK:                 }
-// CHECK:                 omp.terminator
 // CHECK:               }
 // CHECK:               %[[VAL_14:.*]] = fir.undefined tuple<!fir.heap<!fir.array<42xi32>>, i1>
 // CHECK:               %[[VAL_15:.*]] = fir.insert_value %[[VAL_14]], %[[VAL_7]], [1 : index] : (tuple<!fir.heap<!fir.array<42xi32>>, i1>, i1) -> tuple<!fir.heap<!fir.array<42xi32>>, i1>
