@@ -77,6 +77,69 @@ static bool hasDoubleDescriptors(OpTy op) {
   return false;
 }
 
+static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
+                                   mlir::Location loc, mlir::Type toTy,
+                                   mlir::Value val) {
+  if (val.getType() != toTy)
+    return rewriter.create<fir::ConvertOp>(loc, toTy, val);
+  return val;
+}
+
+mlir::Value getDeviceAddress(mlir::PatternRewriter &rewriter,
+                             mlir::OpOperand &operand,
+                             const mlir::SymbolTable &symtab) {
+  mlir::Value v = operand.get();
+  auto declareOp = v.getDefiningOp<fir::DeclareOp>();
+  if (!declareOp)
+    return v;
+
+  auto addrOfOp = declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
+  if (!addrOfOp)
+    return v;
+
+  auto globalOp = symtab.lookup<fir::GlobalOp>(
+      addrOfOp.getSymbol().getRootReference().getValue());
+
+  if (!globalOp)
+    return v;
+
+  bool isDevGlobal{false};
+  auto attr = globalOp.getDataAttrAttr();
+  if (attr) {
+    switch (attr.getValue()) {
+    case cuf::DataAttribute::Device:
+    case cuf::DataAttribute::Managed:
+    case cuf::DataAttribute::Pinned:
+      isDevGlobal = true;
+      break;
+    default:
+      break;
+    }
+  }
+  if (!isDevGlobal)
+    return v;
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(operand.getOwner());
+  auto loc = declareOp.getLoc();
+  auto mod = declareOp->getParentOfType<mlir::ModuleOp>();
+  fir::FirOpBuilder builder(rewriter, mod);
+
+  mlir::func::FuncOp callee =
+      fir::runtime::getRuntimeFunc<mkRTKey(CUFGetDeviceAddress)>(loc, builder);
+  auto fTy = callee.getFunctionType();
+  auto toTy = fTy.getInput(0);
+  mlir::Value inputArg =
+      createConvertOp(rewriter, loc, toTy, declareOp.getResult());
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      builder, loc, fTy, inputArg, sourceFile, sourceLine)};
+  auto call = rewriter.create<fir::CallOp>(loc, callee, args);
+
+  return call->getResult(0);
+}
+
 template <typename OpTy>
 static mlir::LogicalResult convertOpToCall(OpTy op,
                                            mlir::PatternRewriter &rewriter,
@@ -363,17 +426,13 @@ struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   }
 };
 
-static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
-                                   mlir::Location loc, mlir::Type toTy,
-                                   mlir::Value val) {
-  if (val.getType() != toTy)
-    return rewriter.create<fir::ConvertOp>(loc, toTy, val);
-  return val;
-}
-
 struct CufDataTransferOpConversion
     : public mlir::OpRewritePattern<cuf::DataTransferOp> {
   using OpRewritePattern::OpRewritePattern;
+
+  CufDataTransferOpConversion(mlir::MLIRContext *context,
+                              const mlir::SymbolTable &symtab)
+      : OpRewritePattern(context), symtab{symtab} {}
 
   mlir::LogicalResult
   matchAndRewrite(cuf::DataTransferOp op,
@@ -445,9 +504,11 @@ struct CufDataTransferOpConversion
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
 
-      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-          builder, loc, fTy, op.getDst(), op.getSrc(), bytes, modeValue,
-          sourceFile, sourceLine)};
+      mlir::Value dst = getDeviceAddress(rewriter, op.getDstMutable(), symtab);
+      mlir::Value src = getDeviceAddress(rewriter, op.getSrcMutable(), symtab);
+      llvm::SmallVector<mlir::Value> args{
+          fir::runtime::createArguments(builder, loc, fTy, dst, src, bytes,
+                                        modeValue, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);
       return mlir::success();
@@ -552,6 +613,9 @@ struct CufDataTransferOpConversion
     }
     return mlir::success();
   }
+
+private:
+  const mlir::SymbolTable &symtab;
 };
 
 class CufOpConversion : public fir::impl::CufOpConversionBase<CufOpConversion> {
@@ -565,13 +629,15 @@ public:
     mlir::ModuleOp module = mlir::dyn_cast<mlir::ModuleOp>(op);
     if (!module)
       return signalPassFailure();
+    mlir::SymbolTable symtab(module);
 
     std::optional<mlir::DataLayout> dl =
         fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect>();
-    cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, patterns);
+    cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
+                                            patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),
@@ -584,9 +650,9 @@ public:
 
 void cuf::populateCUFToFIRConversionPatterns(
     const fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
-    mlir::RewritePatternSet &patterns) {
+    const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns) {
   patterns.insert<CufAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
-                  CufFreeOpConversion, CufDataTransferOpConversion>(
-      patterns.getContext());
+                  CufFreeOpConversion>(patterns.getContext());
+  patterns.insert<CufDataTransferOpConversion>(patterns.getContext(), symtab);
 }
