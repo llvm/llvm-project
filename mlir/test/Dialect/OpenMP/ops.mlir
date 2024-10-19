@@ -2794,7 +2794,6 @@ func.func @omp_workshare_loop_wrapper(%idx : index) {
       omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -2811,7 +2810,6 @@ func.func @omp_workshare_loop_wrapper_attrs(%idx : index) {
       omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
         omp.yield
       }
-      omp.terminator
     // CHECK: } {attr_in_dict}
     } {attr_in_dict}
     omp.terminator
