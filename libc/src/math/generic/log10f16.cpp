@@ -1,4 +1,4 @@
-//===-- Half-precision log(x) function ------------------------------------===//
+//===-- Half-precision log10(x) function ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/logf16.h"
+#include "src/math/log10f16.h"
 #include "expxf16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
@@ -24,48 +24,55 @@
 namespace LIBC_NAMESPACE_DECL {
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-static constexpr size_t N_LOGF16_EXCEPTS = 5;
+static constexpr size_t N_LOG10F16_EXCEPTS = 11;
 #else
-static constexpr size_t N_LOGF16_EXCEPTS = 11;
+static constexpr size_t N_LOG10F16_EXCEPTS = 17;
 #endif
 
-static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
-    LOGF16_EXCEPTS = {{
-// (input, RZ output, RU offset, RD offset, RN offset)
+static constexpr fputil::ExceptValues<float16, N_LOG10F16_EXCEPTS>
+    LOG10F16_EXCEPTS = {{
+        // (input, RZ output, RU offset, RD offset, RN offset)
+        // x = 0x1.e3cp-3, log10f16(x) = -0x1.40cp-1 (RZ)
+        {0x338fU, 0xb903U, 0U, 1U, 0U},
+        // x = 0x1.fep-3, log10f16(x) = -0x1.35p-1 (RZ)
+        {0x33f8U, 0xb8d4U, 0U, 1U, 1U},
 #ifndef LIBC_TARGET_CPU_HAS_FMA
-        // x = 0x1.61cp-13, logf16(x) = -0x1.16p+3 (RZ)
-        {0x0987U, 0xc858U, 0U, 1U, 0U},
-        // x = 0x1.f2p-12, logf16(x) = -0x1.e98p+2 (RZ)
-        {0x0fc8U, 0xc7a6U, 0U, 1U, 1U},
+        // x = 0x1.394p-1, log10f16(x) = -0x1.b4cp-3 (RZ)
+        {0x38e5U, 0xb2d3U, 0U, 1U, 1U},
 #endif
-        // x = 0x1.4d4p-9, logf16(x) = -0x1.7e4p+2 (RZ)
-        {0x1935U, 0xc5f9U, 0U, 1U, 0U},
-        // x = 0x1.5ep-8, logf16(x) = -0x1.4ecp+2 (RZ)
-        {0x1d78U, 0xc53bU, 0U, 1U, 0U},
+        // x = 0x1.ea8p-1, log10f16(x) = -0x1.31p-6 (RZ)
+        {0x3baaU, 0xa4c4U, 0U, 1U, 1U},
+        // x = 0x1.ebp-1, log10f16(x) = -0x1.29cp-6 (RZ)
+        {0x3bacU, 0xa4a7U, 0U, 1U, 1U},
+        // x = 0x1.f3p-1, log10f16(x) = -0x1.6dcp-7 (RZ)
+        {0x3bccU, 0xa1b7U, 0U, 1U, 1U},
+// x = 0x1.f38p-1, log10f16(x) = -0x1.5f8p-7 (RZ)
 #ifndef LIBC_TARGET_CPU_HAS_FMA
-        // x = 0x1.fdp-1, logf16(x) = -0x1.81p-8 (RZ)
-        {0x3bf4U, 0x9e04U, 0U, 1U, 1U},
-        // x = 0x1.fep-1, logf16(x) = -0x1.008p-8 (RZ)
-        {0x3bf8U, 0x9c02U, 0U, 1U, 0U},
+        {0x3bceU, 0xa17eU, 0U, 1U, 1U},
+        // x = 0x1.fd8p-1, log10f16(x) = -0x1.168p-9 (RZ)
+        {0x3bf6U, 0x985aU, 0U, 1U, 1U},
+        // x = 0x1.ff8p-1, log10f16(x) = -0x1.bccp-12 (RZ)
+        {0x3bfeU, 0x8ef3U, 0U, 1U, 1U},
+        // x = 0x1.374p+0, log10f16(x) = 0x1.5b8p-4 (RZ)
+        {0x3cddU, 0x2d6eU, 1U, 0U, 1U},
+        // x = 0x1.3ecp+1, log10f16(x) = 0x1.958p-2 (RZ)
+        {0x40fbU, 0x3656U, 1U, 0U, 1U},
 #endif
-        // x = 0x1.ffp-1, logf16(x) = -0x1.004p-9 (RZ)
-        {0x3bfcU, 0x9801U, 0U, 1U, 0U},
-        // x = 0x1.ff8p-1, logf16(x) = -0x1p-10 (RZ)
-        {0x3bfeU, 0x9400U, 0U, 1U, 1U},
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-        // x = 0x1.4c4p+1, logf16(x) = 0x1.e84p-1 (RZ)
-        {0x4131U, 0x3ba1U, 1U, 0U, 1U},
-#else
-        // x = 0x1.75p+2, logf16(x) = 0x1.c34p+0 (RZ)
-        {0x45d4U, 0x3f0dU, 1U, 0U, 0U},
-        // x = 0x1.75p+2, logf16(x) = 0x1.c34p+0 (RZ)
-        {0x45d4U, 0x3f0dU, 1U, 0U, 0U},
-        // x = 0x1.d5p+9, logf16(x) = 0x1.b5cp+2 (RZ)
-        {0x6354U, 0x46d7U, 1U, 0U, 1U},
-#endif
+        // x = 0x1.4p+3, log10f16(x) = 0x1p+0 (RZ)
+        {0x4900U, 0x3c00U, 0U, 0U, 0U},
+        // x = 0x1.9p+6, log10f16(x) = 0x1p+1 (RZ)
+        {0x5640U, 0x4000U, 0U, 0U, 0U},
+        // x = 0x1.f84p+6, log10f16(x) = 0x1.0ccp+1 (RZ)
+        {0x57e1U, 0x4033U, 1U, 0U, 0U},
+        // x = 0x1.f4p+9, log10f16(x) = 0x1.8p+1 (RZ)
+        {0x63d0U, 0x4200U, 0U, 0U, 0U},
+        // x = 0x1.388p+13, log10f16(x) = 0x1p+2 (RZ)
+        {0x70e2U, 0x4400U, 0U, 0U, 0U},
+        // x = 0x1.674p+13, log10f16(x) = 0x1.03cp+2 (RZ)
+        {0x719dU, 0x440fU, 1U, 0U, 0U},
     }};
 
-LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
+LLVM_LIBC_FUNCTION(float16, log10f16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 
@@ -73,7 +80,7 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
 
   // If x <= 0, or x is 1, or x is +inf, or x is NaN.
   if (LIBC_UNLIKELY(x_u == 0U || x_u == 0x3c00U || x_u >= 0x7c00U)) {
-    // log(NaN) = NaN
+    // log10(NaN) = NaN
     if (x_bits.is_nan()) {
       if (x_bits.is_signaling_nan()) {
         fputil::raise_except_if_required(FE_INVALID);
@@ -83,7 +90,7 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
       return x;
     }
 
-    // log(+/-0) = −inf
+    // log10(+/-0) = −inf
     if ((x_u & 0x7fffU) == 0U) {
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return FPBits::inf(Sign::NEG).get_val();
@@ -99,23 +106,23 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
       return FPBits::quiet_nan().get_val();
     }
 
-    // log(+inf) = +inf
+    // log10(+inf) = +inf
     return FPBits::inf().get_val();
   }
 
-  if (auto r = LOGF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
+  if (auto r = LOG10F16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
 
-  // To compute log(x), we perform the following range reduction:
+  // To compute log10(x), we perform the following range reduction:
   //   x = 2^m * 1.mant,
-  //   log(x) = m * log(2) + log(1.mant).
-  // To compute log(1.mant), let f be the highest 6 bits including the hidden
+  //   log10(x) = m * log10(2) + log10(1.mant).
+  // To compute log10(1.mant), let f be the highest 6 bits including the hidden
   // bit, and d be the difference (1.mant - f), i.e., the remaining 5 bits of
   // the mantissa, then:
-  //   log(1.mant) = log(f) + log(1.mant / f)
-  //               = log(f) + log(1 + d/f)
+  //   log10(1.mant) = log10(f) + log10(1.mant / f)
+  //                 = log10(f) + log10(1 + d/f)
   // since d/f is sufficiently small.
-  // We store log(f) and 1/f in the lookup tables LOGF_F and ONE_OVER_F_F
+  // We store log10(f) and 1/f in the lookup tables LOG10F_F and ONE_OVER_F_F
   // respectively.
 
   int m = -FPBits::EXP_BIAS;
@@ -144,14 +151,14 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
   // Degree-3 minimax polynomial generated by Sollya with the following
   // commands:
   //   > display = hexadecimal;
-  //   > P = fpminimax(log(1 + x)/x, 2, [|SG...|], [-2^-5, 2^-5]);
+  //   > P = fpminimax(log10(1 + x)/x, 2, [|SG...|], [-2^-5, 2^-5]);
   //   > x * P;
-  float log1p_d_over_f =
-      v * fputil::polyeval(v, 0x1p+0f, -0x1.001804p-1f, 0x1.557ef6p-2f);
-  // log(1.mant) = log(f) + log(1 + d/f)
-  float log_1_mant = LOGF_F[f] + log1p_d_over_f;
+  float log10p1_d_over_f =
+      v * fputil::polyeval(v, 0x1.bcb7bp-2f, -0x1.bce168p-3f, 0x1.28acb8p-3f);
+  // log10(1.mant) = log10(f) + log10(1 + d/f)
+  float log10_1_mant = LOG10F_F[f] + log10p1_d_over_f;
   return fputil::cast<float16>(
-      fputil::multiply_add(static_cast<float>(m), LOGF_2, log_1_mant));
+      fputil::multiply_add(static_cast<float>(m), LOG10F_2, log10_1_mant));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
