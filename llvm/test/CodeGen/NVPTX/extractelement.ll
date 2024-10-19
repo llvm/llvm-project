@@ -16,7 +16,7 @@ define i16  @test_v2i8(i16 %a) {
 ; CHECK-NEXT:    shr.s16 %rs3, %rs1, 8;
 ; CHECK-NEXT:    add.s16 %rs4, %rs2, %rs3;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %v = bitcast i16 %a to <2 x i8>
   %r0 = extractelement <2 x i8> %v, i64 0
@@ -42,7 +42,7 @@ define i1  @test_v2i8_load(ptr %a) {
 ; CHECK-NEXT:    and.b16 %rs6, %rs5, 255;
 ; CHECK-NEXT:    setp.eq.s16 %p1, %rs6, 0;
 ; CHECK-NEXT:    selp.u32 %r1, 1, 0, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %v = load <2 x i8>, ptr %a, align 4
   %r0 = extractelement <2 x i8> %v, i64 0
@@ -72,7 +72,7 @@ define i16  @test_v4i8(i32 %a) {
 ; CHECK-NEXT:    add.s16 %rs6, %rs3, %rs4;
 ; CHECK-NEXT:    add.s16 %rs7, %rs5, %rs6;
 ; CHECK-NEXT:    cvt.u32.u16 %r6, %rs7;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r6;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %v = bitcast i32 %a to <4 x i8>
   %r0 = extractelement <4 x i8> %v, i64 0
@@ -103,7 +103,7 @@ define i32  @test_v4i8_s32(i32 %a) {
 ; CHECK-NEXT:    add.s32 %r6, %r2, %r3;
 ; CHECK-NEXT:    add.s32 %r7, %r4, %r5;
 ; CHECK-NEXT:    add.s32 %r8, %r6, %r7;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
   %v = bitcast i32 %a to <4 x i8>
   %r0 = extractelement <4 x i8> %v, i64 0
@@ -134,7 +134,7 @@ define i32  @test_v4i8_u32(i32 %a) {
 ; CHECK-NEXT:    add.s32 %r6, %r2, %r3;
 ; CHECK-NEXT:    add.s32 %r7, %r4, %r5;
 ; CHECK-NEXT:    add.s32 %r8, %r6, %r7;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
   %v = bitcast i32 %a to <4 x i8>
   %r0 = extractelement <4 x i8> %v, i64 0
@@ -188,7 +188,7 @@ define i16  @test_v8i8(i64 %a) {
 ; CHECK-NEXT:    add.s16 %rs14, %rs11, %rs12;
 ; CHECK-NEXT:    add.s16 %rs15, %rs13, %rs14;
 ; CHECK-NEXT:    cvt.u32.u16 %r13, %rs15;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r13;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r13;
 ; CHECK-NEXT:    ret;
   %v = bitcast i64 %a to <8 x i8>
   %r0 = extractelement <8 x i8> %v, i64 0

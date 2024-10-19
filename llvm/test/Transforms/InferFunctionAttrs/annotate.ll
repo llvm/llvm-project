@@ -643,6 +643,15 @@ declare float @log2f(float)
 ; CHECK: declare x86_fp80 @log2l(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @log2l(x86_fp80)
 
+; CHECK: declare i32 @ilogb(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare i32 @ilogb(double)
+
+; CHECK: declare i32 @ilogbf(float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare i32 @ilogbf(float)
+
+; CHECK: declare i32 @ilogbl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare i32 @ilogbl(x86_fp80)
+
 ; CHECK: declare double @logb(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @logb(double)
 

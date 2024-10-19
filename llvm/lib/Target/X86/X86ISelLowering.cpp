@@ -2682,7 +2682,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 }
 
 // This has so far only been implemented for 64-bit MachO.
-bool X86TargetLowering::useLoadStackGuardNode() const {
+bool X86TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
 }
 
@@ -29986,7 +29986,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
           MVT::getVectorVT(NarrowScalarVT, WideNumElts), dl, AmtWideElts);
       AmtWide = DAG.getZExtOrTrunc(AmtWide, dl, WideVT);
       // Perform the actual shift.
-      unsigned LogicalOpc = Opc == ISD::SRA ? ISD::SRL : Opc;
+      unsigned LogicalOpc = Opc == ISD::SRA ? (unsigned)ISD::SRL : Opc;
       SDValue ShiftedR = DAG.getNode(LogicalOpc, dl, WideVT, RWide, AmtWide);
       // Now we need to construct a mask which will "drop" bits that get
       // shifted past the LSB/MSB. For a logical shift left, it will look
@@ -34838,6 +34838,9 @@ bool X86TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
 
 bool X86TargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                                    EVT VT) const {
+  if (Subtarget.useSoftFloat())
+    return false;
+
   if (!Subtarget.hasAnyFMA())
     return false;
 
