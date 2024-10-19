@@ -1893,7 +1893,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
   bool HasCompleteDecoder =
       HasCompleteDecoderBit ? HasCompleteDecoderBit->getValue() : true;
 
-  return OperandInfo(Decoder, HasCompleteDecoder);
+  return OperandInfo(std::move(Decoder), HasCompleteDecoder);
 }
 
 static void parseVarLenInstOperand(const Record &Def,
