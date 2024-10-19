@@ -14819,8 +14819,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
     return DAG.getConstant(0, DL, VT);
 
   // fold (sext_in_reg c1) -> c1
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N0, N1);
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(ISD::SIGN_EXTEND_INREG, DL, VT, {N0, N1}))
+    return C;
 
   // If the input is already sign extended, just drop the extension.
   if (ExtVTBits >= DAG.ComputeMaxSignificantBits(N0))
