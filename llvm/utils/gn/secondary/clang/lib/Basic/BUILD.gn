@@ -96,6 +96,7 @@ static_library("Basic") {
     "SourceManager.cpp",
     "SourceMgrAdapter.cpp",
     "Stack.cpp",
+    "StackExhaustionHandler.cpp",
     "TargetID.cpp",
     "TargetInfo.cpp",
     "Targets.cpp",

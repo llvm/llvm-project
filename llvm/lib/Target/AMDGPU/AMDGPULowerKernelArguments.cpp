@@ -171,8 +171,8 @@ public:
   // Try to allocate SGPRs to preload implicit kernel arguments.
   void tryAllocImplicitArgPreloadSGPRs(uint64_t ImplicitArgsBaseOffset,
                                        IRBuilder<> &Builder) {
-    StringRef Name = Intrinsic::getName(Intrinsic::amdgcn_implicitarg_ptr);
-    Function *ImplicitArgPtr = F.getParent()->getFunction(Name);
+    Function *ImplicitArgPtr = Intrinsic::getDeclarationIfExists(
+        F.getParent(), Intrinsic::amdgcn_implicitarg_ptr);
     if (!ImplicitArgPtr)
       return;
 

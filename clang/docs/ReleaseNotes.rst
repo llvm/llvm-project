@@ -99,6 +99,40 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
+- Clang will now correctly not consider pointers to non classes for covariance
+  and disallow changing return type to a type that doesn't have the same or less cv-qualifications.
+
+  .. code-block:: c++
+
+    struct A {
+      virtual const int *f() const;
+      virtual const std::string *g() const;
+    };
+    struct B : A {
+      // Return type has less cv-qualification but doesn't point to a class.
+      // Error will be generated.
+      int *f() const override;
+
+      // Return type doesn't have more cv-qualification also not the same or
+      // less cv-qualification.
+      // Error will be generated.
+      volatile std::string *g() const override;
+    };
+
+- The warning ``-Wdeprecated-literal-operator`` is now on by default, as this is
+  something that WG21 has shown interest in removing from the language. The
+  result is that anyone who is compiling with ``-Werror`` should see this
+  diagnostic.  To fix this diagnostic, simply removing the space character from
+  between the ``operator""`` and the user defined literal name will make the
+  source no longer deprecated. This is consistent with `CWG2521 <https://cplusplus.github.io/CWG/issues/2521.html>_`.
+
+  .. code-block:: c++
+
+    // Now diagnoses by default.
+    unsigned operator"" _udl_name(unsigned long long);
+    // Fixed version:
+    unsigned operator""_udl_name(unsigned long long);
+
 ABI Changes in This Version
 ---------------------------
 
@@ -172,15 +206,11 @@ C++23 Feature Support
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
-  supported `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
+  supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-C++17 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-- The implementation of the relaxed template template argument matching rules is
-  more complete and reliable, and should provide more accurate diagnostics.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -207,8 +237,7 @@ Resolutions to C++ Defect Reports
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
 
 - Clang now has improved resolution to CWG2398, allowing class templates to have
-  default arguments deduced when partial ordering, and better backwards compatibility
-  in overload resolution.
+  default arguments deduced when partial ordering.
 
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
@@ -219,6 +248,10 @@ Resolutions to C++ Defect Reports
 
 - Clang now allows trailing requires clause on explicit deduction guides.
   (`CWG2707: Deduction guides cannot have a trailing requires-clause <https://cplusplus.github.io/CWG/issues/2707.html>`_).
+
+- Clang now diagnoses a space in the first production of a ``literal-operator-id``
+  by default.
+  (`CWG2521: User-defined literals and reserved identifiers <https://cplusplus.github.io/CWG/issues/2521.html>`_).
 
 C Language Changes
 ------------------
@@ -237,6 +270,9 @@ Non-comprehensive list of changes in this release
 - The floating point comparison builtins (``__builtin_isgreater``,
   ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
   ``__builtin_signbit`` can now be used in constant expressions.
+- Plugins can now define custom attributes that apply to statements
+  as well as declarations.
+- ``__builtin_abs`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -339,10 +375,6 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
 
-- Clang now properly explains the reason a template template argument failed to
-  match a template template parameter, in terms of the C++17 relaxed matching rules
-  instead of the old ones.
-
 - Don't emit duplicated dangling diagnostics. (#GH93386).
 
 - Improved diagnostic when trying to befriend a concept. (#GH45182).
@@ -387,6 +419,10 @@ Improvements to Clang's diagnostics
 - The warning for an unsupported type for a named register variable is now phrased ``unsupported type for named register variable``,
   instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
   suboptimal in some way the error fails to mention (#GH111550).
+
+- Clang now emits a ``-Wdepredcated-literal-operator`` diagnostic, even if the
+  name was a reserved name, which we improperly allowed to suppress the
+  diagnostic.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -452,8 +488,6 @@ Bug Fixes to C++ Support
 - Correctly check constraints of explicit instantiations of member functions. (#GH46029)
 - When performing partial ordering of function templates, clang now checks that
   the deduction was consistent. Fixes (#GH18291).
-- Fixes to several issues in partial ordering of template template parameters, which
-  were documented in the test suite.
 - Fixed an assertion failure about a constraint of a friend function template references to a value with greater
   template depth than the friend function template. (#GH98258)
 - Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
@@ -491,9 +525,20 @@ Bug Fixes to C++ Support
   in certain friend declarations. (#GH93099)
 - Clang now instantiates the correct lambda call operator when a lambda's class type is
   merged across modules. (#GH110401)
+- Clang now uses the correct set of template argument lists when comparing the constraints of
+  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
+  a class template. (#GH102320)
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
-  and undeclared templates. (#GH107047, #GH49093)
+  and undeclared templates. (#GH107047), (#GH49093)
+- Clang no longer crashes when a lambda contains an invalid block declaration that contains an unexpanded
+  parameter pack. (#GH109148)
+- Fixed overload handling for object parameters with top-level cv-qualifiers in explicit member functions (#GH100394)
+- Fixed a bug in lambda captures where ``constexpr`` class-type objects were not properly considered ODR-used in
+  certain situations. (#GH47400), (#GH90896)
+- Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
+- During the lookup for a base class name, non-type names are ignored. (#GH16855)
+- Fix a crash when recovering an invalid expression involving an explicit object member conversion operator. (#GH112559)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -576,11 +621,18 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- In the ARM Target, the frame pointer (FP) of a leaf function can be retained
+  by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
+  in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
+  the ``-momit-leaf-frame-pointer`` option.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- clang-cl now supports ``/std:c++23preview`` which enables C++23 features.
 
 - Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
   Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.
@@ -601,6 +653,8 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+- Clang now supports CUDA SDK up to 12.6
+- Added support for sm_100
 
 AIX Support
 ^^^^^^^^^^^
@@ -613,6 +667,8 @@ WebAssembly Support
 
 AVR Support
 ^^^^^^^^^^^
+
+- Reject C/C++ compilation for avr1 devices which have no SRAM.
 
 DWARF Support in Clang
 ----------------------
@@ -636,12 +692,19 @@ AST Matchers
 
 - Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
 
+- Ensure ``hasName`` matches template specializations across inline namespaces,
+  making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
+
 clang-format
 ------------
 
 - Adds ``BreakBinaryOperations`` option.
 - Adds ``TemplateNames`` option.
 - Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
+- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of
+  multi-line comments without touching their contents, renames ``false`` to
+  ``Never``, and ``true`` to ``Always``.
+- Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 
 libclang
 --------

@@ -42,9 +42,7 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
-; CHECK-NEXT:    [[CMO:%.*]] = sub i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[TMP37:%.*]] = mul i64 [[CMO]], 8
-; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP37]]
+; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[IND_END]], i64 -8
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START_1]], [[ENTRY:%.*]] ]

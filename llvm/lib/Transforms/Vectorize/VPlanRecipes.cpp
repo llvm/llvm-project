@@ -79,7 +79,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
-  case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
@@ -88,6 +87,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -133,6 +133,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -171,6 +172,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:
+  case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -341,6 +343,10 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   return Res;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPSingleDefRecipe::dump() const { VPDef::dump(); }
+#endif
+
 template <unsigned PartOpIdx>
 VPValue *
 VPUnrollPartAccessor<PartOpIdx>::getUnrollPartOperand(VPUser &U) const {
@@ -386,6 +392,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
+  case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -434,9 +441,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
-    Value *Cond = State.get(getOperand(0));
-    Value *Op1 = State.get(getOperand(1));
-    Value *Op2 = State.get(getOperand(2));
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    Value *Cond = State.get(getOperand(0), OnlyFirstLaneUsed);
+    Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
+    Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
   }
   case VPInstruction::ActiveLaneMask: {
@@ -736,6 +744,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ICmp:
+  case Instruction::Select:
   case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
@@ -984,7 +993,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   // Use vector version of the intrinsic.
   Module *M = State.Builder.GetInsertBlock()->getModule();
   Function *VectorF =
-      Intrinsic::getDeclaration(M, VectorIntrinsicID, TysForDecl);
+      Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
   assert(VectorF && "Can't retrieve vector intrinsic.");
 
   auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
@@ -1040,6 +1049,14 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
 
 StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
   return Intrinsic::getBaseName(VectorIntrinsicID);
+}
+
+bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  // Vector predication intrinsics only demand the the first lane the last
+  // operand (the EVL operand).
+  return VPIntrinsic::isVPIntrinsic(VectorIntrinsicID) &&
+         Op == getOperand(getNumOperands() - 1);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2071,6 +2088,40 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   State.set(this, NewRed, /*IsScalar*/ true);
 }
 
+InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  RecurKind RdxKind = RdxDesc.getRecurrenceKind();
+  Type *ElementTy = Ctx.Types.inferScalarType(this);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  unsigned Opcode = RdxDesc.getOpcode();
+
+  // TODO: Support any-of and in-loop reductions.
+  assert(
+      (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
+       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+      "Any-of reduction not implemented in VPlan-based cost model currently.");
+  assert(
+      (!cast<VPReductionPHIRecipe>(getOperand(0))->isInLoop() ||
+       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+      "In-loop reduction not implemented in VPlan-based cost model currently.");
+
+  assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
+         "Inferred type and recurrence type mismatch.");
+
+  // Cost = Reduction cost + BinOp cost
+  InstructionCost Cost =
+      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, CostKind);
+  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
+    Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
+    return Cost + Ctx.TTI.getMinMaxReductionCost(
+                      Id, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+  }
+
+  return Cost + Ctx.TTI.getArithmeticReductionCost(
+                    Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
@@ -2907,7 +2958,42 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
-  return Ctx.getLegacyCost(IG->getInsertPos(), VF);
+  Instruction *InsertPos = getInsertPos();
+  // Find the VPValue index of the interleave group. We need to skip gaps.
+  unsigned InsertPosIdx = 0;
+  for (unsigned Idx = 0; IG->getFactor(); ++Idx)
+    if (auto *Member = IG->getMember(Idx)) {
+      if (Member == InsertPos)
+        break;
+      InsertPosIdx++;
+    }
+  Type *ValTy = Ctx.Types.inferScalarType(
+      getNumDefinedValues() > 0 ? getVPValue(InsertPosIdx)
+                                : getStoredValues()[InsertPosIdx]);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  unsigned AS = getLoadStoreAddressSpace(InsertPos);
+  enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  unsigned InterleaveFactor = IG->getFactor();
+  auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
+
+  // Holds the indices of existing members in the interleaved group.
+  SmallVector<unsigned, 4> Indices;
+  for (unsigned IF = 0; IF < InterleaveFactor; IF++)
+    if (IG->getMember(IF))
+      Indices.push_back(IF);
+
+  // Calculate the cost of the whole interleaved group.
+  InstructionCost Cost = Ctx.TTI.getInterleavedMemoryOpCost(
+      InsertPos->getOpcode(), WideVecTy, IG->getFactor(), Indices,
+      IG->getAlign(), AS, CostKind, getMask(), NeedsMaskForGaps);
+
+  if (!IG->isReverse())
+    return Cost;
+
+  return Cost + IG->getNumMembers() *
+                    Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                           VectorTy, std::nullopt, CostKind, 0);
 }
 
 void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {

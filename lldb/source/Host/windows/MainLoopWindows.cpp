@@ -116,9 +116,7 @@ Status MainLoopWindows::Run() {
 
   Status error;
 
-  // run until termination or until we run out of things to listen to
-  while (!m_terminate_request && !m_read_fds.empty()) {
-
+  while (!m_terminate_request) {
     llvm::Expected<size_t> signaled_event = Poll();
     if (!signaled_event)
       return Status::FromError(signaled_event.takeError());

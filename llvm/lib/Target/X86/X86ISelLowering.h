@@ -850,6 +850,10 @@ namespace llvm {
     // Perform an FP80 add after changing precision control in FPCW.
     STRICT_FP80_ADD,
 
+    /// Floating point max and min.
+    STRICT_FMAX,
+    STRICT_FMIN,
+
     // WARNING: Only add nodes here if they are strict FP nodes. Non-memory and
     // non-strict FP nodes should be above FIRST_TARGET_STRICTFP_OPCODE.
 
@@ -1564,7 +1568,7 @@ namespace llvm {
     /// returns the address of that location. Otherwise, returns nullptr.
     Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
     void insertSSPDeclarations(Module &M) const override;
     Value *getSDagStackGuard(const Module &M) const override;

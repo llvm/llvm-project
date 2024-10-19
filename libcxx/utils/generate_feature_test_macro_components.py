@@ -280,7 +280,7 @@ feature_test_macros = [
                 "string_view",
             ],
             "test_suite_guard": "defined(__cpp_char8_t)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_CHAR8_T)",
+            "libcxx_guard": "_LIBCPP_HAS_CHAR8_T",
         },
         {
             "name": "__cpp_lib_chrono",

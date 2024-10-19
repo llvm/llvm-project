@@ -132,13 +132,6 @@ public:
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
-  // Get the OpenMP Clause Kind for the corresponding Parser class
-  template <typename A>
-  llvm::omp::Clause GetClauseKindForParserClass(const A &) {
-#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
-#include "llvm/Frontend/OpenMP/OMP.inc"
-  }
-
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
@@ -158,8 +151,8 @@ private:
   // specific clause related
   bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
       const parser::OmpScheduleModifierType::ModType &);
-  void CheckAllowedMapTypes(const parser::OmpMapType::Type &,
-      const std::list<parser::OmpMapType::Type> &);
+  void CheckAllowedMapTypes(const parser::OmpMapClause::Type &,
+      const std::list<parser::OmpMapClause::Type> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
 

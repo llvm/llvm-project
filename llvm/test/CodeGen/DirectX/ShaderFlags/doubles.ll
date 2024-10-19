@@ -9,10 +9,12 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 ; CHECK-NEXT: {{^;$}}
 
-define double @add(double %a, double %b) {
+define double @add(double %a, double %b) #0 {
   %sum = fadd double %a, %b
   ret double %sum
 }
+
+attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 
 ; DXC: - Name:            SFI0
 ; DXC-NEXT:     Size:            8
