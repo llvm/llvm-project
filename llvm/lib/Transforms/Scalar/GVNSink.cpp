@@ -535,14 +535,10 @@ public:
     uint32_t e = ExpressionNumbering[exp];
     if (!e) {
       hash_code H = exp->getHashValue([=](Value *V) { return lookupOrAdd(V); });
-      auto [I, Inserted] = HashNumbering.try_emplace(H);
-      if (!Inserted) {
-        e = I->second;
-      } else {
-        e = nextValueNumber++;
-        I->second = e;
-        ExpressionNumbering[exp] = e;
-      }
+      auto [I, Inserted] = HashNumbering.try_emplace(H, nextValueNumber + 1);
+      e = I->second;
+      if (Inserted)
+        ExpressionNumbering[exp] = ++nextValueNumber;
     }
     ValueNumbering[V] = e;
     return e;
