@@ -2143,7 +2143,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
       // instruction! (This is a longstanding bug, which will be addressed in an
       // upcoming change.)
       if (OpInfo.numFields() > 0)
-        InsnOperands.push_back(OpInfo);
+        InsnOperands.push_back(std::move(OpInfo));
     }
   }
   Operands[Opc] = InsnOperands;
