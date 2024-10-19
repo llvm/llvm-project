@@ -2112,7 +2112,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
 
           addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName,
                               SubOpInfo);
-          InsnOperands.push_back(SubOpInfo);
+          InsnOperands.push_back(std::move(SubOpInfo));
         }
         continue;
       }
