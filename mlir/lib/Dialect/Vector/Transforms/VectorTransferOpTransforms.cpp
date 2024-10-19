@@ -378,6 +378,10 @@ class TransferReadDropUnitDimsPattern
     int reducedRank = getReducedRank(sourceType.getShape());
     if (reducedRank == sourceType.getRank())
       return failure();
+    // TODO: Extend vector.mask to support 0-d vectors. In the meantime, bail
+    // out.
+    if (reducedRank == 0 && maskingOp)
+      return failure();
     // Check if the reduced vector shape matches the reduced source shape.
     // Otherwise, this case is not supported yet.
     VectorType reducedVectorType = trimNonScalableUnitDims(vectorType);
@@ -415,7 +419,7 @@ class TransferReadDropUnitDimsPattern
 
     if (maskingOp) {
       auto shapeCastMask = rewriter.createOrFold<vector::ShapeCastOp>(
-          loc, reducedVectorType.cloneWith({}, rewriter.getI1Type()),
+          loc, reducedVectorType.cloneWith(std::nullopt, rewriter.getI1Type()),
           maskingOp.getMask());
       newTransferReadOp = mlir::vector::maskOperation(
           rewriter, newTransferReadOp, shapeCastMask);
@@ -456,6 +460,10 @@ class TransferWriteDropUnitDimsPattern
     int reducedRank = getReducedRank(sourceType.getShape());
     if (reducedRank == sourceType.getRank())
       return failure();
+    // TODO: Extend vector.mask to support 0-d vectors. In the meantime, bail
+    // out.
+    if (reducedRank == 0 && maskingOp)
+      return failure();
     // Check if the reduced vector shape matches the reduced destination shape.
     // Otherwise, this case is not supported yet.
     VectorType reducedVectorType = trimNonScalableUnitDims(vectorType);
@@ -494,7 +502,7 @@ class TransferWriteDropUnitDimsPattern
 
     if (maskingOp) {
       auto shapeCastMask = rewriter.createOrFold<vector::ShapeCastOp>(
-          loc, reducedVectorType.cloneWith({}, rewriter.getI1Type()),
+          loc, reducedVectorType.cloneWith(std::nullopt, rewriter.getI1Type()),
           maskingOp.getMask());
       newXferWrite =
           mlir::vector::maskOperation(rewriter, newXferWrite, shapeCastMask);

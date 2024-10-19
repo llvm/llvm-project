@@ -114,6 +114,22 @@ func.func @transfer_read_and_vector_rank_reducing_to_0d(
 //       CHECK:   %[[READ:.+]] = vector.transfer_read %[[SUBVIEW]]{{.*}} : memref<f32>, vector<f32>
 //       CHECK:   vector.shape_cast %[[READ]] : vector<f32> to vector<1x1x1xf32>
 
+func.func @transfer_read_and_vector_rank_reducing_to_0d_masked(
+      %arg : memref<1x1x1x1x1xf32>,
+      %mask: vector<1x1x1xi1>) -> vector<1x1x1xf32> {
+
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0.0 : f32
+    %v = vector.mask %mask {
+      vector.transfer_read %arg[%c0, %c0, %c0, %c0, %c0], %cst
+        : memref<1x1x1x1x1xf32>, vector<1x1x1xf32>
+    } : vector<1x1x1xi1> -> vector<1x1x1xf32>
+    return %v : vector<1x1x1xf32>
+}
+// CHECK-LABEL: func @transfer_read_and_vector_rank_reducing_to_0d_masked
+//   CHECK-NOT:   vector.shape_cast
+//   CHECK-NOT:   memref.subview
+
 func.func @transfer_write_and_vector_rank_reducing_to_0d(
       %arg : memref<1x1x1x1x1xf32>,
       %vec : vector<1x1x1xf32>) {
@@ -127,6 +143,23 @@ func.func @transfer_write_and_vector_rank_reducing_to_0d(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[MEMREF]][0, 0, 0, 0, 0] [1, 1, 1, 1, 1] [1, 1, 1, 1, 1] : memref<1x1x1x1x1xf32> to memref<f32>
 //       CHECK:   %[[SHCAST:.+]] = vector.shape_cast %[[VECTOR]] : vector<1x1x1xf32> to vector<f32>
 //       CHECK:   vector.transfer_write %[[SHCAST]], %[[SUBVIEW]]{{.*}} : vector<f32>, memref<f32>
+
+func.func @transfer_write_and_vector_rank_reducing_to_0d_masked(
+      %arg : memref<1x1x1x1x1xf32>,
+      %vec : vector<1x1x1xf32>,
+      %mask: vector<1x1x1xi1>) {
+
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0.0 : f32
+    vector.mask %mask {
+      vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0, %c0] :
+        vector<1x1x1xf32>, memref<1x1x1x1x1xf32>
+    } : vector<1x1x1xi1>
+    return
+}
+// CHECK-LABEL: func @transfer_write_and_vector_rank_reducing_to_0d_masked
+//   CHECK-NOT:   vector.shape_cast
+//   CHECK-NOT:   memref.subview
 
 func.func @transfer_read_dynamic_rank_reducing(
       %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>) -> vector<[16]x1xi8> {
