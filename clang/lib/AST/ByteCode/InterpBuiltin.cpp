@@ -571,7 +571,7 @@ static bool interp__builtin_fma(InterpState &S, CodePtr OpPC,
   Floating Result;
 
   llvm::RoundingMode RM = getActiveRoundingMode(S, Call);
-  if (!Floating::fma(X, Y, Z, RM, &Result))
+  if (Floating::fma(X, Y, Z, RM, &Result) != APFloat::opOK)
     return false;
 
   S.Stk.push<Floating>(Result);
