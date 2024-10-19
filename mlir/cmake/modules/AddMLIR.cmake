@@ -43,8 +43,8 @@ function(_pdll_tablegen project ofn)
   endif()
 
   # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
-  cmake_policy(GET CMP0116 CMP0116_STATE)
-  if(CMAKE_GENERATOR MATCHES "Ninja" AND CMP0116_STATE STREQUAL NEW)
+  cmake_policy(GET CMP0116 cmp0116_state)
+  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW)
     # CMake emits build targets as relative paths but Ninja doesn't identify
     # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
     # CMake handles this discrepancy for us. Otherwise, we use the fallback
