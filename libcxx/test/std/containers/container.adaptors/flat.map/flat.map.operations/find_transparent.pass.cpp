@@ -45,9 +45,9 @@ void test() {
   ASSERT_SAME_TYPE(decltype(m.find(Transparent<std::string>{"abc"})), typename M::iterator);
   ASSERT_SAME_TYPE(decltype(std::as_const(m).find(Transparent<std::string>{"b"})), typename M::const_iterator);
 
-  auto test_find = [&](auto&& m, const std::string& expected_key, long expected_offset) {
-    auto iter = m.find(Transparent<std::string>{expected_key});
-    assert(iter - m.begin() == expected_offset);
+  auto test_find = [&](auto&& map, const std::string& expected_key, long expected_offset) {
+    auto iter = map.find(Transparent<std::string>{expected_key});
+    assert(iter - map.begin() == expected_offset);
   };
 
   test_find(m, "alpha", 0);

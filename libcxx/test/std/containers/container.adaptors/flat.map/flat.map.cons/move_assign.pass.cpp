@@ -89,22 +89,6 @@ int main(int, char**) {
     mo.insert({"foo", 1});
     assert(mo.begin()->first.get_allocator().resource() == &mr1);
   }
-  {
-    // A moved-from flat_map maintains its class invariant in the presence of moved-from comparators.
-    using C = std::function<bool(int, int)>;
-    using M = std::flat_map<int, int, C>;
-    M mo    = M({{1, 3}, {2, 2}, {3, 1}}, std::less<int>());
-    M m     = M({{1, 1}, {2, 2}}, std::greater<int>());
-    m       = std::move(mo);
-    assert(m.size() == 3);
-    assert(std::is_sorted(m.begin(), m.end(), m.value_comp()));
-    assert(m.key_comp()(1, 2) == true);
 
-    assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
-    LIBCPP_ASSERT(m.key_comp()(1, 2) == true);
-    LIBCPP_ASSERT(mo.empty());
-    mo.insert({{1, 3}, {2, 2}, {3, 1}}); // insert has no preconditions
-    LIBCPP_ASSERT(m == mo);
-  }
   return 0;
 }

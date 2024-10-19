@@ -55,27 +55,27 @@ struct AssignFrom {
   AssignFrom& operator=(From);
 };
 
-struct Value {};
+struct V {};
 
-static_assert(CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<Value>>, const int&, Value>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<Value>>, const int&, int>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructFrom<Value>>, const int&, Value>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, AssignFrom<Value>>, const int&, Value>);
+static_assert(CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<V>>, const int&, V>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<V>>, const int&, int>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructFrom<V>>, const int&, V>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, AssignFrom<V>>, const int&, V>);
 
-static_assert(CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<Value>>, int&&, Value>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<Value>>, int&&, int>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructFrom<Value>>, int&&, Value>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, AssignFrom<Value>>, int&&, Value>);
+static_assert(CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<V>>, int&&, V>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<V>>, int&&, int>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructFrom<V>>, int&&, V>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, AssignFrom<V>>, int&&, V>);
 
-static_assert(CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<Value>>, const int&, Value>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<Value>>, const int&, int>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructFrom<Value>>, const int&, Value>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, AssignFrom<Value>>, const int&, Value>);
+static_assert(CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V>>, const int&, V>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V>>, const int&, int>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructFrom<V>>, const int&, V>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, AssignFrom<V>>, const int&, V>);
 
-static_assert(CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<Value>>, int&&, Value>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<Value>>, int&&, int>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructFrom<Value>>, int&&, Value>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, AssignFrom<Value>>, int&&, Value>);
+static_assert(CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V>>, int&&, V>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V>>, int&&, int>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructFrom<V>>, int&&, V>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, AssignFrom<V>>, int&&, V>);
 
 template <class KeyContainer, class ValueContainer>
 void test_cv_key() {

@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "../helpers.h"
 #include "test_macros.h"
 
 struct Counter {
@@ -83,9 +84,7 @@ int main(int, char**) {
           break;
         } catch (int ex) {
           assert(ex == 42);
-          assert(m.keys().size() == m.values().size());              // still sized correctly
-          assert(std::is_sorted(m.begin(), m.end()));                // still sorted
-          assert(std::adjacent_find(m.begin(), m.end()) == m.end()); // still contains no duplicates
+          check_invariant(m);
           LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected + 8));
           if (g_counter.throws == 1) {
             // We reached the first throw but not the second throw.
@@ -112,9 +111,7 @@ int main(int, char**) {
           break;
         } catch (int ex) {
           assert(ex == 42);
-          assert(m.keys().size() == m.values().size());              // still sized correctly
-          assert(std::is_sorted(m.begin(), m.end()));                // still sorted
-          assert(std::adjacent_find(m.begin(), m.end()) == m.end()); // still contains no duplicates
+          check_invariant(m);
           LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected + 8));
           if (g_counter.throws == 1) {
             // We reached the first throw but not the second throw.
@@ -144,9 +141,7 @@ int main(int, char**) {
           break;
         } catch (int ex) {
           assert(ex == 42);
-          assert(m.keys().size() == m.values().size());              // still sized correctly
-          assert(std::is_sorted(m.begin(), m.end()));                // still sorted
-          assert(std::adjacent_find(m.begin(), m.end()) == m.end()); // still contains no duplicates
+          check_invariant(m);
           LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected + 8));
           if (g_counter.throws == 1) {
             // We reached the first throw but not the second throw.

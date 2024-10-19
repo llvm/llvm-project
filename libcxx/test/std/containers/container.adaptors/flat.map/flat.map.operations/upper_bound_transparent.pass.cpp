@@ -44,9 +44,9 @@ void test() {
   ASSERT_SAME_TYPE(decltype(m.lower_bound(Transparent<std::string>{"abc"})), typename M::iterator);
   ASSERT_SAME_TYPE(decltype(std::as_const(m).lower_bound(Transparent<std::string>{"b"})), typename M::const_iterator);
 
-  auto test_upper_bound = [&](auto&& m, const std::string& expected_key, long expected_offset) {
-    auto iter = m.upper_bound(Transparent<std::string>{expected_key});
-    assert(iter - m.begin() == expected_offset);
+  auto test_upper_bound = [&](auto&& map, const std::string& expected_key, long expected_offset) {
+    auto iter = map.upper_bound(Transparent<std::string>{expected_key});
+    assert(iter - map.begin() == expected_offset);
   };
 
   test_upper_bound(m, "abc", 0);

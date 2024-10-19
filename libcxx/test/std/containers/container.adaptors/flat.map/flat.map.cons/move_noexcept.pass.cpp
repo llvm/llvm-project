@@ -40,10 +40,10 @@ struct ThrowingMoveAllocator {
   friend bool operator==(ThrowingMoveAllocator, ThrowingMoveAllocator) = default;
 };
 
-struct ThrowingCopyComp {
-  ThrowingCopyComp() = default;
-  ThrowingCopyComp(const ThrowingCopyComp&) noexcept(false) {}
-  ThrowingCopyComp(ThrowingCopyComp&&) noexcept {}
+struct ThrowingMoveComp {
+  ThrowingMoveComp() = default;
+  ThrowingMoveComp(const ThrowingMoveComp&) noexcept(true) {}
+  ThrowingMoveComp(ThrowingMoveComp&&) noexcept(false) {}
   bool operator()(const auto&, const auto&) const { return false; }
 };
 
@@ -92,11 +92,9 @@ int main(int, char**) {
   }
 #endif // _LIBCPP_VERSION
   {
-    // Comparator fails to be nothrow-copy-constructible
-    using C = std::flat_map<int, int, ThrowingCopyComp>;
-    //todo: why???
-    //static_assert(!std::is_nothrow_move_constructible_v<C>);
-    static_assert(std::is_nothrow_move_constructible_v<C>);
+    // Comparator fails to be nothrow-move-constructible
+    using C = std::flat_map<int, int, ThrowingMoveComp>;
+    static_assert(!std::is_nothrow_move_constructible_v<C>);
     C c;
     C d = std::move(c);
   }

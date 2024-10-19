@@ -46,16 +46,16 @@ void test() {
   ASSERT_SAME_TYPE(decltype(m.equal_range(Transparent<std::string>{"abc"})), R);
   ASSERT_SAME_TYPE(decltype(std::as_const(m).equal_range(Transparent<std::string>{"b"})), CR);
 
-  auto test_found = [&](auto&& m, const std::string& expected_key, int expected_value) {
-    auto [first, last] = m.equal_range(Transparent<std::string>{expected_key});
+  auto test_found = [&](auto&& map, const std::string& expected_key, int expected_value) {
+    auto [first, last] = map.equal_range(Transparent<std::string>{expected_key});
     assert(last - first == 1);
     auto [key, value] = *first;
     assert(key == expected_key);
     assert(value == expected_value);
   };
 
-  auto test_not_found = [&](auto&& m, const std::string& expected_key, long expected_offset) {
-    auto [first, last] = m.equal_range(Transparent<std::string>{expected_key});
+  auto test_not_found = [&](auto&& map, const std::string& expected_key, long expected_offset) {
+    auto [first, last] = map.equal_range(Transparent<std::string>{expected_key});
     assert(first == last);
     assert(first - m.begin() == expected_offset);
   };

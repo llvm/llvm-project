@@ -18,6 +18,7 @@
 #include <iterator>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 #include "MinSequenceContainer.h"
 #include "test_macros.h"
@@ -64,6 +65,13 @@ void test() {
   static_assert(std::indirectly_movable_storable<CI, std::pair<int, char>*>);
   static_assert(std::indirectly_movable_storable<RI, std::pair<int, char>*>);
   static_assert(std::indirectly_movable_storable<CRI, std::pair<int, char>*>);
+
+#ifdef _LIBCPP_VERSION
+  static_assert(std::is_same_v<typename std::iterator_traits<I>::iterator_category, std::random_access_iterator_tag>);
+  static_assert(std::is_same_v<typename std::iterator_traits<CI>::iterator_category, std::random_access_iterator_tag>);
+  static_assert(std::is_same_v<typename std::iterator_traits<RI>::iterator_category, std::random_access_iterator_tag>);
+  static_assert(std::is_same_v<typename std::iterator_traits<CRI>::iterator_category, std::random_access_iterator_tag>);
+#endif
 }
 
 void test() {

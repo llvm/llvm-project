@@ -43,6 +43,7 @@ void test() {
   auto expected_values = {4, 5, 6};
   assert(std::ranges::equal(containers.keys, expected_keys));
   assert(std::ranges::equal(containers.values, expected_values));
+  check_invariant(m);
   LIBCPP_ASSERT(m.empty());
   LIBCPP_ASSERT(m.keys().size() == 0);
   LIBCPP_ASSERT(m.values().size() == 0);
@@ -60,6 +61,7 @@ int main(int, char**) {
     std::same_as<M::containers> auto containers = std::move(m).extract();
     assert(containers.keys.size() == 3);
     assert(containers.values.size() == 3);
+    check_invariant(m);
     LIBCPP_ASSERT(m.empty());
     LIBCPP_ASSERT(m.keys().size() == 0);
     LIBCPP_ASSERT(m.values().size() == 0);
@@ -78,8 +80,7 @@ int main(int, char**) {
       auto c = std::move(m).extract();
       assert(false);
     } catch (int) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, we try to erase the key after value emplacement failure.
       // and after erasure failure, we clear the flat_map
       LIBCPP_ASSERT(m.size() == 0);

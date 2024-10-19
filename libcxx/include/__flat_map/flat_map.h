@@ -247,26 +247,29 @@ public:
       is_nothrow_default_constructible_v<_Compare>)
       : __containers_(), __compare_() {}
 
+  _LIBCPP_HIDE_FROM_ABI flat_map(const flat_map&) = default;
+
   // The copy/move constructors are not specified in the spec, which means they should be defaulted.
   // However, the move constructor can potentially leave a moved-from object in an inconsistent
   // state if an exception is thrown.
-  _LIBCPP_HIDE_FROM_ABI flat_map(const flat_map&) = default;
-
-  // gcc does not like the `throw` keyword in a conditional noexcept function
-  // split the move constructor into two
-  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) try
+  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) noexcept(
+      is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
+      is_nothrow_move_constructible_v<_Compare>)
+#  if _LIBCPP_HAS_EXCEPTIONS
+      try
+#  endif // _LIBCPP_HAS_EXCEPTIONS
       : __containers_(std::move(__other.__containers_)), __compare_(std::move(__other.__compare_)) {
     __other.clear();
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __other.clear();
-    throw;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other) noexcept
-    requires is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
-                 is_nothrow_move_constructible_v<_Compare>
-      : __containers_(std::move(__other.__containers_)), __compare_(std::move(__other.__compare_)) {
-    __other.clear();
+    if constexpr (is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_MappedContainer> &&
+                  is_nothrow_move_constructible_v<_Compare>) {
+      // gcc does not like the `throw` keyword in a conditional noexcept function
+      // split the move constructor into two
+      throw;
+    }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
   template <class _Allocator>
@@ -280,16 +283,21 @@ public:
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
-  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other, const _Allocator& __alloc) try
+  _LIBCPP_HIDE_FROM_ABI flat_map(flat_map&& __other, const _Allocator& __alloc)
+#  if _LIBCPP_HAS_EXCEPTIONS
+      try
+#  endif // _LIBCPP_HAS_EXCEPTIONS
       : flat_map(__ctor_uses_allocator_tag{},
                  __alloc,
                  std::move(__other.__containers_.keys),
                  std::move(__other.__containers_.values),
                  std::move(__other.__compare_)) {
     __other.clear();
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __other.clear();
     throw;
+#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
   _LIBCPP_HIDE_FROM_ABI flat_map(
@@ -575,7 +583,6 @@ public:
   template <class _Kp>
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI mapped_type& at(const _Kp& __x) {
-    static_assert(requires { find(__x); }, "flat_map::at(const K& x): find(x) needs to be well-formed");
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const K&): Key does not exist");
@@ -586,7 +593,6 @@ public:
   template <class _Kp>
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const _Kp& __x) const {
-    static_assert(requires { find(__x); }, "flat_map::at(const K& x) const: find(x) needs to be well-formed");
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const K&) const: Key does not exist");
@@ -1124,8 +1130,11 @@ private:
       } else {
         // In this case, we know the values are just like before we attempted emplacement,
         // and we also know that the keys have been emplaced successfully. Just roll back the keys.
+#  if _LIBCPP_HAS_EXCEPTIONS
         try {
+#  endif // _LIBCPP_HAS_EXCEPTIONS
           __containers_.keys.erase(__key_it);
+#  if _LIBCPP_HAS_EXCEPTIONS
         } catch (...) {
           // Now things are funky for real. We're failing to rollback the keys.
           // Just give up and clear the whole thing.
@@ -1134,6 +1143,7 @@ private:
           // original value-emplacement exception propagate normally.
           clear() /* noexcept */;
         }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
       }
     });
     auto __mapped_it = __containers_.values.emplace(__it_mapped, std::forward<_MArgs>(__mapped_args)...);

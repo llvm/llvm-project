@@ -19,6 +19,18 @@
 #include "test_macros.h"
 #include "check_assertion.h"
 
+template <class... Args>
+void check_invariant(const std::flat_map<Args...>& m) {
+  assert(m.keys().size() == m.values().size());
+  const auto& keys = m.keys();
+  assert(std::is_sorted(keys.begin(), keys.end(), m.key_comp()));
+  auto key_equal = [&](const auto& x, const auto& y) {
+    const auto& c = m.key_comp();
+    return !c(x, y) && !c(y, x);
+  };
+  assert(std::adjacent_find(keys.begin(), keys.end(), key_equal) == keys.end());
+}
+
 struct StartsWith {
   explicit StartsWith(char ch) : lower_(1, ch), upper_(1, ch + 1) {}
   StartsWith(const StartsWith&)     = delete;
@@ -160,12 +172,6 @@ struct ThrowOnMoveContainer : std::vector<T> {
   ThrowOnMoveContainer& operator=(ThrowOnMoveContainer&&) { throw 42; }
 };
 
-template <class T, class Compare = std::less<>>
-bool is_sorted_and_unique(T&& container, Compare compare = Compare()) {
-  auto greater_or_equal_to = [&](const auto& x, const auto& y) { return !compare(x, y); };
-  return std::ranges::adjacent_find(container, greater_or_equal_to) == std::ranges::end(container);
-}
-
 template <class F>
 void test_emplace_exception_guarantee(F&& emplace_function) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -190,8 +196,7 @@ void test_emplace_exception_guarantee(F&& emplace_function) {
       emplace_function(m, 0, 0);
       assert(false);
     } catch (const std::bad_alloc&) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, the flat_map is unchanged
       LIBCPP_ASSERT(m.size() == 4);
       LIBCPP_ASSERT(m.keys() == expected_keys);
@@ -211,8 +216,7 @@ void test_emplace_exception_guarantee(F&& emplace_function) {
       emplace_function(m, 0, 0);
       assert(false);
     } catch (int) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, the flat_map is cleared
       LIBCPP_ASSERT(m.size() == 0);
     }
@@ -238,8 +242,7 @@ void test_emplace_exception_guarantee(F&& emplace_function) {
       emplace_function(m, 0, 0);
       assert(false);
     } catch (const std::bad_alloc&) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, the emplaced key is erased and the flat_map is unchanged
       LIBCPP_ASSERT(m.size() == 4);
       LIBCPP_ASSERT(m.keys() == expected_keys);
@@ -261,8 +264,7 @@ void test_emplace_exception_guarantee(F&& emplace_function) {
       emplace_function(m, 0, 0);
       assert(false);
     } catch (int) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, the flat_map is cleared
       LIBCPP_ASSERT(m.size() == 0);
     }
@@ -285,8 +287,7 @@ void test_emplace_exception_guarantee(F&& emplace_function) {
       emplace_function(m, 0, 0);
       assert(false);
     } catch (const std::bad_alloc&) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, we try to erase the key after value emplacement failure.
       // and after erasure failure, we clear the flat_map
       LIBCPP_ASSERT(m.size() == 0);
@@ -312,8 +313,7 @@ void test_insert_range_exception_guarantee(F&& insert_function) {
     insert_function(m, newValues);
     assert(false);
   } catch (int) {
-    assert(m.keys().size() == m.values().size());
-    assert(is_sorted_and_unique(m.keys()));
+    check_invariant(m);
     // In libc++, we clear if anything goes wrong when inserting a range
     LIBCPP_ASSERT(m.size() == 0);
   }
@@ -336,8 +336,7 @@ void test_erase_exception_guarantee(F&& erase_function) {
       erase_function(m, 3);
       assert(false);
     } catch (int) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, we clear if anything goes wrong when erasing
       LIBCPP_ASSERT(m.size() == 0);
     }
@@ -355,8 +354,7 @@ void test_erase_exception_guarantee(F&& erase_function) {
       erase_function(m, 3);
       assert(false);
     } catch (int) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, we clear if anything goes wrong when erasing
       LIBCPP_ASSERT(m.size() == 0);
     }

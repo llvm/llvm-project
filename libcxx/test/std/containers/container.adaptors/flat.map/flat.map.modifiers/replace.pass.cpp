@@ -70,8 +70,7 @@ int main(int, char**) {
       m.replace(std::move(new_keys), std::move(new_values));
       assert(false);
     } catch (int) {
-      assert(m.keys().size() == m.values().size());
-      assert(is_sorted_and_unique(m.keys()));
+      check_invariant(m);
       // In libc++, we clear the map
       LIBCPP_ASSERT(m.size() == 0);
     }

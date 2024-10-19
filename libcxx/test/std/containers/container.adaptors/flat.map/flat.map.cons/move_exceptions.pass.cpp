@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "../helpers.h"
 #include "test_macros.h"
 
 static int countdown = 0;
@@ -49,9 +50,7 @@ int main(int, char**) {
       assert(x == 42);
     }
     // The source flat_map maintains its class invariant.
-    assert(mo.keys().size() == mo.values().size());
-    assert(std::is_sorted(mo.begin(), mo.end()));
-    assert(std::adjacent_find(mo.keys().begin(), mo.keys().end()) == mo.keys().end());
+    check_invariant(mo);
     LIBCPP_ASSERT(mo.empty());
   }
   {
@@ -65,9 +64,7 @@ int main(int, char**) {
       assert(x == 42);
     }
     // The source flat_map maintains its class invariant.
-    assert(mo.keys().size() == mo.values().size());
-    assert(std::is_sorted(mo.begin(), mo.end()));
-    assert(std::adjacent_find(mo.keys().begin(), mo.keys().end()) == mo.keys().end());
+    check_invariant(mo);
     LIBCPP_ASSERT(mo.empty());
   }
   return 0;

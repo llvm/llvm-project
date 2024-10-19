@@ -56,45 +56,42 @@ struct AssignFrom {
   AssignFrom& operator=(From);
 };
 
-struct Value {};
+struct V {};
 
-static_assert(CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<Value>, TransparentComparator>,
+static_assert(CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<V>, TransparentComparator>,
                                 ConvertibleTransparent<int>,
-                                Value>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<Value>, TransparentComparator>,
+                                V>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<V>, TransparentComparator>,
                                  NonConvertibleTransparent<int>,
-                                 Value>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<Value>, NonTransparentComparator>,
+                                 V>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<V>, NonTransparentComparator>,
                                  NonConvertibleTransparent<int>,
-                                 Value>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<Value>, TransparentComparator>,
+                                 V>);
+static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructAndAssignFrom<V>, TransparentComparator>,
                                  ConvertibleTransparent<int>,
                                  int>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, ConstructFrom<Value>, TransparentComparator>,
-                                 ConvertibleTransparent<int>,
-                                 Value>);
-static_assert(!CanInsertOrAssign<std::flat_map<int, AssignFrom<Value>, TransparentComparator>,
-                                 ConvertibleTransparent<int>,
-                                 Value>);
+static_assert(
+    !CanInsertOrAssign<std::flat_map<int, ConstructFrom<V>, TransparentComparator>, ConvertibleTransparent<int>, V>);
+static_assert(
+    !CanInsertOrAssign<std::flat_map<int, AssignFrom<V>, TransparentComparator>, ConvertibleTransparent<int>, V>);
 
-static_assert(CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<Value>, TransparentComparator>,
+static_assert(CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V>, TransparentComparator>,
                                     ConvertibleTransparent<int>,
-                                    Value>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<Value>, TransparentComparator>,
+                                    V>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V>, TransparentComparator>,
                                      NonConvertibleTransparent<int>,
-                                     Value>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<Value>, NonTransparentComparator>,
+                                     V>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V>, NonTransparentComparator>,
                                      NonConvertibleTransparent<int>,
-                                     Value>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<Value>, TransparentComparator>,
+                                     V>);
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V>, TransparentComparator>,
                                      ConvertibleTransparent<int>,
                                      int>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructFrom<Value>, TransparentComparator>,
+static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructFrom<V>, TransparentComparator>,
                                      ConvertibleTransparent<int>,
-                                     Value>);
-static_assert(!CanInsertOrAssignIter<std::flat_map<int, AssignFrom<Value>, TransparentComparator>,
-                                     ConvertibleTransparent<int>,
-                                     Value>);
+                                     V>);
+static_assert(
+    !CanInsertOrAssignIter<std::flat_map<int, AssignFrom<V>, TransparentComparator>, ConvertibleTransparent<int>, V>);
 
 template <class KeyContainer, class ValueContainer>
 void test() {

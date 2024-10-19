@@ -103,7 +103,7 @@ int main(int, char**) {
     M m1    = M({1, 2, 3}, {1, 2, 3});
     M m2(std::move(m1), std::allocator<int>{});
     assert(m2.size() == 3);
-    assert(m1.keys().size() == m1.values().size());
+    check_invariant(m1);
     LIBCPP_ASSERT(m1.empty());
     LIBCPP_ASSERT(m1.keys().size() == 0);
     LIBCPP_ASSERT(m1.values().size() == 0);
