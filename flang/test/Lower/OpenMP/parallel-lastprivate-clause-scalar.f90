@@ -1,7 +1,7 @@
 ! This test checks lowering of `LASTPRIVATE` clause for scalar types.
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: flang -fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 !CHECK: func @_QPlastprivate_character(%[[ARG1:.*]]: !fir.boxchar<1>{{.*}}) {
 !CHECK-DAG: %[[ARG1_UNBOX:.*]]:2 = fir.unboxchar
@@ -41,7 +41,6 @@
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 
 subroutine lastprivate_character(arg1)
@@ -80,7 +79,6 @@ end subroutine
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 
 subroutine lastprivate_int(arg1)
@@ -124,7 +122,6 @@ end subroutine
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 
 subroutine mult_lastprivate_int(arg1, arg2)
@@ -169,7 +166,6 @@ end subroutine
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 
 subroutine mult_lastprivate_int2(arg1, arg2)
@@ -217,7 +213,6 @@ end subroutine
 !CHECK-NEXT: }
 !CHECK-NEXT: omp.yield
 !CHECK-NEXT: }
-!CHECK-NEXT: omp.terminator
 !CHECK-NEXT: }
 
 subroutine firstpriv_lastpriv_int(arg1, arg2)
@@ -265,7 +260,6 @@ end subroutine
 !CHECK-NEXT: }
 !CHECK-NEXT: omp.yield
 !CHECK-NEXT: }
-!CHECK-NEXT: omp.terminator
 !CHECK-NEXT: }
 
 subroutine firstpriv_lastpriv_int2(arg1)

@@ -45,7 +45,9 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 }
 
 // Get length including padding and null terminator.
-static size_t getPaddedLen(const StringRef &Str) { return Str.size() + 4 & ~3; }
+static size_t getPaddedLen(const StringRef &Str) {
+  return (Str.size() + 4) & ~3;
+}
 
 void addStringImm(const StringRef &Str, MCInst &Inst) {
   const size_t PaddedLen = getPaddedLen(Str);
@@ -157,31 +159,6 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       else
         report_fatal_error("Unexpected operand of the decoration");
     }
-  }
-}
-
-// TODO: maybe the following two functions should be handled in the subtarget
-// to allow for different OpenCL vs Vulkan handling.
-unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
-  switch (SC) {
-  case SPIRV::StorageClass::Function:
-    return 0;
-  case SPIRV::StorageClass::CrossWorkgroup:
-    return 1;
-  case SPIRV::StorageClass::UniformConstant:
-    return 2;
-  case SPIRV::StorageClass::Workgroup:
-    return 3;
-  case SPIRV::StorageClass::Generic:
-    return 4;
-  case SPIRV::StorageClass::DeviceOnlyINTEL:
-    return 5;
-  case SPIRV::StorageClass::HostOnlyINTEL:
-    return 6;
-  case SPIRV::StorageClass::Input:
-    return 7;
-  default:
-    report_fatal_error("Unable to get address space id");
   }
 }
 
@@ -619,6 +596,20 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
     MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
   return MaybeDef;
+}
+
+bool getVacantFunctionName(Module &M, std::string &Name) {
+  // It's a bit of paranoia, but still we don't want to have even a chance that
+  // the loop will work for too long.
+  constexpr unsigned MaxIters = 1024;
+  for (unsigned I = 0; I < MaxIters; ++I) {
+    std::string OrdName = Name + Twine(I).str();
+    if (!M.getFunction(OrdName)) {
+      Name = OrdName;
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace llvm

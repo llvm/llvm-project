@@ -116,7 +116,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   }
 
   // Get overload records
-  std::vector<const Record *> Recs = R->getValueAsListOfConstDefs("overloads");
+  std::vector<const Record *> Recs = R->getValueAsListOfDefs("overloads");
 
   // Sort records in ascending order of DXIL version
   AscendingSortByVersion(Recs);
@@ -126,7 +126,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   }
 
   // Get stage records
-  Recs = R->getValueAsListOfConstDefs("stages");
+  Recs = R->getValueAsListOfDefs("stages");
 
   if (Recs.empty()) {
     PrintFatalError(R, Twine("Atleast one specification of valid stage for ") +
@@ -141,7 +141,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   }
 
   // Get attribute records
-  Recs = R->getValueAsListOfConstDefs("attributes");
+  Recs = R->getValueAsListOfDefs("attributes");
 
   // Sort records in ascending order of DXIL version
   AscendingSortByVersion(Recs);
@@ -160,7 +160,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   const RecordVal *RV = R->getValue("LLVMIntrinsic");
   if (RV && RV->getValue()) {
-    if (DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
+    if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
       auto *IntrinsicDef = DI->getDef();
       auto DefName = IntrinsicDef->getName();
       assert(DefName.starts_with("int_") && "invalid intrinsic name");

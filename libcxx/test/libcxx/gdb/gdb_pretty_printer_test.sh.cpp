@@ -232,9 +232,7 @@ void u32string_test() {
 
 void tuple_test() {
   std::tuple<int, int, int> test0(2, 3, 4);
-  ComparePrettyPrintToChars(
-      test0,
-      "std::tuple containing = {[1] = 2, [2] = 3, [3] = 4}");
+  ComparePrettyPrintToChars(test0, "std::tuple containing = {[0] = 2, [1] = 3, [2] = 4}");
 
   std::tuple<> test1;
   ComparePrettyPrintToChars(

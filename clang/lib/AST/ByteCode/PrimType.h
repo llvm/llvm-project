@@ -43,11 +43,11 @@ enum PrimType : unsigned {
   PT_IntAP = 8,
   PT_IntAPS = 9,
   PT_Bool = 10,
-  PT_Float = 11,
-  PT_Ptr = 12,
-  PT_FnPtr = 13,
-  PT_MemberPtr = 14,
-  PT_FixedPoint = 15,
+  PT_FixedPoint = 11,
+  PT_Float = 12,
+  PT_Ptr = 13,
+  PT_FnPtr = 14,
+  PT_MemberPtr = 15,
 };
 
 inline constexpr bool isPtrType(PrimType T) {
@@ -71,7 +71,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-constexpr bool isIntegralType(PrimType T) { return T <= PT_Bool; }
+constexpr bool isIntegralType(PrimType T) { return T <= PT_FixedPoint; }
 
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;

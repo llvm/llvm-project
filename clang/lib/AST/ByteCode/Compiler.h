@@ -132,6 +132,8 @@ public:
   bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitComplexBinOp(const BinaryOperator *E);
   bool VisitVectorBinOp(const BinaryOperator *E);
+  bool VisitFixedPointBinOp(const BinaryOperator *E);
+  bool VisitFixedPointUnaryOperator(const UnaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitBuiltinCallExpr(const CallExpr *E, unsigned BuiltinID);
@@ -300,7 +302,8 @@ protected:
 
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
+  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                const ValueDecl *ExtendingDecl = nullptr);
   unsigned allocateTemporary(const Expr *E);
 
 private:
