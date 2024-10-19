@@ -30,7 +30,6 @@ end program
 ! FIR-O3:    omp.parallel {
 ! FIR-O3:      omp.wsloop nowait {
 ! FIR-O3:        omp.loop_nest
-! FIR-O3:        omp.terminator
 ! FIR-O3:      omp.barrier
 ! FIR-O3:      omp.terminator
 
@@ -58,7 +57,6 @@ end program
 ! FIR-O0:      omp.wsloop {
 ! FIR-O0:        omp.loop_nest
 ! FIR-O0:          omp.yield
-! FIR-O0:        omp.terminator
 ! FIR-O0:      omp.single nowait {
 ! FIR-O0:        fir.call @_FortranAAssign
 ! FIR-O0:        fir.freemem

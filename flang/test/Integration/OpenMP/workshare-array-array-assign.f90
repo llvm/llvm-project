@@ -28,7 +28,6 @@ end subroutine
 ! FIR:     omp.parallel {
 ! FIR:       omp.wsloop nowait {
 ! FIR:         omp.loop_nest
-! FIR:         omp.terminator
 ! FIR:       }
 ! FIR:       omp.barrier
 ! FIR:       omp.terminator

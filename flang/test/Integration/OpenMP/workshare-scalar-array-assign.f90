@@ -40,7 +40,6 @@ end subroutine
 ! FIR:           fir.store %[[SCALAR_RELOAD]]
 ! FIR:           omp.yield
 ! FIR:         }
-! FIR:         omp.terminator
 ! FIR:       }
 ! FIR:       omp.barrier
 ! FIR:       omp.terminator
