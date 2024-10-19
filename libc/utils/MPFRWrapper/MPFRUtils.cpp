@@ -267,7 +267,7 @@ public:
     mpfr_cos(result.value, value_pi.value, mpfr_rounding);
 
     return result;
-//#endif
+#endif
   }
 
   MPFRNumber erf() const {
