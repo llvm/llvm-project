@@ -999,6 +999,7 @@ private:
       if (Callbacks.empty())
         return Plugin::success();
 
+      assert(Callbacks.size() == ActionArgs.size() && "Size mismatch");
       for (auto [Callback, ActionArg] : llvm::zip(Callbacks, ActionArgs)) {
         // Perform the action.
         if (Callback == memcpyAction) {
@@ -1010,7 +1011,7 @@ private:
         } else if (Callback == releaseSignalAction) {
           if (auto Err = releaseSignalAction(&ActionArg))
             return Err;
-        } else {
+        } else if (Callback) {
           if (auto Err = Callback(ActionArg.CallbackArgs))
             return Err;
         }
