@@ -521,13 +521,14 @@ static void ProcessThread(tid_t os_id, uptr sp,
       }
     }
 #    if SANITIZER_ANDROID
+    extra_ranges.clear();
     auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
                    void *arg) -> void {
-      ScanForPointers(
-          reinterpret_cast<uptr>(dtls_begin), reinterpret_cast<uptr>(dtls_end),
-          reinterpret_cast<Frontier *>(arg), "DTLS", kReachable, accessor);
+      reinterpret_cast<InternalMmapVector<Range> *>(arg)->push_back(
+          {reinterpret_cast<uptr>(dtls_begin),
+           reinterpret_cast<uptr>(dtls_end)});
     };
-
+    ScanRanges(extra_ranges, frontier, "DTLS", accessor);
     // FIXME: There might be a race-condition here (and in Bionic) if the
     // thread is suspended in the middle of updating its DTLS. IOWs, we
     // could scan already freed memory. (probably fine for now)
