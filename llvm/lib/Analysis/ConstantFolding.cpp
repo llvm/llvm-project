@@ -1774,17 +1774,6 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-Constant *ConstantFoldInt(int (*NativeFP)(double), const APFloat &V, Type *Ty) {
-  llvm_fenv_clearexcept();
-  int Result = NativeFP(V.convertToDouble());
-  if (llvm_fenv_testexcept()) {
-    llvm_fenv_clearexcept();
-    return nullptr;
-  }
-
-  return ConstantInt::get(Ty, Result, true);
-}
-
 Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
                          Type *Ty) {
   llvm_fenv_clearexcept();
@@ -2408,7 +2397,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_ilogb:
     case LibFunc_ilogbf:
       if (!APF.isZero() && TLI->has(Func))
-        return ConstantFoldInt(ilogb, APF, Ty);
+        return ConstantInt::get(Ty, ilogb(APF), true);
       break;
     case LibFunc_logb:
     case LibFunc_logbf:
