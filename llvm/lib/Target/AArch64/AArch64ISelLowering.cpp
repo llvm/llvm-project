@@ -20760,7 +20760,7 @@ static SDValue performSubAddMULCombine(SDNode *N, SelectionDAG &DAG) {
 
   if (!Add.hasOneUse())
     return SDValue();
-  if (DAG.isConstantIntBuildVectorOrConstantInt(X))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(X)))
     return SDValue();
 
   SDValue M1 = Add.getOperand(0);
