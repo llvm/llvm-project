@@ -10,7 +10,6 @@ func.func @foo() {
         "test.test0"() : () -> ()
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }

@@ -59,7 +59,6 @@ func.func @wsfunc() {
           "test.test10"(%t6_mem_effect_use) : (i32) -> ()
           omp.yield
         }
-        omp.terminator
       }
 
       "test.test10"(%t2) : (i32) -> ()

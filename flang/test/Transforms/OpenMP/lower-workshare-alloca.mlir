@@ -13,7 +13,6 @@ func.func @wsfunc() {
         "test.test1"(%alloc) : (!fir.ref<i32>) -> ()
         omp.yield
       }
-      omp.terminator
     }
     "test.test2"(%alloc) : (!fir.ref<i32>) -> ()
     omp.terminator
@@ -43,7 +42,6 @@ func.func @wsfunc() {
 // CHECK:               "test.test1"(%[[VAL_0]]) : (!fir.ref<i32>) -> ()
 // CHECK:               omp.yield
 // CHECK:             }
-// CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           omp.single nowait {
 // CHECK:             "test.test2"(%[[VAL_0]]) : (!fir.ref<i32>) -> ()

@@ -21,7 +21,6 @@
 // CHECK:                 "test.test2"() : () -> ()
 // CHECK:                 omp.yield
 // CHECK:               }
-// CHECK:               omp.terminator
 // CHECK:             }
 // CHECK:             omp.barrier
 // CHECK:             omp.terminator
@@ -47,7 +46,6 @@ func.func @wsfunc() {
           "test.test2"() : () -> ()
           omp.yield
         }
-        omp.terminator
       }
       omp.terminator
     }
