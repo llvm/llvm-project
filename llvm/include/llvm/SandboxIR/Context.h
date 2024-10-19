@@ -10,6 +10,7 @@
 #define LLVM_SANDBOXIR_CONTEXT_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/SandboxIR/Tracker.h"
@@ -66,13 +67,13 @@ protected:
 
   /// Callbacks called when an IR instruction is about to get removed. Keys are
   /// used as IDs for deregistration.
-  DenseMap<CallbackID, RemoveInstrCallback> RemoveInstrCallbacks;
+  MapVector<CallbackID, RemoveInstrCallback> RemoveInstrCallbacks;
   /// Callbacks called when an IR instruction is about to get inserted. Keys are
   /// used as IDs for deregistration.
-  DenseMap<CallbackID, InsertInstrCallback> InsertInstrCallbacks;
+  MapVector<CallbackID, InsertInstrCallback> InsertInstrCallbacks;
   /// Callbacks called when an IR instruction is about to get moved. Keys are
   /// used as IDs for deregistration.
-  DenseMap<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
+  MapVector<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
 
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched

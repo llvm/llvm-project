@@ -6001,12 +6001,22 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
           Moved.push_back(std::make_pair(I, &*Where));
       });
 
+  // Two more insertion callbacks, to check that they're called in registration
+  // order.
+  SmallVector<int> Order;
+  auto CheckOrderInsertCbId1 = Ctx.registerInsertInstrCallback(
+      [&Order](sandboxir::Instruction *I) { Order.push_back(1); });
+
+  auto CheckOrderInsertCbId2 = Ctx.registerInsertInstrCallback(
+      [&Order](sandboxir::Instruction *I) { Order.push_back(2); });
+
   Ctx.save();
   auto *NewI = sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
                                             Ret->getIterator(), Ctx);
   EXPECT_THAT(Inserted, testing::ElementsAre(NewI));
   EXPECT_THAT(Removed, testing::IsEmpty());
   EXPECT_THAT(Moved, testing::IsEmpty());
+  EXPECT_THAT(Order, testing::ElementsAre(1, 2));
 
   Ret->moveBefore(NewI);
   EXPECT_THAT(Inserted, testing::ElementsAre(NewI));
@@ -6030,6 +6040,7 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   EXPECT_THAT(Removed, testing::ElementsAre(Ret, NewI, NewI));
   EXPECT_THAT(Moved, testing::ElementsAre(std::make_pair(Ret, NewI),
                                           std::make_pair(Ret, nullptr)));
+  EXPECT_THAT(Order, testing::ElementsAre(1, 2, 1, 2, 1, 2));
 
   // Check that deregistration works. Do an operation of each type after
   // deregistering callbacks and check.
@@ -6039,6 +6050,8 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   Ctx.unregisterInsertInstrCallback(InsertCbId);
   Ctx.unregisterRemoveInstrCallback(RemoveCbId);
   Ctx.unregisterMoveInstrCallback(MoveCbId);
+  Ctx.unregisterInsertInstrCallback(CheckOrderInsertCbId1);
+  Ctx.unregisterInsertInstrCallback(CheckOrderInsertCbId2);
   auto *NewI2 = sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
                                              Ret->getIterator(), Ctx);
   Ret->moveBefore(NewI2);
