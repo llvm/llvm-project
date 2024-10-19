@@ -759,7 +759,8 @@ public:
     auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
 
     MlirContext context = contextWrapper->get();
-    MlirAttribute attr = getAttributeFromBuffer(view, signless, explicitType, explicitShape, context);
+    MlirAttribute attr = getAttributeFromBuffer(view, signless, explicitType,
+                                                explicitShape, context);
     if (mlirAttributeIsNull(attr)) {
       throw std::invalid_argument(
           "DenseElementsAttr could not be constructed from the given buffer. "
@@ -873,9 +874,9 @@ public:
                mlirIntegerTypeGetWidth(elementType) == 1) {
       // i1 / bool
       if (!m_boolBuffer.has_value()) {
-        // Because i1's are bitpacked within MLIR, we need to convert it into the
-        // one bool per byte representation used by numpy.
-        // We allocate a new array to keep around for this purpose.
+        // Because i1's are bitpacked within MLIR, we need to convert it into
+        // the one bool per byte representation used by numpy. We allocate a new
+        // array to keep around for this purpose.
         int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
         m_boolBuffer = SmallVector<bool, 8>(numBooleans);
         for (int i = 0; i < numBooleans; i++) {
@@ -939,9 +940,10 @@ private:
            code == 'q';
   }
 
-  static MlirType getShapedType(std::optional<MlirType> bulkLoadElementType,
-                                std::optional<std::vector<int64_t>> explicitShape,
-                                Py_buffer& view) {
+  static MlirType
+  getShapedType(std::optional<MlirType> bulkLoadElementType,
+                std::optional<std::vector<int64_t>> explicitShape,
+                Py_buffer &view) {
     SmallVector<int64_t> shape;
     if (explicitShape) {
       shape.append(explicitShape->begin(), explicitShape->end());
@@ -962,11 +964,9 @@ private:
     }
   }
 
-  static MlirAttribute getAttributeFromBuffer(Py_buffer& view,
-                                              bool signless,
-                                              std::optional<PyType> explicitType,
-                                              std::optional<std::vector<int64_t>> explicitShape,
-                                              MlirContext& context) {
+  static MlirAttribute getAttributeFromBuffer(
+      Py_buffer &view, bool signless, std::optional<PyType> explicitType,
+      std::optional<std::vector<int64_t>> explicitShape, MlirContext &context) {
     // Detect format codes that are suitable for bulk loading. This includes
     // all byte aligned integer and floating point types up to 8 bytes.
     // Notably, this excludes, bool (which needs to be bit-packed) and
@@ -1048,15 +1048,18 @@ private:
     return mlirDenseElementsAttrRawBufferGet(type, view.len, view.buf);
   }
 
-  // There is a complication for boolean numpy arrays, as numpy represent them as
-  // 8 bits per boolean, whereas MLIR bitpacks them into 8 booleans per byte.
+  // There is a complication for boolean numpy arrays, as numpy represent them
+  // as 8 bits per boolean, whereas MLIR bitpacks them into 8 booleans per byte.
   // This function does the bit-packing respecting endianess.
-  static MlirAttribute getAttributeFromBufferBoolBitpack(Py_buffer& view,
-                                                         std::optional<std::vector<int64_t>> explicitShape,
-                                                         MlirContext& context) {
-    // First read the content of the python buffer as u8's, to correct for endianess
-    MlirType byteType = getShapedType(mlirIntegerTypeUnsignedGet(context, 8), explicitShape, view);
-    MlirAttribute intermediateAttr = mlirDenseElementsAttrRawBufferGet(byteType, view.len, view.buf);
+  static MlirAttribute getAttributeFromBufferBoolBitpack(
+      Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
+      MlirContext &context) {
+    // First read the content of the python buffer as u8's, to correct for
+    // endianess
+    MlirType byteType = getShapedType(mlirIntegerTypeUnsignedGet(context, 8),
+                                      explicitShape, view);
+    MlirAttribute intermediateAttr =
+        mlirDenseElementsAttrRawBufferGet(byteType, view.len, view.buf);
 
     // Pack the boolean array according to the i1 bitpacking layout
     const int numPackedBytes = (view.len + 7) / 8;
@@ -1065,20 +1068,23 @@ private:
       uint8_t byte = 0;
       for (int bitNr = 0; 8 * byteNum + bitNr < view.len; bitNr++) {
         int pos = 8 * byteNum + bitNr;
-        uint8_t boolVal = mlirDenseElementsAttrGetUInt8Value(intermediateAttr, pos) << bitNr;
+        uint8_t boolVal =
+            mlirDenseElementsAttrGetUInt8Value(intermediateAttr, pos) << bitNr;
         byte |= boolVal;
       }
       bitpacked[byteNum] = byte;
     }
 
-    MlirType bitpackedType = getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
-    return mlirDenseElementsAttrRawBufferGet(bitpackedType, numPackedBytes, bitpacked.data());
+    MlirType bitpackedType =
+        getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
+    return mlirDenseElementsAttrRawBufferGet(bitpackedType, numPackedBytes,
+                                             bitpacked.data());
   }
 
   template <typename Type>
   py::buffer_info bufferInfo(MlirType shapedType,
                              const char *explicitFormat = nullptr,
-                             Type* dataOverride = nullptr) {
+                             Type *dataOverride = nullptr) {
     intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the data for the buffer_info.
     // Buffer is configured for read-only access below.
