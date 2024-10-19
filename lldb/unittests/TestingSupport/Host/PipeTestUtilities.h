@@ -20,8 +20,8 @@ protected:
   lldb_private::Pipe output;
 
   void SetUp() override {
-    ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), llvm::Succeeded());
-    ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), llvm::Succeeded());
+    ASSERT_THAT_ERROR(input.CreateNew().ToError(), llvm::Succeeded());
+    ASSERT_THAT_ERROR(output.CreateNew().ToError(), llvm::Succeeded());
   }
 };
 

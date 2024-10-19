@@ -92,7 +92,7 @@ void ConnectionFileDescriptor::OpenCommandPipe() {
 
   Log *log = GetLog(LLDBLog::Connection);
   // Make the command file descriptor here:
-  Status result = m_pipe.CreateNew(/*child_processes_inherit=*/false);
+  Status result = m_pipe.CreateNew();
   if (!result.Success()) {
     LLDB_LOGF(log,
               "%p ConnectionFileDescriptor::OpenCommandPipe () - could not "
