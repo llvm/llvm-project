@@ -115,7 +115,7 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
   //   log(1.mant) = log(f) + log(1.mant / f)
   //               = log(f) + log(1 + d/f)
   // since d/f is sufficiently small.
-  // We store log(f) and 1/f in the lookup tables LOGF_F and ONE_OVER_F
+  // We store log(f) and 1/f in the lookup tables LOGF_F and ONE_OVER_F_F
   // respectively.
 
   int m = -FPBits::EXP_BIAS;
