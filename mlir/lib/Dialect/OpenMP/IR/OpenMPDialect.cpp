@@ -1937,6 +1937,8 @@ void WorkshareOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult WorkshareLoopWrapperOp::verify() {
   if (!(*this)->getParentOfType<WorkshareOp>())
     return emitError() << "must be nested in an omp.workshare";
+  if (getNestedWrapper())
+    return emitError() << "cannot be composite";
   return success();
 }
 

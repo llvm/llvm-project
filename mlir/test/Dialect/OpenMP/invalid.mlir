@@ -2581,15 +2581,13 @@ func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) 
 // -----
 func.func @nested_wrapper(%idx : index) {
   omp.workshare {
-    // expected-error @below {{nested wrappers not supported}}
+    // expected-error @below {{cannot be composite}}
     omp.workshare.loop_wrapper {
       omp.simd {
         omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
           omp.yield
         }
-        omp.terminator
-      }
-      omp.terminator
+      } {omp.composite}
     }
     omp.terminator
   }
@@ -2599,9 +2597,9 @@ func.func @nested_wrapper(%idx : index) {
 // -----
 func.func @not_wrapper() {
   omp.workshare {
-    // expected-error @below {{must be a loop wrapper}}
+    // expected-error @below {{op nested in loop wrapper is not another loop wrapper or `omp.loop_nest`}}
     omp.workshare.loop_wrapper {
-      omp.terminator
+      %0 = arith.constant 0 : index
     }
     omp.terminator
   }
@@ -2615,7 +2613,6 @@ func.func @missing_workshare(%idx : index) {
     omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
       omp.yield
     }
-    omp.terminator
   }
   return
 }
