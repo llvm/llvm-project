@@ -239,11 +239,12 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     return alloc;
   };
 
-  auto moveToSingle = [&](SingleRegion sr, OpBuilder allocaBuilder,
-                          OpBuilder singleBuilder,
-                          OpBuilder parallelBuilder) -> SmallVector<Value> {
+  auto moveToSingle =
+      [&](SingleRegion sr, OpBuilder allocaBuilder, OpBuilder singleBuilder,
+          OpBuilder parallelBuilder) -> std::pair<bool, SmallVector<Value>> {
     IRMapping singleMapping = rootMapping;
     SmallVector<Value> copyPrivate;
+    bool allParallelized = true;
 
     for (Operation &op : llvm::make_range(sr.begin, sr.end)) {
       if (isSafeToParallelize(&op)) {
@@ -267,6 +268,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           assert(llvm::all_of(op.getResults(), [&](Value v) {
             return !isTransitivelyUsedOutside(v, sr);
           }));
+          allParallelized = false;
         }
       } else if (auto alloca = dyn_cast<fir::AllocaOp>(&op)) {
         auto hoisted =
@@ -274,6 +276,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         rootMapping.map(&*alloca, &*hoisted);
         rootMapping.map(alloca.getResult(), hoisted.getResult());
         copyPrivate.push_back(hoisted);
+        allParallelized = false;
       } else {
         singleBuilder.clone(op, singleMapping);
         // Prepare reloaded values for results of operations that cannot be
@@ -286,10 +289,11 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
               copyPrivate.push_back(alloc);
           }
         }
+        allParallelized = false;
       }
     }
     singleBuilder.create<omp::TerminatorOp>(loc);
-    return copyPrivate;
+    return {allParallelized, copyPrivate};
   };
 
   for (Block &block : sourceRegion) {
@@ -343,25 +347,35 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         Block *parallelBlock = new Block();
         parallelBuilder.setInsertionPointToStart(parallelBlock);
 
-        omp::SingleOperands singleOperands;
-        if (isLast)
-          singleOperands.nowait = rootBuilder.getUnitAttr();
-        singleOperands.copyprivateVars =
+        auto [allParallelized, copyprivateVars] =
             moveToSingle(std::get<SingleRegion>(opOrSingle), allocaBuilder,
                          singleBuilder, parallelBuilder);
-        cleanupBlock(singleBlock);
-        for (auto var : singleOperands.copyprivateVars) {
-          mlir::func::FuncOp funcOp =
-              createCopyFunc(loc, var.getType(), firCopyFuncBuilder);
-          singleOperands.copyprivateSyms.push_back(SymbolRefAttr::get(funcOp));
+        if (allParallelized) {
+          // The single region was not required as all operations were safe to
+          // parallelize
+          assert(copyprivateVars.empty());
+          assert(allocaBlock->empty());
+          delete singleBlock;
+        } else {
+          omp::SingleOperands singleOperands;
+          if (isLast)
+            singleOperands.nowait = rootBuilder.getUnitAttr();
+          singleOperands.copyprivateVars = copyprivateVars;
+          cleanupBlock(singleBlock);
+          for (auto var : singleOperands.copyprivateVars) {
+            mlir::func::FuncOp funcOp =
+                createCopyFunc(loc, var.getType(), firCopyFuncBuilder);
+            singleOperands.copyprivateSyms.push_back(
+                SymbolRefAttr::get(funcOp));
+          }
+          omp::SingleOp singleOp =
+              rootBuilder.create<omp::SingleOp>(loc, singleOperands);
+          singleOp.getRegion().push_back(singleBlock);
+          targetRegion.front().getOperations().splice(
+              singleOp->getIterator(), allocaBlock->getOperations());
         }
-        omp::SingleOp singleOp =
-            rootBuilder.create<omp::SingleOp>(loc, singleOperands);
-        singleOp.getRegion().push_back(singleBlock);
         rootBuilder.getInsertionBlock()->getOperations().splice(
             rootBuilder.getInsertionPoint(), parallelBlock->getOperations());
-        targetRegion.front().getOperations().splice(
-            singleOp->getIterator(), allocaBlock->getOperations());
         delete allocaBlock;
         delete parallelBlock;
       } else {
