@@ -24,8 +24,8 @@ void *RTDECL(CUFRegisterModule)(void *data) {
 }
 
 void RTDEF(CUFRegisterFunction)(void **module, const char *fct) {
-  __cudaRegisterFunction(module, fct, (char *)fct, fct, -1, (uint3 *)0,
-      (uint3 *)0, (dim3 *)0, (dim3 *)0, (int *)0);
+  __cudaRegisterFunction(module, fct, const_cast<char *>(fct), fct, -1,
+      (uint3 *)0, (uint3 *)0, (dim3 *)0, (dim3 *)0, (int *)0);
 }
 }
 } // namespace Fortran::runtime::cuda
