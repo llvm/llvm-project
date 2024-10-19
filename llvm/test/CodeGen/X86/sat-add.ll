@@ -631,8 +631,8 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [9223372034707292117,9223372034707292117]
-; SSE41-NEXT:    movdqa %xmm0, %xmm4
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm3
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
