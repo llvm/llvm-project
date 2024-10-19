@@ -2024,7 +2024,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
         EncodingDef.getValueAsBit("hasCompleteDecoder");
     InsnOperands.push_back(
         OperandInfo(std::string(InstDecoder), HasCompleteInstDecoder));
-    Operands[Opc] = InsnOperands;
+    Operands[Opc] = std::move(InsnOperands);
     return Bits.getNumBits();
   }
 
