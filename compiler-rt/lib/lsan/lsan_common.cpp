@@ -525,7 +525,8 @@ static void ProcessThread(tid_t os_id, uptr sp,
     auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
                    void *arg) -> void {
       reinterpret_cast<InternalMmapVector<Range> *>(arg)->push_back(
-          {reinterpret_cast<uptr>(dtls_begin), reinterpret_cast<uptr>(dtls_end)});
+          {reinterpret_cast<uptr>(dtls_begin),
+           reinterpret_cast<uptr>(dtls_end)});
     };
     ScanRanges(extra_ranges, frontier, "DTLS", accessor);
     // FIXME: There might be a race-condition here (and in Bionic) if the
