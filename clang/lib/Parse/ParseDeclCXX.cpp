@@ -3152,7 +3152,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
         Tok.getLocation(),
         DS.isFriendSpecified() || NextToken().is(tok::kw_friend)
             ? llvm::to_underlying(diag::err_friend_concept)
-            : unsigned(
+            : llvm::to_underlying((
                   diag::
                       err_concept_decls_may_only_appear_in_global_namespace_scope));
     SkipUntil(tok::semi, tok::r_brace, StopBeforeMatch);
