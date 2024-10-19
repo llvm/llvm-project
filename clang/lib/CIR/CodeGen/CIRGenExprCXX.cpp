@@ -386,7 +386,24 @@ static void buildNullBaseClassInitialization(CIRGenFunction &CGF,
       Stores.emplace_back(SplitAfterOffset, SplitAfterSize);
   }
 
-  llvm_unreachable("NYI");
+  // If the type contains a pointer to data member we can't memset it to zero.
+  // Instead, create a null constant and copy it to the destination.
+  // TODO: there are other patterns besides zero that we can usefully memset,
+  // like -1, which happens to be the pattern used by member-pointers.
+  // TODO: isZeroInitializable can be over-conservative in the case where a
+  // virtual base contains a member pointer.
+  // TODO(cir): `nullConstantForBase` might be better off as a value instead
+  // of an mlir::TypedAttr? Once this moves out of skeleton, make sure to double
+  // check on what's better.
+  mlir::Attribute nullConstantForBase = CGF.CGM.buildNullConstantForBase(Base);
+  if (!CGF.getBuilder().isNullValue(nullConstantForBase)) {
+    llvm_unreachable("NYI");
+    // Otherwise, just memset the whole thing to zero.  This is legal
+    // because in LLVM, all default initializers (other than the ones we just
+    // handled above) are guaranteed to have a bit pattern of all zeros.
+  } else {
+    llvm_unreachable("NYI");
+  }
 }
 
 void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
