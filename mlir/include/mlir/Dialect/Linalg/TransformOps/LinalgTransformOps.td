@@ -88,14 +88,17 @@ def ApplyPadVectorizationPatternsOp : Op<Transform_Dialect,
     "apply_patterns.linalg.pad_vectorization",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Apply patterns that take tensor.pad and rewrites it as
-    vector.transfer_read/vector.transfer_write Ops.
+    Apply patterns that vectorize tensor.pad.
 
-    These patterns will either fold tensor.pad with an existing
-    vector.transfer_read or vector.transfer_write producer/consumers (requires
-    other surrounding Ops to be already vectorised) or rewrite it, together
-    with tensor.insert_slice consumer, as a vector.transfer_read +
-    vector.transfer_write pair.
+    These patterns rewrite tensor.pad Ops using vector.transfer_read and
+    vector.transfer_write operations. This is done either by:
+      1. Folding tensor.pad with an existing vector.transfer_read /
+      vector.transfer_write Op (generated prior to running these patterns). 
+      2. Rewriting it (when matched together with q tensor.insert_slice
+      consumer Op) as a vector.transfer_read + vector.transfer_write pair.
+
+    In both cases, these patterns look at producers and consumers for the
+    matched tensor.pad Op to find opportunities for vectorization.
   }];
 
   let assemblyFormat = "attr-dict";

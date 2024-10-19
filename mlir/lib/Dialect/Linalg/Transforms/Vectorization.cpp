@@ -2304,7 +2304,7 @@ static SmallVector<Value> ofrToIndexValues(RewriterBase &rewriter, Location loc,
   return result;
 }
 
-/// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp/GenerateOp and
+/// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
 /// If there is enough static type information, TransferReadOps and
 /// TransferWriteOps may be generated instead of InsertSliceOps.
@@ -2712,6 +2712,9 @@ struct PadOpVectorizationWithInsertSlicePattern
 
 void mlir::linalg::populatePadOpVectorizationPatterns(
     RewritePatternSet &patterns, PatternBenefit baseBenefit) {
+  // TODO: The following pattern implements "decomposition" and
+  // optional "vectorization". Seperate "decomposition" into a sepereate
+  // pre-processing pattern group.
   patterns.add<GenericPadOpVectorizationPattern>(patterns.getContext(),
                                                  baseBenefit);
   // Try these specialized patterns first before resorting to the generic one.

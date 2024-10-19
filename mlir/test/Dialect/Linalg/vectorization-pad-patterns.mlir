@@ -37,18 +37,18 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 ///----------------------------------------------------------------------------------------
-/// [Pattern: PadOpVectorizationWithTransferReadPattern
+/// [Pattern: PadOpVectorizationWithTransferWritePattern]
 ///----------------------------------------------------------------------------------------
 func.func private @make_vector() -> vector<7x9xf32>
 
-// CHECK-LABEL: func @pad_and_transfer_write_static
+// CHECK-LABEL: func @pad_and_transfer_write_static_low_and_high
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
 //   CHECK-NOT:   tensor.pad
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> vector<7x9xf32>
 //       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[ARG0]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<5x6xf32>
 //       CHECK:   return %[[RESULT]]
-func.func @pad_and_transfer_write_static(
+func.func @pad_and_transfer_write_static_low_and_high(
     %arg0: tensor<5x6xf32>) -> tensor<5x6xf32> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5.0 : f32
@@ -78,7 +78,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func private @make_vector() -> vector<7x9xf32>
 
-// CHECK-LABEL: func @pad_and_transfer_write_dynamic_static
+// CHECK-LABEL: func @pad_and_transfer_write_static_low_dynamic_high
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x?xf32>, %[[SIZE:.*]]: index, %[[PADDING:.*]]: index
 //   CHECK-NOT:   tensor.pad
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
@@ -86,7 +86,7 @@ func.func private @make_vector() -> vector<7x9xf32>
 //       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> vector<7x9xf32>
 //       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[SUB]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<?x6xf32>
 //       CHECK:   return %[[RESULT]]
-func.func @pad_and_transfer_write_dynamic_static(
+func.func @pad_and_transfer_write_static_low_dynamic_high(
     %arg0: tensor<?x?xf32>, %size: index, %padding: index) -> tensor<?x6xf32> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5.0 : f32
@@ -166,7 +166,9 @@ module attributes {transform.with_named_sequence} {
 
 func.func private @make_vector() -> tensor<12x13xf32>
 
-// Same as @pad_and_insert_slice_dest in vectorization-wit-patterns.mlir, but 
+// Same as @pad_and_insert_slice_dest in vectorization-with-patterns.mlir, but
+// over here linalg::fill is not vectorized (patterns for linalg.fill are not
+// included here)
 // CHECK-LABEL:   func.func @pad_and_insert_slice_dest(
 // CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x5x6xf32>) -> tensor<1x12x13xf32> {
 //  CHECK-NOT:     tensor.pad
