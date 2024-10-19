@@ -62,7 +62,7 @@
 #endif
 
 #ifdef LIBC_OLD_USE_EXTERN_INLINES
-#define __USE_EXTERN_INLINES 
+#define __USE_EXTERN_INLINES
 #undef LIBC_OLD_USE_EXTERN_INLINES
 #endif
 
