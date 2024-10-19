@@ -127,8 +127,8 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
 
   StringRef Contents = PseudoProbeDescSection->getContents();
   if (!ProbeDecoder.buildGUID2FuncDescMap(
-          reinterpret_cast<const uint8_t *>(Contents.data()),
-          Contents.size(), /*IsMMapped*/true)) {
+          reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size(),
+          /*IsMMapped*/ true)) {
     errs() << "BOLT-WARNING: fail in building GUID2FuncDescMap\n";
     return;
   }
