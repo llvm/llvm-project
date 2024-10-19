@@ -2133,7 +2133,12 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     }
 #endif
 
+    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy() &&
+        !Ty->isIntegerTy())
+      return nullptr;
+
     // Use internal versions of these intrinsics.
+
     if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint) {
       U.roundToIntegral(APFloat::rmNearestTiesToEven);
       return ConstantFP::get(Ty->getContext(), U);
