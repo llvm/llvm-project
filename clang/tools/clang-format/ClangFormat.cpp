@@ -509,11 +509,11 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replacements FormatChanges =
       reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
-  if (OutputXML || DryRun) {
-    if (DryRun) {
-      return Replaces.size() > (IsJson ? 1 : 0) &&
-             emitReplacementWarnings(Replaces, AssumedFileName, Code);
-    }
+  if (DryRun) {
+    return Replaces.size() > (IsJson ? 1 : 0) &&
+           emitReplacementWarnings(Replaces, AssumedFileName, Code);
+  }
+  if (OutputXML) {
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
