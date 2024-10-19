@@ -20392,12 +20392,24 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
       return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
     case 'f':
-      if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16)
-        return std::make_pair(0U, &RISCV::FPR16RegClass);
-      if (Subtarget.hasStdExtF() && VT == MVT::f32)
-        return std::make_pair(0U, &RISCV::FPR32RegClass);
-      if (Subtarget.hasStdExtD() && VT == MVT::f64)
-        return std::make_pair(0U, &RISCV::FPR64RegClass);
+      if (VT == MVT::f16) {
+        if (Subtarget.hasStdExtZfhmin())
+          return std::make_pair(0U, &RISCV::FPR16RegClass);
+        if (Subtarget.hasStdExtZhinxmin())
+          return std::make_pair(0U, &RISCV::GPRF16NoX0RegClass);
+      } else if (VT == MVT::f32) {
+        if (Subtarget.hasStdExtF())
+          return std::make_pair(0U, &RISCV::FPR32RegClass);
+        if (Subtarget.hasStdExtZfinx())
+          return std::make_pair(0U, &RISCV::GPRF32NoX0RegClass);
+      } else if (VT == MVT::f64) {
+        if (Subtarget.hasStdExtD())
+          return std::make_pair(0U, &RISCV::FPR64RegClass);
+        if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
+          return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
+        if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
+          return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
+      }
       break;
     default:
       break;
@@ -20440,12 +20452,24 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (!VT.isVector())
       return std::make_pair(0U, &RISCV::GPRCRegClass);
   } else if (Constraint == "cf") {
-    if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16)
-      return std::make_pair(0U, &RISCV::FPR16CRegClass);
-    if (Subtarget.hasStdExtF() && VT == MVT::f32)
-      return std::make_pair(0U, &RISCV::FPR32CRegClass);
-    if (Subtarget.hasStdExtD() && VT == MVT::f64)
-      return std::make_pair(0U, &RISCV::FPR64CRegClass);
+    if (VT == MVT::f16) {
+      if (Subtarget.hasStdExtZfhmin())
+        return std::make_pair(0U, &RISCV::FPR16CRegClass);
+      if (Subtarget.hasStdExtZhinxmin())
+        return std::make_pair(0U, &RISCV::GPRF16CRegClass);
+    } else if (VT == MVT::f32) {
+      if (Subtarget.hasStdExtF())
+        return std::make_pair(0U, &RISCV::FPR32CRegClass);
+      if (Subtarget.hasStdExtZfinx())
+        return std::make_pair(0U, &RISCV::GPRF32CRegClass);
+    } else if (VT == MVT::f64) {
+      if (Subtarget.hasStdExtD())
+        return std::make_pair(0U, &RISCV::FPR64CRegClass);
+      if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
+        return std::make_pair(0U, &RISCV::GPRPairCRegClass);
+      if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
+        return std::make_pair(0U, &RISCV::GPRCRegClass);
+    }
   }
 
   // Clang will correctly decode the usage of register name aliases into their
