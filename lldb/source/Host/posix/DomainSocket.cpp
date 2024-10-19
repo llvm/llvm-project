@@ -58,24 +58,20 @@ static bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
   return true;
 }
 
-DomainSocket::DomainSocket(bool should_close, bool child_processes_inherit)
-    : DomainSocket(kInvalidSocketValue, should_close, child_processes_inherit) {
-}
+DomainSocket::DomainSocket(bool should_close)
+    : DomainSocket(kInvalidSocketValue, should_close) {}
 
-DomainSocket::DomainSocket(NativeSocket socket, bool should_close,
-                           bool child_processes_inherit)
-    : Socket(ProtocolUnixDomain, should_close, child_processes_inherit) {
+DomainSocket::DomainSocket(NativeSocket socket, bool should_close)
+    : Socket(ProtocolUnixDomain, should_close) {
   m_socket = socket;
 }
 
-DomainSocket::DomainSocket(SocketProtocol protocol,
-                           bool child_processes_inherit)
-    : Socket(protocol, true, child_processes_inherit) {}
+DomainSocket::DomainSocket(SocketProtocol protocol)
+    : Socket(protocol, /*should_close=*/true) {}
 
 DomainSocket::DomainSocket(NativeSocket socket,
                            const DomainSocket &listen_socket)
-    : Socket(ProtocolUnixDomain, listen_socket.m_should_close_fd,
-             listen_socket.m_child_processes_inherit) {
+    : Socket(ProtocolUnixDomain, listen_socket.m_should_close_fd) {
   m_socket = socket;
 }
 
@@ -86,7 +82,7 @@ Status DomainSocket::Connect(llvm::StringRef name) {
     return Status::FromErrorString("Failed to set socket address");
 
   Status error;
-  m_socket = CreateSocket(kDomain, kType, 0, m_child_processes_inherit, error);
+  m_socket = CreateSocket(kDomain, kType, 0, error);
   if (error.Fail())
     return error;
   if (llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
@@ -105,7 +101,7 @@ Status DomainSocket::Listen(llvm::StringRef name, int backlog) {
   DeleteSocketFile(name);
 
   Status error;
-  m_socket = CreateSocket(kDomain, kType, 0, m_child_processes_inherit, error);
+  m_socket = CreateSocket(kDomain, kType, 0, error);
   if (error.Fail())
     return error;
   if (::bind(GetNativeSocket(), (struct sockaddr *)&saddr_un, saddr_un_len) ==
@@ -121,13 +117,11 @@ llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> DomainSocket::Accept(
     MainLoopBase &loop,
     std::function<void(std::unique_ptr<Socket> socket)> sock_cb) {
   // TODO: Refactor MainLoop to avoid the shared_ptr requirement.
-  auto io_sp = std::make_shared<DomainSocket>(GetNativeSocket(), false,
-                                              m_child_processes_inherit);
+  auto io_sp = std::make_shared<DomainSocket>(GetNativeSocket(), false);
   auto cb = [this, sock_cb](MainLoopBase &loop) {
     Log *log = GetLog(LLDBLog::Host);
     Status error;
-    auto conn_fd = AcceptSocket(GetNativeSocket(), nullptr, nullptr,
-                                m_child_processes_inherit, error);
+    auto conn_fd = AcceptSocket(GetNativeSocket(), nullptr, nullptr, error);
     if (error.Fail()) {
       LLDB_LOG(log, "AcceptSocket({0}): {1}", GetNativeSocket(), error);
       return;
