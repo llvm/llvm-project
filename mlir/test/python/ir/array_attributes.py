@@ -365,9 +365,9 @@ def testGetDenseElementsI1Signless():
         # CHECK: dense<{{\[}}[true, true, false, false], [true, false, true, false], [false, false, false, false], [true, true, true, true], [true, false, false, true]]> : tensor<5x4xi1>
         print(attr)
         # CHECK: {{\[}}[ True True False False]
-        # CHECK: {{\[}} True False True False]]
-        # CHECK: {{\[}}False False False False]]
-        # CHECK: {{\[}} True True True True]]
+        # CHECK: {{\[}} True False True False]
+        # CHECK: {{\[}}False False False False]
+        # CHECK: {{\[}} True True True True]
         # CHECK: {{\[}} True False False True]]
         print(np.array(attr))
 
@@ -384,9 +384,9 @@ def testGetDenseElementsI1Signless():
 
         array = np.array([], dtype=np.bool_)
         attr = DenseElementsAttr.get(array)
-        # CHECK: dense<{{\[}}]> : tensor<0xi1>
+        # CHECK: dense<> : tensor<0xi1>
         print(attr)
-        # CHECK: {{\[}} ]
+        # CHECK: {{\[}}]
         print(np.array(attr))
 
 
