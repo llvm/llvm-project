@@ -39,10 +39,10 @@ prev(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n) 
   return __x;
 }
 
-template <class _BidirectionalIterator,
-          __enable_if_t<__has_bidirectional_iterator_category<_BidirectionalIterator>::value, int> = 0>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _BidirectionalIterator
-prev(_BidirectionalIterator __it) {
+template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _InputIter prev(_InputIter __it) {
+  static_assert(__has_bidirectional_iterator_category<_InputIter>::value,
+                "Attempt to prev(it) with a non-bidirectional iterator");
   return std::prev(std::move(__it), 1);
 }
 

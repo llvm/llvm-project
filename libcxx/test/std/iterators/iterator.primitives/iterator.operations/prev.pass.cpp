@@ -18,21 +18,6 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-template <class Iter>
-std::false_type prev_test(...);
-
-template <class Iter>
-decltype((void)std::prev(std::declval<Iter>()), std::true_type()) prev_test(int);
-
-template <class Iter>
-using CanPrev = decltype(prev_test<Iter>(0));
-
-static_assert(!CanPrev<cpp17_input_iterator<int*> >::value, "");
-static_assert(CanPrev<bidirectional_iterator<int*> >::value, "");
-#if TEST_STD_VER >= 20
-static_assert(!CanPrev<cpp20_random_access_iterator<int*> >::value);
-#endif
-
 template <class It>
 TEST_CONSTEXPR_CXX17 void
 check_prev_n(It it, typename std::iterator_traits<It>::difference_type n, It result)
