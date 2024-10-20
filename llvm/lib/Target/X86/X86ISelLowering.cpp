@@ -49521,8 +49521,8 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
           // See X86ATTInstPrinter.cpp:printSSECC().
           unsigned x86cc = (cc0 == X86::COND_E) ? 0 : 4;
 
-          // VCOMXSS simplifies conditional code sequence into single setcc node
-          // and a CC node, Earlier until COMI, it required 2 SETCC's
+          // VCOMXSS simplifies conditional code sequence into single setcc node.
+          // Earlier until COMI, it required upto 2 SETCC's to test CC.
           if (Subtarget.hasAVX10_2()) {
             return getSETCC(
                 ((cc0 == X86::COND_E) ? X86::COND_E : X86::COND_NE),
