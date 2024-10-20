@@ -1215,7 +1215,8 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
   auto &TheMap = (*RegionCounterMap)[S];
   auto IsCounter = TheMap.getIsCounterPair();
   if (!UseSkipPath) {
-    assert(IsCounter.first);
+    if (!IsCounter.first)
+      return;
     Counter = (TheMap.first & CounterPair::Mask);
   } else {
     if (!IsCounter.second)
