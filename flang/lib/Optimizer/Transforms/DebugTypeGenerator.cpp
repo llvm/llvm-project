@@ -15,6 +15,7 @@
 #include "DebugTypeGenerator.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -298,6 +299,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
   unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
+  mlir::OpBuilder builder(context);
+  mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
     mlir::Type llvmTy;
@@ -307,11 +310,32 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     else
       llvmTy = llvmTypeConverter.convertType(fieldTy);
 
-    // FIXME: Handle non defaults array bound in derived types
     uint64_t byteSize = dataLayout->getTypeSize(llvmTy);
     unsigned short byteAlign = dataLayout->getTypeABIAlignment(llvmTy);
-    mlir::LLVM::DITypeAttr elemTy =
-        convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
+    std::optional<llvm::ArrayRef<int64_t>> lowerBounds =
+        fir::getComponentLowerBoundsIfNonDefault(Ty, fieldName, module,
+                                                 symbolTable);
+
+    // For members of the derived types, the information about the shift in
+    // lower bounds is not part of the declOp but has to be extracted from the
+    // TypeInfoOp (using getComponentLowerBoundsIfNonDefault). We then assign it
+    // temporarily to the declOp to propagate this information where it will be
+    // needed by the type conversion logic.
+    mlir::LLVM::DITypeAttr elemTy;
+    if (declOp && lowerBounds) {
+      llvm::SmallVector<mlir::Value> shiftOpers;
+      for (int64_t bound : *lowerBounds) {
+        auto constOp = builder.create<mlir::arith::ConstantOp>(
+            module.getLoc(), builder.getIntegerAttr(intTy, bound));
+        shiftOpers.push_back(constOp);
+      }
+      mlir::OperandRange originalShift = declOp.getShift();
+      mlir::MutableOperandRange mutableOpRange = declOp.getShiftMutable();
+      mutableOpRange.assign(shiftOpers);
+      elemTy = convertType(fieldTy, fileAttr, scope, declOp);
+      mutableOpRange.assign(originalShift);
+    } else
+      elemTy = convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
     offset = llvm::alignTo(offset, byteAlign);
     mlir::LLVM::DIDerivedTypeAttr tyAttr = mlir::LLVM::DIDerivedTypeAttr::get(
         context, llvm::dwarf::DW_TAG_member,
