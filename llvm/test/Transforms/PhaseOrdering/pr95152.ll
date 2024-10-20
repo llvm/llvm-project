@@ -45,9 +45,9 @@ define void @g(ptr dead_on_unwind noalias writable dereferenceable(8) align 8 %p
 
 define void @f(ptr dead_on_unwind noalias %p) {
 ; CHECK-LABEL: define void @f(
-; CHECK-SAME: ptr dead_on_unwind noalias [[P:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr dead_on_unwind noalias nocapture [[P:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    store i64 3, ptr [[P]], align 4
-; CHECK-NEXT:    tail call void @j(ptr nonnull align 8 dereferenceable(8) [[P]])
+; CHECK-NEXT:    tail call void @j(ptr nocapture nonnull align 8 dereferenceable(8) [[P]])
 ; CHECK-NEXT:    store i64 43, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
