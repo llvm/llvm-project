@@ -3285,10 +3285,9 @@ bool FunctionDecl::isImmediateEscalating() const {
     return true;
 
   if (auto *CD = dyn_cast<CXXConstructorDecl>(this);
-      CD && CD->isInheritingConstructor())
-    return CD->getInheritedConstructor()
-        .getConstructor()
-        ->isImmediateEscalating();
+      CD && CD->isInheritingConstructor() &&
+      CD->getInheritedConstructor().getConstructor()->isImmediateEscalating())
+    return true;
 
   // - a function that results from the instantiation of a templated entity
   // defined with the constexpr specifier.
