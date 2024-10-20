@@ -1812,10 +1812,7 @@ struct CounterCoverageMappingBuilder
     if (llvm::EnableSingleByteCoverage)
       OutCount = getRegionCounter(S);
     else {
-      LoopCount =
-          (ParentCount.isZero()
-               ? ParentCount
-               : addCounters(ParentCount, BackedgeCount, BC.ContinueCount));
+      LoopCount = addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
       auto [ExecCount, SkipCount] = getBranchCounterPair(S, LoopCount);
       ExitCount = SkipCount;
       assert(ExecCount.isZero() || ExecCount == BodyCount);
@@ -1851,9 +1848,7 @@ struct CounterCoverageMappingBuilder
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
     Counter LoopCount =
-        (ParentCount.isZero()
-             ? ParentCount
-             : addCounters(ParentCount, BackedgeCount, BC.ContinueCount));
+        addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
     auto [ExecCount, ExitCount] = getBranchCounterPair(S, LoopCount);
     assert(ExecCount.isZero() || ExecCount == BodyCount);
     Counter OutCount = addCounters(BC.BreakCount, ExitCount);
