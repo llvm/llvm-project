@@ -58,7 +58,7 @@ std::string lld::toString(const elf::Symbol &sym) {
   return ret;
 }
 
-static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
+static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
   switch (sym.kind()) {
   case Symbol::DefinedKind: {
     auto &d = cast<Defined>(sym);
@@ -141,8 +141,8 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
   llvm_unreachable("invalid symbol kind");
 }
 
-uint64_t Symbol::getVA(int64_t addend) const {
-  return getSymVA(*this, addend) + addend;
+uint64_t Symbol::getVA(Ctx &ctx, int64_t addend) const {
+  return getSymVA(ctx, *this, addend) + addend;
 }
 
 uint64_t Symbol::getGotVA(Ctx &ctx) const {

@@ -1504,9 +1504,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // .rela.dyn. See also AArch64::relocate.
       if (part.relrAuthDyn) {
         auto it = llvm::remove_if(
-            part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
+            part.relrAuthDyn->relocs, [this, &part](const RelativeReloc &elem) {
               const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
-              if (isInt<32>(reloc.sym->getVA(reloc.addend)))
+              if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
                                       reloc.offset,
@@ -2713,7 +2713,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
 static uint64_t getEntryAddr(Ctx &ctx) {
   // Case 1, 2 or 3
   if (Symbol *b = ctx.symtab->find(ctx.arg.entry))
-    return b->getVA();
+    return b->getVA(ctx);
 
   // Case 4
   uint64_t addr;

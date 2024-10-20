@@ -2257,7 +2257,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
     if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
         t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
-                                  t->getThunkTargetSym()->getVA(-pcBias)))
+                                  t->getThunkTargetSym()->getVA(ctx, -pcBias)))
       return std::make_pair(t, false);
 
   // No existing compatible Thunk in range, create a new one
@@ -2281,7 +2281,8 @@ std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
 // relocation back to its original non-Thunk target.
 bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
   if (Thunk *t = thunks.lookup(rel.sym)) {
-    if (ctx.target->inBranchRange(rel.type, src, rel.sym->getVA(rel.addend)))
+    if (ctx.target->inBranchRange(rel.type, src,
+                                  rel.sym->getVA(ctx, rel.addend)))
       return true;
     rel.sym = &t->destination;
     rel.addend = t->addend;
