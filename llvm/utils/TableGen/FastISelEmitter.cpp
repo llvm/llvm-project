@@ -591,7 +591,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     // Ok, we found a pattern that we can handle. Remember it.
     InstructionMemo Memo(Pattern.getDstPattern().getOperator()->getName(),
-                         DstRC, SubRegNo, PhysRegInputs, PredicateCheck);
+                         DstRC, SubRegNo, std::move(PhysRegInputs), PredicateCheck);
 
     int complexity = Pattern.getPatternComplexity(CGP);
 
