@@ -758,8 +758,8 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
 }
 
 // Relax local-exec TLS when hi20 is zero.
-static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
-                       Relocation &r, uint32_t &remove) {
+static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
+                       uint64_t loc, Relocation &r, uint32_t &remove) {
   uint64_t val = r.sym->getVA(ctx, r.addend);
   if (hi20(val) != 0)
     return;
@@ -852,7 +852,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     case R_RISCV_TPREL_LO12_I:
     case R_RISCV_TPREL_LO12_S:
       if (relaxable(relocs, i))
-        relaxTlsLe(sec, i, loc, r, remove);
+        relaxTlsLe(ctx, sec, i, loc, r, remove);
       break;
     case R_RISCV_HI20:
     case R_RISCV_LO12_I:

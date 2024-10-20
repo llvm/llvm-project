@@ -70,8 +70,10 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
 
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
   // longer supported.
-  if (flags & SHF_COMPRESSED)
+  if (flags & SHF_COMPRESSED) {
+    Ctx &ctx = file->ctx;
     invokeELFT(parseCompressedHeader,);
+  }
 }
 
 // SHF_INFO_LINK and SHF_GROUP are normally resolved and not copied to the

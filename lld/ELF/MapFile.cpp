@@ -65,7 +65,7 @@ static std::vector<Defined *> getSymbols(Ctx &ctx) {
 }
 
 // Returns a map from sections to their symbols.
-static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
+static SymbolMapTy getSectionSyms(Ctx &ctx, ArrayRef<Defined *> syms) {
   SymbolMapTy ret;
   for (Defined *dr : syms)
     ret[dr->section].emplace_back(dr, dr->getVA(ctx));
@@ -149,7 +149,7 @@ static void printEhFrame(Ctx &ctx, raw_ostream &os, const EhFrameSection *sec) {
 static void writeMapFile(Ctx &ctx, raw_fd_ostream &os) {
   // Collect symbol info that we want to print out.
   std::vector<Defined *> syms = getSymbols(ctx);
-  SymbolMapTy sectionSyms = getSectionSyms(syms);
+  SymbolMapTy sectionSyms = getSectionSyms(ctx, syms);
   DenseMap<Symbol *, std::string> symStr = getSymbolStrings(ctx, syms);
 
   // Print out the header line.
