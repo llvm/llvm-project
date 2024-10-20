@@ -11522,8 +11522,8 @@ getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const 
   if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
     const AArch64RegisterInfo *MRI = Subtarget->getRegisterInfo();
     unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
-    if (!Subtarget->isXRegisterReserved(DwarfRegNum) &&
-        !MRI->isReservedReg(MF, Reg))
+    if (Subtarget->isXRegisterReserved(DwarfRegNum) ||
+        MRI->isReservedReg(MF, Reg))
       Reg = 0;
   }
   if (Reg)
