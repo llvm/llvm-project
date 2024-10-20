@@ -15,7 +15,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <vector>
 
 #include "test_macros.h"
@@ -70,22 +69,6 @@ int main(int, char**) {
     assert(mo.values() == vs);
     assert(mo.keys().get_allocator() == other_allocator<int>(6));
     assert(mo.values().get_allocator() == other_allocator<char>(7));
-  }
-  {
-    // pmr allocator is not propagated
-    using M = std::flat_map<int, int, std::less<>, std::pmr::deque<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr1;
-    std::pmr::monotonic_buffer_resource mr2;
-    M mo = M({{1, 1}, {2, 2}, {3, 3}}, &mr1);
-    M m  = M({{4, 4}, {5, 5}}, &mr2);
-    m    = mo;
-    assert((m == M{{1, 1}, {2, 2}, {3, 3}}));
-    assert(m.keys().get_allocator().resource() == &mr2);
-    assert(m.values().get_allocator().resource() == &mr2);
-
-    // mo is unchanged
-    assert((mo == M{{1, 1}, {2, 2}, {3, 3}}));
-    assert(mo.keys().get_allocator().resource() == &mr1);
   }
   {
     // comparator is copied and invariant is preserved

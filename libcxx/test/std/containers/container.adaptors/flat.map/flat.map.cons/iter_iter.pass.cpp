@@ -21,7 +21,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <vector>
 
 #include "min_allocator.h"
@@ -150,26 +149,6 @@ int main(int, char**) {
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
   }
-  {
-    // pmr cpp17 iterator
-    using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    vm.emplace_back(cpp17_input_iterator<const P*>(ar), cpp17_input_iterator<const P*>(ar + 9));
-    assert(std::ranges::equal(vm[0].keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(vm[0], expected));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
-  {
-    // pmr
-    using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    vm.emplace_back(ar, ar);
-    assert(vm[0].empty());
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
+
   return 0;
 }

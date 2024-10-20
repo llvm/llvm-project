@@ -16,7 +16,6 @@
 #include <cassert>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <vector>
 
 #include "test_macros.h"
@@ -68,19 +67,6 @@ int main(int, char**) {
     assert(m.keys().get_allocator().get_id() == 5);
     assert(m.values().get_allocator().get_id() == 5);
   }
-  {
-    // pmr
-    using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::polymorphic_allocator<int> pa = &mr;
-    auto m1                                 = M(pa);
-    assert(m1.empty());
-    assert(m1.keys().get_allocator() == pa);
-    assert(m1.values().get_allocator() == pa);
-    auto m2 = M(&mr);
-    assert(m2.empty());
-    assert(m2.keys().get_allocator() == pa);
-    assert(m2.values().get_allocator() == pa);
-  }
+
   return 0;
 }

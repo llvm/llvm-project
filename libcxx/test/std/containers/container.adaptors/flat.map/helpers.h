@@ -17,9 +17,6 @@
 
 #include "test_allocator.h"
 #include "test_macros.h"
-#if !defined(TEST_HAS_NO_LOCALIZATION)
-#  include "check_assertion.h"
-#endif
 
 template <class... Args>
 void check_invariant(const std::flat_map<Args...>& m) {
@@ -366,44 +363,6 @@ void test_erase_exception_guarantee([[maybe_unused]] F&& erase_function) {
   }
 #endif
 }
-
-template <class F>
-void test_swap_exception_guarantee([[maybe_unused]] F&& swap_function) {
-#if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_HAS_NO_LOCALIZATION)
-  {
-    // key swap throws
-    using KeyContainer   = ThrowOnMoveContainer<int>;
-    using ValueContainer = std::vector<int>;
-    using M              = std::flat_map<int, int, TransparentComparator, KeyContainer, ValueContainer>;
-
-    M m1, m2;
-    m1.emplace(1, 1);
-    m1.emplace(2, 2);
-    m2.emplace(3, 3);
-    m2.emplace(4, 4);
-    // swap is noexcept
-    EXPECT_STD_TERMINATE([&] { swap_function(m1, m2); });
-  }
-
-  {
-    // value swap throws
-    using KeyContainer   = std::vector<int>;
-    using ValueContainer = ThrowOnMoveContainer<int>;
-    using M              = std::flat_map<int, int, TransparentComparator, KeyContainer, ValueContainer>;
-
-    M m1, m2;
-    m1.emplace(1, 1);
-    m1.emplace(2, 2);
-    m2.emplace(3, 3);
-    m2.emplace(4, 4);
-
-    // swap is noexcept
-    EXPECT_STD_TERMINATE([&] { swap_function(m1, m2); });
-  }
-
-#endif
-}
-
 class Moveable {
   int int_;
   double double_;

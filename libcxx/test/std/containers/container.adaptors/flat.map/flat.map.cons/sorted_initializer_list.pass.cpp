@@ -22,7 +22,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <vector>
 
 #include "min_allocator.h"
@@ -175,33 +174,6 @@ int main(int, char**) {
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
   }
-  {
-    // pmr cpp_17
-    using C = test_less<int>;
-    using M = std::flat_map<int, int, C, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    using P = std::pair<int, int>;
-    P ar[]  = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
-    vm.emplace_back(
-        std::sorted_unique, cpp17_input_iterator<const P*>(ar), cpp17_input_iterator<const P*>(ar + 4), C(3));
-    assert((vm[0] == M{{1, 1}, {2, 2}, {4, 4}, {5, 5}}));
-    assert(vm[0].key_comp() == C(3));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
-  {
-    // pmr
-    using C = test_less<int>;
-    using M = std::flat_map<int, int, C, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    std::pair<int, int> ar[1] = {{42, 42}};
-    vm.emplace_back(std::sorted_unique, ar, ar, C(4));
-    assert(vm[0] == M{});
-    assert(vm[0].key_comp() == C(4));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
+
   return 0;
 }

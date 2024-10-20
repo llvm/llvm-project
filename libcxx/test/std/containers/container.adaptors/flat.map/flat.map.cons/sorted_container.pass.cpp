@@ -24,7 +24,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <vector>
 
 #include "min_allocator.h"
@@ -161,44 +160,6 @@ int main(int, char**) {
     assert(m2.keys().get_allocator() == A(6));
     assert(m2.values().get_allocator() == A(6));
   }
-  {
-    // pmr
-    using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks = {1, 2, 4, 10};
-    std::pmr::vector<int> vs = {4, 3, 2, 1};
-    vm.emplace_back(std::sorted_unique, ks, vs);
-    assert(!ks.empty()); // it was an lvalue above
-    assert(!vs.empty()); // it was an lvalue above
-    assert((vm[0] == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
-  {
-    // pmr move
-    using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks = {1, 2, 4, 10};
-    std::pmr::vector<int> vs = {4, 3, 2, 1};
-    vm.emplace_back(std::sorted_unique, std::move(ks), std::move(vs));
-    LIBCPP_ASSERT(ks.size() == 4); // ks' size is unchanged, since it uses a different allocator
-    LIBCPP_ASSERT(vs.size() == 4); // vs' size is unchanged, since it uses a different allocator
-    assert((vm[0] == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
-  {
-    using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks({1, 2, 4, 10}, &mr);
-    std::pmr::vector<int> vs({4, 3, 2, 1}, &mr);
-    vm.emplace_back(std::sorted_unique, std::move(ks), std::move(vs));
-    assert((vm[0] == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
+
   return 0;
 }

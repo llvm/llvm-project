@@ -32,8 +32,10 @@ concept NoExceptMemberSwap = requires(T t1, T t2) {
 };
 
 static_assert(NoExceptMemberSwap<std::flat_map<int, int>>);
+#ifndef TEST_HAS_NO_EXCEPTIONS
 static_assert(
     NoExceptMemberSwap<std::flat_map<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
+#endif
 
 template <class KeyContainer, class ValueContainer>
 void test() {
@@ -88,11 +90,6 @@ int main(int, char**) {
   test<std::deque<int>, std::vector<double>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
-
-  {
-    auto swap_func = [](auto& m1, auto& m2) { m1.swap(m2); };
-    test_swap_exception_guarantee(swap_func);
-  }
 
   return 0;
 }

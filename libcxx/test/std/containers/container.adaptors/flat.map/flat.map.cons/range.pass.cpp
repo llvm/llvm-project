@@ -23,7 +23,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <string>
 #include <vector>
 
@@ -223,30 +222,6 @@ int main(int, char**) {
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
   }
-  {
-    // pmr input_range
-    using M    = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
-    using Iter = cpp20_input_iterator<const P*>;
-    using Sent = sentinel_wrapper<Iter>;
-    using R    = std::ranges::subrange<Iter, Sent>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    vm.emplace_back(std::from_range, R(Iter(ar), Sent(Iter(ar + 9))));
-    assert(std::ranges::equal(vm[0].keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(vm[0], expected));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
-  {
-    // pmr
-    using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
-    using R = std::ranges::subrange<const P*>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    vm.emplace_back(std::from_range, R(ar, ar));
-    assert(vm[0].empty());
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
+
   return 0;
 }

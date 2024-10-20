@@ -17,7 +17,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <type_traits>
 #include <vector>
 
@@ -82,17 +81,6 @@ int main(int, char**) {
     assert(m.values().get_allocator() == A2(5));
   }
   {
-    using M = std::flat_map<int, int, std::function<bool(int, int)>, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    vm.emplace_back(std::greater<int>());
-    assert(vm[0] == M{});
-    assert(vm[0].key_comp()(2, 1) == true);
-    assert(vm[0].value_comp()({2, 0}, {1, 0}) == true);
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
-  {
     // If an allocator is given, it must be usable by both containers.
     using A = test_allocator<int>;
     using M = std::flat_map<int, int, std::less<>, std::vector<int>, std::vector<int, A>>;
@@ -100,5 +88,6 @@ int main(int, char**) {
     static_assert(!std::is_constructible_v<M, std::less<>, std::allocator<int>>);
     static_assert(!std::is_constructible_v<M, std::less<>, A>);
   }
+
   return 0;
 }

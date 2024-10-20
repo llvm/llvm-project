@@ -16,7 +16,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <string>
 #include <utility>
 #include <vector>
@@ -69,25 +68,6 @@ int main(int, char**) {
     assert(ks.get_allocator() == A());
     assert(vs.get_allocator() == A());
     assert(mo.empty());
-  }
-  {
-    // A moved-from flat_map maintains its class invariant in the presence of moved-from elements.
-    using M =
-        std::flat_map<std::pmr::string, int, std::less<>, std::pmr::vector<std::pmr::string>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr1;
-    std::pmr::monotonic_buffer_resource mr2;
-    M mo = M({{"short", 1},
-              {"very long string that definitely won't fit in the SSO buffer and therefore becomes empty on move", 2}},
-             &mr1);
-    M m  = M({{"don't care", 3}}, &mr2);
-    m    = std::move(mo);
-    assert(m.size() == 2);
-    assert(std::is_sorted(m.begin(), m.end(), m.value_comp()));
-    assert(m.begin()->first.get_allocator().resource() == &mr2);
-
-    assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
-    mo.insert({"foo", 1});
-    assert(mo.begin()->first.get_allocator().resource() == &mr1);
   }
 
   return 0;

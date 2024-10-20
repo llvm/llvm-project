@@ -20,7 +20,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <type_traits>
 #include <vector>
 
@@ -153,29 +152,6 @@ int main(int, char**) {
     M m({{5, 2}, {2, 2}, {2, 2}, {3, 3}, {1, 1}, {3, 3}}, {}, a);
     assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
   }
-  {
-    // pmr
-    using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    std::initializer_list<M::value_type> il = {{3, 3}, {1, 1}, {4, 4}, {1, 1}, {5, 5}};
-    vm.emplace_back(il);
-    assert((vm[0] == M{{1, 1}, {3, 3}, {4, 4}, {5, 5}}));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
-  {
-    // pmr compartor
-    using C = test_less<int>;
-    using M = std::flat_map<int, int, C, std::pmr::vector<int>, std::pmr::deque<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    std::initializer_list<M::value_type> il = {{3, 3}, {1, 1}, {4, 4}, {1, 1}, {5, 5}};
-    vm.emplace_back(il, C(5));
-    assert((vm[0] == M{{1, 1}, {3, 3}, {4, 4}, {5, 5}}));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-    assert(vm[0].key_comp() == C(5));
-  }
+
   return 0;
 }

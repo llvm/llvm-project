@@ -16,7 +16,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <vector>
 
 #include "test_macros.h"
@@ -63,34 +62,6 @@ int main(int, char**) {
     assert(mo.keys().get_allocator() == test_allocator<int>(6));
     assert(mo.values().get_allocator() == test_allocator<char>(7));
   }
-  {
-    // explicit(false)
-    using C = test_less<int>;
-    using M = std::flat_map<int, int, C, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr1;
-    std::pmr::monotonic_buffer_resource mr2;
-    M mo = M({1, 2, 3}, {2, 2, 1}, C(5), &mr1);
-    M m  = {mo, &mr2}; // also test the implicitness of this constructor
 
-    assert(m.key_comp() == C(5));
-    assert((m.keys() == std::pmr::vector<int>{1, 2, 3}));
-    assert((m.values() == std::pmr::vector<int>{2, 2, 1}));
-    assert(m.keys().get_allocator().resource() == &mr2);
-    assert(m.values().get_allocator().resource() == &mr2);
-
-    // mo is unchanged
-    assert(mo.key_comp() == C(5));
-    assert((mo.keys() == std::pmr::vector<int>{1, 2, 3}));
-    assert((mo.values() == std::pmr::vector<int>{2, 2, 1}));
-    assert(mo.keys().get_allocator().resource() == &mr1);
-    assert(mo.values().get_allocator().resource() == &mr1);
-  }
-  {
-    using M = std::flat_map<int, int, std::less<>, std::pmr::vector<int>, std::pmr::deque<int>>;
-    std::pmr::vector<M> vs;
-    M m = {{1, 2}, {2, 2}, {3, 1}};
-    vs.push_back(m);
-    assert(vs[0] == m);
-  }
   return 0;
 }

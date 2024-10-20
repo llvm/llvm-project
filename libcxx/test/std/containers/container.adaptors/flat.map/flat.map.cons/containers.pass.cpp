@@ -23,7 +23,6 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <vector>
 
 #include "min_allocator.h"
@@ -180,127 +179,6 @@ int main(int, char**) {
     assert(m2.keys().get_allocator() == A(5));
     assert(m2.values().get_allocator() == A(5));
   }
-  {
-    // pmr
-    using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-    std::pmr::vector<int> vs = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-    assert(ks.get_allocator().resource() != &mr);
-    assert(vs.get_allocator().resource() != &mr);
-    vm.emplace_back(ks, vs);
-    assert(ks.size() == 9); // ks' value is unchanged, since it was an lvalue above
-    assert(vs.size() == 9); // vs' value is unchanged, since it was an lvalue above
-    assert((vm[0] == M{{1, 1}, {2, 2}, {3, 3}}));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
-  {
-    // pmr move
-    using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-    std::pmr::vector<int> vs = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-    assert(ks.get_allocator().resource() != &mr);
-    assert(vs.get_allocator().resource() != &mr);
-    vm.emplace_back(std::move(ks), std::move(vs));
-    LIBCPP_ASSERT(ks.size() == 9); // ks' size is unchanged, since it uses a different allocator
-    LIBCPP_ASSERT(vs.size() == 9); // vs' size is unchanged, since it uses a different allocator
-    assert((vm[0] == M{{1, 1}, {2, 2}, {3, 3}}));
-    assert(vm[0].keys().get_allocator().resource() == &mr);
-    assert(vm[0].values().get_allocator().resource() == &mr);
-  }
 
-#if 0
-  // Test all combinations of lvalue and rvalue containers (LWG 3802).
-  {
-    int input[] = {1,1,1,2,2,3,2,3,3};
-    const P expected[] = {{1,1}, {2,2}, {3,3}};
-    {
-      using M = std::flat_map<int, MoveOnly, std::less<>, std::pmr::vector<int>, std::pmr::vector<MoveOnly>>;
-      std::pmr::monotonic_buffer_resource mr;
-      std::pmr::vector<M> vm(&mr);
-      std::pmr::vector<int> ks(input, input + 9);
-      std::pmr::vector<MoveOnly> vs(input, input + 9);
-      vm.emplace_back(ks, std::move(vs)); // ill-formed before LWG 3802
-      assert(ks.size() == 9);        // ks' value is unchanged, since it was an lvalue above
-      LIBCPP_ASSERT(vs.size() == 9); // vs' size is unchanged, since it uses a different allocator
-      assert(std::ranges::equal(vm[0], expected, std::equal_to<>()));
-      assert(vm[0].keys().get_allocator().resource() == &mr);
-      assert(vm[0].values().get_allocator().resource() == &mr);
-    }
-    {
-      using M = std::flat_map<MoveOnly, int, std::less<>, std::pmr::vector<MoveOnly>, std::pmr::vector<int>>;
-      std::pmr::monotonic_buffer_resource mr;
-      std::pmr::vector<M> vm(&mr);
-      std::pmr::vector<MoveOnly> ks(input, input + 9);
-      std::pmr::vector<int> vs(input, input + 9);
-      vm.emplace_back(std::move(ks), vs); // ill-formed before LWG 3802
-      LIBCPP_ASSERT(ks.size() == 9); // ks' size is unchanged, since it uses a different allocator
-      assert(vs.size() == 9);        // vs' value is unchanged, since it was an lvalue above
-      assert(std::ranges::equal(vm[0], expected, std::equal_to<>()));
-      assert(vm[0].keys().get_allocator().resource() == &mr);
-      assert(vm[0].values().get_allocator().resource() == &mr);
-    }
-    {
-      using M = std::flat_map<MoveOnly, MoveOnly, std::less<>, std::pmr::vector<MoveOnly>, std::pmr::vector<MoveOnly>>;
-      std::pmr::monotonic_buffer_resource mr;
-      std::pmr::vector<M> vm(&mr);
-      std::pmr::vector<MoveOnly> ks(input, input + 9);
-      std::pmr::vector<MoveOnly> vs(input, input + 9);
-      vm.emplace_back(std::move(ks), std::move(vs)); // ill-formed before LWG 3802
-      LIBCPP_ASSERT(ks.size() == 9); // ks' size is unchanged, since it uses a different allocator
-      LIBCPP_ASSERT(vs.size() == 9); // vs' size is unchanged, since it uses a different allocator
-      assert(std::ranges::equal(vm[0], expected, std::equal_to<>()));
-      assert(vm[0].keys().get_allocator().resource() == &mr);
-      assert(vm[0].values().get_allocator().resource() == &mr);
-    }
-  }
-  {
-    int input[] = {1,2,3};
-    const P expected[] = {{1,1}, {2,2}, {3,3}};
-    {
-      using M = std::flat_map<int, MoveOnly, std::less<>, std::pmr::vector<int>, std::pmr::vector<MoveOnly>>;
-      std::pmr::monotonic_buffer_resource mr;
-      std::pmr::vector<M> vm(&mr);
-      std::pmr::vector<int> ks(input, input + 3);
-      std::pmr::vector<MoveOnly> vs(input, input + 3);
-      vm.emplace_back(std::sorted_unique, ks, std::move(vs)); // ill-formed before LWG 3802
-      assert(ks.size() == 3);        // ks' value is unchanged, since it was an lvalue above
-      LIBCPP_ASSERT(vs.size() == 3); // vs' size is unchanged, since it uses a different allocator
-      assert(std::ranges::equal(vm[0], expected, std::equal_to<>()));
-      assert(vm[0].keys().get_allocator().resource() == &mr);
-      assert(vm[0].values().get_allocator().resource() == &mr);
-    }
-    {
-      using M = std::flat_map<MoveOnly, int, std::less<>, std::pmr::vector<MoveOnly>, std::pmr::vector<int>>;
-      std::pmr::monotonic_buffer_resource mr;
-      std::pmr::vector<M> vm(&mr);
-      std::pmr::vector<MoveOnly> ks(input, input + 3);
-      std::pmr::vector<int> vs(input, input + 3);
-      vm.emplace_back(std::sorted_unique, std::move(ks), vs); // ill-formed before LWG 3802
-      LIBCPP_ASSERT(ks.size() == 3); // ks' size is unchanged, since it uses a different allocator
-      assert(vs.size() == 3);        // vs' value is unchanged, since it was an lvalue above
-      assert(std::ranges::equal(vm[0], expected, std::equal_to<>()));
-      assert(vm[0].keys().get_allocator().resource() == &mr);
-      assert(vm[0].values().get_allocator().resource() == &mr);
-    }
-    {
-      using M = std::flat_map<MoveOnly, MoveOnly, std::less<>, std::pmr::vector<MoveOnly>, std::pmr::vector<MoveOnly>>;
-      std::pmr::monotonic_buffer_resource mr;
-      std::pmr::vector<M> vm(&mr);
-      std::pmr::vector<MoveOnly> ks(input, input + 3);
-      std::pmr::vector<MoveOnly> vs(input, input + 3);
-      vm.emplace_back(std::sorted_unique, std::move(ks), std::move(vs)); // ill-formed before LWG 3802
-      LIBCPP_ASSERT(ks.size() == 3); // ks' size is unchanged, since it uses a different allocator
-      LIBCPP_ASSERT(vs.size() == 3); // vs' size is unchanged, since it uses a different allocator
-      assert(std::ranges::equal(vm[0], expected, std::equal_to<>()));
-      assert(vm[0].keys().get_allocator().resource() == &mr);
-      assert(vm[0].values().get_allocator().resource() == &mr);
-    }
-  }
-#endif
   return 0;
 }

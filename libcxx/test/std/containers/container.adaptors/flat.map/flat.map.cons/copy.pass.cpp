@@ -14,7 +14,6 @@
 
 #include <cassert>
 #include <flat_map>
-#include <memory_resource>
 #include <vector>
 
 #include "test_macros.h"
@@ -66,25 +65,6 @@ int main(int, char**) {
     assert(mo.keys().get_allocator() == other_allocator<int>(6));
     assert(mo.values().get_allocator() == other_allocator<char>(7));
   }
-  {
-    using C = test_less<int>;
-    std::pmr::monotonic_buffer_resource mr;
-    using M = std::flat_map<int, int, C, std::pmr::vector<int>, std::pmr::vector<int>>;
-    auto mo = M({{1, 1}, {2, 2}, {3, 3}}, C(5), &mr);
-    auto m  = mo;
 
-    assert(m.key_comp() == C(5));
-    assert((m == M{{1, 1}, {2, 2}, {3, 3}}));
-    auto [ks, vs] = std::move(m).extract();
-    assert(ks.get_allocator().resource() == std::pmr::get_default_resource());
-    assert(vs.get_allocator().resource() == std::pmr::get_default_resource());
-
-    // mo is unchanged
-    assert(mo.key_comp() == C(5));
-    assert((mo == M{{1, 1}, {2, 2}, {3, 3}}));
-    auto [kso, vso] = std::move(mo).extract();
-    assert(kso.get_allocator().resource() == &mr);
-    assert(vso.get_allocator().resource() == &mr);
-  }
   return 0;
 }

@@ -13,6 +13,7 @@
 // template<class K> size_type count(const K& x) const;
 
 #include <cassert>
+#include <deque>
 #include <flat_map>
 #include <string>
 #include <utility>

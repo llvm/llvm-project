@@ -14,6 +14,7 @@
 // template<class K> const_iterator lower_bound(const K& x) const;
 
 #include <cassert>
+#include <deque>
 #include <flat_map>
 #include <string>
 #include <utility>

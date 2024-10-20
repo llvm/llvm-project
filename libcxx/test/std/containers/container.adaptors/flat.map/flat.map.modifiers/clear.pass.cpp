@@ -33,8 +33,10 @@ concept NoExceptClear = requires(T t) {
 };
 
 static_assert(NoExceptClear<std::flat_map<int, int>>);
+#ifndef TEST_HAS_NO_EXCEPTIONS
 static_assert(
     NoExceptClear<std::flat_map<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
+#endif
 
 template <class KeyContainer, class ValueContainer>
 void test() {

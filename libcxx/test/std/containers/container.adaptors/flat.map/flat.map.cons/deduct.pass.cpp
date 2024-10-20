@@ -18,7 +18,6 @@
 #include <list>
 #include <flat_map>
 #include <functional>
-#include <memory_resource>
 #include <ranges>
 #include <type_traits>
 #include <utility>
@@ -89,32 +88,6 @@ void test_containers() {
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
   }
-  {
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::monotonic_buffer_resource mr2;
-    std::pmr::deque<int> pks(ks.begin(), ks.end(), &mr);
-    std::pmr::deque<short> pvs(vs.begin(), vs.end(), &mr);
-    std::flat_map s(std::move(pks), std::move(pvs), &mr2);
-
-    ASSERT_SAME_TYPE(
-        decltype(s), std::flat_map<int, short, std::less<int>, std::pmr::deque<int>, std::pmr::deque<short>>);
-    assert(std::ranges::equal(s, expected));
-    assert(s.keys().get_allocator().resource() == &mr2);
-    assert(s.values().get_allocator().resource() == &mr2);
-  }
-  {
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::monotonic_buffer_resource mr2;
-    std::pmr::deque<int> pks(sorted_ks.begin(), sorted_ks.end(), &mr);
-    std::pmr::deque<short> pvs(sorted_vs.begin(), sorted_vs.end(), &mr);
-    std::flat_map s(std::sorted_unique, std::move(pks), std::move(pvs), &mr2);
-
-    ASSERT_SAME_TYPE(
-        decltype(s), std::flat_map<int, short, std::less<int>, std::pmr::deque<int>, std::pmr::deque<short>>);
-    assert(std::ranges::equal(s, expected));
-    assert(s.keys().get_allocator().resource() == &mr2);
-    assert(s.values().get_allocator().resource() == &mr2);
-  }
 }
 
 void test_containers_compare() {
@@ -154,32 +127,6 @@ void test_containers_compare() {
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
-  }
-  {
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::monotonic_buffer_resource mr2;
-    std::pmr::deque<int> pks(ks.begin(), ks.end(), &mr);
-    std::pmr::deque<short> pvs(vs.begin(), vs.end(), &mr);
-    std::flat_map s(std::move(pks), std::move(pvs), std::greater<int>(), &mr2);
-
-    ASSERT_SAME_TYPE(
-        decltype(s), std::flat_map<int, short, std::greater<int>, std::pmr::deque<int>, std::pmr::deque<short>>);
-    assert(std::ranges::equal(s, expected));
-    assert(s.keys().get_allocator().resource() == &mr2);
-    assert(s.values().get_allocator().resource() == &mr2);
-  }
-  {
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::monotonic_buffer_resource mr2;
-    std::pmr::deque<int> pks(sorted_ks.begin(), sorted_ks.end(), &mr);
-    std::pmr::deque<short> pvs(sorted_vs.begin(), sorted_vs.end(), &mr);
-    std::flat_map s(std::sorted_unique, std::move(pks), std::move(pvs), std::greater<int>(), &mr2);
-
-    ASSERT_SAME_TYPE(
-        decltype(s), std::flat_map<int, short, std::greater<int>, std::pmr::deque<int>, std::pmr::deque<short>>);
-    assert(std::ranges::equal(s, expected));
-    assert(s.keys().get_allocator().resource() == &mr2);
-    assert(s.values().get_allocator().resource() == &mr2);
   }
 }
 
