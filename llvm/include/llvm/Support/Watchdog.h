@@ -22,7 +22,7 @@ namespace llvm {
     /// that must complete in a given amount of time. Failure to complete before
     /// the timeout is an unrecoverable situation and no mechanisms to attempt
     /// to handle it are provided.
-    class Watchdog {
+    class LLVM_ABI Watchdog {
     public:
       Watchdog(unsigned int seconds);
       ~Watchdog();

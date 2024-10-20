@@ -13,12 +13,13 @@
 #ifndef LLVM_SUPPORT_TOOLOUTPUTFILE_H
 #define LLVM_SUPPORT_TOOLOUTPUTFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 namespace llvm {
 
-class CleanupInstaller {
+class LLVM_ABI CleanupInstaller {
 public:
   /// The name of the file.
   std::string Filename;
@@ -36,7 +37,7 @@ public:
 ///   - The file is automatically deleted if the process is killed.
 ///   - The file is automatically deleted when the ToolOutputFile
 ///     object is destroyed unless the client calls keep().
-class ToolOutputFile {
+class LLVM_ABI ToolOutputFile {
   /// This class is declared before the raw_fd_ostream so that it is constructed
   /// before the raw_fd_ostream is constructed and destructed after the
   /// raw_fd_ostream is destructed. It installs cleanups in its constructor and

@@ -15,12 +15,13 @@
 #define LLVM_SUPPORT_KNOWNBITS_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
 
 // Struct for tracking the known zeros and ones of a value.
-struct KnownBits {
+struct LLVM_ABI KnownBits {
   APInt Zero;
   APInt One;
 

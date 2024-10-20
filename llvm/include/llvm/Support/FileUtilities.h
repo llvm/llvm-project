@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_FILEUTILITIES_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -29,7 +30,7 @@ namespace llvm {
   /// option, it will set the string to an error message if an error occurs, or
   /// if the files are different.
   ///
-  int DiffFilesWithTolerance(StringRef FileA,
+  LLVM_ABI int DiffFilesWithTolerance(StringRef FileA,
                              StringRef FileB,
                              double AbsTol, double RelTol,
                              std::string *Error = nullptr);
@@ -79,7 +80,7 @@ namespace llvm {
   /// FilePermssionsApplier helps to copy permissions from an input file to
   /// an output one. It memorizes the status of the input file and can apply
   /// permissions and dates to the output file.
-  class FilePermissionsApplier {
+  class LLVM_ABI FilePermissionsApplier {
   public:
     static Expected<FilePermissionsApplier> create(StringRef InputFilename);
 

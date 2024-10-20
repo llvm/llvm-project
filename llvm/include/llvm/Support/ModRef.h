@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -53,7 +54,7 @@ enum class ModRefInfo : uint8_t {
 }
 
 /// Debug print ModRefInfo.
-raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
 /// The locations at which a function might access memory.
 enum class IRMemLocation {
@@ -268,7 +269,7 @@ public:
 using MemoryEffects = MemoryEffectsBase<IRMemLocation>;
 
 /// Debug print MemoryEffects.
-raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 
 // Legacy alias.
 using FunctionModRefBehavior = MemoryEffects;

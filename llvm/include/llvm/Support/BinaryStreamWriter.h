@@ -14,6 +14,7 @@
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -27,7 +28,7 @@ namespace llvm {
 /// such as null-terminated strings, integers in various flavors of endianness,
 /// etc.  Can be subclassed to provide reading and writing of custom datatypes,
 /// although no methods are overridable.
-class BinaryStreamWriter {
+class LLVM_ABI BinaryStreamWriter {
 public:
   BinaryStreamWriter() = default;
   explicit BinaryStreamWriter(WritableBinaryStreamRef Ref);

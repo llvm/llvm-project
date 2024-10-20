@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_CIRCULAR_RAW_OSTREAM_H
 #define LLVM_SUPPORT_CIRCULAR_RAW_OSTREAM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -21,7 +22,7 @@ namespace llvm {
   /// to a circular buffer, or can pass it through directly to an
   /// underlying stream if specified with a buffer of zero.
   ///
-  class circular_raw_ostream : public raw_ostream {
+  class LLVM_ABI circular_raw_ostream : public raw_ostream {
   public:
     /// TAKE_OWNERSHIP - Tell this stream that it owns the underlying
     /// stream and is responsible for cleanup, memory management

@@ -25,6 +25,7 @@
 #define LLVM_SUPPORT_PROCESS_H
 
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Program.h"
@@ -40,7 +41,7 @@ namespace sys {
 
 /// A collection of legacy interfaces for querying information about the
 /// current executing process.
-class Process {
+class LLVM_ABI Process {
 public:
   using Pid = int32_t;
 

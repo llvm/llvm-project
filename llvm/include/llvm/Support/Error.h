@@ -42,7 +42,7 @@ class ErrorSuccess;
 
 /// Base class for error info classes. Do not extend this directly: Extend
 /// the ErrorInfo template subclass instead.
-class ErrorInfoBase {
+class LLVM_ABI ErrorInfoBase {
 public:
   virtual ~ErrorInfoBase() = default;
 
@@ -157,7 +157,7 @@ private:
 /// *All* Error instances must be checked before destruction, even if
 /// they're moved-assigned or constructed from Success values that have already
 /// been checked. This enforces checking through all levels of the call stack.
-class [[nodiscard]] Error {
+class LLVM_ABI [[nodiscard]] Error {
   // ErrorList needs to be able to yank ErrorInfoBase pointers out of Errors
   // to add to the error list. It can't rely on handleErrors for this, since
   // handleErrors does not support ErrorList handlers.
@@ -367,7 +367,7 @@ public:
 
 /// Special ErrorInfo subclass representing a list of ErrorInfos.
 /// Instances of this class are constructed by joinError.
-class ErrorList final : public ErrorInfo<ErrorList> {
+class LLVM_ABI ErrorList final : public ErrorInfo<ErrorList> {
   // handleErrors needs to be able to iterate the payload list of an
   // ErrorList.
   template <typename... HandlerTs>
@@ -738,7 +738,7 @@ private:
 
 /// Report a serious error, calling any installed error handler. See
 /// ErrorHandling.h.
-[[noreturn]] void report_fatal_error(Error Err, bool gen_crash_diag = true);
+[[noreturn]] void LLVM_ABI report_fatal_error(Error Err, bool gen_crash_diag = true);
 
 /// Report a fatal error if Err is a failure value.
 ///
@@ -1049,15 +1049,15 @@ Expected<T> handleExpected(Expected<T> ValOrErr, RecoveryFtor &&RecoveryPath,
 /// This is useful in the base level of your program to allow clean termination
 /// (allowing clean deallocation of resources, etc.), while reporting error
 /// information to the user.
-void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner = {});
+LLVM_ABI void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner = {});
 
 /// Write all error messages (if any) in E to a string. The newline character
 /// is used to separate error messages.
-std::string toString(Error E);
+LLVM_ABI std::string toString(Error E);
 
 /// Like toString(), but does not consume the error. This can be used to print
 /// a warning while retaining the original error object.
-std::string toStringWithoutConsuming(const Error &E);
+LLVM_ABI std::string toStringWithoutConsuming(const Error &E);
 
 /// Consume a Error without doing anything. This method should be used
 /// only where an error can be considered a reasonable and expected return
@@ -1171,8 +1171,8 @@ private:
 /// This is useful if you're writing an interface that returns a Error
 /// (or Expected) and you want to call code that still returns
 /// std::error_codes.
-class ECError : public ErrorInfo<ECError> {
-  friend Error errorCodeToError(std::error_code);
+class LLVM_ABI ECError : public ErrorInfo<ECError> {
+  friend LLVM_ABI Error errorCodeToError(std::error_code);
 
   void anchor() override;
 
@@ -1197,16 +1197,16 @@ protected:
 /// sensible conversion to std::error_code is available, as attempts to convert
 /// to/from this error will result in a fatal error. (i.e. it is a programmatic
 /// error to try to convert such a value).
-std::error_code inconvertibleErrorCode();
+LLVM_ABI std::error_code inconvertibleErrorCode();
 
 /// Helper for converting an std::error_code to a Error.
-Error errorCodeToError(std::error_code EC);
+LLVM_ABI Error errorCodeToError(std::error_code EC);
 
 /// Helper for converting an ECError to a std::error_code.
 ///
 /// This method requires that Err be Error() or an ECError, otherwise it
 /// will trigger a call to abort().
-std::error_code errorToErrorCode(Error Err);
+LLVM_ABI std::error_code errorToErrorCode(Error Err);
 
 /// Helper to get errno as an std::error_code.
 ///
@@ -1260,7 +1260,7 @@ template <typename T> ErrorOr<T> expectedToErrorOr(Expected<T> &&E) {
 ///   }
 ///   @endcode
 ///
-class StringError : public ErrorInfo<StringError> {
+class LLVM_ABI StringError : public ErrorInfo<StringError> {
 public:
   static char ID;
 
@@ -1290,7 +1290,7 @@ inline Error createStringError(std::error_code EC, char const *Fmt,
   return make_error<StringError>(Buffer, EC);
 }
 
-Error createStringError(std::string &&Msg, std::error_code EC);
+LLVM_ABI Error createStringError(std::string &&Msg, std::error_code EC);
 
 inline Error createStringError(std::error_code EC, const char *S) {
   return createStringError(std::string(S), EC);
@@ -1320,7 +1320,7 @@ inline Error createStringError(std::errc EC, char const *Fmt,
 ///
 /// In some cases, an error needs to live along a 'source' name, in order to
 /// show more detailed information to the user.
-class FileError final : public ErrorInfo<FileError> {
+class LLVM_ABI FileError final : public ErrorInfo<FileError> {
 
   friend Error createFileError(const Twine &, Error);
   friend Error createFileError(const Twine &, size_t, Error);
