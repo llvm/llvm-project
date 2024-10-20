@@ -958,6 +958,14 @@ struct CounterCoverageMappingBuilder
     return {ExecCnt, SkipCnt};
   }
 
+  Counter getSwitchImplicitDefaultCounter(const Stmt *Cond, Counter ParentCount,
+                                          Counter CaseCountSum) {
+    return (
+        llvm::EnableSingleByteCoverage
+            ? Counter::getCounter(CounterMap[Cond].second = NextCounterNum++)
+            : subtractCounters(ParentCount, CaseCountSum));
+  }
+
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
     if (OutCount == ParentCount)
       return true;
@@ -1885,7 +1893,7 @@ struct CounterCoverageMappingBuilder
       propagateCounts(Counter::getZero(), Body);
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    if (!BreakContinueStack.empty() && !llvm::EnableSingleByteCoverage)
+    if (!BreakContinueStack.empty())
       BreakContinueStack.back().ContinueCount = addCounters(
           BreakContinueStack.back().ContinueCount, BC.ContinueCount);
 
@@ -1899,11 +1907,6 @@ struct CounterCoverageMappingBuilder
     // in a different file.
     MostRecentLocation = getStart(S);
     handleFileExit(ExitLoc);
-
-    // When single byte coverage mode is enabled, do not create branch region by
-    // early returning.
-    if (llvm::EnableSingleByteCoverage)
-      return;
 
     // Create a Branch Region around each Case. Subtract the case's
     // counter from the Parent counter to track the "False" branch count.
@@ -1920,7 +1923,8 @@ struct CounterCoverageMappingBuilder
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      Counter DefaultCount = subtractCounters(ParentCount, CaseCountSum);
+      Counter DefaultCount = getSwitchImplicitDefaultCounter(
+          S->getCond(), ParentCount, CaseCountSum);
       createBranchRegion(S->getCond(), Counter::getZero(), DefaultCount);
     }
   }
@@ -1929,9 +1933,7 @@ struct CounterCoverageMappingBuilder
     extendRegion(S);
 
     SourceMappingRegion &Parent = getRegion();
-    Counter Count = llvm::EnableSingleByteCoverage
-                        ? getRegionCounter(S)
-                        : addCounters(Parent.getCounter(), getRegionCounter(S));
+    Counter Count = addCounters(Parent.getCounter(), getRegionCounter(S));
 
     // Reuse the existing region if it starts at our label. This is typical of
     // the first case in a switch.
