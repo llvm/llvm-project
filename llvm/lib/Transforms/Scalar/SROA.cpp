@@ -2854,7 +2854,8 @@ private:
   bool visitLoadInst(LoadInst &LI) {
     LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
 
-    // load atomic vector would be generated, which is illegal
+    // Load atomic vector would be generated, which is illegal.
+    // TODO: Generate a generic bitcast in machine codegen instead.
     if (LI.isAtomic() && !LoadInst::isValidAtomicTy(NewAI.getAllocatedType()))
       return false;
 
