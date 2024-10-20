@@ -138,14 +138,14 @@ Counter CounterExpressionBuilder::subtract(Counter LHS, Counter RHS,
 Counter CounterExpressionBuilder::replace(Counter C, const ReplaceMap &Map) {
   auto I = Map.find(C);
 
-  // Replace C with the Map even if C is Expression.
+  // Replace C with the value found in Map even if C is Expression.
   if (I != Map.end())
     return I->second;
 
-  // Traverse only Expression.
   if (!C.isExpression())
     return C;
 
+  // Traverse both sides of Expression.
   auto CE = Expressions[C.getExpressionID()];
   auto NewLHS = replace(CE.LHS, Map);
   auto NewRHS = replace(CE.RHS, Map);
