@@ -1,11 +1,18 @@
 // Tests that we'll find aligned allocation function properly.
 // RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify -fcoro-aligned-allocation
+// RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify -fcoro-aligned-allocation -fexperimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify -fcoro-aligned-allocation -fexperimental-cxx-type-aware-allocators -DUSE_TAA
 
 #include "Inputs/std-coroutine.h"
 
 namespace std {
     typedef __SIZE_TYPE__ size_t;
     enum class align_val_t : size_t {};
+    #ifdef USE_TAA
+    template <typename T> struct type_identity {
+      typedef T type;
+    };
+    #endif
 }
 
 struct task {
@@ -15,7 +22,12 @@ struct task {
     auto get_return_object() { return task{}; }
     void unhandled_exception() {}
     void return_value(int) {}
+    #ifdef USE_TAA
+    template <typename T>
+    void *operator new(std::type_identity<T>, std::size_t); // expected-warning 1+{{under -fcoro-aligned-allocation, the non-aligned allocation function for the promise type 'f' has higher precedence than the global aligned allocation function}}
+    #else
     void *operator new(std::size_t); // expected-warning 1+{{under -fcoro-aligned-allocation, the non-aligned allocation function for the promise type 'f' has higher precedence than the global aligned allocation function}}
+    #endif
   };
 };
 
@@ -30,7 +42,12 @@ struct task2 {
     auto get_return_object() { return task2{}; }
     void unhandled_exception() {}
     void return_value(int) {}
+    #ifdef USE_TAA
+    template <typename T>
+    void *operator new(std::type_identity<T>, std::size_t, std::align_val_t);
+    #else
     void *operator new(std::size_t, std::align_val_t);
+    #endif
   };
 };
 
@@ -64,7 +81,12 @@ struct task4 {
     auto get_return_object() { return task4{}; }
     void unhandled_exception() {}
     void return_value(int) {}
+    #ifdef USE_TAA
+    template <typename T>
+    void *operator new(std::type_identity<T>, std::size_t, std::align_val_t, int, double, int) noexcept;
+    #else
     void *operator new(std::size_t, std::align_val_t, int, double, int) noexcept;
+    #endif
   };
 };
 
@@ -109,7 +131,12 @@ task6 f5() { // expected-error 1+{{unable to find '::operator new(size_t, align_
     co_return 43;
 }
 
-void *operator new(std::size_t, std::align_val_t, std::nothrow_t) noexcept; 
+#ifdef USE_TAA
+template <typename T>
+void *operator new(std::type_identity<T>, std::size_t, std::align_val_t, std::nothrow_t) noexcept;
+#else
+void *operator new(std::size_t, std::align_val_t, std::nothrow_t) noexcept;
+#endif
 
 task6 f6() {
     co_return 43;

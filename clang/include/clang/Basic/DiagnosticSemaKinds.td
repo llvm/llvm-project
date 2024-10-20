@@ -9692,6 +9692,18 @@ def err_operator_delete_param_type : Error<
 def err_destroying_operator_delete_not_usual : Error<
   "destroying operator delete can have only an optional size and optional "
   "alignment parameter">;
+def err_type_aware_destroying_operator_delete : Error<
+  "type aware destroying delete is not permitted">;
+def err_unsupported_type_aware_allocator : Error<
+  "type aware allocation operators are disabled">;
+def err_no_matching_type_aware_cleanup_deallocator_mismatch : Error<
+  "type aware %0 requires matching %1 in %2">;
+def err_type_aware_operator_found : Note<
+  "type aware %0 found in %1">;
+def warn_mismatching_type_aware_cleanup_deallocator : Warning<
+  "mismatching type aware allocation operators for constructor cleanup">, InGroup<TypeAwareAllocatorMismatch>;
+def note_type_aware_operator_declared : Note<
+  "%select{|non-}0type aware %1 declared here">;
 def note_implicit_delete_this_in_destructor_here : Note<
   "while checking implicit 'delete this' for virtual destructor">;
 def err_builtin_operator_new_delete_not_usual : Error<

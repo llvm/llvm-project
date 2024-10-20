@@ -17401,6 +17401,19 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     Previous.clear();
   }
 
+  // I think DC check should be DC->isStdNamespace()?
+  // Also these guards are questionable - it's possible to get incorrect
+  // codegen when the declared type does not match the expected type.
+  // e.g. something like
+  //    namespace std { struct align_val_t { explicit align_val_t(size_t); } };
+  // can result in an operator new/delete decl picking up this specified
+  // align_val_t struct, but the align_val_t constructed implicitly has the
+  // mismatching internal definition.
+  //
+  // The correct course of action is probably to perform this logic at the point
+  // a declaration is inserted into the DeclContext, where it can also perform
+  // appropriate type checks for warnings/errors, rather than working backwards
+  // from the assumption that the type will always be correct.
   if (getLangOpts().CPlusPlus && Name && DC && StdNamespace &&
       DC->Equals(getStdNamespace())) {
     if (Name->isStr("bad_alloc")) {

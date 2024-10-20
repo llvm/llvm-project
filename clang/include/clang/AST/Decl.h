@@ -2530,6 +2530,8 @@ public:
   /// Determine whether this is a destroying operator delete.
   bool isDestroyingOperatorDelete() const;
 
+  bool IsTypeAwareOperatorNewOrDelete() const;
+
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
 

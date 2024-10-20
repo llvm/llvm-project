@@ -1,7 +1,15 @@
 // RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify -fexperimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify -fexperimental-cxx-type-aware-allocators -DUSE_TAA
+
 #include "Inputs/std-coroutine.h"
 
 namespace std {
+#ifdef USE_TAA
+template <typename T> struct type_identity {
+  typedef T type;
+};
+#endif
 typedef decltype(sizeof(int)) size_t;
 }
 
@@ -9,7 +17,11 @@ struct Allocator {};
 
 struct resumable {
   struct promise_type {
+    #ifdef USE_TAA
+    template <typename T> void *operator new(std::type_identity<T>, std::size_t sz, Allocator &);
+    #else
     void *operator new(std::size_t sz, Allocator &);
+    #endif
 
     resumable get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }

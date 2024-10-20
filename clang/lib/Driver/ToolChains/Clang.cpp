@@ -7145,6 +7145,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       types::isCXX(InputType))
     CmdArgs.push_back("-fcoro-aligned-allocation");
 
+  if (Args.hasFlag(options::OPT_fcxx_type_aware_allocators,
+                   options::OPT_fno_cxx_type_aware_allocators, false))
+    CmdArgs.push_back("-fexperimental-cxx-type-aware-allocators");
+
+  if (Args.hasFlag(options::OPT_fcxx_type_aware_destroying_delete,
+                   options::OPT_fno_cxx_type_aware_destroying_delete, false))
+    CmdArgs.push_back("-fcxx-type-aware-destroying-delete");
+
   Args.AddLastArg(CmdArgs, options::OPT_fdouble_square_bracket_attributes,
                   options::OPT_fno_double_square_bracket_attributes);
 
