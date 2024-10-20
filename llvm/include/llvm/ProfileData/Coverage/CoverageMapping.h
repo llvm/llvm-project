@@ -720,7 +720,7 @@ struct FunctionRecord {
         Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
       CountedBranchRegions.emplace_back(Region, Count, FalseCount,
                                         HasSingleByteCoverage);
-      // If either counters is hard-coded to zero, then this region represents a
+      // If either counter is hard-coded to zero, then this region represents a
       // constant-folded branch.
       CountedBranchRegions.back().TrueFolded = Region.Count.isZero();
       CountedBranchRegions.back().FalseFolded = Region.FalseCount.isZero();
