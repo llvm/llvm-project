@@ -8866,11 +8866,8 @@ static void addLiveOutsForFirstOrderRecurrences(
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
   } else if (ExitUsersToFix.empty()) {
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
-  }
-  if (!ScalarPHVPBB) {
-    assert(ExitUsersToFix.empty() &&
-           "missed inserting extracts for exiting values");
-    return;
+  } else {
+    llvm_unreachable("unsupported CFG in VPlan");
   }
 
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
