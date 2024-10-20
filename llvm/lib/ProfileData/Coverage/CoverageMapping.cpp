@@ -136,10 +136,8 @@ Counter CounterExpressionBuilder::subtract(Counter LHS, Counter RHS,
 }
 
 Counter CounterExpressionBuilder::replace(Counter C, const ReplaceMap &Map) {
-  auto I = Map.find(C);
-
   // Replace C with the value found in Map even if C is Expression.
-  if (I != Map.end())
+  if (auto I = Map.find(C); I != Map.end())
     return I->second;
 
   if (!C.isExpression())
@@ -161,7 +159,7 @@ Counter CounterExpressionBuilder::replace(Counter C, const ReplaceMap &Map) {
   }
 
   // Reconfirm if the reconstructed expression would hit the Map.
-  if ((I = Map.find(C)) != Map.end())
+  if (auto I = Map.find(C); I != Map.end())
     return I->second;
 
   return C;
