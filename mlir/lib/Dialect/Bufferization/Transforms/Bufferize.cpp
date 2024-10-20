@@ -130,7 +130,7 @@ public:
 } // namespace
 
 void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<BufferizeToTensorOp, BufferizeToMemrefOp>(typeConverter,
                                                          patterns.getContext());
 }
@@ -224,6 +224,7 @@ struct OneShotBufferizePass
         };
       }
       opt.printConflicts = printConflicts;
+      opt.bufferAlignment = bufferAlignment;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
       opt.checkParallelRegions = checkParallelRegions;

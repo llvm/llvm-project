@@ -1972,9 +1972,11 @@ private:
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
                         CXXConstructorDecl *Ctor, DeductionCandidate Kind,
+                        Expr *TrailingRequiresClause,
                         CXXDeductionGuideDecl *GeneratedFrom, SourceKind SK)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
-                     SC_None, false, false, ConstexprSpecKind::Unspecified),
+                     SC_None, false, false, ConstexprSpecKind::Unspecified,
+                     TrailingRequiresClause),
         Ctor(Ctor), ExplicitSpec(ES), SourceDeductionGuide(GeneratedFrom, SK) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
@@ -2001,6 +2003,7 @@ public:
          TypeSourceInfo *TInfo, SourceLocation EndLocation,
          CXXConstructorDecl *Ctor = nullptr,
          DeductionCandidate Kind = DeductionCandidate::Normal,
+         Expr *TrailingRequiresClause = nullptr,
          CXXDeductionGuideDecl *SourceDG = nullptr,
          SourceKind SK = SourceKind::Alias);
 

@@ -10,7 +10,7 @@
 ; CHECK-MIR-DAG: [[source_language_sycl:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i64]], 7
 ; CHECK-MIR-DAG: [[source_language_cpp:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i64]], 4
 ; CHECK-MIR-DAG: [[filename_str_sycl:%[0-9]+\:id\(s32\)]] = OpString 1094795567, 1094795585, 792805697, 1111638594, 1111638594, 1128481583, 1128481603, {{1697596227|1700545347}}, 1886216568, 1663985004, 0
-; CHECK-MIR-DAG: [[filename_str_cpp:%[0-9]+\:id\(s32\)]] = OpString 1145324591, 1145324612, 793003076, 1162167621, 1162167621, 1179010607, 1179010630, 1697596998, 1886216568, 774989164, 7368803
+; CHECK-MIR-DAG: [[filename_str_cpp:%[0-9]+\:id\(s32\)]] = OpString 1145324591, 1145324612, 793003076, 1162167621, 1162167621, 1179010607, 1179010630, {{1697596998|1700546118}}, 1886216568, 774989164, 7368803
 ; CHECK-MIR-DAG: [[debug_source_sycl:%[0-9]+\:id\(s32\)]] = OpExtInst [[type_void]], 3, 35, [[filename_str_sycl]]
 ; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 1, [[debug_info_version]], [[dwarf_version]], [[debug_source_sycl]], [[source_language_sycl]]
 ; CHECK-MIR-DAG: [[debug_source_cpp:%[0-9]+\:id\(s32\)]] = OpExtInst [[type_void]], 3, 35, [[filename_str_cpp]]

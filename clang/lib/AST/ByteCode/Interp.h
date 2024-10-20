@@ -16,6 +16,7 @@
 #include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "DynamicAllocator.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
@@ -37,6 +38,7 @@ namespace clang {
 namespace interp {
 
 using APSInt = llvm::APSInt;
+using FixedPointSemantics = llvm::FixedPointSemantics;
 
 /// Convert a value to an APValue.
 template <typename T>
@@ -159,6 +161,16 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
+bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
+
+template <typename T>
+static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_overflow) << SrcValue << E->getType();
+  return S.noteUndefinedBehavior();
+}
+bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
+                              const FixedPoint &FP);
 
 enum class ShiftDir { Left, Right };
 
@@ -224,14 +236,16 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
     return false;
   }
 
-  if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
-    APSInt LHSInt = LHS.toAPSInt();
-    SmallString<32> Trunc;
-    (-LHSInt.extend(LHSInt.getBitWidth() + 1)).toString(Trunc, 10);
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    const Expr *E = S.Current->getExpr(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
-    return false;
+  if constexpr (!std::is_same_v<T, FixedPoint>) {
+    if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
+      APSInt LHSInt = LHS.toAPSInt();
+      SmallString<32> Trunc;
+      (-LHSInt.extend(LHSInt.getBitWidth() + 1)).toString(Trunc, 10);
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
+      return false;
+    }
   }
   return true;
 }
@@ -363,9 +377,12 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     S.Stk.push<T>(Result);
     return true;
   }
-
   // If for some reason evaluation continues, use the truncated results.
   S.Stk.push<T>(Result);
+
+  // Short-circuit fixed-points here since the error handling is easier.
+  if constexpr (std::is_same_v<T, FixedPoint>)
+    return handleFixedPointOverflow(S, OpPC, Result);
 
   // Slow path - compute the result using another bit of precision.
   APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
@@ -383,13 +400,10 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
         << Trunc << Type << E->getSourceRange();
   }
 
-  S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-
-  if (!S.noteUndefinedBehavior()) {
+  if (!handleOverflow(S, OpPC, Value)) {
     S.Stk.pop<T>();
     return false;
   }
-
   return true;
 }
 
@@ -679,6 +693,13 @@ bool Div(InterpState &S, CodePtr OpPC) {
     S.Stk.push<T>(Result);
     return true;
   }
+
+  if constexpr (std::is_same_v<T, FixedPoint>) {
+    if (handleFixedPointOverflow(S, OpPC, Result)) {
+      S.Stk.push<T>(Result);
+      return true;
+    }
+  }
   return false;
 }
 
@@ -739,8 +760,7 @@ bool Neg(InterpState &S, CodePtr OpPC) {
     return true;
   }
 
-  S.CCEDiag(E, diag::note_constexpr_overflow) << NegatedValue << Type;
-  return S.noteUndefinedBehavior();
+  return handleOverflow(S, OpPC, NegatedValue);
 }
 
 enum class PushVal : bool {
@@ -802,8 +822,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return true;
   }
 
-  S.CCEDiag(E, diag::note_constexpr_overflow) << APResult << Type;
-  return S.noteUndefinedBehavior();
+  return handleOverflow(S, OpPC, APResult);
 }
 
 /// 1) Pops a pointer from the stack
@@ -1623,14 +1642,14 @@ inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
 
   if (!Ptr.isBlockPointer()) {
     S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
     return true;
   }
 
-  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
-    return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   const Pointer &Result = Ptr.atField(Off);
@@ -1643,13 +1662,14 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+
   if (!Ptr.isBlockPointer()) {
     S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
     return true;
   }
 
-  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
-    return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   const Pointer &Result = Ptr.atField(Off);
@@ -1821,6 +1841,7 @@ bool Init(InterpState &S, CodePtr OpPC) {
     assert(false);
     return false;
   }
+  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -1832,6 +1853,7 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
+  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -1843,13 +1865,24 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.peek<Pointer>().atIndex(Idx);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
   if (Ptr.isUnknownSizeArray())
     return false;
-  if (!CheckInit(S, OpPC, Ptr))
+
+  // In the unlikely event that we're initializing the first item of
+  // a non-array, skip the atIndex().
+  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+    Ptr.initialize();
+    new (&Ptr.deref<T>()) T(Value);
+    return true;
+  }
+
+  const Pointer &ElemPtr = Ptr.atIndex(Idx);
+  if (!CheckInit(S, OpPC, ElemPtr))
     return false;
-  Ptr.initialize();
-  new (&Ptr.deref<T>()) T(Value);
+  ElemPtr.initialize();
+  new (&ElemPtr.deref<T>()) T(Value);
   return true;
 }
 
@@ -1857,13 +1890,23 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>().atIndex(Idx);
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.isUnknownSizeArray())
     return false;
-  if (!CheckInit(S, OpPC, Ptr))
+
+  // In the unlikely event that we're initializing the first item of
+  // a non-array, skip the atIndex().
+  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+    Ptr.initialize();
+    new (&Ptr.deref<T>()) T(Value);
+    return true;
+  }
+
+  const Pointer &ElemPtr = Ptr.atIndex(Idx);
+  if (!CheckInit(S, OpPC, ElemPtr))
     return false;
-  Ptr.initialize();
-  new (&Ptr.deref<T>()) T(Value);
+  ElemPtr.initialize();
+  new (&ElemPtr.deref<T>()) T(Value);
   return true;
 }
 
@@ -2159,6 +2202,22 @@ inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
   return true;
 }
 
+inline bool CastFixedPoint(InterpState &S, CodePtr OpPC, uint32_t FPS) {
+  FixedPointSemantics TargetSemantics(0, 0, false, false, false);
+  std::memcpy(&TargetSemantics, &FPS, sizeof(TargetSemantics));
+
+  const auto &Source = S.Stk.pop<FixedPoint>();
+
+  bool Overflow;
+  FixedPoint Result = Source.toSemantics(TargetSemantics, &Overflow);
+
+  if (Overflow && !handleFixedPointOverflow(S, OpPC, Result))
+    return false;
+
+  S.Stk.push<FixedPoint>(Result);
+  return true;
+}
+
 /// Like Cast(), but we cast to an arbitrary-bitwidth integral, so we need
 /// to know what bitwidth the result should be.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -2229,13 +2288,8 @@ static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
   auto Status = F.convertToInteger(Result);
 
   // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    QualType Type = E->getType();
-
-    S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
-    return S.noteUndefinedBehavior();
-  }
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite())
+    return handleOverflow(S, OpPC, F.getAPFloat());
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   S.Stk.push<IntegralAP<true>>(IntegralAP<true>(Result));
@@ -2250,63 +2304,84 @@ static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
   auto Status = F.convertToInteger(Result);
 
   // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    QualType Type = E->getType();
-
-    S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
-    return S.noteUndefinedBehavior();
-  }
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite())
+    return handleOverflow(S, OpPC, F.getAPFloat());
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   S.Stk.push<IntegralAP<true>>(IntegralAP<true>(Result));
   return CheckFloatResult(S, OpPC, F, Status, FPO);
 }
 
+bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
+                                const Pointer &Ptr, unsigned BitWidth);
+bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
+bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isDummy())
+  if (!CheckPointerToIntegralCast(S, OpPC, Ptr, T::bitWidth()))
     return false;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
   S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
   return true;
 }
 
-static inline bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC,
-                                         uint32_t BitWidth) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+static inline bool CastIntegralFixedPoint(InterpState &S, CodePtr OpPC,
+                                          uint32_t FPS) {
+  const T &Int = S.Stk.pop<T>();
 
-  if (Ptr.isDummy())
+  FixedPointSemantics Sem(0, 0, false, false, false);
+  std::memcpy(&Sem, &FPS, sizeof(Sem));
+
+  bool Overflow;
+  FixedPoint Result = FixedPoint::from(Int.toAPSInt(), Sem, &Overflow);
+
+  if (Overflow && !handleFixedPointOverflow(S, OpPC, Result))
     return false;
 
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-
-  S.Stk.push<IntegralAP<false>>(
-      IntegralAP<false>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  S.Stk.push<FixedPoint>(Result);
   return true;
 }
 
-static inline bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC,
-                                          uint32_t BitWidth) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
+static inline bool CastFloatingFixedPoint(InterpState &S, CodePtr OpPC,
+                                          uint32_t FPS) {
+  const auto &Float = S.Stk.pop<Floating>();
 
-  if (Ptr.isDummy())
+  FixedPointSemantics Sem(0, 0, false, false, false);
+  std::memcpy(&Sem, &FPS, sizeof(Sem));
+
+  bool Overflow;
+  FixedPoint Result = FixedPoint::from(Float.getAPFloat(), Sem, &Overflow);
+
+  if (Overflow && !handleFixedPointOverflow(S, OpPC, Result))
     return false;
 
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  S.Stk.push<FixedPoint>(Result);
+  return true;
+}
 
-  S.Stk.push<IntegralAP<true>>(
-      IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
+static inline bool CastFixedPointFloating(InterpState &S, CodePtr OpPC,
+                                          const llvm::fltSemantics *Sem) {
+  const auto &Fixed = S.Stk.pop<FixedPoint>();
+
+  S.Stk.push<Floating>(Fixed.toFloat(Sem));
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+static inline bool CastFixedPointIntegral(InterpState &S, CodePtr OpPC) {
+  const auto &Fixed = S.Stk.pop<FixedPoint>();
+
+  bool Overflow;
+  APSInt Int = Fixed.toInt(T::bitWidth(), T::isSigned(), &Overflow);
+
+  if (Overflow && !handleOverflow(S, OpPC, Int))
+    return false;
+
+  S.Stk.push<T>(Int);
   return true;
 }
 
@@ -2498,6 +2573,42 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   auto LHS = S.Stk.pop<LT>();
 
   return DoShift<LT, RT, ShiftDir::Left>(S, OpPC, LHS, RHS);
+}
+
+static inline bool ShiftFixedPoint(InterpState &S, CodePtr OpPC, bool Left) {
+  const auto &RHS = S.Stk.pop<FixedPoint>();
+  const auto &LHS = S.Stk.pop<FixedPoint>();
+  llvm::FixedPointSemantics LHSSema = LHS.getSemantics();
+
+  unsigned ShiftBitWidth =
+      LHSSema.getWidth() - (unsigned)LHSSema.hasUnsignedPadding() - 1;
+
+  // Embedded-C 4.1.6.2.2:
+  //   The right operand must be nonnegative and less than the total number
+  //   of (nonpadding) bits of the fixed-point operand ...
+  if (RHS.isNegative()) {
+    S.CCEDiag(S.Current->getLocation(OpPC), diag::note_constexpr_negative_shift)
+        << RHS.toAPSInt();
+  } else if (static_cast<unsigned>(RHS.toAPSInt().getLimitedValue(
+                 ShiftBitWidth)) != RHS.toAPSInt()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_large_shift)
+        << RHS.toAPSInt() << E->getType() << ShiftBitWidth;
+  }
+
+  FixedPoint Result;
+  if (Left) {
+    if (FixedPoint::shiftLeft(LHS, RHS, ShiftBitWidth, &Result) &&
+        !handleFixedPointOverflow(S, OpPC, Result))
+      return false;
+  } else {
+    if (FixedPoint::shiftRight(LHS, RHS, ShiftBitWidth, &Result) &&
+        !handleFixedPointOverflow(S, OpPC, Result))
+      return false;
+  }
+
+  S.Stk.push<FixedPoint>(Result);
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2888,65 +2999,16 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
   return true;
 }
 
-bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B);
-static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
-  if (!CheckDynamicMemoryAllocation(S, OpPC))
-    return false;
-
-  const Expr *Source = nullptr;
-  const Block *BlockToDelete = nullptr;
-  {
-    // Extra scope for this so the block doesn't have this pointer
-    // pointing to it when we destroy it.
-    const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-    // Deleteing nullptr is always fine.
-    if (Ptr.isZero())
-      return true;
-
-    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
-          << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
-      return false;
-    }
-
-    Source = Ptr.getDeclDesc()->asExpr();
-    BlockToDelete = Ptr.block();
-
-    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
-      return false;
-  }
-  assert(Source);
-  assert(BlockToDelete);
-
-  // Invoke destructors before deallocating the memory.
-  if (!RunDestructors(S, OpPC, BlockToDelete))
-    return false;
-
-  DynamicAllocator &Allocator = S.getAllocator();
-  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
-  std::optional<DynamicAllocator::Form> AllocForm =
-      Allocator.getAllocationForm(Source);
-
-  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
-    // Nothing has been deallocated, this must be a double-delete.
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_double_delete);
-    return false;
-  }
-
-  assert(AllocForm);
-  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
-                                          ? DynamicAllocator::Form::Array
-                                          : DynamicAllocator::Form::NonArray;
-  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
-                             Source);
-}
+bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
+          bool IsGlobalDelete);
 
 static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
   return true;
+}
+
+static inline bool CheckAllocations(InterpState &S, CodePtr OpPC) {
+  return S.maybeDiagnoseDanglingAllocations();
 }
 
 /// Check if the initializer and storage types of a placement-new expression

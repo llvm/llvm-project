@@ -210,7 +210,6 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -345,7 +344,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -437,7 +435,6 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0

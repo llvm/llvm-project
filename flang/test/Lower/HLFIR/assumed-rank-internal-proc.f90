@@ -1,5 +1,5 @@
 ! Test assumed-rank capture inside internal procedures.
-! RUN: bbc -emit-hlfir -o - %s -allow-assumed-rank | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_assumed_rank(x)
   real :: x(..)

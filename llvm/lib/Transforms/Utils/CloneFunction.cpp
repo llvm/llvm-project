@@ -70,6 +70,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_memprof);
+      hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_callsite);
     }
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
       if (!AI->isStaticAlloca()) {
@@ -424,8 +425,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
 
       // Create intrinsic call.
       LLVMContext &Ctx = NewFunc->getContext();
-      Function *IFn =
-          Intrinsic::getDeclaration(NewFunc->getParent(), CIID, TParams);
+      Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(),
+                                                        CIID, TParams);
       SmallVector<Value *, 4> Args;
       unsigned NumOperands = OldInst.getNumOperands();
       if (isa<CallInst>(OldInst))
@@ -556,6 +557,7 @@ void PruningFunctionCloner::CloneBlock(
     if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
+      hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_callsite);
     }
 
     CloneDbgRecordsToHere(NewInst, II);
@@ -817,9 +819,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // Drop all incompatible return attributes that cannot be applied to NewFunc
   // during cloning, so as to allow instruction simplification to reason on the
   // old state of the function. The original attributes are restored later.
-  AttributeMask IncompatibleAttrs =
-      AttributeFuncs::typeIncompatible(OldFunc->getReturnType());
   AttributeList Attrs = NewFunc->getAttributes();
+  AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
+      OldFunc->getReturnType(), Attrs.getRetAttrs());
   NewFunc->removeRetAttrs(IncompatibleAttrs);
 
   // As phi-nodes have been now remapped, allow incremental simplification of

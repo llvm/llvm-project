@@ -328,7 +328,7 @@ jobs:
       run: |
         # Build some of the mlir tools that take a long time to link
         if [ "${{ needs.prepare.outputs.build-flang }}" = "true" ]; then
-          ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ -j2 flang-new bbc
+          ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ -j2 flang bbc
         fi
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ \
             mlir-bytecode-parser-fuzzer \
@@ -420,6 +420,14 @@ jobs:
       attestations: write # For artifact attestations
 
     steps:
+    - name: Checkout Release Scripts
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        sparse-checkout: |
+          llvm/utils/release/github-upload-release.py
+          llvm/utils/git/requirements.txt
+        sparse-checkout-cone-mode: false
+
     - name: 'Download artifact'
       uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
       with:
@@ -441,14 +449,6 @@ jobs:
       with:
         name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
         path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
-
-    - name: Checkout Release Scripts
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      with:
-        sparse-checkout: |
-          llvm/utils/release/github-upload-release.py
-          llvm/utils/git/requirements.txt
-        sparse-checkout-cone-mode: false
 
     - name: Install Python Requirements
       run: |

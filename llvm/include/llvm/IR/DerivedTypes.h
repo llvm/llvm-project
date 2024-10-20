@@ -301,6 +301,10 @@ public:
   ///  {<vscale x 2 x i32>, <vscale x 4 x i64>}}
   bool containsHomogeneousScalableVectorTypes() const;
 
+  /// Return true if this struct is non-empty and all element types are the
+  /// same.
+  bool containsHomogeneousTypes() const;
+
   /// Return true if this is a named struct that has a non-empty name.
   bool hasName() const { return SymbolTableEntry != nullptr; }
 

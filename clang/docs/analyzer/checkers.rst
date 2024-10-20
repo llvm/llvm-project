@@ -1288,6 +1288,34 @@ by explicitly marking the ``size`` parameter as sanitized. See the
     delete[] ptr;
   }
 
+.. _optin-taint-TaintedDiv:
+
+optin.taint.TaintedDiv (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""
+This checker warns when the denominator in a division
+operation is a tainted (potentially attacker controlled) value.
+If the attacker can set the denominator to 0, a runtime error can
+be triggered. The checker warns when the denominator is a tainted
+value and the analyzer cannot prove that it is not 0. This warning
+is more pessimistic than the :ref:`core-DivideZero` checker
+which warns only when it can prove that the denominator is 0.
+
+.. code-block:: c
+
+  int vulnerable(int n) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    return n / size; // warn: Division by a tainted value, possibly zero
+  }
+
+  int not_vulnerable(int n) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    if (!size)
+      return 0;
+    return n / size; // no warning
+  }
+
 .. _security-checkers:
 
 security
@@ -1543,6 +1571,49 @@ Warn on ``mmap()`` calls with both writable and executable access.
    //       exploitable memory regions, which could be overwritten with malicious
    //       code
  }
+
+.. _security-PointerSub:
+
+security.PointerSub (C)
+"""""""""""""""""""""""
+Check for pointer subtractions on two pointers pointing to different memory
+chunks. According to the C standard §6.5.6 only subtraction of pointers that
+point into (or one past the end) the same array object is valid (for this
+purpose non-array variables are like arrays of size 1). This checker only
+searches for different memory objects at subtraction, but does not check if the
+array index is correct. Furthermore, only cases are reported where
+stack-allocated objects are involved (no warnings on pointers to memory
+allocated by `malloc`).
+
+.. code-block:: c
+
+ void test() {
+   int a, b, c[10], d[10];
+   int x = &c[3] - &c[1];
+   x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
+   x = (&a + 1) - &a;
+   x = &b - &a; // warn: 'a' and 'b' are different variables
+ }
+
+ struct S {
+   int x[10];
+   int y[10];
+ };
+
+ void test1() {
+   struct S a[10];
+   struct S b;
+   int d = &a[4] - &a[6];
+   d = &a[0].x[3] - &a[0].x[1];
+   d = a[0].y - a[0].x; // warn: 'S.b' and 'S.a' are different objects
+   d = (char *)&b.y - (char *)&b.x; // warn: different members of the same object
+   d = (char *)&b.y - (char *)&b; // warn: object of type S is not the same array as a member of it
+ }
+
+There may be existing applications that use code like above for calculating
+offsets of members in a structure, using pointer subtractions. This is still
+undefined behavior according to the standard and code like this can be replaced
+with the `offsetof` macro.
 
 .. _security-putenv-stack-array:
 
@@ -2761,49 +2832,6 @@ Check for pointer arithmetic on locations other than array elements.
    p = &x + 1; // warn
  }
 
-.. _alpha-core-PointerSub:
-
-alpha.core.PointerSub (C)
-"""""""""""""""""""""""""
-Check for pointer subtractions on two pointers pointing to different memory
-chunks. According to the C standard §6.5.6 only subtraction of pointers that
-point into (or one past the end) the same array object is valid (for this
-purpose non-array variables are like arrays of size 1). This checker only
-searches for different memory objects at subtraction, but does not check if the
-array index is correct. Furthermore, only cases are reported where
-stack-allocated objects are involved (no warnings on pointers to memory
-allocated by `malloc`).
-
-.. code-block:: c
-
- void test() {
-   int a, b, c[10], d[10];
-   int x = &c[3] - &c[1];
-   x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
-   x = (&a + 1) - &a;
-   x = &b - &a; // warn: 'a' and 'b' are different variables
- }
-
- struct S {
-   int x[10];
-   int y[10];
- };
-
- void test1() {
-   struct S a[10];
-   struct S b;
-   int d = &a[4] - &a[6];
-   d = &a[0].x[3] - &a[0].x[1];
-   d = a[0].y - a[0].x; // warn: 'S.b' and 'S.a' are different objects
-   d = (char *)&b.y - (char *)&b.x; // warn: different members of the same object
-   d = (char *)&b.y - (char *)&b; // warn: object of type S is not the same array as a member of it
- }
-
-There may be existing applications that use code like above for calculating
-offsets of members in a structure, using pointer subtractions. This is still
-undefined behavior according to the standard and code like this can be replaced
-with the `offsetof` macro.
-
 .. _alpha-core-StackAddressAsyncEscape:
 
 alpha.core.StackAddressAsyncEscape (ObjC)
@@ -3343,12 +3371,23 @@ Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmem
 
 alpha.unix.cstring.NotNullTerminated (C)
 """"""""""""""""""""""""""""""""""""""""
-Check for arguments which are not null-terminated strings; applies to: ``strlen, strnlen, strcpy, strncpy, strcat, strncat, wcslen, wcsnlen``.
+Check for arguments which are not null-terminated strings;
+applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
+
+Only very fundamental cases are detected where the passed memory block is
+absolutely different from a null-terminated string. This checker does not
+find if a memory buffer is passed where the terminating zero character
+is missing.
 
 .. code-block:: c
 
- void test() {
-   int y = strlen((char *)&test); // warn
+ void test1() {
+   int l = strlen((char *)&test); // warn
+ }
+
+ void test2() {
+ label:
+   int l = strlen((char *)&&label); // warn
  }
 
 .. _alpha-unix-cstring-OutOfBounds:
@@ -3441,6 +3480,27 @@ Check for non-determinism caused by sorting of pointers.
 
 alpha.WebKit
 ^^^^^^^^^^^^
+
+.. _alpha-webkit-NoUncheckedPtrMemberChecker:
+
+alpha.webkit.NoUncheckedPtrMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to an object which supports CheckedPtr or CheckedRef can't be used as class members. Only CheckedPtr, CheckedRef, RefPtr, or Ref are allowed.
+
+.. code-block:: cpp
+
+ struct CheckableObj {
+   void incrementPtrCount() {}
+   void decrementPtrCount() {}
+ };
+
+ struct Foo {
+   CheckableObj* ptr; // warn
+   CheckableObj& ptr; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
 
 .. _alpha-webkit-UncountedCallArgsChecker:
 

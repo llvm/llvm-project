@@ -290,11 +290,6 @@ def PointerArithChecker : Checker<"PointerArithm">,
            "elements">,
   Documentation<HasDocumentation>;
 
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
-  Documentation<HasDocumentation>;
-
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
   HelpText<"Check for division by variable that is later compared against 0. "
            "Either the comparison is useless or there is division by zero.">,
@@ -1003,6 +998,11 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls with both writable and executable access">,
   Documentation<HasDocumentation>;
 
+def PointerSubChecker : Checker<"PointerSub">,
+  HelpText<"Check for pointer subtractions on two pointers pointing to "
+           "different memory chunks">,
+  Documentation<HasDocumentation>;
+
 def PutenvStackArray : Checker<"PutenvStackArray">,
   HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
            "an automatic (stack-allocated) array as the argument.">,
@@ -1703,6 +1703,12 @@ def TaintedAllocChecker: Checker<"TaintedAlloc">,
   Dependencies<[DynamicMemoryModeling, TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
+def TaintedDivChecker: Checker<"TaintedDiv">,
+  HelpText<"Check for divisions where the denominator is tainted "
+           "(attacker controlled) and might be 0.">,
+  Dependencies<[TaintPropagationChecker]>,
+  Documentation<HasDocumentation>;
+
 } // end "optin.taint"
 
 //===----------------------------------------------------------------------===//
@@ -1763,6 +1769,10 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 } // end webkit
 
 let ParentPackage = WebKitAlpha in {
+
+def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
+  HelpText<"Check for no unchecked member variables.">,
+  Documentation<HasDocumentation>;
 
 def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
   HelpText<"Check uncounted call arguments.">,

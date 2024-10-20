@@ -62,3 +62,23 @@ noVRegs: false
 name:            TestNoVRegsOverrideTrue
 noVRegs: true
 ...
+---
+# CHECK-LABEL: name: TestHasFakeUses
+# CHECK: hasFakeUses: false
+# CHECK: ...
+name:            TestHasFakeUses
+...
+---
+# CHECK-LABEL: name: TestHasFakeUsesOverride
+# CHECK: hasFakeUses: false
+# CHECK: ...
+name:            TestHasFakeUsesOverride
+hasFakeUses: false
+...
+---
+# CHECK-LABEL: name: TestHasFakeUsesOverrideTrue
+# CHECK: hasFakeUses: true
+# CHECK: ...
+name:            TestHasFakeUsesOverrideTrue
+hasFakeUses: true
+...

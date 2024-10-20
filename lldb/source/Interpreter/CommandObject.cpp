@@ -127,16 +127,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
       if (options->VerifyOptions(result))
         return true;
     } else {
-      const char *error_cstr = error.AsCString();
-      if (error_cstr) {
-        // We got an error string, lets use that
-        result.AppendError(error_cstr);
-      } else {
-        // No error string, output the usage information into result
-        options->GenerateOptionUsage(
-            result.GetErrorStream(), *this,
-            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
-      }
+      result.SetError(error.takeError());
     }
     result.SetStatus(eReturnStatusFailed);
     return false;

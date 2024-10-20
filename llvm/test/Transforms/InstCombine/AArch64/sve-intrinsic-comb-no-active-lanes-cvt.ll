@@ -7,7 +7,7 @@ define <vscale x 8 x bfloat> @test_fcvt_bf16_f32(<vscale x 8 x bfloat> %a, <vsca
 ; CHECK-SAME: <vscale x 8 x bfloat> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) {
 ; CHECK-NEXT:    ret <vscale x 8 x bfloat> [[A]]
 ;
-  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32.v2(<vscale x 8 x bfloat> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
   ret <vscale x 8 x bfloat> %out
 }
 
@@ -88,7 +88,7 @@ define <vscale x 8 x bfloat> @test_fcvtnt_bf16_f32(<vscale x 8 x bfloat> %a, <vs
 ; CHECK-SAME: <vscale x 8 x bfloat> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) {
 ; CHECK-NEXT:    ret <vscale x 8 x bfloat> [[A]]
 ;
-  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32.v2(<vscale x 8 x bfloat> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
   ret <vscale x 8 x bfloat> %out
 }
 

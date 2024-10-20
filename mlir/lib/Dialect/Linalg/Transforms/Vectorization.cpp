@@ -250,6 +250,32 @@ private:
                            LinalgOp linalgOp,
                            std::optional<AffineMap> maybeMaskingMap);
 
+  /// Check whether this permutation map can be used for masking. At the
+  /// moment we only make sure that there are no broadcast dimensions, but this
+  /// might change if indexing maps evolve.
+  bool isValidMaskingMap(AffineMap maskingMap) {
+    return maskingMap.getBroadcastDims().size() == 0;
+  }
+
+  /// Turn the input indexing map into a valid masking map.
+  ///
+  /// The input indexing map may contain "zero" results, e.g.:
+  ///    (d0, d1, d2, d3) -> (d2, d1, d0, 0)
+  /// Applying such maps to canonical vector shapes like this one:
+  ///    (1, 16, 16, 4)
+  /// would yield an invalid vector shape like this:
+  ///    (16, 16, 1, 0)
+  /// Instead, drop the broadcasting dims that make no sense for masking perm.
+  /// maps:
+  ///    (d0, d1, d2, d3) -> (d2, d1, d0)
+  /// This way, the corresponding vector/mask type will be:
+  ///    vector<16x16x1xty>
+  /// rather than this invalid Vector type:
+  ///    vector<16x16x1x0xty>
+  AffineMap getMaskingMapFromIndexingMap(AffineMap &indexingMap) {
+    return indexingMap.dropZeroResults();
+  }
+
   // Holds the compile-time static sizes of the iteration space to vectorize.
   // Dynamic dimensions are represented using ShapedType::kDynamic.
   SmallVector<int64_t> iterSpaceStaticSizes;
@@ -360,6 +386,10 @@ VectorizationState::initState(RewriterBase &rewriter, LinalgOp linalgOp,
 Value VectorizationState::getOrCreateMaskFor(
     RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
     std::optional<AffineMap> maybeMaskingMap) {
+
+  assert((!maybeMaskingMap || isValidMaskingMap(*maybeMaskingMap)) &&
+         "Ill-formed masking map.");
+
   // No mask is needed if the operation is not maskable.
   auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
   if (!maskableOp)
@@ -429,20 +459,8 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
   LDBG("Trying to mask: " << *opToMask << "\n");
 
   std::optional<AffineMap> maybeMaskingMap = std::nullopt;
-  // The Operand indexing map may contain "zero" results, e.g.:
-  //    (d0, d1, d2, d3) -> (d0, d1, d2, 0)
-  // When applied to canonical vector shapes like these:
-  //    (1, 16, 16, 4)
-  // we would get:
-  //    (1, 16, 16, 0)
-  // Instead, we should extract the following map permutation map for masking:
-  //    (d0, d1, d2, d3) -> (d0, d1, d2)
-  // This way, the corresponding vector/mask type will be:
-  //    vector<1x16x16xty>
-  // rather than:
-  //    vector<1x16x16x0xty>
   if (maybeIndexingMap)
-    maybeMaskingMap = maybeIndexingMap->dropZeroResults();
+    maybeMaskingMap = getMaskingMapFromIndexingMap(*maybeIndexingMap);
 
   // Create or retrieve mask for this operation.
   Value mask =
@@ -840,14 +858,15 @@ enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
 /// TODO: Statically shaped loops + vector masking
 static uint64_t getTrailingNonUnitLoopDimIdx(LinalgOp linalgOp) {
   SmallVector<int64_t> loopRanges = linalgOp.getStaticLoopRanges();
-  assert(linalgOp.hasDynamicShape() ||
-         llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) ==
-                 1 &&
-             "For statically shaped Linalg Ops, only one "
-             "non-unit loop dim is expected");
+  assert(
+      (linalgOp.hasDynamicShape() ||
+       llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) == 1) &&
+      "For statically shaped Linalg Ops, only one "
+      "non-unit loop dim is expected");
+  assert(loopRanges.size() != 0 && "Empty loops, nothing to analyse.");
 
   size_t idx = loopRanges.size() - 1;
-  for (; idx >= 0; idx--)
+  for (; idx != 0; idx--)
     if (loopRanges[idx] != 1)
       break;
 
@@ -1380,17 +1399,8 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
     SmallVector<Value> indices(linalgOp.getShape(opOperand).size(), zero);
 
-    // Make sure that the in_bounds attribute corresponding to a broadcast dim
-    // is `true`
-    SmallVector<unsigned> broadcastedDims = readMap.getBroadcastDims();
-    SmallVector<bool> inBounds(readType.getRank(), false);
-
-    for (auto idx : broadcastedDims)
-      inBounds[idx] = true;
-
     Operation *read = rewriter.create<vector::TransferReadOp>(
-        loc, readType, opOperand->get(), indices, readMap,
-        ArrayRef<bool>(inBounds));
+        loc, readType, opOperand->get(), indices, readMap);
     read = state.maskOperation(rewriter, read, linalgOp, indexingMap);
     Value readValue = read->getResult(0);
 
@@ -2092,6 +2102,10 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
     Operation *op, ArrayRef<int64_t> inputVectorSizes,
     ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
     bool flatten1DDepthwiseConv) {
+
+  if (!hasVectorizationImpl(op))
+    return failure();
+
   if (failed(vectorizeScalableVectorPrecondition(op, inputVectorSizes,
                                                  inputScalableVecDims)))
     return failure();
@@ -2127,6 +2141,11 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
         op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
     rewriter.replaceOp(op, expanded);
   }
+}
+
+bool mlir::linalg::hasVectorizationImpl(Operation *op) {
+  return isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp, tensor::UnPackOp>(
+      op);
 }
 
 /// Emit a suitable vector form for an operation. If provided,

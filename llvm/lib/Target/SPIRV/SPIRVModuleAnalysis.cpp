@@ -282,7 +282,7 @@ void SPIRVModuleAnalysis::collectGlobalEntities(
 void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
   std::vector<SPIRV::DTSortableEntry *> DepsGraph;
 
-  GR->buildDepsGraph(DepsGraph, SPVDumpDeps ? MMI : nullptr);
+  GR->buildDepsGraph(DepsGraph, TII, SPVDumpDeps ? MMI : nullptr);
 
   collectGlobalEntities(
       DepsGraph, SPIRV::MB_TypeConstVars,
@@ -436,7 +436,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           namespace NS = SPIRV::NonSemanticExtInst;
           static constexpr int64_t GlobalNonSemanticDITy[] = {
               NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
-              NS::DebugTypeBasic};
+              NS::DebugTypeBasic, NS::DebugTypePointer};
           bool IsGlobalDI = false;
           for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
             IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
@@ -691,7 +691,9 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Provided by all supported Vulkan versions.
   addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
-                    Capability::Float64, Capability::GroupNonUniform});
+                    Capability::Float64, Capability::GroupNonUniform,
+                    Capability::Image1D, Capability::SampledBuffer,
+                    Capability::ImageBuffer});
 }
 
 } // namespace SPIRV
@@ -776,12 +778,13 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   }
 
   // Has optional access qualifier.
-  // TODO: check if it's OpenCL's kernel.
-  if (MI.getNumOperands() > 8 &&
-      MI.getOperand(8).getImm() == SPIRV::AccessQualifier::ReadWrite)
-    Reqs.addRequirements(SPIRV::Capability::ImageReadWrite);
-  else
-    Reqs.addRequirements(SPIRV::Capability::ImageBasic);
+  if (ST.isOpenCLEnv()) {
+    if (MI.getNumOperands() > 8 &&
+        MI.getOperand(8).getImm() == SPIRV::AccessQualifier::ReadWrite)
+      Reqs.addRequirements(SPIRV::Capability::ImageReadWrite);
+    else
+      Reqs.addRequirements(SPIRV::Capability::ImageBasic);
+  }
 }
 
 // Add requirements for handling atomic float instructions
@@ -1199,6 +1202,21 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    break;
+  case SPIRV::OpArithmeticFenceEXT:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence))
+      report_fatal_error("OpArithmeticFenceEXT requires the "
+                         "following SPIR-V extension: SPV_EXT_arithmetic_fence",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence);
+    Reqs.addCapability(SPIRV::Capability::ArithmeticFenceEXT);
+    break;
+  case SPIRV::OpControlBarrierArriveINTEL:
+  case SPIRV::OpControlBarrierWaitINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_split_barrier)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_split_barrier);
+      Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
+    }
     break;
   default:
     break;
