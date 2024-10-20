@@ -175,5 +175,41 @@ define double @erf_poison() {
   ret double %r
 }
 
+define float @erff_const_strictfp() {
+; CHECK-LABEL: define float @erff_const_strictfp() {
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 5.000000e-01) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @erff(float 5.000000e-01) strictfp
+  ret float %r
+}
+
+define double @erf_const_strictfp() {
+; CHECK-LABEL: define double @erf_const_strictfp() {
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double -5.000000e-01) #[[ATTR2]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @erf(double -5.000000e-01) strictfp
+  ret double %r
+}
+
+define float @erff_nan_strictfp() {
+; CHECK-LABEL: define float @erff_nan_strictfp() {
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 0x7FF8000000000000) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @erff(float 0x7FF8000000000000) strictfp
+  ret float %r
+}
+
+define double @erf_nan_strictfp() {
+; CHECK-LABEL: define double @erf_nan_strictfp() {
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double 0x7FF8000000000000) #[[ATTR2]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @erf(double 0x7FF8000000000000) strictfp
+  ret double %r
+}
+
 declare float @erff(float) willreturn
 declare double @erf(double) willreturn
