@@ -276,8 +276,8 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
                                 InputSectionBase &section) {
-  Defined *s = makeDefined(section.file, name, STB_LOCAL, STV_DEFAULT, type,
-                           value, size, &section);
+  Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
+                           type, value, size, &section);
   if (ctx.in.symTab)
     ctx.in.symTab->addSymbol(s);
 
@@ -4681,8 +4681,8 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
-  s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
-                          STT_NOTYPE, val,
+  s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+                          stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);
