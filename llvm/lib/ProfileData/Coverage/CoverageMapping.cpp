@@ -136,16 +136,14 @@ Counter CounterExpressionBuilder::subtract(Counter LHS, Counter RHS,
 }
 
 Counter CounterExpressionBuilder::replace(Counter C, const ReplaceMap &Map) {
-  auto I = Map.find(C);
-
-  // Replace C with the Map even if C is Expression.
-  if (I != Map.end())
+  // Replace C with the value found in Map even if C is Expression.
+  if (auto I = Map.find(C); I != Map.end())
     return I->second;
 
-  // Traverse only Expression.
   if (!C.isExpression())
     return C;
 
+  // Traverse both sides of Expression.
   auto CE = Expressions[C.getExpressionID()];
   auto NewLHS = replace(CE.LHS, Map);
   auto NewRHS = replace(CE.RHS, Map);
@@ -161,7 +159,7 @@ Counter CounterExpressionBuilder::replace(Counter C, const ReplaceMap &Map) {
   }
 
   // Reconfirm if the reconstructed expression would hit the Map.
-  if ((I = Map.find(C)) != Map.end())
+  if (auto I = Map.find(C); I != Map.end())
     return I->second;
 
   return C;
