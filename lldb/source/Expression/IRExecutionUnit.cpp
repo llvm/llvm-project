@@ -16,6 +16,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "Plugins/SymbolFile/DWARF/DWARFBaseDIE.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
@@ -37,6 +39,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <optional>
 
 using namespace lldb_private;
@@ -781,6 +785,38 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   function_options.include_inlines = false;
 
   for (const ConstString &name : names) {
+    auto ref = name.GetStringRef();
+    if (ref.consume_front("$__lldb_func_")) {
+      uintptr_t module_ptr;
+      if (ref.consumeInteger(0, module_ptr))
+        return LLDB_INVALID_ADDRESS;
+
+      auto *mod = (lldb_private::Module *)module_ptr;
+      auto *sym = mod->GetSymbolFile();
+      assert(mod && sym);
+
+      if (!ref.consume_front(":"))
+        return LLDB_INVALID_ADDRESS;
+
+      lldb::user_id_t die_id;
+      if (ref.consumeInteger(10, die_id))
+        return LLDB_INVALID_ADDRESS;
+
+      auto *dwarf = llvm::dyn_cast<plugin::dwarf::SymbolFileDWARF>(sym);
+      if (!dwarf)
+        return LLDB_INVALID_ADDRESS;
+
+      auto die = dwarf->GetDIE(die_id);
+      Module::LookupInfo lookup_info(
+          ConstString(die.GetMangledName()),
+          lldb::FunctionNameType::eFunctionNameTypeAny,
+          lldb::LanguageType::eLanguageTypeC_plus_plus);
+      SymbolContextList sc_list;
+      dwarf->FindFunctions(lookup_info, {}, false, sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
+    }
+
     if (sc.module_sp) {
       SymbolContextList sc_list;
       sc.module_sp->FindFunctions(name, CompilerDeclContext(),

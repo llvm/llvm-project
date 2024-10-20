@@ -9,19 +9,20 @@
 // Implements generic name mangling support for blocks and Objective-C.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/AST/Attr.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/Mangle.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -126,7 +127,7 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
 
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
   // over all other naming in the .o file.
-  if (D->hasAttr<AsmLabelAttr>())
+  if (D->hasAttr<AsmLabelAttr>() || D->hasAttr<StructorMangledNamesAttr>())
     return true;
 
   // Declarations that don't have identifier names always need to be mangled.
@@ -139,6 +140,68 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
 void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   const ASTContext &ASTContext = getASTContext();
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
+
+  if (const StructorMangledNamesAttr *SMA =
+          D->getAttr<StructorMangledNamesAttr>()) {
+    CXXConstructorDecl const *Ctor = dyn_cast<CXXConstructorDecl>(D);
+    CXXDestructorDecl const *Dtor = dyn_cast<CXXDestructorDecl>(D);
+    assert(Ctor || Dtor);
+    enum CtorDtor {
+      None = -1,
+      Deleting = 0,
+      Base,
+      Complete,
+      Allocating
+    } CtorDtorVariant = None;
+
+    // Map ctor/dtor variant to a the variant that LLDB encoded in the
+    // special identifier. I.e., a number between [0-3].
+    if (Dtor) {
+      switch (GD.getDtorType()) {
+      case Dtor_Complete:
+        CtorDtorVariant = Complete;
+        break;
+      case Dtor_Base:
+        CtorDtorVariant = Base;
+        break;
+      case Dtor_Deleting:
+      case Dtor_Comdat:
+        llvm_unreachable("");
+      }
+    } else if (Ctor) {
+      switch (GD.getCtorType()) {
+      case Ctor_Complete:
+        CtorDtorVariant = Complete;
+        break;
+      case Ctor_Base:
+        CtorDtorVariant = Base;
+        break;
+      case Ctor_DefaultClosure:
+      case Ctor_CopyingClosure:
+      case Ctor_Comdat:
+        llvm_unreachable("");
+      }
+    }
+
+    // Parse the LLDB [variant -> special name] mappings.
+    llvm::DenseMap<CtorDtor, llvm::StringRef> names;
+    for (auto name : SMA->mangledNames()) {
+      auto [structor_variant, mangled_name] = name.split(':');
+      auto variant = llvm::StringSwitch<CtorDtor>(structor_variant)
+                         .Case("0", CtorDtor::Deleting)
+                         .Case("1", CtorDtor::Base)
+                         .Case("2", CtorDtor::Complete)
+                         .Case("3", CtorDtor::Complete)
+                         .Default(CtorDtor::None);
+      names[variant] = mangled_name;
+    }
+
+    assert(CtorDtorVariant != CtorDtor::None);
+
+    // Pick the mapping
+    Out << names[CtorDtorVariant];
+    return;
+  }
 
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
   // over all other naming in the .o file.

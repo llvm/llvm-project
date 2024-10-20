@@ -10,6 +10,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -7735,7 +7736,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     const char *mangled_name, const CompilerType &method_clang_type,
     lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-    bool is_explicit, bool is_attr_used, bool is_artificial) {
+    bool is_explicit, bool is_attr_used, bool is_artificial,
+    std::vector<std::string> const &structor_names) {
   if (!type || !method_clang_type.IsValid() || name.empty())
     return nullptr;
 
@@ -7788,6 +7790,11 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_dtor_decl->setImplicit(is_artificial);
     cxx_dtor_decl->setInlineSpecified(is_inline);
     cxx_dtor_decl->setConstexprKind(ConstexprSpecKind::Unspecified);
+    if (!structor_names.empty()) {
+      auto names = llvm::to_vector_of<llvm::StringRef>(structor_names);
+      cxx_dtor_decl->addAttr(clang::StructorMangledNamesAttr::CreateImplicit(
+          getASTContext(), names.data(), names.size()));
+    }
     cxx_method_decl = cxx_dtor_decl;
   } else if (decl_name == cxx_record_decl->getDeclName()) {
     cxx_ctor_decl = clang::CXXConstructorDecl::CreateDeserialized(
@@ -7802,6 +7809,12 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_ctor_decl->setConstexprKind(ConstexprSpecKind::Unspecified);
     cxx_ctor_decl->setNumCtorInitializers(0);
     cxx_ctor_decl->setExplicitSpecifier(explicit_spec);
+    if (!structor_names.empty()) {
+      auto names = llvm::to_vector_of<llvm::StringRef>(structor_names);
+      cxx_ctor_decl->addAttr(clang::StructorMangledNamesAttr::CreateImplicit(
+          getASTContext(), names.data(), names.size()));
+    }
+
     cxx_method_decl = cxx_ctor_decl;
   } else {
     clang::StorageClass SC = is_static ? clang::SC_Static : clang::SC_None;

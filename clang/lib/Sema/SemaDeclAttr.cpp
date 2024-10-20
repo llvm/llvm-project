@@ -5539,6 +5539,25 @@ static void handleMSConstexprAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) MSConstexprAttr(S.Context, AL));
 }
 
+static void handleStructorNamesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  SmallVector<StringRef, 4> Tags;
+  for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
+    StringRef Tag;
+    if (!S.checkStringLiteralArgumentAttr(AL, I, Tag))
+      return;
+    Tags.push_back(Tag);
+  }
+
+  if (!AL.checkAtLeastNumArgs(S, 1))
+    return;
+
+  // Store tags without duplicates.
+  Tags.erase(std::unique(Tags.begin(), Tags.end()), Tags.end());
+
+  D->addAttr(::new (S.Context) StructorMangledNamesAttr(
+      S.Context, AL, Tags.data(), Tags.size()));
+}
+
 static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<StringRef, 4> Tags;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
@@ -6983,6 +7002,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
 
+  case ParsedAttr::AT_StructorMangledNames:
+    handleStructorNamesAttr(S, D, AL);
+    break;
   case ParsedAttr::AT_AbiTag:
     handleAbiTagAttr(S, D, AL);
     break;

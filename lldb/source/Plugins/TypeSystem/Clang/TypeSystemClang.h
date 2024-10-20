@@ -980,7 +980,8 @@ public:
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       const char *mangled_name, const CompilerType &method_type,
       lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-      bool is_explicit, bool is_attr_used, bool is_artificial);
+      bool is_explicit, bool is_attr_used, bool is_artificial,
+      std::vector<std::string> const &structor_names = {});
 
   void AddMethodOverridesForCXXRecordType(lldb::opaque_compiler_type_t type);
 

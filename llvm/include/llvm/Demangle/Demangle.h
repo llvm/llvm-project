@@ -10,6 +10,7 @@
 #define LLVM_DEMANGLE_DEMANGLE_H
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -107,6 +108,8 @@ struct ItaniumPartialDemangler {
   /// If this function has any cv or reference qualifiers. These imply that
   /// the function is a non-static member function.
   bool hasFunctionQualifiers() const;
+
+  std::optional<int> getCtorDtorVariant() const;
 
   /// If this symbol describes a constructor or destructor.
   bool isCtorOrDtor() const;

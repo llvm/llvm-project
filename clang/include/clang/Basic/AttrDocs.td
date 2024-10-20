@@ -3568,6 +3568,11 @@ manipulating bits of the enumerator when issuing warnings.
   }];
 }
 
+def StructorMangledNamesDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{ TODO }];
+}
+
 def AsmLabelDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

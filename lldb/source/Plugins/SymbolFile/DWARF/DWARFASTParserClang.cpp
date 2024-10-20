@@ -45,6 +45,7 @@
 #include "clang/AST/Type.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <map>
 #include <memory>
@@ -1040,6 +1041,62 @@ bool DWARFASTParserClang::ParseObjCMethod(
   return true;
 }
 
+static bool IsStructorDIE(DWARFDIE const &die, DWARFDIE const &parent_die) {
+  llvm::StringRef name = die.GetName();
+  llvm::StringRef parent_name = parent_die.GetName();
+
+  name.consume_front("~");
+  parent_name = parent_name.substr(0, parent_name.find('<'));
+
+  return name == parent_name;
+}
+
+/// Given a DIE with an external definition (and thus no linkage name)
+/// find the definitions by lookup into the DWARF name index.
+/// We check the DW_AT_specification for each DIE in the index with
+/// the same name as the specified 'die' until we find one that references
+/// 'die'. Then return that linkage name. If no such DIE is found in the index,
+/// returns nullptr.
+static std::vector<std::string> FindStructorNames(DWARFDIE die) {
+  auto *dwarf = die.GetDWARF();
+  assert(dwarf);
+
+  ConstString func_name(die.GetName());
+  assert(func_name);
+
+  SymbolContextList sc_list;
+  Module::LookupInfo lookup_info(func_name,
+                                 FunctionNameType::eFunctionNameTypeMethod |
+                                     FunctionNameType::eFunctionNameTypeFull,
+                                 LanguageType::eLanguageTypeUnknown);
+  dwarf->FindFunctions(lookup_info, {}, true, sc_list);
+
+  std::vector<std::string> structor_names;
+  for (auto const &sc : sc_list.SymbolContexts()) {
+    if (auto *func = sc.function) {
+      auto func_die = dwarf->GetDIE(func->GetID());
+      if (!func_die.IsValid())
+        continue;
+
+      auto spec_die =
+          func_die.GetAttributeValueAsReferenceDIE(DW_AT_specification);
+      if (spec_die.IsValid() && spec_die == die) {
+        llvm::ItaniumPartialDemangler D;
+        const bool success = !D.partialDemangle(func_die.GetMangledName());
+        assert(success);
+        const auto maybe_structor_kind = D.getCtorDtorVariant();
+        assert(maybe_structor_kind);
+
+        structor_names.push_back(
+            llvm::formatv("{0}:$__lldb_func_{1}:{2}", *maybe_structor_kind,
+                          func_die.GetModule().get(), func_die.GetID()));
+      }
+    }
+  }
+
+  return structor_names;
+}
+
 std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     const DWARFDIE &die, CompilerType clang_type,
     const ParsedDWARFTypeAttributes &attrs, const DWARFDIE &decl_ctx_die,
@@ -1140,11 +1197,15 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
   const auto accessibility =
       attrs.accessibility == eAccessNone ? eAccessPublic : attrs.accessibility;
 
+  std::vector<std::string> structor_names;
+  if (IsStructorDIE(die, decl_ctx_die))
+    structor_names = FindStructorNames(die);
+
   clang::CXXMethodDecl *cxx_method_decl = m_ast.AddMethodToCXXRecordType(
       class_opaque_type.GetOpaqueQualType(), attrs.name.GetCString(),
       attrs.mangled_name, clang_type, accessibility, attrs.is_virtual,
       is_static, attrs.is_inline, attrs.is_explicit, is_attr_used,
-      attrs.is_artificial);
+      attrs.is_artificial, structor_names);
 
   if (cxx_method_decl) {
     LinkDeclContextToDIE(cxx_method_decl, die);
@@ -1330,19 +1391,10 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         lldbassert(function_decl);
 
         if (function_decl) {
-          // Attach an asm(<mangled_name>) label to the FunctionDecl.
-          // This ensures that clang::CodeGen emits function calls
-          // using symbols that are mangled according to the DW_AT_linkage_name.
-          // If we didn't do this, the external symbols wouldn't exactly
-          // match the mangled name LLDB knows about and the IRExecutionUnit
-          // would have to fall back to searching object files for
-          // approximately matching function names. The motivating
-          // example is generating calls to ABI-tagged template functions.
-          // This is done separately for member functions in
-          // AddMethodToCXXRecordType.
-          if (attrs.mangled_name)
-            function_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
-                m_ast.getASTContext(), attrs.mangled_name, /*literal=*/false));
+          auto ident = llvm::formatv("$__lldb_func_{0}:{1}",
+                                     die.GetModule().get(), die.GetID());
+          function_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
+              m_ast.getASTContext(), ident.str(), /*literal=*/false));
 
           LinkDeclContextToDIE(function_decl, die);
 

@@ -784,6 +784,14 @@ def AbiTag : Attr {
   let Documentation = [AbiTagsDocs];
 }
 
+def StructorMangledNames : Attr {
+  let Spellings = [Clang<"structor_names">];
+  let Args = [VariadicStringArgument<"MangledNames">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [StructorMangledNamesDocs];
+}
+
+
 def AddressSpace : TypeAttr {
   let Spellings = [Clang<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
