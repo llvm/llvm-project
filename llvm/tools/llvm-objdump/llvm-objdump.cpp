@@ -2322,9 +2322,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           if (Disassembled && DT->InstrAnalysis) {
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
-            bool PrintTarget = DT->InstrAnalysis->evaluateBranch(Inst, SectionAddr + Index, Size, Target) || 
-              DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target);
-
+            bool PrintTarget = DT->InstrAnalysis->evaluateBranch(Inst, SectionAddr + Index, Size, Target);
+            if (DT->SubtargetInfo->getTargetTriple().isRISCV())
+              PrintTarget = DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target);
             if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(
