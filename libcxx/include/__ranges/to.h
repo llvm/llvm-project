@@ -10,7 +10,7 @@
 #ifndef _LIBCPP___RANGES_TO_H
 #define _LIBCPP___RANGES_TO_H
 
-#include <__algorithm/ranges_copy.h>
+#include <__algorithm/ranges_for_each.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/derived_from.h>
@@ -54,19 +54,26 @@ constexpr bool __reservable_container =
     };
 
 template <class _Container, class _Ref>
-constexpr bool __container_insertable = requires(_Container& __c, _Ref&& __ref) {
+constexpr bool __container_appendable = requires(_Container& __c, _Ref&& __ref) {
   requires(
+      requires { __c.emplace_back(std::forward<_Ref>(__ref)); } ||
       requires { __c.push_back(std::forward<_Ref>(__ref)); } ||
+      requires { __c.emplace(__c.end(), std::forward<_Ref>(__ref)); } ||
       requires { __c.insert(__c.end(), std::forward<_Ref>(__ref)); });
 };
 
-template <class _Ref, class _Container>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __container_inserter(_Container& __c) {
-  if constexpr (requires { __c.push_back(std::declval<_Ref>()); }) {
-    return std::back_inserter(__c);
-  } else {
-    return std::inserter(__c, __c.end());
-  }
+template <class _Container>
+_LIBCPP_HIDE_FROM_ABI constexpr auto __container_append(_Container& __c) {
+  return [&__c]<class _Ref>(_Ref&& __ref) {
+    if constexpr (requires { __c.emplace_back(declval<_Ref>()); })
+      __c.emplace_back(std::forward<_Ref>(__ref));
+    else if constexpr (requires { __c.push_back(declval<_Ref>()); })
+      __c.push_back(std::forward<_Ref>(__ref));
+    else if constexpr (requires { __c.emplace(__c.end(), declval<_Ref>()); })
+      __c.emplace(__c.end(), std::forward<_Ref>(__ref));
+    else if constexpr (requires { __c.insert(__c.end(), declval<_Ref>()); })
+      __c.insert(__c.end(), std::forward<_Ref>(__ref));
+  };
 }
 
 // Note: making this a concept allows short-circuiting the second condition.
@@ -113,13 +120,13 @@ template <class _Container, input_range _Range, class... _Args>
 
     // Case 4 -- default-construct (or construct from the extra arguments) and insert, reserving the size if possible.
     else if constexpr (constructible_from<_Container, _Args...> &&
-                       __container_insertable<_Container, range_reference_t<_Range>>) {
+                       __container_appendable<_Container, range_reference_t<_Range>>) {
       _Container __result(std::forward<_Args>(__args)...);
       if constexpr (sized_range<_Range> && __reservable_container<_Container>) {
         __result.reserve(static_cast<range_size_t<_Container>>(ranges::size(__range)));
       }
 
-      ranges::copy(__range, ranges::__container_inserter<range_reference_t<_Range>>(__result));
+      ranges::for_each(__range, ranges::__container_append(__result));
 
       return __result;
 
