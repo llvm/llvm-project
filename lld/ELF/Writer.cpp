@@ -1690,10 +1690,9 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
         // finalizeAddressDependentContent, making .rela.dyn no longer empty.
         // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
         // we would fail to remove it here.
-        if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs)
-          if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
-            if (relSec == ctx.mainPart->relaDyn.get())
-              return false;
+        if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs &&
+            sec == ctx.mainPart->relaDyn.get())
+          return false;
         unused.insert(sec);
         return true;
       });
