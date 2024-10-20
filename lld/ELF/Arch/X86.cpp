@@ -181,7 +181,7 @@ void X86::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void X86::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An x86 entry is the address of the ifunc resolver function.
-  write32le(buf, s.getVA());
+  write32le(buf, s.getVA(ctx));
 }
 
 RelType X86::getDynRel(RelType type) const {

@@ -624,7 +624,7 @@ encodeOneCrel(Ctx &ctx, raw_svector_ostream &os,
     if (d) {
       SectionBase *section = d->section;
       assert(section->isLive());
-      addend = sym.getVA(addend) - section->getOutputSection()->addr;
+      addend = sym.getVA(ctx, addend) - section->getOutputSection()->addr;
     } else {
       // Encode R_*_NONE(symidx=0).
       symidx = type = addend = 0;

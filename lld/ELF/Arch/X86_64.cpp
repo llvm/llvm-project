@@ -429,7 +429,7 @@ void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An x86 entry is the address of the ifunc resolver function (for -z rel).
   if (ctx.arg.writeAddends)
-    write64le(buf, s.getVA());
+    write64le(buf, s.getVA(ctx));
 }
 
 void X86_64::writePltHeader(uint8_t *buf) const {

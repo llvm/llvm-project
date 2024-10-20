@@ -210,7 +210,7 @@ public:
   bool isInGot(Ctx &ctx) const { return getGotIdx(ctx) != uint32_t(-1); }
   bool isInPlt(Ctx &ctx) const { return getPltIdx(ctx) != uint32_t(-1); }
 
-  uint64_t getVA(int64_t addend = 0) const;
+  uint64_t getVA(Ctx &, int64_t addend = 0) const;
 
   uint64_t getGotOffset(Ctx &) const;
   uint64_t getGotVA(Ctx &) const;
