@@ -567,7 +567,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
           ++DstIndex;
         }
 
-        PhysRegInputs.push_back(PhysReg);
+        PhysRegInputs.push_back(std::move(PhysReg));
       }
 
       if (Op->getName() != "EXTRACT_SUBREG" && DstIndex < Dst.getNumChildren())
