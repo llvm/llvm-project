@@ -2050,12 +2050,7 @@ struct CounterCoverageMappingBuilder
     extendRegion(S->getCond());
 
     Counter ParentCount = getRegion().getCounter();
-    auto [ThenCount, ElseCount] =
-        (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S->getThen()),
-                              (S->getElse() ? getRegionCounter(S->getElse())
-                                            : Counter::getZero()))
-             : getBranchCounterPair(S, ParentCount));
+    auto [ThenCount, ElseCount] = getBranchCounterPair(S, ParentCount);
 
     // Emitting a counter for the condition makes it easier to interpret the
     // counter for the body when looking at the coverage.
@@ -2080,26 +2075,20 @@ struct CounterCoverageMappingBuilder
         fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ElseCount);
       extendRegion(Else);
 
-      Counter ElseOutCount = propagateCounts(ElseCount, Else);
-      if (!llvm::EnableSingleByteCoverage)
-        OutCount = addCounters(OutCount, ElseOutCount);
+      OutCount = addCounters(OutCount, propagateCounts(ElseCount, Else));
 
       if (ThenHasTerminateStmt)
         HasTerminateStmt = true;
-    } else if (!llvm::EnableSingleByteCoverage)
+    } else
       OutCount = addCounters(OutCount, ElseCount);
-
-    if (llvm::EnableSingleByteCoverage)
-      OutCount = getRegionCounter(S);
 
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
     }
 
-    if (!llvm::EnableSingleByteCoverage)
-      // Create Branch Region around condition.
-      createBranchRegion(S->getCond(), ThenCount, ElseCount);
+    // Create Branch Region around condition.
+    createBranchRegion(S->getCond(), ThenCount, ElseCount);
   }
 
   void VisitCXXTryStmt(const CXXTryStmt *S) {

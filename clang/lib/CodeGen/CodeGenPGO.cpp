@@ -366,18 +366,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (Hash.getHashVersion() == PGO_HASH_V1)
       return Base::TraverseIfStmt(If);
 
-    // When single byte coverage mode is enabled, add a counter to then and
-    // else.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : If->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == If->getThen())
-        CounterMap[If->getThen()] = NextCounter++;
-      else if (CS == If->getElse())
-        CounterMap[If->getElse()] = NextCounter++;
-    }
-
     // Otherwise, keep track of which branch we're in while traversing.
     VisitStmt(If);
 
