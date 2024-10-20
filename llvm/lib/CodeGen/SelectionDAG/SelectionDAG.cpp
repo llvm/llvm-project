@@ -7000,10 +7000,10 @@ void SelectionDAG::canonicalizeCommutativeBinop(unsigned Opcode, SDValue &N1,
 
   // Canonicalize:
   //   binop(const, nonconst) -> binop(nonconst, const)
-  SDNode *N1C = isConstantIntBuildVectorOrConstantInt(N1);
-  SDNode *N2C = isConstantIntBuildVectorOrConstantInt(N2);
-  SDNode *N1CFP = isConstantFPBuildVectorOrConstantFP(N1);
-  SDNode *N2CFP = isConstantFPBuildVectorOrConstantFP(N2);
+  bool N1C = isConstantIntBuildVectorOrConstantInt(N1);
+  bool N2C = isConstantIntBuildVectorOrConstantInt(N2);
+  bool N1CFP = isConstantFPBuildVectorOrConstantFP(N1);
+  bool N2CFP = isConstantFPBuildVectorOrConstantFP(N2);
   if ((N1C && !N2C) || (N1CFP && !N2CFP))
     std::swap(N1, N2);
 
@@ -13200,39 +13200,44 @@ bool ShuffleVectorSDNode::isSplatMask(const int *Mask, EVT VT) {
   return true;
 }
 
-// Returns the SDNode if it is a constant integer BuildVector
-// or constant integer.
-SDNode *SelectionDAG::isConstantIntBuildVectorOrConstantInt(SDValue N) const {
-  if (isa<ConstantSDNode>(N))
-    return N.getNode();
+// Returns true if it is a constant integer BuildVector or constant integer,
+// possibly hidden by a bitcast.
+bool SelectionDAG::isConstantIntBuildVectorOrConstantInt(
+    SDValue N, bool AllowOpaques) const {
+  N = peekThroughBitcasts(N);
+
+  if (auto *C = dyn_cast<ConstantSDNode>(N))
+    return AllowOpaques || !C->isOpaque();
+
   if (ISD::isBuildVectorOfConstantSDNodes(N.getNode()))
-    return N.getNode();
+    return true;
+
   // Treat a GlobalAddress supporting constant offset folding as a
   // constant integer.
-  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N))
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(N))
     if (GA->getOpcode() == ISD::GlobalAddress &&
         TLI->isOffsetFoldingLegal(GA))
-      return GA;
+      return true;
+
   if ((N.getOpcode() == ISD::SPLAT_VECTOR) &&
       isa<ConstantSDNode>(N.getOperand(0)))
-    return N.getNode();
-  return nullptr;
+    return true;
+  return false;
 }
 
-// Returns the SDNode if it is a constant float BuildVector
-// or constant float.
-SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
+// Returns true if it is a constant float BuildVector or constant float.
+bool SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
   if (isa<ConstantFPSDNode>(N))
-    return N.getNode();
+    return true;
 
   if (ISD::isBuildVectorOfConstantFPSDNodes(N.getNode()))
-    return N.getNode();
+    return true;
 
   if ((N.getOpcode() == ISD::SPLAT_VECTOR) &&
       isa<ConstantFPSDNode>(N.getOperand(0)))
-    return N.getNode();
+    return true;
 
-  return nullptr;
+  return false;
 }
 
 std::optional<bool> SelectionDAG::isBoolConstant(SDValue N,
