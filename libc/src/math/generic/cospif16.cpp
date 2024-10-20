@@ -7,13 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/cospif16.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "sincosf16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
 LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
@@ -49,9 +53,8 @@ LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
 
   // Numbers greater or equal to 2^10 are integers, or infinity, or NaN
   if (LIBC_UNLIKELY(x_abs >= 0x6400)) {
-    if (LIBC_UNLIKELY(x_abs <= 0x67FF)) {
+    if (LIBC_UNLIKELY(x_abs <= 0x67FF))
       return fputil::cast<float16>((x_abs & 0x1) ? -1.0f : 1.0f);
-    }
 
     // Check for NaN or infintiy values
     if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {

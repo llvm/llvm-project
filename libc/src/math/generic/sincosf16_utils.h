@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF16_UTILS_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF16_UTILS_H
 
@@ -38,7 +39,7 @@ constexpr float SIN_K_PI_OVER_32[64] = {
     -0x1.6a09e6p-1, -0x1.44cf32p-1, -0x1.1c73b4p-1, -0x1.e2b5d4p-2,
     -0x1.87de2ap-2, -0x1.294062p-2, -0x1.8f8b84p-3, -0x1.917a6cp-4};
 
-LIBC_INLINE int32_t range_reduction(float x, float &y) {
+LIBC_INLINE int32_t range_reduction_sincospif16(float x, float &y) {
   float kf = fputil::nearest_integer(x * 32);
   y = fputil::multiply_add<float>(x, 32.0, -kf);
 
@@ -48,7 +49,7 @@ LIBC_INLINE int32_t range_reduction(float x, float &y) {
 LIBC_INLINE void sincospif16_eval(float xf, float &sin_k, float &cos_k,
                                   float &sin_y, float &cosm1_y) {
   float y;
-  int32_t k = range_reduction(xf, y);
+  int32_t k = range_reduction_sincospif16(xf, y);
 
   sin_k = SIN_K_PI_OVER_32[k & 63];
   cos_k = SIN_K_PI_OVER_32[(k + 16) & 63];

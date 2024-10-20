@@ -356,7 +356,6 @@ add_header_library(
   HDRS
     sincosf16_utils.h
   DEPENDS
-    .range_reduction
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.nearest_integer
