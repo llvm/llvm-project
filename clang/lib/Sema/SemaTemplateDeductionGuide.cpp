@@ -989,8 +989,7 @@ TypeSourceInfo *buildInheritedConstructorDeductionGuideType(
   for (unsigned I = 0, E = NewTL.getNumParams(); I != E; ++I)
     NewTL.setParam(I, TL.getParam(I));
 
-  TypeSourceInfo *TSI = TLB.getTypeSourceInfo(Context, FT);
-  return TSI;
+  return TLB.getTypeSourceInfo(Context, FT);
 }
 
 // Build deduction guides for a type alias template from the given underlying
@@ -1444,7 +1443,10 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   // but with default arguments removed, using the template instantiator
   // for heavy lifting.
   LocalInstantiationScope CloneScope(SemaRef);
-  TemplateDeclInstantiator CloneTDI(SemaRef, DC, /*TemplateArgs=*/{});
+  MultiLevelTemplateArgumentList CloneArgs;
+  CloneArgs.setKind(TemplateSubstitutionKind::Rewrite);
+  CloneArgs.addOuterRetainedLevels(Template->getTemplateDepth());
+  TemplateDeclInstantiator CloneTDI(SemaRef, DC, CloneArgs);
   TemplateParameterList *PartialSpecTPL =
       CloneTDI.SubstTemplateParams(AliasTPL);
   CloneScope.Exit();
@@ -1482,7 +1484,8 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   // whose primary template is not defined ...
   auto *TParam = TemplateTypeParmDecl::Create(
       Context, DC, SourceLocation(), SourceLocation(),
-      Template->getTemplateDepth(), 0, nullptr, false, false);
+      Template->getTemplateDepth(), 0, nullptr,
+      /*Typename=*/true, /*ParameterPack=*/false);
   TParam->setImplicit();
   auto *MapperTPL = TemplateParameterList::Create(
       Context, SourceLocation(), SourceLocation(),
@@ -1581,6 +1584,8 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   DependentNameTypeLoc DepTL =
       ReturnTypeTLB.push<DependentNameTypeLoc>(MapperReturnType);
   DepTL.setQualifierLoc(QualifierLoc);
+  DepTL.setNameLoc(Template->getBeginLoc());
+  DepTL.setElaboratedKeywordLoc(SourceLocation());
 
   TypeSourceInfo *MapperTSI =
       ReturnTypeTLB.getTypeSourceInfo(Context, MapperReturnType);
