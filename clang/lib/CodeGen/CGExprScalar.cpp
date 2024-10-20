@@ -4918,6 +4918,9 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 }
 
 Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
+  auto HasLHSSkip = CGF.getIsCounterPair(E);
+  auto HasRHSSkip = CGF.getIsCounterPair(E->getRHS());
+
   // Perform vector logical and on comparisons with zero vectors.
   if (E->getType()->isVectorType()) {
     CGF.incrementProfileCounter(E);
@@ -4964,11 +4967,17 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
           CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
         CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
         llvm::BasicBlock *FBlock = CGF.createBasicBlock("land.end");
+        llvm::BasicBlock *RHSSkip =
+            (HasRHSSkip.second ? CGF.createBasicBlock("land.rhsskip") : FBlock);
         llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("land.rhscnt");
-        Builder.CreateCondBr(RHSCond, RHSBlockCnt, FBlock);
+        Builder.CreateCondBr(RHSCond, RHSBlockCnt, RHSSkip);
         CGF.EmitBlock(RHSBlockCnt);
-        CGF.incrementProfileCounter(E->getRHS());
+        CGF.incrementProfileCounter(false, E->getRHS());
         CGF.EmitBranch(FBlock);
+        if (HasRHSSkip.second) {
+          CGF.EmitBlock(RHSSkip);
+          CGF.incrementProfileCounter(true, E->getRHS());
+        }
         CGF.EmitBlock(FBlock);
       }
 
@@ -4997,11 +5006,20 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("land.end");
   llvm::BasicBlock *RHSBlock  = CGF.createBasicBlock("land.rhs");
 
+  llvm::BasicBlock *LHSFalseBlock =
+      (HasLHSSkip.second ? CGF.createBasicBlock("land.lhsskip") : ContBlock);
+
   CodeGenFunction::ConditionalEvaluation eval(CGF);
 
   // Branch on the LHS first.  If it is false, go to the failure (cont) block.
-  CGF.EmitBranchOnBoolExpr(E->getLHS(), RHSBlock, ContBlock,
+  CGF.EmitBranchOnBoolExpr(E->getLHS(), RHSBlock, LHSFalseBlock,
                            CGF.getProfileCount(E->getRHS()));
+
+  if (HasLHSSkip.second) {
+    CGF.EmitBlock(LHSFalseBlock);
+    CGF.incrementProfileCounter(true, E);
+    CGF.EmitBranch(ContBlock);
+  }
 
   // Any edges into the ContBlock are now from an (indeterminate number of)
   // edges from this first condition.  All of these values will be false.  Start
@@ -5014,7 +5032,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
-  CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(false, E);
   Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
   eval.end(CGF);
 
@@ -5024,15 +5042,24 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   // If we're generating for profiling or coverage, generate a branch on the
   // RHS to a block that increments the RHS true counter needed to track branch
   // condition coverage.
+  llvm::BasicBlock *ContIncoming = RHSBlock;
   if (InstrumentRegions &&
       CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
     CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
     llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("land.rhscnt");
-    Builder.CreateCondBr(RHSCond, RHSBlockCnt, ContBlock);
+    llvm::BasicBlock *RHSBlockSkip =
+        (HasRHSSkip.second ? CGF.createBasicBlock("land.rhsskip") : ContBlock);
+    Builder.CreateCondBr(RHSCond, RHSBlockCnt, RHSBlockSkip);
     CGF.EmitBlock(RHSBlockCnt);
-    CGF.incrementProfileCounter(E->getRHS());
+    CGF.incrementProfileCounter(false, E->getRHS());
     CGF.EmitBranch(ContBlock);
     PN->addIncoming(RHSCond, RHSBlockCnt);
+    if (HasRHSSkip.second) {
+      CGF.EmitBlock(RHSBlockSkip);
+      CGF.incrementProfileCounter(true, E->getRHS());
+      CGF.EmitBranch(ContBlock);
+      ContIncoming = RHSBlockSkip;
+    }
   }
 
   // Emit an unconditional branch from this block to ContBlock.
@@ -5042,7 +5069,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
     CGF.EmitBlock(ContBlock);
   }
   // Insert an entry into the phi node for the edge with the value of RHSCond.
-  PN->addIncoming(RHSCond, RHSBlock);
+  PN->addIncoming(RHSCond, ContIncoming);
 
   CGF.MCDCLogOpStack.pop_back();
   // If the top of the logical operator nest, update the MCDC bitmap.
@@ -5060,6 +5087,9 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
 }
 
 Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
+  auto HasLHSSkip = CGF.getIsCounterPair(E);
+  auto HasRHSSkip = CGF.getIsCounterPair(E->getRHS());
+
   // Perform vector logical or on comparisons with zero vectors.
   if (E->getType()->isVectorType()) {
     CGF.incrementProfileCounter(E);
@@ -5088,7 +5118,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   bool LHSCondVal;
   if (CGF.ConstantFoldsToSimpleInteger(E->getLHS(), LHSCondVal)) {
     if (!LHSCondVal) { // If we have 0 || X, just emit X.
-      CGF.incrementProfileCounter(E);
+      CGF.incrementProfileCounter(false, E);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
       if (CGF.MCDCLogOpStack.empty())
@@ -5106,11 +5136,17 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
           CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
         CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
         llvm::BasicBlock *FBlock = CGF.createBasicBlock("lor.end");
+        llvm::BasicBlock *RHSSkip =
+            (HasRHSSkip.second ? CGF.createBasicBlock("lor.rhsskip") : FBlock);
         llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("lor.rhscnt");
-        Builder.CreateCondBr(RHSCond, FBlock, RHSBlockCnt);
+        Builder.CreateCondBr(RHSCond, RHSSkip, RHSBlockCnt);
         CGF.EmitBlock(RHSBlockCnt);
-        CGF.incrementProfileCounter(E->getRHS());
+        CGF.incrementProfileCounter(false, E->getRHS());
         CGF.EmitBranch(FBlock);
+        if (HasRHSSkip.second) {
+          CGF.EmitBlock(RHSSkip);
+          CGF.incrementProfileCounter(true, E->getRHS());
+        }
         CGF.EmitBlock(FBlock);
       }
 
@@ -5138,13 +5174,21 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("lor.end");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("lor.rhs");
+  llvm::BasicBlock *LHSTrueBlock =
+      (HasLHSSkip.second ? CGF.createBasicBlock("lor.lhsskip") : ContBlock);
 
   CodeGenFunction::ConditionalEvaluation eval(CGF);
 
   // Branch on the LHS first.  If it is true, go to the success (cont) block.
-  CGF.EmitBranchOnBoolExpr(E->getLHS(), ContBlock, RHSBlock,
+  CGF.EmitBranchOnBoolExpr(E->getLHS(), LHSTrueBlock, RHSBlock,
                            CGF.getCurrentProfileCount() -
                                CGF.getProfileCount(E->getRHS()));
+
+  if (HasLHSSkip.second) {
+    CGF.EmitBlock(LHSTrueBlock);
+    CGF.incrementProfileCounter(true, E);
+    CGF.EmitBranch(ContBlock);
+  }
 
   // Any edges into the ContBlock are now from an (indeterminate number of)
   // edges from this first condition.  All of these values will be true.  Start
@@ -5159,7 +5203,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
 
   // Emit the RHS condition as a bool value.
   CGF.EmitBlock(RHSBlock);
-  CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(false, E);
   Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
   eval.end(CGF);
@@ -5170,21 +5214,30 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   // If we're generating for profiling or coverage, generate a branch on the
   // RHS to a block that increments the RHS true counter needed to track branch
   // condition coverage.
+  llvm::BasicBlock *ContIncoming = RHSBlock;
   if (InstrumentRegions &&
       CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
     CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
     llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("lor.rhscnt");
-    Builder.CreateCondBr(RHSCond, ContBlock, RHSBlockCnt);
+    llvm::BasicBlock *RHSTrueBlock =
+        (HasRHSSkip.second ? CGF.createBasicBlock("lor.rhsskip") : ContBlock);
+    Builder.CreateCondBr(RHSCond, RHSTrueBlock, RHSBlockCnt);
     CGF.EmitBlock(RHSBlockCnt);
-    CGF.incrementProfileCounter(E->getRHS());
+    CGF.incrementProfileCounter(false, E->getRHS());
     CGF.EmitBranch(ContBlock);
     PN->addIncoming(RHSCond, RHSBlockCnt);
+    if (HasRHSSkip.second) {
+      CGF.EmitBlock(RHSTrueBlock);
+      CGF.incrementProfileCounter(true, E->getRHS());
+      CGF.EmitBranch(ContBlock);
+      ContIncoming = RHSTrueBlock;
+    }
   }
 
   // Emit an unconditional branch from this block to ContBlock.  Insert an entry
   // into the phi node for the edge with the value of RHSCond.
   CGF.EmitBlock(ContBlock);
-  PN->addIncoming(RHSCond, RHSBlock);
+  PN->addIncoming(RHSCond, ContIncoming);
 
   CGF.MCDCLogOpStack.pop_back();
   // If the top of the logical operator nest, update the MCDC bitmap.
