@@ -44,13 +44,13 @@ LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
 }
 
 // Returns a symbol for an error message.
-static std::string maybeDemangleSymbol(StringRef symName) {
-  return elf::ctx.arg.demangle ? demangle(symName.str()) : symName.str();
+static std::string maybeDemangleSymbol(Ctx &ctx, StringRef symName) {
+  return ctx.arg.demangle ? demangle(symName.str()) : symName.str();
 }
 
 std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
-  std::string ret = maybeDemangleSymbol(name);
+  std::string ret = maybeDemangleSymbol(ctx, name);
 
   const char *suffix = sym.getVersionSuffix();
   if (*suffix == '@')
@@ -617,7 +617,7 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
 
   // For common objects, we want to look for global or weak definitions that
   // should be extracted as the canonical definition instead.
-  if (LLVM_UNLIKELY(isCommon()) && elf::ctx.arg.fortranCommon &&
+  if (LLVM_UNLIKELY(isCommon()) && ctx.arg.fortranCommon &&
       other.file->shouldExtractForCommon(getName())) {
     ctx.backwardReferences.erase(this);
     other.overwrite(*this);
