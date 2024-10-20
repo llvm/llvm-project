@@ -10,6 +10,7 @@
 // `check_assertion.h` requires Unix headers and regex support.
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: no-localization
+// UNSUPPORTED: no-exceptions
 
 // <flat_map>
 
