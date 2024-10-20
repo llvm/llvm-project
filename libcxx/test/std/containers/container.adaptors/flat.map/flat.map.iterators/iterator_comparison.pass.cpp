@@ -29,7 +29,6 @@ void test() {
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
   using KI    = typename KeyContainer::iterator;
-  using KCI   = typename KeyContainer::const_iterator;
   using I     = M::iterator;
   using CI    = M::const_iterator;
   using RI    = M::reverse_iterator;

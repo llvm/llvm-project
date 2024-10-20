@@ -124,6 +124,7 @@ struct NoDefaultCtr {
   NoDefaultCtr() = delete;
 };
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
 template <class T>
 struct EmplaceUnsafeContainer : std::vector<T> {
   using std::vector<T>::vector;
@@ -171,6 +172,8 @@ struct ThrowOnMoveContainer : std::vector<T> {
 
   ThrowOnMoveContainer& operator=(ThrowOnMoveContainer&&) { throw 42; }
 };
+
+#endif
 
 template <class F>
 void test_emplace_exception_guarantee(F&& emplace_function) {
