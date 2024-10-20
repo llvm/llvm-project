@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STRING_STRNCAT_H
 
 #include "src/__support/macros/config.h"
-#include <string.h>
+#include "include/llvm-libc-types/size_t.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
