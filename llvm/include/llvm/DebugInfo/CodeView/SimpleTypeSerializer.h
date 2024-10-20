@@ -35,8 +35,8 @@ public:
 // Needed by RandomAccessVisitorTest.cpp
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   class Name##Record;                                                          \
-  extern template LLVM_TEMPLATE_ABI ArrayRef<uint8_t> llvm::codeview::SimpleTypeSerializer::serialize(  \
-      Name##Record &Record);
+  extern template LLVM_TEMPLATE_ABI ArrayRef<uint8_t>                          \
+  llvm::codeview::SimpleTypeSerializer::serialize(Name##Record &Record);
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD(EnumName, EnumVal, Name)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
