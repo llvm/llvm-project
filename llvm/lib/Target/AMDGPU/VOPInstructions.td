@@ -37,7 +37,7 @@ defvar VOPDX_Max_Index = 12;
 
 class VOPD_Component<bits<5> OpIn, string vOPDName> {
   Instruction BaseVOP = !cast<Instruction>(NAME);
-  string VOPDName = "v_dual_" # !if(!le(!size(vOPDName), 2), "", !substr(vOPDName, 2));
+  string VOPDName = "v_dual_" # !substr(vOPDName, 2);
   bits<5> VOPDOp = OpIn;
   bit CanBeVOPDX = !le(VOPDOp, VOPDX_Max_Index);
 }
