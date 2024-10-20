@@ -98,6 +98,20 @@ public:
     return iterator<true>(*this, __tuple_transform(ranges::begin, bases_));
   }
 
+  constexpr iterator<false> end()
+    requires((!__simple_view<First> || ... || !__simple_view<Vs>) && cartesian_product_is_common<First, Vs...>)
+  {
+    constexpr bool is_const = false;
+    return end_impl<is_const>();
+  }
+
+  constexpr iterator<true> end() const
+    requires(cartesian_product_is_common<const First, const Vs...>)
+  {
+    constexpr bool is_const = true;
+    return end_impl<is_const>();
+  }
+
   constexpr auto size()
     requires(sized_range<First> && ... && sized_range<Vs>)
   {
@@ -111,6 +125,30 @@ public:
   }
 
 private:
+  template <bool is_const>
+  constexpr iterator<is_const> end_impl() const {
+    bool is_empty                  = end_is_empty();
+    const auto ranges_to_iterators = [is_empty, &b = bases_]<std::size_t... I>(std::index_sequence<I...>) {
+      const auto begin_or_first_end = [is_empty]<bool is_first>(const auto& rng) {
+        if constexpr (is_first)
+          return is_empty ? ranges::begin(rng) : cartesian_common_arg_end(rng);
+        return ranges::begin(rng);
+      };
+      return std::make_tuple(begin_or_first_end<I == 0>(std::get<I>(b))...);
+    };
+    iterator<is_const> it(*this, ranges_to_iterators(std::make_index_sequence<1 + sizeof...(Vs)>{}));
+    return it;
+  }
+
+  template <auto N = 0>
+  constexpr bool end_is_empty() const {
+    if constexpr (N == sizeof...(Vs))
+      return false;
+    if (const auto& v = std::get<N + 1>(bases_); ranges::empty(v))
+      return true;
+    return end_is_empty<N + 1>();
+  }
+
   constexpr auto size_impl() const {
     return std::apply(
         [](auto&&... bases) {
@@ -332,7 +370,7 @@ private:
 
   template <auto N = sizeof...(Vs)>
   constexpr bool at_end() const {
-    if (std::get<N>(current_) == end(std::get<N>(parent_->bases_)))
+    if (std::get<N>(current_) == ranges::end(std::get<N>(parent_->bases_)))
       return true;
     if constexpr (N > 0)
       return at_end<N - 1>();
