@@ -384,6 +384,34 @@ define float @test_sqrt_rn_f_ftz(float %a) #0 {
   ret float %ret
 }
 
+; CHECK-LABEL: @test_fshl_clamp_1
+define i32 @test_fshl_clamp_1(i32 %a, i32 %b, i32 %c) {
+; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 3)
+  %call = call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 3)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshl_clamp_2
+define i32 @test_fshl_clamp_2(i32 %a, i32 %b, i32 %c) {
+; CHECK: ret i32 %b
+  %call = call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 300)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshr_clamp_1
+define i32 @test_fshr_clamp_1(i32 %a, i32 %b, i32 %c) {
+; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 29)
+  %call = call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 3)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshr_clamp_2
+define i32 @test_fshr_clamp_2(i32 %a, i32 %b, i32 %c) {
+; CHECK: ret i32 %b
+  %call = call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 300)
+  ret i32 %call
+}
+
 declare double @llvm.nvvm.add.rn.d(double, double)
 declare float @llvm.nvvm.add.rn.f(float, float)
 declare float @llvm.nvvm.add.rn.ftz.f(float, float)
@@ -454,3 +482,5 @@ declare double @llvm.nvvm.ui2d.rn(i32)
 declare float @llvm.nvvm.ui2f.rn(i32)
 declare double @llvm.nvvm.ull2d.rn(i64)
 declare float @llvm.nvvm.ull2f.rn(i64)
+declare i32 @llvm.nvvm.fshr.clamp.i32(i32, i32, i32)
+declare i32 @llvm.nvvm.fshl.clamp.i32(i32, i32, i32)
