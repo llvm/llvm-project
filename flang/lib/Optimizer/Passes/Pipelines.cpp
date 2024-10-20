@@ -227,11 +227,11 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
                                          hlfir::createOptimizedBufferization);
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
+  if (enableOpenMP)
+    pm.addPass(flangomp::createLowerWorkshare());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
   pm.addPass(hlfir::createBufferizeHLFIR());
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
-  if (enableOpenMP)
-    pm.addPass(flangomp::createLowerWorkshare());
 }
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
