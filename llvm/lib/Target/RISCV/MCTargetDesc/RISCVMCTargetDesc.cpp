@@ -272,6 +272,29 @@ public:
         }
         break;
       }
+      case RISCV::C_ADDI: {
+        int64_t Offset = Inst.getOperand(2).getImm();
+        if (Offset == 0)
+          break;
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          Target = *TargetRegState + SignExtend64<6>(Offset);
+          return true;
+        }
+        break;
+      }
+      case RISCV::C_ADDIW: {
+        int64_t Offset = Inst.getOperand(2).getImm(); 
+        if (Offset == 0)
+          break;
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          uint64_t Mask = ~((uint64_t)0) >> 32;
+          Target &= Mask;
+          Target = *TargetRegState + SignExtend64<6>(Offset);
+          Target = SignExtend64<32>(Target);
+          return true;
+        }
+        break;
+      }
       case RISCV::LB:
       case RISCV::LH:
       case RISCV::LD:
@@ -296,7 +319,20 @@ public:
           Target = Offset;
         return true;
       }
-      // TODO: Add cases for compressed load and store instructions
+      case RISCV::C_LD:
+      case RISCV::C_SD:
+      case RISCV::C_FLD:
+      case RISCV::C_FSD:
+      case RISCV::C_SW:
+      case RISCV::C_LW:
+      case RISCV::C_FSW:
+      case RISCV::C_FLW: {
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          Target = *TargetRegState + Inst.getOperand(2).getImm();
+          return true;
+        }
+        break;
+      }
     }
     return false;
   }
