@@ -343,14 +343,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return Base::VisitBinaryOperator(S);
   }
 
-  bool VisitConditionalOperator(ConditionalOperator *S) {
-    if (llvm::EnableSingleByteCoverage && S->getTrueExpr())
-      CounterMap[S->getTrueExpr()] = NextCounter++;
-    if (llvm::EnableSingleByteCoverage && S->getFalseExpr())
-      CounterMap[S->getFalseExpr()] = NextCounter++;
-    return Base::VisitConditionalOperator(S);
-  }
-
   /// Include \p S in the function hash.
   bool VisitStmt(Stmt *S) {
     auto Type = updateCounterMappings(S);
