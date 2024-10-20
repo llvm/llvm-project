@@ -17,7 +17,9 @@
 
 #include "test_allocator.h"
 #include "test_macros.h"
-#include "check_assertion.h"
+#if !defined(TEST_HAS_NO_LOCALIZATION)
+#  include "check_assertion.h"
+#endif
 
 template <class... Args>
 void check_invariant(const std::flat_map<Args...>& m) {
@@ -176,7 +178,7 @@ struct ThrowOnMoveContainer : std::vector<T> {
 #endif
 
 template <class F>
-void test_emplace_exception_guarantee(F&& emplace_function) {
+void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   using C = TransparentComparator;
   {
@@ -300,7 +302,7 @@ void test_emplace_exception_guarantee(F&& emplace_function) {
 }
 
 template <class F>
-void test_insert_range_exception_guarantee(F&& insert_function) {
+void test_insert_range_exception_guarantee([[maybe_unused]] F&& insert_function) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   using KeyContainer   = EmplaceUnsafeContainer<int>;
   using ValueContainer = std::vector<int>;
@@ -324,7 +326,7 @@ void test_insert_range_exception_guarantee(F&& insert_function) {
 }
 
 template <class F>
-void test_erase_exception_guarantee(F&& erase_function) {
+void test_erase_exception_guarantee([[maybe_unused]] F&& erase_function) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
     // key erase throws
@@ -366,8 +368,8 @@ void test_erase_exception_guarantee(F&& erase_function) {
 }
 
 template <class F>
-void test_swap_exception_guarantee(F&& swap_function) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
+void test_swap_exception_guarantee([[maybe_unused]] F&& swap_function) {
+#if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_HAS_NO_LOCALIZATION)
   {
     // key swap throws
     using KeyContainer   = ThrowOnMoveContainer<int>;

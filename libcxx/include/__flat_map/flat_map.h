@@ -161,7 +161,7 @@ private:
         : __key_iter_(std::move(__key_iter)), __mapped_iter_(std::move(__mapped_iter)) {}
 
     _LIBCPP_HIDE_FROM_ABI __reference operator*() const { return __reference(*__key_iter_, *__mapped_iter_); }
-    _LIBCPP_HIDE_FROM_ABI __arrow_proxy operator->() const { return __arrow_proxy(**this); }
+    _LIBCPP_HIDE_FROM_ABI __arrow_proxy operator->() const { return __arrow_proxy{**this}; }
 
     _LIBCPP_HIDE_FROM_ABI __iterator& operator++() {
       ++__key_iter_;

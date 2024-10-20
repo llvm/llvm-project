@@ -14,6 +14,7 @@
 // template<class K> pair<const_iterator,const_iterator> equal_range(const K& x) const;
 
 #include <cassert>
+#include <deque>
 #include <flat_map>
 #include <string>
 #include <utility>
