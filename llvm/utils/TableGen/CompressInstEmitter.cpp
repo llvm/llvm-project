@@ -486,10 +486,9 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
     return R->getValueAsBit("AssemblerMatcherPredicate");
   });
 
-  CompressPatterns.push_back(CompressPat(SourceInst, DestInst,
-                                         std::move(PatReqFeatures),
-                                         SourceOperandMap, DestOperandMap,
-                                         Rec->getValueAsBit("isCompressOnly")));
+  CompressPatterns.push_back(CompressPat(
+      SourceInst, DestInst, std::move(PatReqFeatures), SourceOperandMap,
+      DestOperandMap, Rec->getValueAsBit("isCompressOnly")));
 }
 
 static void
