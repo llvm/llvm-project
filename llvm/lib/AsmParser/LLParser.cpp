@@ -338,7 +338,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
-      Intrinsic::ID IID = Function::lookupIntrinsicID(Name);
+      Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
       if (IID == Intrinsic::not_intrinsic)
         // Don't do anything for unknown intrinsics.
         continue;
@@ -360,7 +360,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                                               OverloadTys))
           return error(Info.second, "invalid intrinsic signature");
 
-        U.set(Intrinsic::getDeclaration(M, IID, OverloadTys));
+        U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
       }
 
       Info.first->eraseFromParent();
@@ -3202,8 +3202,14 @@ bool LLParser::parseOptionalOperandBundles(
 
       Type *Ty = nullptr;
       Value *Input = nullptr;
-      if (parseType(Ty) || parseValue(Ty, Input, PFS))
+      if (parseType(Ty))
         return true;
+      if (Ty->isMetadataTy()) {
+        if (parseMetadataAsValue(Input, PFS))
+          return true;
+      } else if (parseValue(Ty, Input, PFS)) {
+        return true;
+      }
       Inputs.push_back(Input);
     }
 
@@ -3220,7 +3226,7 @@ bool LLParser::parseOptionalOperandBundles(
 }
 
 bool LLParser::checkValueID(LocTy Loc, StringRef Kind, StringRef Prefix,
-                            unsigned NextID, unsigned ID) const {
+                            unsigned NextID, unsigned ID) {
   if (ID < NextID)
     return error(Loc, Kind + " expected to be numbered '" + Prefix +
                           Twine(NextID) + "' or greater");
@@ -4000,11 +4006,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (!F) {
       // Make a global variable as a placeholder for this reference.
       GlobalValue *&FwdRef =
-          ForwardRefBlockAddresses.insert(std::make_pair(
-                                              std::move(Fn),
-                                              std::map<ValID, GlobalValue *>()))
-              .first->second.insert(std::make_pair(std::move(Label), nullptr))
-              .first->second;
+          ForwardRefBlockAddresses[std::move(Fn)][std::move(Label)];
       if (!FwdRef) {
         unsigned FwdDeclAS;
         if (ExpectedTy) {
@@ -4082,7 +4084,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       auto &FwdRefMap = (Fn.Kind == ValID::t_GlobalID)
                             ? ForwardRefDSOLocalEquivalentIDs
                             : ForwardRefDSOLocalEquivalentNames;
-      GlobalValue *&FwdRef = FwdRefMap.try_emplace(Fn, nullptr).first->second;
+      GlobalValue *&FwdRef = FwdRefMap[Fn];
       if (!FwdRef) {
         FwdRef = new GlobalVariable(*M, Type::getInt8Ty(Context), false,
                                     GlobalValue::InternalLinkage, nullptr, "",
@@ -5192,7 +5194,7 @@ bool LLParser::parseDILocation(MDNode *&Result, bool IsDistinct) {
 ///   ::= distinct !DIAssignID()
 bool LLParser::parseDIAssignID(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
-    return Lex.Error("missing 'distinct', required for !DIAssignID()");
+    return tokError("missing 'distinct', required for !DIAssignID()");
 
   Lex.Lex();
 
@@ -5239,7 +5241,7 @@ bool LLParser::parseDISubrange(MDNode *&Result, bool IsDistinct) {
   Metadata *UpperBound = nullptr;
   Metadata *Stride = nullptr;
 
-  auto convToMetadata = [&](MDSignedOrMDField Bound) -> Metadata * {
+  auto convToMetadata = [&](const MDSignedOrMDField &Bound) -> Metadata * {
     if (Bound.isMDSignedField())
       return ConstantAsMetadata::get(ConstantInt::getSigned(
           Type::getInt64Ty(Context), Bound.getMDSignedValue()));
@@ -5271,7 +5273,7 @@ bool LLParser::parseDIGenericSubrange(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  auto ConvToMetadata = [&](MDSignedOrMDField Bound) -> Metadata * {
+  auto ConvToMetadata = [&](const MDSignedOrMDField &Bound) -> Metadata * {
     if (Bound.isMDSignedField())
       return DIExpression::get(
           Context, {dwarf::DW_OP_consts,
@@ -5500,7 +5502,7 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
   if (checksumkind.Seen && checksum.Seen)
     OptChecksum.emplace(checksumkind.Val, checksum.Val);
   else if (checksumkind.Seen || checksum.Seen)
-    return Lex.Error("'checksumkind' and 'checksum' must be provided together");
+    return tokError("'checksumkind' and 'checksum' must be provided together");
 
   MDString *Source = nullptr;
   if (source.Seen)
@@ -5519,7 +5521,7 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
 ///                      sysroot: "/", sdk: "MacOSX.sdk")
 bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
-    return Lex.Error("missing 'distinct', required for !DICompileUnit");
+    return tokError("missing 'distinct', required for !DICompileUnit");
 
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(language, DwarfLangField, );                                        \
@@ -5599,7 +5601,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
                    : DISubprogram::toSPFlags(isLocal.Val, isDefinition.Val,
                                              isOptimized.Val, virtuality.Val);
   if ((SPFlags & DISubprogram::SPFlagDefinition) && !IsDistinct)
-    return Lex.Error(
+    return error(
         Loc,
         "missing 'distinct', required for !DISubprogram that is a Definition");
   Result = GET_OR_DISTINCT(
@@ -6301,7 +6303,7 @@ bool isOldDbgFormatIntrinsic(StringRef Name) {
   // intrinsics in the new debug info format.
   if (!Name.starts_with("llvm.dbg."))
     return false;
-  Intrinsic::ID FnID = Function::lookupIntrinsicID(Name);
+  Intrinsic::ID FnID = Intrinsic::lookupIntrinsicID(Name);
   return FnID == Intrinsic::dbg_declare || FnID == Intrinsic::dbg_value ||
          FnID == Intrinsic::dbg_assign;
 }
@@ -6950,8 +6952,14 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_and:
   case lltok::kw_xor:
     return parseLogical(Inst, PFS, KeywordVal);
-  case lltok::kw_icmp:
-    return parseCompare(Inst, PFS, KeywordVal);
+  case lltok::kw_icmp: {
+    bool SameSign = EatIfPresent(lltok::kw_samesign);
+    if (parseCompare(Inst, PFS, KeywordVal))
+      return true;
+    if (SameSign)
+      cast<ICmpInst>(Inst)->setSameSign();
+    return false;
+  }
   case lltok::kw_fcmp: {
     FastMathFlags FMF = EatFastMathFlagsIfPresent();
     int Res = parseCompare(Inst, PFS, KeywordVal);
@@ -7952,10 +7960,10 @@ bool LLParser::parseLandingPad(Instruction *&Inst, PerFunctionState &PFS) {
     // array constant.
     if (CT == LandingPadInst::Catch) {
       if (isa<ArrayType>(V->getType()))
-        error(VLoc, "'catch' clause has an invalid type");
+        return error(VLoc, "'catch' clause has an invalid type");
     } else {
       if (!isa<ArrayType>(V->getType()))
-        error(VLoc, "'filter' clause has an invalid type");
+        return error(VLoc, "'filter' clause has an invalid type");
     }
 
     Constant *CV = dyn_cast<Constant>(V);
@@ -8639,7 +8647,7 @@ bool LLParser::parseUseListOrderIndexes(SmallVectorImpl<unsigned> &Indexes) {
   if (parseToken(lltok::lbrace, "expected '{' here"))
     return true;
   if (Lex.getKind() == lltok::rbrace)
-    return Lex.Error("expected non-empty list of uselistorder indexes");
+    return tokError("expected non-empty list of uselistorder indexes");
 
   // Use Offset, Max, and IsOrdered to check consistency of indexes.  The
   // indexes should be distinct numbers in the range [0, size-1], and should

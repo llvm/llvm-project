@@ -306,7 +306,7 @@ body:             |
 
   bb.3:
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    dead $sgpr30_sgpr31 = SI_CALL undef %24:sreg_64_xexec, 0, CustomRegMask($sgpr60,$sgpr62)
+    dead $sgpr30_sgpr31 = SI_CALL undef %24:sreg_64_xexec_xnull, 0, CustomRegMask($sgpr60,$sgpr62)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
 
   bb.4:
@@ -338,7 +338,7 @@ body:             |
 
   bb.9:
     %31:vreg_64_align2 = COPY %19.sub16_sub17, implicit $exec
-    GLOBAL_STORE_DWORDX2_SADDR undef %18:vgpr_32, %31, undef %24:sreg_64_xexec, 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    GLOBAL_STORE_DWORDX2_SADDR undef %18:vgpr_32, %31, undef %24:sreg_64_xexec_xnull, 0, 0, implicit $exec :: (store (s64), addrspace 1)
     %32:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %5, implicit $exec
     dead %33:sreg_64_xexec = V_CMP_NE_U32_e64 1, %32, implicit $exec
     undef %34.sub0:sreg_64 = S_ADD_U32 %15.sub0, 32, implicit-def dead $scc

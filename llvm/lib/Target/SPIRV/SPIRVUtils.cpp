@@ -46,8 +46,7 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 
 // Get length including padding and null terminator.
 static size_t getPaddedLen(const StringRef &Str) {
-  const size_t Len = Str.size() + 1;
-  return (Len % 4 == 0) ? Len : Len + (4 - (Len % 4));
+  return (Str.size() + 4) & ~3;
 }
 
 void addStringImm(const StringRef &Str, MCInst &Inst) {
@@ -163,31 +162,6 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
 }
 
-// TODO: maybe the following two functions should be handled in the subtarget
-// to allow for different OpenCL vs Vulkan handling.
-unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
-  switch (SC) {
-  case SPIRV::StorageClass::Function:
-    return 0;
-  case SPIRV::StorageClass::CrossWorkgroup:
-    return 1;
-  case SPIRV::StorageClass::UniformConstant:
-    return 2;
-  case SPIRV::StorageClass::Workgroup:
-    return 3;
-  case SPIRV::StorageClass::Generic:
-    return 4;
-  case SPIRV::StorageClass::DeviceOnlyINTEL:
-    return 5;
-  case SPIRV::StorageClass::HostOnlyINTEL:
-    return 6;
-  case SPIRV::StorageClass::Input:
-    return 7;
-  default:
-    report_fatal_error("Unable to get address space id");
-  }
-}
-
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
@@ -251,6 +225,32 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
     return SPIRV::MemorySemantics::None;
   }
   llvm_unreachable(nullptr);
+}
+
+SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+  // Named by
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
+  // We don't need aliases for Invocation and CrossDevice, as we already have
+  // them covered by "singlethread" and "" strings respectively (see
+  // implementation of LLVMContext::LLVMContext()).
+  static const llvm::SyncScope::ID SubGroup =
+      Ctx.getOrInsertSyncScopeID("subgroup");
+  static const llvm::SyncScope::ID WorkGroup =
+      Ctx.getOrInsertSyncScopeID("workgroup");
+  static const llvm::SyncScope::ID Device =
+      Ctx.getOrInsertSyncScopeID("device");
+
+  if (Id == llvm::SyncScope::SingleThread)
+    return SPIRV::Scope::Invocation;
+  else if (Id == llvm::SyncScope::System)
+    return SPIRV::Scope::CrossDevice;
+  else if (Id == SubGroup)
+    return SPIRV::Scope::Subgroup;
+  else if (Id == WorkGroup)
+    return SPIRV::Scope::Workgroup;
+  else if (Id == Device)
+    return SPIRV::Scope::Device;
+  return SPIRV::Scope::CrossDevice;
 }
 
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
@@ -589,6 +589,27 @@ bool sortBlocks(Function &F) {
   }
 
   return Modified;
+}
+
+MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
+  MachineInstr *MaybeDef = MRI.getVRegDef(Reg);
+  if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
+    MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
+  return MaybeDef;
+}
+
+bool getVacantFunctionName(Module &M, std::string &Name) {
+  // It's a bit of paranoia, but still we don't want to have even a chance that
+  // the loop will work for too long.
+  constexpr unsigned MaxIters = 1024;
+  for (unsigned I = 0; I < MaxIters; ++I) {
+    std::string OrdName = Name + Twine(I).str();
+    if (!M.getFunction(OrdName)) {
+      Name = OrdName;
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace llvm

@@ -235,13 +235,12 @@ Value *CachingVPExpander::convertEVLToMask(IRBuilder<> &Builder,
   // TODO add caching
   // Scalable vector %evl conversion.
   if (ElemCount.isScalable()) {
-    auto *M = Builder.GetInsertBlock()->getModule();
     Type *BoolVecTy = VectorType::get(Builder.getInt1Ty(), ElemCount);
-    Function *ActiveMaskFunc = Intrinsic::getDeclaration(
-        M, Intrinsic::get_active_lane_mask, {BoolVecTy, EVLParam->getType()});
     // `get_active_lane_mask` performs an implicit less-than comparison.
     Value *ConstZero = Builder.getInt32(0);
-    return Builder.CreateCall(ActiveMaskFunc, {ConstZero, EVLParam});
+    return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
+                                   {BoolVecTy, EVLParam->getType()},
+                                   {ConstZero, EVLParam});
   }
 
   // Fixed vector %evl conversion.
@@ -299,18 +298,18 @@ Value *CachingVPExpander::expandPredicationToIntCall(
   case Intrinsic::umin: {
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
-    Function *Fn = Intrinsic::getDeclaration(
-        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
-    Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1}, VPI.getName());
+    Value *NewOp = Builder.CreateIntrinsic(
+        UnpredicatedIntrinsicID, {VPI.getType()}, {Op0, Op1},
+        /*FMFSource=*/nullptr, VPI.getName());
     replaceOperation(*NewOp, VPI);
     return NewOp;
   }
   case Intrinsic::bswap:
   case Intrinsic::bitreverse: {
     Value *Op = VPI.getOperand(0);
-    Function *Fn = Intrinsic::getDeclaration(
-        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
-    Value *NewOp = Builder.CreateCall(Fn, {Op}, VPI.getName());
+    Value *NewOp =
+        Builder.CreateIntrinsic(UnpredicatedIntrinsicID, {VPI.getType()}, {Op},
+                                /*FMFSource=*/nullptr, VPI.getName());
     replaceOperation(*NewOp, VPI);
     return NewOp;
   }
@@ -327,9 +326,9 @@ Value *CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::fabs:
   case Intrinsic::sqrt: {
     Value *Op0 = VPI.getOperand(0);
-    Function *Fn = Intrinsic::getDeclaration(
-        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
-    Value *NewOp = Builder.CreateCall(Fn, {Op0}, VPI.getName());
+    Value *NewOp =
+        Builder.CreateIntrinsic(UnpredicatedIntrinsicID, {VPI.getType()}, {Op0},
+                                /*FMFSource=*/nullptr, VPI.getName());
     replaceOperation(*NewOp, VPI);
     return NewOp;
   }
@@ -337,9 +336,9 @@ Value *CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::minnum: {
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
-    Function *Fn = Intrinsic::getDeclaration(
-        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
-    Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1}, VPI.getName());
+    Value *NewOp = Builder.CreateIntrinsic(
+        UnpredicatedIntrinsicID, {VPI.getType()}, {Op0, Op1},
+        /*FMFSource=*/nullptr, VPI.getName());
     replaceOperation(*NewOp, VPI);
     return NewOp;
   }
@@ -350,7 +349,7 @@ Value *CachingVPExpander::expandPredicationToFPCall(
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
     Value *Op2 = VPI.getOperand(2);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp;
     if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
@@ -592,12 +591,10 @@ bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
   Type *Int32Ty = Type::getInt32Ty(VPI.getContext());
   if (StaticElemCount.isScalable()) {
     // TODO add caching
-    auto *M = VPI.getModule();
-    Function *VScaleFunc =
-        Intrinsic::getDeclaration(M, Intrinsic::vscale, Int32Ty);
     IRBuilder<> Builder(VPI.getParent(), VPI.getIterator());
     Value *FactorConst = Builder.getInt32(StaticElemCount.getKnownMinValue());
-    Value *VScale = Builder.CreateCall(VScaleFunc, {}, "vscale");
+    Value *VScale = Builder.CreateIntrinsic(Intrinsic::vscale, Int32Ty, {},
+                                            /*FMFSource=*/nullptr, "vscale");
     MaxEVL = Builder.CreateMul(VScale, FactorConst, "scalable_size",
                                /*NUW*/ true, /*NSW*/ false);
   } else {

@@ -305,6 +305,7 @@ class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
+  let Constraints = "$rd = $rs3";
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 

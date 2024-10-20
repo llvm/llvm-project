@@ -169,15 +169,12 @@ struct CodeGenIntrinsic {
 };
 
 class CodeGenIntrinsicTable {
-  std::vector<CodeGenIntrinsic> Intrinsics;
-
 public:
   struct TargetSet {
     StringRef Name;
     size_t Offset;
     size_t Count;
   };
-  std::vector<TargetSet> Targets;
 
   explicit CodeGenIntrinsicTable(const RecordKeeper &RC);
 
@@ -185,13 +182,21 @@ public:
   size_t size() const { return Intrinsics.size(); }
   auto begin() const { return Intrinsics.begin(); }
   auto end() const { return Intrinsics.end(); }
-  CodeGenIntrinsic &operator[](size_t Pos) { return Intrinsics[Pos]; }
   const CodeGenIntrinsic &operator[](size_t Pos) const {
     return Intrinsics[Pos];
   }
+  ArrayRef<CodeGenIntrinsic> operator[](const TargetSet &Set) const {
+    return ArrayRef(&Intrinsics[Set.Offset], Set.Count);
+  }
+  ArrayRef<TargetSet> getTargets() const { return Targets; }
 
 private:
   void CheckDuplicateIntrinsics() const;
+  void CheckTargetIndependentIntrinsics() const;
+  void CheckOverloadSuffixConflicts() const;
+
+  std::vector<CodeGenIntrinsic> Intrinsics;
+  std::vector<TargetSet> Targets;
 };
 
 // This class builds `CodeGenIntrinsic` on demand for a given Def.
@@ -201,7 +206,7 @@ class CodeGenIntrinsicMap {
 
 public:
   explicit CodeGenIntrinsicMap(const RecordKeeper &RC) : Ctx(RC) {}
-  CodeGenIntrinsic &operator[](const Record *Def);
+  const CodeGenIntrinsic &operator[](const Record *Def);
 };
 
 } // namespace llvm

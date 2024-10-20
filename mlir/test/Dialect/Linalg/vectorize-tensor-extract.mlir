@@ -38,6 +38,33 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+#map = affine_map<() -> ()>
+func.func @negative_no_loops(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
+  %1 = linalg.generic {
+    indexing_maps = [#map],
+    iterator_types = []
+  } outs(%arg1 : tensor<f32>) {
+  ^bb0(%arg4: f32):
+    %2 = tensor.extract %arg0[] : tensor<f32>
+    linalg.yield %2 : f32
+  } -> tensor<f32>
+  return %1 : tensor<f32>
+}
+// CHECK-LABEL: func.func @negative_no_loops
+// CHECK: tensor.extract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+
+// -----
+
 #map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func.func @vectorize_nd_tensor_extract_constant_idx(%arg0: tensor<3x3xf32>, %arg2: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
   %c0 = arith.constant 1 : index
@@ -304,6 +331,96 @@ module attributes {transform.with_named_sequence} {
 // CHECK: %[[ADDI:.*]] = arith.addi %[[B3]], %[[T]] : vector<8x1xindex>
 // CHECK: %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]] [%[[ADDI]]], %[[CST_2]], %[[PASSTHRU]] : tensor<8x128x768xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
 // CHECK: vector.transfer_write %[[GATHER]], %[[EMPTY]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x1xf32>, tensor<8x1xf32>
+
+// -----
+
+// Reading a 1D column vector (hence a candidate for a contiguous load), but given
+// %1, it's a gather load.
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @index_from_output_column_vector_gather_load(%src: tensor<8x128xf32>) -> tensor<8x1xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.empty() : tensor<8x1xf32>
+  %res = linalg.generic {
+    indexing_maps = [#map],
+    iterator_types = ["parallel", "parallel"]
+  } outs(%0 : tensor<8x1xf32>) {
+  ^bb0(%arg1: f32):
+      %1 = linalg.index 0 : index
+    %extracted = tensor.extract %src[%1, %c0] : tensor<8x128xf32>
+      linalg.yield %extracted : f32
+  } -> tensor<8x1xf32>
+  return %res : tensor<8x1xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg2: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg2 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {vectorize_nd_extract} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   func.func @index_from_output_column_vector_gather_load(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<8x128xf32>) -> tensor<8x1xf32> {
+// CHECK:           %[[C128:.*]] = arith.constant dense<128> : vector<1x8xindex>
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PASS_THRU:.*]] = arith.constant dense<0.000000e+00> : vector<8x1xf32>
+// CHECK:           %[[MASK:.*]] = arith.constant dense<true> : vector<8x1xi1>
+// CHECK:           %[[IDX_VEC:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7]> : vector<8xindex>
+// CHECK:           %[[OUT:.*]] = tensor.empty() : tensor<8x1xf32>
+// CHECK:           %[[B:.*]] = vector.broadcast %[[IDX_VEC]] : vector<8xindex> to vector<1x8xindex>
+// CHECK:           %[[MUL:.*]] = arith.muli %[[B]], %[[C128]] : vector<1x8xindex>
+// CHECK:           %[[TR:.*]] = vector.transpose %[[MUL]], [1, 0] : vector<1x8xindex> to vector<8x1xindex>
+// CHECK:           %[[GATHER:.*]] = vector.gather %[[SRC]]{{\[}}%[[C0]], %[[C0]]] {{\[}}%[[TR]]], %[[MASK]], %[[PASS_THRU]] : tensor<8x128xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[GATHER]], %[[OUT]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x1xf32>, tensor<8x1xf32>
+// CHECK:           return %[[RES]] : tensor<8x1xf32>
+
+// -----
+
+// Same as above, but the access indices have been swapped and hence this _is_
+// a contiguous load. Currently not supported and lowered as vector.gather
+// instead.
+// TODO: Make sure that this is lowered as a contiguous load.
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @index_from_output_column_vector_contiguous_load(%src: tensor<8x128xf32>) -> tensor<8x1xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.empty() : tensor<8x1xf32>
+  %res = linalg.generic {
+    indexing_maps = [#map],
+    iterator_types = ["parallel", "parallel"]
+  } outs(%0 : tensor<8x1xf32>) {
+  ^bb0(%arg1: f32):
+      %1 = linalg.index 0 : index
+    %extracted = tensor.extract %src[%c0, %1] : tensor<8x128xf32>
+      linalg.yield %extracted : f32
+  } -> tensor<8x1xf32>
+  return %res : tensor<8x1xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg2: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg2 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {vectorize_nd_extract} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   func.func @index_from_output_column_vector_contiguous_load(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<8x128xf32>) -> tensor<8x1xf32> {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PASS_THRU:.*]] = arith.constant dense<0.000000e+00> : vector<8x1xf32>
+// CHECK:           %[[MASK:.*]] = arith.constant dense<true> : vector<8x1xi1>
+// CHECK:           %[[IDX_VEC:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7]> : vector<8xindex>
+// CHECK:           %[[OUT:.*]] = tensor.empty() : tensor<8x1xf32>
+// CHECK:           %[[B:.*]] = vector.broadcast %[[IDX_VEC]] : vector<8xindex> to vector<1x8xindex>
+// CHECK:           %[[TR:.*]] = vector.transpose %[[B]], [1, 0] : vector<1x8xindex> to vector<8x1xindex>
+// CHECK:           %[[GATHER:.*]] = vector.gather %[[SRC]]{{\[}}%[[C0]], %[[C0]]] {{\[}}%[[TR]]], %[[MASK]], %[[PASS_THRU]] : tensor<8x128xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[GATHER]], %[[OUT]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x1xf32>, tensor<8x1xf32>
+// CHECK:           return %[[RES]] : tensor<8x1xf32>
 
 // -----
 

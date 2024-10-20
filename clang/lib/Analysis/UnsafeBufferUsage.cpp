@@ -250,7 +250,9 @@ AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
 
 AST_MATCHER_P(Stmt, ignoreUnsafeLibcCall, const UnsafeBufferUsageHandler *,
               Handler) {
-  return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+  if (Finder->getASTContext().getLangOpts().CPlusPlus)
+    return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+  return true; /* Only warn about libc calls for C++ */
 }
 
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
@@ -784,12 +786,12 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
     return false; // possibly some user-defined printf function
 
   ASTContext &Ctx = Finder->getASTContext();
-  QualType FristParmTy = FD->getParamDecl(0)->getType();
+  QualType FirstParmTy = FD->getParamDecl(0)->getType();
 
-  if (!FristParmTy->isPointerType())
+  if (!FirstParmTy->isPointerType())
     return false; // possibly some user-defined printf function
 
-  QualType FirstPteTy = (cast<PointerType>(FristParmTy))->getPointeeType();
+  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
 
   if (!Ctx.getFILEType()
            .isNull() && //`FILE *` must be in the context if it is fprintf
@@ -865,7 +867,7 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
   if (!FirstParmTy->isPointerType())
     return false; // Not an snprint
 
-  QualType FirstPteTy = cast<PointerType>(FirstParmTy)->getPointeeType();
+  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
   const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
   if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||
@@ -1497,8 +1499,11 @@ public:
   }
 
   static Matcher matcher() {
-    Matcher callExpr = cxxMemberCallExpr(
-        callee(cxxMethodDecl(hasName("data"), ofClass(hasName("std::span")))));
+
+    Matcher callExpr = cxxMemberCallExpr(callee(
+        cxxMethodDecl(hasName("data"),
+                      ofClass(anyOf(hasName("std::span"), hasName("std::array"),
+                                    hasName("std::vector"))))));
     return stmt(
         explicitCastExpr(anyOf(has(callExpr), has(parenExpr(has(callExpr)))))
             .bind(OpTag));

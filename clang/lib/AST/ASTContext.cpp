@@ -1184,6 +1184,13 @@ ASTContext::getTypePackElementDecl() const {
   return TypePackElementDecl;
 }
 
+BuiltinTemplateDecl *ASTContext::getBuiltinCommonTypeDecl() const {
+  if (!BuiltinCommonTypeDecl)
+    BuiltinCommonTypeDecl = buildBuiltinTemplateDecl(
+        BTK__builtin_common_type, getBuiltinCommonTypeName());
+  return BuiltinCommonTypeDecl;
+}
+
 RecordDecl *ASTContext::buildImplicitRecord(StringRef Name,
                                             RecordDecl::TagKind TK) const {
   SourceLocation Loc;
@@ -1434,7 +1441,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   if (Target.getTriple().isAMDGPU() ||
       (AuxTarget && AuxTarget->getTriple().isAMDGPU())) {
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"
   }
@@ -2257,7 +2264,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(NAME, AS, WIDTH, ALIGN, ID, SINGLETONID)        \
+#define AMDGPU_TYPE(NAME, ID, SINGLETONID, WIDTH, ALIGN)                       \
   case BuiltinType::ID:                                                        \
     Width = WIDTH;                                                             \
     Align = ALIGN;                                                             \
@@ -2265,8 +2272,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
-      Width = 0;
-      Align = 8;
+      Width = Target->getPointerWidth(LangAS::Default);
+      Align = Target->getPointerAlign(LangAS::Default);
       break;
     }
     break;
@@ -3391,7 +3398,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
@@ -3430,6 +3437,9 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << II->getLength() << II->getName();
     return;
   }
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("should never get here");
+    break;
   case Type::DeducedTemplateSpecialization:
   case Type::Auto:
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
@@ -3528,6 +3538,50 @@ QualType ASTContext::getCountAttributedType(
   return QualType(CATy, 0);
 }
 
+QualType
+ASTContext::adjustType(QualType Orig,
+                       llvm::function_ref<QualType(QualType)> Adjust) const {
+  switch (Orig->getTypeClass()) {
+  case Type::Attributed: {
+    const auto *AT = dyn_cast<AttributedType>(Orig);
+    return getAttributedType(AT->getAttrKind(),
+                             adjustType(AT->getModifiedType(), Adjust),
+                             adjustType(AT->getEquivalentType(), Adjust));
+  }
+
+  case Type::BTFTagAttributed: {
+    const auto *BTFT = dyn_cast<BTFTagAttributedType>(Orig);
+    return getBTFTagAttributedType(BTFT->getAttr(),
+                                   adjustType(BTFT->getWrappedType(), Adjust));
+  }
+
+  case Type::Elaborated: {
+    const auto *ET = cast<ElaboratedType>(Orig);
+    return getElaboratedType(ET->getKeyword(), ET->getQualifier(),
+                             adjustType(ET->getNamedType(), Adjust));
+  }
+
+  case Type::Paren:
+    return getParenType(
+        adjustType(cast<ParenType>(Orig)->getInnerType(), Adjust));
+
+  case Type::Adjusted: {
+    const auto *AT = cast<AdjustedType>(Orig);
+    return getAdjustedType(AT->getOriginalType(),
+                           adjustType(AT->getAdjustedType(), Adjust));
+  }
+
+  case Type::MacroQualified: {
+    const auto *MQT = cast<MacroQualifiedType>(Orig);
+    return getMacroQualifiedType(adjustType(MQT->getUnderlyingType(), Adjust),
+                                 MQT->getMacroIdentifier());
+  }
+
+  default:
+    return Adjust(Orig);
+  }
+}
+
 const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
                                                    FunctionType::ExtInfo Info) {
   if (T->getExtInfo() == Info)
@@ -3546,13 +3600,23 @@ const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
   return cast<FunctionType>(Result.getTypePtr());
 }
 
+QualType ASTContext::adjustFunctionResultType(QualType FunctionType,
+                                              QualType ResultType) {
+  return adjustType(FunctionType, [&](QualType Orig) {
+    if (const auto *FNPT = Orig->getAs<FunctionNoProtoType>())
+      return getFunctionNoProtoType(ResultType, FNPT->getExtInfo());
+
+    const auto *FPT = Orig->castAs<FunctionProtoType>();
+    return getFunctionType(ResultType, FPT->getParamTypes(),
+                           FPT->getExtProtoInfo());
+  });
+}
+
 void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
                                                  QualType ResultType) {
   FD = FD->getMostRecentDecl();
   while (true) {
-    const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-    FD->setType(getFunctionType(ResultType, FPT->getParamTypes(), EPI));
+    FD->setType(adjustFunctionResultType(FD->getType(), ResultType));
     if (FunctionDecl *Next = FD->getPreviousDecl())
       FD = Next;
     else
@@ -3568,30 +3632,11 @@ void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
 /// and preserved. Other type sugar (for instance, typedefs) is not.
 QualType ASTContext::getFunctionTypeWithExceptionSpec(
     QualType Orig, const FunctionProtoType::ExceptionSpecInfo &ESI) const {
-  // Might have some parens.
-  if (const auto *PT = dyn_cast<ParenType>(Orig))
-    return getParenType(
-        getFunctionTypeWithExceptionSpec(PT->getInnerType(), ESI));
-
-  // Might be wrapped in a macro qualified type.
-  if (const auto *MQT = dyn_cast<MacroQualifiedType>(Orig))
-    return getMacroQualifiedType(
-        getFunctionTypeWithExceptionSpec(MQT->getUnderlyingType(), ESI),
-        MQT->getMacroIdentifier());
-
-  // Might have a calling-convention attribute.
-  if (const auto *AT = dyn_cast<AttributedType>(Orig))
-    return getAttributedType(
-        AT->getAttrKind(),
-        getFunctionTypeWithExceptionSpec(AT->getModifiedType(), ESI),
-        getFunctionTypeWithExceptionSpec(AT->getEquivalentType(), ESI));
-
-  // Anything else must be a function type. Rebuild it with the new exception
-  // specification.
-  const auto *Proto = Orig->castAs<FunctionProtoType>();
-  return getFunctionType(
-      Proto->getReturnType(), Proto->getParamTypes(),
-      Proto->getExtProtoInfo().withExceptionSpec(ESI));
+  return adjustType(Orig, [&](QualType Ty) {
+    const auto *Proto = Ty->castAs<FunctionProtoType>();
+    return getFunctionType(Proto->getReturnType(), Proto->getParamTypes(),
+                           Proto->getExtProtoInfo().withExceptionSpec(ESI));
+  });
 }
 
 bool ASTContext::hasSameFunctionTypeIgnoringExceptionSpec(QualType T,
@@ -4066,6 +4111,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::ArrayParameter:
+  case Type::HLSLAttributedResource:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -5158,7 +5204,7 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
 }
 
 QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
-                                             QualType Wrapped) {
+                                             QualType Wrapped) const {
   llvm::FoldingSetNodeID ID;
   BTFTagAttributedType::Profile(ID, Wrapped, BTFAttr);
 
@@ -5191,9 +5237,8 @@ QualType ASTContext::getHLSLAttributedResourceType(
   if (Ty)
     return QualType(Ty, 0);
 
-  QualType Canon = getCanonicalType(Wrapped);
   Ty = new (*this, alignof(HLSLAttributedResourceType))
-      HLSLAttributedResourceType(Canon, Wrapped, Contained, Attrs);
+      HLSLAttributedResourceType(Wrapped, Contained, Attrs);
 
   Types.push_back(Ty);
   HLSLAttributedResourceTypes.InsertNode(Ty, InsertPos);
@@ -8591,7 +8636,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
@@ -9063,6 +9108,9 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
     return;
+
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
   case Type::Pipe:
@@ -11491,6 +11539,20 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return {};
     return LHS;
   }
+  case Type::HLSLAttributedResource: {
+    const HLSLAttributedResourceType *LHSTy =
+        LHS->castAs<HLSLAttributedResourceType>();
+    const HLSLAttributedResourceType *RHSTy =
+        RHS->castAs<HLSLAttributedResourceType>();
+    assert(LHSTy->getWrappedType() == RHSTy->getWrappedType() &&
+           LHSTy->getWrappedType()->isHLSLResourceType() &&
+           "HLSLAttributedResourceType should always wrap __hlsl_resource_t");
+
+    if (LHSTy->getAttrs() == RHSTy->getAttrs() &&
+        LHSTy->getContainedType() == RHSTy->getContainedType())
+      return LHS;
+    return {};
+  }
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -12580,8 +12642,7 @@ void ASTContext::forEachMultiversionedFunctionVersion(
        FD->getDeclContext()->getRedeclContext()->lookup(FD->getDeclName())) {
     FunctionDecl *CurFD = CurDecl->getAsFunction()->getMostRecentDecl();
     if (CurFD && hasSameType(CurFD->getType(), FD->getType()) &&
-        !SeenDecls.contains(CurFD)) {
-      SeenDecls.insert(CurFD);
+        SeenDecls.insert(CurFD).second) {
       Pred(CurFD);
     }
   }
@@ -13327,6 +13388,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(Record)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
+    SUGAR_FREE_TYPE(HLSLAttributedResource)
 #undef SUGAR_FREE_TYPE
 #define NON_UNIQUE_TYPE(Class) UNEXPECTED_TYPE(Class, "non-unique")
     NON_UNIQUE_TYPE(TypeOfExpr)
@@ -14284,9 +14346,17 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
   } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
-    llvm::SmallVector<StringRef, 8> Feats;
-    TV->getFeatures(Feats);
-    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+    std::vector<std::string> Features;
+    if (Target->getTriple().isRISCV()) {
+      ParsedTargetAttr ParsedAttr = Target->parseTargetAttr(TV->getName());
+      Features.insert(Features.begin(), ParsedAttr.Features.begin(),
+                      ParsedAttr.Features.end());
+    } else {
+      assert(Target->getTriple().isAArch64());
+      llvm::SmallVector<StringRef, 8> Feats;
+      TV->getFeatures(Feats);
+      Features = getFMVBackendFeaturesFor(Feats);
+    }
     Features.insert(Features.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.end());
@@ -14398,8 +14468,6 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
         Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ false,
                              mangledNameStream);
 
-      if (Thunks.find(ElidedName) == Thunks.end())
-        Thunks[ElidedName] = {};
       Thunks[ElidedName].push_back(std::string(MangledName));
     }
   }

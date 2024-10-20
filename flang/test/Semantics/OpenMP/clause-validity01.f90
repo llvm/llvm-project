@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=50
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !
@@ -389,6 +389,12 @@ use omp_lib
      a = 3.14
   enddo
   !$omp end parallel
+
+  !ERROR: The `SAFELEN` clause cannot appear in the `SIMD` directive with `ORDER(CONCURRENT)` clause
+  !$omp simd order(concurrent) safelen(1+2)
+  do i = 1, N
+    a = 3.14
+  enddo
 
 ! 2.11.1 parallel-do-clause -> parallel-clause |
 !                              do-clause

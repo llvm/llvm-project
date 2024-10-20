@@ -92,8 +92,8 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
   auto HSOpts = std::make_shared<HeaderSearchOptions>();
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      std::string(ASTFileName.str()), PCHContainerOps->getRawReader(),
-      ASTUnit::LoadEverything, Diags, FileSystemOptions(), HSOpts);
+      ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
+      Diags, FileSystemOptions(), HSOpts);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";

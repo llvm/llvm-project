@@ -85,11 +85,11 @@ void testVQLocal(int *ptr, vector unsigned char vc) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP5:%.*]] = call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[TMP3]], <16 x i8> [[TMP4]])
-// CHECK-NEXT:    store <256 x i1> [[TMP5]], ptr [[VP2]], align 64
+// CHECK-NEXT:    store <256 x i1> [[TMP5]], ptr [[VP2]], align 32
 // CHECK-NEXT:    [[TMP6:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[TMP7]], <16 x i8> [[TMP6]])
-// CHECK-NEXT:    store <256 x i1> [[TMP8]], ptr [[VP2]], align 64
+// CHECK-NEXT:    store <256 x i1> [[TMP8]], ptr [[VP2]], align 32
 // CHECK-NEXT:    [[TMP9:%.*]] = load <256 x i1>, ptr [[VP3]], align 32
 // CHECK-NEXT:    [[TMP10:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP11:%.*]] = call <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1> [[TMP9]], <16 x i8> [[TMP10]])
@@ -118,11 +118,11 @@ void testVQLocal(int *ptr, vector unsigned char vc) {
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[TMP3]], <16 x i8> [[TMP4]])
-// CHECK-BE-NEXT:    store <256 x i1> [[TMP5]], ptr [[VP2]], align 64
+// CHECK-BE-NEXT:    store <256 x i1> [[TMP5]], ptr [[VP2]], align 32
 // CHECK-BE-NEXT:    [[TMP6:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-BE-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-BE-NEXT:    [[TMP8:%.*]] = call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[TMP6]], <16 x i8> [[TMP7]])
-// CHECK-BE-NEXT:    store <256 x i1> [[TMP8]], ptr [[VP2]], align 64
+// CHECK-BE-NEXT:    store <256 x i1> [[TMP8]], ptr [[VP2]], align 32
 // CHECK-BE-NEXT:    [[TMP9:%.*]] = load <256 x i1>, ptr [[VP3]], align 32
 // CHECK-BE-NEXT:    [[TMP10:%.*]] = load <16 x i8>, ptr [[VC_ADDR]], align 16
 // CHECK-BE-NEXT:    [[TMP11:%.*]] = call <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1> [[TMP9]], <16 x i8> [[TMP10]])

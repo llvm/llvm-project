@@ -75,12 +75,6 @@ bool isReductionIterator(utils::IteratorType iteratorType);
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold);
 
-/// Returns a GenericOp that transposes `inputTensor` into `outputTensor`
-/// using `transposeVector` to permute the `inputTensor` dimensions.
-GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
-                          Value outputTensor,
-                          ArrayRef<int64_t> transposeVector);
-
 /// Returns GenericOp that copies an n-D memref. Unlike the current
 /// implementation of memref::CopyOp, this op can further tile, lower to loops
 /// or vectorize.

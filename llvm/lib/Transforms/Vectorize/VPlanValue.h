@@ -350,6 +350,7 @@ public:
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
+    VPWidenIntrinsicSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,
@@ -358,6 +359,7 @@ public:
     VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
+    VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,
