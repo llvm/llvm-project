@@ -2754,33 +2754,6 @@ static MachineInstr *swapNonRegOperands(MachineInstr &MI,
     NonRegOp1.setTargetFlags(NonRegOp2.getTargetFlags());
     NonRegOp2.setTargetFlags(TargetFlags);
   }
-  // --> Still working on the FrameInfo case :)
-  // else if (NonRegOp1.isFI() && NonRegOp2.isFI()){
-  //   auto TargetFlags = NonRegOp 1.getTargetFlags();
-  //   auto FrameIndex = NonRegOp1.getIndex();  
-  //   NonRegOp1.ChangeToFrameIndex(NonRegOp2.getIndex());  
-  //   NonRegOp2.ChangeToFrameIndex(FrameIndex);  
-  //   NonRegOp1.setTargetFlags(NonRegOp2.getTargetFlags());
-  //   NonRegOp2.setTargetFlags(TargetFlags);
-  // }
-  else if (NonRegOp1.isGlobal() && NonRegOp2.isImm()){
-    auto TargetFlags = NonRegOp1.getTargetFlags();
-    auto GlobalVal = NonRegOp1.getGlobal();  
-    auto GlobalOffset = NonRegOp1.getOffset();  
-    NonRegOp1.ChangeToImmediate(NonRegOp2.getImm());  
-    NonRegOp1.setTargetFlags(NonRegOp2.getTargetFlags());
-    NonRegOp2.ChangeToGA(GlobalVal, GlobalOffset, TargetFlags);  
-    NonRegOp2.setTargetFlags(TargetFlags);
-  }
-  else if (NonRegOp1.isImm() && NonRegOp2.isGlobal()){
-    auto TargetFlags = NonRegOp2.getTargetFlags();
-    auto GlobalVal = NonRegOp2.getGlobal();  
-    auto GlobalOffset = NonRegOp2.getOffset();  
-    NonRegOp2.ChangeToImmediate(NonRegOp1.getImm());  
-    NonRegOp2.setTargetFlags(NonRegOp1.getTargetFlags());
-    NonRegOp1.ChangeToGA(GlobalVal, GlobalOffset, TargetFlags);  
-    NonRegOp1.setTargetFlags(TargetFlags);
-  }
   else 
     return nullptr;
   return &MI;
@@ -2824,7 +2797,7 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     if (isOperandLegal(MI, Src1Idx, &Src0))
       CommutedMI = swapRegAndNonRegOperand(MI, Src1, Src0);
   } else {
-      CommutedMI = swapNonRegOperands(MI, Src1, Src0);
+      CommutedMI = swapNonRegOperands(MI, Src0, Src1);
   }
 
   if (CommutedMI) {
