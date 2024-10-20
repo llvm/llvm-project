@@ -1699,6 +1699,17 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
 
+  if (auto *II = dyn_cast<IntrinsicInst>(&Op)) {
+    if (II->getIntrinsicID() == Intrinsic::sqrt) {
+      Value *NewTV = Builder.CreateUnaryIntrinsic(Intrinsic::sqrt, TV, nullptr,
+                                                  "sqrt_fold");
+      Value *NewFV = Builder.CreateUnaryIntrinsic(Intrinsic::sqrt, FV, nullptr,
+                                                  "sqrt_fold");
+      return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr,
+                                SI);
+    }
+  }
+
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
