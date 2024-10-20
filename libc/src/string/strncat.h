@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRNCAT_H
 #define LLVM_LIBC_SRC_STRING_STRNCAT_H
 
-#include "src/__support/macros/config.h"
 #include "include/llvm-libc-types/size_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
