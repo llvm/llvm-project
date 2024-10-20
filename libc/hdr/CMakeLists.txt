@@ -93,19 +93,6 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.file_seek_macros
 )
 
-add_header_library(string_overlay HDRS string_overlay.h)
-
-add_proxy_header_library(
-  string_macros
-  HDRS
-    string_macros.h
-  DEPENDS
-    .string_overlay
-  FULL_BUILD_DEPENDS
-    libc.include.string
-    libc.include.llvm-libc-macros.null_macro
-)
-
 add_proxy_header_library(
   sys_epoll_macros
   HDRS
