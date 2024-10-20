@@ -2231,7 +2231,8 @@ ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
     return cast<CXXConstructorDecl>(Function)->getExplicitSpecifier();
   case Decl::Kind::CXXConversion:
     return cast<CXXConversionDecl>(Function)->getExplicitSpecifier();
-  case Decl::Kind::CXXDeductionGuide: return cast<CXXDeductionGuideDecl>(Function)->getExplicitSpecifier();
+  case Decl::Kind::CXXDeductionGuide:
+    return cast<CXXDeductionGuideDecl>(Function)->getExplicitSpecifier();
   default:
     return {};
   }
@@ -2243,10 +2244,9 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
     DeductionCandidate Kind, Expr *TrailingRequiresClause,
     CXXDeductionGuideDecl *GeneratedFrom, SourceKind SK) {
-  return new (C, DC)
-      CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T, TInfo,
-                            EndLocation, Ctor, Kind, TrailingRequiresClause,
-                            GeneratedFrom, SK);
+  return new (C, DC) CXXDeductionGuideDecl(
+      C, DC, StartLoc, ES, NameInfo, T, TInfo, EndLocation, Ctor, Kind,
+      TrailingRequiresClause, GeneratedFrom, SK);
 }
 
 CXXDeductionGuideDecl *
@@ -2255,8 +2255,7 @@ CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
       QualType(), nullptr, SourceLocation(), nullptr,
       DeductionCandidate::Normal, nullptr,
-      /*GeneratedFrom=*/nullptr,
-      SourceKind::Alias);
+      /*GeneratedFrom=*/nullptr, SourceKind::Alias);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
