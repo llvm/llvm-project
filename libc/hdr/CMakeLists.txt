@@ -50,7 +50,6 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.error_number_macros
     libc.include.llvm-libc-macros.generic_error_number_macros
 )
-  
 
 add_proxy_header_library(
   fcntl_macros
