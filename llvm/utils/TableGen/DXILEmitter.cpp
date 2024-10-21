@@ -85,9 +85,9 @@ static void AscendingSortByVersion(std::vector<const Record *> &Recs) {
   });
 }
 
-/// Take a `int_{intrinsic_name}` and return just the intrinsic_name part if available.
-/// Otherwise return the empty string.
-static StringRef GetIntrinsicName(const RecordVal *RV){
+/// Take a `int_{intrinsic_name}` and return just the intrinsic_name part if
+/// available. Otherwise return the empty string.
+static StringRef GetIntrinsicName(const RecordVal *RV) {
   if (RV && RV->getValue()) {
     if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
       auto *IntrinsicDef = DI->getDef();

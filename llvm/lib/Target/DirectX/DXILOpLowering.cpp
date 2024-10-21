@@ -499,8 +499,8 @@ public:
         continue;
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
-    HasErrors |= replaceFunctionWithOp(F, OpCode,                              \
-                                       ArrayRef<ArgSelect>{ __VA_ARGS__ });    \
+    HasErrors |=                                                               \
+        replaceFunctionWithOp(F, OpCode, ArrayRef<ArgSelect>{__VA_ARGS__});    \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
