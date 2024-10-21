@@ -848,29 +848,21 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf(
           all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
-  LegalityPredicate UseOutlineAtomics = [&ST](const LegalityQuery &Query) {
-    return ST.outlineAtomics() && !ST.hasLSE();
-  };
+  bool UseOutlineAtomics = ST.outlineAtomics() && !ST.hasLSE();
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0),
-                   predNot(UseOutlineAtomics)))
-      .customIf(all(typeIs(0, s128), predNot(UseOutlineAtomics)))
-      .customIf([UseOutlineAtomics](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() == 128 &&
-               !UseOutlineAtomics(Query);
-      })
-      .libcallIf(all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(1, p0),
-                     UseOutlineAtomics))
+      .legalFor(!UseOutlineAtomics, {{s32, p0}, {s64, p0}})
+      .customFor(!UseOutlineAtomics, {{s128, p0}})
+      .libcallFor(UseOutlineAtomics,
+                  {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}, {s128, p0}})
       .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder({G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD,
                                G_ATOMICRMW_SUB, G_ATOMICRMW_AND, G_ATOMICRMW_OR,
                                G_ATOMICRMW_XOR})
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0),
-                   predNot(UseOutlineAtomics)))
-      .libcallIf(all(typeInSet(0, {s8, s16, s32, s64}), typeIs(1, p0),
-                     UseOutlineAtomics))
+      .legalFor(!UseOutlineAtomics, {{s32, p0}, {s64, p0}})
+      .libcallFor(UseOutlineAtomics,
+                  {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, s32, s64);
 
   // Do not outline these atomics operations, as per comment in
@@ -1289,6 +1281,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_PREFETCH).custom();
 
   getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
+
+  getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
+      .legalFor({{v8s8, v16s8}, {v4s16, v8s16}, {v2s32, v4s32}})
+      .widenScalarOrEltToNextPow2(0)
+      .immIdx(0); // Inform verifier imm idx 0 is handled.
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

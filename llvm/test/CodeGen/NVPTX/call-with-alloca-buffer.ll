@@ -45,9 +45,9 @@ entry:
   store float %3, ptr %arrayidx7, align 4
 
 ; CHECK:        .param .b64 param0;
-; CHECK-NEXT:   st.param.b64  [param0+0], %rd[[A_REG]]
+; CHECK-NEXT:   st.param.b64  [param0], %rd[[A_REG]]
 ; CHECK-NEXT:   .param .b64 param1;
-; CHECK-NEXT:   st.param.b64  [param1+0], %rd[[SP_REG]]
+; CHECK-NEXT:   st.param.b64  [param1], %rd[[SP_REG]]
 ; CHECK-NEXT:   call.uni
 ; CHECK-NEXT:   callee,
 

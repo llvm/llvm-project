@@ -1294,8 +1294,8 @@ bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
     Veneer->getOrCreateLocalLabel(Address);
     Veneer->setMaxSize(TotalSize);
     Veneer->updateState(BinaryFunction::State::Disassembled);
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x" << Address
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x"
+                      << Twine::utohexstr(Address) << "\n");
     return true;
   };
 

@@ -21,6 +21,7 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "ASTOpsTest.cpp",
     "ArenaTest.cpp",
     "CFGMatchSwitchTest.cpp",
+    "CachedConstAccessorsLatticeTest.cpp",
     "ChromiumCheckModelTest.cpp",
     "DataflowAnalysisContextTest.cpp",
     "DataflowEnvironmentTest.cpp",

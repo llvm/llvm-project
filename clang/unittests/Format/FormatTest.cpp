@@ -28135,6 +28135,83 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                Style);
 }
 
+TEST_F(FormatTest, RemovesEmptyLinesInUnwrappedLines) {
+  auto Style = getLLVMStyle();
+  Style.RemoveEmptyLinesInUnwrappedLines = true;
+
+  verifyFormat("int c = a + b;",
+               "int c\n"
+               "\n"
+               "    = a + b;",
+               Style);
+
+  verifyFormat("enum : unsigned { AA = 0, BB } myEnum;",
+               "enum : unsigned\n"
+               "\n"
+               "{\n"
+               "  AA = 0,\n"
+               "  BB\n"
+               "} myEnum;",
+               Style);
+
+  verifyFormat("class B : public E {\n"
+               "private:\n"
+               "};",
+               "class B : public E\n"
+               "\n"
+               "{\n"
+               "private:\n"
+               "};",
+               Style);
+
+  verifyFormat(
+      "struct AAAAAAAAAAAAAAA test[3] = {{56, 23, \"hello\"}, {7, 5, \"!!\"}};",
+      "struct AAAAAAAAAAAAAAA test[3] = {{56,\n"
+      "\n"
+      "                                   23, \"hello\"},\n"
+      "                                  {7, 5, \"!!\"}};",
+      Style);
+
+  verifyFormat("int myFunction(int aaaaaaaaaaaaa, int ccccccccccccc, int d);",
+               "int myFunction(\n"
+               "\n"
+               "    int aaaaaaaaaaaaa,\n"
+               "\n"
+               "    int ccccccccccccc, int d);",
+               Style);
+
+  verifyFormat("switch (e) {\n"
+               "case 1:\n"
+               "  return e;\n"
+               "case 2:\n"
+               "  return 2;\n"
+               "}",
+               "switch (\n"
+               "\n"
+               "    e) {\n"
+               "case 1:\n"
+               "  return e;\n"
+               "case 2:\n"
+               "  return 2;\n"
+               "}",
+               Style);
+
+  verifyFormat("while (true) {\n"
+               "}",
+               "while (\n"
+               "\n"
+               "    true) {\n"
+               "}",
+               Style);
+
+  verifyFormat("void loooonFunctionIsVeryLongButNotAsLongAsJavaTypeNames(\n"
+               "    std::map<int, std::string> *outputMap);",
+               "void loooonFunctionIsVeryLongButNotAsLongAsJavaTypeNames\n"
+               "\n"
+               "    (std::map<int, std::string> *outputMap);",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

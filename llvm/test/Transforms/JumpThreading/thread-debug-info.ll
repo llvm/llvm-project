@@ -50,7 +50,7 @@ exit:                                             ; preds = %bb.f4, %bb.f3, %bb.
   ret void, !dbg !29
 }
 
-; This is testing for debug value instrinsics outside of the threaded block pointing to a value
+; This is testing for debug value intrinsics outside of the threaded block pointing to a value
 ; inside to correctly take any new definitions.
 define void @test2(i32 %cond1, i32 %cond2) !dbg !5 {
 ; CHECK: bb.f3

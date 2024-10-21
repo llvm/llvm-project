@@ -1055,13 +1055,13 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$paddingDimensions,
                    CArg<"ArrayRef<int64_t>", "{}">:$staticPadToMultipleOf,
-                   CArg<"ArrayRef<int64_t>", "{}">:$packPaddings,
+                   CArg<"ArrayRef<int64_t>", "{}">:$nofoldFlags,
                    CArg<"ArrayRef<Attribute>", "{}">:$transposePaddings,
                    CArg<"StringRef", "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copyBackOp)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$paddingDimensions,
                    "ArrayRef<OpFoldResult>":$mixedPadToMultipleOf,
-                   CArg<"ArrayRef<int64_t>", "{}">:$packPaddings,
+                   CArg<"ArrayRef<int64_t>", "{}">:$nofoldFlags,
                    CArg<"ArrayRef<Attribute>", "{}">:$transposePaddings,
                    CArg<"StringRef", "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copyBackOp)>
   ];
@@ -2294,13 +2294,15 @@ def HoistRedundantVectorTransfersOp :
     function op.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   UnitAttr:$verify_non_zero_trip);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
 
   let builders = [
-    OpBuilder<(ins "Value":$target)>,
+    OpBuilder<(ins "Value":$target,
+               CArg<"bool", "false">:$verify_non_zero_trip)>,
   ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

@@ -343,6 +343,10 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   return Res;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPSingleDefRecipe::dump() const { VPDef::dump(); }
+#endif
+
 template <unsigned PartOpIdx>
 VPValue *
 VPUnrollPartAccessor<PartOpIdx>::getUnrollPartOperand(VPUser &U) const {
@@ -388,6 +392,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
+  case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -436,9 +441,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
-    Value *Cond = State.get(getOperand(0));
-    Value *Op1 = State.get(getOperand(1));
-    Value *Op2 = State.get(getOperand(2));
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    Value *Cond = State.get(getOperand(0), OnlyFirstLaneUsed);
+    Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
+    Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
   }
   case VPInstruction::ActiveLaneMask: {
@@ -738,6 +744,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ICmp:
+  case Instruction::Select:
   case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
@@ -2951,11 +2958,20 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
-  Instruction *I = getInsertPos();
+  Instruction *InsertPos = getInsertPos();
+  // Find the VPValue index of the interleave group. We need to skip gaps.
+  unsigned InsertPosIdx = 0;
+  for (unsigned Idx = 0; IG->getFactor(); ++Idx)
+    if (auto *Member = IG->getMember(Idx)) {
+      if (Member == InsertPos)
+        break;
+      InsertPosIdx++;
+    }
   Type *ValTy = Ctx.Types.inferScalarType(
-      getNumDefinedValues() > 0 ? getVPValue(0) : getStoredValues()[0]);
+      getNumDefinedValues() > 0 ? getVPValue(InsertPosIdx)
+                                : getStoredValues()[InsertPosIdx]);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
-  unsigned AS = getLoadStoreAddressSpace(I);
+  unsigned AS = getLoadStoreAddressSpace(InsertPos);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   unsigned InterleaveFactor = IG->getFactor();
@@ -2969,8 +2985,8 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
 
   // Calculate the cost of the whole interleaved group.
   InstructionCost Cost = Ctx.TTI.getInterleavedMemoryOpCost(
-      I->getOpcode(), WideVecTy, IG->getFactor(), Indices, IG->getAlign(), AS,
-      CostKind, getMask(), NeedsMaskForGaps);
+      InsertPos->getOpcode(), WideVecTy, IG->getFactor(), Indices,
+      IG->getAlign(), AS, CostKind, getMask(), NeedsMaskForGaps);
 
   if (!IG->isReverse())
     return Cost;
