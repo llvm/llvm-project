@@ -1282,7 +1282,8 @@ public:
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
-    Handler.handleUnsafeOperationInContainer(Invocation, Ctor, IsRelatedToDecl, Ctx);
+    Handler.handleUnsafeOperationInContainer(Invocation, Ctor, IsRelatedToDecl,
+                                             Ctx);
   }
   SourceLocation getSourceLoc() const override { return Ctor->getBeginLoc(); }
 
