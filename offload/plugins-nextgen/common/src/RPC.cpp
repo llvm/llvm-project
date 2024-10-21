@@ -21,8 +21,69 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 
+void RPCServerTy::ServerThread::startThread() {
+#ifdef LIBOMPTARGET_RPC_SUPPORT
+  Worker = std::thread([this]() { run(); });
+#endif
+}
+
+void RPCServerTy::ServerThread::shutDown() {
+#ifdef LIBOMPTARGET_RPC_SUPPORT
+  {
+    std::lock_guard<decltype(Mutex)> Lock(Mutex);
+    Running.store(false, std::memory_order_release);
+    CV.notify_all();
+  }
+  if (Worker.joinable())
+    Worker.join();
+#endif
+}
+
+void RPCServerTy::ServerThread::run() {
+#ifdef LIBOMPTARGET_RPC_SUPPORT
+  std::unique_lock<decltype(Mutex)> Lock(Mutex);
+  for (;;) {
+    CV.wait(Lock, [&]() {
+      return NumUsers.load(std::memory_order_acquire) > 0 ||
+             !Running.load(std::memory_order_acquire);
+    });
+
+    if (!Running.load(std::memory_order_acquire))
+      return;
+
+    Lock.unlock();
+    while (NumUsers.load(std::memory_order_relaxed) > 0 &&
+           Running.load(std::memory_order_relaxed)) {
+      for (const auto &Handle : Handles) {
+        rpc_device_t RPCDevice{Handle};
+        [[maybe_unused]] rpc_status_t Err = rpc_handle_server(RPCDevice);
+        assert(Err == RPC_STATUS_SUCCESS &&
+               "Checking the RPC server should not fail");
+      }
+    }
+    Lock.lock();
+  }
+#endif
+}
+
 RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
-    : Handles(Plugin.getNumDevices()) {}
+    : Handles(
+          std::make_unique<std::atomic<uintptr_t>[]>(Plugin.getNumDevices())),
+      Thread(new ServerThread(Handles.get(), Plugin.getNumDevices())) {}
+
+llvm::Error RPCServerTy::startThread() {
+#ifdef LIBOMPTARGET_RPC_SUPPORT
+  Thread->startThread();
+#endif
+  return Error::success();
+}
+
+llvm::Error RPCServerTy::shutDown() {
+#ifdef LIBOMPTARGET_RPC_SUPPORT
+  Thread->shutDown();
+#endif
+  return Error::success();
+}
 
 llvm::Expected<bool>
 RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
@@ -105,17 +166,6 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                                    rpc_get_client_size(), nullptr))
     return Err;
   Handles[Device.getDeviceId()] = RPCDevice.handle;
-#endif
-  return Error::success();
-}
-
-Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  rpc_device_t RPCDevice{Handles[Device.getDeviceId()]};
-  if (rpc_status_t Err = rpc_handle_server(RPCDevice))
-    return plugin::Plugin::error(
-        "Error while running RPC server on device %d: %d", Device.getDeviceId(),
-        Err);
 #endif
   return Error::success();
 }
