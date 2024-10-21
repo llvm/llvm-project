@@ -348,6 +348,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     } else if (Feature == "+movbe") {
       HasMOVBE = true;
+    } else if (Feature == "+movrs") {
+      HasMOVRS = true;
     } else if (Feature == "+sgx") {
       HasSGX = true;
     } else if (Feature == "+cx8") {
@@ -1116,6 +1118,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("lzcnt", true)
       .Case("mmx", true)
       .Case("movbe", true)
+      .Case("movrs", true)
       .Case("movdiri", true)
       .Case("movdir64b", true)
       .Case("mwaitx", true)
@@ -1233,6 +1236,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("lzcnt", HasLZCNT)
       .Case("mmx", HasMMX)
       .Case("movbe", HasMOVBE)
+      .Case("movrs", HasMOVRS)
       .Case("movdiri", HasMOVDIRI)
       .Case("movdir64b", HasMOVDIR64B)
       .Case("mwaitx", HasMWAITX)

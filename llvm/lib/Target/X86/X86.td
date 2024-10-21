@@ -351,6 +351,8 @@ def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
 def FeatureUseGPR32InInlineAsm
     : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
+def FeatureMOVRS   : SubtargetFeature<"movrs", "HasMOVRS", "true",
+                           "Enable MOVRS", []>;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software

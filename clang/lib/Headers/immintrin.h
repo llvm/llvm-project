@@ -605,6 +605,16 @@ _storebe_i64(void * __P, long long __D) {
 #include <movdirintrin.h>
 #endif
 
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AVX10_2__) && defined(__MOVRS__))
+#include <movrs_avx10_2intrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AVX10_2_512__) && defined(__MOVRS__))
+#include <movrs_avx10_2_512intrin.h>
+#endif
+
 #if !defined(__SCE__) || __has_feature(modules) || defined(__PCONFIG__)
 #include <pconfigintrin.h>
 #endif
