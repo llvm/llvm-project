@@ -287,7 +287,6 @@ public:
 class SeedCollector {
   SeedContainer StoreSeeds;
   SeedContainer LoadSeeds;
-  BasicBlock *BB;
   Context &Ctx;
 
   /// \Returns the number of SeedBundle groups for all seed types.
@@ -297,10 +296,8 @@ class SeedCollector {
   }
 
 public:
-  SeedCollector(BasicBlock *SBBB, ScalarEvolution &SE);
+  SeedCollector(BasicBlock *BB, ScalarEvolution &SE);
   ~SeedCollector();
-
-  BasicBlock *getBasicBlock() { return BB; }
 
   iterator_range<SeedContainer::iterator> getStoreSeeds() {
     return {StoreSeeds.begin(), StoreSeeds.end()};

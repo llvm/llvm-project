@@ -160,7 +160,7 @@ template bool isValidMemSeed<LoadInst>(LoadInst *LSI);
 template bool isValidMemSeed<StoreInst>(StoreInst *LSI);
 
 SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
-    : StoreSeeds(SE), LoadSeeds(SE), BB(BB), Ctx(BB->getContext()) {
+    : StoreSeeds(SE), LoadSeeds(SE), Ctx(BB->getContext()) {
   // TODO: Register a callback for updating the Collector data structures upon
   // instr removal
 

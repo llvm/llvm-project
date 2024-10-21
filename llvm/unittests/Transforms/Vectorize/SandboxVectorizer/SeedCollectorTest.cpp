@@ -394,7 +394,7 @@ bb:
   auto StoreSeedsRange = SC.getStoreSeeds();
   EXPECT_EQ(range_size(StoreSeedsRange), 1u);
   auto &SB = *StoreSeedsRange.begin();
-  EXPECT_THAT(SB, testing::ElementsAre(St0, St2));
+  EXPECT_THAT(SB, testing::ElementsAre(St0, St1));
 }
 
 TEST_F(SeedBundleTest, MixedScalarVectors) {

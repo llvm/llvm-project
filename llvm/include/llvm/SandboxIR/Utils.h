@@ -60,18 +60,6 @@ public:
         getUnderlyingObject(LSI->getPointerOperand()->Val));
   }
 
-  /// \Returns the number of elements in \p Ty. That is the number of lanes if a
-  /// fixed vector or 1 if scalar. ScalableVectors have unknown size and
-  /// therefore are unsupported.
-  static int getNumElements(Type *Ty) {
-    assert(!isa<ScalableVectorType>(Ty));
-    return Ty->isVectorTy() ? cast<FixedVectorType>(Ty)->getNumElements() : 1;
-  }
-  /// Returns \p Ty if scalar or its element type if vector.
-  static Type *getElementType(Type *Ty) {
-    return Ty->isVectorTy() ? cast<FixedVectorType>(Ty)->getElementType() : Ty;
-  }
-
   /// \Returns the number of bits required to represent the operands or return
   /// value of \p V in \p DL.
   static unsigned getNumBits(Value *V, const DataLayout &DL) {
