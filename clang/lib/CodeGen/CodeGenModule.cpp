@@ -4764,6 +4764,15 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     llvm::AttrBuilder B(F->getContext(), ExtraAttrs.getFnAttrs());
     F->addFnAttrs(B);
   }
+  if (ExtraAttrs.hasRetAttrs()) {
+    llvm::AttrBuilder B(F->getContext(), ExtraAttrs.getRetAttrs());
+    F->addRetAttrs(B);
+  }
+  for (unsigned i = 0; i < F->arg_size(); ++i)
+    if (ExtraAttrs.hasParamAttrs(i)) {
+      llvm::AttrBuilder B(F->getContext(), ExtraAttrs.getParamAttrs(i));
+      F->addParamAttrs(i, B);
+    }
 
   if (!DontDefer) {
     // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
@@ -4945,6 +4954,40 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
   }
 
   return {FTy, C};
+}
+
+llvm::AttributeList
+CodeGenModule::getTargetExtAttrs(ArrayRef<AttrKind> Extensions) {
+  using AttrIndex = llvm::AttributeList::AttrIndex;
+  assert(Extensions.size() && "Empty array not expected.");
+  const auto &T = getTarget().getTriple();
+  llvm::AttributeList AL;
+
+  bool IsSigned;
+  auto isExtension = [&IsSigned](AttrKind AK) -> bool {
+    assert((AK == AttrKind::None || AK == AttrKind::SExt ||
+            AK == AttrKind::ZExt) &&
+           "Unhandled extension attribute.");
+    if (AK != AttrKind::SExt && AK != AttrKind::ZExt)
+      return false;
+    IsSigned = (AK == AttrKind::SExt);
+    return true;
+  };
+
+  if (isExtension(Extensions[0])) { // Returned value at index 0.
+    AttrKind AK = llvm::TargetLibraryInfo::getExtAttrForI32Return(T, IsSigned);
+    if (AK != AttrKind::None)
+      AL = AL.addAttributeAtIndex(getLLVMContext(), AttrIndex::ReturnIndex, AK);
+  }
+  for (unsigned i = 1; i < Extensions.size(); ++i)
+    if (isExtension(Extensions[i])) {
+      AttrKind AK = llvm::TargetLibraryInfo::getExtAttrForI32Param(T, IsSigned);
+      if (AK != AttrKind::None)
+        AL = AL.addAttributeAtIndex(getLLVMContext(),
+                                    AttrIndex::FirstArgIndex + i - 1, AK);
+    }
+
+  return AL;
 }
 
 /// GetOrCreateLLVMGlobal - If the specified mangled name is not in the module,
