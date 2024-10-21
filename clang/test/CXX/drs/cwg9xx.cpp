@@ -93,7 +93,7 @@ struct B : A {
 } // namespace example2
 } // namespace cwg952
 
-namespace cwg960 { // cwg960: 2.8
+namespace cwg960 { // cwg960: 3.0
 struct a {};
 class A {
 #if __cplusplus >= 201103L
