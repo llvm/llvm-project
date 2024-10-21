@@ -51,6 +51,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
 #include <optional>
@@ -570,6 +571,11 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(LoopIdiomVectorizePass());
       });
+  if (getTargetTriple().isOSWindows())
+    PB.registerPipelineEarlySimplificationEPCallback(
+        [](ModulePassManager &PM, OptimizationLevel Level) {
+          PM.addPass(LowerIFuncPass());
+        });
 }
 
 TargetTransformInfo
