@@ -30,6 +30,7 @@ class CmpInst;
 class IntrinsicInst;
 class Operator;
 class OverflowingBinaryOperator;
+class FPMathOperator;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.
@@ -162,6 +163,7 @@ protected:
   friend class IntrinsicInst;         // For `Val`.
   friend class Operator;              // For `Val`.
   friend class OverflowingBinaryOperator; // For `Val`.
+  friend class FPMathOperator;            // For `Val`.
   // Region needs to manipulate metadata in the underlying LLVM Value, we don't
   // expose metadata in sandboxir.
   friend class Region;
