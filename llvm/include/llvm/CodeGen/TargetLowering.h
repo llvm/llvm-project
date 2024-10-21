@@ -455,6 +455,12 @@ public:
     return true;
   }
 
+  /// Return true if the target can handle the declaration and use of pointers
+  /// that specify the type of data they point to, meaning that interpretation
+  /// of the data type is not left to instructions that utilize the pointer, but
+  /// encoded by the pointer declaration.
+  virtual bool hasTypedPointer() const { return false; }
+
   /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
   /// should be expanded using generic code in SelectionDAGBuilder.
   virtual bool
