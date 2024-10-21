@@ -1748,6 +1748,13 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     MFI->reserveWWMRegister(ParsedReg);
   }
 
+  for (const auto &[_, Info] : PFS.VRegInfosNamed) {
+    MFI->setFlag(Info->VReg, Info->Flags);
+  }
+  for (const auto &[_, Info] : PFS.VRegInfos) {
+    MFI->setFlag(Info->VReg, Info->Flags);
+  }
+
   auto parseAndCheckArgument = [&](const std::optional<yaml::SIArgument> &A,
                                    const TargetRegisterClass &RC,
                                    ArgDescriptor &Arg, unsigned UserSGPRs,

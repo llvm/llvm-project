@@ -19354,6 +19354,9 @@ bool ARMTargetLowering::allowTruncateForTailCall(Type *Ty1, Type *Ty2) const {
 /// patterns (and we don't have the non-fused floating point instruction).
 bool ARMTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                                    EVT VT) const {
+  if (Subtarget->useSoftFloat())
+    return false;
+
   if (!VT.isSimple())
     return false;
 
@@ -21305,7 +21308,7 @@ bool ARMTargetLowering::shouldInsertFencesForAtomic(
   return InsertFencesForAtomic;
 }
 
-bool ARMTargetLowering::useLoadStackGuardNode() const {
+bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
   // ROPI/RWPI are not supported currently.
   return !Subtarget->isROPI() && !Subtarget->isRWPI();
 }
