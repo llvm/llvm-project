@@ -300,8 +300,9 @@ struct BuiltinTypeDeclBuilder {
   }
 
   TemplateParameterListBuilder addTemplateArgumentList(Sema &S);
-  BuiltinTypeDeclBuilder &addSimpleTemplateParams(Sema &S,
-                                                  ArrayRef<StringRef> Names);
+  BuiltinTypeDeclBuilder &
+  addSimpleTemplateParams(Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD);
+  BuiltinTypeDeclBuilder &addConceptSpecializationExpr(Sema &S);
 };
 
 struct TemplateParameterListBuilder {
@@ -323,30 +324,128 @@ struct TemplateParameterListBuilder {
         S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         SourceLocation(), /* TemplateDepth */ 0, Position,
         &S.Context.Idents.get(Name, tok::TokenKind::identifier),
-        /* Typename */ false,
-        /* ParameterPack */ false);
+        /* Typename */ true,
+        /* ParameterPack */ false,
+        /* HasTypeConstraint*/ false);
     if (!DefaultValue.isNull())
       Decl->setDefaultArgument(
           S.Context, S.getTrivialTemplateArgumentLoc(DefaultValue, QualType(),
                                                      SourceLocation()));
-
+    Decl->setReferenced();
     Params.emplace_back(Decl);
     return *this;
   }
 
-  BuiltinTypeDeclBuilder &finalizeTemplateArgs() {
+  /*
+  The concept specialization expression (CSE) constructed below is constructed
+  so that it matches the CSE that is constructed when parsing
+  the below C++ code:
+
+  template<typename T>
+  concept is_valid_line_vector =sizeof(T) <= 16;
+
+  template<typename element_type> requires is_valid_line_vector<element_type>
+
+  struct RWBuffer {
+      element_type Val;
+  };
+
+  int fn() {
+      RWBuffer<int> Buf;
+  }
+
+  When dumping the AST and filtering for "RWBuffer", the resulting AST
+  structure is what we're trying to construct below, specifically the
+  CSE portion.
+  */
+  ConceptSpecializationExpr *
+  constructConceptSpecializationExpr(Sema &S, ConceptDecl *CD) {
+    ASTContext &Context = S.getASTContext();
+    SourceLocation Loc = Builder.Record->getBeginLoc();
+    DeclarationNameInfo DNI(CD->getDeclName(), Loc);
+    NestedNameSpecifierLoc NNSLoc;
+    DeclContext *DC = Builder.Record->getDeclContext();
+    TemplateArgumentListInfo TALI(Loc, Loc);
+
+    // Assume that the concept decl has just one template parameter
+    // This parameter should have been added when CD was constructed
+    // in getTypedBufferConceptDecl
+    assert(CD->getTemplateParameters()->size() == 1 &&
+           "unexpected concept decl parameter count");
+    TemplateTypeParmDecl *ConceptTTPD = dyn_cast<TemplateTypeParmDecl>(
+        CD->getTemplateParameters()->getParam(0));
+
+    // this fake TemplateTypeParmDecl is used to construct a template argument
+    // that will be used to construct the ImplicitConceptSpecializationDecl
+    TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
+        Context,                          // AST context
+        Context.getTranslationUnitDecl(), // DeclContext
+        SourceLocation(), SourceLocation(),
+        /*depth=*/0,                // Depth in the template parameter list
+        /*position=*/0,             // Position in the template parameter list
+        /*id=*/nullptr,             // Identifier for 'T'
+        /*Typename=*/true,          // Indicates this is a 'typename' or 'class'
+        /*ParameterPack=*/false,    // Not a parameter pack
+        /*HasTypeConstraint=*/false // Has no type constraint
+    );
+
+    T->setDeclContext(DC);
+    T->setReferenced();
+
+    QualType ConceptTType = Context.getTypeDeclType(ConceptTTPD);
+
+    // this is the 2nd template argument node in the AST above
+    TemplateArgument ConceptTA = TemplateArgument(ConceptTType);
+
+    QualType CSETType = Context.getTypeDeclType(T);
+
+    // this is the 1st template argument node in the AST above
+    TemplateArgument CSETA = TemplateArgument(CSETType);
+
+    ImplicitConceptSpecializationDecl *ImplicitCSEDecl =
+        ImplicitConceptSpecializationDecl::Create(
+            Context, Builder.Record->getDeclContext(), Loc, {CSETA});
+
+    // Constraint satisfaction is used to construct the
+    // ConceptSpecailizationExpr, and represents the 2nd Template Argument,
+    // located at the bottom of the sample AST above.
+    const ConstraintSatisfaction CS(CD, {ConceptTA});
+    TemplateArgumentLoc TAL = S.getTrivialTemplateArgumentLoc(
+        ConceptTA, QualType(), SourceLocation());
+
+    TALI.addArgument(TAL);
+    const ASTTemplateArgumentListInfo *ATALI =
+        ASTTemplateArgumentListInfo::Create(Context, TALI);
+
+    // In the concept reference, ATALI is what adds the extra
+    // TemplateArgument node underneath CSE
+    ConceptReference *CR =
+        ConceptReference::Create(Context, NNSLoc, Loc, DNI, CD, CD, ATALI);
+
+    ConceptSpecializationExpr *CSE =
+        ConceptSpecializationExpr::Create(Context, CR, ImplicitCSEDecl, &CS);
+
+    return CSE;
+  }
+
+  BuiltinTypeDeclBuilder &finalizeTemplateArgs(ConceptDecl *CD = nullptr) {
     if (Params.empty())
       return Builder;
+    ConceptSpecializationExpr *CSE =
+        CD ? constructConceptSpecializationExpr(S, CD) : nullptr;
+
     auto *ParamList = TemplateParameterList::Create(S.Context, SourceLocation(),
                                                     SourceLocation(), Params,
-                                                    SourceLocation(), nullptr);
+                                                    SourceLocation(), CSE);
     Builder.Template = ClassTemplateDecl::Create(
         S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         DeclarationName(Builder.Record->getIdentifier()), ParamList,
         Builder.Record);
+
     Builder.Record->setDescribedClassTemplate(Builder.Template);
     Builder.Template->setImplicit(true);
     Builder.Template->setLexicalDeclContext(Builder.Record->getDeclContext());
+
     // NOTE: setPreviousDecl before addDecl so new decl replace old decl when
     // make visible.
     Builder.Template->setPreviousDecl(Builder.PrevTemplate);
@@ -366,13 +465,13 @@ BuiltinTypeDeclBuilder::addTemplateArgumentList(Sema &S) {
   return TemplateParameterListBuilder(S, *this);
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSimpleTemplateParams(Sema &S,
-                                                ArrayRef<StringRef> Names) {
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
+    Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD = nullptr) {
   TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
     Builder.addTypeParameter(Name);
-  return Builder.finalizeTemplateArgs();
+
+  return Builder.finalizeTemplateArgs(CD);
 }
 
 HLSLExternalSemaSource::~HLSLExternalSemaSource() {}
@@ -483,10 +582,101 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor(S, RC);
 }
 
+BinaryOperator *constructSizeOfLEQ16Expr(ASTContext &Context,
+                                         SourceLocation NameLoc,
+                                         TemplateTypeParmDecl *T) {
+  // Obtain the QualType for 'unsigned long'
+  QualType UnsignedLongType = Context.UnsignedLongTy;
+
+  // Create a QualType that points to this TemplateTypeParmDecl
+  QualType TType = Context.getTypeDeclType(T);
+
+  // Create a TypeSourceInfo for the template type parameter 'T'
+  TypeSourceInfo *TTypeSourceInfo =
+      Context.getTrivialTypeSourceInfo(TType, NameLoc);
+
+  UnaryExprOrTypeTraitExpr *sizeOfExpr = new (Context) UnaryExprOrTypeTraitExpr(
+      UETT_SizeOf, TTypeSourceInfo, UnsignedLongType, NameLoc, NameLoc);
+
+  // Create an IntegerLiteral for the value '16' with size type
+  QualType SizeType = Context.getSizeType();
+  llvm::APInt SizeValue = llvm::APInt(Context.getTypeSize(SizeType), 16);
+  IntegerLiteral *SizeLiteral =
+      new (Context) IntegerLiteral(Context, SizeValue, SizeType, NameLoc);
+
+  QualType BoolTy = Context.BoolTy;
+
+  BinaryOperator *binaryOperator =
+      BinaryOperator::Create(Context, sizeOfExpr, // Left-hand side expression
+                             SizeLiteral,         // Right-hand side expression
+                             BO_LE,               // Binary operator kind (<=)
+                             BoolTy,              // Result type (bool)
+                             VK_LValue,           // Value kind
+                             OK_Ordinary,         // Object kind
+                             NameLoc,             // Source location of operator
+                             FPOptionsOverride());
+
+  return binaryOperator;
+}
+
+Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
+                                         TemplateTypeParmDecl *T) {
+  ASTContext &Context = S.getASTContext();
+
+  // first get the "sizeof(T) <= 16" expression, as a binary operator
+  BinaryOperator *SizeOfLEQ16 = constructSizeOfLEQ16Expr(Context, NameLoc, T);
+  // TODO: add the '__builtin_hlsl_is_line_vector_layout_compatible' builtin
+  // and return a binary operator that evaluates the builtin on the given
+  // template type parameter 'T'
+  return SizeOfLEQ16;
+}
+
+ConceptDecl *constructTypedBufferConceptDecl(Sema &S) {
+  DeclContext *DC = S.CurContext;
+  ASTContext &Context = S.getASTContext();
+  SourceLocation DeclLoc = SourceLocation();
+
+  IdentifierInfo &IsValidLineVectorII =
+      Context.Idents.get("is_valid_line_vector");
+  IdentifierInfo &ElementTypeII = Context.Idents.get("element_type");
+  TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
+      Context, Context.getTranslationUnitDecl(), DeclLoc, DeclLoc,
+      /*depth=*/0,
+      /*position=*/0,
+      /*id=*/&ElementTypeII,
+      /*Typename=*/true,
+      /*ParameterPack=*/false);
+
+  T->setDeclContext(DC);
+  T->setReferenced();
+
+  // Create and Attach Template Parameter List to ConceptDecl
+  TemplateParameterList *ConceptParams = TemplateParameterList::Create(
+      Context, DeclLoc, DeclLoc, {T}, DeclLoc, nullptr);
+
+  DeclarationName DeclName = DeclarationName(&IsValidLineVectorII);
+  Expr *ConstraintExpr = constructTypedBufferConstraintExpr(S, DeclLoc, T);
+
+  // Create a ConceptDecl
+  ConceptDecl *CD =
+      ConceptDecl::Create(Context, Context.getTranslationUnitDecl(), DeclLoc,
+                          DeclName, ConceptParams, ConstraintExpr);
+
+  // Attach the template parameter list to the ConceptDecl
+  CD->setTemplateParameters(ConceptParams);
+
+  // Add the concept declaration to the Translation Unit Decl
+  Context.getTranslationUnitDecl()->addDecl(CD);
+
+  return CD;
+}
+
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
+  ConceptDecl *CD = constructTypedBufferConceptDecl(*SemaPtr);
+
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"}, CD)
              .Record;
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
