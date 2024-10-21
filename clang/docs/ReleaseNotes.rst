@@ -538,6 +538,7 @@ Bug Fixes to C++ Support
   certain situations. (#GH47400), (#GH90896)
 - Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 - During the lookup for a base class name, non-type names are ignored. (#GH16855)
+- Fix immediate escalation not propagating through inherited constructors.  (#GH112677)
 - Fix a crash when recovering an invalid expression involving an explicit object member conversion operator. (#GH112559)
 
 Bug Fixes to AST Handling
