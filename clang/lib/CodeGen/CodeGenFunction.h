@@ -4298,8 +4298,11 @@ public:
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
   LValue EmitHLSLArrayAssignLValue(const BinaryOperator *E);
-  void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
-                          QualType Ty);
+
+  std::pair<LValue, LValue> EmitHLSLOutArgLValues(const HLSLOutArgExpr *E,
+                                                  QualType Ty);
+  LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
+                            QualType Ty);
 
   Address EmitExtVectorElementLValue(LValue V);
 
@@ -5148,6 +5151,12 @@ public:
   void EmitNonNullArgCheck(Address Addr, QualType ArgType,
                            SourceLocation ArgLoc, AbstractCallee AC,
                            unsigned ParmNum);
+
+  /// EmitWriteback - Emit callbacks for function.
+  void EmitWritebacks(CodeGenFunction &CGF, const CallArgList &Args);
+
+  void EmitWriteback(CodeGenFunction &CGF,
+                     const CallArgList::Writeback &writeback);
 
   /// EmitCallArg - Emit a single call argument.
   void EmitCallArg(CallArgList &args, const Expr *E, QualType ArgType);

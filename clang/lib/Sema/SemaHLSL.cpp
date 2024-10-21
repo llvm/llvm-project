@@ -1698,18 +1698,27 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
-static bool CheckArgsTypesAreCorrect(
+bool CheckArgTypeIsIncorrect(
+    Sema *S, Expr *Arg, QualType ExpectedType,
+    llvm::function_ref<bool(clang::QualType PassedType)> Check) {
+  QualType PassedType = Arg->getType();
+  if (Check(PassedType)) {
+    if (auto *VecTyA = PassedType->getAs<VectorType>())
+      ExpectedType = S->Context.getVectorType(
+          ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
+    S->Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+        << PassedType << ExpectedType << 1 << 0 << 0;
+    return true;
+  }
+  return false;
+}
+
+bool CheckArgsTypesAreCorrect(
     Sema *S, CallExpr *TheCall, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
-    QualType PassedType = TheCall->getArg(i)->getType();
-    if (Check(PassedType)) {
-      if (auto *VecTyA = PassedType->getAs<VectorType>())
-        ExpectedType = S->Context.getVectorType(
-            ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
-      S->Diag(TheCall->getArg(0)->getBeginLoc(),
-              diag::err_typecheck_convert_incompatible)
-          << PassedType << ExpectedType << 1 << 0 << 0;
+    Expr *Arg = TheCall->getArg(i);
+    if (CheckArgTypeIsIncorrect(S, Arg, ExpectedType, Check)) {
       return true;
     }
   }
@@ -2072,6 +2081,35 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     if (SemaRef.checkArgCount(TheCall, 0))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_splitdouble: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+
+    Expr *Op0 = TheCall->getArg(0);
+
+    auto CheckIsNotDouble = [](clang::QualType PassedType) -> bool {
+      return !PassedType->hasFloatingRepresentation();
+    };
+
+    if (CheckArgTypeIsIncorrect(&SemaRef, Op0, SemaRef.Context.DoubleTy,
+                                CheckIsNotDouble))
+      return true;
+
+    Expr *Op1 = TheCall->getArg(1);
+    Expr *Op2 = TheCall->getArg(2);
+
+    auto CheckIsNotUint = [](clang::QualType PassedType) -> bool {
+      return !PassedType->hasUnsignedIntegerRepresentation();
+    };
+
+    if (CheckArgTypeIsIncorrect(&SemaRef, Op1, SemaRef.Context.UnsignedIntTy,
+                                CheckIsNotUint) ||
+        CheckArgTypeIsIncorrect(&SemaRef, Op2, SemaRef.Context.UnsignedIntTy,
+                                CheckIsNotUint))
+      return true;
+
     break;
   }
   case Builtin::BI__builtin_elementwise_acos:

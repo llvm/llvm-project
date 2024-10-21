@@ -17,6 +17,7 @@
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
+#include "CGValue.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
@@ -27,6 +28,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -67,6 +69,7 @@
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
 #include <sstream>
+#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -18951,6 +18954,142 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         /*ReturnType=*/Op0->getType(),
         CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.radians");
+  }
+  case Builtin::BI__builtin_hlsl_splitdouble: {
+
+    assert((E->getArg(0)->getType()->hasFloatingRepresentation() &&
+            E->getArg(1)->getType()->hasUnsignedIntegerRepresentation() &&
+            E->getArg(2)->getType()->hasUnsignedIntegerRepresentation()) &&
+           "asuint operands types mismatch");
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    const auto *OutArg1 = dyn_cast<HLSLOutArgExpr>(E->getArg(1));
+    const auto *OutArg2 = dyn_cast<HLSLOutArgExpr>(E->getArg(2));
+
+    CallArgList Args;
+    LValue Op1TmpLValue = EmitHLSLOutArgExpr(OutArg1, Args, OutArg1->getType());
+    LValue Op2TmpLValue = EmitHLSLOutArgExpr(OutArg2, Args, OutArg2->getType());
+
+    if (getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee())
+      Args.reverseWritebacks();
+
+    auto EmitVectorCode =
+        [](Value *Op, CGBuilderTy *Builder,
+           FixedVectorType *DestTy) -> std::pair<Value *, Value *> {
+      Value *bitcast = Builder->CreateBitCast(Op, DestTy);
+
+      SmallVector<int> LowbitsIndex;
+      SmallVector<int> HighbitsIndex;
+
+      for (unsigned int Idx = 0; Idx < DestTy->getNumElements(); Idx += 2) {
+        LowbitsIndex.push_back(Idx);
+        HighbitsIndex.push_back(Idx + 1);
+      }
+
+      Value *Arg0 = Builder->CreateShuffleVector(bitcast, LowbitsIndex);
+      Value *Arg1 = Builder->CreateShuffleVector(bitcast, HighbitsIndex);
+
+      return std::make_pair(Arg0, Arg1);
+    };
+
+    Value *LastInst = nullptr;
+
+    if (CGM.getTarget().getTriple().isDXIL()) {
+
+      llvm::Type *RetElementTy = Int32Ty;
+      if (auto *Op0VecTy = E->getArg(0)->getType()->getAs<VectorType>())
+        RetElementTy = llvm::VectorType::get(
+            Int32Ty, ElementCount::getFixed(Op0VecTy->getNumElements()));
+      auto *RetTy = llvm::StructType::get(RetElementTy, RetElementTy);
+
+      CallInst *CI = Builder.CreateIntrinsic(
+          RetTy, Intrinsic::dx_splitdouble, {Op0}, nullptr, "hlsl.splitdouble");
+
+      Value *Arg0 = Builder.CreateExtractValue(CI, 0);
+      Value *Arg1 = Builder.CreateExtractValue(CI, 1);
+
+      Builder.CreateStore(Arg0, Op1TmpLValue.getAddress());
+      LastInst = Builder.CreateStore(Arg1, Op2TmpLValue.getAddress());
+
+    } else {
+
+      assert(!CGM.getTarget().getTriple().isDXIL() &&
+             "For non-DXIL targets we generate the instructions");
+
+      if (!Op0->getType()->isVectorTy()) {
+        FixedVectorType *DestTy = FixedVectorType::get(Int32Ty, 2);
+        Value *Bitcast = Builder.CreateBitCast(Op0, DestTy);
+
+        Value *Arg0 = Builder.CreateExtractElement(Bitcast, 0.0);
+        Value *Arg1 = Builder.CreateExtractElement(Bitcast, 1.0);
+
+        Builder.CreateStore(Arg0, Op1TmpLValue.getAddress());
+        LastInst = Builder.CreateStore(Arg1, Op2TmpLValue.getAddress());
+      } else {
+
+        const auto *TargTy = E->getArg(0)->getType()->getAs<VectorType>();
+
+        int NumElements = TargTy->getNumElements();
+
+        FixedVectorType *DestTy = FixedVectorType::get(Int32Ty, 4);
+        if (NumElements == 1) {
+          FixedVectorType *DestTy = FixedVectorType::get(Int32Ty, 2);
+          Value *Bitcast = Builder.CreateBitCast(Op0, DestTy);
+
+          Value *Arg0 = Builder.CreateExtractElement(Bitcast, 0.0);
+          Value *Arg1 = Builder.CreateExtractElement(Bitcast, 1.0);
+
+          Builder.CreateStore(Arg0, Op1TmpLValue.getAddress());
+          LastInst = Builder.CreateStore(Arg1, Op2TmpLValue.getAddress());
+        } else if (NumElements == 2) {
+          auto [LowBits, HighBits] = EmitVectorCode(Op0, &Builder, DestTy);
+
+          Builder.CreateStore(LowBits, Op1TmpLValue.getAddress());
+          LastInst = Builder.CreateStore(HighBits, Op2TmpLValue.getAddress());
+        } else {
+
+          SmallVector<std::pair<Value *, Value *>> EmitedValuePairs;
+
+          for (int It = 0; It < NumElements; It += 2) {
+            // Due to existing restrictions to SPIR-V and splitdouble,
+            // all shufflevector operations, should return vectors of
+            // the same size, up to 4. Such introduce and edge case
+            // when we got odd sized vectors, which will require
+            // an additional dummy value, such is masked out in a later
+            // stage of this code.
+            auto Shuff = Builder.CreateShuffleVector(
+                Op0, {It, ((It + 1) % NumElements)});
+            std::pair<Value *, Value *> ValuePair =
+                EmitVectorCode(Shuff, &Builder, DestTy);
+            EmitedValuePairs.push_back(ValuePair);
+          }
+
+          SmallVector<int> Index;
+          auto InitSize = NumElements > 4 ? 4 : NumElements;
+          for (int It = 0; It < InitSize; It++)
+            Index.push_back(It);
+
+          auto arg0 = Builder.CreateShuffleVector(
+              EmitedValuePairs[0].first, EmitedValuePairs[1].first, Index);
+          auto arg1 = Builder.CreateShuffleVector(
+              EmitedValuePairs[0].second, EmitedValuePairs[1].second, Index);
+
+          for (size_t It = 2; It < EmitedValuePairs.size(); It++) {
+            int CurIndexSize = Index.size();
+            Index.insert(Index.end(), {CurIndexSize + 1,
+                                       ((CurIndexSize + 2) % NumElements)});
+            arg0 = Builder.CreateShuffleVector(arg0, EmitedValuePairs[It].first,
+                                               Index);
+            arg1 = Builder.CreateShuffleVector(
+                arg1, EmitedValuePairs[It].second, Index);
+          }
+
+          Builder.CreateStore(arg0, Op1TmpLValue.getAddress());
+          LastInst = Builder.CreateStore(arg1, Op2TmpLValue.getAddress());
+        }
+      }
+    }
+    EmitWritebacks(*this, Args);
+    return LastInst;
   }
   }
   return nullptr;
