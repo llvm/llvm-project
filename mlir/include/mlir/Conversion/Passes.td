@@ -879,6 +879,23 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MeshToMPI
+//===----------------------------------------------------------------------===//
+
+def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
+  let summary = "Convert Mesh dialect to MPI dialect.";
+  let description = [{
+    This pass converts communication operations
+    from the Mesh dialect to the MPI dialect.
+  }];
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "mpi::MPIDialect",
+    "scf::SCFDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVMToLLVM
 //===----------------------------------------------------------------------===//
 
