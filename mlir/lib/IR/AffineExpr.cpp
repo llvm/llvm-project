@@ -794,6 +794,10 @@ AffineExpr AffineExpr::operator+(AffineExpr other) const {
 
 /// Simplify a multiply expression. Return nullptr if it can't be simplified.
 static AffineExpr simplifyMul(AffineExpr lhs, AffineExpr rhs) {
+  // The caller should have checked that this constitutes a valid `AffineExpr`
+  // in principle.
+  assert(lhs.isSymbolicOrConstant() || rhs.isSymbolicOrConstant());
+
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
@@ -804,9 +808,6 @@ static AffineExpr simplifyMul(AffineExpr lhs, AffineExpr rhs) {
     }
     return getAffineConstantExpr(product, lhs.getContext());
   }
-
-  if (!lhs.isSymbolicOrConstant() && !rhs.isSymbolicOrConstant())
-    return nullptr;
 
   // Canonicalize the mul expression so that the constant/symbolic term is the
   // RHS. If both the lhs and rhs are symbolic, swap them if the lhs is a
@@ -849,6 +850,11 @@ AffineExpr AffineExpr::operator*(int64_t v) const {
   return *this * getAffineConstantExpr(v, getContext());
 }
 AffineExpr AffineExpr::operator*(AffineExpr other) const {
+  // If neither LHS nor RHS are symbolic or constant, this product will not be a
+  // valid `AffineExpr`.
+  if (!this->isSymbolicOrConstant() && !other.isSymbolicOrConstant())
+    return nullptr;
+
   if (auto simplified = simplifyMul(*this, other))
     return simplified;
 
