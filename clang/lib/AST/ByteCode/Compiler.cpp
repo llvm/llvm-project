@@ -6097,7 +6097,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
           if (VD->evaluateValue())
             return revisit(VD);
-          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E), E);
+          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                          /*InitializerFailed=*/true, E);
         }
       }
     } else {
@@ -6123,7 +6124,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   }
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return this->emitInvalidDeclRef(DRE, E);
+    return this->emitInvalidDeclRef(DRE, /*InitializerFailed=*/false, E);
   return false;
 }
 
