@@ -164,7 +164,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// The function hash.
   PGOHash Hash;
   /// The map of statements to counters.
-  llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
+  llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
   /// The state of MC/DC Coverage in this function.
   MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
@@ -175,7 +175,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   DiagnosticsEngine &Diag;
 
   MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
-                    llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
+                    llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
                     MCDC::State &MCDCState, unsigned MCDCMaxCond,
                     DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
@@ -343,14 +343,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return Base::VisitBinaryOperator(S);
   }
 
-  bool VisitConditionalOperator(ConditionalOperator *S) {
-    if (llvm::EnableSingleByteCoverage && S->getTrueExpr())
-      CounterMap[S->getTrueExpr()] = NextCounter++;
-    if (llvm::EnableSingleByteCoverage && S->getFalseExpr())
-      CounterMap[S->getFalseExpr()] = NextCounter++;
-    return Base::VisitConditionalOperator(S);
-  }
-
   /// Include \p S in the function hash.
   bool VisitStmt(Stmt *S) {
     auto Type = updateCounterMappings(S);
@@ -365,18 +357,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     // If we used the V1 hash, use the default traversal.
     if (Hash.getHashVersion() == PGO_HASH_V1)
       return Base::TraverseIfStmt(If);
-
-    // When single byte coverage mode is enabled, add a counter to then and
-    // else.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : If->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == If->getThen())
-        CounterMap[If->getThen()] = NextCounter++;
-      else if (CS == If->getElse())
-        CounterMap[If->getElse()] = NextCounter++;
-    }
 
     // Otherwise, keep track of which branch we're in while traversing.
     VisitStmt(If);
@@ -394,81 +374,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
-  bool TraverseWhileStmt(WhileStmt *While) {
-    // When single byte coverage mode is enabled, add a counter to condition and
-    // body.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : While->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == While->getCond())
-        CounterMap[While->getCond()] = NextCounter++;
-      else if (CS == While->getBody())
-        CounterMap[While->getBody()] = NextCounter++;
-    }
-
-    Base::TraverseWhileStmt(While);
-    if (Hash.getHashVersion() != PGO_HASH_V1)
-      Hash.combine(PGOHash::EndOfScope);
-    return true;
-  }
-
-  bool TraverseDoStmt(DoStmt *Do) {
-    // When single byte coverage mode is enabled, add a counter to condition and
-    // body.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : Do->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == Do->getCond())
-        CounterMap[Do->getCond()] = NextCounter++;
-      else if (CS == Do->getBody())
-        CounterMap[Do->getBody()] = NextCounter++;
-    }
-
-    Base::TraverseDoStmt(Do);
-    if (Hash.getHashVersion() != PGO_HASH_V1)
-      Hash.combine(PGOHash::EndOfScope);
-    return true;
-  }
-
-  bool TraverseForStmt(ForStmt *For) {
-    // When single byte coverage mode is enabled, add a counter to condition,
-    // increment and body.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : For->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == For->getCond())
-        CounterMap[For->getCond()] = NextCounter++;
-      else if (CS == For->getInc())
-        CounterMap[For->getInc()] = NextCounter++;
-      else if (CS == For->getBody())
-        CounterMap[For->getBody()] = NextCounter++;
-    }
-
-    Base::TraverseForStmt(For);
-    if (Hash.getHashVersion() != PGO_HASH_V1)
-      Hash.combine(PGOHash::EndOfScope);
-    return true;
-  }
-
-  bool TraverseCXXForRangeStmt(CXXForRangeStmt *ForRange) {
-    // When single byte coverage mode is enabled, add a counter to body.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : ForRange->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == ForRange->getBody())
-        CounterMap[ForRange->getBody()] = NextCounter++;
-    }
-
-    Base::TraverseCXXForRangeStmt(ForRange);
-    if (Hash.getHashVersion() != PGO_HASH_V1)
-      Hash.combine(PGOHash::EndOfScope);
-    return true;
-  }
-
 // If the statement type \p N is nestable, and its nesting impacts profile
 // stability, define a custom traversal which tracks the end of the statement
 // in the hash (provided we're not using the V1 hash).
@@ -480,6 +385,10 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;                                                               \
   }
 
+  DEFINE_NESTABLE_TRAVERSAL(WhileStmt)
+  DEFINE_NESTABLE_TRAVERSAL(DoStmt)
+  DEFINE_NESTABLE_TRAVERSAL(ForStmt)
+  DEFINE_NESTABLE_TRAVERSAL(CXXForRangeStmt)
   DEFINE_NESTABLE_TRAVERSAL(ObjCForCollectionStmt)
   DEFINE_NESTABLE_TRAVERSAL(CXXTryStmt)
   DEFINE_NESTABLE_TRAVERSAL(CXXCatchStmt)
@@ -1084,7 +993,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
       (CGM.getCodeGenOpts().MCDCCoverage ? CGM.getCodeGenOpts().MCDCMaxConds
                                          : 0);
 
-  RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, CounterPair>);
   RegionMCDCState.reset(new MCDC::State);
   MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
                            *RegionMCDCState, MCDCMaxConditions, CGM.getDiags());
@@ -1138,6 +1047,19 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
   if (CoverageMapping.empty())
     return;
 
+  // Scan max(FalseCnt) and update NumRegionCounters.
+  unsigned MaxNumCounters = NumRegionCounters;
+  for (const auto [_, V] : *RegionCounterMap) {
+    auto HasCounters = V.getIsCounterPair();
+    assert((!HasCounters.first ||
+            MaxNumCounters > (V.first & CounterPair::Mask)) &&
+           "TrueCnt should not be reassigned");
+    if (HasCounters.second)
+      MaxNumCounters =
+          std::max(MaxNumCounters, (V.second & CounterPair::Mask) + 1);
+  }
+  NumRegionCounters = MaxNumCounters;
+
   CGM.getCoverageMapping()->addFunctionMappingRecord(
       FuncNameVar, FuncName, FunctionHash, CoverageMapping);
 }
@@ -1186,12 +1108,33 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
+std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
+  if (!RegionCounterMap || RegionCounterMap->count(S) == 0)
+    return {false, false};
+  return (*RegionCounterMap)[S].getIsCounterPair();
+}
+
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                           bool UseSkipPath, bool UseBoth,
                                            llvm::Value *StepV) {
-  if (!RegionCounterMap || !Builder.GetInsertBlock())
+  if (!RegionCounterMap)
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S];
+  unsigned Counter;
+  auto &TheMap = (*RegionCounterMap)[S];
+  auto IsCounter = TheMap.getIsCounterPair();
+  if (!UseSkipPath) {
+    if (!IsCounter.first)
+      return;
+    Counter = (TheMap.first & CounterPair::Mask);
+  } else {
+    if (!IsCounter.second)
+      return;
+    Counter = (TheMap.second & CounterPair::Mask);
+  }
+
+  if (!Builder.GetInsertBlock())
+    return;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
