@@ -78,13 +78,18 @@ bool DXContainerGlobals::runOnModule(Module &M) {
 }
 
 GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
-  const uint64_t FeatureFlags =
-      static_cast<uint64_t>(getAnalysis<ShaderFlagsAnalysisWrapper>()
-                                .getShaderFlags()
-                                .getFeatureFlags());
+  const DXILModuleShaderFlagsInfo &MSFI =
+      getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
+  // TODO: Feature flags mask is obtained as a collection of feature flags
+  // of the shader flags of all functions in the module. Need to verify
+  // and modify the computation of feature flags to be used.
+  uint64_t ConsolidatedFeatureFlags = 0;
+  for (const auto &FuncFlags : MSFI.FuncShaderFlagsMap) {
+    ConsolidatedFeatureFlags |= FuncFlags.second.getFeatureFlags();
+  }
 
   Constant *FeatureFlagsConstant =
-      ConstantInt::get(M.getContext(), APInt(64, FeatureFlags));
+      ConstantInt::get(M.getContext(), APInt(64, ConsolidatedFeatureFlags));
   return buildContainerGlobal(M, FeatureFlagsConstant, "dx.sfi0", "SFI0");
 }
 
