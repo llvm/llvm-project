@@ -439,6 +439,26 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       indicatePessimisticFixpoint();
       return;
     }
+
+    SmallPtrSet<const Constant *, 8> VisitedConsts;
+
+    for (Instruction &I : instructions(F)) {
+      if (isa<AddrSpaceCastInst>(I) &&
+          cast<AddrSpaceCastInst>(I).getSrcAddressSpace() ==
+              AMDGPUAS::PRIVATE_ADDRESS) {
+        removeAssumedBits(FLAT_SCRATCH_INIT);
+        return;
+      }
+      // check for addrSpaceCast in constant expressions
+      for (const Use &U : I.operands()) {
+        if (const auto *C = dyn_cast<Constant>(U)) {
+          if (constHasASCast(C, VisitedConsts)) {
+            removeAssumedBits(FLAT_SCRATCH_INIT);
+            return;
+          }
+        }
+      }
+    }
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -524,6 +544,9 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
     if (isAssumed(COMPLETION_ACTION) && funcRetrievesCompletionAction(A, COV))
       removeAssumedBits(COMPLETION_ACTION);
+
+    if (isAssumed(FLAT_SCRATCH_INIT) && needFlatScratchInit(A))
+      removeAssumedBits(FLAT_SCRATCH_INIT);
 
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
                                        : ChangeStatus::UNCHANGED;
@@ -682,6 +705,59 @@ private:
     bool UsedAssumedInformation = false;
     return !A.checkForAllCallLikeInstructions(DoesNotRetrieve, *this,
                                               UsedAssumedInformation);
+  }
+
+  // Returns true if FlatScratchInit is needed, i.e., no-flat-scratch-init is
+  // not to be set.
+  bool needFlatScratchInit(Attributor &A) {
+    assert(isAssumed(FLAT_SCRATCH_INIT)); // only called if the bit is still set
+
+    // This is called on each callee; false means callee shouldn't have
+    // no-flat-scratch-init.
+    auto CheckForNoFlatScratchInit = [&](Instruction &I) {
+      const auto &CB = cast<CallBase>(I);
+      const Function *Callee = CB.getCalledFunction();
+
+      // Callee == 0 for inline asm or indirect call with known callees.
+      // In the latter case, updateImpl() already checked the callees and we
+      // know their FLAT_SCRATCH_INIT bit is set.
+      // If function has indirect call with unknown callees, the bit is
+      // already removed in updateImpl() and execution won't reach here.
+      if (!Callee)
+        return true;
+
+      return Callee->getIntrinsicID() !=
+             Intrinsic::amdgcn_addrspacecast_nonnull;
+    };
+
+    bool UsedAssumedInformation = false;
+    // If any callee is false (i.e. need FlatScratchInit),
+    // checkForAllCallLikeInstructions returns false, in which case this
+    // function returns true.
+    return !A.checkForAllCallLikeInstructions(CheckForNoFlatScratchInit, *this,
+                                              UsedAssumedInformation);
+  }
+
+  bool constHasASCast(const Constant *C,
+                      SmallPtrSetImpl<const Constant *> &Visited) {
+    if (!Visited.insert(C).second)
+      return false;
+
+    if (const auto *CE = dyn_cast<ConstantExpr>(C))
+      if (CE->getOpcode() == Instruction::AddrSpaceCast &&
+          CE->getOperand(0)->getType()->getPointerAddressSpace() ==
+              AMDGPUAS::PRIVATE_ADDRESS)
+        return true;
+
+    for (const Use &U : C->operands()) {
+      const auto *OpC = dyn_cast<Constant>(U);
+      if (!OpC || !Visited.insert(OpC).second)
+        continue;
+
+      if (constHasASCast(OpC, Visited))
+        return true;
+    }
+    return false;
   }
 };
 

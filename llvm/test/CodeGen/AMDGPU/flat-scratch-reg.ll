@@ -96,9 +96,9 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
 ; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr() #0 {
@@ -113,9 +113,9 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
 ; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_lo() #0 {
@@ -130,9 +130,9 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
 ; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_hi() #0 {
