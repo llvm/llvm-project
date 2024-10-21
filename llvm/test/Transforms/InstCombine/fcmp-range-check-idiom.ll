@@ -363,8 +363,8 @@ define i1 @test_and_olt_fmf_propagation_union(float %x) {
 define i1 @test_and_olt_fmf_propagation_union_logical_rhs_poison(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union_logical_rhs_poison(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ninf olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ninf olt float %x, 0x3C00000000000000
