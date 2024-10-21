@@ -1485,6 +1485,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
     return TTI::CastContextHint::Normal;
   };
 
+  VPValue *Operand = getOperand(0);
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
   // For Trunc, the context is the only user, which must be a
   // VPWidenStoreRecipe, a VPInterleaveRecipe ,or a VPReplicateRecipe.
@@ -1497,14 +1498,14 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   // a VPInterleaveRecipe, a VPReplicateRecipe or a live-in value.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
            Opcode == Instruction::FPExt) {
-    if (getOperand(0)->isLiveIn())
+    if (Operand->isLiveIn())
       CCH = TTI::CastContextHint::Normal;
-    else if (getOperand(0)->getDefiningRecipe())
-      CCH = ComputeCCH(getOperand(0)->getDefiningRecipe());
+    else if (Operand->getDefiningRecipe())
+      CCH = ComputeCCH(Operand->getDefiningRecipe());
   }
 
-  auto *SrcTy = cast<VectorType>(
-      ToVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
+  auto *SrcTy =
+      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(Operand), VF));
   auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
   // Arm TTI will use the underlying instruction to determine the cost.
   return Ctx.TTI.getCastInstrCost(

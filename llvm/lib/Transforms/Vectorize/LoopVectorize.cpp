@@ -7258,7 +7258,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     const auto &ChainOps = RdxDesc.getReductionOpChain(RedPhi, OrigLoop);
     SetVector<Instruction *> ChainOpsAndOperands(ChainOps.begin(),
                                                  ChainOps.end());
-    auto isZExtOrSExt = [](const unsigned Opcode) -> bool {
+    auto IsZExtOrSExt = [](const unsigned Opcode) -> bool {
       return Opcode == Instruction::ZExt || Opcode == Instruction::SExt;
     };
     // Also include the operands of instructions in the chain, as the cost-model
@@ -7274,11 +7274,12 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
           ChainOpsAndOperands.insert(I);
           if (I->getOpcode() == Instruction::Mul) {
             auto *Ext0 = dyn_cast<Instruction>(I->getOperand(0));
-            if (Ext0 && isZExtOrSExt(Ext0->getOpcode()))
-              ChainOpsAndOperands.insert(Ext0);
             auto *Ext1 = dyn_cast<Instruction>(I->getOperand(1));
-            if (Ext1 && isZExtOrSExt(Ext1->getOpcode()))
+            if (Ext0 && IsZExtOrSExt(Ext0->getOpcode()) && Ext1 &&
+                Ext0->getOpcode() == Ext1->getOpcode()) {
+              ChainOpsAndOperands.insert(Ext0);
               ChainOpsAndOperands.insert(Ext1);
+            }
           }
         }
       }
