@@ -132,6 +132,7 @@ def OMPC_Destroy : Clause<"destroy"> {
 }
 def OMPC_Detach : Clause<"detach"> {
   let clangClass = "OMPDetachClause";
+  let flangClass = "OmpDetachClause";
 }
 def OMPC_Device : Clause<"device"> {
   let clangClass = "OMPDeviceClause";
