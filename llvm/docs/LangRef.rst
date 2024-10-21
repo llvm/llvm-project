@@ -12832,7 +12832,7 @@ This instruction requires several arguments:
    - The caller and callee prototypes must match. Pointer types of parameters
      or return types may differ in pointee type, but not in address space.
 
-  On the other hand, if the calling convention is `swifttailcc` or `swiftcc`:
+  On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
 
    - Only these ABI-impacting attributes attributes are allowed: sret, byval,
      swiftself, and swiftasync.
