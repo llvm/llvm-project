@@ -719,6 +719,12 @@ DXILResourceMap::DXILResourceMap(
     if (Resources.empty() || RI != Resources.back())
       Resources.push_back(RI);
     CallMap[CI] = Resources.size() - 1;
+
+    // Build ResUseToHandleMap
+    for (auto it = CI->users().begin(); it != CI->users().end(); ++it) {
+      CallInst *CI_Use = dyn_cast<CallInst>(*it);
+      ResUseToHandleMap[CI_Use] = CI;
+    }
   }
 
   unsigned Size = Resources.size();
@@ -744,6 +750,47 @@ DXILResourceMap::DXILResourceMap(
   }
 }
 
+// Parameter origCallInst: original Resource Handle
+// Parameter newCallInst:  new Resource Handle
+//
+// This function is needed when origCallInst's lowered to newCallInst.
+//
+// Because origCallInst and its uses will be replaced by newCallInst and new def
+// instructions after lowering. The [origCallInst, resource info] entry in
+// CallMap and [origCallInst's use, origCallInst] entries in ResUseToHandleMap
+// have to be updated per the changes in lowering.
+//
+// What this function does are:
+//   1. Add [newCallInst, resource info] entry in CallMap
+//   2. Remove [origCallInst, resource info] entry in CallMap
+//   3. Remap [origCallInst's use, origCallInst] entries to
+//      [origCallInst's use, newCallInst] entries in ResUseToHandleMap
+//
+// Remove those entries related to origCallInst in maps is necessary since
+// origCallInst's no longer existing after lowering. Moreover, keeping those
+// entries in maps will crash DXILResourceMap::print function
+//
+// FYI:
+// Make sure to invoke this function before origCallInst->replaceAllUsesWith()
+// and origCallInst->eraseFromParent() since this function needs to visit
+// origCallInst and its uses.
+//
+void DXILResourceMap::updateResourceMap(CallInst *origCallInst,
+                                        CallInst *newCallInst) {
+  assert((origCallInst != nullptr) && (newCallInst != nullptr) &&
+         (origCallInst != newCallInst));
+
+  CallMap.try_emplace(newCallInst, CallMap[origCallInst]);
+  CallMap.erase(origCallInst);
+
+  // Update ResUseToHandleMap since Resource Handle changed
+  for (auto it = origCallInst->users().begin();
+       it != origCallInst->users().end(); ++it) {
+    CallInst *CI_Use = dyn_cast<CallInst>(*it);
+    ResUseToHandleMap[CI_Use] = newCallInst;
+  }
+}
+
 void DXILResourceMap::print(raw_ostream &OS) const {
   for (unsigned I = 0, E = Resources.size(); I != E; ++I) {
     OS << "Binding " << I << ":\n";
@@ -754,6 +801,14 @@ void DXILResourceMap::print(raw_ostream &OS) const {
   for (const auto &[CI, Index] : CallMap) {
     OS << "Call bound to " << Index << ":";
     CI->print(OS);
+    OS << "\n";
+  }
+
+  for (const auto &[ResUse, ResHandle] : ResUseToHandleMap) {
+    OS << "\n";
+    OS << "Resource " << CallMap.find(ResHandle)->second;
+    OS << " is used by ";
+    ResUse->print(OS);
     OS << "\n";
   }
 }
