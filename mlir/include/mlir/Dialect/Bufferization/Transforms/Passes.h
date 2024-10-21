@@ -229,6 +229,10 @@ createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
 /// insert_slice ops.
 std::unique_ptr<Pass> createEmptyTensorEliminationPass();
 
+// Create a pass that enforces read only buffers of the
+// relevant function arguments.
+std::unique_ptr<Pass> createEnforceImmutableFuncArgsPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
