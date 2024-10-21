@@ -91,10 +91,22 @@ public:
                       "-v128:64-a:8:16-n32:64");
     }
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 128;
+
+    // True if the backend supports operations on the half LLVM IR type.
+    HasLegalHalfType = false;
+    // Allow half arguments and return values.
+    HalfArgsAndReturns = true;
+    // Support _Float16.
+    HasFloat16 = true;
+
     HasStrictFP = true;
   }
 
   unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
+
+  bool useFP16ConversionIntrinsics() const override {
+    return false;
+  }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;

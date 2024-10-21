@@ -16549,7 +16549,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
           PromoteType = QualType();
       }
     }
-    if (TInfo->getType()->isSpecificBuiltinType(BuiltinType::Float))
+    if (TInfo->getType()->isFloat16Type() || TInfo->getType()->isFloat32Type())
       PromoteType = Context.DoubleTy;
     if (!PromoteType.isNull())
       DiagRuntimeBehavior(TInfo->getTypeLoc().getBeginLoc(), E,
