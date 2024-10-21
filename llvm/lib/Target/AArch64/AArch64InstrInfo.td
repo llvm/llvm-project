@@ -213,6 +213,12 @@ def HasSMEF8F16     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF8
 def HasSMEF8F32     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF8F32()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF8F32), "sme-f8f32">;
 
+def HasPCDPHINT      : Predicate<"Subtarget->hasPCDPHINT()">,
+                                 AssemblerPredicateWithAll<(all_of FeaturePCDPHINT), "pcdphint">;
+def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLSUI), "lsui">;
+def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
 def HasCMPBR        : Predicate<"Subtarget->hasCMPBR()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCMPBR), "cmpbr">;
 def HasF8F32MM      : Predicate<"Subtarget->hasF8F32MM()">,
@@ -231,6 +237,7 @@ def HasSVEBFSCALE   : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && Su
                                  AssemblerPredicateWithAll<(all_of FeatureSVEBFSCALE), "sve-bfscale">;
 def HasSVE_F16F32MM : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_F16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_F16F32MM), "sve-f16f32mm">;
+
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
@@ -1264,6 +1271,11 @@ def : InstAlias<"sevl", (HINT 0b101)>;
 def : InstAlias<"dgh",  (HINT 0b110)>;
 def : InstAlias<"esb",  (HINT 0b10000)>, Requires<[HasRAS]>;
 def : InstAlias<"csdb", (HINT 20)>;
+
+let Predicates = [HasPCDPHINT] in {
+    def STSHH: STSHHI;
+}
+
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Indentification mnemonics, even with BTI disabled.
 // However, in order to be compatible with other assemblers (e.g. GAS), LLVM
@@ -2601,11 +2613,73 @@ defm CASPA  : CompareAndSwapPair<1, 0, "a">;
 defm CASPL  : CompareAndSwapPair<0, 1, "l">;
 defm CASPAL : CompareAndSwapPair<1, 1, "al">;
 
+// v9.6-a atomic CAST
+let Predicates = [HasLSUI] in {
+defm CAST   : CompareAndSwapUnprivileged<0b11, 0, 0, "">;
+defm CASLT  : CompareAndSwapUnprivileged<0b11, 0, 1, "l">;
+defm CASAT  : CompareAndSwapUnprivileged<0b11, 1, 0, "a">;
+defm CASALT : CompareAndSwapUnprivileged<0b11, 1, 1, "al">;
+
+def : MnemonicAlias<"cas", "cast">;
+def : MnemonicAlias<"casl", "caslt">;
+def : MnemonicAlias<"casa", "casat">;
+def : MnemonicAlias<"casal", "casalt">;
+
+// v9.6-a atomic CASPT
+defm CASPT   : CompareAndSwapPairUnprivileged<0b01, 0, 0, "">;
+defm CASPLT  : CompareAndSwapPairUnprivileged<0b01, 0, 1, "l">;
+defm CASPAT  : CompareAndSwapPairUnprivileged<0b01, 1, 0, "a">;
+defm CASPALT : CompareAndSwapPairUnprivileged<0b01, 1, 1, "al">;
+
+def : MnemonicAlias<"casp", "caspt">;
+def : MnemonicAlias<"caspl", "casplt">;
+def : MnemonicAlias<"caspa", "caspat">;
+def : MnemonicAlias<"caspal", "caspalt">;
+}
+
 // v8.1 atomic SWP
 defm SWP   : Swap<0, 0, "">;
 defm SWPA  : Swap<1, 0, "a">;
 defm SWPL  : Swap<0, 1, "l">;
 defm SWPAL : Swap<1, 1, "al">;
+
+// v9.6a atomic swap (FEAT_LSUI)
+let Predicates = [HasLSUI] in {
+  defm SWPT   : SwapLSUI<0, 0, "">;
+  defm SWPTA  : SwapLSUI<1, 0, "a">;
+  defm SWPTL  : SwapLSUI<0, 1, "l">;
+  defm SWPTAL : SwapLSUI<1, 1, "al">;
+
+  def : MnemonicAlias<"swp", "swpt">;
+  def : MnemonicAlias<"swpa", "swpta">;
+  def : MnemonicAlias<"swpl", "swptl">;
+  def : MnemonicAlias<"swpal", "swptal">;
+}
+
+// v9.6-a unprivileged atomic LD<OP> (FEAT_LSUI)
+let Predicates = [HasLSUI] in {
+  defm LDTADD   : LDOPregisterLSUI<0b000, "add", 0, 0, "">;
+  defm LDTADDA  : LDOPregisterLSUI<0b000, "add", 1, 0, "a">;
+  defm LDTADDL  : LDOPregisterLSUI<0b000, "add", 0, 1, "l">;
+  defm LDTADDAL : LDOPregisterLSUI<0b000, "add", 1, 1, "al">;
+
+  defm LDTCLR   : LDOPregisterLSUI<0b001, "clr", 0, 0, "">;
+  defm LDTCLRA  : LDOPregisterLSUI<0b001, "clr", 1, 0, "a">;
+  defm LDTCLRL  : LDOPregisterLSUI<0b001, "clr", 0, 1, "l">;
+  defm LDTCLRAL : LDOPregisterLSUI<0b001, "clr", 1, 1, "al">;
+
+  defm LDTSET   : LDOPregisterLSUI<0b011, "set", 0, 0, "">;
+  defm LDTSETA  : LDOPregisterLSUI<0b011, "set", 1, 0, "a">;
+  defm LDTSETL  : LDOPregisterLSUI<0b011, "set", 0, 1, "l">;
+  defm LDTSETAL : LDOPregisterLSUI<0b011, "set", 1, 1, "al">;
+
+  defm : STOPregisterLSUI<"sttadd","LDTADD">; // STTADDx
+  defm : STOPregisterLSUI<"sttclr","LDTCLR">; // STTCLRx
+  defm : STOPregisterLSUI<"sttset","LDTSET">; // STTSETx
+}
+
+// v9.6-a FEAT_RME_GPC3
+def APAS : APASI;
 
 // v8.1 atomic LD<OP>(register). Performs load and then ST<OP>(register)
 defm LDADD   : LDOPregister<0b000, "add", 0, 0, "">;
@@ -4053,6 +4127,33 @@ defm STNPD : StorePairNoAlloc<0b01, 1, FPR64Op, simm7s8, "stnp">;
 defm STNPQ : StorePairNoAlloc<0b10, 1, FPR128Op, simm7s16, "stnp">;
 }
 
+// Armv9.6-a Load/store pair (FEAT_LSUI)
+let Predicates = [HasLSUI] in {
+  defm LDTP    : LoadPairOffset<0b11, 0, GPR64z, simm7s8, "ldtp">;
+  def LDTPpre  : LoadPairPreIdx<0b11, 0, GPR64z, simm7s8, "ldtp">;
+  def LDTPpost : LoadPairPostIdx<0b11, 0, GPR64z, simm7s8, "ldtp">;
+
+  defm STTNPX : StorePairNoAllocLSUI<0b11, 0, GPR64z, simm7s8, "sttnp">;
+  defm LDTNPX : LoadPairNoAllocLSUI<0b11, 0, GPR64z, simm7s8, "ldtnp">;
+
+  defm STTP    : StorePairOffset<0b11, 0, GPR64z, simm7s8, "sttp">;
+  def STTPpre  : StorePairPreIdx<0b11, 0, GPR64z, simm7s8, "sttp">;
+  def STTPpost : StorePairPostIdx<0b11, 0, GPR64z, simm7s8, "sttp">;
+}
+
+let Predicates = [HasLSUI, HasNEON] in {
+  defm LDTPQ    : LoadPairOffset<0b11, 1, FPR128Op, simm7s16, "ldtp">;
+  def LDTPQpre  : LoadPairPreIdx<0b11, 1, FPR128Op, simm7s16, "ldtp">;
+  def LDTPQpost : LoadPairPostIdx<0b11, 1, FPR128Op, simm7s16, "ldtp">;
+
+  defm STTNPQ : StorePairNoAllocLSUI<0b11, 1, FPR128Op, simm7s16, "sttnp">;
+  defm LDTNPQ : LoadPairNoAllocLSUI<0b11, 1, FPR128Op, simm7s16, "ldtnp">;
+
+  defm STTPQ    : StorePairOffset<0b11, 1, FPR128Op, simm7s16, "sttp">;
+  def STTPQpre  : StorePairPreIdx<0b11, 1, FPR128Op, simm7s16, "sttp">;
+  def STTPQpost : StorePairPostIdx<0b11, 1, FPR128Op, simm7s16, "sttp">;
+}
+
 def : Pat<(AArch64stp GPR64z:$Rt, GPR64z:$Rt2, (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (STPXi GPR64z:$Rt, GPR64z:$Rt2, GPR64sp:$Rn, simm7s8:$offset)>;
 
@@ -4691,6 +4792,29 @@ let Predicates = [HasLOR] in {
   def STLLRX0 : InstAlias<"stllr\t$Rt,  [$Rn, #0]",  (STLLRX   GPR64: $Rt, GPR64sp:$Rn)>;
   def STLLRB0 : InstAlias<"stllrb\t$Rt, [$Rn, #0]",  (STLLRB   GPR32: $Rt, GPR64sp:$Rn)>;
   def STLLRH0 : InstAlias<"stllrh\t$Rt, [$Rn, #0]",  (STLLRH   GPR32: $Rt, GPR64sp:$Rn)>;
+}
+
+// v9.6-a Unprivileged load store operations
+let Predicates = [HasLSUI] in {
+defm LDTXRW : LoadUnprivilegedLSUI<0b10, GPR32, "ldtxr">;
+defm LDTXRX : LoadUnprivilegedLSUI<0b11, GPR64, "ldtxr">;
+
+def : MnemonicAlias<"ldxr", "ldtxr">;
+
+def LDATXRW : LoadExclusiveLSUI <0b10, 1, 1, GPR32, "ldatxr">;
+def LDATXRX : LoadExclusiveLSUI <0b11, 1, 1, GPR64, "ldatxr">;
+
+def : MnemonicAlias<"ldaxr", "ldatxr">;
+
+defm STTXRW : StoreUnprivilegedLSUI<0b10, GPR32, "sttxr">;
+defm STTXRX : StoreUnprivilegedLSUI<0b11, GPR64, "sttxr">;
+
+def : MnemonicAlias<"stxr", "sttxr">;
+
+def STLTXRW : StoreExclusiveLSUI<0b10, 0, 1, GPR32, "stltxr">;
+def STLTXRX : StoreExclusiveLSUI<0b11, 0, 1, GPR64, "stltxr">;
+
+def : MnemonicAlias<"stlxr", "stltxr">;
 }
 
 //===----------------------------------------------------------------------===//

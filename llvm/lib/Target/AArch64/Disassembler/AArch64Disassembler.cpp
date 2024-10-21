@@ -1135,6 +1135,14 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::STPSpre:
   case AArch64::STGPpre:
   case AArch64::STGPpost:
+  case AArch64::LDTPpre:
+  case AArch64::LDTPpost:
+  case AArch64::LDTPQpost:
+  case AArch64::LDTPQpre:
+  case AArch64::STTPpost:
+  case AArch64::STTPpre:
+  case AArch64::STTPQpost:
+  case AArch64::STTPQpre:
     DecodeSimpleRegisterClass<AArch64::GPR64spRegClassID, 0, 32>(Inst, Rn, Addr,
                                                                  Decoder);
     break;
@@ -1151,6 +1159,10 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::LDPSWpre:
   case AArch64::STGPpre:
   case AArch64::STGPpost:
+  case AArch64::LDTPpost:
+  case AArch64::LDTPpre:
+  case AArch64::STTPpost:
+  case AArch64::STTPpre:
     NeedsDisjointWritebackTransfer = true;
     [[fallthrough]];
   case AArch64::LDNPXi:
@@ -1159,6 +1171,10 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::STPXi:
   case AArch64::LDPSWi:
   case AArch64::STGPi:
+  case AArch64::LDTPi:
+  case AArch64::STTPi:
+  case AArch64::STTNPXi:
+  case AArch64::LDTNPXi:
     DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rt, Addr,
                                                                Decoder);
     DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rt2, Addr,
@@ -1187,6 +1203,14 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::STPQi:
   case AArch64::LDPQpre:
   case AArch64::STPQpre:
+  case AArch64::LDTPQi:
+  case AArch64::LDTPQpost:
+  case AArch64::LDTPQpre:
+  case AArch64::LDTNPQi:
+  case AArch64::STTPQi:
+  case AArch64::STTPQpost:
+  case AArch64::STTPQpre:
+  case AArch64::STTNPQi:
     DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 32>(Inst, Rt, Addr,
                                                                 Decoder);
     DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 32>(Inst, Rt2, Addr,
