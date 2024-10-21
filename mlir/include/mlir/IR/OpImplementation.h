@@ -265,8 +265,11 @@ public:
   /// Attempts to start a cyclic printing region for `attrOrType`.
   /// A cyclic printing region starts with this call and ends with the
   /// destruction of the returned `CyclicPrintReset`. During this time,
-  /// calling `tryStartCyclicPrint` with the same attribute in any printer
-  /// will lead to returning failure.
+  /// calling `tryStartCyclicPrint` with the same attribute or type in any
+  /// printer will lead to returning failure. Additionally, if the printer
+  /// knows a complete definition of the attribute or type will be emitted in
+  /// the future, it'll also return failure to permit abbreviated definitions
+  /// to be used wherever possible.
   ///
   /// This makes it possible to break infinite recursions when trying to print
   /// cyclic attributes or types by printing only immutable parameters if nested
@@ -278,6 +281,8 @@ public:
                           AttrOrTypeT> ||
             std::is_base_of_v<TypeTrait::IsMutable<AttrOrTypeT>, AttrOrTypeT>,
         "Only mutable attributes or types can be cyclic");
+    if (hasFutureAlias(attrOrType.getAsOpaquePointer()))
+      return failure();
     if (failed(pushCyclicPrinting(attrOrType.getAsOpaquePointer())))
       return failure();
     return CyclicPrintReset(this);
@@ -298,6 +303,12 @@ protected:
   /// `pushCyclicPrinting`. There must be exactly one `popCyclicPrinting` call
   /// in reverse order of all successful `pushCyclicPrinting`.
   virtual void popCyclicPrinting();
+
+  /// Check if the given attribute or type (in the form of a type erased
+  /// pointer) will be printed as an alias in the future. Returns false if the
+  /// type has an alias that's currently being printed or has already been
+  /// printed. This enables cyclic print checking for mutual recursion.
+  virtual bool hasFutureAlias(const void *opaquePointer) const;
 
 private:
   AsmPrinter(const AsmPrinter &) = delete;
