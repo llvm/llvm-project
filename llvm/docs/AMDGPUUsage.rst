@@ -608,7 +608,6 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1100``
                                                                                                 - ``gfx1101``
                                                                                                 - ``gfx1151``
-                                                                                                - ``gfx1152``
 
                                                                                                 SALU floating point instructions
                                                                                                 are not available on:
