@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_loongarch64.h ----------------------*- C++ -*-===//
+//===-- RegisterContextPOSIXCore_loongarch64.h -------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,8 @@
 
 #include <memory>
 
-class RegisterContextCorePOSIX_loongarch64 : public RegisterContextPOSIX_loongarch64 {
+class RegisterContextCorePOSIX_loongarch64
+    : public RegisterContextPOSIX_loongarch64 {
 public:
   static std::unique_ptr<RegisterContextCorePOSIX_loongarch64>
   Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,

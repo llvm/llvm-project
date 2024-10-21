@@ -31,13 +31,13 @@ RegisterContextCorePOSIX_loongarch64::RegisterContextCorePOSIX_loongarch64(
     : RegisterContextPOSIX_loongarch64(thread, std::move(register_info)) {
 
   m_gpr.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
-                                                  gpregset.GetByteSize()));
+                                                 gpregset.GetByteSize()));
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
   ArchSpec arch = m_register_info_up->GetTargetArchitecture();
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
   m_fpr.SetData(std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
-                                                  fpregset.GetByteSize()));
+                                                 fpregset.GetByteSize()));
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 }
 

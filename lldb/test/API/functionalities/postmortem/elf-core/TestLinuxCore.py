@@ -929,7 +929,7 @@ class LinuxCoreTestCase(TestBase):
         fpr_values["fcc5"] = "0x01"
         fpr_values["fcc6"] = "0x00"
         fpr_values["fcc7"] = "0x01"
-        fpr_values["fcsr"] = "0x0000"
+        fpr_values["fcsr"] = "0x00000000"
 
         for regname, value in values.items():
             self.expect(
@@ -944,7 +944,6 @@ class LinuxCoreTestCase(TestBase):
             )
 
         self.expect("register read --all")
-
 
     def test_get_core_file_api(self):
         """
