@@ -99,10 +99,10 @@ void RenderDiagnosticDetails(Stream &stream,
 
   // Sort the diagnostics.
   auto sort = [](auto &ds) {
-    llvm::sort(ds.begin(), ds.end(), [](auto &d1, auto &d2) {
+    std::stable_sort(ds.begin(), ds.end(), [](auto &d1, auto &d2) {
       auto l1 = d1.source_location.value_or(DiagnosticDetail::SourceLocation{});
       auto l2 = d2.source_location.value_or(DiagnosticDetail::SourceLocation{});
-      return std::pair(l1.line, l2.column) < std::pair(l1.line, l2.column);
+      return std::tie(l1.line, l1.column) < std::tie(l2.line, l2.column);
     });
   };
   sort(remaining_details);
