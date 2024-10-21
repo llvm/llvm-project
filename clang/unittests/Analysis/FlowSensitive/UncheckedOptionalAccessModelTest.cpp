@@ -2167,6 +2167,26 @@ TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
   )");
 }
 
+TEST_P(UncheckedOptionalAccessTest, OptionalFieldModified) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      $ns::$optional<std::string> opt;
+      void clear();  // assume this may modify the opt field's state
+    };
+
+    void target(Foo& foo) {
+      if (foo.opt) {
+        foo.opt.value();
+        foo.clear();
+        foo.opt.value();  // [[unsafe]]
+      }
+    }
+  )");
+}
+
 TEST_P(UncheckedOptionalAccessTest, StdSwap) {
   ExpectDiagnosticsFor(
       R"(
