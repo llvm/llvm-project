@@ -13017,6 +13017,12 @@ public:
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
 
+  void getTemplateInstantiationArgs(
+      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
+      const DeclContext *DC = nullptr, bool Final = false,
+      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
+      bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
+
   /// RAII object to handle the state changes required to synthesize
   /// a function body.
   class SynthesizedFunctionScope {
