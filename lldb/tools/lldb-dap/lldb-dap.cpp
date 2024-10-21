@@ -4024,6 +4024,23 @@ void request_variables(const llvm::json::Object &request) {
       variable_name_counts[GetNonNullVariableName(variable)]++;
     }
 
+    // Show return value if there is any ( in the top frame )
+    auto process = g_dap.target.GetProcess();
+    auto selected_thread = process.GetSelectedThread();
+    lldb::SBValue stop_return_value = selected_thread.GetStopReturnValue();
+    if (stop_return_value.IsValid() &&
+        (selected_thread.GetSelectedFrame().GetFrameID() == 0)) {
+      auto renamed_return_value = stop_return_value.Clone("(Return Value)");
+      int64_t return_ref = 0;
+      if (stop_return_value.MightHaveChildren() ||
+          stop_return_value.IsSynthetic()) {
+        return_ref = g_dap.variables.InsertExpandableVariable(
+            stop_return_value, /*is_permanent=*/false);
+      }
+      variables.emplace_back(CreateVariable(renamed_return_value, return_ref,
+                                            UINT64_MAX, hex, false));
+    }
+
     // Now we construct the result with unique display variable names
     for (auto i = start_idx; i < end_idx; ++i) {
       lldb::SBValue variable = top_scope->GetValueAtIndex(i);
