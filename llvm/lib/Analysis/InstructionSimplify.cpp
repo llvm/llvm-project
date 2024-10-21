@@ -5328,7 +5328,14 @@ static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
     // If we have a PHI node like phi(X, undef, X), where X is defined by some
     // instruction, we cannot return X as the result of the PHI node unless it
     // dominates the PHI block.
-    return valueDominatesPHI(CommonValue, PN, Q.DT) ? CommonValue : nullptr;
+    if (!valueDominatesPHI(CommonValue, PN, Q.DT))
+      return nullptr;
+
+    // Make sure we do not replace an undef value with poison.
+    if (HasUndefInput &&
+        !isGuaranteedNotToBePoison(CommonValue, Q.AC, Q.CxtI, Q.DT))
+      return nullptr;
+    return CommonValue;
   }
 
   return CommonValue;
