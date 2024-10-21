@@ -16679,7 +16679,7 @@ versions of the intrinsics respect the exception behavior.
      - qNaN, invalid exception
 
    * - ``+0.0 vs -0.0``
-     - either one
+     - +0.0(max)/-0.0(min)
      - +0.0(max)/-0.0(min)
      - +0.0(max)/-0.0(min)
 
@@ -16723,8 +16723,14 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE754 2008 semantics for minNum.
-This also matches the current (C23) behavior of libm's fmin.
+Follows the IEEE754 2008 semantics for minNum with +0.0>-0.0.
+This is more strict than current (C23) behavior of libm's fmin.
+Some applications like Clang, can call '``llvm.minnum.*``' with '``nsz``' attribute
+to archive the same behaivor of libm's fmin.
+
+For some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, they have the
+strict same instructions; thus it is quite simple for these architectures.
+For other architectures, the custom or expand methods may provide '``nsz``' flavor.
 
 Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
 sNaN for qNaN vs sNaN. Withe recent libc versions, libc follows IEEE754-2008:
@@ -16770,12 +16776,14 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE754 2008 semantics for maxNum.
-This also matches the current (C23) behavior of libm's fmax.
+Follows the IEEE754 2008 semantics for maxNum with +0.0>-0.0.
+This is more strict than current (C23) behavior of libm's fmax.
+Some applications like Clang, can call '``llvm.maxnum.*``' with '``nsz``' attribute
+to archive the same behaivor of libm's fmax.
 
-Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
-sNaN for qNaN vs sNaN. Withe recent libc versions, libc follows IEEE754-2008:
-NUM vs sNaN -> qNaN; NUM vs qNaN -> NUM; qNaN vs sNaN -> qNaN; sNaN vs sNaN -> qNaN.
+For some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, they have the
+strict same instructions; thus it is quite simple for these architectures.
+For other architectures, the custom or expand methods may provide '``nsz``' flavor.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
