@@ -3963,9 +3963,11 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
         "requires source to be a memref or ranked tensor type");
 
   auto elementType = shapedType.getElementType();
+  Type baseElementalType = elementType;
   DataLayout dataLayout = DataLayout::closest(op);
   if (auto vectorElementType = llvm::dyn_cast<VectorType>(elementType)) {
     // Memref or tensor has vector element type.
+    baseElementalType = vectorElementType.getElementType();
     unsigned sourceVecSize =
         dataLayout.getTypeSizeInBits(vectorElementType.getElementType()) *
         vectorElementType.getShape().back();
@@ -4006,6 +4008,10 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
       return op->emitOpError("requires a permutation_map with result dims of "
                              "the same rank as the vector type");
   }
+
+  if (baseElementalType != vectorType.getElementType())
+    return op->emitOpError("expects a vector of the same base elemental "
+                           "type as the source");
 
   if (permutationMap.getNumSymbols() != 0)
     return op->emitOpError("requires permutation_map without symbols");
