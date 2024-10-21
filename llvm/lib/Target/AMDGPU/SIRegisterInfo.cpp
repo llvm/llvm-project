@@ -4006,3 +4006,17 @@ SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
   }
   return 0;
 }
+
+unsigned
+SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
+                                   const TargetRegisterClass &RC) const {
+  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+  ArrayRef<MCPhysReg> Registers =
+      (RC.getID() == AMDGPU::VGPR_32RegClassID)
+          ? RC.getRegisters().take_front(NumArchVGPRs)
+          : RC.getRegisters();
+  for (MCPhysReg Reg : reverse(Registers))
+    if (MRI.isPhysRegUsed(Reg))
+      return getHWRegIndex(Reg) + 1;
+  return 0;
+}
