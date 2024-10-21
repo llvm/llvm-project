@@ -27,6 +27,12 @@ main:
 	movl	$0x0, -0x4(%rbp)
 	movl	%edi, -0x8(%rbp)
 	movq	%rsi, -0x10(%rbp)
+	callq	puts@PLT
+# PREAGG: B X:0 #Ltmp1# 2 0
+# CHECK:      callq puts@PLT
+# CHECK-NEXT: count: 2
+
+Ltmp1:
 	movq	-0x10(%rbp), %rax
 	movq	0x8(%rax), %rdi
 	movl	%eax, -0x14(%rbp)
@@ -51,6 +57,7 @@ Ltmp2:
 	movl	%eax, -0x18(%rbp)
 	jmp	Ltmp3
 	jmp	Ltmp4
+	jmp	Ltmp1
 
 Ltmp0:
 	xorl	%eax, %eax
