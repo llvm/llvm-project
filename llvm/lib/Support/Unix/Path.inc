@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
+#include "llvm/Config/config.h" // for HAVE_DLFCN_H, HAVE_DLADDR, HAVE_FCNTL_H, HAVE_FUTIMENS, HAVE_FUTIMES, HAVE_PREAD, HAVE_SYS_STAT_H, HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC, HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC, HAVE_UNISTD_H
 #include <limits.h>
 #include <stdio.h>
 #if HAVE_SYS_STAT_H
