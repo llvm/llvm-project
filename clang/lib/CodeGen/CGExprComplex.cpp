@@ -28,10 +28,6 @@ using namespace CodeGen;
 //                        Complex Expression Emitter
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
-} // namespace llvm
-
 typedef CodeGenFunction::ComplexPairTy ComplexPairTy;
 
 /// Return the complex type that we are meant to emit.
@@ -1381,11 +1377,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(LHSBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E->getTrueExpr());
-  else
-    CGF.incrementProfileCounter(E);
-
+  CGF.incrementProfileCounter(false, E);
   ComplexPairTy LHS = Visit(E->getTrueExpr());
   LHSBlock = Builder.GetInsertBlock();
   CGF.EmitBranch(ContBlock);
@@ -1393,13 +1385,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E->getFalseExpr());
+  CGF.incrementProfileCounter(true, E);
   ComplexPairTy RHS = Visit(E->getFalseExpr());
   RHSBlock = Builder.GetInsertBlock();
   CGF.EmitBlock(ContBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E);
   eval.end(CGF);
 
   // Create a PHI node for the real part.
