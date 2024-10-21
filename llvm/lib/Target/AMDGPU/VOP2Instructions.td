@@ -319,7 +319,7 @@ multiclass
 multiclass
     VOP2eInst<string opName, VOPProfile P, SDPatternOperator node = null_frag,
               string revOp = opName, bit useSGPRInput = !eq(P.NumSrcArgs, 3)>
-    : VOP2eInst_Base<opName, P, -1, "v_cndmask_b16", node, revOp, useSGPRInput>;
+    : VOP2eInst_Base<opName, P, -1, "v_", node, revOp, useSGPRInput>;
 
 multiclass
     VOP2eInst_VOPD<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
