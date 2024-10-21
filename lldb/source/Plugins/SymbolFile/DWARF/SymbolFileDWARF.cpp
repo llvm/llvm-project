@@ -2763,7 +2763,7 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
     if (query.GetModuleSearch())
       die_context = die.GetDeclContext();
     else
-      die_context = die.GetTypeLookupContext();
+      die_context = die.GetTypeLookupContext(query.GetSearchByMangledName());
     assert(!die_context.empty());
     if (!query.ContextMatches(die_context))
       return true; // Keep iterating over index types, context mismatch.

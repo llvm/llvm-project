@@ -14,6 +14,7 @@
 #include "DWARFDeclContext.h"
 #include "DWARFUnit.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -368,7 +369,7 @@ lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
   return nullptr;
 }
 
-static void GetDeclContextImpl(DWARFDIE die,
+static void GetDeclContextImpl(DWARFDIE die, bool use_mangled_name,
                                llvm::SmallSet<lldb::user_id_t, 4> &seen,
                                std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
@@ -383,6 +384,13 @@ static void GetDeclContextImpl(DWARFDIE die,
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
       context.push_back({kind, ConstString(name)});
     };
+
+    // Since mangled names are unique there's no need to build an entire context.
+    if (use_mangled_name) {
+      push_ctx(CompilerContextKind::AnyType, die.GetMangledName());
+      return;
+    }
+
     switch (die.Tag()) {
     case DW_TAG_module:
       push_ctx(CompilerContextKind::Module, die.GetName());
@@ -417,15 +425,15 @@ static void GetDeclContextImpl(DWARFDIE die,
   }
 }
 
-std::vector<CompilerContext> DWARFDIE::GetDeclContext() const {
+std::vector<CompilerContext> DWARFDIE::GetDeclContext(bool use_mangled_name) const {
   llvm::SmallSet<lldb::user_id_t, 4> seen;
   std::vector<CompilerContext> context;
-  GetDeclContextImpl(*this, seen, context);
+  GetDeclContextImpl(*this, use_mangled_name, seen, context);
   std::reverse(context.begin(), context.end());
   return context;
 }
 
-static void GetTypeLookupContextImpl(DWARFDIE die,
+static void GetTypeLookupContextImpl(DWARFDIE die, bool use_mangled_name,
                                      llvm::SmallSet<lldb::user_id_t, 4> &seen,
                                      std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
@@ -434,6 +442,19 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
       context.push_back({kind, ConstString(name)});
     };
+
+    // Since mangled names are unique there's no need to build an entire context.
+    if (use_mangled_name) {
+      push_ctx(CompilerContextKind::AnyType, die.GetMangledName());
+      return;
+    }
+
+    // If there is no name, then there is no need to look anything up for this
+    // DIE.
+       const char *name = die.GetName();
+    if (!name || !name[0])
+      return;
+
     switch (die.Tag()) {
     case DW_TAG_namespace:
       push_ctx(CompilerContextKind::Namespace, die.GetName());
@@ -453,7 +474,7 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
       break;
     case DW_TAG_typedef:
       push_ctx(CompilerContextKind::Typedef, die.GetName());
-      break;
+   break;
     case DW_TAG_base_type:
       push_ctx(CompilerContextKind::Builtin, die.GetName());
       break;
@@ -477,10 +498,10 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
   }
 }
 
-std::vector<CompilerContext> DWARFDIE::GetTypeLookupContext() const {
+std::vector<CompilerContext> DWARFDIE::GetTypeLookupContext(bool use_mangled_name) const {
   llvm::SmallSet<lldb::user_id_t, 4> seen;
   std::vector<CompilerContext> context;
-  GetTypeLookupContextImpl(*this, seen, context);
+  GetTypeLookupContextImpl(*this, use_mangled_name, seen, context);
   std::reverse(context.begin(), context.end());
   return context;
 }

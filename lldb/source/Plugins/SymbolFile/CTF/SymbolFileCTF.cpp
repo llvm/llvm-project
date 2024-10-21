@@ -1032,10 +1032,16 @@ void SymbolFileCTF::FindTypes(const lldb_private::TypeQuery &match,
 
   ConstString name = match.GetTypeBasename();
   for (TypeSP type_sp : GetTypeList().Types()) {
-    if (type_sp && type_sp->GetName() == name) {
-      results.InsertUnique(type_sp);
-      if (results.Done(match))
-        return;
+    if (type_sp) {
+      auto type_name =
+          match.GetSearchByMangledName()
+              ? type_sp->GetForwardCompilerType().GetMangledTypeName()
+              : type_sp->GetName();
+      if (type_name == name) {
+        results.InsertUnique(type_sp);
+        if (results.Done(match))
+          return;
+      }
     }
   }
 }

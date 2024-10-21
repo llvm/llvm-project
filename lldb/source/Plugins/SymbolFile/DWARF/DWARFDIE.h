@@ -72,7 +72,7 @@ public:
   /// Return this DIE's decl context as it is needed to look up types
   /// in Clang modules. This context will include any modules or functions that
   /// the type is declared in so an exact module match can be efficiently made.
-  std::vector<CompilerContext> GetDeclContext() const;
+  std::vector<CompilerContext> GetDeclContext(bool use_mangled_name = false) const;
 
   /// Get a context to a type so it can be looked up.
   ///
@@ -84,7 +84,8 @@ public:
   /// appropriate time, like either the translation unit or at a function
   /// context. This is designed to allow users to efficiently look for types
   /// using a full or partial CompilerContext array.
-  std::vector<CompilerContext> GetTypeLookupContext() const;
+  std::vector<CompilerContext>
+  GetTypeLookupContext(bool use_mangled_name = false) const;
 
   DWARFDeclContext GetDWARFDeclContext() const;
 
