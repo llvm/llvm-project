@@ -17,12 +17,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
 #include <functional>
-#include <map>
 #include <memory>
-#include <string>
 #include <system_error>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 namespace llvm {
@@ -33,14 +29,6 @@ class Module;
 /// based on the provided summary informations.
 class FunctionImporter {
 public:
-  /// The functions to import from a source module and their import type.
-  /// Note we choose unordered_map over (Small)DenseMap. The number of imports
-  /// from a source module could be small but DenseMap size grows to 64 quickly
-  /// and not memory efficient (see
-  /// https://llvm.org/docs/ProgrammersManual.html#llvm-adt-densemap-h)
-  using FunctionsToImportTy =
-      std::unordered_map<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
-
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
   enum class ImportFailureReason {
@@ -123,6 +111,13 @@ public:
   public:
     using ImportIDTy = uint32_t;
 
+    ImportIDTable() = default;
+
+    // Something is wrong with the application logic if we need to make a copy
+    // of this and potentially make a fork.
+    ImportIDTable(const ImportIDTable &) = delete;
+    ImportIDTable &operator=(const ImportIDTable &) = delete;
+
     // Create a pair of import IDs [Def, Decl] for a given pair of FromModule
     // and GUID.
     std::pair<ImportIDTy, ImportIDTy> createImportIDs(StringRef FromModule,
@@ -156,6 +151,12 @@ public:
       return std::make_tuple(FromModule, GUID, Kind);
     }
 
+    // The same as lookup above.  Useful for map_iterator.
+    std::tuple<StringRef, GlobalValue::GUID, GlobalValueSummary::ImportKind>
+    operator()(ImportIDTable::ImportIDTy ImportID) const {
+      return lookup(ImportID);
+    }
+
   private:
     // Make a pair of import IDs [Def, Decl] from an index into TheTable.
     static std::pair<ImportIDTy, ImportIDTy> makeIDPair(ImportIDTy Index) {
@@ -166,6 +167,9 @@ public:
 
     MapVector<std::pair<StringRef, GlobalValue::GUID>, ImportIDTy> TheTable;
   };
+
+  // Forward-declare SortedImportList for ImportMapTy.
+  class SortedImportList;
 
   /// The map maintains the list of imports.  Conceptually, it is a collection
   /// of tuples of the form:
@@ -179,8 +183,6 @@ public:
   /// path string table).
   class ImportMapTy {
   public:
-    using ImportMapTyImpl = DenseMap<StringRef, FunctionsToImportTy>;
-
     enum class AddDefinitionStatus {
       // No change was made to the list of imports or whether each import should
       // be imported as a declaration or definition.
@@ -191,6 +193,9 @@ public:
       // An existing with the given GUID was changed to a definition.
       ChangedToDefinition,
     };
+
+    ImportMapTy() = delete;
+    ImportMapTy(ImportIDTable &IDs) : IDs(IDs) {}
 
     // Add the given GUID to ImportList as a definition.  If the same GUID has
     // been added as a declaration previously, that entry is overridden.
@@ -215,23 +220,68 @@ public:
     SmallVector<StringRef, 0> getSourceModules() const;
 
     std::optional<GlobalValueSummary::ImportKind>
-    getImportType(const FunctionsToImportTy &GUIDToImportType,
-                  GlobalValue::GUID GUID) const;
+    getImportType(StringRef FromModule, GlobalValue::GUID GUID) const;
 
-    const ImportMapTyImpl &getImportMap() const { return ImportMap; }
+    // Iterate over the import list.  The caller gets tuples of FromModule,
+    // GUID, and ImportKind instead of import IDs.  std::cref below prevents
+    // map_iterator from deep-copying IDs.
+    auto begin() const { return map_iterator(Imports.begin(), std::cref(IDs)); }
+    auto end() const { return map_iterator(Imports.end(), std::cref(IDs)); }
+
+    friend class SortedImportList;
 
   private:
-    ImportMapTyImpl ImportMap;
+    ImportIDTable &IDs;
+    DenseSet<ImportIDTable::ImportIDTy> Imports;
+  };
+
+  // A read-only copy of ImportMapTy with its contents sorted according to the
+  // given comparison function.
+  class SortedImportList {
+  public:
+    SortedImportList(const ImportMapTy &ImportMap,
+                     llvm::function_ref<
+                         bool(const std::pair<StringRef, GlobalValue::GUID> &,
+                              const std::pair<StringRef, GlobalValue::GUID> &)>
+                         Comp)
+        : IDs(ImportMap.IDs), Imports(iterator_range(ImportMap.Imports)) {
+      llvm::sort(Imports, [&](ImportIDTable::ImportIDTy L,
+                              ImportIDTable::ImportIDTy R) {
+        auto Lookup = [&](ImportIDTable::ImportIDTy Id)
+            -> std::pair<StringRef, GlobalValue::GUID> {
+          auto Tuple = IDs.lookup(Id);
+          return std::make_pair(std::get<0>(Tuple), std::get<1>(Tuple));
+        };
+        return Comp(Lookup(L), Lookup(R));
+      });
+    }
+
+    // Iterate over the import list.  The caller gets tuples of FromModule,
+    // GUID, and ImportKind instead of import IDs.  std::cref below prevents
+    // map_iterator from deep-copying IDs.
+    auto begin() const { return map_iterator(Imports.begin(), std::cref(IDs)); }
+    auto end() const { return map_iterator(Imports.end(), std::cref(IDs)); }
+
+  private:
+    const ImportIDTable &IDs;
+    SmallVector<ImportIDTable::ImportIDTy, 0> Imports;
   };
 
   // A map from destination modules to lists of imports.
   class ImportListsTy {
   public:
-    ImportListsTy() = default;
-    ImportListsTy(size_t Size) : ListsImpl(Size) {}
+    ImportListsTy() : EmptyList(ImportIDs) {}
+    ImportListsTy(size_t Size) : EmptyList(ImportIDs), ListsImpl(Size) {}
 
     ImportMapTy &operator[](StringRef DestMod) {
-      return ListsImpl.try_emplace(DestMod).first->second;
+      return ListsImpl.try_emplace(DestMod, ImportIDs).first->second;
+    }
+
+    const ImportMapTy &lookup(StringRef DestMod) const {
+      auto It = ListsImpl.find(DestMod);
+      if (It != ListsImpl.end())
+        return It->second;
+      return EmptyList;
     }
 
     size_t size() const { return ListsImpl.size(); }
@@ -241,7 +291,9 @@ public:
     const_iterator end() const { return ListsImpl.end(); }
 
   private:
+    ImportMapTy EmptyList;
     DenseMap<StringRef, ImportMapTy> ListsImpl;
+    ImportIDTable ImportIDs;
   };
 
   /// The set contains an entry for every global value that the module exports.
@@ -365,9 +417,9 @@ void gatherImportedSummariesForModule(
     GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
-std::error_code
-EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
-                 const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
+Error EmitImportsFiles(
+    StringRef ModulePath, StringRef OutputFilename,
+    const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
 
 /// Based on the information recorded in the summaries during global
 /// summary-based analysis:

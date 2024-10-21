@@ -67,6 +67,18 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertIn(thread_id, stacks_to_registers_map)
             register_val_list = stacks_to_registers_map[thread_id]
             frame_register_list = frame.GetRegisters()
+            # explicitly verify we collected fs and gs base for x86_64
+            explicit_registers = ["fs_base", "gs_base"]
+            for reg in explicit_registers:
+                register = frame_register_list.GetFirstValueByName(reg)
+                self.assertNotEqual(None, register)
+                self.assertEqual(
+                    register.GetValueAsUnsigned(),
+                    stacks_to_registers_map[thread_id]
+                    .GetFirstValueByName("fs_base")
+                    .GetValueAsUnsigned(),
+                )
+
             for x in register_val_list:
                 self.assertEqual(
                     x.GetValueAsUnsigned(),
@@ -105,14 +117,14 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             expected_number_of_threads = process.GetNumThreads()
             expected_threads = []
             stacks_to_sp_map = {}
-            stakcs_to_registers_map = {}
+            stacks_to_registers_map = {}
 
             for thread_idx in range(process.GetNumThreads()):
                 thread = process.GetThreadAtIndex(thread_idx)
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
-                stakcs_to_registers_map[thread_id] = thread.GetFrameAtIndex(
+                stacks_to_registers_map[thread_id] = thread.GetFrameAtIndex(
                     0
                 ).GetRegisters()
 
@@ -126,7 +138,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=modified-memory '%s'" % (core_dirty))
@@ -137,7 +149,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=full '%s'" % (core_full))
@@ -148,7 +160,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -166,7 +178,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -183,7 +195,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             # Minidump can now save full core files, but they will be huge and
@@ -202,7 +214,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             self.assertSuccess(process.Kill())
@@ -332,3 +344,295 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(default_value_file):
                 os.unlink(default_value_file)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_linux_minidump_one_region(self):
+        """Test that we can save a Linux mini dump with one region in sbsavecore regions"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        one_region_file = self.getBuildArtifact("core.one_region.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            memory_region = lldb.SBMemoryRegionInfo()
+            memory_list = process.GetMemoryRegions()
+            memory_list.GetMemoryRegionAtIndex(0, memory_region)
+
+            # This is almost identical to the single thread test case because
+            # minidump defaults to stacks only, so we want to see if the
+            # default options work as expected.
+            options = lldb.SBSaveCoreOptions()
+            file_spec = lldb.SBFileSpec(one_region_file)
+            options.SetOutputFile(file_spec)
+            options.SetPluginName("minidump")
+            options.AddMemoryRegionToSave(memory_region)
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            error = process.SaveCore(options)
+            print(f"Error: {error.GetCString()}")
+            self.assertTrue(error.Success(), error.GetCString())
+
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = core_target.LoadCore(one_region_file)
+            core_memory_list = core_proc.GetMemoryRegions()
+            # Note because the /proc/pid maps are included on linux, we can't
+            # depend on size for validation, so we'll ensure the first region
+            # is present and then assert we fail on the second.
+            core_memory_region = lldb.SBMemoryRegionInfo()
+            core_memory_list.GetMemoryRegionAtIndex(0, core_memory_region)
+            self.assertEqual(
+                core_memory_region.GetRegionBase(), memory_region.GetRegionBase()
+            )
+            self.assertEqual(
+                core_memory_region.GetRegionEnd(), memory_region.GetRegionEnd()
+            )
+
+            region_two = lldb.SBMemoryRegionInfo()
+            core_memory_list.GetMemoryRegionAtIndex(1, region_two)
+            err = lldb.SBError()
+            content = core_proc.ReadMemory(region_two.GetRegionBase(), 1, err)
+            self.assertTrue(err.Fail(), "Should fail to read memory")
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(one_region_file):
+                os.unlink(one_region_file)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_minidump_custom_save_style(self):
+        """Test that verifies a custom and unspecified save style fails for
+        containing no data to save"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        custom_file = self.getBuildArtifact("core.custom.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+
+            error = process.SaveCore(options)
+            self.assertTrue(error.Fail())
+            self.assertEqual(
+                error.GetCString(), "no valid address ranges found for core style"
+            )
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(custom_file):
+                os.unlink(custom_file)
+
+    def save_core_with_region(self, process, region_index):
+        try:
+            custom_file = self.getBuildArtifact("core.custom.dmp")
+            memory_region = lldb.SBMemoryRegionInfo()
+            memory_list = process.GetMemoryRegions()
+            memory_list.GetMemoryRegionAtIndex(0, memory_region)
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreFull)
+
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = core_target.LoadCore(custom_file)
+            core_memory_list = core_proc.GetMemoryRegions()
+            # proc/pid/ maps are included on linux, so we can't depend on size
+            # for validation, we make a set of all the ranges,
+            # and ensure no duplicates!
+            range_set = set()
+            for x in range(core_memory_list.GetSize()):
+                core_memory_region = lldb.SBMemoryRegionInfo()
+                core_memory_list.GetMemoryRegionAtIndex(x, core_memory_region)
+                mem_tuple = (
+                    core_memory_region.GetRegionBase(),
+                    core_memory_region.GetRegionEnd(),
+                )
+                self.assertTrue(
+                    mem_tuple not in range_set, "Duplicate memory region found"
+                )
+                range_set.add(mem_tuple)
+        finally:
+            if os.path.isfile(custom_file):
+                os.unlink(custom_file)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_minidump_custom_save_style_duplicated_regions(self):
+        """Test that verifies a custom and unspecified save style fails for
+        containing no data to save"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            memory_list = process.GetMemoryRegions()
+            # Test that we don't duplicate regions, by duplicating regions
+            # at various indices.
+            self.save_core_with_region(process, 0)
+            self.save_core_with_region(process, len(memory_list) - 1)
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+
+    @skipUnlessPlatform(["linux"])
+    def minidump_deleted_on_save_failure(self):
+        """Test that verifies the minidump file is deleted after an error"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            custom_file = self.getBuildArtifact("core.should.be.deleted.custom.dmp")
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            # We set custom only and have no thread list and have no memory.
+            error = process.SaveCore(options)
+            self.assertTrue(error.Fail())
+            self.assertIn(
+                "no valid address ranges found for core style", error.GetCString()
+            )
+            self.assertTrue(not os.path.isfile(custom_file))
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+
+    @skipUnlessPlatform(["linux"])
+    @skipUnlessArch("x86_64")
+    def minidump_saves_fs_base_region(self):
+        """Test that verifies the minidump file saves region for fs_base"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+            thread = process.GetThreadAtIndex(0)
+            custom_file = self.getBuildArtifact("core.reg_region.dmp")
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            options.AddThread(thread)
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+
+            registers = thread.GetFrameAtIndex(0).GetRegisters()
+            fs_base = registers.GetFirstValueByName("fs_base").GetValueAsUnsigned()
+            self.assertTrue(fs_base != 0)
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = core_target.LoadCore(one_region_file)
+            core_region_list = core_proc.GetMemoryRegions()
+            live_region_list = process.GetMemoryRegions()
+            live_region = lldb.SBMemoryRegionInfo()
+            live_region_list.GetMemoryRegionForAddress(fs_base, live_region)
+            core_region = lldb.SBMemoryRegionInfo()
+            error = core_region_list.GetMemoryRegionForAddress(fs_base, core_region)
+            self.assertTrue(error.Success())
+            self.assertEqual(live_region, core_region)
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            self.assertTrue(self.dbg.DeleteTarget(core_target))
+            if os.path.isfile(custom_file):
+                os.unlink(custom_file)
+
+    def minidump_deterministic_difference(self):
+        """Test that verifies that two minidumps produced are identical."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+
+            core_styles = [
+                lldb.eSaveCoreStackOnly,
+                lldb.eSaveCoreDirtyOnly,
+                lldb.eSaveCoreFull,
+            ]
+            for style in core_styles:
+                spec_one = lldb.SBFileSpec(self.getBuildArtifact("core.one.dmp"))
+                spec_two = lldb.SBFileSpec(self.getBuildArtifact("core.two.dmp"))
+                options = lldb.SBSaveCoreOptions()
+                options.SetOutputFile(spec_one)
+                options.SetPluginName("minidump")
+                options.SetStyle(style)
+                error = process.SaveCore(options)
+                self.assertTrue(error.Success())
+                options.SetOutputFile(spec_two)
+                error = process.SaveCore(options)
+                self.assertTrue(error.Success())
+
+                file_one = None
+                file_two = None
+                with open(spec_one.GetFileName(), mode="rb") as file:
+                    file_one = file.read()
+                with open(spec_two.GetFileName(), mode="rb") as file:
+                    file_two = file.read()
+                self.assertEqual(file_one, file_two)
+                self.assertTrue(os.unlink(spec_one.GetFileName()))
+                self.assertTrue(os.unlink(spec_two.GetFileName()))
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+
+    @skipUnlessPlatform(["linux"])
+    @skipUnlessArch("x86_64")
+    def minidump_saves_fs_base_region(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+            thread = process.GetThreadAtIndex(0)
+            tls_file = self.getBuildArtifact("core.tls.dmp")
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(tls_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            options.AddThread(thread)
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = core_target.LoadCore(tls_file)
+            frame = core_proc.GetThreadAtIndex(0).GetFrameAtIndex(0)
+            tls_val = frame.FindValue("lf")
+            self.assertEqual(tls_val.GetValueAsUnsigned(), 42)
+
+        except:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(tls_file):
+                os.unlink(tls_file)

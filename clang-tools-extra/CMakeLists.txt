@@ -27,7 +27,6 @@ add_subdirectory(clang-move)
 add_subdirectory(clang-query)
 add_subdirectory(include-cleaner)
 add_subdirectory(pp-trace)
-add_subdirectory(pseudo)
 add_subdirectory(tool-template)
 
 option(CLANG_TOOLS_EXTRA_INCLUDE_DOCS "Generate build targets for the Clang Extra Tools docs."

@@ -137,11 +137,11 @@ static bool mayShadow(const NamedDecl *ND0,
 const ConfusableIdentifierCheck::ContextInfo *
 ConfusableIdentifierCheck::getContextInfo(const DeclContext *DC) {
   const DeclContext *PrimaryContext = DC->getPrimaryContext();
-  auto It = ContextInfos.find(PrimaryContext);
-  if (It != ContextInfos.end())
+  auto [It, Inserted] = ContextInfos.try_emplace(PrimaryContext);
+  if (!Inserted)
     return &It->second;
 
-  ContextInfo &Info = ContextInfos[PrimaryContext];
+  ContextInfo &Info = It->second;
   Info.PrimaryContext = PrimaryContext;
   Info.NonTransparentContext = PrimaryContext;
 

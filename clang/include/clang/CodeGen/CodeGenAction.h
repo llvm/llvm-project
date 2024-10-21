@@ -57,7 +57,7 @@ private:
   bool loadLinkModules(CompilerInstance &CI);
 
 protected:
-  bool BeginInvocation(CompilerInstance &CI) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   /// Create a new code generation action.  If the optional \p _VMContext
   /// parameter is supplied, the action uses it without taking ownership,

@@ -9,17 +9,17 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_movk_i32 s0, 0x4925
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v1, v0, s[6:7]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_bfe_i32 v2, v1, 0, 16
-; GCN-NEXT:    v_mul_lo_u32 v2, v2, s0
-; GCN-NEXT:    v_lshrrev_b32_e32 v3, 31, v2
-; GCN-NEXT:    v_ashrrev_i32_e32 v2, 17, v2
-; GCN-NEXT:    v_add_u16_e32 v2, v2, v3
-; GCN-NEXT:    v_mul_lo_u16_e32 v2, 7, v2
-; GCN-NEXT:    v_sub_u16_e32 v1, v1, v2
+; GCN-NEXT:    v_readfirstlane_b32 s0, v1
+; GCN-NEXT:    s_sext_i32_i16 s0, s0
+; GCN-NEXT:    s_mulk_i32 s0, 0x4925
+; GCN-NEXT:    s_lshr_b32 s1, s0, 31
+; GCN-NEXT:    s_ashr_i32 s0, s0, 17
+; GCN-NEXT:    s_add_i32 s0, s0, s1
+; GCN-NEXT:    s_mul_i32 s0, s0, 7
+; GCN-NEXT:    v_subrev_u32_e32 v1, s0, v1
 ; GCN-NEXT:    global_store_short v0, v1, s[4:5]
 ; GCN-NEXT:    s_endpgm
 ;
@@ -54,17 +54,17 @@ define amdgpu_kernel void @srem_i16_7(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s2
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
 ; TONGA-NEXT:    flat_load_ushort v2, v[0:1]
-; TONGA-NEXT:    s_movk_i32 s2, 0x4925
+; TONGA-NEXT:    v_mov_b32_e32 v0, s0
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s1
 ; TONGA-NEXT:    s_waitcnt vmcnt(0)
-; TONGA-NEXT:    v_bfe_i32 v0, v2, 0, 16
-; TONGA-NEXT:    v_mul_lo_u32 v3, v0, s2
-; TONGA-NEXT:    v_mov_b32_e32 v0, s0
-; TONGA-NEXT:    v_lshrrev_b32_e32 v4, 31, v3
-; TONGA-NEXT:    v_ashrrev_i32_e32 v3, 17, v3
-; TONGA-NEXT:    v_add_u16_e32 v3, v3, v4
-; TONGA-NEXT:    v_mul_lo_u16_e32 v3, 7, v3
-; TONGA-NEXT:    v_sub_u16_e32 v2, v2, v3
+; TONGA-NEXT:    v_readfirstlane_b32 s0, v2
+; TONGA-NEXT:    s_sext_i32_i16 s0, s0
+; TONGA-NEXT:    s_mulk_i32 s0, 0x4925
+; TONGA-NEXT:    s_lshr_b32 s1, s0, 31
+; TONGA-NEXT:    s_ashr_i32 s0, s0, 17
+; TONGA-NEXT:    s_add_i32 s0, s0, s1
+; TONGA-NEXT:    s_mul_i32 s0, s0, 7
+; TONGA-NEXT:    v_subrev_u32_e32 v2, vcc, s0, v2
 ; TONGA-NEXT:    flat_store_short v[0:1], v2
 ; TONGA-NEXT:    s_endpgm
 ;

@@ -9,6 +9,7 @@ static_library("CodeGen") {
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",
+    "//llvm/lib/CGData",
     "//llvm/lib/CodeGenTypes",
     "//llvm/lib/IR",
     "//llvm/lib/MC",

@@ -178,8 +178,6 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
 /// ]
 ///
 /// #trait = {
-///   args_in = 2,
-///   args_out = 1,
 ///   indexing_maps = #accesses,
 ///   iterator_types = ["parallel", "parallel"],
 ///   library_call = "some_external_fn"
@@ -210,8 +208,6 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
 /// ]
 ///
 /// #trait = {
-///   args_in = 2,
-///   args_out = 1,
 ///   indexing_maps = #accesses,
 ///   iterator_types = ["parallel", "parallel"],
 ///   library_call = "some_external_fn"
@@ -526,12 +522,11 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   rewriter.inlineRegionBefore(genericOp.getRegion(), replacementOp.getRegion(),
                               replacementOp.getRegion().begin());
   // 5a. Replace `linalg.index` operations that refer to the dropped unit
-  // dimensions.
+  //     dimensions.
   replaceUnitDimIndexOps(replacementOp, unitDims, rewriter);
 
   // 6. If any result type changes, insert a reshape/slice to convert from the
-  // original
-  //    type to the new type.
+  //    original type to the new type.
   SmallVector<Value> resultReplacements;
   for (auto [index, result] : llvm::enumerate(replacementOp.getResults())) {
     unsigned opOperandIndex = index + replacementOp.getNumDpsInputs();
@@ -789,8 +784,6 @@ static void
 populateFoldUnitExtentDimsViaSlicesPatterns(RewritePatternSet &patterns,
                                             ControlDropUnitDims &options) {
   auto *context = patterns.getContext();
-  options.rankReductionStrategy =
-      ControlDropUnitDims::RankReductionStrategy::ExtractInsertSlice;
   patterns.add<DropUnitDims>(context, options);
   patterns.add<DropPadUnitDims>(context, options);
   // TODO: Patterns unrelated to unit dim folding should be factored out.

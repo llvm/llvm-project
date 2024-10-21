@@ -285,8 +285,8 @@ class AMDGPULowerModuleLDS {
     BasicBlock *Entry = &Func->getEntryBlock();
     IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
 
-    Function *Decl =
-        Intrinsic::getDeclaration(Func->getParent(), Intrinsic::donothing, {});
+    Function *Decl = Intrinsic::getOrInsertDeclaration(
+        Func->getParent(), Intrinsic::donothing, {});
 
     Value *UseInstance[1] = {
         Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
@@ -324,7 +324,7 @@ public:
     for (GlobalVariable *GV : Variables) {
       auto ConstantGepIt = LDSVarsToConstantGEP.find(GV);
       if (ConstantGepIt != LDSVarsToConstantGEP.end()) {
-        auto elt = ConstantExpr::getPtrToInt(ConstantGepIt->second, I32);
+        auto *elt = ConstantExpr::getPtrToInt(ConstantGepIt->second, I32);
         Elements.push_back(elt);
       } else {
         Elements.push_back(PoisonValue::get(I32));
@@ -529,13 +529,11 @@ public:
     // block to spare deduplicating it later.
     auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
     if (Inserted) {
-      Function *Decl =
-          Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
-
       auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
       IRBuilder<> Builder(&*InsertAt);
 
-      It->second = Builder.CreateCall(Decl, {});
+      It->second =
+          Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
     }
 
     return It->second;
@@ -850,7 +848,7 @@ public:
     }
 
     assert(func->hasName()); // Checked by caller
-    auto emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
+    auto *emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
     GlobalVariable *N = new GlobalVariable(
         M, emptyCharArray, false, GlobalValue::ExternalLinkage, nullptr,
         Twine("llvm.amdgcn." + func->getName() + ".dynlds"), nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
@@ -890,8 +888,8 @@ public:
 
           markUsedByKernel(func, N);
 
-          auto emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
-          auto GEP = ConstantExpr::getGetElementPtr(
+          auto *emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
+          auto *GEP = ConstantExpr::getGetElementPtr(
               emptyCharArray, N, ConstantInt::get(I32, 0), true);
           newDynamicLDS.push_back(ConstantExpr::getPtrToInt(GEP, I32));
         } else {
@@ -1010,19 +1008,20 @@ public:
           M, TableLookupVariablesOrdered, OrderedKernels, KernelToReplacement);
       replaceUsesInInstructionsWithTableLookup(M, TableLookupVariablesOrdered,
                                                LookupTable);
-
-      // Strip amdgpu-no-lds-kernel-id from all functions reachable from the
-      // kernel. We may have inferred this wasn't used prior to the pass.
-      //
-      // TODO: We could filter out subgraphs that do not access LDS globals.
-      for (Function *F : KernelsThatAllocateTableLDS)
-        removeFnAttrFromReachable(CG, F, {"amdgpu-no-lds-kernel-id"});
     }
 
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS =
         lowerDynamicLDSVariables(M, LDSUsesInfo,
                                  KernelsThatIndirectlyAllocateDynamicLDS,
                                  DynamicVariables, OrderedKernels);
+
+    // Strip amdgpu-no-lds-kernel-id from all functions reachable from the
+    // kernel. We may have inferred this wasn't used prior to the pass.
+    // TODO: We could filter out subgraphs that do not access LDS globals.
+    for (auto *KernelSet : {&KernelsThatIndirectlyAllocateDynamicLDS,
+                            &KernelsThatAllocateTableLDS})
+      for (Function *F : *KernelSet)
+        removeFnAttrFromReachable(CG, F, {"amdgpu-no-lds-kernel-id"});
 
     // All kernel frames have been allocated. Calculate and record the
     // addresses.

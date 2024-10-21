@@ -300,6 +300,8 @@ module AtomicRMWBinOp = struct
   | FMin
   | UInc_Wrap
   | UDec_Wrap
+  | USub_Cond
+  | USub_Sat
 end
 
 module ValueKind = struct

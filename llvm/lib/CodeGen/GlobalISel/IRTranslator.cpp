@@ -838,7 +838,7 @@ void IRTranslator::splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
 void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
                                  MachineBasicBlock *MBB) {
   // Emit the code for the jump table
-  assert(JT.Reg != -1U && "Should lower JT Header first!");
+  assert(JT.Reg && "Should lower JT Header first!");
   MachineIRBuilder MIB(*MBB->getParent());
   MIB.setMBB(*MBB);
   MIB.setDebugLoc(CurBuilder->getDebugLoc());
@@ -1885,6 +1885,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FASIN;
     case Intrinsic::atan:
       return TargetOpcode::G_FATAN;
+    case Intrinsic::atan2:
+      return TargetOpcode::G_FATAN2;
     case Intrinsic::bswap:
       return TargetOpcode::G_BSWAP;
     case Intrinsic::bitreverse:
@@ -2198,7 +2200,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     for (const auto &Arg : CI.args())
       for (auto VReg : getOrCreateVRegs(*Arg))
         VRegs.push_back(VReg);
-    MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, std::nullopt, VRegs);
+    MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, {}, VRegs);
+    MF->setHasFakeUses(true);
     return true;
   }
   case Intrinsic::dbg_declare: {
@@ -2340,6 +2343,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::fptosi_sat:
+    MIRBuilder.buildFPTOSI_SAT(getOrCreateVReg(CI),
+                               getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::fptoui_sat:
+    MIRBuilder.buildFPTOUI_SAT(getOrCreateVReg(CI),
+                               getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
   case Intrinsic::memcpy_inline:
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMCPY_INLINE);
   case Intrinsic::memcpy:
@@ -2367,7 +2378,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::stackprotector: {
     LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
     Register GuardVal;
-    if (TLI->useLoadStackGuardNode()) {
+    if (TLI->useLoadStackGuardNode(*CI.getModule())) {
       GuardVal = MRI->createGenericVirtualRegister(PtrTy);
       getStackGuard(GuardVal, MIRBuilder);
     } else
@@ -2578,6 +2589,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                          getOrCreateVReg(*CI.getOperand(0)),
                          getOrCreateVReg(*CI.getOperand(1)));
     return true;
+  case Intrinsic::vector_extract:
+    return translateExtractVector(CI, MIRBuilder);
+  case Intrinsic::vector_insert:
+    return translateInsertVector(CI, MIRBuilder);
   case Intrinsic::prefetch: {
     Value *Addr = CI.getOperand(0);
     unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();
@@ -3153,6 +3168,57 @@ bool IRTranslator::translateInsertElement(const User &U,
   return true;
 }
 
+bool IRTranslator::translateInsertVector(const User &U,
+                                         MachineIRBuilder &MIRBuilder) {
+  Register Dst = getOrCreateVReg(U);
+  Register Vec = getOrCreateVReg(*U.getOperand(0));
+  Register Elt = getOrCreateVReg(*U.getOperand(1));
+
+  ConstantInt *CI = cast<ConstantInt>(U.getOperand(2));
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+
+  // Resize Index to preferred index width.
+  if (CI->getBitWidth() != PreferredVecIdxWidth) {
+    APInt NewIdx = CI->getValue().zextOrTrunc(PreferredVecIdxWidth);
+    CI = ConstantInt::get(CI->getContext(), NewIdx);
+  }
+
+  // If it is a <1 x Ty> vector, we have to use other means.
+  if (auto *ResultType = dyn_cast<FixedVectorType>(U.getOperand(1)->getType());
+      ResultType && ResultType->getNumElements() == 1) {
+    if (auto *InputType = dyn_cast<FixedVectorType>(U.getOperand(0)->getType());
+        InputType && InputType->getNumElements() == 1) {
+      // We are inserting an illegal fixed vector into an illegal
+      // fixed vector, use the scalar as it is not a legal vector type
+      // in LLT.
+      return translateCopy(U, *U.getOperand(0), MIRBuilder);
+    }
+    if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
+      // We are inserting an illegal fixed vector into a legal fixed
+      // vector, use the scalar as it is not a legal vector type in
+      // LLT.
+      Register Idx = getOrCreateVReg(*CI);
+      MIRBuilder.buildInsertVectorElement(Dst, Vec, Elt, Idx);
+      return true;
+    }
+    if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
+      // We are inserting an illegal fixed vector into a scalable
+      // vector, use a scalar element insert.
+      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      Register Idx = getOrCreateVReg(*CI);
+      auto ScaledIndex = MIRBuilder.buildMul(
+          VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
+      MIRBuilder.buildInsertVectorElement(Dst, Vec, Elt, ScaledIndex);
+      return true;
+    }
+  }
+
+  MIRBuilder.buildInsertSubvector(
+      getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
+      getOrCreateVReg(*U.getOperand(1)), CI->getZExtValue());
+  return true;
+}
+
 bool IRTranslator::translateExtractElement(const User &U,
                                            MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
@@ -3178,6 +3244,54 @@ bool IRTranslator::translateExtractElement(const User &U,
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
+  return true;
+}
+
+bool IRTranslator::translateExtractVector(const User &U,
+                                          MachineIRBuilder &MIRBuilder) {
+  Register Res = getOrCreateVReg(U);
+  Register Vec = getOrCreateVReg(*U.getOperand(0));
+  ConstantInt *CI = cast<ConstantInt>(U.getOperand(1));
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+
+  // Resize Index to preferred index width.
+  if (CI->getBitWidth() != PreferredVecIdxWidth) {
+    APInt NewIdx = CI->getValue().zextOrTrunc(PreferredVecIdxWidth);
+    CI = ConstantInt::get(CI->getContext(), NewIdx);
+  }
+
+  // If it is a <1 x Ty> vector, we have to use other means.
+  if (auto *ResultType = dyn_cast<FixedVectorType>(U.getType());
+      ResultType && ResultType->getNumElements() == 1) {
+    if (auto *InputType = dyn_cast<FixedVectorType>(U.getOperand(0)->getType());
+        InputType && InputType->getNumElements() == 1) {
+      // We are extracting an illegal fixed vector from an illegal fixed vector,
+      // use the scalar as it is not a legal vector type in LLT.
+      return translateCopy(U, *U.getOperand(0), MIRBuilder);
+    }
+    if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
+      // We are extracting an illegal fixed vector from a legal fixed
+      // vector, use the scalar as it is not a legal vector type in
+      // LLT.
+      Register Idx = getOrCreateVReg(*CI);
+      MIRBuilder.buildExtractVectorElement(Res, Vec, Idx);
+      return true;
+    }
+    if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
+      // We are extracting an illegal fixed vector from a scalable
+      // vector, use a scalar element extract.
+      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      Register Idx = getOrCreateVReg(*CI);
+      auto ScaledIndex = MIRBuilder.buildMul(
+          VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
+      MIRBuilder.buildExtractVectorElement(Res, Vec, ScaledIndex);
+      return true;
+    }
+  }
+
+  MIRBuilder.buildExtractSubvector(getOrCreateVReg(U),
+                                   getOrCreateVReg(*U.getOperand(0)),
+                                   CI->getZExtValue());
   return true;
 }
 
@@ -3307,6 +3421,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
     break;
   case AtomicRMWInst::UDecWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UDEC_WRAP;
+    break;
+  case AtomicRMWInst::USubCond:
+    Opcode = TargetOpcode::G_ATOMICRMW_USUB_COND;
+    break;
+  case AtomicRMWInst::USubSat:
+    Opcode = TargetOpcode::G_ATOMICRMW_USUB_SAT;
     break;
   }
 
@@ -3522,18 +3642,17 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     Register AddrDisc = getOrCreateVReg(*CPA->getAddrDiscriminator());
     EntryBuilder->buildConstantPtrAuth(Reg, CPA, Addr, AddrDisc);
   } else if (auto CAZ = dyn_cast<ConstantAggregateZero>(&C)) {
-    if (!isa<FixedVectorType>(CAZ->getType()))
-      return false;
+    Constant &Elt = *CAZ->getElementValue(0u);
+    if (isa<ScalableVectorType>(CAZ->getType())) {
+      EntryBuilder->buildSplatVector(Reg, getOrCreateVReg(Elt));
+      return true;
+    }
     // Return the scalar if it is a <1 x Ty> vector.
     unsigned NumElts = CAZ->getElementCount().getFixedValue();
     if (NumElts == 1)
-      return translateCopy(C, *CAZ->getElementValue(0u), *EntryBuilder);
-    SmallVector<Register, 4> Ops;
-    for (unsigned I = 0; I < NumElts; ++I) {
-      Constant &Elt = *CAZ->getElementValue(I);
-      Ops.push_back(getOrCreateVReg(Elt));
-    }
-    EntryBuilder->buildBuildVector(Reg, Ops);
+      return translateCopy(C, Elt, *EntryBuilder);
+    // All elements are zero so we can just use the first one.
+    EntryBuilder->buildSplatBuildVector(Reg, getOrCreateVReg(Elt));
   } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
     // Return the scalar if it is a <1 x Ty> vector.
     if (CV->getNumElements() == 1)
@@ -3750,7 +3869,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
-  if (TLI->useLoadStackGuardNode()) {
+  if (TLI->useLoadStackGuardNode(*ParentBB->getBasicBlock()->getModule())) {
     Guard =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
     getStackGuard(Guard, *CurBuilder);
@@ -3794,16 +3913,11 @@ bool IRTranslator::emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
     return false;
   }
 
-  // On PS4/PS5, the "return address" must still be within the calling
-  // function, even if it's at the very end, so emit an explicit TRAP here.
-  // WebAssembly needs an unreachable instruction after a non-returning call,
-  // because the function return type can be different from __stack_chk_fail's
-  // return type (void).
-  const TargetMachine &TM = MF->getTarget();
-  if (TM.getTargetTriple().isPS() || TM.getTargetTriple().isWasm()) {
-    LLVM_DEBUG(dbgs() << "Unhandled trap emission for stack protector fail\n");
-    return false;
-  }
+  // Emit a trap instruction if we are required to do so.
+  const TargetOptions &TargetOpts = TLI->getTargetMachine().Options;
+  if (TargetOpts.TrapUnreachable && !TargetOpts.NoTrapAfterNoreturn)
+    CurBuilder->buildInstr(TargetOpcode::G_TRAP);
+
   return true;
 }
 
@@ -3937,7 +4051,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (CLI->fallBackToDAGISel(*MF)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
-    R << "unable to lower function: " << ore::NV("Prototype", F.getType());
+    R << "unable to lower function: "
+      << ore::NV("Prototype", F.getFunctionType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }
@@ -3959,7 +4074,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (!CLI->lowerFormalArguments(*EntryBuilder, F, VRegArgs, FuncInfo)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
-    R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
+    R << "unable to lower arguments: "
+      << ore::NV("Prototype", F.getFunctionType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }

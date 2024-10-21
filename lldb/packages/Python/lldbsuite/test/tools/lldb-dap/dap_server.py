@@ -691,6 +691,19 @@ class DebugCommunication(object):
         for inst in instructions:
             self.disassembled_instructions[inst["address"]] = inst
 
+    def request_readMemory(self, memoryReference, offset, count):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "offset": offset,
+            "count": count,
+        }
+        command_dict = {
+            "command": "readMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
@@ -702,6 +715,17 @@ class DebugCommunication(object):
         }
         command_dict = {
             "command": "evaluate",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
+    def request_exceptionInfo(self, threadId=None):
+        if threadId is None:
+            threadId = self.get_thread_id()
+        args_dict = {"threadId": threadId}
+        command_dict = {
+            "command": "exceptionInfo",
             "type": "request",
             "arguments": args_dict,
         }
@@ -754,6 +778,7 @@ class DebugCommunication(object):
         runInTerminal=False,
         postRunCommands=None,
         enableAutoVariableSummaries=False,
+        displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -806,6 +831,7 @@ class DebugCommunication(object):
 
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
+        args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
         args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)
@@ -980,7 +1006,7 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text)}
+        args_dict = {"text": text, "column": len(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {
@@ -1078,6 +1104,17 @@ class DebugCommunication(object):
             args_dict["id"] = id
         command_dict = {
             "command": "setVariable",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
+    def request_locations(self, locationReference):
+        args_dict = {
+            "locationReference": locationReference,
+        }
+        command_dict = {
+            "command": "locations",
             "type": "request",
             "arguments": args_dict,
         }
@@ -1230,7 +1267,7 @@ def run_vscode(dbg, args, options):
 def main():
     parser = optparse.OptionParser(
         description=(
-            "A testing framework for the Visual Studio Code Debug " "Adaptor protocol"
+            "A testing framework for the Visual Studio Code Debug Adaptor protocol"
         )
     )
 

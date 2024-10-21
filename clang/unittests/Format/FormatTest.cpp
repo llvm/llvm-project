@@ -9441,6 +9441,11 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
+               "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)\n"
+               "};",
+               Style);
+
   verifyFormat("bool aaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    const bool &aaaaaaaaa, const void *aaaaaaaaaa\n"
                ") const {\n"
@@ -11514,6 +11519,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignLeft);
   verifyFormat("template <typename T> void operator=(T) & {}", AlignLeft);
   verifyFormat("template <typename T> void operator=(T) && {}", AlignLeft);
+  verifyFormat("for (foo<void() &&>& cb : X)", AlignLeft);
 
   FormatStyle AlignMiddle = getLLVMStyle();
   AlignMiddle.PointerAlignment = FormatStyle::PAS_Middle;
@@ -17282,6 +17288,12 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   Spaces.SpacesInParens = FormatStyle::SIPO_Custom;
   Spaces.SpacesInParensOptions = {};
   Spaces.SpacesInParensOptions.Other = true;
+
+  EXPECT_FALSE(Spaces.SpacesInParensOptions.InConditionalStatements);
+  verifyFormat("if (a)\n"
+               "  return;",
+               Spaces);
+
   Spaces.SpacesInParensOptions.InConditionalStatements = true;
   verifyFormat("do_something( ::globalVar );", Spaces);
   verifyFormat("call( x, y, z );", Spaces);
@@ -18096,7 +18108,7 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
 
   // Test across comments
   Style.MaxEmptyLinesToKeep = 10;
-  Style.ReflowComments = false;
+  Style.ReflowComments = FormatStyle::RCS_Never;
   Style.AlignConsecutiveMacros.AcrossComments = true;
   verifyFormat("#define a    3\n"
                "// line comment\n"
@@ -18843,7 +18855,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossEmptyLinesAndComments) {
                "y = 1;",
                Alignment);
 
-  Alignment.ReflowComments = true;
+  Alignment.ReflowComments = FormatStyle::RCS_Always;
   Alignment.ColumnLimit = 50;
   verifyFormat("int x   = 0;\n"
                "int yy  = 1; /// specificlennospace\n"
@@ -19241,7 +19253,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "y = 1;",
                Alignment);
 
-  EXPECT_EQ(Alignment.ReflowComments, true);
+  EXPECT_EQ(Alignment.ReflowComments, FormatStyle::RCS_Always);
   Alignment.ColumnLimit = 50;
   verifyFormat("int x   = 0;\n"
                "int yy  = 1; /// specificlennospace\n"
@@ -20010,6 +20022,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  return 0;\n"
                "}() };",
                BracedAlign);
+
+  Alignment.AlignConsecutiveDeclarations.AlignFunctionDeclarations = false;
+  verifyFormat("unsigned int f1(void);\n"
+               "void f2(void);\n"
+               "size_t f3(void);",
+               Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
@@ -20253,9 +20271,16 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
-                 /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                 /*AlignFunctionDeclarations=*/false,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
-            FormatStyle::AlignConsecutiveStyle({}));
+            FormatStyle::AlignConsecutiveStyle(
+                {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
+                 /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AlignFunctionDeclarations=*/true,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"
@@ -27577,6 +27602,12 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
 
   verifyNoChange("int i;\n", Style);
   verifyFormat("int i;\n", "int i;", Style);
+
+  constexpr StringRef Code{"namespace {\n"
+                           "int i;\n"
+                           "} // namespace"};
+  verifyFormat(Code.str() + '\n', Code, Style,
+               {tooling::Range(19, 13)}); // line 3
 }
 
 TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
@@ -28101,6 +28132,83 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  | byte_buffer[1] << 8\n"
                "                  | byte_buffer[2] << 16\n"
                "                  | byte_buffer[3] << 24;",
+               Style);
+}
+
+TEST_F(FormatTest, RemovesEmptyLinesInUnwrappedLines) {
+  auto Style = getLLVMStyle();
+  Style.RemoveEmptyLinesInUnwrappedLines = true;
+
+  verifyFormat("int c = a + b;",
+               "int c\n"
+               "\n"
+               "    = a + b;",
+               Style);
+
+  verifyFormat("enum : unsigned { AA = 0, BB } myEnum;",
+               "enum : unsigned\n"
+               "\n"
+               "{\n"
+               "  AA = 0,\n"
+               "  BB\n"
+               "} myEnum;",
+               Style);
+
+  verifyFormat("class B : public E {\n"
+               "private:\n"
+               "};",
+               "class B : public E\n"
+               "\n"
+               "{\n"
+               "private:\n"
+               "};",
+               Style);
+
+  verifyFormat(
+      "struct AAAAAAAAAAAAAAA test[3] = {{56, 23, \"hello\"}, {7, 5, \"!!\"}};",
+      "struct AAAAAAAAAAAAAAA test[3] = {{56,\n"
+      "\n"
+      "                                   23, \"hello\"},\n"
+      "                                  {7, 5, \"!!\"}};",
+      Style);
+
+  verifyFormat("int myFunction(int aaaaaaaaaaaaa, int ccccccccccccc, int d);",
+               "int myFunction(\n"
+               "\n"
+               "    int aaaaaaaaaaaaa,\n"
+               "\n"
+               "    int ccccccccccccc, int d);",
+               Style);
+
+  verifyFormat("switch (e) {\n"
+               "case 1:\n"
+               "  return e;\n"
+               "case 2:\n"
+               "  return 2;\n"
+               "}",
+               "switch (\n"
+               "\n"
+               "    e) {\n"
+               "case 1:\n"
+               "  return e;\n"
+               "case 2:\n"
+               "  return 2;\n"
+               "}",
+               Style);
+
+  verifyFormat("while (true) {\n"
+               "}",
+               "while (\n"
+               "\n"
+               "    true) {\n"
+               "}",
+               Style);
+
+  verifyFormat("void loooonFunctionIsVeryLongButNotAsLongAsJavaTypeNames(\n"
+               "    std::map<int, std::string> *outputMap);",
+               "void loooonFunctionIsVeryLongButNotAsLongAsJavaTypeNames\n"
+               "\n"
+               "    (std::map<int, std::string> *outputMap);",
                Style);
 }
 

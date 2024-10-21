@@ -568,9 +568,9 @@ public:
   /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
   /// \p Params. Additionally, the load and gather intrinsics require
   /// \p ReturnType to be specified.
-  static Function *getDeclarationForParams(Module *M, Intrinsic::ID,
-                                           Type *ReturnType,
-                                           ArrayRef<Value *> Params);
+  static Function *getOrInsertDeclarationForParams(Module *M, Intrinsic::ID,
+                                                   Type *ReturnType,
+                                                   ArrayRef<Value *> Params);
 
   static std::optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);
   static std::optional<unsigned> getVectorLengthParamPos(
@@ -1516,6 +1516,8 @@ public:
     return const_cast<Value *>(getArgOperand(0))->stripPointerCasts();
   }
 
+  void setNameValue(Value *V) { setArgOperand(0, V); }
+
   // The hash of the CFG for the instrumented function.
   ConstantInt *getHash() const {
     return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
@@ -1584,6 +1586,12 @@ public:
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  // We instrument direct calls (but not to intrinsics), or indirect calls.
+  static bool canInstrumentCallsite(const CallBase &CB) {
+    return !CB.isInlineAsm() &&
+           (CB.isIndirectCall() ||
+            (CB.getCalledFunction() && !CB.getCalledFunction()->isIntrinsic()));
   }
   Value *getCallee() const;
   void setCallee(Value *Callee);

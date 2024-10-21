@@ -359,3 +359,42 @@ define i1 @test_and_olt_fmf_propagation_union(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
+define i1 @test_and_olt_fmf_propagation_union_logical_rhs_poison(float %x) {
+; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union_logical_rhs_poison(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %cmp1 = fcmp ninf olt float %x, 0x3C00000000000000
+  %cmp2 = fcmp ogt float %x, 0xBC00000000000000
+  %cond = select i1 %cmp2, i1 %cmp1, i1 false
+  ret i1 %cond
+}
+
+define i1 @test_and_olt_fmf_propagation_union_logical_lhs_poison(float %x) {
+; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union_logical_lhs_poison(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ninf olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %cmp1 = fcmp olt float %x, 0x3C00000000000000
+  %cmp2 = fcmp ninf ogt float %x, 0xBC00000000000000
+  %cond = select i1 %cmp2, i1 %cmp1, i1 false
+  ret i1 %cond
+}
+
+define i1 @test_and_olt_fmf_propagation_union_logical_both_poison(float %x) {
+; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union_logical_both_poison(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ninf olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %cmp1 = fcmp ninf olt float %x, 0x3C00000000000000
+  %cmp2 = fcmp ninf ogt float %x, 0xBC00000000000000
+  %cond = select i1 %cmp2, i1 %cmp1, i1 false
+  ret i1 %cond
+}

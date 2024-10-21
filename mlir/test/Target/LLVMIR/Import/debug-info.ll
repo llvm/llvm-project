@@ -307,17 +307,13 @@ define void @class_method() {
   ret void, !dbg !9
 }
 
-; Verify the cyclic composite type is identified, even though conversion begins from the subprogram type.
-; CHECK-DAG: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
-; CHECK-DAG: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]], sizeInBits = 64>
+; Verify the cyclic subprogram is handled correctly.
+; CHECK-DAG: #[[SP_SELF:.+]] = #llvm.di_subprogram<recId = [[REC_ID:.+]], isRecSelf = true>
+; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[SP_SELF]]>
+; CHECK-DAG: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
-; CHECK-DAG: #[[SP_INNER:.+]] = #llvm.di_subprogram<id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP_SELF]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
-; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[SP_INNER]]>
-
-; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
-; CHECK-DAG: #[[SP_TYPE_OUTER:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR_OUTER]]>
-; CHECK-DAG: #[[SP_OUTER:.+]] = #llvm.di_subprogram<id = [[SP_ID]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE_OUTER]]>
-; CHECK-DAG: #[[LOC]] = loc(fused<#[[SP_OUTER]]>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<recId = [[REC_ID]], id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
+; CHECK-DAG: #[[LOC]] = loc(fused<#[[SP]]>
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -335,10 +331,10 @@ define void @class_method() {
 ; // -----
 
 ; Verify the cyclic composite type is handled correctly.
-; CHECK-DAG: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
+; CHECK-DAG: #[[COMP_SELF:.+]] = #llvm.di_composite_type<recId = [[REC_ID:.+]], isRecSelf = true>
 ; CHECK-DAG: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]]>
 ; CHECK-DAG: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", baseType = #[[COMP_PTR_INNER]]>
-; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
+; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<recId = [[REC_ID]], tag = DW_TAG_class_type, name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
 ; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]]>
 ; CHECK-DAG: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[COMP_PTR_OUTER]]>
 
@@ -610,9 +606,10 @@ define void @distinct_cu_func1() !dbg !5 {
 ; CHECK-LABEL: @declaration
 declare !dbg !1 void @declaration()
 
-; CHECK: #di_subprogram = #llvm.di_subprogram<
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<
 ; CHECK-NOT: id = distinct
 ; CHECK-NOT: subprogramFlags =
+; CHECK: loc(fused<#[[SP]]>
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
@@ -633,14 +630,14 @@ declare !dbg !1 void @declaration()
 
 ; CHECK-DAG: #[[B1_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_SELF:.+]]>
 ; CHECK-DAG: #[[B2_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_SELF]]>
-; CHECK-DAG: #[[B_INNER:.+]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[B1_INNER]], #[[B2_INNER]]
+; CHECK-DAG: #[[B_INNER:.+]] = #llvm.di_composite_type<recId = [[B_RECID:.+]], tag = DW_TAG_class_type, name = "B", {{.*}}elements = #[[B1_INNER]], #[[B2_INNER]]
 
 ; CHECK-DAG: #[[B1_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_INNER]]>
 ; CHECK-DAG: #[[B2_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_INNER]]>
-; CHECK-DAG: #[[A_OUTER:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID:.+]], {{.*}}name = "A", {{.*}}elements = #[[B1_OUTER]], #[[B2_OUTER]]
+; CHECK-DAG: #[[A_OUTER:.+]] = #llvm.di_composite_type<recId = [[A_RECID:.+]], tag = DW_TAG_class_type, name = "A", {{.*}}elements = #[[B1_OUTER]], #[[B2_OUTER]]
 
-; CHECK-DAG: #[[A_SELF:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID]]
-; CHECK-DAG: #[[B_SELF:.+]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]
+; CHECK-DAG: #[[A_SELF:.+]] = #llvm.di_composite_type<recId = [[A_RECID]]
+; CHECK-DAG: #[[B_SELF:.+]] = #llvm.di_composite_type<recId = [[B_RECID]]
 
 ; CHECK: #llvm.di_subprogram<{{.*}}scope = #[[A_OUTER]]
 
@@ -678,11 +675,11 @@ define void @class_field(ptr %arg1) !dbg !18 {
 ; CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[A]],
 
 ; CHECK-DAG: #[[TO_B_OUTER]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_OUTER:.+]]>
-; CHECK-DAG: #[[B_OUTER]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[TO_C_INNER:.+]]>
+; CHECK-DAG: #[[B_OUTER]] = #llvm.di_composite_type<recId = [[B_RECID:.+]], tag = DW_TAG_class_type, name = "B", {{.*}}elements = #[[TO_C_INNER:.+]]>
 ; CHECK-DAG: #[[TO_C_INNER]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_INNER:.+]]>
 ; CHECK-DAG: #[[C_INNER]] = #llvm.di_composite_type<{{.*}}name = "C", {{.*}}elements = #[[TO_B_SELF:.+]]>
 ; CHECK-DAG: #[[TO_B_SELF]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_SELF:.+]]>
-; CHECK-DAG: #[[B_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]>
+; CHECK-DAG: #[[B_SELF]] = #llvm.di_composite_type<recId = [[B_RECID]], isRecSelf = true>
 
 ; CHECK-DAG: #[[TO_C_OUTER]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_OUTER:.+]]>
 ; CHECK-DAG: #[[C_OUTER]] = #llvm.di_composite_type<{{.*}}name = "C", {{.*}}elements = #[[TO_B_OUTER]]>
@@ -718,23 +715,23 @@ define void @class_field(ptr %arg1) !dbg !18 {
 ; ^             ^
 ; +-------------+
 
-; CHECK-DAG: #[[A:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID:.+]], {{.*}}name = "A", {{.*}}elements = #[[A_TO_B:.+]], #[[A_TO_C:.+]]>
+; CHECK-DAG: #[[A:.+]] = #llvm.di_composite_type<recId = [[A_RECID:.+]], tag = DW_TAG_class_type, name = "A", {{.*}}elements = #[[A_TO_B:.+]], #[[A_TO_C:.+]]>
 ; CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[A]],
 ; CHECK-DAG: #[[A_TO_B]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_FROM_A:.+]]>
 ; CHECK-DAG: #[[A_TO_C]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_FROM_A:.+]]>
 
-; CHECK-DAG: #[[B_FROM_A]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[B_TO_C:.+]]>
+; CHECK-DAG: #[[B_FROM_A]] = #llvm.di_composite_type<recId = [[B_RECID:.+]], tag = DW_TAG_class_type, name = "B", {{.*}}elements = #[[B_TO_C:.+]]>
 ; CHECK-DAG: #[[B_TO_C]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_FROM_B:.+]]>
-; CHECK-DAG: #[[C_FROM_B]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID:.+]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF:.+]], #[[TO_B_SELF:.+]], #[[TO_C_SELF:.+]]>
+; CHECK-DAG: #[[C_FROM_B]] = #llvm.di_composite_type<recId = [[C_RECID:.+]], tag = DW_TAG_class_type, name = "C", {{.*}}elements = #[[TO_A_SELF:.+]], #[[TO_B_SELF:.+]], #[[TO_C_SELF:.+]]>
 
-; CHECK-DAG: #[[C_FROM_A]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF]], #[[A_TO_B:.+]], #[[TO_C_SELF]]
+; CHECK-DAG: #[[C_FROM_A]] = #llvm.di_composite_type<recId = [[C_RECID]], tag = DW_TAG_class_type, name = "C", {{.*}}elements = #[[TO_A_SELF]], #[[A_TO_B:.+]], #[[TO_C_SELF]]
 
 ; CHECK-DAG: #[[TO_A_SELF]] = #llvm.di_derived_type<{{.*}}name = "->A", {{.*}}baseType = #[[A_SELF:.+]]>
 ; CHECK-DAG: #[[TO_B_SELF]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_SELF:.+]]>
 ; CHECK-DAG: #[[TO_C_SELF]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_SELF:.+]]>
-; CHECK-DAG: #[[A_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID]]>
-; CHECK-DAG: #[[B_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]>
-; CHECK-DAG: #[[C_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID]]>
+; CHECK-DAG: #[[A_SELF]] = #llvm.di_composite_type<recId = [[A_RECID]], isRecSelf = true>
+; CHECK-DAG: #[[B_SELF]] = #llvm.di_composite_type<recId = [[B_RECID]], isRecSelf = true>
+; CHECK-DAG: #[[C_SELF]] = #llvm.di_composite_type<recId = [[C_RECID]], isRecSelf = true>
 
 define void @class_field(ptr %arg1) !dbg !18 {
   ret void
@@ -816,4 +813,81 @@ define void @imp_fn() !dbg !12 {
 !17 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !12, entity: !8, file: !3, line: 1, elements: !15)
 
 ; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
-; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #llvm.di_imported_entity<tag = DW_TAG_imported_module, entity = #[[M]]{{.*}}>>
+; CHECK-DAG:  #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct{{.*}}<>, isRecSelf = true>
+; CHECK-DAG: #[[IE:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[M]]{{.*}}>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #[[IE]]>
+
+; // -----
+
+; Test that annotations are handled correctly
+
+; CHECK-LABEL: @fn_with_annotations
+
+define void @fn_with_annotations() !dbg !12 {
+  ret void
+}
+
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!4}
+
+!2 = !DIModule(scope: !4, name: "mod1", file: !3, line: 1)
+!3 = !DIFile(filename: "test.f90", directory: "")
+!4 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3)
+!8 = !DIModule(scope: !4, name: "mod1", file: !3, line: 5)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!12 = distinct !DISubprogram(name: "fn_with_annotations", linkageName: "fn_with_annotations", scope: !3, file: !3, line: 10, type: !14, scopeLine: 10, spFlags: DISPFlagDefinition, unit: !4, annotations: !16)
+!14 = !DISubroutineType(cc: DW_CC_program, types: !15)
+!15 = !{}
+!16 = !{!17}
+!17 = !{!"foo", !"bar"}
+
+
+; CHECK-DAG: #llvm.di_subprogram<{{.*}}name = "fn_with_annotations"{{.*}}annotations = #llvm.di_annotation<name = "foo", value = "bar">>
+
+; // -----
+
+@block = common global [4 x i8] zeroinitializer, !dbg !0
+
+define void @test() !dbg !3 {
+  ret void
+}
+
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!7}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "alpha", scope: !2, file: !4, type: !9)
+!2 = !DICommonBlock(scope: !3, declaration: null, name: "block", file: !4, line: 3)
+!3 = distinct !DISubprogram(name: "test", scope: !4, file: !4, spFlags: DISPFlagDefinition, unit: !7)
+!4 = !DIFile(filename: "test.f90", directory: "")
+!7 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !4)
+!9 = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+
+; CHECK: #[[FILE:.+]] = #llvm.di_file<"test.f90" in "">
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
+; CHECK: #llvm.di_common_block<scope = #[[SP]], name = "block", file = #[[FILE]], line = 3>
+
+; // -----
+
+@data = external global i64, !dbg !0, !dbg !5
+
+!llvm.module.flags = !{!8}
+!llvm.dbg.cu = !{!2}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 2, type: !7)
+!2 = distinct !DICompileUnit(language: DW_LANG_C, file: !3, globals: !4)
+!3 = !DIFile(filename: "test.c", directory: "")
+!4 = !{!0, !5}
+!5 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression())
+!6 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 3, type: !7)
+!7 = !DIBasicType(name: "int", size: 32)
+!8 = !{i32 2, !"Debug Info Version", i32 3}
+
+
+; CHECK: #[[VAR1:.+]] =  #llvm.di_global_variable<{{.*}}name = "a"{{.*}}>
+; CHECK: #[[VAR2:.+]] =  #llvm.di_global_variable<{{.*}}name = "b"{{.*}}>
+; CHECK: #[[EXP1:.+]] =  #llvm.di_global_variable_expression<var = #[[VAR1]], expr = <>>
+; CHECK: #[[EXP2:.+]] =  #llvm.di_global_variable_expression<var = #[[VAR2]], expr = <>>
+; CHECK: llvm.mlir.global external @data() {{{.*}}dbg_exprs = [#[[EXP1]], #[[EXP2]]]} : i64

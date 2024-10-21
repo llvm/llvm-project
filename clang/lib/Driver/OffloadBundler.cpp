@@ -1192,7 +1192,7 @@ Error OffloadBundler::ListBundleIDsInFile(
     StringRef InputFileName, const OffloadBundlerConfig &BundlerConfig) {
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFileName);
+      MemoryBuffer::getFileOrSTDIN(InputFileName, /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(InputFileName, EC);
 
@@ -1324,7 +1324,7 @@ Error OffloadBundler::BundleFiles() {
   InputBuffers.reserve(BundlerConfig.InputFileNames.size());
   for (auto &I : BundlerConfig.InputFileNames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-        MemoryBuffer::getFileOrSTDIN(I);
+        MemoryBuffer::getFileOrSTDIN(I, /*IsText=*/true);
     if (std::error_code EC = CodeOrErr.getError())
       return createFileError(I, EC);
     InputBuffers.emplace_back(std::move(*CodeOrErr));
@@ -1392,7 +1392,8 @@ Error OffloadBundler::BundleFiles() {
 Error OffloadBundler::UnbundleFiles() {
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      MemoryBuffer::getFileOrSTDIN(BundlerConfig.InputFileNames.front());
+      MemoryBuffer::getFileOrSTDIN(BundlerConfig.InputFileNames.front(),
+                                   /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(BundlerConfig.InputFileNames.front(), EC);
 
@@ -1760,16 +1761,8 @@ Error OffloadBundler::UnbundleArchive() {
 
           // For inserting <CompatibleTarget, list<CodeObject>> entry in
           // OutputArchivesMap.
-          if (!OutputArchivesMap.contains(CompatibleTarget)) {
-
-            std::vector<NewArchiveMember> ArchiveMembers;
-            ArchiveMembers.push_back(NewArchiveMember(MemBufRef));
-            OutputArchivesMap.insert_or_assign(CompatibleTarget,
-                                               std::move(ArchiveMembers));
-          } else {
-            OutputArchivesMap[CompatibleTarget].push_back(
-                NewArchiveMember(MemBufRef));
-          }
+          OutputArchivesMap[CompatibleTarget].push_back(
+              NewArchiveMember(MemBufRef));
         }
       }
 

@@ -449,7 +449,7 @@ struct __make_dextents< _IndexType, 0, extents<_IndexType, _ExtentsPack...>> {
   using type = extents<_IndexType, _ExtentsPack...>;
 };
 
-} // end namespace __mdspan_detail
+} // namespace __mdspan_detail
 
 // [mdspan.extents.dextents], alias template
 template <class _IndexType, size_t _Rank>

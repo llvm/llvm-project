@@ -39,7 +39,7 @@ class EnumPropertyType<string typeName = ""> : PropertyType<typeName> {}
 /// Supports optional values by using the null representation.
 class RefPropertyType<string className> : PropertyType<className # "*"> {
   let PackOptional =
-    "value ? *value : nullptr";
+    "value.value_or(nullptr)";
   let UnpackOptional =
     "value ? std::optional<" # CXXName # ">(value) : std::nullopt";
 }
@@ -750,6 +750,23 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
   }
   def : Creator<[{
     return ctx.getSubstTemplateTemplateParmPack(argumentPack, associatedDecl, index, final);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "DeducedTemplate"> in {
+  def : ReadHelper<[{
+    auto DTS = node.getAsDeducedTemplateName();
+  }]>;
+  def : Property<"underlying", TemplateName> {
+    let Read = [{ DTS->getUnderlying() }];
+  }
+  def : Property<"startPos", UInt32> {
+    let Read = [{ DTS->getDefaultArguments().StartPos }];
+  }
+  def : Property<"defaultArgs", Array<TemplateArgument>> {
+    let Read = [{ DTS->getDefaultArguments().Args }];
+  }
+  def : Creator<[{
+    return ctx.getDeducedTemplateName(underlying, {startPos, defaultArgs});
   }]>;
 }
 

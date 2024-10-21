@@ -52,7 +52,7 @@ All patches go through the regular `LLVM review process
 Q: How to build an OpenMP GPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To build an *effective* OpenMP offload capable compiler, only one extra CMake
-option, ``LLVM_ENABLE_RUNTIMES="openmp"``, is needed when building LLVM (Generic
+option, ``LLVM_ENABLE_RUNTIMES="openmp;offload"``, is needed when building LLVM (Generic
 information about building LLVM is available `here
 <https://llvm.org/docs/GettingStarted.html>`__.). Make sure all backends that
 are targeted by OpenMP are enabled. That can be done by adjusting the CMake 
@@ -81,9 +81,9 @@ The Cuda SDK is required on the machine that will execute the openmp application
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_<xy>,...`` where ``<xy>`` is the numeric 
+- ``LIBOMPTARGET_DEVICE_ARCHITECTURES='sm_<xy>;...'`` where ``<xy>`` is the numeric
   compute capability of your GPU. For instance, set 
-  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_70,sm_80`` to target the Nvidia Volta 
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES='sm_70;sm_80'`` to target the Nvidia Volta
   and Ampere architectures. 
 
 
@@ -141,9 +141,9 @@ With those libraries installed, then LLVM build and installed, try:
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx<xyz>,...`` where ``<xyz>`` is the 
+- ``LIBOMPTARGET_DEVICE_ARCHITECTURES='gfx<xyz>;...'`` where ``<xyz>`` is the
   shader core instruction set architecture. For instance, set 
-  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx906,gfx90a`` to target AMD GCN5 
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES='gfx906;gfx90a'`` to target AMD GCN5
   and CDNA2 devices. 
 
 Q: What are the known limitations of OpenMP AMDGPU offload?

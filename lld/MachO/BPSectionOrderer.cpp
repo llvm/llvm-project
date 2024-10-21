@@ -21,6 +21,8 @@
 using namespace llvm;
 using namespace lld::macho;
 
+using UtilityNodes = SmallVector<BPFunctionNode::UtilityNodeT>;
+
 /// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
 /// "yyyy" are numbers that could change between builds. We need to use the root
 /// symbol name before this suffix so these symbols can be matched with profiles
@@ -60,12 +62,15 @@ getRelocHash(const Reloc &reloc,
   return getRelocHash(kind, sectionIdx.value_or(0), 0, reloc.addend);
 }
 
-static void constructNodesForCompression(
-    const SmallVector<const InputSection *> &sections,
+/// Given \p sectionIdxs, a list of section indexes, return a list of utility
+/// nodes for each section index. If \p duplicateSectionIdx is provided,
+/// populate it with nearly identical sections. Increment \p maxUN to be the
+/// largest utility node we have used so far.
+static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
+    ArrayRef<const InputSection *> sections,
     const DenseMap<const InputSection *, uint64_t> &sectionToIdx,
-    const SmallVector<unsigned> &sectionIdxs,
-    std::vector<BPFunctionNode> &nodes,
-    DenseMap<unsigned, SmallVector<unsigned>> &duplicateSectionIdxs,
+    ArrayRef<unsigned> sectionIdxs,
+    DenseMap<unsigned, SmallVector<unsigned>> *duplicateSectionIdxs,
     BPFunctionNode::UtilityNodeT &maxUN) {
   TimeTraceScope timeScope("Build nodes for compression");
 
@@ -103,54 +108,58 @@ static void constructNodesForCompression(
     for (auto hash : hashes)
       ++hashFrequency[hash];
 
-  // Merge section that are nearly identical
-  SmallVector<std::pair<unsigned, SmallVector<uint64_t>>> newSectionHashes;
-  DenseMap<uint64_t, unsigned> wholeHashToSectionIdx;
-  for (auto &[sectionIdx, hashes] : sectionHashes) {
-    uint64_t wholeHash = 0;
-    for (auto hash : hashes)
-      if (hashFrequency[hash] > 5)
-        wholeHash ^= hash;
-    auto [it, wasInserted] =
-        wholeHashToSectionIdx.insert(std::make_pair(wholeHash, sectionIdx));
-    if (wasInserted) {
-      newSectionHashes.emplace_back(sectionIdx, hashes);
-    } else {
-      duplicateSectionIdxs[it->getSecond()].push_back(sectionIdx);
+  if (duplicateSectionIdxs) {
+    // Merge section that are nearly identical
+    SmallVector<std::pair<unsigned, SmallVector<uint64_t>>> newSectionHashes;
+    DenseMap<uint64_t, unsigned> wholeHashToSectionIdx;
+    for (auto &[sectionIdx, hashes] : sectionHashes) {
+      uint64_t wholeHash = 0;
+      for (auto hash : hashes)
+        if (hashFrequency[hash] > 5)
+          wholeHash ^= hash;
+      auto [it, wasInserted] =
+          wholeHashToSectionIdx.insert(std::make_pair(wholeHash, sectionIdx));
+      if (wasInserted) {
+        newSectionHashes.emplace_back(sectionIdx, hashes);
+      } else {
+        (*duplicateSectionIdxs)[it->getSecond()].push_back(sectionIdx);
+      }
     }
-  }
-  sectionHashes = newSectionHashes;
+    sectionHashes = newSectionHashes;
 
-  // Recompute hash frequencies
-  hashFrequency.clear();
-  for (auto &[sectionIdx, hashes] : sectionHashes)
-    for (auto hash : hashes)
-      ++hashFrequency[hash];
+    // Recompute hash frequencies
+    hashFrequency.clear();
+    for (auto &[sectionIdx, hashes] : sectionHashes)
+      for (auto hash : hashes)
+        ++hashFrequency[hash];
+  }
 
   // Filter rare and common hashes and assign each a unique utility node that
   // doesn't conflict with the trace utility nodes
   DenseMap<uint64_t, BPFunctionNode::UtilityNodeT> hashToUN;
   for (auto &[hash, frequency] : hashFrequency) {
-    if (frequency <= 1 || frequency * 2 > wholeHashToSectionIdx.size())
+    if (frequency <= 1 || frequency * 2 > sectionHashes.size())
       continue;
     hashToUN[hash] = ++maxUN;
   }
 
-  std::vector<BPFunctionNode::UtilityNodeT> uns;
+  SmallVector<std::pair<unsigned, UtilityNodes>> sectionUns;
   for (auto &[sectionIdx, hashes] : sectionHashes) {
+    UtilityNodes uns;
     for (auto &hash : hashes) {
       auto it = hashToUN.find(hash);
       if (it != hashToUN.end())
         uns.push_back(it->second);
     }
-    nodes.emplace_back(sectionIdx, uns);
-    uns.clear();
+    sectionUns.emplace_back(sectionIdx, uns);
   }
+  return sectionUns;
 }
 
 DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     size_t &highestAvailablePriority, StringRef profilePath,
-    bool forFunctionCompression, bool forDataCompression, bool verbose) {
+    bool forFunctionCompression, bool forDataCompression,
+    bool compressionSortStartupFunctions, bool verbose) {
 
   SmallVector<const InputSection *> sections;
   DenseMap<const InputSection *, uint64_t> sectionToIdx;
@@ -185,10 +194,10 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
                                            sectionIdxs.end());
   }
 
-  std::vector<BPFunctionNode> nodesForStartup;
   BPFunctionNode::UtilityNodeT maxUN = 0;
-  DenseMap<unsigned, SmallVector<BPFunctionNode::UtilityNodeT>>
-      startupSectionIdxUNs;
+  DenseMap<unsigned, UtilityNodes> startupSectionIdxUNs;
+  // Used to define the initial order for startup functions.
+  DenseMap<unsigned, size_t> sectionIdxToTimestamp;
   std::unique_ptr<InstrProfReader> reader;
   if (!profilePath.empty()) {
     auto fs = vfs::getRealFileSystem();
@@ -202,8 +211,6 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     }
     auto &traces = reader->getTemporalProfTraces();
 
-    // Used to define the initial order for startup functions.
-    DenseMap<unsigned, size_t> sectionIdxToTimestamp;
     DenseMap<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
     for (size_t traceIdx = 0; traceIdx < traces.size(); traceIdx++) {
       uint64_t currentSize = 0, cutoffSize = 1;
@@ -245,15 +252,6 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
       ++maxUN;
       sectionIdxToFirstUN.clear();
     }
-
-    // These uns should already be sorted without duplicates.
-    for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
-      nodesForStartup.emplace_back(sectionIdx, uns);
-
-    llvm::sort(nodesForStartup, [&sectionIdxToTimestamp](auto &L, auto &R) {
-      return std::make_pair(sectionIdxToTimestamp[L.Id], L.Id) <
-             std::make_pair(sectionIdxToTimestamp[R.Id], R.Id);
-    });
   }
 
   SmallVector<unsigned> sectionIdxsForFunctionCompression,
@@ -271,21 +269,48 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     }
   }
 
-  std::vector<BPFunctionNode> nodesForFunctionCompression,
-      nodesForDataCompression;
-  // Map a section index (to be ordered for compression) to a list of duplicate
-  // section indices (not ordered for compression).
-  DenseMap<unsigned, SmallVector<unsigned>> duplicateFunctionSectionIdxs,
-      duplicateDataSectionIdxs;
-  constructNodesForCompression(
-      sections, sectionToIdx, sectionIdxsForFunctionCompression,
-      nodesForFunctionCompression, duplicateFunctionSectionIdxs, maxUN);
-  constructNodesForCompression(
-      sections, sectionToIdx, sectionIdxsForDataCompression,
-      nodesForDataCompression, duplicateDataSectionIdxs, maxUN);
+  if (compressionSortStartupFunctions) {
+    SmallVector<unsigned> startupIdxs;
+    for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
+      startupIdxs.push_back(sectionIdx);
+    auto unsForStartupFunctionCompression =
+        getUnsForCompression(sections, sectionToIdx, startupIdxs,
+                             /*duplicateSectionIdxs=*/nullptr, maxUN);
+    for (auto &[sectionIdx, compressionUns] :
+         unsForStartupFunctionCompression) {
+      auto &uns = startupSectionIdxUNs[sectionIdx];
+      uns.append(compressionUns);
+      llvm::sort(uns);
+      uns.erase(std::unique(uns.begin(), uns.end()), uns.end());
+    }
+  }
 
-  // Sort nodes by their Id (which is the section index) because the input
-  // linker order tends to be not bad
+  // Map a section index (order directly) to a list of duplicate section indices
+  // (not ordered directly).
+  DenseMap<unsigned, SmallVector<unsigned>> duplicateSectionIdxs;
+  auto unsForFunctionCompression = getUnsForCompression(
+      sections, sectionToIdx, sectionIdxsForFunctionCompression,
+      &duplicateSectionIdxs, maxUN);
+  auto unsForDataCompression = getUnsForCompression(
+      sections, sectionToIdx, sectionIdxsForDataCompression,
+      &duplicateSectionIdxs, maxUN);
+
+  std::vector<BPFunctionNode> nodesForStartup, nodesForFunctionCompression,
+      nodesForDataCompression;
+  for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
+    nodesForStartup.emplace_back(sectionIdx, uns);
+  for (auto &[sectionIdx, uns] : unsForFunctionCompression)
+    nodesForFunctionCompression.emplace_back(sectionIdx, uns);
+  for (auto &[sectionIdx, uns] : unsForDataCompression)
+    nodesForDataCompression.emplace_back(sectionIdx, uns);
+
+  // Use the first timestamp to define the initial order for startup nodes.
+  llvm::sort(nodesForStartup, [&sectionIdxToTimestamp](auto &L, auto &R) {
+    return std::make_pair(sectionIdxToTimestamp[L.Id], L.Id) <
+           std::make_pair(sectionIdxToTimestamp[R.Id], R.Id);
+  });
+  // Sort compression nodes by their Id (which is the section index) because the
+  // input linker order tends to be not bad.
   llvm::sort(nodesForFunctionCompression,
              [](auto &L, auto &R) { return L.Id < R.Id; });
   llvm::sort(nodesForDataCompression,
@@ -318,8 +343,8 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     if (orderedSections.insert(isec))
       ++numCodeCompressionSections;
 
-    auto It = duplicateFunctionSectionIdxs.find(node.Id);
-    if (It == duplicateFunctionSectionIdxs.end())
+    auto It = duplicateSectionIdxs.find(node.Id);
+    if (It == duplicateSectionIdxs.end())
       continue;
     for (auto dupSecIdx : It->getSecond()) {
       const auto *dupIsec = sections[dupSecIdx];
@@ -332,8 +357,8 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     const auto *isec = sections[node.Id];
     if (orderedSections.insert(isec))
       ++numDataCompressionSections;
-    auto It = duplicateDataSectionIdxs.find(node.Id);
-    if (It == duplicateDataSectionIdxs.end())
+    auto It = duplicateSectionIdxs.find(node.Id);
+    if (It == duplicateSectionIdxs.end())
       continue;
     for (auto dupSecIdx : It->getSecond()) {
       const auto *dupIsec = sections[dupSecIdx];

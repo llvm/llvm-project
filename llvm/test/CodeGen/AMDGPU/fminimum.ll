@@ -174,7 +174,8 @@ define amdgpu_ps <3 x half> @test_fminimum_v3f16_ss(<3 x half> inreg %a, <3 x ha
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_pk_minimum_f16 v0, s0, s2
 ; GFX12-GISEL-NEXT:    s_minimum_f16 s0, s1, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call <3 x half> @llvm.minimum.v3f16(<3 x half> %a, <3 x half> %b)
@@ -272,8 +273,6 @@ define amdgpu_kernel void @fminimumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    v_minimum_f32 v1, v1, v2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -296,8 +295,6 @@ define amdgpu_kernel void @fminimum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    v_minimum_f16 v1, v1, v2
 ; GCN-NEXT:    global_store_b16 v0, v1, s[4:5]
-; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 4
   %b = load volatile half, ptr addrspace(1) %bptr, align 4

@@ -481,3 +481,16 @@ struct Out {
 Out<float>::B out(100); // deduced to Out<float>::A<float>;
 static_assert(__is_same(decltype(out), Out<float>::A<float>));
 }
+
+namespace GH111508 {
+
+template <typename V> struct S {
+  using T = V;
+  T Data;
+};
+
+template <typename V> using Alias = S<V>;
+
+Alias A(42);
+
+} // namespace GH111508

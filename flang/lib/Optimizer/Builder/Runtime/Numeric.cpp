@@ -284,7 +284,7 @@ struct ForcedSpacing16 {
   }
 };
 
-/// Generate call to Exponent instrinsic runtime routine.
+/// Generate call to Exponent intrinsic runtime routine.
 mlir::Value fir::runtime::genExponent(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Type resultType,
                                       mlir::Value x) {
@@ -320,7 +320,7 @@ mlir::Value fir::runtime::genExponent(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
-/// Generate call to Fraction instrinsic runtime routine.
+/// Generate call to Fraction intrinsic runtime routine.
 mlir::Value fir::runtime::genFraction(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Value x) {
   mlir::func::FuncOp func;
@@ -596,7 +596,7 @@ mlir::Value fir::runtime::genSelectedRealKind(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
-/// Generate call to Set_exponent instrinsic runtime routine.
+/// Generate call to Set_exponent intrinsic runtime routine.
 mlir::Value fir::runtime::genSetExponent(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Value x,
                                          mlir::Value i) {
@@ -625,7 +625,11 @@ mlir::Value fir::runtime::genSpacing(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value x) {
   mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
-
+  // TODO: for f16/bf16, there are better alternatives that do not require
+  // casting the argument (resp. result) to (resp. from) f32, but this requires
+  // knowing that the target runtime has been compiled with std::float16_t or
+  // std::bfloat16_t support, which is not an information available here for
+  // now.
   if (fltTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(Spacing4)>(loc, builder);
   else if (fltTy.isF64())
@@ -634,6 +638,10 @@ mlir::Value fir::runtime::genSpacing(fir::FirOpBuilder &builder,
     func = fir::runtime::getRuntimeFunc<ForcedSpacing10>(loc, builder);
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedSpacing16>(loc, builder);
+  else if (fltTy.isF16())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Spacing2By4)>(loc, builder);
+  else if (fltTy.isBF16())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Spacing3By4)>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, fltTy, loc, "SPACING");
 
@@ -641,5 +649,6 @@ mlir::Value fir::runtime::genSpacing(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = {
       builder.createConvert(loc, funcTy.getInput(0), x)};
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  mlir::Value res = builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return builder.createConvert(loc, fltTy, res);
 }

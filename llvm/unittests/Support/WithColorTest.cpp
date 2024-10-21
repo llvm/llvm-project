@@ -19,7 +19,7 @@ TEST(WithColorTest, ColorMode) {
     OS.enable_colors(true);
 
     WithColor(OS, HighlightColor::Error, ColorMode::Disable) << "test";
-    EXPECT_EQ("test", OS.str());
+    EXPECT_EQ("test", S);
   }
 
   {
@@ -28,7 +28,7 @@ TEST(WithColorTest, ColorMode) {
     OS.enable_colors(true);
 
     WithColor(OS, HighlightColor::Error, ColorMode::Auto) << "test";
-    EXPECT_EQ("test", OS.str());
+    EXPECT_EQ("test", S);
   }
 
 #ifdef LLVM_ON_UNIX
@@ -38,7 +38,7 @@ TEST(WithColorTest, ColorMode) {
     OS.enable_colors(true);
 
     WithColor(OS, HighlightColor::Error, ColorMode::Enable) << "test";
-    EXPECT_EQ("\x1B[0;1;31mtest\x1B[0m", OS.str());
+    EXPECT_EQ("\x1B[0;1;31mtest\x1B[0m", S);
   }
 #endif
 }

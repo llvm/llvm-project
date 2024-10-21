@@ -76,6 +76,21 @@ public:
 
   const char *getTargetNodeName(unsigned Opcode) const override;
 
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
+
+  TargetLowering::ConstraintType
+  getConstraintType(StringRef Constraint) const override;
+
+  TargetLowering::ConstraintWeight
+  getSingleConstraintMatchWeight(AsmOperandInfo &Info,
+                                 const char *Constraint) const override;
+
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
+                                    std::vector<SDValue> &Ops,
+                                    SelectionDAG &DAG) const override;
+
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
@@ -125,11 +140,15 @@ private:
 
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
 

@@ -191,6 +191,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.at_quick_exit
     libc.src.stdlib.quick_exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.system
 
     # TODO: Implement these correctly
     libc.src.stdlib.aligned_alloc
@@ -239,6 +240,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.remove
+    libc.src.stdio.rename
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
@@ -519,7 +521,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.coshf16
     libc.src.math.exp10f16
+    libc.src.math.exp10m1f16
     libc.src.math.exp2f16
     libc.src.math.expf16
     libc.src.math.f16add
@@ -563,7 +567,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
+    libc.src.math.log10f16
+    libc.src.math.log2f16
     libc.src.math.logbf16
+    libc.src.math.logf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
     libc.src.math.modff16
@@ -582,6 +589,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
+    libc.src.math.sinhf16
+    libc.src.math.sqrtf16
+    libc.src.math.tanhf16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
     libc.src.math.truncf16

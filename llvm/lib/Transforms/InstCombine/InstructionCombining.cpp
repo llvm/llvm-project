@@ -48,7 +48,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -156,7 +155,7 @@ std::optional<Instruction *>
 InstCombiner::targetInstCombineIntrinsic(IntrinsicInst &II) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
-    return TTI.instCombineIntrinsic(*this, II);
+    return TTIForTargetIntrinsicsOnly.instCombineIntrinsic(*this, II);
   }
   return std::nullopt;
 }
@@ -166,8 +165,8 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedUseBitsIntrinsic(
     bool &KnownBitsComputed) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
-    return TTI.simplifyDemandedUseBitsIntrinsic(*this, II, DemandedMask, Known,
-                                                KnownBitsComputed);
+    return TTIForTargetIntrinsicsOnly.simplifyDemandedUseBitsIntrinsic(
+        *this, II, DemandedMask, Known, KnownBitsComputed);
   }
   return std::nullopt;
 }
@@ -179,7 +178,7 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
         SimplifyAndSetOp) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
-    return TTI.simplifyDemandedVectorEltsIntrinsic(
+    return TTIForTargetIntrinsicsOnly.simplifyDemandedVectorEltsIntrinsic(
         *this, II, DemandedElts, PoisonElts, PoisonElts2, PoisonElts3,
         SimplifyAndSetOp);
   }
@@ -187,7 +186,10 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
 }
 
 bool InstCombiner::isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
-  return TTI.isValidAddrSpaceCast(FromAS, ToAS);
+  // Approved exception for TTI use: This queries a legality property of the
+  // target, not an profitability heuristic. Ideally this should be part of
+  // DataLayout instead.
+  return TTIForTargetIntrinsicsOnly.isValidAddrSpaceCast(FromAS, ToAS);
 }
 
 Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
@@ -1731,8 +1733,7 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
                                          const DataLayout &DL,
                                          const SimplifyQuery SQ) {
   // NB: It is a precondition of this transform that the operands be
-  // phi translatable! This is usually trivially satisfied by limiting it
-  // to constant ops, and for selects we do a more sophisticated check.
+  // phi translatable!
   SmallVector<Value *> Ops;
   for (Value *Op : I.operands()) {
     if (Op == PN)
@@ -1785,12 +1786,34 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // Otherwise, we can replace *all* users with the new PHI we form.
   }
 
+  // Check that all operands are phi-translatable.
+  for (Value *Op : I.operands()) {
+    if (Op == PN)
+      continue;
+
+    // Non-instructions never require phi-translation.
+    auto *I = dyn_cast<Instruction>(Op);
+    if (!I)
+      continue;
+
+    // Phi-translate can handle phi nodes in the same block.
+    if (isa<PHINode>(I))
+      if (I->getParent() == PN->getParent())
+        continue;
+
+    // Operand dominates the block, no phi-translation necessary.
+    if (DT.dominates(I, PN->getParent()))
+      continue;
+
+    // Not phi-translatable, bail out.
+    return nullptr;
+  }
+
   // Check to see whether the instruction can be folded into each phi operand.
   // If there is one operand that does not fold, remember the BB it is in.
-  // If there is more than one or if *it* is a PHI, bail out.
   SmallVector<Value *> NewPhiValues;
-  BasicBlock *NonSimplifiedBB = nullptr;
-  Value *NonSimplifiedInVal = nullptr;
+  SmallVector<unsigned int> OpsToMoveUseToIncomingBB;
+  bool SeenNonSimplifiedInVal = false;
   for (unsigned i = 0; i != NumPHIValues; ++i) {
     Value *InVal = PN->getIncomingValue(i);
     BasicBlock *InBB = PN->getIncomingBlock(i);
@@ -1800,37 +1823,67 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       continue;
     }
 
-    if (NonSimplifiedBB) return nullptr;  // More than one non-simplified value.
+    // If the only use of phi is comparing it with a constant then we can
+    // put this comparison in the incoming BB directly after a ucmp/scmp call
+    // because we know that it will simplify to a single icmp.
+    const APInt *Ignored;
+    if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUser() &&
+        match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
+      OpsToMoveUseToIncomingBB.push_back(i);
+      NewPhiValues.push_back(nullptr);
+      continue;
+    }
 
-    NonSimplifiedBB = InBB;
-    NonSimplifiedInVal = InVal;
+    if (SeenNonSimplifiedInVal)
+      return nullptr; // More than one non-simplified value.
+    SeenNonSimplifiedInVal = true;
+
+    // If there is exactly one non-simplified value, we can insert a copy of the
+    // operation in that block.  However, if this is a critical edge, we would
+    // be inserting the computation on some other paths (e.g. inside a loop).
+    // Only do this if the pred block is unconditionally branching into the phi
+    // block. Also, make sure that the pred block is not dead code.
+    BranchInst *BI = dyn_cast<BranchInst>(InBB->getTerminator());
+    if (!BI || !BI->isUnconditional() || !DT.isReachableFromEntry(InBB))
+      return nullptr;
+
     NewPhiValues.push_back(nullptr);
+    OpsToMoveUseToIncomingBB.push_back(i);
 
     // If the InVal is an invoke at the end of the pred block, then we can't
     // insert a computation after it without breaking the edge.
     if (isa<InvokeInst>(InVal))
-      if (cast<Instruction>(InVal)->getParent() == NonSimplifiedBB)
+      if (cast<Instruction>(InVal)->getParent() == InBB)
         return nullptr;
 
-    // If the incoming non-constant value is reachable from the phis block,
-    // we'll push the operation across a loop backedge. This could result in
+    // Do not push the operation across a loop backedge. This could result in
     // an infinite combine loop, and is generally non-profitable (especially
     // if the operation was originally outside the loop).
-    if (isPotentiallyReachable(PN->getParent(), NonSimplifiedBB, nullptr, &DT,
-                               LI))
+    if (isBackEdge(InBB, PN->getParent()))
       return nullptr;
   }
 
-  // If there is exactly one non-simplified value, we can insert a copy of the
-  // operation in that block.  However, if this is a critical edge, we would be
-  // inserting the computation on some other paths (e.g. inside a loop).  Only
-  // do this if the pred block is unconditionally branching into the phi block.
-  // Also, make sure that the pred block is not dead code.
-  if (NonSimplifiedBB != nullptr) {
-    BranchInst *BI = dyn_cast<BranchInst>(NonSimplifiedBB->getTerminator());
-    if (!BI || !BI->isUnconditional() ||
-        !DT.isReachableFromEntry(NonSimplifiedBB))
-      return nullptr;
+  // Clone the instruction that uses the phi node and move it into the incoming
+  // BB because we know that the next iteration of InstCombine will simplify it.
+  SmallDenseMap<BasicBlock *, Instruction *> Clones;
+  for (auto OpIndex : OpsToMoveUseToIncomingBB) {
+    Value *Op = PN->getIncomingValue(OpIndex);
+    BasicBlock *OpBB = PN->getIncomingBlock(OpIndex);
+
+    Instruction *Clone = Clones.lookup(OpBB);
+    if (!Clone) {
+      Clone = I.clone();
+      for (Use &U : Clone->operands()) {
+        if (U == PN)
+          U = Op;
+        else
+          U = U->DoPHITranslation(PN->getParent(), OpBB);
+      }
+      Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
+      Clones.insert({OpBB, Clone});
+    }
+
+    NewPhiValues[OpIndex] = Clone;
   }
 
   // Okay, we can do the transformation: create the new PHI node.
@@ -1839,30 +1892,13 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   NewPN->takeName(PN);
   NewPN->setDebugLoc(PN->getDebugLoc());
 
-  // If we are going to have to insert a new computation, do so right before the
-  // predecessor's terminator.
-  Instruction *Clone = nullptr;
-  if (NonSimplifiedBB) {
-    Clone = I.clone();
-    for (Use &U : Clone->operands()) {
-      if (U == PN)
-        U = NonSimplifiedInVal;
-      else
-        U = U->DoPHITranslation(PN->getParent(), NonSimplifiedBB);
-    }
-    InsertNewInstBefore(Clone, NonSimplifiedBB->getTerminator()->getIterator());
-  }
-
-  for (unsigned i = 0; i != NumPHIValues; ++i) {
-    if (NewPhiValues[i])
-      NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
-    else
-      NewPN->addIncoming(Clone, PN->getIncomingBlock(i));
-  }
+  for (unsigned i = 0; i != NumPHIValues; ++i)
+    NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
 
   for (User *U : make_early_inc_range(PN->users())) {
     Instruction *User = cast<Instruction>(U);
-    if (User == &I) continue;
+    if (User == &I)
+      continue;
     replaceInstUsesWith(*User, NewPN);
     eraseInstFromFunction(*User);
   }
@@ -2048,8 +2084,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     if (auto *BO = dyn_cast<BinaryOperator>(V))
       BO->copyIRFlags(&Inst);
     Module *M = Inst.getModule();
-    Function *F =
-        Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vector_reverse, V->getType());
     return CallInst::Create(F, V);
   };
 
@@ -2075,7 +2111,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   // It may not be safe to reorder shuffles and things like div, urem, etc.
   // because we may trap when executing those ops on unknown vector elements.
   // See PR20059.
-  if (!isSafeToSpeculativelyExecute(&Inst))
+  if (!isSafeToSpeculativelyExecuteWithVariableReplaced(&Inst))
     return nullptr;
 
   auto createBinOpShuffle = [&](Value *X, Value *Y, ArrayRef<int> M) {
@@ -2309,8 +2345,11 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
   return CastInst::Create(CastOpc, NarrowBO, BO.getType());
 }
 
-static bool isMergedGEPInBounds(GEPOperator &GEP1, GEPOperator &GEP2) {
-  return GEP1.isInBounds() && GEP2.isInBounds();
+/// Determine nowrap flags for (gep (gep p, x), y) to (gep p, (x + y))
+/// transform.
+static GEPNoWrapFlags getMergedGEPNoWrapFlags(GEPOperator &GEP1,
+                                              GEPOperator &GEP2) {
+  return GEP1.getNoWrapFlags().intersectForOffsetAdd(GEP2.getNoWrapFlags());
 }
 
 /// Thread a GEP operation with constant indices through the constant true/false
@@ -2424,23 +2463,13 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (!GEP.accumulateConstantOffset(DL, Offset))
       return nullptr;
 
-    APInt OffsetOld = Offset;
     // Convert the total offset back into indices.
     SmallVector<APInt> ConstIndices =
         DL.getGEPIndicesForOffset(BaseType, Offset);
-    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero())) {
-      // If both GEP are constant-indexed, and cannot be merged in either way,
-      // convert them to a GEP of i8.
-      if (Src->hasAllConstantIndices())
-        return replaceInstUsesWith(
-            GEP, Builder.CreateGEP(
-                     Builder.getInt8Ty(), Src->getOperand(0),
-                     Builder.getInt(OffsetOld), "",
-                     isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))));
+    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero()))
       return nullptr;
-    }
 
-    bool IsInBounds = isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP));
+    GEPNoWrapFlags NW = getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
     SmallVector<Value *> Indices;
     append_range(Indices, drop_end(Src->indices(),
                                    Src->getNumIndices() - NumVarIndices));
@@ -2450,12 +2479,15 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       // by first performing a larger negative offset, and then a smaller
       // positive one. The large negative offset might go out of bounds. Only
       // preserve inbounds if all signs are the same.
-      IsInBounds &= Idx.isNonNegative() == ConstIndices[0].isNonNegative();
+      if (Idx.isNonNegative() != ConstIndices[0].isNonNegative())
+        NW = NW.withoutNoUnsignedSignedWrap();
+      if (!Idx.isNonNegative())
+        NW = NW.withoutNoUnsignedWrap();
     }
 
     return replaceInstUsesWith(
         GEP, Builder.CreateGEP(Src->getSourceElementType(), Src->getOperand(0),
-                               Indices, "", IsInBounds));
+                               Indices, "", NW));
   }
 
   if (Src->getResultElementType() != GEP.getSourceElementType())
@@ -2490,13 +2522,6 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (Sum == nullptr)
       return nullptr;
 
-    // Update the GEP in place if possible.
-    if (Src->getNumOperands() == 2) {
-      GEP.setIsInBounds(isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP)));
-      replaceOperand(GEP, 0, Src->getOperand(0));
-      replaceOperand(GEP, 1, Sum);
-      return &GEP;
-    }
     Indices.append(Src->op_begin()+1, Src->op_end()-1);
     Indices.push_back(Sum);
     Indices.append(GEP.op_begin()+2, GEP.op_end());
@@ -2512,7 +2537,7 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     return replaceInstUsesWith(
         GEP, Builder.CreateGEP(
                  Src->getSourceElementType(), Src->getOperand(0), Indices, "",
-                 isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))));
+                 getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP))));
 
   return nullptr;
 }
@@ -2706,6 +2731,36 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   return nullptr;
 }
 
+/// Return true if we should canonicalize the gep to an i8 ptradd.
+static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
+  Value *PtrOp = GEP.getOperand(0);
+  Type *GEPEltType = GEP.getSourceElementType();
+  if (GEPEltType->isIntegerTy(8))
+    return false;
+
+  // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
+  // intrinsic. This has better support in BasicAA.
+  if (GEPEltType->isScalableTy())
+    return true;
+
+  // gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two multiplies
+  // together.
+  if (GEP.getNumIndices() == 1 &&
+      match(GEP.getOperand(1),
+            m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
+                                 m_Shl(m_Value(), m_ConstantInt())))))
+    return true;
+
+  // gep (gep %p, C1), %x, C2 is expanded so the two constants can
+  // possibly be merged together.
+  auto PtrOpGep = dyn_cast<GEPOperator>(PtrOp);
+  return PtrOpGep && PtrOpGep->hasAllConstantIndices() &&
+         any_of(GEP.indices(), [](Value *V) {
+           const APInt *C;
+           return match(V, m_APInt(C)) && !C->isZero();
+         });
+}
+
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getOperand(0);
   SmallVector<Value *, 8> Indices(GEP.indices());
@@ -2787,19 +2842,11 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                     GEP.getNoWrapFlags()));
   }
 
-  // Canonicalize
-  //  - scalable GEPs to an explicit offset using the llvm.vscale intrinsic.
-  //    This has better support in BasicAA.
-  //  - gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two
-  //    multiplies together.
-  if (GEPEltType->isScalableTy() ||
-      (!GEPEltType->isIntegerTy(8) && GEP.getNumIndices() == 1 &&
-       match(GEP.getOperand(1),
-             m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
-                                  m_Shl(m_Value(), m_ConstantInt())))))) {
+  if (shouldCanonicalizeGEPToPtrAdd(GEP)) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
-    return replaceInstUsesWith(
-        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags()));
+    Value *NewGEP =
+        Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
+    return replaceInstUsesWith(GEP, NewGEP);
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -3308,9 +3355,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(&MI)) {
       // Replace invoke with a NOP intrinsic to maintain the original CFG
       Module *M = II->getModule();
-      Function *F = Intrinsic::getDeclaration(M, Intrinsic::donothing);
-      InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(),
-                         std::nullopt, "", II->getParent());
+      Function *F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::donothing);
+      InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(), {}, "",
+                         II->getParent());
     }
 
     // Remove debug intrinsics which describe the value contained within the
@@ -4775,7 +4822,8 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
-  if (I->mayReadFromMemory()) {
+  if (I->mayReadFromMemory() &&
+      !I->hasMetadata(LLVMContext::MD_invariant_load)) {
     // We don't want to do any sophisticated alias analysis, so we only check
     // the instructions after I in I's parent block if we try to sink to its
     // successor block.
@@ -5145,8 +5193,13 @@ bool InstCombinerImpl::run() {
         LLVM_DEBUG(dbgs() << "IC: Old = " << *I << '\n'
                           << "    New = " << *Result << '\n');
 
-        Result->copyMetadata(*I,
-                             {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+        // We copy the old instruction's DebugLoc to the new instruction, unless
+        // InstCombine already assigned a DebugLoc to it, in which case we
+        // should trust the more specifically selected DebugLoc.
+        if (!Result->getDebugLoc())
+          Result->setDebugLoc(I->getDebugLoc());
+        // We also copy annotation metadata to the new instruction.
+        Result->copyMetadata(*I, LLVMContext::MD_annotation);
         // Everything uses the new instruction now.
         I->replaceAllUsesWith(Result);
 
@@ -5390,11 +5443,23 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
   return MadeIRChange;
 }
 
+void InstCombiner::computeBackEdges() {
+  // Collect backedges.
+  SmallPtrSet<BasicBlock *, 16> Visited;
+  for (BasicBlock *BB : RPOT) {
+    Visited.insert(BB);
+    for (BasicBlock *Succ : successors(BB))
+      if (Visited.contains(Succ))
+        BackEdges.insert({BB, Succ});
+  }
+  ComputedBackEdges = true;
+}
+
 static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI, LoopInfo *LI,
+    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
     const InstCombineOptions &Opts) {
   auto &DL = F.getDataLayout();
 
@@ -5433,7 +5498,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, LI, RPOT);
+                        ORE, BFI, BPI, PSI, DL, RPOT);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
@@ -5470,7 +5535,6 @@ void InstCombinePass::printPipeline(
       OS, MapClassName2PassName);
   OS << '<';
   OS << "max-iterations=" << Options.MaxIterations << ";";
-  OS << (Options.UseLoopInfo ? "" : "no-") << "use-loop-info;";
   OS << (Options.VerifyFixpoint ? "" : "no-") << "verify-fixpoint";
   OS << '>';
 }
@@ -5483,12 +5547,6 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  // TODO: Only use LoopInfo when the option is set. This requires that the
-  //       callers in the pass pipeline explicitly set the option.
-  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
-  if (!LI && Options.UseLoopInfo)
-    LI = &AM.getResult<LoopAnalysis>(F);
-
   auto *AA = &AM.getResult<AAManager>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
@@ -5498,7 +5556,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, BPI, PSI, LI, Options))
+                                       BFI, BPI, PSI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -5537,8 +5595,6 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
   auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
   // Optional analyses.
-  auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-  auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI =
@@ -5551,8 +5607,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
     BPI = &WrapperPass->getBPI();
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, BPI, PSI, LI,
-                                         InstCombineOptions());
+                                         BFI, BPI, PSI, InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;

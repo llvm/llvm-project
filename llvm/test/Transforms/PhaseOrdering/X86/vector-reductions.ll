@@ -168,7 +168,7 @@ define i32 @TestVectorsEqualFP(ptr noalias %Vec0, ptr noalias %Vec1, float %Tole
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[VEC1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <4 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = fcmp fast ole float [[TMP4]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND5:%.*]] = zext i1 [[CMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[COND5]]
@@ -225,7 +225,7 @@ define i32 @TestVectorsEqualFP_alt(ptr noalias %Vec0, ptr noalias %Vec1, float %
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[VEC0:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[VEC1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[CMP3:%.*]] = fcmp fast ole float [[TMP3]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]

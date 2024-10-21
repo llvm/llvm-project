@@ -587,13 +587,11 @@ define <4 x float> @asin_4x(ptr %a) {
 ; NOACCELERATE-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP2:%.*]] = tail call fast float @asinf(float [[VECEXT_1]])
 ; NOACCELERATE-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; NOACCELERATE-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; NOACCELERATE-NEXT:    [[TMP3:%.*]] = tail call fast float @asinf(float [[VECEXT_2]])
-; NOACCELERATE-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; NOACCELERATE-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; NOACCELERATE-NEXT:    [[TMP4:%.*]] = tail call fast float @asinf(float [[VECEXT_3]])
-; NOACCELERATE-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_3]]
+; NOACCELERATE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP4:%.*]] = call fast <2 x float> @llvm.asin.v2f32(<2 x float> [[TMP3]])
+; NOACCELERATE-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -666,13 +664,11 @@ define <4 x float> @acos_4x(ptr %a) {
 ; NOACCELERATE-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP2:%.*]] = tail call fast float @acosf(float [[VECEXT_1]])
 ; NOACCELERATE-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; NOACCELERATE-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; NOACCELERATE-NEXT:    [[TMP3:%.*]] = tail call fast float @acosf(float [[VECEXT_2]])
-; NOACCELERATE-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; NOACCELERATE-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; NOACCELERATE-NEXT:    [[TMP4:%.*]] = tail call fast float @acosf(float [[VECEXT_3]])
-; NOACCELERATE-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_3]]
+; NOACCELERATE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP4:%.*]] = call fast <2 x float> @llvm.acos.v2f32(<2 x float> [[TMP3]])
+; NOACCELERATE-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -745,13 +741,11 @@ define <4 x float> @atan_4x(ptr %a) {
 ; NOACCELERATE-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP2:%.*]] = tail call fast float @atanf(float [[VECEXT_1]])
 ; NOACCELERATE-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; NOACCELERATE-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; NOACCELERATE-NEXT:    [[TMP3:%.*]] = tail call fast float @atanf(float [[VECEXT_2]])
-; NOACCELERATE-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; NOACCELERATE-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; NOACCELERATE-NEXT:    [[TMP4:%.*]] = tail call fast float @atanf(float [[VECEXT_3]])
-; NOACCELERATE-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_3]]
+; NOACCELERATE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP4:%.*]] = call fast <2 x float> @llvm.atan.v2f32(<2 x float> [[TMP3]])
+; NOACCELERATE-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -824,13 +818,11 @@ define <4 x float> @sinh_4x(ptr %a) {
 ; NOACCELERATE-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP2:%.*]] = tail call fast float @sinhf(float [[VECEXT_1]])
 ; NOACCELERATE-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; NOACCELERATE-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; NOACCELERATE-NEXT:    [[TMP3:%.*]] = tail call fast float @sinhf(float [[VECEXT_2]])
-; NOACCELERATE-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; NOACCELERATE-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; NOACCELERATE-NEXT:    [[TMP4:%.*]] = tail call fast float @sinhf(float [[VECEXT_3]])
-; NOACCELERATE-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_3]]
+; NOACCELERATE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP4:%.*]] = call fast <2 x float> @llvm.sinh.v2f32(<2 x float> [[TMP3]])
+; NOACCELERATE-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -903,13 +895,11 @@ define <4 x float> @cosh_4x(ptr %a) {
 ; NOACCELERATE-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP2:%.*]] = tail call fast float @coshf(float [[VECEXT_1]])
 ; NOACCELERATE-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; NOACCELERATE-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; NOACCELERATE-NEXT:    [[TMP3:%.*]] = tail call fast float @coshf(float [[VECEXT_2]])
-; NOACCELERATE-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; NOACCELERATE-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; NOACCELERATE-NEXT:    [[TMP4:%.*]] = tail call fast float @coshf(float [[VECEXT_3]])
-; NOACCELERATE-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_3]]
+; NOACCELERATE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP4:%.*]] = call fast <2 x float> @llvm.cosh.v2f32(<2 x float> [[TMP3]])
+; NOACCELERATE-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -982,13 +972,11 @@ define <4 x float> @tanh_4x(ptr %a) {
 ; NOACCELERATE-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP2:%.*]] = tail call fast float @tanhf(float [[VECEXT_1]])
 ; NOACCELERATE-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; NOACCELERATE-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; NOACCELERATE-NEXT:    [[TMP3:%.*]] = tail call fast float @tanhf(float [[VECEXT_2]])
-; NOACCELERATE-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; NOACCELERATE-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; NOACCELERATE-NEXT:    [[TMP4:%.*]] = tail call fast float @tanhf(float [[VECEXT_3]])
-; NOACCELERATE-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_3]]
+; NOACCELERATE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP4:%.*]] = call fast <2 x float> @llvm.tanh.v2f32(<2 x float> [[TMP3]])
+; NOACCELERATE-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16

@@ -289,7 +289,7 @@ private:
     // Instantiate the regex so we can report any errors.
     auto regex = RegularExpression(op_arg);
     if (llvm::Error err = regex.GetError()) {
-      error = Status(std::move(err));
+      error = Status::FromError(std::move(err));
       return FilterRuleSP();
     }
 

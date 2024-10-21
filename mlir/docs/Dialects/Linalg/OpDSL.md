@@ -23,8 +23,8 @@ python -m mlir.dialects.linalg.opdsl.dump_oplib .ops.core_named_ops
 ```
 
 Alternatively, run the `$PWD/build/bin/update_core_linalg_named_ops.sh` script,
-which is available after building the `mlir-linalg-ods-gen` target. The tool is
-meant for use during both development and runtime, but not as a build tool of
+which is available after building the `mlir-linalg-ods-yaml-gen` target. The tool
+is meant for use during both development and runtime, but not as a build tool of
 the core compiler: in order to export static named op definitions to be built as
 part of the compiler, the corresponding Linalg dialect YAML file must be updated
 and reviewed. TODO: Develop a script to automate op updates to these files.

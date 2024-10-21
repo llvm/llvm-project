@@ -101,7 +101,9 @@ struct TestPassT : public TestPass {
   bool runOnMachineFunction(MachineFunction &MF) override {
     AnalysisType &A = getAnalysis<AnalysisType>();
     T(MF, A);
-    EXPECT_EQ(MF.verify(this, /* Banner */ nullptr, /* AbortOnError */ false),
+    EXPECT_EQ(MF.verify(this, /* Banner=*/nullptr,
+                        /*OS=*/nullptr,
+                        /* AbortOnError=*/false),
               ShouldPass);
     return true;
   }

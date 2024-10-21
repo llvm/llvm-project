@@ -276,3 +276,24 @@ define i32 @cttz_of_power_of_two_wrong_constant_2(i32 %x) {
   %r = call i32 @llvm.cttz.i32(i32 %add, i1 false)
   ret i32 %r
 }
+
+define i16 @cttz_assume(i16 %x) {
+; CHECK-LABEL: @cttz_assume(
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND0:%.*]] = icmp ult i16 [[ADD]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND0]])
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i16 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    ret i16 [[CTTZ]]
+;
+  %add = add i16 %x, 1
+  %cond0 = icmp ult i16 %add, 10
+  call void @llvm.assume(i1 %cond0)
+
+  %cond1 = icmp ne i16 %x, 0
+  call void @llvm.assume(i1 %cond1)
+
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 false)
+  ret i16 %cttz
+}

@@ -1,0 +1,42 @@
+; RUN: %if spirv-tools %{ spirv-as %s -o - | spirv-val - %}
+; RUN: spirv-sim --function=simple --wave=3 --expects=5,6,6 -i %s
+               OpCapability Shader
+               OpCapability GroupNonUniform
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %WaveIndex
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 670
+               OpName %simple "simple"
+               OpName %main "main"
+                OpDecorate %WaveIndex BuiltIn SubgroupLocalInvocationId
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+       %bool = OpTypeBool
+      %int_2 = OpConstant %int 2
+      %int_5 = OpConstant %int 5
+      %int_6 = OpConstant %int 6
+     %uint_0 = OpConstant %uint 0
+       %void = OpTypeVoid
+  %main_type = OpTypeFunction %void
+%simple_type = OpTypeFunction %int
+  %uint_iptr = OpTypePointer Input %uint
+  %WaveIndex = OpVariable %uint_iptr Input
+       %main = OpFunction %void None %main_type
+      %entry = OpLabel
+               OpReturn
+               OpFunctionEnd
+     %simple = OpFunction %int None %simple_type
+          %1 = OpLabel
+          %2 = OpLoad %uint %WaveIndex
+          %3 = OpIEqual %bool %uint_0 %2
+               OpSelectionMerge %merge None
+               OpBranchConditional %3 %true %false
+       %true = OpLabel
+               OpBranch %merge
+      %false = OpLabel
+               OpBranch %merge
+      %merge = OpLabel
+          %4 = OpPhi %int %int_5 %true %int_6 %false
+               OpReturnValue %4
+               OpFunctionEnd
+

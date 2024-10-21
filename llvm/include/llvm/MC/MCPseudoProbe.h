@@ -507,6 +507,10 @@ public:
     return iterator_range(It->second);
   }
 
+  const ArrayRef<MCDecodedPseudoProbeInlineTree> getInlineTreeVec() const {
+    return InlineTreeVec;
+  }
+
 private:
   // Recursively parse an inlining tree encoded in pseudo_probe section. Returns
   // whether the the top-level node should be skipped.

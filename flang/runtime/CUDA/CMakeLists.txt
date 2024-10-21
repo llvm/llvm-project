@@ -15,7 +15,10 @@ set(CUFRT_LIBNAME CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR})
 
 add_flang_library(${CUFRT_LIBNAME}
   allocator.cpp
+  allocatable.cpp
   descriptor.cpp
+  memory.cpp
+  registration.cpp
 )
 
 if (BUILD_SHARED_LIBS)

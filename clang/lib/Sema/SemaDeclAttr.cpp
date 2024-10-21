@@ -1216,6 +1216,8 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
+  if (T->isDependentType())
+    return true;
   if (RefOkay) {
     if (T->isReferenceType())
       return true;
@@ -1284,7 +1286,7 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     for (unsigned I = 0, E = getFunctionOrMethodNumParams(D);
          I != E && !AnyPointers; ++I) {
       QualType T = getFunctionOrMethodParamType(D, I);
-      if (T->isDependentType() || S.isValidPointerAttrType(T))
+      if (S.isValidPointerAttrType(T))
         AnyPointers = true;
     }
 
@@ -1409,8 +1411,7 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
   AllocAlignAttr TmpAttr(Context, CI, ParamIdx());
   SourceLocation AttrLoc = CI.getLoc();
 
-  if (!ResultType->isDependentType() &&
-      !isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
+  if (!isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
     Diag(AttrLoc, diag::warn_attribute_return_pointers_refs_only)
         << &TmpAttr << CI.getRange() << getFunctionOrMethodResultSourceRange(D);
     return;
@@ -2993,10 +2994,17 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unknown << Tune << ParsedAttrs.Tune << Target;
 
-  if (Context.getTargetInfo().getTriple().isRISCV() &&
-      ParsedAttrs.Duplicate != "")
-    return Diag(LiteralLoc, diag::err_duplicate_target_attribute)
-           << Duplicate << None << ParsedAttrs.Duplicate << Target;
+  if (Context.getTargetInfo().getTriple().isRISCV()) {
+    if (ParsedAttrs.Duplicate != "")
+      return Diag(LiteralLoc, diag::err_duplicate_target_attribute)
+             << Duplicate << None << ParsedAttrs.Duplicate << Target;
+    for (const auto &Feature : ParsedAttrs.Features) {
+      StringRef CurFeature = Feature;
+      if (!CurFeature.starts_with('+') && !CurFeature.starts_with('-'))
+        return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << Target;
+    }
+  }
 
   if (ParsedAttrs.Duplicate != "")
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
@@ -3033,6 +3041,54 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
   llvm::SmallVector<StringRef, 8> Features;
+  if (Context.getTargetInfo().getTriple().isRISCV()) {
+    llvm::SmallVector<StringRef, 8> AttrStrs;
+    AttrStr.split(AttrStrs, ';');
+
+    bool HasArch = false;
+    bool HasPriority = false;
+    bool HasDefault = false;
+    bool DuplicateAttr = false;
+    for (auto &AttrStr : AttrStrs) {
+      // Only support arch=+ext,... syntax.
+      if (AttrStr.starts_with("arch=+")) {
+        if (HasArch)
+          DuplicateAttr = true;
+        HasArch = true;
+        ParsedTargetAttr TargetAttr =
+            Context.getTargetInfo().parseTargetAttr(AttrStr);
+
+        if (TargetAttr.Features.empty() ||
+            llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+              return !RISCV().isValidFMVExtension(Ext);
+            }))
+          return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << AttrStr << TargetVersion;
+      } else if (AttrStr.starts_with("default")) {
+        if (HasDefault)
+          DuplicateAttr = true;
+        HasDefault = true;
+      } else if (AttrStr.consume_front("priority=")) {
+        if (HasPriority)
+          DuplicateAttr = true;
+        HasPriority = true;
+        unsigned Digit;
+        if (AttrStr.getAsInteger(0, Digit))
+          return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << AttrStr << TargetVersion;
+      } else {
+        return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+      }
+    }
+
+    if (((HasPriority || HasArch) && HasDefault) || DuplicateAttr ||
+        (HasPriority && !HasArch))
+      return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << AttrStr << TargetVersion;
+
+    return false;
+  }
   AttrStr.split(Features, "+");
   for (auto &CurFeature : Features) {
     CurFeature = CurFeature.trim();
@@ -3138,6 +3194,55 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
+    } else if (TInfo.getTriple().isRISCV()) {
+      // Suppress warn_target_clone_mixed_values
+      HasCommas = false;
+
+      // Cur is split's parts of Str. RISC-V uses Str directly,
+      // so skip when encountered more than once.
+      if (!Str.starts_with(Cur))
+        continue;
+
+      llvm::SmallVector<StringRef, 8> AttrStrs;
+      Str.split(AttrStrs, ";");
+
+      bool IsPriority = false;
+      bool IsDefault = false;
+      for (auto &AttrStr : AttrStrs) {
+        // Only support arch=+ext,... syntax.
+        if (AttrStr.starts_with("arch=+")) {
+          ParsedTargetAttr TargetAttr =
+              Context.getTargetInfo().parseTargetAttr(AttrStr);
+
+          if (TargetAttr.Features.empty() ||
+              llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+                return !RISCV().isValidFMVExtension(Ext);
+              }))
+            return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                   << Unsupported << None << Str << TargetClones;
+        } else if (AttrStr.starts_with("default")) {
+          IsDefault = true;
+          DefaultIsDupe = HasDefault;
+          HasDefault = true;
+        } else if (AttrStr.consume_front("priority=")) {
+          IsPriority = true;
+          unsigned Digit;
+          if (AttrStr.getAsInteger(0, Digit))
+            return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                   << Unsupported << None << Str << TargetClones;
+        } else {
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Str << TargetClones;
+        }
+      }
+
+      if (IsPriority && IsDefault)
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << Str << TargetClones;
+
+      if (llvm::is_contained(StringsBuffer, Str) || DefaultIsDupe)
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+      StringsBuffer.push_back(Str);
     } else {
       // Other targets ( currently X86 )
       if (Cur.starts_with("arch=")) {
@@ -3853,30 +3958,11 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   RD->addAttr(::new (S.Context) TransparentUnionAttr(S.Context, AL));
 }
 
-void Sema::AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
-                             StringRef Str, MutableArrayRef<Expr *> Args) {
-  auto *Attr = AnnotateAttr::Create(Context, Str, Args.data(), Args.size(), CI);
-  if (ConstantFoldAttrArgs(
-          CI, MutableArrayRef<Expr *>(Attr->args_begin(), Attr->args_end()))) {
+static void handleAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *Attr = S.CreateAnnotationAttr(AL);
+  if (Attr) {
     D->addAttr(Attr);
   }
-}
-
-static void handleAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  // Make sure that there is a string literal as the annotation's first
-  // argument.
-  StringRef Str;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
-    return;
-
-  llvm::SmallVector<Expr *, 4> Args;
-  Args.reserve(AL.getNumArgs() - 1);
-  for (unsigned Idx = 1; Idx < AL.getNumArgs(); Idx++) {
-    assert(!AL.isArgIdent(Idx));
-    Args.push_back(AL.getArgAsExpr(Idx));
-  }
-
-  S.AddAnnotationAttr(D, AL, Str, Args);
 }
 
 static void handleAlignValueAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6906,12 +6992,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
-    break;
-  case ParsedAttr::AT_HLSLROV:
-    handleSimpleAttribute<HLSLROVAttr>(S, D, AL);
-    break;
-  case ParsedAttr::AT_HLSLResourceClass:
-    S.HLSL().handleResourceClassAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);

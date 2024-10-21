@@ -227,15 +227,26 @@ namespace floating_comparison {
   !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
   __builtin_isunordered(X, Y) && __builtin_isunordered(Y, X)
 
-  static_assert(
-    LESS(0.0, 1.0) && EQUAL(1.0, 1.0) && EQUAL(0.0, -0.0) &&
-    UNORDERED(__builtin_nan(""), 1.0) && UNORDERED(__builtin_nan(""), __builtin_inf()) && LESS(0.0, __builtin_inf()) &&
-    LESS(0.0f, 1.0f) && EQUAL(1.0f, 1.0f) && EQUAL(0.0f, -0.0f) &&
-    UNORDERED(__builtin_nanf(""), 1.0f) && UNORDERED(__builtin_nanf(""), __builtin_inff()) && LESS(0.0f, __builtin_inff()) &&
-    LESS(0.0L, 1.0L) && EQUAL(1.0L, 1.0L) && EQUAL(0.0L, -0.0L) &&
-    UNORDERED(__builtin_nanl(""), 1.0L) && UNORDERED(__builtin_nanl(""), __builtin_infl()) && LESS(0.0L, __builtin_infl()) &&
-    true, ""
-  );
+  static_assert(LESS(0.0, 1.0));
+  static_assert(LESS(0.0, __builtin_inf()));
+  static_assert(LESS(0.0f, 1.0f));
+  static_assert(LESS(0.0f, __builtin_inff()));
+  static_assert(LESS(0.0L, 1.0L));
+  static_assert(LESS(0.0L, __builtin_infl()));
+
+  static_assert(EQUAL(1.0, 1.0));
+  static_assert(EQUAL(0.0, -0.0));
+  static_assert(EQUAL(1.0f, 1.0f));
+  static_assert(EQUAL(0.0f, -0.0f));
+  static_assert(EQUAL(1.0L, 1.0L));
+  static_assert(EQUAL(0.0L, -0.0L));
+
+  static_assert(UNORDERED(__builtin_nan(""), 1.0));
+  static_assert(UNORDERED(__builtin_nan(""), __builtin_inf()));
+  static_assert(UNORDERED(__builtin_nanf(""), 1.0f));
+  static_assert(UNORDERED(__builtin_nanf(""), __builtin_inff()));
+  static_assert(UNORDERED(__builtin_nanl(""), 1.0L));
+  static_assert(UNORDERED(__builtin_nanl(""), __builtin_infl()));
 }
 
 namespace fpclassify {
@@ -253,6 +264,20 @@ namespace fpclassify {
   char classify_neg_zero[__builtin_fpclassify(-1, -1, -1, -1, +1, -0.0)];
   char classify_subnorm [__builtin_fpclassify(-1, -1, -1, +1, -1, 1.0e-38f)];
 }
+
+namespace abs {
+  static_assert(__builtin_abs(14) == 14, "");
+  static_assert(__builtin_labs(14L) == 14L, "");
+  static_assert(__builtin_llabs(14LL) == 14LL, "");
+  static_assert(__builtin_abs(-14) == 14, "");
+  static_assert(__builtin_labs(-0x14L) == 0x14L, "");
+  static_assert(__builtin_llabs(-0x141414141414LL) == 0x141414141414LL, "");
+#define BITSIZE(x) (sizeof(x) * 8)
+  constexpr int abs4 = __builtin_abs(1 << (BITSIZE(int) - 1)); // both-error {{must be initialized by a constant expression}}
+  constexpr long abs6 = __builtin_labs(1L << (BITSIZE(long) - 1)); // both-error {{must be initialized by a constant expression}}
+  constexpr long long abs8 = __builtin_llabs(1LL << (BITSIZE(long long) - 1)); // both-error {{must be initialized by a constant expression}}
+#undef BITSIZE
+} // namespace abs
 
 namespace fabs {
   static_assert(__builtin_fabs(-14.0) == 14.0, "");
@@ -945,7 +970,7 @@ namespace shufflevector {
   static_assert(vectorShuffle6[7] == 7, "");
 
   constexpr vector4char  vectorShuffleFail1 = __builtin_shufflevector( // both-error {{must be initialized by a constant expression}}\
-                                                                       // ref-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}
+                                                                       // both-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}
           vector4charConst1,
           vector4charConst2, -1, -1, -1, -1);
 }
@@ -955,5 +980,13 @@ namespace shufflevector {
 namespace FunctionStart {
   void a(void) {}
   static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
-                                                       // both-note {{comparison of addresses of literals has unspecified value}}
+                                                       // ref-note {{comparison against opaque constant address '&__builtin_function_start(a)'}} \
+                                                       // expected-note {{comparison of addresses of literals has unspecified value}}
+}
+
+namespace BuiltinInImplicitCtor {
+  constexpr struct {
+    int a = __builtin_isnan(1.0);
+  } Foo;
+  static_assert(Foo.a == 0, "");
 }

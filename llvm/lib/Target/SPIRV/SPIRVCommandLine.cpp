@@ -28,6 +28,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float16_add},
         {"SPV_EXT_shader_atomic_float_min_max",
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
+        {"SPV_EXT_arithmetic_fence",
+         SPIRV::Extension::Extension::SPV_EXT_arithmetic_fence},
         {"SPV_INTEL_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_INTEL_arbitrary_precision_integers},
         {"SPV_INTEL_cache_controls",
@@ -40,6 +42,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
         {"SPV_INTEL_optnone", SPIRV::Extension::Extension::SPV_INTEL_optnone},
         {"SPV_INTEL_usm_storage_classes",
          SPIRV::Extension::Extension::SPV_INTEL_usm_storage_classes},
+        {"SPV_INTEL_split_barrier",
+         SPIRV::Extension::Extension::SPV_INTEL_split_barrier},
         {"SPV_INTEL_subgroups",
          SPIRV::Extension::Extension::SPV_INTEL_subgroups},
         {"SPV_KHR_uniform_group_instructions",
@@ -112,4 +116,16 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
 
   Vals = std::move(EnabledExtensions);
   return false;
+}
+
+llvm::StringRef SPIRVExtensionsParser::checkExtensions(
+    const std::vector<std::string> &ExtNames,
+    std::set<SPIRV::Extension::Extension> &AllowedExtensions) {
+  for (const auto &Ext : ExtNames) {
+    auto It = SPIRVExtensionMap.find(Ext);
+    if (It == SPIRVExtensionMap.end())
+      return Ext;
+    AllowedExtensions.insert(It->second);
+  }
+  return StringRef();
 }
