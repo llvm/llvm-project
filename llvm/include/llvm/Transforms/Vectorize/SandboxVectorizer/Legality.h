@@ -28,6 +28,7 @@ enum class LegalityResultID {
 
 /// The reason for vectorizing or not vectorizing.
 enum class ResultReason {
+  NotInstructions,
   DiffOpcodes,
   DiffTypes,
 };
@@ -45,6 +46,8 @@ struct ToStr {
 
   static const char *getVecReason(ResultReason Reason) {
     switch (Reason) {
+    case ResultReason::NotInstructions:
+      return "NotInstructions";
     case ResultReason::DiffOpcodes:
       return "DiffOpcodes";
     case ResultReason::DiffTypes:
@@ -64,6 +67,10 @@ protected:
   /// Only Legality can create LegalityResults.
   LegalityResult(LegalityResultID ID) : ID(ID) {}
   friend class LegalityAnalysis;
+
+  /// We shouldn't need copies.
+  LegalityResult(const LegalityResult &) = delete;
+  LegalityResult &operator=(const LegalityResult &) = delete;
 
 public:
   virtual ~LegalityResult() {}
@@ -88,6 +95,7 @@ class LegalityResultWithReason : public LegalityResult {
   friend class Pack; // For constructor.
 
 public:
+  ResultReason getReason() const { return Reason; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
     LegalityResult::print(OS);
@@ -136,7 +144,7 @@ public:
   }
   /// Checks if it's legal to vectorize the instructions in \p Bndl.
   /// \Returns a LegalityResult object owned by LegalityAnalysis.
-  LegalityResult &canVectorize(ArrayRef<Value *> Bndl);
+  const LegalityResult &canVectorize(ArrayRef<Value *> Bndl);
 };
 
 } // namespace llvm::sandboxir
