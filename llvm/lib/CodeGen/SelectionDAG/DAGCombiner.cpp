@@ -12368,20 +12368,19 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
   MachineMemOperand *MMO = HG->getMemOperand();
   ISD::MemIndexType IndexType = HG->getIndexType();
 
-  if (ISD::isConstantSplatVectorAllZeros(Mask.getNode())) {
+  if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return Chain;
-  }
+
   SDValue Ops[] = {Chain,          Inc,           Mask, BasePtr, Index,
                    HG->getScale(), HG->getIntID()};
-  if (refineUniformBase(BasePtr, Index, HG->isIndexScaled(), DAG, DL)) {
+  if (refineUniformBase(BasePtr, Index, HG->isIndexScaled(), DAG, DL))
     return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
                                   MMO, IndexType);
-  }
+
   EVT DataVT = Index.getValueType();
-  if (refineIndexType(Index, IndexType, DataVT, DAG)) {
+  if (refineIndexType(Index, IndexType, DataVT, DAG))
     return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
                                   MMO, IndexType);
-  }
   return SDValue();
 }
 
