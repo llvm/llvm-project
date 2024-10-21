@@ -45,12 +45,12 @@ define amdgpu_kernel void @max_size_small_static_memcpy_caller0(ptr addrspace(1)
 ; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; ALL:       load-store-loop:
 ; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
 ; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; ALL:       memcpy-split:
 ; ALL-NEXT:    ret void
@@ -65,12 +65,12 @@ define amdgpu_kernel void @min_size_large_static_memcpy_caller0(ptr addrspace(1)
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 1
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 1
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 1024
@@ -92,22 +92,22 @@ define amdgpu_kernel void @max_size_small_static_memmove_caller0(ptr addrspace(1
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr addrspace(1) [[SRC:%.*]], [[DST:%.*]]
 ; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_BWD_LOOP:%.*]], label [[MEMMOVE_FWD_LOOP:%.*]]
 ; ALL:       memmove_bwd_loop:
-; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 64, [[TMP0:%.*]] ]
+; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 4, [[TMP0:%.*]] ]
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP1]], 1
-; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP2]], align 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP2]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
 ; ALL-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; ALL-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; ALL:       memmove_fwd_loop:
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP7:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP6]], align 1
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP5]], align 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP6]], align 1
 ; ALL-NEXT:    [[TMP7]] = add i64 [[FWD_INDEX]], 1
-; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 64
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 4
 ; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
@@ -127,22 +127,22 @@ define amdgpu_kernel void @min_size_large_static_memmove_caller0(ptr addrspace(1
 ; OPT-NEXT:    store i8 [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
 ; OPT-NEXT:    br label [[MEMMOVE_BWD_LOOP:%.*]]
 ; OPT:       memmove_bwd_loop:
-; OPT-NEXT:    [[TMP4:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 64, [[MEMMOVE_BWD_RESIDUAL]] ]
+; OPT-NEXT:    [[TMP4:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 4, [[MEMMOVE_BWD_RESIDUAL]] ]
 ; OPT-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP4]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
-; OPT-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1
-; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP6]], align 1
+; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
+; OPT-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP5]], align 1
+; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP6]], align 1
 ; OPT-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; OPT-NEXT:    br i1 [[TMP7]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; OPT:       memmove_fwd_loop:
 ; OPT-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP10:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0:%.*]] ]
-; OPT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
-; OPT-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP8]], align 1
-; OPT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP9]], align 1
+; OPT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
+; OPT-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP8]], align 1
+; OPT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP9]], align 1
 ; OPT-NEXT:    [[TMP10]] = add i64 [[FWD_INDEX]], 1
-; OPT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 64
+; OPT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 4
 ; OPT-NEXT:    br i1 [[TMP11]], label [[MEMMOVE_FWD_RESIDUAL:%.*]], label [[MEMMOVE_FWD_LOOP]]
 ; OPT:       memmove_fwd_residual:
 ; OPT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 1024
@@ -396,7 +396,7 @@ define amdgpu_kernel void @memcpy_multi_use_one_function_keep_small(ptr addrspac
 ; MAX1024-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP14]], [[TMP2]]
 ; MAX1024-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
 ; MAX1024:       post-loop-memcpy-expansion:
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST1:%.*]], ptr addrspace(1) [[SRC]], i64 102, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST1:%.*]], ptr addrspace(1) [[SRC]], i64 282, i1 false)
 ; MAX1024-NEXT:    ret void
 ; MAX1024:       loop-memcpy-residual-header:
 ; MAX1024-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP2]], 0
@@ -431,21 +431,25 @@ define amdgpu_kernel void @memcpy_multi_use_one_function_keep_small(ptr addrspac
 ; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; ALL:       load-store-loop:
 ; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[POST_LOOP_MEMCPY_EXPANSION]] ], [ [[TMP19:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    [[TMP17:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP16]], align 1
-; ALL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST1:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[TMP17]], ptr addrspace(1) [[TMP18]], align 1
+; ALL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP17:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP16]], align 1
+; ALL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST1:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[TMP17]], ptr addrspace(1) [[TMP18]], align 1
 ; ALL-NEXT:    [[TMP19]] = add i64 [[LOOP_INDEX]], 1
-; ALL-NEXT:    [[TMP20:%.*]] = icmp ult i64 [[TMP19]], 6
+; ALL-NEXT:    [[TMP20:%.*]] = icmp ult i64 [[TMP19]], 1
 ; ALL-NEXT:    br i1 [[TMP20]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; ALL:       memcpy-split:
-; ALL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[SRC]], i64 24
-; ALL-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) [[TMP21]], align 1
-; ALL-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[DST1]], i64 24
-; ALL-NEXT:    store i32 [[TMP22]], ptr addrspace(1) [[TMP23]], align 1
-; ALL-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[SRC]], i64 50
+; ALL-NEXT:    [[TMP28:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 16
+; ALL-NEXT:    [[TMP29:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP28]], align 1
+; ALL-NEXT:    [[TMP30:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST1]], i64 16
+; ALL-NEXT:    store <4 x i32> [[TMP29]], ptr addrspace(1) [[TMP30]], align 1
+; ALL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[SRC]], i64 34
+; ALL-NEXT:    [[TMP22:%.*]] = load i64, ptr addrspace(1) [[TMP21]], align 1
+; ALL-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[DST1]], i64 34
+; ALL-NEXT:    store i64 [[TMP22]], ptr addrspace(1) [[TMP23]], align 1
+; ALL-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[SRC]], i64 140
 ; ALL-NEXT:    [[TMP25:%.*]] = load i16, ptr addrspace(1) [[TMP24]], align 1
-; ALL-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[DST1]], i64 50
+; ALL-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[DST1]], i64 140
 ; ALL-NEXT:    store i16 [[TMP25]], ptr addrspace(1) [[TMP26]], align 1
 ; ALL-NEXT:    ret void
 ; ALL:       loop-memcpy-residual-header:
@@ -453,7 +457,7 @@ define amdgpu_kernel void @memcpy_multi_use_one_function_keep_small(ptr addrspac
 ; ALL-NEXT:    br i1 [[TMP27]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
 ;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst0, ptr addrspace(1) %src, i64 %n, i1 false)
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst1, ptr addrspace(1) %src, i64 102, i1 false)
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst1, ptr addrspace(1) %src, i64 282, i1 false)
   ret void
 }
 
@@ -462,12 +466,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1028(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[SRC]], i64 256
@@ -485,12 +489,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1025(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 1024
@@ -508,12 +512,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1026(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[SRC]], i64 512
@@ -531,12 +535,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1032(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[SRC]], i64 128
@@ -554,12 +558,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1034(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[SRC]], i64 128
@@ -581,12 +585,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1035(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[SRC]], i64 128
@@ -612,12 +616,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1036(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[SRC]], i64 128
@@ -639,12 +643,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1039(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[SRC]], i64 128
@@ -697,12 +701,12 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1027(ptr addrspace
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[SRC]], i64 512
@@ -770,12 +774,12 @@ define amdgpu_kernel void @memcpy_private_align4_private_align4_1027(ptr addrspa
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr addrspace(5) [[SRC]], i32 512
@@ -820,12 +824,12 @@ define amdgpu_kernel void @memcpy_private_align1_private_align4_1027(ptr addrspa
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP1]], align 4
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 1
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 1
 ; OPT-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr addrspace(5) [[SRC]], i32 512
@@ -870,12 +874,12 @@ define amdgpu_kernel void @memcpy_private_align4_private_align1_1027(ptr addrspa
 ; OPT-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP1]], align 1
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP1]], align 1
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 4
 ; OPT-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 64
+; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 4
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr addrspace(5) [[SRC]], i32 512
@@ -1203,26 +1207,26 @@ define amdgpu_kernel void @memcpy_global_align4_local_align4_variable(ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @memcpy_global_align4_global_align4_16(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
-; MAX1024-LABEL: @memcpy_global_align4_global_align4_16(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 16, i1 false)
+define amdgpu_kernel void @memcpy_global_align4_global_align4_256(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
+; MAX1024-LABEL: @memcpy_global_align4_global_align4_256(
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 256, i1 false)
 ; MAX1024-NEXT:    ret void
 ;
-; ALL-LABEL: @memcpy_global_align4_global_align4_16(
+; ALL-LABEL: @memcpy_global_align4_global_align4_256(
 ; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; ALL:       load-store-loop:
 ; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 ; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
 ; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1
 ; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; ALL:       memcpy-split:
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 %dst, ptr addrspace(1) align 4 %src, i64 16, i1 false)
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 %dst, ptr addrspace(1) align 4 %src, i64 256, i1 false)
   ret void
 }
 
@@ -1340,22 +1344,22 @@ define amdgpu_kernel void @memmove_flat_align1_global_align1(ptr %dst, ptr addrs
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[TMP1]], [[DST:%.*]]
 ; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_BWD_LOOP:%.*]], label [[MEMMOVE_FWD_LOOP:%.*]]
 ; ALL:       memmove_bwd_loop:
-; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 16, [[TMP0:%.*]] ]
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 1, [[TMP0:%.*]] ]
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP2]], 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT]], ptr [[TMP4]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <64 x i32>, ptr [[DST]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT]], ptr [[TMP4]], align 1
 ; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; ALL:       memmove_fwd_loop:
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP8:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP6]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr [[TMP7]], align 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <64 x i32>, ptr [[DST]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT1]], ptr [[TMP7]], align 1
 ; ALL-NEXT:    [[TMP8]] = add i64 [[FWD_INDEX]], 1
-; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 16
+; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 1
 ; ALL-NEXT:    br i1 [[TMP9]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
@@ -1374,22 +1378,22 @@ define amdgpu_kernel void @memmove_global_align1_flat_align1(ptr addrspace(1) %d
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[SRC:%.*]], [[TMP1]]
 ; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_BWD_LOOP:%.*]], label [[MEMMOVE_FWD_LOOP:%.*]]
 ; ALL:       memmove_bwd_loop:
-; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 16, [[TMP0:%.*]] ]
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 1, [[TMP0:%.*]] ]
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP2]], 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP4]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr [[SRC]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP4]], align 1
 ; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; ALL:       memmove_fwd_loop:
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP8:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr [[TMP6]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP7]], align 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr [[SRC]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP7]], align 1
 ; ALL-NEXT:    [[TMP8]] = add i64 [[FWD_INDEX]], 1
-; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 16
+; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 1
 ; ALL-NEXT:    br i1 [[TMP9]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
@@ -1408,22 +1412,22 @@ define amdgpu_kernel void @memmove_flat_align1_private_align1(ptr %dst, ptr addr
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[TMP1]], [[DST:%.*]]
 ; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_BWD_LOOP:%.*]], label [[MEMMOVE_FWD_LOOP:%.*]]
 ; ALL:       memmove_bwd_loop:
-; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 16, [[TMP0:%.*]] ]
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 1, [[TMP0:%.*]] ]
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP2]], 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT]], ptr [[TMP4]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[SRC]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <64 x i32>, ptr [[DST]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT]], ptr [[TMP4]], align 1
 ; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; ALL:       memmove_fwd_loop:
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP8:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP6]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr [[TMP7]], align 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[SRC]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <64 x i32>, ptr [[DST]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT1]], ptr [[TMP7]], align 1
 ; ALL-NEXT:    [[TMP8]] = add i64 [[FWD_INDEX]], 1
-; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 16
+; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 1
 ; ALL-NEXT:    br i1 [[TMP9]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
@@ -1442,22 +1446,22 @@ define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[SRC:%.*]], [[TMP1]]
 ; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_BWD_LOOP:%.*]], label [[MEMMOVE_FWD_LOOP:%.*]]
 ; ALL:       memmove_bwd_loop:
-; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 16, [[TMP0:%.*]] ]
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 1, [[TMP0:%.*]] ]
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP2]], 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr [[TMP3]], align 1
-; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(5) [[TMP4]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr [[SRC]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[DST]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(5) [[TMP4]], align 1
 ; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; ALL:       memmove_fwd_loop:
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP8:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr [[TMP6]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(5) [[TMP7]], align 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr [[SRC]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[DST]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(5) [[TMP7]], align 1
 ; ALL-NEXT:    [[TMP8]] = add i64 [[FWD_INDEX]], 1
-; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 16
+; ALL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 1
 ; ALL-NEXT:    br i1 [[TMP9]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
@@ -1475,12 +1479,12 @@ define amdgpu_kernel void @memmove_private_align1_global_align1(ptr addrspace(5)
 ; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; ALL:       load-store-loop:
 ; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 1, !alias.scope [[META0:![0-9]+]]
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 1, !noalias [[META0]]
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 1, !alias.scope [[META0:![0-9]+]]
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 1, !noalias [[META0]]
 ; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 16
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1
 ; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; ALL:       memcpy-split:
 ; ALL-NEXT:    ret void
@@ -1498,12 +1502,12 @@ define amdgpu_kernel void @memmove_global_align1_private_align1(ptr addrspace(1)
 ; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; ALL:       load-store-loop:
 ; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP1]], align 1, !alias.scope [[META3:![0-9]+]]
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1, !noalias [[META3]]
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP1]], align 1, !alias.scope [[META3:![0-9]+]]
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1, !noalias [[META3]]
 ; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 16
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1
 ; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; ALL:       memcpy-split:
 ; ALL-NEXT:    ret void
@@ -2012,22 +2016,22 @@ define amdgpu_kernel void @memmove_private_align1_private_align1(ptr addrspace(5
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr addrspace(5) [[SRC:%.*]], [[DST:%.*]]
 ; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_BWD_LOOP:%.*]], label [[MEMMOVE_FWD_LOOP:%.*]]
 ; ALL:       memmove_bwd_loop:
-; ALL-NEXT:    [[TMP1:%.*]] = phi i32 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 16, [[TMP0:%.*]] ]
+; ALL-NEXT:    [[TMP1:%.*]] = phi i32 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 1, [[TMP0:%.*]] ]
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i32 [[TMP1]], 1
-; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC]], i32 [[BWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP2]], align 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST]], i32 [[BWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(5) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[SRC]], i32 [[BWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP2]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[DST]], i32 [[BWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(5) [[TMP3]], align 1
 ; ALL-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[BWD_INDEX]], 0
 ; ALL-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; ALL:       memmove_fwd_loop:
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i32 [ [[TMP7:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC]], i32 [[FWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP5]], align 1
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST]], i32 [[FWD_INDEX]]
-; ALL-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(5) [[TMP6]], align 1
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[SRC]], i32 [[FWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP5]], align 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(5) [[DST]], i32 [[FWD_INDEX]]
+; ALL-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(5) [[TMP6]], align 1
 ; ALL-NEXT:    [[TMP7]] = add i32 [[FWD_INDEX]], 1
-; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 16
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 1
 ; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
@@ -2101,27 +2105,27 @@ define amdgpu_kernel void @memmove_global_align4_static_residual_empty(ptr addrs
 ; OPT-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr addrspace(1) [[SRC:%.*]], [[DST:%.*]]
 ; OPT-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_BWD_LOOP:%.*]], label [[MEMMOVE_FWD_LOOP:%.*]]
 ; OPT:       memmove_bwd_loop:
-; OPT-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 65, [[TMP0:%.*]] ]
+; OPT-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 5, [[TMP0:%.*]] ]
 ; OPT-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP1]], 1
-; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
-; OPT-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP2]], align 1
-; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
+; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
+; OPT-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP2]], align 1
+; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
 ; OPT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; OPT-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; OPT:       memmove_fwd_loop:
 ; OPT-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP7:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
-; OPT-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1
-; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP6]], align 1
+; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
+; OPT-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP5]], align 1
+; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP6]], align 1
 ; OPT-NEXT:    [[TMP7]] = add i64 [[FWD_INDEX]], 1
-; OPT-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 65
+; OPT-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 5
 ; OPT-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_LOOP]]
 ; OPT:       memmove_done:
 ; OPT-NEXT:    ret void
 ;
-  call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 1040, i1 false)
+  call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 1280, i1 false)
   ret void
 }
 
@@ -2148,22 +2152,22 @@ define amdgpu_kernel void @memmove_global_align4_static_residual_full(ptr addrsp
 ; OPT-NEXT:    store i64 [[TMP11]], ptr addrspace(1) [[TMP12]], align 1
 ; OPT-NEXT:    br label [[MEMMOVE_BWD_LOOP:%.*]]
 ; OPT:       memmove_bwd_loop:
-; OPT-NEXT:    [[TMP13:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 64, [[MEMMOVE_BWD_RESIDUAL]] ]
+; OPT-NEXT:    [[TMP13:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 4, [[MEMMOVE_BWD_RESIDUAL]] ]
 ; OPT-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP13]], 1
-; OPT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
-; OPT-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP14]], align 1
-; OPT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP15]], align 1
+; OPT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
+; OPT-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP14]], align 1
+; OPT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP15]], align 1
 ; OPT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; OPT-NEXT:    br i1 [[TMP16]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; OPT:       memmove_fwd_loop:
 ; OPT-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP19:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0:%.*]] ]
-; OPT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
-; OPT-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP17]], align 1
-; OPT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP18]], align 1
+; OPT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
+; OPT-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP17]], align 1
+; OPT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
+; OPT-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP18]], align 1
 ; OPT-NEXT:    [[TMP19]] = add i64 [[FWD_INDEX]], 1
-; OPT-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[TMP19]], 64
+; OPT-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[TMP19]], 4
 ; OPT-NEXT:    br i1 [[TMP20]], label [[MEMMOVE_FWD_RESIDUAL:%.*]], label [[MEMMOVE_FWD_LOOP]]
 ; OPT:       memmove_fwd_residual:
 ; OPT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[SRC]], i64 128
@@ -2234,57 +2238,57 @@ entry:
 
 define amdgpu_kernel void @memmove_volatile(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memmove_volatile(
-; MAX1024-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 64, i1 true)
+; MAX1024-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 512, i1 true)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_volatile(
 ; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr addrspace(1) [[SRC:%.*]], [[DST:%.*]]
 ; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[MEMMOVE_BWD_LOOP:%.*]], label [[MEMMOVE_FWD_LOOP:%.*]]
 ; ALL:       memmove_bwd_loop:
-; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 4, [[TMP0:%.*]] ]
+; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 2, [[TMP0:%.*]] ]
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP1]], 1
-; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT:%.*]] = load volatile <4 x i32>, ptr addrspace(1) [[TMP2]], align 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
-; ALL-NEXT:    store volatile <4 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load volatile <64 x i32>, ptr addrspace(1) [[TMP2]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]]
+; ALL-NEXT:    store volatile <64 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
 ; ALL-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
 ; ALL-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; ALL:       memmove_fwd_loop:
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP7:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    [[ELEMENT1:%.*]] = load volatile <4 x i32>, ptr addrspace(1) [[TMP5]], align 1
-; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
-; ALL-NEXT:    store volatile <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP6]], align 1
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    [[ELEMENT1:%.*]] = load volatile <64 x i32>, ptr addrspace(1) [[TMP5]], align 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]]
+; ALL-NEXT:    store volatile <64 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP6]], align 1
 ; ALL-NEXT:    [[TMP7]] = add i64 [[FWD_INDEX]], 1
-; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 4
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 2
 ; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[MEMMOVE_FWD_LOOP]]
 ; ALL:       memmove_done:
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 64, i1 true)
+  call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 512, i1 true)
   ret void
 }
 
 define amdgpu_kernel void @memcpy_volatile(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memcpy_volatile(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 64, i1 true)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 512, i1 true)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_volatile(
 ; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; ALL:       load-store-loop:
 ; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    [[TMP2:%.*]] = load volatile <4 x i32>, ptr addrspace(1) [[TMP1]], align 1
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; ALL-NEXT:    store volatile <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load volatile <64 x i32>, ptr addrspace(1) [[TMP1]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <64 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store volatile <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
 ; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
-; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 2
 ; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; ALL:       memcpy-split:
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 64, i1 true)
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 512, i1 true)
   ret void
 }
 
