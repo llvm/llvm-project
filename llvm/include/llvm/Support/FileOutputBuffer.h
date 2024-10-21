@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_FILEOUTPUTBUFFER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 
@@ -25,7 +26,7 @@ namespace llvm {
 /// If the FileOutputBuffer is committed, the target file's content will become
 /// the buffer content at the time of the commit.  If the FileOutputBuffer is
 /// not committed, the file will be deleted in the FileOutputBuffer destructor.
-class FileOutputBuffer {
+class LLVM_ABI FileOutputBuffer {
 public:
   enum {
     /// Set the 'x' bit on the resulting file.

@@ -17,6 +17,7 @@
 #define LLVM_SUPPORT_THREAD_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 #ifdef _WIN32
@@ -35,7 +36,7 @@ namespace llvm {
 
 /// LLVM thread following std::thread interface with added constructor to
 /// specify stack size.
-class thread {
+class LLVM_ABI thread {
   template <typename CalleeTuple> static void GenericThreadProxy(void *Ptr) {
     std::unique_ptr<CalleeTuple> Callee(static_cast<CalleeTuple *>(Ptr));
     std::apply(
@@ -113,13 +114,13 @@ private:
   native_handle_type Thread;
 };
 
-thread::native_handle_type
+LLVM_ABI thread::native_handle_type
 llvm_execute_on_thread_impl(thread::start_routine_type ThreadFunc, void *Arg,
                             std::optional<unsigned> StackSizeInBytes);
-void llvm_thread_join_impl(thread::native_handle_type Thread);
-void llvm_thread_detach_impl(thread::native_handle_type Thread);
-thread::id llvm_thread_get_id_impl(thread::native_handle_type Thread);
-thread::id llvm_thread_get_current_id_impl();
+LLVM_ABI void llvm_thread_join_impl(thread::native_handle_type Thread);
+LLVM_ABI void llvm_thread_detach_impl(thread::native_handle_type Thread);
+LLVM_ABI thread::id llvm_thread_get_id_impl(thread::native_handle_type Thread);
+LLVM_ABI thread::id llvm_thread_get_current_id_impl();
 
 template <class Function, class... Args>
 thread::thread(std::optional<unsigned> StackSizeInBytes, Function &&f,

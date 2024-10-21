@@ -41,11 +41,11 @@ namespace llvm {
   ///
   /// \param user_data - An argument which will be passed to the install error
   /// handler.
-  void install_fatal_error_handler(fatal_error_handler_t handler,
+  LLVM_ABI void install_fatal_error_handler(fatal_error_handler_t handler,
                                    void *user_data = nullptr);
 
   /// Restores default error handling behaviour.
-  void remove_fatal_error_handler();
+  LLVM_ABI void remove_fatal_error_handler();
 
   /// ScopedFatalErrorHandler - This is a simple helper class which just
   /// calls install_fatal_error_handler in its constructor and
@@ -68,11 +68,11 @@ namespace llvm {
 /// After the error handler is called this function will call abort(), it
 /// does not return.
 /// NOTE: The std::string variant was removed to avoid a <string> dependency.
-[[noreturn]] void report_fatal_error(const char *reason,
+[[noreturn]] void LLVM_ABI report_fatal_error(const char *reason,
                                      bool gen_crash_diag = true);
-[[noreturn]] void report_fatal_error(StringRef reason,
+[[noreturn]] void LLVM_ABI report_fatal_error(StringRef reason,
                                      bool gen_crash_diag = true);
-[[noreturn]] void report_fatal_error(const Twine &reason,
+[[noreturn]] void LLVM_ABI report_fatal_error(const Twine &reason,
                                      bool gen_crash_diag = true);
 
 /// Installs a new bad alloc error handler that should be used whenever a
@@ -91,13 +91,13 @@ namespace llvm {
 ///
 /// \param user_data - An argument which will be passed to the installed error
 /// handler.
-void install_bad_alloc_error_handler(fatal_error_handler_t handler,
+LLVM_ABI void install_bad_alloc_error_handler(fatal_error_handler_t handler,
                                      void *user_data = nullptr);
 
 /// Restores default bad alloc error handling behavior.
-void remove_bad_alloc_error_handler();
+LLVM_ABI void remove_bad_alloc_error_handler();
 
-void install_out_of_memory_new_handler();
+LLVM_ABI void install_out_of_memory_new_handler();
 
 /// Reports a bad alloc error, calling any user defined bad alloc
 /// error handler. In contrast to the generic 'report_fatal_error'
@@ -111,14 +111,14 @@ void install_out_of_memory_new_handler();
 /// If no error handler is installed (default), throws a bad_alloc exception
 /// if LLVM is compiled with exception support. Otherwise prints the error
 /// to standard error and calls abort().
-[[noreturn]] void report_bad_alloc_error(const char *Reason,
+[[noreturn]] void LLVM_ABI report_bad_alloc_error(const char *Reason,
                                          bool GenCrashDiag = true);
 
 /// This function calls abort(), and prints the optional message to stderr.
 /// Use the llvm_unreachable macro (that adds location info), instead of
 /// calling this function directly.
 [[noreturn]] void
-llvm_unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
+LLVM_ABI llvm_unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
                           unsigned line = 0);
 }
 

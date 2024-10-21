@@ -18,6 +18,7 @@
 #ifndef LLVM_SUPPORT_INSTRUCTIONCOST_H
 #define LLVM_SUPPORT_INSTRUCTIONCOST_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <limits>
 #include <optional>
@@ -26,7 +27,7 @@ namespace llvm {
 
 class raw_ostream;
 
-class InstructionCost {
+class LLVM_ABI InstructionCost {
 public:
   using CostType = int64_t;
 

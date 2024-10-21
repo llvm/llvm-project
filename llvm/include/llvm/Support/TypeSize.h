@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -27,7 +28,7 @@ namespace llvm {
 
 /// Reports a diagnostic message to indicate an invalid size request has been
 /// done on a scalable vector. This function may not return.
-void reportInvalidSizeRequest(const char *Msg);
+LLVM_ABI void reportInvalidSizeRequest(const char *Msg);
 
 /// StackOffset holds a fixed and a scalable offset in bytes.
 class StackOffset {
@@ -331,7 +332,7 @@ public:
 // Stores the size of a type. If the type is of fixed size, it will represent
 // the exact size. If the type is a scalable vector, it will represent the known
 // minimum size.
-class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
+class LLVM_ABI TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
   TypeSize(const FixedOrScalableQuantity<TypeSize, uint64_t> &V)
       : FixedOrScalableQuantity(V) {}
 

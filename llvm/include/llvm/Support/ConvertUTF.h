@@ -105,6 +105,7 @@
 #ifndef LLVM_SUPPORT_CONVERTUTF_H
 #define LLVM_SUPPORT_CONVERTUTF_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <string>
 
@@ -157,7 +158,7 @@ typedef enum {
   lenientConversion
 } ConversionFlags;
 
-ConversionResult ConvertUTF8toUTF16 (
+LLVM_ABI ConversionResult ConvertUTF8toUTF16 (
   const UTF8** sourceStart, const UTF8* sourceEnd,
   UTF16** targetStart, UTF16* targetEnd, ConversionFlags flags);
 
@@ -165,7 +166,7 @@ ConversionResult ConvertUTF8toUTF16 (
  * Convert a partial UTF8 sequence to UTF32.  If the sequence ends in an
  * incomplete code unit sequence, returns \c sourceExhausted.
  */
-ConversionResult ConvertUTF8toUTF32Partial(
+LLVM_ABI ConversionResult ConvertUTF8toUTF32Partial(
   const UTF8** sourceStart, const UTF8* sourceEnd,
   UTF32** targetStart, UTF32* targetEnd, ConversionFlags flags);
 
@@ -173,33 +174,33 @@ ConversionResult ConvertUTF8toUTF32Partial(
  * Convert a partial UTF8 sequence to UTF32.  If the sequence ends in an
  * incomplete code unit sequence, returns \c sourceIllegal.
  */
-ConversionResult ConvertUTF8toUTF32(
+LLVM_ABI ConversionResult ConvertUTF8toUTF32(
   const UTF8** sourceStart, const UTF8* sourceEnd,
   UTF32** targetStart, UTF32* targetEnd, ConversionFlags flags);
 
-ConversionResult ConvertUTF16toUTF8 (
+LLVM_ABI ConversionResult ConvertUTF16toUTF8 (
   const UTF16** sourceStart, const UTF16* sourceEnd,
   UTF8** targetStart, UTF8* targetEnd, ConversionFlags flags);
 
-ConversionResult ConvertUTF32toUTF8 (
+LLVM_ABI ConversionResult ConvertUTF32toUTF8 (
   const UTF32** sourceStart, const UTF32* sourceEnd,
   UTF8** targetStart, UTF8* targetEnd, ConversionFlags flags);
 
-ConversionResult ConvertUTF16toUTF32 (
+LLVM_ABI ConversionResult ConvertUTF16toUTF32 (
   const UTF16** sourceStart, const UTF16* sourceEnd,
   UTF32** targetStart, UTF32* targetEnd, ConversionFlags flags);
 
-ConversionResult ConvertUTF32toUTF16 (
+LLVM_ABI ConversionResult ConvertUTF32toUTF16 (
   const UTF32** sourceStart, const UTF32* sourceEnd,
   UTF16** targetStart, UTF16* targetEnd, ConversionFlags flags);
 
-Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
+LLVM_ABI Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 
-Boolean isLegalUTF8String(const UTF8 **source, const UTF8 *sourceEnd);
+LLVM_ABI Boolean isLegalUTF8String(const UTF8 **source, const UTF8 *sourceEnd);
 
-unsigned getUTF8SequenceSize(const UTF8 *source, const UTF8 *sourceEnd);
+LLVM_ABI unsigned getUTF8SequenceSize(const UTF8 *source, const UTF8 *sourceEnd);
 
-unsigned getNumBytesForUTF8(UTF8 firstByte);
+LLVM_ABI unsigned getNumBytesForUTF8(UTF8 firstByte);
 
 /*************************************************************************/
 /* Below are LLVM-specific wrappers of the functions above. */
@@ -217,26 +218,26 @@ class StringRef;
  * the first character which could not be converted.
  * \return true on success.
  */
-bool ConvertUTF8toWide(unsigned WideCharWidth, llvm::StringRef Source,
+LLVM_ABI bool ConvertUTF8toWide(unsigned WideCharWidth, llvm::StringRef Source,
                        char *&ResultPtr, const UTF8 *&ErrorPtr);
 
 /**
 * Converts a UTF-8 StringRef to a std::wstring.
 * \return true on success.
 */
-bool ConvertUTF8toWide(llvm::StringRef Source, std::wstring &Result);
+LLVM_ABI bool ConvertUTF8toWide(llvm::StringRef Source, std::wstring &Result);
 
 /**
 * Converts a UTF-8 C-string to a std::wstring.
 * \return true on success.
 */
-bool ConvertUTF8toWide(const char *Source, std::wstring &Result);
+LLVM_ABI bool ConvertUTF8toWide(const char *Source, std::wstring &Result);
 
 /**
 * Converts a std::wstring to a UTF-8 encoded std::string.
 * \return true on success.
 */
-bool convertWideToUTF8(const std::wstring &Source, std::string &Result);
+LLVM_ABI bool convertWideToUTF8(const std::wstring &Source, std::string &Result);
 
 
 /**
@@ -249,7 +250,7 @@ bool convertWideToUTF8(const std::wstring &Source, std::string &Result);
  *
  * \returns true on success.
  */
-bool ConvertCodePointToUTF8(unsigned Source, char *&ResultPtr);
+LLVM_ABI bool ConvertCodePointToUTF8(unsigned Source, char *&ResultPtr);
 
 /**
  * Convert the first UTF8 sequence in the given source buffer to a UTF32
@@ -282,7 +283,7 @@ inline ConversionResult convertUTF8Sequence(const UTF8 **source,
  * Returns true if a blob of text starts with a UTF-16 big or little endian byte
  * order mark.
  */
-bool hasUTF16ByteOrderMark(ArrayRef<char> SrcBytes);
+LLVM_ABI bool hasUTF16ByteOrderMark(ArrayRef<char> SrcBytes);
 
 /**
  * Converts a stream of raw bytes assumed to be UTF16 into a UTF8 std::string.
@@ -291,7 +292,7 @@ bool hasUTF16ByteOrderMark(ArrayRef<char> SrcBytes);
  * \param [out] Out Converted UTF-8 is stored here on success.
  * \returns true on success
  */
-bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out);
+LLVM_ABI bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out);
 
 /**
 * Converts a UTF16 string into a UTF8 std::string.
@@ -300,7 +301,7 @@ bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out);
 * \param [out] Out Converted UTF-8 is stored here on success.
 * \returns true on success
 */
-bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out);
+LLVM_ABI bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out);
 
 /**
  * Converts a stream of raw bytes assumed to be UTF32 into a UTF8 std::string.
@@ -309,7 +310,7 @@ bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out);
  * \param [out] Out Converted UTF-8 is stored here on success.
  * \returns true on success
  */
-bool convertUTF32ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out);
+LLVM_ABI bool convertUTF32ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out);
 
 /**
  * Converts a UTF32 string into a UTF8 std::string.
@@ -318,26 +319,26 @@ bool convertUTF32ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out);
  * \param [out] Out Converted UTF-8 is stored here on success.
  * \returns true on success
  */
-bool convertUTF32ToUTF8String(ArrayRef<UTF32> Src, std::string &Out);
+LLVM_ABI bool convertUTF32ToUTF8String(ArrayRef<UTF32> Src, std::string &Out);
 
 /**
  * Converts a UTF-8 string into a UTF-16 string with native endianness.
  *
  * \returns true on success
  */
-bool convertUTF8ToUTF16String(StringRef SrcUTF8,
+LLVM_ABI bool convertUTF8ToUTF16String(StringRef SrcUTF8,
                               SmallVectorImpl<UTF16> &DstUTF16);
 
 #if defined(_WIN32)
 namespace sys {
 namespace windows {
-std::error_code UTF8ToUTF16(StringRef utf8, SmallVectorImpl<wchar_t> &utf16);
+LLVM_ABI std::error_code UTF8ToUTF16(StringRef utf8, SmallVectorImpl<wchar_t> &utf16);
 /// Convert to UTF16 from the current code page used in the system
-std::error_code CurCPToUTF16(StringRef utf8, SmallVectorImpl<wchar_t> &utf16);
-std::error_code UTF16ToUTF8(const wchar_t *utf16, size_t utf16_len,
+LLVM_ABI std::error_code CurCPToUTF16(StringRef utf8, SmallVectorImpl<wchar_t> &utf16);
+LLVM_ABI std::error_code UTF16ToUTF8(const wchar_t *utf16, size_t utf16_len,
                             SmallVectorImpl<char> &utf8);
 /// Convert from UTF16 to the current code page used in the system
-std::error_code UTF16ToCurCP(const wchar_t *utf16, size_t utf16_len,
+LLVM_ABI std::error_code UTF16ToCurCP(const wchar_t *utf16, size_t utf16_len,
                              SmallVectorImpl<char> &utf8);
 } // namespace windows
 } // namespace sys
