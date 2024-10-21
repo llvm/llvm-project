@@ -39,6 +39,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
@@ -4902,7 +4903,8 @@ public:
                                 llvm::GlobalVariable *GV);
 
   // Emit an @llvm.invariant.start call for the given memory region.
-  void EmitInvariantStart(llvm::Constant *Addr, CharUnits Size);
+  void EmitInvariantStart(llvm::Constant *Addr, CharUnits Size,
+                          bool IsTLS = false);
 
   /// EmitCXXGlobalVarDeclInit - Create the initializer for a C++
   /// variable with global storage.
@@ -4951,10 +4953,9 @@ public:
 
   /// GenerateCXXGlobalInitFunc - Generates code for initializing global
   /// variables.
-  void
-  GenerateCXXGlobalInitFunc(llvm::Function *Fn,
-                            ArrayRef<llvm::Function *> CXXThreadLocals,
-                            ConstantAddress Guard = ConstantAddress::invalid());
+  void GenerateCXXGlobalInitFunc(
+      llvm::Function *Fn, ArrayRef<llvm::Function *> CXXThreadLocals,
+      ConstantAddress Guard = ConstantAddress::invalid(), bool IsTLS = false);
 
   /// GenerateCXXGlobalCleanUpFunc - Generates code for cleaning up global
   /// variables.
