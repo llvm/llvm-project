@@ -1804,6 +1804,23 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
   return false;
 }
 
+static bool CheckNotScalarType(Sema *S, CallExpr *TheCall, QualType Scalar,
+                               unsigned ArgIndex) {
+  assert(TheCall->getNumArgs() >= ArgIndex);
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
+  auto *VTy = ArgType->getAs<VectorType>();
+  // is the scalar or vector<scalar>
+  if (S->Context.hasSameUnqualifiedType(ArgType, Scalar) ||
+      (VTy &&
+       S->Context.hasSameUnqualifiedType(VTy->getElementType(), Scalar))) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+            diag::err_typecheck_expect_scalar_or_vector_not_type)
+        << ArgType << Scalar;
+    return true;
+  }
+  return false;
+}
+
 static bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() == 3);
   Expr *Arg1 = TheCall->getArg(1);
@@ -2037,6 +2054,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     QualType ArgTyA = A.get()->getType();
     // return type is the same as the input type
     TheCall->setType(ArgTyA);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_max: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector and the same as the return type
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckNotScalarType(&SemaRef, TheCall, getASTContext().BoolTy, 0))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic

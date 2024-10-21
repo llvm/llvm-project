@@ -4750,6 +4750,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "unsigned int(bool)";
 }
 
+def HLSLWaveActiveMax : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_max"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_get_lane_index"];
   let Attributes = [NoThrow, Const];
