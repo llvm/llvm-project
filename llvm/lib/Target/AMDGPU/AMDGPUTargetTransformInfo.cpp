@@ -308,7 +308,7 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
 
 InstructionCost GCNTTIImpl::getDataFlowCost(Type *DataType,
                                             bool IsCallingConv) {
-  if (isTypeLegal(DataType) || IsCallingConv)
+  if (IsCallingConv  || isTypeLegal(DataType))
     return BaseT::getDataFlowCost(DataType, IsCallingConv);
 
   return getNumberOfParts(DataType);
