@@ -66,6 +66,24 @@ add_libc_unittest(
     libc.src.time.time_utils
 )
 
+add_libc_unittest(
+  ctime_s_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    ctime_s_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
+    libc.src.time.ctime_s
+    libc.src.time.time_utils
+)
+
 add_libc_test(
   clock_gettime_test
   SUITE
