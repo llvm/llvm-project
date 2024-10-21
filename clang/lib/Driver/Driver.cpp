@@ -4791,6 +4791,11 @@ Action *Driver::ConstructPhaseAction(
   if (Phase == phases::Assemble && Input->getType() != types::TY_PP_Asm)
     return Input;
 
+  // Use of --sycl-link will only allow for the link phase to occur. This is
+  // for all input files.
+  if (Args.hasArg(options::OPT_sycl_link) && Phase != phases::Link)
+    return Input;
+
   // Build the appropriate action.
   switch (Phase) {
   case phases::Link:
