@@ -45,10 +45,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_SB);
   if (hwcap & HWCAP_SSBS)
     setCPUFeature(FEAT_SSBS2);
-  if (hwcap2 & HWCAP2_MTE) {
-    setCPUFeature(FEAT_MEMTAG);
+  if (hwcap2 & HWCAP2_MTE)
     setCPUFeature(FEAT_MEMTAG2);
-  }
   if (hwcap2 & HWCAP2_MTE3)
     setCPUFeature(FEAT_MEMTAG3);
   if (hwcap2 & HWCAP2_SVEAES)
