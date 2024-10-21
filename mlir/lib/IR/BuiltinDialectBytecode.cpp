@@ -14,7 +14,10 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
+#include "mlir/IR/Location.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <cstdint>
 
 using namespace mlir;
 
@@ -78,6 +81,50 @@ void writePotentiallySplatString(DialectBytecodeWriter &writer,
 
   for (StringRef str : attr.getRawStringData())
     writer.writeOwnedString(str);
+}
+
+FileLineColRange getFileLineColRange(MLIRContext *context, StringAttr filename,
+                                     ArrayRef<uint64_t> lineCols) {
+  switch (lineCols.size()) {
+  case 0:
+    return FileLineColRange::get(filename);
+  case 1:
+    return FileLineColRange::get(filename, lineCols[0]);
+  case 2:
+    return FileLineColRange::get(filename, lineCols[0], lineCols[1]);
+  case 3:
+    return FileLineColRange::get(filename, lineCols[0], lineCols[1],
+                                 lineCols[2]);
+  case 4:
+    return FileLineColRange::get(filename, lineCols[0], lineCols[1],
+                                 lineCols[3], lineCols[2]);
+  default:
+    return {};
+  }
+}
+
+LogicalResult readFileLineColRangeLocs(DialectBytecodeReader &reader,
+                                       SmallVectorImpl<uint64_t> &lineCols) {
+  return reader.readList(
+      lineCols, [&reader](uint64_t &val) { return reader.readVarInt(val); });
+}
+
+void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
+                               FileLineColRange range) {
+  int count = range.getStartLine().has_value() +
+              range.getStartColumn().has_value() +
+              range.getEndLine().has_value() + range.getEndColumn().has_value();
+  writer.writeVarInt(count);
+  if (count == 0)
+    return;
+  // Startline here is either known or zero with other trailing offsets.
+  writer.writeVarInt(range.getStartLine().value_or(0));
+  if (range.getStartColumn().has_value())
+    writer.writeVarInt(*range.getStartColumn());
+  if (range.getEndColumn().has_value())
+    writer.writeVarInt(*range.getEndColumn());
+  if (range.getEndLine().has_value())
+    writer.writeVarInt(*range.getEndLine());
 }
 
 #include "mlir/IR/BuiltinDialectBytecode.cpp.inc"
