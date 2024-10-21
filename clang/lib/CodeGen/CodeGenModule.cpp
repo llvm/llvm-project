@@ -1218,6 +1218,9 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 1);
 
     if (getTriple().isOSLinux()) {
+      if (LangOpts.PointerAuthCalls)
+        getModule().addModuleFlag(llvm::Module::Min, "ptrauth-sign-personality",
+                                  1);
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =
