@@ -315,25 +315,31 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     std::optional<llvm::ArrayRef<int64_t>> lowerBounds =
         fir::getComponentLowerBoundsIfNonDefault(Ty, fieldName, module,
                                                  symbolTable);
+    auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(fieldTy);
 
     // For members of the derived types, the information about the shift in
     // lower bounds is not part of the declOp but has to be extracted from the
-    // TypeInfoOp (using getComponentLowerBoundsIfNonDefault). We then assign it
-    // temporarily to the declOp to propagate this information where it will be
-    // needed by the type conversion logic.
+    // TypeInfoOp (using getComponentLowerBoundsIfNonDefault).
     mlir::LLVM::DITypeAttr elemTy;
-    if (declOp && lowerBounds) {
-      llvm::SmallVector<mlir::Value> shiftOpers;
-      for (int64_t bound : *lowerBounds) {
-        auto constOp = builder.create<mlir::arith::ConstantOp>(
-            module.getLoc(), builder.getIntegerAttr(intTy, bound));
-        shiftOpers.push_back(constOp);
+    if (lowerBounds && seqTy &&
+        lowerBounds->size() == seqTy.getShape().size()) {
+      llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
+      for (auto [bound, dim] :
+           llvm::zip_equal(*lowerBounds, seqTy.getShape())) {
+        auto countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
+        auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, bound));
+        auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
+            context, countAttr, lowerAttr, /*upperBound=*/nullptr,
+            /*stride=*/nullptr);
+        elements.push_back(subrangeTy);
       }
-      mlir::OperandRange originalShift = declOp.getShift();
-      mlir::MutableOperandRange mutableOpRange = declOp.getShiftMutable();
-      mutableOpRange.assign(shiftOpers);
-      elemTy = convertType(fieldTy, fileAttr, scope, declOp);
-      mutableOpRange.assign(originalShift);
+      elemTy = mlir::LLVM::DICompositeTypeAttr::get(
+          context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
+          /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr,
+          convertType(seqTy.getEleTy(), fileAttr, scope, declOp),
+          mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
+          elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
+          /*allocated=*/nullptr, /*associated=*/nullptr);
     } else
       elemTy = convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
     offset = llvm::alignTo(offset, byteAlign);
