@@ -182,10 +182,16 @@ void ScriptedProcess::DidResume() {
   m_pid = GetInterface().GetProcessID();
 }
 
-Status ScriptedProcess::DoResume() {
+Status ScriptedProcess::DoResume(RunDirection direction) {
   LLDB_LOGF(GetLog(LLDBLog::Process), "ScriptedProcess::%s resuming process", __FUNCTION__);
 
-  return GetInterface().Resume();
+  if (direction == RunDirection::eRunForward) {
+    return GetInterface().Resume();
+  } else {
+    return Status::FromErrorStringWithFormatv(
+        "error: {0} does not support reverse execution of processes",
+        GetPluginName());
+  }
 }
 
 Status ScriptedProcess::DoAttach(const ProcessAttachInfo &attach_info) {
