@@ -1,11 +1,11 @@
 ; This test shows how value attributes are being passed during different translation steps.
 ; See also test/CodeGen/SPIRV/optimizations/add-check-overflow.ll.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=prepare-functions 2>&1 | FileCheck %s  --check-prefix=CHECK-PREPARE
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=prepare-functions 2>&1 -verify-machineinstrs | FileCheck %s  --check-prefix=CHECK-PREPARE
 ; Intrinsics with aggregate return type are not substituted/removed.
 ; CHECK-PREPARE: @llvm.uadd.with.overflow.i32
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=emit-intrinsics 2>&1 | FileCheck %s  --check-prefix=CHECK-IR
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=emit-intrinsics 2>&1 -verify-machineinstrs | FileCheck %s  --check-prefix=CHECK-IR
 ; Aggregate data are wrapped into @llvm.fake.use(),
 ; and their attributes are packed into a metadata for @llvm.spv.value.md().
 ; CHECK-IR: %[[R1:.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32
@@ -18,20 +18,20 @@
 ; Origin data type of the value.
 ; CHECK-IR: !1 = !{{[{]}}{{[{]}} i32, i1 {{[}]}} poison{{[}]}}
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=irtranslator 2>&1 | FileCheck %s  --check-prefix=CHECK-GMIR
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=irtranslator 2>&1 -verify-machineinstrs | FileCheck %s  --check-prefix=CHECK-GMIR
 ; Required info succeeded to get through IRTranslator.
 ; CHECK-GMIR: %[[phires:.*]]:_(s32) = G_PHI
 ; CHECK-GMIR: %[[math:.*]]:id(s32), %[[ov:.*]]:_(s1) = G_UADDO %[[phires]]:_, %[[#]]:_
 ; CHECK-GMIR: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.value.md), !0
 ; CHECK-GMIR: FAKE_USE %[[math]]:id(s32), %[[ov]]:_(s1)
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=spirv-prelegalizer 2>&1 | FileCheck %s  --check-prefix=CHECK-PRE
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=spirv-prelegalizer 2>&1 -verify-machineinstrs | FileCheck %s  --check-prefix=CHECK-PRE
 ; Internal service instructions are consumed.
 ; CHECK-PRE: G_UADDO
 ; CHECK-PRE-NO: llvm.spv.value.md
 ; CHECK-PRE-NO: FAKE_USE
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=instruction-select 2>&1 | FileCheck %s  --check-prefix=CHECK-ISEL
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=instruction-select 2>&1 -verify-machineinstrs | FileCheck %s  --check-prefix=CHECK-ISEL
 ; Names and types are restored and correctly encoded. Correct instruction selection is completed.
 ; CHECK-ISEL-DAG: %[[int32:.*]]:type = OpTypeInt 32, 0
 ; CHECK-ISEL-DAG: %[[struct:.*]]:type = OpTypeStruct %[[int32]]:type, %[[int32]]:type
