@@ -1233,7 +1233,7 @@ def CoroReturnType : InheritableAttr {
 
 def CoroWrapper : InheritableAttr {
   let Spellings = [Clang<"coro_wrapper">];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, CXXRecord]>;
   let LangOpts = [CPlusPlus];
   let Documentation = [CoroReturnTypeAndWrapperDoc];
   let SimpleHandler = 1;
