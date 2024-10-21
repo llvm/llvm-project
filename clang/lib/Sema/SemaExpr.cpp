@@ -29,6 +29,7 @@
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -11962,12 +11963,22 @@ static bool checkThreeWayNarrowingConversion(Sema &S, QualType ToType, Expr *E,
   case NK_Not_Narrowing:
     return false;
 
-  case NK_Constant_Narrowing:
-    // Implicit conversion to a narrower type, and the value is not a constant
-    // expression.
+  case NK_Constant_Narrowing: {
+    // Implicit conversion to a narrower type, and the value is a constant
+    // expression
+    std::string ValueAsString;
+    {
+      llvm::raw_string_ostream Out(ValueAsString);
+      PrintingPolicy Policy(S.getPrintingPolicy());
+      // If PreNarrowingType is an enumeral type, prefer to print
+      // the value as `(EnumT)<underlying value>` to make it clear what's being
+      // narrowed here
+      Policy.UseEnumerators = false;
+      PreNarrowingValue.printPretty(Out, Policy, PreNarrowingType, &S.Context);
+    }
     S.Diag(E->getBeginLoc(), diag::err_spaceship_argument_narrowing)
-        << /*Constant*/ 1
-        << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << ToType;
+        << /*Constant*/ 1 << ValueAsString << ToType;
+  }
     return true;
 
   case NK_Variable_Narrowing:

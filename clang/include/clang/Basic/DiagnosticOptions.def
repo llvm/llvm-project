@@ -86,6 +86,8 @@ VALUE_DIAGOPT(MacroBacktraceLimit, 32, DefaultMacroBacktraceLimit)
 VALUE_DIAGOPT(TemplateBacktraceLimit, 32, DefaultTemplateBacktraceLimit)
 /// Limit depth of constexpr backtrace.
 VALUE_DIAGOPT(ConstexprBacktraceLimit, 32, DefaultConstexprBacktraceLimit)
+/// Limit size of constexpr diagnostic value.
+VALUE_DIAGOPT(ConstexprValueSizeLimit, 32, DefaultConstexprValueSizeLimit)
 /// Limit number of times to perform spell checking.
 VALUE_DIAGOPT(SpellCheckingLimit, 32, DefaultSpellCheckingLimit)
 /// Limit number of lines shown in a snippet.

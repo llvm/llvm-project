@@ -22,9 +22,12 @@
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/AttributeCommonInfo.h"
@@ -55,7 +58,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstring>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 
@@ -17011,6 +17018,113 @@ static void WriteCharValueForDiagnostic(uint32_t Value, const BuiltinType *BTy,
   }
 }
 
+/// A raw_ostream that clips its output beyond a certain size, inserting a
+/// human-readable message about how much output was skipped.
+///
+/// size_limited_ostream acts as a passthrough to the underlying raw_ostream
+/// until too many bytes have been written, at which point it buffers up to
+/// \p MaxTrailing bytes to emit an output like:
+///
+///   `leading ...(+ NN bytes)... trailing`
+///
+/// NB: since size_limited_ostream prints a diagnostic, when the output
+/// overflows it will write more bytes to the underlying \p OS than strictly
+/// requested.
+///
+/// fixme: size_limited_ostream will happily e.g. "snap off" a utf-8 sequence or
+/// utf-16 surrogate pair, or break a combining sequence in the middle. Since
+/// this is intended for human eyes, probably it should be counting in terms of
+/// graphemes instead of raw bytes, but then it would have to know the
+/// underlying encoding of the stream.
+class size_limited_ostream : public llvm::raw_ostream {
+  size_t Seen;
+  raw_ostream &OS;
+  SmallVector<char, 0> Buffer;
+
+public:
+  const size_t MaxLeading, MaxTrailing;
+
+  /// Construct a size_limited_ostream.
+  ///
+  /// \param OS the wrapped output stream
+  /// \param Limit the maximum number of bytes to print, split evenly
+  ///   before and after the ellipsis. May be zero.
+  explicit size_limited_ostream(llvm::raw_ostream &OS, size_t Limit)
+      : size_limited_ostream(OS, Limit >> 1, Limit >> 1) {}
+
+  /// Construct a size_limited_ostream.
+  ///
+  /// \param OS the wrapped output stream
+  /// \param MaxLeading the maximum number of "leading" bytes to print
+  ///   (i.e. before the ellipsis). May be zero.
+  /// \param MaxTrailing the maximum numberof "trailing" bytes to print
+  ///   (i.e. after the ellipsis. May be zero.)
+  explicit size_limited_ostream(llvm::raw_ostream &OS, size_t MaxLeading,
+                                size_t MaxTrailing)
+      : Seen(0), OS(OS), MaxLeading(MaxLeading), MaxTrailing(MaxTrailing) {
+    SetUnbuffered(); // avoid using the buffering facilities in raw_ostream,
+                     // which don't quite work how we'd like
+    Buffer.reserve(MaxTrailing);
+  };
+  ~size_limited_ostream() override {
+    if (Seen > limit()) {
+      if (MaxLeading)
+        OS << " ...";
+      OS << "(+" << omitted() << " bytes)";
+      if (MaxTrailing)
+        OS << "... ";
+    }
+    OS << StringRef(Buffer.data(), Buffer.size());
+  };
+  void flush() = delete;
+
+  inline size_t limit() { return MaxLeading + MaxTrailing; }
+  inline size_t omitted() {
+    if (Seen < limit())
+      return 0;
+    return Seen - limit();
+  }
+  uint64_t current_pos() const override { return Seen; }
+
+  void write_impl(const char *Ptr, size_t Size) override {
+    size_t N = 0;
+    // write directly to the wrapped OS until we satisfy MaxLeading
+    if (Seen < MaxLeading) {
+      N = std::min(Size, MaxLeading - Seen);
+      OS.write(Ptr, N);
+    }
+    // write up to MaxTrailing bytes into Buffer
+    size_t Rem = Size - N;
+    const char *End = Ptr + Size;
+    if (Buffer.size() + Rem <= MaxTrailing) {
+      // write Rem bytes
+      Buffer.append(Ptr + N, End);
+    } else if (Rem >= MaxTrailing) {
+      // overwrite the whole buffer
+      assert(Size >=
+             MaxTrailing); // else (End - MaxTrailing) would underflow, but
+                           // it must be, because MaxTrailing < Rem <= Size
+      Buffer.clear();
+      Buffer.append(End - MaxTrailing, End);
+    } else {
+      assert(Rem > 0);
+      // shift "left" just enough bytes to keep the buffer full
+      size_t Keep = MaxTrailing - Rem;
+      assert(Keep < Buffer.size()); // b/c (Buffer.size() + Rem) > MaxTrailing
+                                    // => Buffer.size() > (MaxTrailing - Rem)
+      std::move(Buffer.end() - Keep, Buffer.end(), Buffer.begin());
+      Buffer.truncate(Keep);
+      // write in the new bits
+      Buffer.append(Ptr + N, End);
+    }
+
+    Seen += Size;
+    assert(Buffer.capacity() == MaxTrailing);
+    assert((Seen < MaxLeading && Buffer.size() == 0) ||
+           Buffer.size() == std::min(Seen - MaxLeading, MaxTrailing));
+  }
+};
+
 /// Convert \V to a string we can present to the user in a diagnostic
 /// \T is the type of the expression that has been evaluated into \V
 static bool ConvertAPValueToString(const APValue &V, QualType T,
@@ -17060,6 +17174,14 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
           break;
         }
       }
+      // print enums as either their named value or a cast
+      if (T->isEnumeralType()) {
+        PrintingPolicy Policy(Context.getPrintingPolicy());
+        Policy.UseEnumerators = true;
+        llvm::raw_svector_ostream OS(Str);
+        V.printPretty(OS, Policy, T, &Context);
+        break;
+      }
       V.getInt().toString(Str);
     }
 
@@ -17095,6 +17217,56 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
     OS << "i)";
   } break;
 
+  case APValue::ValueKind::Array:
+  case APValue::ValueKind::Vector: {
+    llvm::raw_svector_ostream OS(Str);
+    // we hope to emit a valid initalizer expression
+    // like `(const int[3]){1, 2, 3}`
+    OS << '(' << T << ')';
+    PrintingPolicy Policy(Context.getPrintingPolicy());
+    Policy.UseEnumerators = true;
+    unsigned Limit = Context.getDiagnostics().getConstexprValueSizeLimit();
+    if (Limit) {
+      size_limited_ostream OSS(OS, Limit);
+      V.printPretty(OSS, Policy, T, &Context);
+    } else
+      V.printPretty(OS, Policy, T, &Context);
+  } break;
+
+  case APValue::ValueKind::Struct: {
+    llvm::raw_svector_ostream OS(Str);
+    const auto *RT = T->getAsStructureType();
+    if (RT->hasUnnamedOrLocalType()) {
+      OS << '(';
+      // e.g. `(unnamed struct at ...)`, unless...
+      if (const auto *Defn = RT->getDecl()->getDefinition()) {
+        if (const NamedDecl *ND =
+                dyn_cast_if_present<NamedDecl>(Defn->getNextDeclInContext())) {
+          // ... it's part of a declaration,  then use `(decltype(...))`
+          OS << "decltype(";
+          ND->printQualifiedName(OS);
+          OS << ")";
+        } else
+          Defn->printQualifiedName(OS);
+      }
+      OS << ')';
+    } else if (T.hasQualifiers()) {
+      OS << '(' << T << ')';
+    } else {
+      PrintingPolicy TyPolicy(Context.getPrintingPolicy());
+      TyPolicy.SuppressUnwrittenScope = true;
+      T.print(OS, TyPolicy);
+    }
+    PrintingPolicy Policy(Context.getPrintingPolicy());
+    Policy.UseEnumerators = true;
+    unsigned Limit = Context.getDiagnostics().getConstexprValueSizeLimit();
+    if (Limit) {
+      size_limited_ostream OSS(OS, Limit);
+      V.printPretty(OSS, Policy, T, &Context);
+    } else
+      V.printPretty(OS, Policy, T, &Context);
+  } break;
+
   default:
     return false;
   }
@@ -17105,7 +17277,14 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
 /// Some Expression types are not useful to print notes about,
 /// e.g. literals and values that have already been expanded
 /// before such as int-valued template parameters.
-static bool UsefulToPrintExpr(const Expr *E) {
+static bool UsefulToPrintExpr(const Expr *E, unsigned MaxDepth = ~0) {
+  if (MaxDepth == 0)
+    return true;
+
+  // Always expand partial initializer lists
+  if (isa<ImplicitValueInitExpr>(E))
+    return true;
+
   E = E->IgnoreParenImpCasts();
   // Literals are pretty easy for humans to understand.
   if (isa<IntegerLiteral, FloatingLiteral, CharacterLiteral, CXXBoolLiteralExpr,
@@ -17117,24 +17296,49 @@ static bool UsefulToPrintExpr(const Expr *E) {
   if (isa<SubstNonTypeTemplateParmExpr>(E))
     return false;
 
-  // -5 is also simple to understand.
-  if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E))
-    return UsefulToPrintExpr(UnaryOp->getSubExpr());
+  // -5 is also simple to understand
+  if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E)) {
+    // but print the result of e.g. `-(-5)`
+    return UsefulToPrintExpr(UnaryOp->getSubExpr(), std::min(1U, MaxDepth - 1));
+  }
 
   // Only print nested arithmetic operators.
   if (const auto *BO = dyn_cast<BinaryOperator>(E))
     return (BO->isShiftOp() || BO->isAdditiveOp() || BO->isMultiplicativeOp() ||
             BO->isBitwiseOp());
 
+  if (const auto *CE = dyn_cast<CastExpr>(E)) {
+    // It's usually useful to print an enum (to see whether it matches a
+    // constant)
+    if (CE->getType()->isEnumeralType())
+      return true;
+    // There are useful diagnostics about the many ways to specify a character
+    if (CE->getType()->isAnyCharacterType())
+      return true;
+    return UsefulToPrintExpr(CE->getSubExprAsWritten(), MaxDepth - 1);
+  }
+
+  if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
+    // for whatever reason, ExtVectors don't get `ImplicitValueInitExpr`s in
+    // unwritten slots
+    if (const auto *EVT = ILE->getType()->getAs<ExtVectorType>())
+      if (ILE->getNumInits() < EVT->getNumElements())
+        return true;
+
+    for (const auto *Init : ILE->inits())
+      if (UsefulToPrintExpr(Init, MaxDepth - 1))
+        return true;
+    return false;
+  }
+
   return true;
 }
 
 void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
-  if (const auto *Op = dyn_cast<BinaryOperator>(E);
-      Op && Op->getOpcode() != BO_LOr) {
-    const Expr *LHS = Op->getLHS()->IgnoreParenImpCasts();
-    const Expr *RHS = Op->getRHS()->IgnoreParenImpCasts();
-
+  const auto Diagnose = [&](const Expr *LHS, const Expr *RHS,
+                            const llvm::StringRef &OpStr) {
+    LHS = LHS->IgnoreParenImpCasts();
+    RHS = RHS->IgnoreParenImpCasts();
     // Ignore comparisons of boolean expressions with a boolean literal.
     if ((isa<CXXBoolLiteralExpr>(LHS) && RHS->getType()->isBooleanType()) ||
         (isa<CXXBoolLiteralExpr>(RHS) && LHS->getType()->isBooleanType()))
@@ -17161,10 +17365,19 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
                                  DiagSide[I].ValueString, Context);
     }
     if (DiagSide[0].Print && DiagSide[1].Print) {
-      Diag(Op->getExprLoc(), diag::note_expr_evaluates_to)
-          << DiagSide[0].ValueString << Op->getOpcodeStr()
-          << DiagSide[1].ValueString << Op->getSourceRange();
+      Diag(E->getExprLoc(), diag::note_expr_evaluates_to)
+          << DiagSide[0].ValueString << OpStr << DiagSide[1].ValueString
+          << E->getSourceRange();
     }
+  };
+
+  if (const auto *Op = dyn_cast<BinaryOperator>(E);
+      Op && Op->getOpcode() != BO_LOr) {
+    Diagnose(Op->getLHS(), Op->getRHS(), Op->getOpcodeStr());
+  } else if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(E);
+             Op && Op->isInfixBinaryOp()) {
+    Diagnose(Op->getArg(0), Op->getArg(1),
+             getOperatorSpelling(Op->getOperator()));
   }
 }
 

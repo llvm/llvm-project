@@ -6578,6 +6578,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("19");
 
   Args.AddLastArg(CmdArgs, options::OPT_fconstexpr_backtrace_limit_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fconstexpr_print_value_size_limit_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_fmacro_backtrace_limit_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_ftemplate_backtrace_limit_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_fspell_checking_limit_EQ);
