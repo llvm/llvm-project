@@ -16,6 +16,7 @@
 #include "Graph.h"
 #include "Math.h"
 #include "Solution.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include <cassert>
 #include <limits>
 
