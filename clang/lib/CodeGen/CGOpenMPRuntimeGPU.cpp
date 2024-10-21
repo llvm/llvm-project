@@ -1753,11 +1753,13 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
-  CGF.Builder.restoreIP(OMPBuilder.createReductionsGPU(
+  auto Result = OMPBuilder.createReductionsGPU(
       OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
       DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
       CGF.getTarget().getGridValue(), C.getLangOpts().OpenMPCUDAReductionBufNum,
-      RTLoc));
+      RTLoc);
+  assert(Result && "unexpected error creating GPU reductions");
+  CGF.Builder.restoreIP(*Result);
   return;
 }
 

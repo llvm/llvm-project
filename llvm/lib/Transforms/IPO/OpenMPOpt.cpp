@@ -1093,6 +1093,7 @@ private:
       CGStartBB->getTerminator()->setSuccessor(0, StartBB);
       assert(EndBB != nullptr && "EndBB should not be null");
       EndBB->getTerminator()->setSuccessor(0, CGEndBB);
+      return Error::success();
     };
 
     auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &,
@@ -1101,7 +1102,7 @@ private:
       return CodeGenIP;
     };
 
-    auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+    auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
 
     /// Create a sequential execution region within a merged parallel region,
     /// encapsulated in a master construct with a barrier for synchronization.
@@ -1132,8 +1133,9 @@ private:
         CGStartBB->getTerminator()->setSuccessor(0, SeqStartBB);
         assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
         SeqEndBB->getTerminator()->setSuccessor(0, CGEndBB);
+        return Error::success();
       };
-      auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+      auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
 
       // Find outputs from the sequential region to outside users and
       // broadcast their values to them.
@@ -1176,12 +1178,15 @@ private:
 
       OpenMPIRBuilder::LocationDescription Loc(
           InsertPointTy(ParentBB, ParentBB->end()), DL);
-      InsertPointTy SeqAfterIP =
+      auto SeqAfterIP =
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB);
+      assert(SeqAfterIP && "Unexpected error creating master");
 
-      OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel);
+      auto BarrierResult =
+          OMPInfoCache.OMPBuilder.createBarrier(*SeqAfterIP, OMPD_parallel);
+      assert(BarrierResult && "Unexpected error creating barrier");
 
-      BranchInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
+      BranchInst::Create(SeqAfterBB, SeqAfterIP->getBlock());
 
       LLVM_DEBUG(dbgs() << TAG << "After sequential inlining " << *OuterFn
                         << "\n");
@@ -1251,10 +1256,11 @@ private:
           OriginalFn->getEntryBlock().getFirstInsertionPt());
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
-      InsertPointTy AfterIP = OMPInfoCache.OMPBuilder.createParallel(
+      auto AfterIP = OMPInfoCache.OMPBuilder.createParallel(
           Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
           OMP_PROC_BIND_default, /* IsCancellable */ false);
-      BranchInst::Create(AfterBB, AfterIP.getBlock());
+      assert(AfterIP && "Unexpected error creating parallel");
+      BranchInst::Create(AfterBB, AfterIP->getBlock());
 
       // Perform the actual outlining.
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
@@ -1290,10 +1296,11 @@ private:
         if (CI != MergableCIs.back()) {
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
-          OMPInfoCache.OMPBuilder.createBarrier(
+          auto Result = OMPInfoCache.OMPBuilder.createBarrier(
               InsertPointTy(NewCI->getParent(),
                             NewCI->getNextNode()->getIterator()),
               OMPD_parallel);
+          assert(Result && "Unexpected error creating barrier");
         }
 
         CI->eraseFromParent();
