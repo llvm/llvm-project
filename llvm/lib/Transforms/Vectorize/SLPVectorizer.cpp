@@ -897,19 +897,15 @@ getInterchangeableInstruction(Instruction *I) {
       break;
     }
     case Instruction::Mul: {
-      switch (Op1Int.getSExtValue()) {
-      case 1:
+      if (Op1Int.isOne()) {
         PII.emplace_back(Instruction::Sub, Op0, Zero);
         PII.emplace_back(Instruction::Add, Op0, Zero);
         PII.emplace_back(Instruction::And, Op0, UnsignedMax);
         PII.emplace_back(Instruction::Or, Op0, Zero);
-        break;
-      case 0:
+      } else if (Op1Int.isZero()) {
         PII.emplace_back(Instruction::And, Op0, Zero);
-        break;
-      case -1:
+      } else if (Op1Int.isAllOnes()) {
         PII.emplace_back(Instruction::Sub, Zero, Op0);
-        break;
       }
       break;
     }
