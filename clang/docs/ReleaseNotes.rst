@@ -424,6 +424,8 @@ Improvements to Clang's diagnostics
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
 
+- Clang now diagnoses missing format attributes for non-template functions and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
