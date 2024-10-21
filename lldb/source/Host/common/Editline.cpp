@@ -12,6 +12,8 @@
 
 #include "lldb/Host/Editline.h"
 
+#include <codecvt>
+
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -23,6 +25,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/Timeout.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Locale.h"
@@ -444,7 +447,9 @@ StringList Editline::GetInputAsStringList(int line_count) {
     if (line_count == 0)
       break;
 #if LLDB_EDITLINE_USE_WCHAR
-    lines.AppendString(m_utf8conv.to_bytes(line));
+    std::string buffer;
+    llvm::convertWideToUTF8(line, buffer);
+    lines.AppendString(buffer);
 #else
     lines.AppendString(line);
 #endif
@@ -636,7 +641,9 @@ unsigned char Editline::BreakLineCommand(int ch) {
     if (m_fix_indentation_callback) {
       StringList lines = GetInputAsStringList(m_current_line_index + 1);
 #if LLDB_EDITLINE_USE_WCHAR
-      lines.AppendString(m_utf8conv.to_bytes(new_line_fragment));
+      std::string buffer;
+      llvm::convertWideToUTF8(new_line_fragment, buffer);
+      lines.AppendString(buffer);
 #else
       lines.AppendString(new_line_fragment);
 #endif
@@ -684,8 +691,9 @@ unsigned char Editline::EndOrAddLineCommand(int ch) {
       m_input_lines.clear();
       for (unsigned index = 0; index < lines.GetSize(); index++) {
 #if LLDB_EDITLINE_USE_WCHAR
-        m_input_lines.insert(m_input_lines.end(),
-                             m_utf8conv.from_bytes(lines[index]));
+        std::wstring wbuffer;
+        llvm::ConvertUTF8toWide(lines[index], wbuffer);
+        m_input_lines.insert(m_input_lines.end(), wbuffer);
 #else
         m_input_lines.insert(m_input_lines.end(), lines[index]);
 #endif
@@ -869,7 +877,9 @@ unsigned char Editline::FixIndentationCommand(int ch) {
     currentLine = currentLine.erase(0, -indent_correction);
   }
 #if LLDB_EDITLINE_USE_WCHAR
-  m_input_lines[m_current_line_index] = m_utf8conv.from_bytes(currentLine);
+  std::wstring wbuffer;
+  llvm::ConvertUTF8toWide(currentLine, wbuffer);
+  m_input_lines[m_current_line_index] = wbuffer;
 #else
   m_input_lines[m_current_line_index] = currentLine;
 #endif
@@ -1502,7 +1512,7 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
     } else {
       m_history_sp->Enter(input);
 #if LLDB_EDITLINE_USE_WCHAR
-      line = m_utf8conv.to_bytes(SplitLines(input)[0]);
+      llvm::convertWideToUTF8(SplitLines(input)[0], line);
 #else
       line = SplitLines(input)[0];
 #endif
@@ -1574,25 +1584,23 @@ bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
   out = (unsigned char)ch;
   return true;
 #else
-  LLDB_DEPRECATED_WARNING_DISABLE
-  std::codecvt_utf8<wchar_t> cvt;
-  LLDB_DEPRECATED_WARNING_RESTORE
   llvm::SmallString<4> input;
   for (;;) {
-    const char *from_next;
-    wchar_t *to_next;
-    std::mbstate_t state = std::mbstate_t();
     input.push_back(ch);
-    switch (cvt.in(state, input.begin(), input.end(), from_next, &out, &out + 1,
-                   to_next)) {
-    case std::codecvt_base::ok:
+    const char *cur_ptr = input.begin();
+    const char *end_ptr = input.end();
+    llvm::UTF32 code_point = 0;
+    llvm::ConversionResult cr = llvm::convertUTF8Sequence(
+        (const llvm::UTF8 **)&cur_ptr, (const llvm::UTF8 *)end_ptr, &code_point,
+        llvm::lenientConversion);
+    switch (cr) {
+    case llvm::conversionOK:
+      out = code_point;
       return out != (EditLineGetCharType)WEOF;
-
-    case std::codecvt_base::error:
-    case std::codecvt_base::noconv:
+    case llvm::targetExhausted:
+    case llvm::sourceIllegal:
       return false;
-
-    case std::codecvt_base::partial:
+    case llvm::sourceExhausted:
       lldb::ConnectionStatus status;
       size_t read_count = m_input_connection.Read(
           &ch, 1, std::chrono::seconds(0), status, nullptr);
