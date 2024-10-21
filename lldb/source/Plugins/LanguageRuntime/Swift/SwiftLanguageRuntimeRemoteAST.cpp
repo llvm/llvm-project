@@ -468,17 +468,20 @@ CompilerType SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(
   std::optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
       m_for_object_sp->GetSwiftScratchContext();
   if (!maybe_swift_scratch_ctx) {
-    error->SetErrorString("couldn't get Swift scratch context");
+    if (error)
+      *error = Status::FromErrorString("couldn't get Swift scratch context");
     return CompilerType();
   }
   auto scratch_ctx = maybe_swift_scratch_ctx->get();
   if (!scratch_ctx) {
-    error->SetErrorString("couldn't get Swift scratch context");
+    if (error)
+      *error = Status::FromErrorString("couldn't get Swift scratch context");
     return CompilerType();
   }
   SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx) {
-    error->SetErrorString("couldn't get Swift scratch context");
+    if (error)
+      *error = Status::FromErrorString("couldn't get Swift scratch context");
     return CompilerType();
   }
   auto &remote_ast = m_swift_runtime.GetRemoteASTContext(*swift_ast_ctx);
@@ -496,8 +499,8 @@ CompilerType SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(
   } else {
     const auto &failure = result.getFailure();
     if (error)
-      error->SetErrorStringWithFormat("error in resolving type: %s",
-                                      failure.render().c_str());
+      *error = Status::FromErrorStringWithFormatv(
+          "error in resolving type: {0}", failure.render());
     if (log)
       log->Printf("[MetadataPromise] failure: %s", failure.render().c_str());
     return (m_compiler_type = CompilerType()).value();
