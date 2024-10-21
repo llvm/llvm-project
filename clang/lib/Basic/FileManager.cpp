@@ -213,8 +213,10 @@ FileManager::getFile(StringRef Filename, bool openFile, bool CacheFailure) {
   return llvm::errorToErrorCode(Result.takeError());
 }
 
-llvm::Expected<FileEntryRef>
-FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
+llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
+                                                     bool openFile,
+                                                     bool CacheFailure,
+                                                     bool IsText) {
   ++NumFileLookups;
 
   // See if there is already an entry in the map.
@@ -260,7 +262,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   std::unique_ptr<llvm::vfs::File> F;
   llvm::vfs::Status Status;
   auto statError = getStatValue(InterndFileName, Status, true,
-                                openFile ? &F : nullptr);
+                                openFile ? &F : nullptr, IsText);
   if (statError) {
     // There's no real file at the given path.
     if (CacheFailure)
@@ -532,7 +534,7 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
                               bool RequiresNullTerminator,
-                              std::optional<int64_t> MaybeLimit,
+                              std::optional<int64_t> MaybeLimit, bool IsText,
                               std::optional<cas::ObjectRef> *CASContents) {
   const FileEntry *Entry = &FE.getFileEntry();
   // If the content is living on the file entry, return a reference to it.
@@ -566,21 +568,22 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
 
   // Otherwise, open the file.
   return getBufferForFileImpl(Filename, FileSize, isVolatile,
-                              RequiresNullTerminator, CASContents);
+                              RequiresNullTerminator, IsText, CASContents);
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
                                   bool isVolatile, bool RequiresNullTerminator,
+                                  bool IsText,
                                   std::optional<cas::ObjectRef> *CASContents) const {
   if (FileSystemOpts.WorkingDir.empty())
     return FS->getBufferForFile(Filename, FileSize, RequiresNullTerminator,
-                                isVolatile, CASContents);
+                                isVolatile, IsText, CASContents);
 
   SmallString<128> FilePath(Filename);
   FixupRelativePath(FilePath);
   return FS->getBufferForFile(FilePath, FileSize, RequiresNullTerminator,
-                              isVolatile, CASContents);
+                              isVolatile, IsText, CASContents);
 }
 
 llvm::ErrorOr<std::optional<cas::ObjectRef>>
@@ -599,20 +602,22 @@ FileManager::getObjectRefForFileContent(const Twine &Filename) {
 /// if the path points to a virtual file or does not exist, or returns
 /// false if it's an existent real file.  If FileDescriptor is NULL,
 /// do directory look-up instead of file look-up.
-std::error_code
-FileManager::getStatValue(StringRef Path, llvm::vfs::Status &Status,
-                          bool isFile, std::unique_ptr<llvm::vfs::File> *F) {
+std::error_code FileManager::getStatValue(StringRef Path,
+                                          llvm::vfs::Status &Status,
+                                          bool isFile,
+                                          std::unique_ptr<llvm::vfs::File> *F,
+                                          bool IsText) {
   // FIXME: FileSystemOpts shouldn't be passed in here, all paths should be
   // absolute!
   if (FileSystemOpts.WorkingDir.empty())
-    return FileSystemStatCache::get(Path, Status, isFile, F,
-                                    StatCache.get(), *FS);
+    return FileSystemStatCache::get(Path, Status, isFile, F, StatCache.get(),
+                                    *FS, IsText);
 
   SmallString<128> FilePath(Path);
   FixupRelativePath(FilePath);
 
   return FileSystemStatCache::get(FilePath.c_str(), Status, isFile, F,
-                                  StatCache.get(), *FS);
+                                  StatCache.get(), *FS, IsText);
 }
 
 std::error_code
