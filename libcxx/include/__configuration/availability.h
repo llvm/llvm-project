@@ -67,14 +67,6 @@
 //
 // [1]: https://clang.llvm.org/docs/AttributeReference.html#availability
 
-// For backwards compatibility, allow users to define _LIBCPP_DISABLE_AVAILABILITY
-// for a while.
-#if defined(_LIBCPP_DISABLE_AVAILABILITY)
-#  if !defined(_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
-#    define _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS
-#  endif
-#endif
-
 // Availability markup is disabled when building the library, or when a non-Clang
 // compiler is used because only Clang supports the necessary attributes.
 #if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) || !defined(_LIBCPP_COMPILER_CLANG_BASED)

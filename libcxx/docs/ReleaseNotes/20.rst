@@ -85,6 +85,9 @@ Deprecations and Removals
 - The function ``__libcpp_verbose_abort()`` is now ``noexcept``, to match ``std::terminate()``. (The combination of
   ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.)
 
+- The ``_LIBCPP_DISABLE_AVAILABILITY`` macro that was used to force-disable availability markup has now been removed.
+  Whether availability markup is used by the library is now solely controlled at configuration-time.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
