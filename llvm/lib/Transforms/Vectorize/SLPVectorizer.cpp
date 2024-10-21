@@ -1046,7 +1046,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                               std::back_inserter(NewInterchangeableOpcode));
         if (NewInterchangeableOpcode.empty())
           return false;
-        LHS = std::move(NewInterchangeableOpcode);
+        LHS.swap(NewInterchangeableOpcode);
         return true;
       };
   for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
@@ -1060,22 +1060,20 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         continue;
       if (AlternateInterchangeableOpcode.empty()) {
         InterchangeableOpcode.erase(
-            std::remove_if(InterchangeableOpcode.begin(),
-                           InterchangeableOpcode.end(),
-                           [](const InterchangeableInstruction &I) {
-                             return !isValidForAlternation(I.Opcode);
-                           }),
+            remove_if(InterchangeableOpcode,
+                      [](const InterchangeableInstruction &I) {
+                        return !isValidForAlternation(I.Opcode);
+                      }),
             InterchangeableOpcode.end());
         ThisInterchangeableOpcode.erase(
-            std::remove_if(ThisInterchangeableOpcode.begin(),
-                           ThisInterchangeableOpcode.end(),
-                           [](const InterchangeableInstruction &I) {
-                             return !isValidForAlternation(I.Opcode);
-                           }),
+            remove_if(ThisInterchangeableOpcode,
+                      [](const InterchangeableInstruction &I) {
+                        return !isValidForAlternation(I.Opcode);
+                      }),
             ThisInterchangeableOpcode.end());
         if (InterchangeableOpcode.empty() || ThisInterchangeableOpcode.empty())
           return InstructionsState(VL[BaseIndex], nullptr, nullptr);
-        AlternateInterchangeableOpcode = std::move(ThisInterchangeableOpcode);
+        AlternateInterchangeableOpcode.swap(ThisInterchangeableOpcode);
         continue;
       }
       if (UpdateInterchangeableOpcode(AlternateInterchangeableOpcode,
