@@ -603,7 +603,7 @@ void handleNonConstMemberCall(const CallExpr *CE,
                               LatticeTransferState &State) {
   // When a non-const member function is called, reset some state.
   if (RecordLoc != nullptr) {
-    for (const auto& [Field, FieldLoc] : RecordLoc->children()) {
+    for (const auto &[Field, FieldLoc] : RecordLoc->children()) {
       if (isSupportedOptionalType(Field->getType())) {
         auto *FieldRecordLoc = cast_or_null<RecordStorageLocation>(FieldLoc);
         if (FieldRecordLoc) {
