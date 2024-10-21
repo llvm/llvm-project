@@ -68,7 +68,6 @@
 ! CHECK:                 hlfir.assign %[[VAL_15]] to %[[VAL_12]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -112,7 +111,6 @@ end subroutine
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[VAL_12]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -155,7 +153,6 @@ end subroutine
 ! CHECK:                 hlfir.assign %[[VAL_15]] to %[[VAL_12]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -198,7 +195,6 @@ end subroutine
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[VAL_12]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -258,7 +254,6 @@ end subroutine
 ! CHECK:                 hlfir.assign %[[VAL_31]] to %[[VAL_22]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -325,7 +320,6 @@ end subroutine
 ! CHECK:                 hlfir.assign %[[VAL_34]] to %[[VAL_22]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -401,7 +395,6 @@ end subroutine
 ! CHECK:                 hlfir.assign %[[VAL_42]] to %[[VAL_27]]#0 : f64, !fir.ref<f64>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

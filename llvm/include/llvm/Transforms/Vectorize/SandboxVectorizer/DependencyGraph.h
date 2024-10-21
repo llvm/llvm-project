@@ -1,4 +1,4 @@
-//===- DependencyGraph.h ----------------------------------*- C++ -*-===//
+//===- DependencyGraph.h ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,6 +40,54 @@ enum class DGNodeID {
   MemDGNode,
 };
 
+class DGNode;
+class MemDGNode;
+class DependencyGraph;
+
+/// While OpIt points to a Value that is not an Instruction keep incrementing
+/// it. \Returns the first iterator that points to an Instruction, or end.
+[[nodiscard]] static User::op_iterator skipNonInstr(User::op_iterator OpIt,
+                                                    User::op_iterator OpItE) {
+  while (OpIt != OpItE && !isa<Instruction>((*OpIt).get()))
+    ++OpIt;
+  return OpIt;
+}
+
+/// Iterate over both def-use and mem dependencies.
+class PredIterator {
+  User::op_iterator OpIt;
+  User::op_iterator OpItE;
+  DenseSet<MemDGNode *>::iterator MemIt;
+  DGNode *N = nullptr;
+  DependencyGraph *DAG = nullptr;
+
+  PredIterator(const User::op_iterator &OpIt, const User::op_iterator &OpItE,
+               const DenseSet<MemDGNode *>::iterator &MemIt, DGNode *N,
+               DependencyGraph &DAG)
+      : OpIt(OpIt), OpItE(OpItE), MemIt(MemIt), N(N), DAG(&DAG) {}
+  PredIterator(const User::op_iterator &OpIt, const User::op_iterator &OpItE,
+               DGNode *N, DependencyGraph &DAG)
+      : OpIt(OpIt), OpItE(OpItE), N(N), DAG(&DAG) {}
+  friend class DGNode;    // For constructor
+  friend class MemDGNode; // For constructor
+
+public:
+  using difference_type = std::ptrdiff_t;
+  using value_type = DGNode *;
+  using pointer = value_type *;
+  using reference = value_type &;
+  using iterator_category = std::input_iterator_tag;
+  value_type operator*();
+  PredIterator &operator++();
+  PredIterator operator++(int) {
+    auto Copy = *this;
+    ++(*this);
+    return Copy;
+  }
+  bool operator==(const PredIterator &Other) const;
+  bool operator!=(const PredIterator &Other) const { return !(*this == Other); }
+};
+
 /// A DependencyGraph Node that points to an Instruction and contains memory
 /// dependency edges.
 class DGNode {
@@ -48,12 +96,14 @@ protected:
   // TODO: Use a PointerIntPair for SubclassID and I.
   /// For isa/dyn_cast etc.
   DGNodeID SubclassID;
-  // TODO: Move MemPreds to MemDGNode.
-  /// Memory predecessors.
-  DenseSet<MemDGNode *> MemPreds;
+  /// The number of unscheduled successors.
+  unsigned UnscheduledSuccs = 0;
+  /// This is true if this node has been scheduled.
+  bool Scheduled = false;
 
   DGNode(Instruction *I, DGNodeID ID) : I(I), SubclassID(ID) {}
-  friend class MemDGNode; // For constructor.
+  friend class MemDGNode;       // For constructor.
+  friend class DependencyGraph; // For UnscheduledSuccs
 
 public:
   DGNode(Instruction *I) : I(I), SubclassID(DGNodeID::DGNode) {
@@ -61,8 +111,40 @@ public:
   }
   DGNode(const DGNode &Other) = delete;
   virtual ~DGNode() = default;
+  /// \Returns the number of unscheduled successors.
+  unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
+  void decrUnscheduledSuccs() {
+    assert(UnscheduledSuccs > 0 && "Counting error!");
+    --UnscheduledSuccs;
+  }
+  /// \Returns true if all dependent successors have been scheduled.
+  bool ready() const { return UnscheduledSuccs == 0; }
+  /// \Returns true if this node has been scheduled.
+  bool scheduled() const { return Scheduled; }
+  void setScheduled(bool NewVal) { Scheduled = NewVal; }
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
+  using iterator = PredIterator;
+  virtual iterator preds_begin(DependencyGraph &DAG) {
+    return PredIterator(skipNonInstr(I->op_begin(), I->op_end()), I->op_end(),
+                        this, DAG);
+  }
+  virtual iterator preds_end(DependencyGraph &DAG) {
+    return PredIterator(I->op_end(), I->op_end(), this, DAG);
+  }
+  iterator preds_begin(DependencyGraph &DAG) const {
+    return const_cast<DGNode *>(this)->preds_begin(DAG);
+  }
+  iterator preds_end(DependencyGraph &DAG) const {
+    return const_cast<DGNode *>(this)->preds_end(DAG);
+  }
+  /// \Returns a range of DAG predecessors nodes. If this is a MemDGNode then
+  /// this will also include the memory dependency predecessors.
+  /// Please note that this can include the same node more than once, if for
+  /// example it's both a use-def predecessor and a mem dep predecessor.
+  iterator_range<iterator> preds(DependencyGraph &DAG) const {
+    return make_range(preds_begin(DAG), preds_end(DAG));
+  }
 
   static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -105,17 +187,6 @@ public:
   }
 
   Instruction *getInstruction() const { return I; }
-  void addMemPred(MemDGNode *PredN) { MemPreds.insert(PredN); }
-  /// \Returns all memory dependency predecessors.
-  iterator_range<DenseSet<MemDGNode *>::const_iterator> memPreds() const {
-    return make_range(MemPreds.begin(), MemPreds.end());
-  }
-  /// \Returns true if there is a memory dependency N->this.
-  bool hasMemPred(DGNode *N) const {
-    if (auto *MN = dyn_cast<MemDGNode>(N))
-      return MemPreds.count(MN);
-    return false;
-  }
 
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS, bool PrintDeps = true) const;
@@ -133,6 +204,9 @@ public:
 class MemDGNode final : public DGNode {
   MemDGNode *PrevMemN = nullptr;
   MemDGNode *NextMemN = nullptr;
+  /// Memory predecessors.
+  DenseSet<MemDGNode *> MemPreds;
+  friend class PredIterator; // For MemPreds.
 
   void setNextNode(MemDGNode *N) { NextMemN = N; }
   void setPrevNode(MemDGNode *N) { PrevMemN = N; }
@@ -145,15 +219,54 @@ public:
   static bool classof(const DGNode *Other) {
     return Other->SubclassID == DGNodeID::MemDGNode;
   }
+  iterator preds_begin(DependencyGraph &DAG) override {
+    auto OpEndIt = I->op_end();
+    return PredIterator(skipNonInstr(I->op_begin(), OpEndIt), OpEndIt,
+                        MemPreds.begin(), this, DAG);
+  }
+  iterator preds_end(DependencyGraph &DAG) override {
+    return PredIterator(I->op_end(), I->op_end(), MemPreds.end(), this, DAG);
+  }
   /// \Returns the previous Mem DGNode in instruction order.
   MemDGNode *getPrevNode() const { return PrevMemN; }
   /// \Returns the next Mem DGNode in instruction order.
   MemDGNode *getNextNode() const { return NextMemN; }
+  /// Adds the mem dependency edge PredN->this. This also increments the
+  /// UnscheduledSuccs counter of the predecessor if this node has not been
+  /// scheduled.
+  void addMemPred(MemDGNode *PredN) {
+    [[maybe_unused]] auto Inserted = MemPreds.insert(PredN).second;
+    assert(Inserted && "PredN already exists!");
+    if (!Scheduled) {
+      ++PredN->UnscheduledSuccs;
+    }
+  }
+  /// \Returns true if there is a memory dependency N->this.
+  bool hasMemPred(DGNode *N) const {
+    if (auto *MN = dyn_cast<MemDGNode>(N))
+      return MemPreds.count(MN);
+    return false;
+  }
+  /// \Returns all memory dependency predecessors. Used by tests.
+  iterator_range<DenseSet<MemDGNode *>::const_iterator> memPreds() const {
+    return make_range(MemPreds.begin(), MemPreds.end());
+  }
+#ifndef NDEBUG
+  virtual void print(raw_ostream &OS, bool PrintDeps = true) const override;
+#endif // NDEBUG
 };
 
 /// Convenience builders for a MemDGNode interval.
 class MemDGNodeIntervalBuilder {
 public:
+  /// Scans the instruction chain in \p Intvl top-down, returning the top-most
+  /// MemDGNode, or nullptr.
+  static MemDGNode *getTopMemDGNode(const Interval<Instruction> &Intvl,
+                                    const DependencyGraph &DAG);
+  /// Scans the instruction chain in \p Intvl bottom-up, returning the
+  /// bottom-most MemDGNode, or nullptr.
+  static MemDGNode *getBotMemDGNode(const Interval<Instruction> &Intvl,
+                                    const DependencyGraph &DAG);
   /// Given \p Instrs it finds their closest mem nodes in the interval and
   /// returns the corresponding mem range. Note: BotN (or its neighboring mem
   /// node) is included in the range.
@@ -173,7 +286,6 @@ private:
   enum class DependencyType {
     ReadAfterWrite,  ///> Memory dependency write -> read
     WriteAfterWrite, ///> Memory dependency write -> write
-    ReadAfterRead,   ///> Memory dependency read -> read
     WriteAfterRead,  ///> Memory dependency read -> write
     Control,         ///> Control-related dependency, like with PHI/Terminator
     Other,           ///> Currently used for stack related instrs
@@ -194,7 +306,15 @@ private:
 
   /// Go through all mem nodes in \p SrcScanRange and try to add dependencies to
   /// \p DstN.
-  void scanAndAddDeps(DGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
+  void scanAndAddDeps(MemDGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
+
+  /// Sets the UnscheduledSuccs of all DGNodes in \p NewInterval based on
+  /// def-use edges.
+  void setDefUseUnscheduledSuccs(const Interval<Instruction> &NewInterval);
+
+  /// Create DAG nodes for instrs in \p NewInterval and update the MemNode
+  /// chain.
+  void createNewNodes(const Interval<Instruction> &NewInterval);
 
 public:
   DependencyGraph(AAResults &AA)
@@ -221,8 +341,10 @@ public:
     return It->second.get();
   }
   /// Build/extend the dependency graph such that it includes \p Instrs. Returns
-  /// the interval spanning \p Instrs.
+  /// the range of instructions added to the DAG.
   Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
+  /// \Returns the range of instructions included in the DAG.
+  Interval<Instruction> getInterval() const { return DAGInterval; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

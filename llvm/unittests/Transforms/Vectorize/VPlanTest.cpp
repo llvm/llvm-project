@@ -1195,7 +1195,8 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     // Test for a call to a function without side-effects.
     LLVMContext C;
     Module M("", C);
-    Function *TheFn = Intrinsic::getDeclaration(&M, Intrinsic::thread_pointer);
+    Function *TheFn =
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::thread_pointer);
 
     auto *Call = CallInst::Create(TheFn->getFunctionType(), TheFn);
     VPValue Op1;
@@ -1274,6 +1275,21 @@ TEST(VPRecipeTest, dumpRecipeInPlan) {
     EXPECT_EXIT(
         {
           VPV->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
+    VPDef *Def = WidenR;
+    EXPECT_EXIT(
+        {
+          Def->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
+    EXPECT_EXIT(
+        {
+          WidenR->dump();
           exit(0);
         },
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");

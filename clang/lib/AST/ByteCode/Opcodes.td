@@ -769,10 +769,13 @@ def InvalidCast : Opcode {
 }
 
 def InvalidDeclRef : Opcode {
-  let Args = [ArgDeclRef];
+  let Args = [ArgDeclRef, ArgBool];
 }
 
 def SizelessVectorElementSize : Opcode;
+def InvalidShuffleVectorIndex : Opcode {
+  let Args = [ArgUint32];
+}
 
 def Assume : Opcode;
 
@@ -815,7 +818,7 @@ def AllocCN : Opcode {
 }
 
 def Free : Opcode {
-  let Args = [ArgBool];
+  let Args = [ArgBool, ArgBool];
 }
 
 def CheckNewTypeMismatch : Opcode {
@@ -833,3 +836,4 @@ def CheckNewTypeMismatchArray : Opcode {
 }
 
 def IsConstantContext: Opcode;
+def CheckAllocations : Opcode;

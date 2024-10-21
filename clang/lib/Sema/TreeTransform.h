@@ -1761,6 +1761,15 @@ public:
                                                      EndLoc);
   }
 
+  /// Build a new OpenMP 'permutation' clause.
+  OMPClause *RebuildOMPPermutationClause(ArrayRef<Expr *> PermExprs,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPPermutationClause(PermExprs, StartLoc,
+                                                           LParenLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'full' clause.
   OMPClause *RebuildOMPFullClause(SourceLocation StartLoc,
                                   SourceLocation EndLoc) {
@@ -10281,6 +10290,32 @@ OMPClause *TreeTransform<Derived>::TransformOMPSizesClause(OMPSizesClause *C) {
 }
 
 template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPPermutationClause(OMPPermutationClause *C) {
+  SmallVector<Expr *> TransformedArgs;
+  TransformedArgs.reserve(C->getNumLoops());
+  bool Changed = false;
+  for (Expr *E : C->getArgsRefs()) {
+    if (!E) {
+      TransformedArgs.push_back(nullptr);
+      continue;
+    }
+
+    ExprResult T = getDerived().TransformExpr(E);
+    if (T.isInvalid())
+      return nullptr;
+    if (E != T.get())
+      Changed = true;
+    TransformedArgs.push_back(T.get());
+  }
+
+  if (!Changed && !getDerived().AlwaysRebuild())
+    return C;
+  return RebuildOMPPermutationClause(TransformedArgs, C->getBeginLoc(),
+                                     C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPFullClause(OMPFullClause *C) {
   if (!getDerived().AlwaysRebuild())
     return C;
@@ -11753,6 +11788,61 @@ void OpenACCClauseTransform<Derived>::VisitAsyncClause(
                                          : nullptr,
       ParsedClause.getEndLoc());
 }
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitWorkerClause(
+    const OpenACCWorkerClause &C) {
+  if (C.hasIntExpr()) {
+    // restrictions on this expression are all "does it exist in certain
+    // situations" that are not possible to be dependent, so the only check we
+    // have is that it transforms, and is an int expression.
+    ExprResult Res = Self.TransformExpr(const_cast<Expr *>(C.getIntExpr()));
+    if (!Res.isUsable())
+      return;
+
+    Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                C.getClauseKind(),
+                                                C.getBeginLoc(), Res.get());
+    if (!Res.isUsable())
+      return;
+    ParsedClause.setIntExprDetails(Res.get());
+  }
+
+  NewClause = OpenACCWorkerClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(),
+      ParsedClause.getNumIntExprs() != 0 ? ParsedClause.getIntExprs()[0]
+                                         : nullptr,
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitVectorClause(
+    const OpenACCVectorClause &C) {
+  if (C.hasIntExpr()) {
+    // restrictions on this expression are all "does it exist in certain
+    // situations" that are not possible to be dependent, so the only check we
+    // have is that it transforms, and is an int expression.
+    ExprResult Res = Self.TransformExpr(const_cast<Expr *>(C.getIntExpr()));
+    if (!Res.isUsable())
+      return;
+
+    Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                C.getClauseKind(),
+                                                C.getBeginLoc(), Res.get());
+    if (!Res.isUsable())
+      return;
+    ParsedClause.setIntExprDetails(Res.get());
+  }
+
+  NewClause = OpenACCVectorClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(),
+      ParsedClause.getNumIntExprs() != 0 ? ParsedClause.getIntExprs()[0]
+                                         : nullptr,
+      ParsedClause.getEndLoc());
+}
+
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitWaitClause(
     const OpenACCWaitClause &C) {
@@ -11904,6 +11994,29 @@ void OpenACCClauseTransform<Derived>::VisitTileClause(
   NewClause = OpenACCTileClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getIntExprs(),
+      ParsedClause.getEndLoc());
+}
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitGangClause(
+    const OpenACCGangClause &C) {
+  llvm::SmallVector<OpenACCGangKind> TransformedGangKinds;
+  llvm::SmallVector<Expr *> TransformedIntExprs;
+
+  for (unsigned I = 0; I < C.getNumExprs(); ++I) {
+    ExprResult ER = Self.TransformExpr(const_cast<Expr *>(C.getExpr(I).second));
+    if (!ER.isUsable())
+      continue;
+
+    ER = Self.getSema().OpenACC().CheckGangExpr(C.getExpr(I).first, ER.get());
+    if (!ER.isUsable())
+      continue;
+    TransformedGangKinds.push_back(C.getExpr(I).first);
+    TransformedIntExprs.push_back(ER.get());
+  }
+
+  NewClause = OpenACCGangClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), TransformedGangKinds, TransformedIntExprs,
       ParsedClause.getEndLoc());
 }
 } // namespace

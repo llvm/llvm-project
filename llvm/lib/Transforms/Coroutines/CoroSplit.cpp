@@ -19,10 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
-#include "ABI.h"
-#include "CoroInstr.h"
 #include "CoroInternal.h"
-#include "MaterializationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -64,6 +61,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Coroutines/ABI.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/MaterializationUtils.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
@@ -2200,20 +2200,24 @@ static void addPrepareFunction(const Module &M,
 
 static std::unique_ptr<coro::BaseABI>
 CreateNewABI(Function &F, coro::Shape &S,
-             std::function<bool(Instruction &)> IsMatCallback) {
+             std::function<bool(Instruction &)> IsMatCallback,
+             const SmallVector<CoroSplitPass::BaseABITy> GenCustomABIs) {
+  if (S.CoroBegin->hasCustomABI()) {
+    unsigned CustomABI = S.CoroBegin->getCustomABI();
+    if (CustomABI >= GenCustomABIs.size())
+      llvm_unreachable("Custom ABI not found amoung those specified");
+    return GenCustomABIs[CustomABI](F, S);
+  }
+
   switch (S.ABI) {
   case coro::ABI::Switch:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::SwitchABI(F, S, IsMatCallback));
+    return std::make_unique<coro::SwitchABI>(F, S, IsMatCallback);
   case coro::ABI::Async:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AsyncABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AsyncABI>(F, S, IsMatCallback);
   case coro::ABI::Retcon:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AnyRetconABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
   case coro::ABI::RetconOnce:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AnyRetconABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
   }
   llvm_unreachable("Unknown ABI");
 }
@@ -2221,7 +2225,17 @@ CreateNewABI(Function &F, coro::Shape &S,
 CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
     : CreateAndInitABI([](Function &F, coro::Shape &S) {
         std::unique_ptr<coro::BaseABI> ABI =
-            CreateNewABI(F, S, coro::isTriviallyMaterializable);
+            CreateNewABI(F, S, coro::isTriviallyMaterializable, {});
+        ABI->init();
+        return ABI;
+      }),
+      OptimizeFrame(OptimizeFrame) {}
+
+CoroSplitPass::CoroSplitPass(
+    SmallVector<CoroSplitPass::BaseABITy> GenCustomABIs, bool OptimizeFrame)
+    : CreateAndInitABI([=](Function &F, coro::Shape &S) {
+        std::unique_ptr<coro::BaseABI> ABI =
+            CreateNewABI(F, S, coro::isTriviallyMaterializable, GenCustomABIs);
         ABI->init();
         return ABI;
       }),
@@ -2232,7 +2246,21 @@ CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
 CoroSplitPass::CoroSplitPass(std::function<bool(Instruction &)> IsMatCallback,
                              bool OptimizeFrame)
     : CreateAndInitABI([=](Function &F, coro::Shape &S) {
-        std::unique_ptr<coro::BaseABI> ABI = CreateNewABI(F, S, IsMatCallback);
+        std::unique_ptr<coro::BaseABI> ABI =
+            CreateNewABI(F, S, IsMatCallback, {});
+        ABI->init();
+        return ABI;
+      }),
+      OptimizeFrame(OptimizeFrame) {}
+
+// For back compatibility, constructor takes a materializable callback and
+// creates a generator for an ABI with a modified materializable callback.
+CoroSplitPass::CoroSplitPass(
+    std::function<bool(Instruction &)> IsMatCallback,
+    SmallVector<CoroSplitPass::BaseABITy> GenCustomABIs, bool OptimizeFrame)
+    : CreateAndInitABI([=](Function &F, coro::Shape &S) {
+        std::unique_ptr<coro::BaseABI> ABI =
+            CreateNewABI(F, S, IsMatCallback, GenCustomABIs);
         ABI->init();
         return ABI;
       }),

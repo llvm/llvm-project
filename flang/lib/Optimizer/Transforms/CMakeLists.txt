@@ -49,6 +49,7 @@ add_flang_library(FIRTransforms
   HLFIRDialect
   MLIRAffineUtils
   MLIRFuncDialect
+  MLIRGPUDialect
   MLIRLLVMDialect
   MLIRLLVMCommonConversion
   MLIRMathTransforms

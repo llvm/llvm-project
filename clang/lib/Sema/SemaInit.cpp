@@ -763,6 +763,8 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
             SemaRef.parentEvaluationContext()
                 .DelayedDefaultInitializationContext;
+        SemaRef.currentEvaluationContext().InLifetimeExtendingContext =
+            SemaRef.parentEvaluationContext().InLifetimeExtendingContext;
         DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       }
       if (DIE.isInvalid()) {
@@ -9951,7 +9953,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     auto SynthesizeAggrGuide = [&](InitListExpr *ListInit) {
       auto *Pattern = Template;
       while (Pattern->getInstantiatedFromMemberTemplate()) {
-        if (Pattern->isMemberSpecialization())
+        if (Pattern->hasMemberSpecialization())
           break;
         Pattern = Pattern->getInstantiatedFromMemberTemplate();
       }

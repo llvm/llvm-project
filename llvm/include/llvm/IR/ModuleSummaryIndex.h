@@ -200,7 +200,12 @@ struct ValueInfo {
     return getRef()->second.SummaryList;
   }
 
+  // Even if the index is built with GVs available, we may not have one for
+  // summary entries synthesized for profiled indirect call targets.
+  bool hasName() const { return !haveGVs() || getValue(); }
+
   StringRef name() const {
+    assert(!haveGVs() || getRef()->second.U.GV);
     return haveGVs() ? getRef()->second.U.GV->getName()
                      : getRef()->second.U.Name;
   }
