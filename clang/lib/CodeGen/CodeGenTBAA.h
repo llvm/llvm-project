@@ -120,7 +120,7 @@ class CodeGenTBAA {
   llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
-  MangleContext *MangleCtx;
+  std::unique_ptr<MangleContext> MangleCtx;
 
   // MDHelper - Helper for creating metadata.
   llvm::MDBuilder MDHelper;
