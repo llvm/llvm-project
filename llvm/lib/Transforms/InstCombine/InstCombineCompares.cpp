@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
@@ -22,13 +24,21 @@
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <bitset>
+#include <cstdint>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -7974,6 +7984,93 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
   return new FCmpInst(Pred, LHSI->getOperand(1), RHSC, "", &I);
 }
 
+// Fold fptrunc(x) < constant --> x < constant if possible.
+static Instruction *foldFCmpFpTrunc(FCmpInst &I, Instruction *LHSI,
+                                    Constant *RHSC) {
+  FCmpInst::Predicate Pred = I.getPredicate();
+  bool RoundDown = false;
+
+  if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
+      Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT)
+    RoundDown = true;
+  else if (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT ||
+           Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
+    RoundDown = false;
+  else
+    return nullptr;
+
+  const APFloat *RValue;
+  if (!match(RHSC, m_APFloat(RValue)))
+    return nullptr;
+
+  // RHSC should not be nan or infinity.
+  if (RValue->isNaN() || RValue->isInfinity())
+    return nullptr;
+
+  Type *LType = LHSI->getOperand(0)->getType();
+  Type *RType = RHSC->getType();
+  Type *LEleType = LType->getScalarType();
+  Type *REleType = RType->getScalarType();
+
+  APFloat NextRValue = *RValue;
+  NextRValue.next(RoundDown);
+
+  // Round RValue to suitable value
+  APFloat ExtRValue = *RValue;
+  APFloat ExtNextRValue = NextRValue;
+  bool lossInfo;
+  ExtRValue.convert(LEleType->getFltSemantics(), APFloat::rmNearestTiesToEven,
+                    &lossInfo);
+  ExtNextRValue.convert(LEleType->getFltSemantics(),
+                        APFloat::rmNearestTiesToEven, &lossInfo);
+
+  // Binary search to find the maximal (or minimal) value after RValue promotion.
+  // RValue can't have special comparison rules, which means nan or inf is not
+  // allowed here.
+  APFloat RoundValue{LEleType->getFltSemantics()};
+  {
+    APFloat Two{LEleType->getFltSemantics(), 2};
+
+    // The (negative) maximum of RValue will become infinity when rounded up (down).
+    // Set the limit of ExtNextRValue.
+    if (NextRValue.isInfinity()) {
+      ExtNextRValue = ExtRValue * Two;
+    }
+
+    APFloat LowBound = RoundDown ? ExtNextRValue : ExtRValue;
+    APFloat UpBound = RoundDown ? ExtRValue : ExtNextRValue;
+
+    while (true) {
+      APFloat UpBoundNext = UpBound;
+      UpBoundNext.next(true);
+      if (UpBoundNext == LowBound) {
+        RoundValue = RoundDown ? UpBound : LowBound;
+        break;
+      }
+
+      APFloat Mid = (LowBound + UpBound) / Two;
+      APFloat TruncMid = Mid;
+      TruncMid.convert(REleType->getFltSemantics(),
+                       APFloat::rmNearestTiesToEven, &lossInfo);
+
+      if (TruncMid == *RValue) {
+        if (RoundDown)
+          UpBound = Mid;
+        else
+          LowBound = Mid;
+      } else {
+        if (RoundDown)
+          LowBound = Mid;
+        else
+          UpBound = Mid;
+      }
+    }
+  }
+
+  return new FCmpInst(Pred, LHSI->getOperand(0),
+                      ConstantFP::get(LType, RoundValue), "", &I);
+}
+
 /// Optimize fabs(X) compared with zero.
 static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *X;
@@ -8465,6 +8562,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
           if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
                   cast<LoadInst>(LHSI), GEP, GV, I))
             return Res;
+      break;
+    case Instruction::FPTrunc:
+      if (Instruction *NV = foldFCmpFpTrunc(I, LHSI, RHSC))
+        return NV;
       break;
   }
   }
