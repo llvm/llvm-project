@@ -1393,6 +1393,19 @@ libc_support_library(
     ],
 )
 
+########################## externally shared targets ###########################
+
+libc_support_library(
+    name = "libc_external_common",
+    hdrs = glob(["shared/*.h"]),
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fp_bits",
+        ":__support_str_to_float",
+        ":__support_str_to_integer",
+    ],
+)
+
 ############################### errno targets ################################
 
 libc_function(
