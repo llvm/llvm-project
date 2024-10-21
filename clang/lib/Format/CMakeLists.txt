@@ -53,3 +53,10 @@ foreach (file IN LISTS files)
 endforeach ()
 
 add_custom_target(clang-format-check-format DEPENDS ${check_format_depends})
+
+add_custom_target(clang-format-style-options
+    COMMAND "${Python3_EXECUTABLE}" dump_format_style.py
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../docs/tools"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../../include/clang/Format/Format.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../include/clang/Tooling/Inclusions/IncludeStyle.h")
+add_dependencies(clangFormat clang-format-style-options)
