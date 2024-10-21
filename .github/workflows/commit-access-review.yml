@@ -12,7 +12,7 @@ permissions:
 jobs:
   commit-access-review:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4

@@ -60,7 +60,7 @@ jobs:
         id: vars
         run: |
           tag=`date +%s`
-          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-22.04"
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-24.04"
           echo "container-name=$container_name" >> $GITHUB_OUTPUT
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
 
