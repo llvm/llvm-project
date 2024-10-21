@@ -199,6 +199,9 @@ class VirtRegRewriter : public MachineFunctionPass {
   void handleIdentityCopy(MachineInstr &MI);
   void expandCopyBundle(MachineInstr &MI) const;
   bool subRegLiveThrough(const MachineInstr &MI, MCRegister SuperPhysReg) const;
+  bool needLiveOutUndefSubregDef(const LiveInterval &LI,
+                                 const MachineBasicBlock &MBB, unsigned SubReg,
+                                 MCPhysReg PhysReg) const;
 
 public:
   static char ID;
@@ -532,6 +535,26 @@ bool VirtRegRewriter::subRegLiveThrough(const MachineInstr &MI,
   return false;
 }
 
+/// Check if we need to maintain liveness for undef subregister lanes that are
+/// live out of a block.
+bool VirtRegRewriter::needLiveOutUndefSubregDef(const LiveInterval &LI,
+                                                const MachineBasicBlock &MBB,
+                                                unsigned SubReg,
+                                                MCPhysReg PhysReg) const {
+  LaneBitmask UndefMask = ~TRI->getSubRegIndexLaneMask(SubReg);
+  for (const LiveInterval::SubRange &SR : LI.subranges()) {
+    LaneBitmask NeedImpDefLanes = UndefMask & SR.LaneMask;
+    if (NeedImpDefLanes.any() && !LIS->isLiveOutOfMBB(SR, &MBB)) {
+      for (const MachineBasicBlock *Succ : MBB.successors()) {
+        if (LIS->isLiveInToMBB(SR, Succ))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 void VirtRegRewriter::rewrite() {
   bool NoSubRegLiveness = !MRI->subRegLivenessEnabled();
   SmallVector<Register, 8> SuperDeads;
@@ -586,6 +609,11 @@ void VirtRegRewriter::rewrite() {
                 MO.setIsUndef(true);
             } else if (!MO.isDead()) {
               assert(MO.isDef());
+              if (MO.isUndef()) {
+                const LiveInterval &LI = LIS->getInterval(VirtReg);
+                if (needLiveOutUndefSubregDef(LI, *MBBI, SubReg, PhysReg))
+                  SuperDefs.push_back(PhysReg);
+              }
             }
           }
 
