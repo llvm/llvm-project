@@ -115,19 +115,18 @@ static void handleLLVMFatalError(void *, const char *Message, bool) {
 extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
                                                         char ***argv) {
   EnableDebugBuffering = true;
+  StringRef ExecName = *argv[0];
 
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
-  handleExecNameEncodedBEOpts(*argv[0]);
+  handleExecNameEncodedBEOpts(ExecName);
   parseFuzzerCLOpts(*argc, *argv);
 
-  std::string execName = *argv[0];
-
   if (TargetTriple.empty()) {
-    errs() << execName << ": -mtriple must be specified\n";
+    errs() << ExecName << ": -mtriple must be specified\n";
     exit(1);
   }
 
@@ -137,10 +136,10 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
     OLvl = *Level;
   } else {
-    errs() << execName << ": invalid optimization level.\n";
+    errs() << ExecName << ": invalid optimization level.\n";
     return 1;
   }
-  ExitOnError ExitOnErr(std::string(execName) + ": error:");
+  ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
   TM = ExitOnErr(codegen::createTargetMachineForTriple(
       Triple::normalize(TargetTriple), OLvl));
   assert(TM && "Could not allocate target machine!");
