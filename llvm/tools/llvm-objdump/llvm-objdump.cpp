@@ -1513,9 +1513,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
     if (MIA) {
       if (Disassembled) {
         uint64_t Target;
-        bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
-        if (TargetKnown && (Target >= Start && Target < End) &&
-            !Labels.count(Target)) {
+        bool BranchTargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
+        if (BranchTargetKnown && (Target >= Start && Target < End)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
           // On other PowerPC platforms (ELF), a function call is encoded as
           // a branch to self. Do not add a label for these cases.
@@ -2323,9 +2322,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           if (Disassembled && DT->InstrAnalysis) {
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
-            bool PrintTarget = DT->InstrAnalysis->evaluateBranch(
-                Inst, SectionAddr + Index, Size, Target);
-
+            bool PrintTarget = DT->InstrAnalysis->evaluateBranch(Inst, SectionAddr + Index, Size, Target);
+            if (DT->SubtargetInfo->getTargetTriple().isRISCV())
+              PrintTarget = DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target);
             if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(
@@ -2368,6 +2367,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   if (It->first != TargetSecAddr)
                     break;
                   TargetSectionSymbols.push_back(&AllSymbols[It->second]);
+                  if (AllSymbols[It->second].empty())
+                    TargetSecAddr = 0;
                 }
               } else {
                 TargetSectionSymbols.push_back(&Symbols);
@@ -2398,7 +2399,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   break;
               }
 
-              // Branch targets are printed just after the instructions.
+              // Branch and instruction targets are printed just after the instructions.
               // Print the labels corresponding to the target if there's any.
               bool BBAddrMapLabelAvailable = BBAddrMapLabels.count(Target);
               bool LabelAvailable = AllLabels.count(Target);
@@ -2479,7 +2480,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                           << ">";
               } else if (LabelAvailable) {
                 *TargetOS << " <" << AllLabels[Target] << ">";
-              }
+              } 
               // By convention, each record in the comment stream should be
               // terminated.
               if (TargetOS == &CommentStream)
