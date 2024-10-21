@@ -1718,6 +1718,13 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     MFI->reserveWWMRegister(ParsedReg);
   }
 
+  for (const auto &YamlRegStr : YamlMFI.SpillPhysVGPRS) {
+    Register ParsedReg;
+    if (parseRegister(YamlRegStr, ParsedReg))
+      return true;
+    MFI->SpillPhysVGPRs.push_back(ParsedReg);
+  }
+
   auto parseAndCheckArgument = [&](const std::optional<yaml::SIArgument> &A,
                                    const TargetRegisterClass &RC,
                                    ArgDescriptor &Arg, unsigned UserSGPRs,
