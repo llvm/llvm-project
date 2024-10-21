@@ -17,4 +17,6 @@
 # RUN: FileCheck < %t.xunit.xml %s --check-prefix=EXISTING
 # EXISTING: test
 ## Results in a new file with some discriminator added.
+# RUN: ls -l %t.xunit*.xml | wc -l | FileCheck %s --check-prefix=NUMFILES
+# NUMFILES: 2
 # RUN: FileCheck < %t.xunit.*.xml %s --check-prefix=NEW
