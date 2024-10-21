@@ -325,7 +325,7 @@ class ArgI8<DXILConstant value_> : Arg {
   let is_i8 = 1;
 }
 
-class IntrinsicSelect<Intrinsic intrinsic_, list<Arg> args_=?> {
+class IntrinsicSelect<Intrinsic intrinsic_, list<Arg> args_> {
   Intrinsic intrinsic = intrinsic_;
   list<Arg> args = args_;
 }
