@@ -2792,10 +2792,8 @@ static void readSecurityNotes(Ctx &ctx) {
       referenceFileName = (*it)->getName();
     }
   }
-  bool hasValidPauthAbiCoreInfo =
-      (!ctx.aarch64PauthAbiCoreInfo.empty() &&
-       llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
-                    [](uint8_t c) { return c != 0; }));
+  bool hasValidPauthAbiCoreInfo = llvm::any_of(
+      ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
 
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
