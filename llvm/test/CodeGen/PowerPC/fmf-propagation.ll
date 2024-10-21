@@ -302,47 +302,43 @@ define float @fmul_fma_fast2(float %x) {
 define float @sqrt_afn_ieee(float %x) #0 {
 ; FMF-LABEL: sqrt_afn_ieee:
 ; FMF:       # %bb.0:
-; FMF-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
-; FMF-NEXT:    xsabsdp 0, 1
-; FMF-NEXT:    lfs 2, .LCPI11_1@toc@l(3)
-; FMF-NEXT:    fcmpu 0, 0, 2
-; FMF-NEXT:    xxlxor 0, 0, 0
-; FMF-NEXT:    blt 0, .LBB11_2
-; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    xsrsqrtesp 2, 1
 ; FMF-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
 ; FMF-NEXT:    vspltisw 2, -3
 ; FMF-NEXT:    lfs 0, .LCPI11_0@toc@l(3)
-; FMF-NEXT:    xsmulsp 1, 1, 2
-; FMF-NEXT:    xsmulsp 0, 1, 0
-; FMF-NEXT:    xsmulsp 1, 1, 2
-; FMF-NEXT:    xvcvsxwdp 2, 34
-; FMF-NEXT:    xsaddsp 1, 1, 2
-; FMF-NEXT:    xsmulsp 0, 0, 1
-; FMF-NEXT:  .LBB11_2:
-; FMF-NEXT:    fmr 1, 0
+; FMF-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
+; FMF-NEXT:    xsmulsp 3, 1, 2
+; FMF-NEXT:    xsabsdp 1, 1
+; FMF-NEXT:    xsmulsp 0, 3, 0
+; FMF-NEXT:    xsmulsp 2, 3, 2
+; FMF-NEXT:    xvcvsxwdp 3, 34
+; FMF-NEXT:    xsaddsp 2, 2, 3
+; FMF-NEXT:    xsmulsp 0, 0, 2
+; FMF-NEXT:    lfs 2, .LCPI11_1@toc@l(3)
+; FMF-NEXT:    xvcmpgesp 1, 2, 1
+; FMF-NEXT:    xxlxor 2, 2, 2
+; FMF-NEXT:    xxsel 1, 2, 0, 1
+; FMF-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; FMF-NEXT:    blr
 ;
 ; GLOBAL-LABEL: sqrt_afn_ieee:
 ; GLOBAL:       # %bb.0:
-; GLOBAL-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
-; GLOBAL-NEXT:    xsabsdp 0, 1
-; GLOBAL-NEXT:    lfs 2, .LCPI11_1@toc@l(3)
-; GLOBAL-NEXT:    fcmpu 0, 0, 2
-; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    blt 0, .LBB11_2
-; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
-; GLOBAL-NEXT:    xvcvsxwdp 2, 34
-; GLOBAL-NEXT:    xsmulsp 1, 1, 0
-; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xvcvsxwdp 3, 34
+; GLOBAL-NEXT:    xsmulsp 2, 1, 0
+; GLOBAL-NEXT:    xsabsdp 1, 1
+; GLOBAL-NEXT:    xsmaddasp 3, 2, 0
 ; GLOBAL-NEXT:    lfs 0, .LCPI11_0@toc@l(3)
-; GLOBAL-NEXT:    xsmulsp 0, 1, 0
-; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB11_2:
-; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
+; GLOBAL-NEXT:    xsmulsp 0, 2, 0
+; GLOBAL-NEXT:    lfs 2, .LCPI11_1@toc@l(3)
+; GLOBAL-NEXT:    xvcmpgesp 1, 2, 1
+; GLOBAL-NEXT:    xxlxor 2, 2, 2
+; GLOBAL-NEXT:    xsmulsp 0, 0, 3
+; GLOBAL-NEXT:    xxsel 1, 2, 0, 1
+; GLOBAL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; GLOBAL-NEXT:    blr
   %rt = call afn ninf float @llvm.sqrt.f32(float %x)
   ret float %rt
@@ -373,41 +369,39 @@ define float @sqrt_afn_ieee_inf(float %x) #0 {
 define float @sqrt_afn_preserve_sign(float %x) #1 {
 ; FMF-LABEL: sqrt_afn_preserve_sign:
 ; FMF:       # %bb.0:
-; FMF-NEXT:    xxlxor 0, 0, 0
-; FMF-NEXT:    fcmpu 0, 1, 0
-; FMF-NEXT:    beq 0, .LBB13_2
-; FMF-NEXT:  # %bb.1:
-; FMF-NEXT:    xsrsqrtesp 0, 1
+; FMF-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; FMF-NEXT:    xsrsqrtesp 2, 1
 ; FMF-NEXT:    addis 3, 2, .LCPI13_0@toc@ha
 ; FMF-NEXT:    vspltisw 2, -3
-; FMF-NEXT:    lfs 2, .LCPI13_0@toc@l(3)
-; FMF-NEXT:    xsmulsp 1, 1, 0
-; FMF-NEXT:    xsmulsp 2, 1, 2
-; FMF-NEXT:    xsmulsp 0, 1, 0
-; FMF-NEXT:    xvcvsxwdp 1, 34
-; FMF-NEXT:    xsaddsp 0, 0, 1
-; FMF-NEXT:    xsmulsp 0, 2, 0
-; FMF-NEXT:  .LBB13_2:
-; FMF-NEXT:    fmr 1, 0
+; FMF-NEXT:    lfs 0, .LCPI13_0@toc@l(3)
+; FMF-NEXT:    xsmulsp 3, 1, 2
+; FMF-NEXT:    xsmulsp 0, 3, 0
+; FMF-NEXT:    xsmulsp 2, 3, 2
+; FMF-NEXT:    xvcvsxwdp 3, 34
+; FMF-NEXT:    xsaddsp 2, 2, 3
+; FMF-NEXT:    xsmulsp 0, 0, 2
+; FMF-NEXT:    xxlxor 2, 2, 2
+; FMF-NEXT:    xvcmpeqsp 1, 1, 2
+; FMF-NEXT:    xxsel 1, 2, 0, 1
+; FMF-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; FMF-NEXT:    blr
 ;
 ; GLOBAL-LABEL: sqrt_afn_preserve_sign:
 ; GLOBAL:       # %bb.0:
-; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    fcmpu 0, 1, 0
-; GLOBAL-NEXT:    beq 0, .LBB13_2
-; GLOBAL-NEXT:  # %bb.1:
+; GLOBAL-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI13_0@toc@ha
-; GLOBAL-NEXT:    xvcvsxwdp 2, 34
-; GLOBAL-NEXT:    xsmulsp 1, 1, 0
-; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xvcvsxwdp 3, 34
+; GLOBAL-NEXT:    xsmulsp 2, 1, 0
+; GLOBAL-NEXT:    xsmaddasp 3, 2, 0
 ; GLOBAL-NEXT:    lfs 0, .LCPI13_0@toc@l(3)
-; GLOBAL-NEXT:    xsmulsp 0, 1, 0
-; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB13_2:
-; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    xsmulsp 0, 2, 0
+; GLOBAL-NEXT:    xxlxor 2, 2, 2
+; GLOBAL-NEXT:    xvcmpeqsp 1, 1, 2
+; GLOBAL-NEXT:    xsmulsp 0, 0, 3
+; GLOBAL-NEXT:    xxsel 1, 2, 0, 1
+; GLOBAL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; GLOBAL-NEXT:    blr
   %rt = call afn ninf float @llvm.sqrt.f32(float %x)
   ret float %rt
@@ -440,46 +434,42 @@ define float @sqrt_afn_preserve_sign_inf(float %x) #1 {
 define float @sqrt_fast_ieee(float %x) #0 {
 ; FMF-LABEL: sqrt_fast_ieee:
 ; FMF:       # %bb.0:
-; FMF-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
-; FMF-NEXT:    xsabsdp 0, 1
-; FMF-NEXT:    lfs 2, .LCPI15_1@toc@l(3)
-; FMF-NEXT:    fcmpu 0, 0, 2
-; FMF-NEXT:    xxlxor 0, 0, 0
-; FMF-NEXT:    blt 0, .LBB15_2
-; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    xsrsqrtesp 0, 1
 ; FMF-NEXT:    vspltisw 2, -3
 ; FMF-NEXT:    addis 3, 2, .LCPI15_0@toc@ha
-; FMF-NEXT:    xvcvsxwdp 2, 34
-; FMF-NEXT:    xsmulsp 1, 1, 0
-; FMF-NEXT:    xsmaddasp 2, 1, 0
+; FMF-NEXT:    xvcvsxwdp 3, 34
+; FMF-NEXT:    xsmulsp 2, 1, 0
+; FMF-NEXT:    xsabsdp 1, 1
+; FMF-NEXT:    xsmaddasp 3, 2, 0
 ; FMF-NEXT:    lfs 0, .LCPI15_0@toc@l(3)
-; FMF-NEXT:    xsmulsp 0, 1, 0
-; FMF-NEXT:    xsmulsp 0, 0, 2
-; FMF-NEXT:  .LBB15_2:
-; FMF-NEXT:    fmr 1, 0
+; FMF-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
+; FMF-NEXT:    xsmulsp 0, 2, 0
+; FMF-NEXT:    lfs 2, .LCPI15_1@toc@l(3)
+; FMF-NEXT:    xvcmpgesp 1, 2, 1
+; FMF-NEXT:    xxlxor 2, 2, 2
+; FMF-NEXT:    xsmulsp 0, 0, 3
+; FMF-NEXT:    xxsel 1, 2, 0, 1
+; FMF-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; FMF-NEXT:    blr
 ;
 ; GLOBAL-LABEL: sqrt_fast_ieee:
 ; GLOBAL:       # %bb.0:
-; GLOBAL-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
-; GLOBAL-NEXT:    xsabsdp 0, 1
-; GLOBAL-NEXT:    lfs 2, .LCPI15_1@toc@l(3)
-; GLOBAL-NEXT:    fcmpu 0, 0, 2
-; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    blt 0, .LBB15_2
-; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI15_0@toc@ha
-; GLOBAL-NEXT:    xvcvsxwdp 2, 34
-; GLOBAL-NEXT:    xsmulsp 1, 1, 0
-; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xvcvsxwdp 3, 34
+; GLOBAL-NEXT:    xsmulsp 2, 1, 0
+; GLOBAL-NEXT:    xsabsdp 1, 1
+; GLOBAL-NEXT:    xsmaddasp 3, 2, 0
 ; GLOBAL-NEXT:    lfs 0, .LCPI15_0@toc@l(3)
-; GLOBAL-NEXT:    xsmulsp 0, 1, 0
-; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB15_2:
-; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
+; GLOBAL-NEXT:    xsmulsp 0, 2, 0
+; GLOBAL-NEXT:    lfs 2, .LCPI15_1@toc@l(3)
+; GLOBAL-NEXT:    xvcmpgesp 1, 2, 1
+; GLOBAL-NEXT:    xxlxor 2, 2, 2
+; GLOBAL-NEXT:    xsmulsp 0, 0, 3
+; GLOBAL-NEXT:    xxsel 1, 2, 0, 1
+; GLOBAL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; GLOBAL-NEXT:    blr
   %rt = call contract reassoc afn ninf float @llvm.sqrt.f32(float %x)
   ret float %rt
@@ -498,40 +488,38 @@ define float @sqrt_fast_ieee(float %x) #0 {
 define float @sqrt_fast_preserve_sign(float %x) #1 {
 ; FMF-LABEL: sqrt_fast_preserve_sign:
 ; FMF:       # %bb.0:
-; FMF-NEXT:    xxlxor 0, 0, 0
-; FMF-NEXT:    fcmpu 0, 1, 0
-; FMF-NEXT:    beq 0, .LBB16_2
-; FMF-NEXT:  # %bb.1:
+; FMF-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; FMF-NEXT:    xsrsqrtesp 0, 1
 ; FMF-NEXT:    vspltisw 2, -3
 ; FMF-NEXT:    addis 3, 2, .LCPI16_0@toc@ha
-; FMF-NEXT:    xvcvsxwdp 2, 34
-; FMF-NEXT:    xsmulsp 1, 1, 0
-; FMF-NEXT:    xsmaddasp 2, 1, 0
+; FMF-NEXT:    xvcvsxwdp 3, 34
+; FMF-NEXT:    xsmulsp 2, 1, 0
+; FMF-NEXT:    xsmaddasp 3, 2, 0
 ; FMF-NEXT:    lfs 0, .LCPI16_0@toc@l(3)
-; FMF-NEXT:    xsmulsp 0, 1, 0
-; FMF-NEXT:    xsmulsp 0, 0, 2
-; FMF-NEXT:  .LBB16_2:
-; FMF-NEXT:    fmr 1, 0
+; FMF-NEXT:    xsmulsp 0, 2, 0
+; FMF-NEXT:    xxlxor 2, 2, 2
+; FMF-NEXT:    xvcmpeqsp 1, 1, 2
+; FMF-NEXT:    xsmulsp 0, 0, 3
+; FMF-NEXT:    xxsel 1, 2, 0, 1
+; FMF-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; FMF-NEXT:    blr
 ;
 ; GLOBAL-LABEL: sqrt_fast_preserve_sign:
 ; GLOBAL:       # %bb.0:
-; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    fcmpu 0, 1, 0
-; GLOBAL-NEXT:    beq 0, .LBB16_2
-; GLOBAL-NEXT:  # %bb.1:
+; GLOBAL-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI16_0@toc@ha
-; GLOBAL-NEXT:    xvcvsxwdp 2, 34
-; GLOBAL-NEXT:    xsmulsp 1, 1, 0
-; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xvcvsxwdp 3, 34
+; GLOBAL-NEXT:    xsmulsp 2, 1, 0
+; GLOBAL-NEXT:    xsmaddasp 3, 2, 0
 ; GLOBAL-NEXT:    lfs 0, .LCPI16_0@toc@l(3)
-; GLOBAL-NEXT:    xsmulsp 0, 1, 0
-; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB16_2:
-; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    xsmulsp 0, 2, 0
+; GLOBAL-NEXT:    xxlxor 2, 2, 2
+; GLOBAL-NEXT:    xvcmpeqsp 1, 1, 2
+; GLOBAL-NEXT:    xsmulsp 0, 0, 3
+; GLOBAL-NEXT:    xxsel 1, 2, 0, 1
+; GLOBAL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; GLOBAL-NEXT:    blr
   %rt = call contract reassoc ninf afn float @llvm.sqrt.f32(float %x)
   ret float %rt
@@ -540,34 +528,34 @@ define float @sqrt_fast_preserve_sign(float %x) #1 {
 ; fcmp can have fast-math-flags.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fcmp_nnan:'
-; FMFDEBUG:         select_cc nnan {{t[0-9]+}}
+; FMFDEBUG:         PPCISD::VSX_CMPSEL
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fcmp_nnan:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fcmp_nnan:'
-; GLOBALDEBUG:         select_cc nnan {{t[0-9]+}}
+; GLOBALDEBUG:      PPCISD::VSX_CMPSEL
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fcmp_nnan:'
 
 define double @fcmp_nnan(double %a, double %y, double %z) {
 ; FMF-LABEL: fcmp_nnan:
 ; FMF:       # %bb.0:
 ; FMF-NEXT:    xxlxor 0, 0, 0
-; FMF-NEXT:    xscmpudp 0, 1, 0
-; FMF-NEXT:    blt 0, .LBB17_2
-; FMF-NEXT:  # %bb.1:
-; FMF-NEXT:    fmr 3, 2
-; FMF-NEXT:  .LBB17_2:
-; FMF-NEXT:    fmr 1, 3
+; FMF-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; FMF-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; FMF-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; FMF-NEXT:    xvcmpgedp 0, 0, 1
+; FMF-NEXT:    xxsel 1, 3, 2, 0
+; FMF-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; FMF-NEXT:    blr
 ;
 ; GLOBAL-LABEL: fcmp_nnan:
 ; GLOBAL:       # %bb.0:
 ; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    xscmpudp 0, 1, 0
-; GLOBAL-NEXT:    blt 0, .LBB17_2
-; GLOBAL-NEXT:  # %bb.1:
-; GLOBAL-NEXT:    fmr 3, 2
-; GLOBAL-NEXT:  .LBB17_2:
-; GLOBAL-NEXT:    fmr 1, 3
+; GLOBAL-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; GLOBAL-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; GLOBAL-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; GLOBAL-NEXT:    xvcmpgedp 0, 0, 1
+; GLOBAL-NEXT:    xxsel 1, 3, 2, 0
+; GLOBAL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; GLOBAL-NEXT:    blr
   %cmp = fcmp nnan ult double %a, 0.0
   %z.y = select i1 %cmp, double %z, double %y
