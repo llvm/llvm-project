@@ -2092,30 +2092,26 @@ public:
     // For a given list of items, if the item has a value, then walk it.
     // Print commas between items that have values.
     // Return 'true' if something did get printed, otherwise 'false'.
-    auto join = [&](bool comma, auto &&cont, auto &&item,
-                    auto &&...items) -> bool {
-      // comma: if something needs to be walked (i.e. printed), precede it
-      // with a comma.
-      if (!item.has_value()) {
-        if constexpr (sizeof...(items) != 0) {
-          return cont(comma, cont, items...);
-        } else {
-          return false;
-        }
-      } else {
-        if (comma) {
-          Put(", ");
-        }
-        Walk(*item);
-        if constexpr (sizeof...(items) != 0) {
-          return cont(true, cont, items...) || true;
-        } else {
-          return true;
-        }
+    bool needComma{false};
+    if (typeMod) {
+      Walk(*typeMod);
+      needComma = true;
+    }
+    if (iter) {
+      if (needComma) {
+        Put(", ");
       }
-    };
-
-    if (join(false, join, typeMod, iter, type)) {
+      Walk(*iter);
+      needComma = true;
+    }
+    if (type) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*type);
+      needComma = true;
+    }
+    if (needComma) {
       Put(": ");
     }
     Walk(std::get<OmpObjectList>(x.t));
