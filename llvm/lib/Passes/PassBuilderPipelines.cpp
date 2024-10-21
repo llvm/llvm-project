@@ -1828,6 +1828,15 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
+    // Promoting by-reference arguments to by-value exposes more constants to
+    // IPSCCP.
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
+
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
@@ -1840,9 +1849,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(CalledValuePropagationPass());
   }
 
-  // Now deduce any function attributes based in the current code.
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  // For higher optimization levels this Pass has just run, so don't repeat it.
+  if (Level.getSpeedupLevel() == 1) {
+    // Now deduce any function attributes based on the current code.
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  }
 
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
