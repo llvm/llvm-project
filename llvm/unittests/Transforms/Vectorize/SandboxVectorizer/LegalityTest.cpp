@@ -55,3 +55,24 @@ define void @foo(ptr %ptr) {
   auto Result = Legality.canVectorize({St0, St1});
   EXPECT_TRUE(isa<sandboxir::Widen>(Result));
 }
+
+#ifndef NDEBUG
+TEST_F(LegalityTest, LegalityResultDump) {
+  auto Matches = [](const sandboxir::LegalityResult &Result,
+                    const std::string &ExpectedStr) -> bool {
+    std::string Buff;
+    raw_string_ostream OS(Buff);
+    Result.print(OS);
+    return Buff == ExpectedStr;
+  };
+  sandboxir::LegalityAnalysis Legality;
+  EXPECT_TRUE(
+      Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
+  EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
+                          sandboxir::ResultReason::DiffOpcodes),
+                      "Pack Reason: DiffOpcodes"));
+  EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
+                          sandboxir::ResultReason::DiffTypes),
+                      "Pack Reason: DiffTypes"));
+}
+#endif // NDEBUG
