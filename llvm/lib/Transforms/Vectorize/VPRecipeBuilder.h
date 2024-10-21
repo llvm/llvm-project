@@ -54,9 +54,11 @@ class VPRecipeBuilder {
   EdgeMaskCacheTy EdgeMaskCache;
   BlockMaskCacheTy BlockMaskCache;
 
+  using RecipeOrResult = PointerUnion<VPRecipeBase *, VPValue *>;
+
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
-  DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
+  DenseMap<Instruction *, RecipeOrResult> Ingredient2Recipe;
 
   /// Cross-iteration reduction & first-order recurrence phis for which we need
   /// to add the incoming value from the backedge after all recipes have been
@@ -95,8 +97,8 @@ class VPRecipeBuilder {
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
   /// decreased to ensure same decision from \p Range.Start to \p Range.End.
-  VPSingleDefRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
-                                    VFRange &Range);
+  VPRecipeBase *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
+                               VFRange &Range);
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
@@ -132,6 +134,15 @@ public:
     Ingredient2Recipe[I] = R;
   }
 
+  // Set the recipe value for a given ingredient.
+  void setRecipe(Instruction *I, VPValue *RecipeResult) {
+    assert(!Ingredient2Recipe.contains(I) &&
+           "Cannot reset recipe for instruction.");
+    assert(RecipeResult->getDefiningRecipe() &&
+           "Value must be defined by a recipe.");
+    Ingredient2Recipe[I] = RecipeResult;
+  }
+
   /// Create the mask for the vector loop header block.
   void createHeaderMask();
 
@@ -158,9 +169,11 @@ public:
   VPRecipeBase *getRecipe(Instruction *I) {
     assert(Ingredient2Recipe.count(I) &&
            "Recording this ingredients recipe was not requested");
-    assert(Ingredient2Recipe[I] != nullptr &&
-           "Ingredient doesn't have a recipe");
-    return Ingredient2Recipe[I];
+    assert(Ingredient2Recipe[I] && "Ingredient doesn't have a recipe");
+    auto RecipeInfo = Ingredient2Recipe[I];
+    if (auto *R = dyn_cast<VPRecipeBase *>(RecipeInfo))
+      return R;
+    return cast<VPValue *>(RecipeInfo)->getDefiningRecipe();
   }
 
   /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
@@ -179,8 +192,11 @@ public:
 
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {
-      if (auto *R = Ingredient2Recipe.lookup(I))
-        return R->getVPSingleValue();
+      if (auto RecipeInfo = Ingredient2Recipe.lookup(I)) {
+        if (auto *R = dyn_cast<VPRecipeBase *>(RecipeInfo))
+          return R->getVPSingleValue();
+        return cast<VPValue *>(RecipeInfo);
+      }
     }
     return Plan.getOrAddLiveIn(V);
   }

@@ -907,7 +907,7 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   EXPECT_TRUE(isa<VPUser>(BaseR));
   EXPECT_EQ(&Recipe, BaseR);
 
-  VPValue *VPV = &Recipe;
+  VPValue *VPV = Recipe.getVPSingleValue();
   EXPECT_TRUE(VPV->getDefiningRecipe());
   EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
