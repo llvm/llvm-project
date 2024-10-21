@@ -2590,6 +2590,42 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
       return replaceOperand(*II, 0, X);
 
+    Value *A, *B;
+    CmpInst::Predicate Pred;
+    const APFloat *TC, *FC;
+    if (!match(Sign, m_Select(m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
+                                    m_Value(B)),
+                              m_APFloat(TC), m_APFloat(FC))))
+      return nullptr;
+
+    /*
+    Match select ?, TC, FC where the constants are equal but negated.
+    Check for these conditions:
+    olt/ule
+    copysign(Mag, B & (A < 0.0) ? -TC : TC) -> copysign(Mag, A) B->true, A<0.
+    copysign(Mag, B & (A < 0.0) ? -TC : TC) -> copysign(Mag, A) B->true, A>0.
+    copysign(Mag, B & (A < 0.0) ? -TC : TC) -> copysign(Mag, A) B->false, A>0.
+    copysign(Mag, B & (A < 0.0) ? -TC : TC) -> copysign(Mag, -A) B->false, A<0.
+    ogt/uge
+    copysign(Mag, B & !(A < 0.0) ? -TC : TC) -> copysign(Mag, -A) B->true, A<0.
+    copysign(Mag, B & !(A < 0.0) ? -TC : TC) -> copysign(Mag, -A) B->true, A>0.
+    copysign(Mag, B & !(A < 0.0) ? -TC : TC) -> copysign(Mag, A) B->false, A>0.
+    copysign(Mag, B & !(A < 0.0) ? -TC : TC) -> copysign(Mag, -A) B->false,A<0.
+    */
+
+    if (Pred == CmpInst::FCMP_OLT || Pred == CmpInst::FCMP_ULE) {
+      if (match(A, m_Negative()) && TC->isNegative())
+        if (match(B, m_ZeroInt()))
+          A = Builder.CreateFNeg(A);
+      return replaceOperand(*II, 1, A);
+    }
+    if (Pred == CmpInst::FCMP_OGT || Pred == CmpInst::FCMP_UGE) {
+      if (match(A, m_Negative()))
+        A = Builder.CreateFNeg(A);
+      else if (TC->isNegative() && !match(B, m_ZeroInt()))
+        A = Builder.CreateFNeg(A);
+      return replaceOperand(*II, 1, A);
+    }
     break;
   }
   case Intrinsic::fabs: {
