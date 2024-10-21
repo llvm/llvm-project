@@ -54,7 +54,7 @@ void llvm::createMemCpyLoopKnownSize(
   assert((!AtomicElementSize || LoopOpSize % *AtomicElementSize == 0) &&
          "Atomic memcpy lowering is not supported for selected operand size");
 
-  uint64_t LoopEndCount = (CopyLen->getZExtValue() / LoopOpSize) * LoopOpSize;
+  uint64_t LoopEndCount = alignDown(CopyLen->getZExtValue(), LoopOpSize);
 
   if (LoopEndCount != 0) {
     // Split
@@ -676,8 +676,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   Type *Int8Type = Type::getInt8Ty(Ctx);
 
   // Calculate the loop trip count and remaining bytes to copy after the loop.
-  uint64_t BytesCopiedInLoop =
-      (CopyLen->getZExtValue() / LoopOpSize) * LoopOpSize;
+  uint64_t BytesCopiedInLoop = alignDown(CopyLen->getZExtValue(), LoopOpSize);
   uint64_t RemainingBytes = CopyLen->getZExtValue() - BytesCopiedInLoop;
 
   IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
