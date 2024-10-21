@@ -1514,7 +1514,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
       if (Disassembled) {
         uint64_t Target;
         bool BranchTargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
-        if (BranchTargetKnown && (Target >= Start && Target < End)) {
+        if (BranchTargetKnown && (Target >= Start && Target < End) &&
+            !Labels.count(Target)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
           // On other PowerPC platforms (ELF), a function call is encoded as
           // a branch to self. Do not add a label for these cases.
@@ -2322,9 +2323,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           if (Disassembled && DT->InstrAnalysis) {
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
-            bool PrintTarget = DT->InstrAnalysis->evaluateBranch(Inst, SectionAddr + Index, Size, Target);
-            if (DT->SubtargetInfo->getTargetTriple().isRISCV())
-              PrintTarget = DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target);
+            bool PrintTarget = DT->InstrAnalysis->evaluateBranch(Inst, SectionAddr + Index, Size, Target) || 
+                               DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target);
             if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(
