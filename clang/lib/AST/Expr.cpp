@@ -1989,7 +1989,7 @@ Expr *CastExpr::getSubExprAsWritten() {
       SubExpr = IgnoreExprNodes(cast<CXXConstructExpr>(SubExpr)->getArg(0),
                                 ignoreImplicitSemaNodes);
     } else if (E->getCastKind() == CK_UserDefinedConversion) {
-      assert((isa<CXXMemberCallExpr>(SubExpr) || isa<BlockExpr>(SubExpr)) &&
+      assert((isa<CallExpr, BlockExpr>(SubExpr)) &&
              "Unexpected SubExpr for CK_UserDefinedConversion.");
       if (auto *MCE = dyn_cast<CXXMemberCallExpr>(SubExpr))
         SubExpr = MCE->getImplicitObjectArgument();

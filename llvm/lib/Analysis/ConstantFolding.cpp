@@ -82,7 +82,7 @@ static Constant *foldConstVectorToAPInt(APInt &Result, Type *DestTy,
     else
       Element = C->getAggregateElement(i);
 
-    if (Element && isa<UndefValue>(Element)) {
+    if (isa_and_nonnull<UndefValue>(Element)) {
       Result <<= BitShift;
       continue;
     }
@@ -219,7 +219,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize*(Ratio-1);
       for (unsigned j = 0; j != Ratio; ++j) {
         Constant *Src = C->getAggregateElement(SrcElt++);
-        if (Src && isa<UndefValue>(Src))
+        if (isa_and_nonnull<UndefValue>(Src))
           Src = Constant::getNullValue(
               cast<VectorType>(C->getType())->getElementType());
         else
@@ -888,7 +888,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   APInt Offset = APInt(
       BitWidth,
       DL.getIndexedOffsetInType(
-          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)));
+          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)),
+      /*isSigned=*/true, /*implicitTrunc=*/true);
 
   std::optional<ConstantRange> InRange = GEP->getInRange();
   if (InRange)
@@ -923,7 +924,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     Ptr = cast<Constant>(GEP->getOperand(0));
     SrcElemTy = GEP->getSourceElementType();
     Offset = Offset.sadd_ov(
-        APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps)),
+        APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps),
+              /*isSigned=*/true, /*implicitTrunc=*/true),
         Overflow);
   }
 
@@ -1676,6 +1678,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
     return Name == "fabs" || Name == "fabsf" ||
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
+  case 'i':
+    return Name == "ilogb" || Name == "ilogbf";
   case 'l':
     return Name == "log" || Name == "logf" || Name == "logl" ||
            Name == "log2" || Name == "log2f" || Name == "log10" ||
@@ -2130,7 +2134,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     }
 #endif
 
-    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
+    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy() &&
+        !Ty->isIntegerTy())
       return nullptr;
 
     // Use internal versions of these intrinsics.
@@ -2389,6 +2394,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
+      break;
+    case LibFunc_ilogb:
+    case LibFunc_ilogbf:
+      if (!APF.isZero() && TLI->has(Func))
+        return ConstantInt::get(Ty, ilogb(APF), true);
       break;
     case LibFunc_logb:
     case LibFunc_logbf:

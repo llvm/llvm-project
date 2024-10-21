@@ -12466,7 +12466,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // Build a list of tree entries where V is used.
     SmallPtrSet<const TreeEntry *, 4> VToTEs;
     for (const TreeEntry *TEPtr : ValueToGatherNodes.find(V)->second) {
-      if (TEPtr == TE)
+      if (TEPtr == TE || TEPtr->Idx == 0)
         continue;
       assert(any_of(TEPtr->Scalars,
                     [&](Value *V) { return GatheredScalars.contains(V); }) &&
@@ -14868,6 +14868,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         return E->VectorizedValue;
       }
 
+      if (Op->getType() != VecTy) {
+        assert((It != MinBWs.end() || getOperandEntry(E, 0)->isGather() ||
+                MinBWs.contains(getOperandEntry(E, 0))) &&
+               "Expected item in MinBWs.");
+        Op = Builder.CreateIntCast(Op, VecTy, GetOperandSignedness(0));
+      }
       Value *V = Builder.CreateFreeze(Op);
       V = FinalShuffle(V, E);
 
@@ -17010,6 +17016,8 @@ bool BoUpSLP::collectValuesToDemote(
     return TryProcessInstruction(
         BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)});
   }
+  case Instruction::Freeze:
+    return TryProcessInstruction(BitWidth, getOperandEntry(&E, 0));
   case Instruction::Shl: {
     // If we are truncating the result of this SHL, and if it's a shift of an
     // inrange amount, we can always perform a SHL in a smaller type.
@@ -17131,9 +17139,25 @@ bool BoUpSLP::collectValuesToDemote(
                 MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL)));
       });
     };
+    auto AbsChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
+      assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+      return all_of(E.Scalars, [&](Value *V) {
+        auto *I = cast<Instruction>(V);
+        unsigned SignBits = OrigBitWidth - BitWidth;
+        APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth - 1);
+        unsigned Op0SignBits =
+            ComputeNumSignBits(I->getOperand(0), *DL, 0, AC, nullptr, DT);
+        return SignBits <= Op0SignBits &&
+               ((SignBits != Op0SignBits &&
+                 !isKnownNonNegative(I->getOperand(0), SimplifyQuery(*DL))) ||
+                MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)));
+      });
+    };
     if (ID != Intrinsic::abs) {
       Operands.push_back(getOperandEntry(&E, 1));
       CallChecker = CompChecker;
+    } else {
+      CallChecker = AbsChecker;
     }
     InstructionCost BestCost =
         std::numeric_limits<InstructionCost::CostType>::max();
@@ -19949,7 +19973,7 @@ static bool isReductionCandidate(Instruction *I) {
 }
 
 bool SLPVectorizerPass::vectorizeHorReduction(
-    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R, TargetTransformInfo *TTI,
+    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
     SmallVectorImpl<WeakTrackingVH> &PostponedInsts) {
   if (!ShouldVectorizeHor)
     return false;
@@ -19982,7 +20006,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   Stack.emplace(SelectRoot(), 0);
   SmallPtrSet<Value *, 8> VisitedInstrs;
   bool Res = false;
-  auto &&TryToReduce = [this, TTI, &R](Instruction *Inst) -> Value * {
+  auto &&TryToReduce = [this, &R](Instruction *Inst) -> Value * {
     if (R.isAnalyzedReductionRoot(Inst))
       return nullptr;
     if (!isReductionCandidate(Inst))
@@ -20049,10 +20073,9 @@ bool SLPVectorizerPass::vectorizeHorReduction(
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Instruction *Root,
-                                                 BasicBlock *BB, BoUpSLP &R,
-                                                 TargetTransformInfo *TTI) {
+                                                 BasicBlock *BB, BoUpSLP &R) {
   SmallVector<WeakTrackingVH> PostponedInsts;
-  bool Res = vectorizeHorReduction(P, Root, BB, R, TTI, PostponedInsts);
+  bool Res = vectorizeHorReduction(P, Root, BB, R, PostponedInsts);
   Res |= tryToVectorize(PostponedInsts, R);
   return Res;
 }
@@ -20317,7 +20340,7 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
       continue;
     for (Value *Op : I->operands())
       if (auto *RootOp = dyn_cast<Instruction>(Op))
-        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
+        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R);
   }
   // Try to vectorize operands as vector bundles.
   for (CmpInst *I : CmpInsts) {
@@ -20384,7 +20407,7 @@ bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
     // pass2 - try to vectorize reductions only
     if (R.isDeleted(I))
       continue;
-    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, PostponedInsts);
     if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     // pass3 - try to match and vectorize a buildvector sequence.
@@ -20644,7 +20667,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (P->getNumIncomingValues() == 2) {
         // Try to match and vectorize a horizontal reduction.
         Instruction *Root = getReductionInstr(DT, P, BB, LI);
-        if (Root && vectorizeRootInstruction(P, Root, BB, R, TTI)) {
+        if (Root && vectorizeRootInstruction(P, Root, BB, R)) {
           Changed = true;
           It = BB->begin();
           E = BB->end();
@@ -20666,8 +20689,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         // vectorization.
         if (auto *PI = dyn_cast<Instruction>(P->getIncomingValue(I));
             PI && !IsInPostProcessInstrs(PI)) {
-          bool Res = vectorizeRootInstruction(nullptr, PI,
-                                              P->getIncomingBlock(I), R, TTI);
+          bool Res =
+              vectorizeRootInstruction(nullptr, PI, P->getIncomingBlock(I), R);
           Changed |= Res;
           if (Res && R.isDeleted(P)) {
             It = BB->begin();
@@ -20701,7 +20724,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (auto *VI = dyn_cast<Instruction>(V);
               VI && !IsInPostProcessInstrs(VI))
             // Try to match and vectorize a horizontal reduction.
-            OpsChanged |= vectorizeRootInstruction(nullptr, VI, BB, R, TTI);
+            OpsChanged |= vectorizeRootInstruction(nullptr, VI, BB, R);
         }
       }
       // Start vectorization of post-process list of instructions from the

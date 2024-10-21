@@ -19,18 +19,18 @@ using namespace coverage;
 static void sumBranches(size_t &NumBranches, size_t &CoveredBranches,
                         const ArrayRef<CountedRegion> &Branches) {
   for (const auto &BR : Branches) {
-    // Skip folded branches.
-    if (BR.Folded)
-      continue;
-
-    // "True" Condition Branches.
-    ++NumBranches;
-    if (BR.ExecutionCount > 0)
-      ++CoveredBranches;
-    // "False" Condition Branches.
-    ++NumBranches;
-    if (BR.FalseExecutionCount > 0)
-      ++CoveredBranches;
+    if (!BR.TrueFolded) {
+      // "True" Condition Branches.
+      ++NumBranches;
+      if (BR.ExecutionCount > 0)
+        ++CoveredBranches;
+    }
+    if (!BR.FalseFolded) {
+      // "False" Condition Branches.
+      ++NumBranches;
+      if (BR.FalseExecutionCount > 0)
+        ++CoveredBranches;
+    }
   }
 }
 

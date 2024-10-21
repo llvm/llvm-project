@@ -68,11 +68,23 @@ public:
     if (const auto *e{GetExpr(context_, expr)}) {
       for (const Symbol &symbol : evaluate::CollectSymbols(*e)) {
         const Symbol &root{GetAssociationRoot(symbol)};
-        if (IsFunction(root) && !IsElementalProcedure(root)) {
-          context_.Say(expr.source,
-              "User defined non-ELEMENTAL function "
-              "'%s' is not allowed in a WORKSHARE construct"_err_en_US,
-              root.name());
+        if (IsFunction(root)) {
+          std::string attrs{""};
+          if (!IsElementalProcedure(root)) {
+            attrs = " non-ELEMENTAL";
+          }
+          if (root.attrs().test(Attr::IMPURE)) {
+            if (attrs != "") {
+              attrs = "," + attrs;
+            }
+            attrs = " IMPURE" + attrs;
+          }
+          if (attrs != "") {
+            context_.Say(expr.source,
+                "User defined%s function '%s' is not allowed in a "
+                "WORKSHARE construct"_err_en_US,
+                attrs, root.name());
+          }
         }
       }
     }
@@ -2273,6 +2285,21 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
         }
       }
     }
+
+    // 2.11.5 Simd construct restriction (OpenMP 5.1)
+    if (auto *sl_clause{FindClause(llvm::omp::Clause::OMPC_safelen)}) {
+      if (auto *o_clause{FindClause(llvm::omp::Clause::OMPC_order)}) {
+        const auto &orderClause{
+            std::get<parser::OmpClause::Order>(o_clause->u)};
+        if (std::get<parser::OmpOrderClause::Type>(orderClause.v.t) ==
+            parser::OmpOrderClause::Type::Concurrent) {
+          context_.Say(sl_clause->source,
+              "The `SAFELEN` clause cannot appear in the `SIMD` directive "
+              "with `ORDER(CONCURRENT)` clause"_err_en_US);
+        }
+      }
+    }
+
     // Sema checks related to presence of multiple list items within the same
     // clause
     CheckMultListItems();
@@ -2336,11 +2363,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   SetContextClause(x);
 
-  llvm::omp::Clause clauseId = std::visit(
-      [this](auto &&s) { return GetClauseKindForParserClass(s); }, x.u);
-
   // The visitors for these clauses do their own checks.
-  switch (clauseId) {
+  switch (x.Id()) {
   case llvm::omp::Clause::OMPC_copyprivate:
   case llvm::omp::Clause::OMPC_enter:
   case llvm::omp::Clause::OMPC_lastprivate:
@@ -3217,7 +3241,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   DirectivesClauseTriple dirClauseTriple;
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(objectList, currSymbols);
-  CheckDefinableObjects(currSymbols, GetClauseKindForParserClass(x));
+  CheckDefinableObjects(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_lastprivate);
 
@@ -3230,7 +3254,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
           llvm::omp::Directive::OMPD_parallel, llvm::omp::privateReductionSet));
 
   CheckPrivateSymbolsInOuterCxt(
-      currSymbols, dirClauseTriple, GetClauseKindForParserClass(x));
+      currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_lastprivate);
 
   using LastprivateModifier = parser::OmpLastprivateClause::LastprivateModifier;
   const auto &maybeMod{std::get<std::optional<LastprivateModifier>>(x.v.t)};

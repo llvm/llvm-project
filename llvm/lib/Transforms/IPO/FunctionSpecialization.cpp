@@ -57,9 +57,9 @@ static cl::opt<unsigned> MaxBlockPredecessors(
     "considered during the estimation of dead code"));
 
 static cl::opt<unsigned> MinFunctionSize(
-    "funcspec-min-function-size", cl::init(300), cl::Hidden, cl::desc(
-    "Don't specialize functions that have less than this number of "
-    "instructions"));
+    "funcspec-min-function-size", cl::init(500), cl::Hidden,
+    cl::desc("Don't specialize functions that have less than this number of "
+             "instructions"));
 
 static cl::opt<unsigned> MaxCodeSizeGrowth(
     "funcspec-max-codesize-growth", cl::init(3), cl::Hidden, cl::desc(
@@ -641,12 +641,17 @@ bool FunctionSpecializer::run() {
         Metrics.analyzeBasicBlock(&BB, GetTTI(F), EphValues);
     }
 
+    // When specializing literal constants is enabled, always require functions
+    // to be larger than MinFunctionSize, to prevent excessive specialization.
+    const bool RequireMinSize =
+        !ForceSpecialization &&
+        (SpecializeLiteralConstant || !F.hasFnAttribute(Attribute::NoInline));
+
     // If the code metrics reveal that we shouldn't duplicate the function,
     // or if the code size implies that this function is easy to get inlined,
     // then we shouldn't specialize it.
     if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-        (!ForceSpecialization && !F.hasFnAttribute(Attribute::NoInline) &&
-         Metrics.NumInsts < MinFunctionSize))
+        (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
       continue;
 
     // TODO: For now only consider recursive functions when running multiple

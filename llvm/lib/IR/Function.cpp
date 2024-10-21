@@ -359,6 +359,10 @@ Attribute Argument::getAttribute(Attribute::AttrKind Kind) const {
   return getParent()->getParamAttribute(getArgNo(), Kind);
 }
 
+AttributeSet Argument::getAttributes() const {
+  return getParent()->getAttributes().getParamAttrs(getArgNo());
+}
+
 //===----------------------------------------------------------------------===//
 // Helper Methods in Function
 //===----------------------------------------------------------------------===//
