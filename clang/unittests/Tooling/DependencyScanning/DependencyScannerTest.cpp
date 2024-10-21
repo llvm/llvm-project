@@ -264,7 +264,8 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
     std::optional<ObjectRef> CASContents;
     auto Buf = DepFS.getBufferForFile(Path, /*FileSize*/ -1,
                                       /*RequiresNullTerminator*/ false,
-                                      /*IsVolatile*/ false, &CASContents);
+                                      /*IsVolatile*/ false, /*IsText*/ true,
+                                      &CASContents);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents, (*Buf)->getBuffer());
     ASSERT_TRUE(CASContents);
