@@ -8001,15 +8001,15 @@ def : Pat<(v1i64 (AArch64vsli (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn),
                                       (i32 vecshiftL64:$imm))),
           (SLId FPR64:$Rd, FPR64:$Rn, vecshiftL64:$imm)>;
 defm SQRSHRN : SIMDVectorRShiftNarrowBHS<0, 0b10011, "sqrshrn",
-                                         int_aarch64_neon_sqrshrn>;
+                  BinOpFrag<(truncssat_s (AArch64srshri node:$LHS, node:$RHS))>>;
 defm SQRSHRUN: SIMDVectorRShiftNarrowBHS<1, 0b10001, "sqrshrun",
-                                         int_aarch64_neon_sqrshrun>;
+                  BinOpFrag<(truncssat_u (AArch64srshri node:$LHS, node:$RHS))>>;
 defm SQSHLU : SIMDVectorLShiftBHSD<1, 0b01100, "sqshlu", AArch64sqshlui>;
 defm SQSHL  : SIMDVectorLShiftBHSD<0, 0b01110, "sqshl", AArch64sqshli>;
 defm SQSHRN  : SIMDVectorRShiftNarrowBHS<0, 0b10010, "sqshrn",
-                                         BinOpFrag<(truncssat_s (AArch64vashr node:$LHS, node:$RHS))>>;
+                  BinOpFrag<(truncssat_s (AArch64vashr node:$LHS, node:$RHS))>>;
 defm SQSHRUN : SIMDVectorRShiftNarrowBHS<1, 0b10000, "sqshrun",
-                                         BinOpFrag<(truncssat_u (AArch64vashr node:$LHS, node:$RHS))>>;
+                  BinOpFrag<(truncssat_u (AArch64vashr node:$LHS, node:$RHS))>>;
 defm SRI     : SIMDVectorRShiftBHSDTied<1, 0b01000, "sri", AArch64vsri>;
 def : Pat<(v1i64 (AArch64vsri (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn),
                                       (i32 vecshiftR64:$imm))),
@@ -8027,10 +8027,10 @@ defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
-                                         int_aarch64_neon_uqrshrn>;
+                  BinOpFrag<(truncusat_u (AArch64urshri node:$LHS, node:$RHS))>>;
 defm UQSHL   : SIMDVectorLShiftBHSD<1, 0b01110, "uqshl", AArch64uqshli>;
 defm UQSHRN  : SIMDVectorRShiftNarrowBHS<1, 0b10010, "uqshrn",
-                                         BinOpFrag<(truncusat_u (AArch64vlshr node:$LHS, node:$RHS))>>;
+                  BinOpFrag<(truncusat_u (AArch64vlshr node:$LHS, node:$RHS))>>;
 defm URSHR   : SIMDVectorRShiftBHSD<1, 0b00100, "urshr", AArch64urshri>;
 defm URSRA   : SIMDVectorRShiftBHSDTied<1, 0b00110, "ursra",
                 TriOpFrag<(add node:$LHS,
