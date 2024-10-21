@@ -352,6 +352,17 @@ add_header_library(
 )
 
 add_header_library(
+  sincosf16_utils
+  HDRS
+    sincosf16_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common  
+)
+
+add_header_library(
   sincos_eval
   HDRS
     sincos_eval.h
@@ -418,6 +429,21 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  cospif16
+  SRCS
+    cospif16.cpp
+  HDRS
+    ../cospif16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
   COMPILE_OPTIONS
     -O3
 )
@@ -535,14 +561,10 @@ add_entrypoint_object(
   HDRS
     ../sinpif16.h
   DEPENDS
-    libc.src.__support.common
+    .sincosf16_utils
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits 
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -O3
 )
