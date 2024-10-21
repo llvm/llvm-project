@@ -890,8 +890,7 @@ float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
   const auto *MF = MBB->getParent();
   // When optimizing for size we only consider the codesize impact of spilling
   // the register, not the runtime impact.
-  if (PSI && (MF->getFunction().hasOptSize() ||
-              llvm::shouldOptimizeForSize(MF, PSI, MBFI)))
+  if (PSI && llvm::shouldOptimizeForSize(MF, PSI, MBFI))
     return Weight;
   return Weight * MBFI->getBlockFreqRelativeToEntryBlock(MBB);
 }
