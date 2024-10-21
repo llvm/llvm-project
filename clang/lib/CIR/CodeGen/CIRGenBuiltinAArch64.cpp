@@ -3139,8 +3139,14 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NYI");
   }
   case NEON::BI__builtin_neon_vabd_v:
-  case NEON::BI__builtin_neon_vabdq_v:
-    llvm_unreachable("NYI");
+  case NEON::BI__builtin_neon_vabdq_v: {
+    llvm::StringRef name =
+        usgn ? "llvm.aarch64.neon.uabd" : "llvm.aarch64.neon.sabd";
+    if (mlir::cir::isFPOrFPVectorTy(ty))
+      name = "llvm.aarch64.neon.fabd";
+    return buildNeonCall(builder, {ty, ty}, Ops, name, ty,
+                         getLoc(E->getExprLoc()));
+  }
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v: {
     llvm_unreachable("NYI");
