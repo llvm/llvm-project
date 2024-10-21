@@ -3142,10 +3142,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     case options::OPT_fveclib:
       VecLibArg = A;
-      if (llvm::is_contained(VecLibImpliesNoMathErrno, A->getValue())) {
+      NoMathErrnoWasImpliedByVecLib =
+          llvm::is_contained(VecLibImpliesNoMathErrno, A->getValue());
+      if (NoMathErrnoWasImpliedByVecLib)
         MathErrno = false;
-        NoMathErrnoWasImpliedByVecLib = true;
-      }
       break;
     case options::OPT_fno_trapping_math:
       if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
