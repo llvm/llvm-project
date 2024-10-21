@@ -645,6 +645,7 @@ LOOP_ANALYSIS("should-run-extra-simple-loop-unswitch",
 #endif
 LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
+LOOP_PASS("evl-iv-simplify", EVLIndVarSimplifyPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
 LOOP_PASS("indvars", IndVarSimplifyPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
