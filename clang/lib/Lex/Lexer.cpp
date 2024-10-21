@@ -74,6 +74,19 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
 }
 
+/// Return true if we have an C++20 Modules contextual keyword(export, import
+/// or module).
+bool Token::isModuleContextualKeyword(bool AllowExport) const {
+  if (AllowExport && is(tok::kw_export))
+    return true;
+  if (isOneOf(tok::kw_import, tok::kw_module))
+    return true;
+  if (isNot(tok::identifier))
+    return false;
+  const auto *II = getIdentifierInfo();
+  return II->isModulesImport() || II->isModulesDeclaration();
+}
+
 /// Determine whether the token kind starts a simple-type-specifier.
 bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   switch (getKind()) {
@@ -3195,18 +3208,19 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
   return PP->HandleEndOfFile(Result, isPragmaLexer());
 }
 
-/// isNextPPTokenLParen - Return 1 if the next unexpanded token lexed from
-/// the specified lexer will return a tok::l_paren token, 0 if it is something
-/// else and 2 if there are no more tokens in the buffer controlled by the
-/// lexer.
-unsigned Lexer::isNextPPTokenLParen() {
+/// peekNextPPToken - Return std::nullopt if there are no more tokens in the
+/// buffer controlled by this lexer, otherwise return the next unexpanded
+/// token.
+std::optional<Token> Lexer::peekNextPPToken() {
   assert(!LexingRawMode && "How can we expand a macro from a skipping buffer?");
 
   if (isDependencyDirectivesLexer()) {
     if (NextDepDirectiveTokenIndex == DepDirectives.front().Tokens.size())
-      return 2;
-    return DepDirectives.front().Tokens[NextDepDirectiveTokenIndex].is(
-        tok::l_paren);
+      return std::nullopt;
+    Token Result;
+    (void)convertDependencyDirectiveToken(
+        DepDirectives.front().Tokens[NextDepDirectiveTokenIndex], Result);
+    return Result;
   }
 
   // Switch to 'skipping' mode.  This will ensure that we can lex a token
@@ -3235,8 +3249,8 @@ unsigned Lexer::isNextPPTokenLParen() {
   LexingRawMode = false;
 
   if (Tok.is(tok::eof))
-    return 2;
-  return Tok.is(tok::l_paren);
+    return std::nullopt;
+  return Tok;
 }
 
 /// Find the end of a version control conflict marker.
@@ -3997,11 +4011,17 @@ LexStart:
   case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
   case 'o': case 'p': case 'q': case 'r': case 's': case 't':    /*'u'*/
   case 'v': case 'w': case 'x': case 'y': case 'z':
-  case '_':
+  case '_': {
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
-    return LexIdentifierContinue(Result, CurPtr);
-
+    bool returnedToken = LexIdentifierContinue(Result, CurPtr);
+    if (returnedToken && Result.isModuleContextualKeyword() &&
+        LangOpts.CPlusPlusModules &&
+        PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine) &&
+        !LexingRawMode && !Is_PragmaLexer)
+      goto HandleDirective;
+    return returnedToken;
+  }
   case '$':   // $ in identifiers.
     if (LangOpts.DollarIdents) {
       if (!isLexingRawMode())
@@ -4484,8 +4504,8 @@ LexStart:
 
 HandleDirective:
   // We parsed a # character and it's the start of a preprocessing directive.
-
-  FormTokenWithChars(Result, CurPtr, tok::hash);
+  if (!Result.isOneOf(tok::kw_import, tok::kw_module))
+    FormTokenWithChars(Result, CurPtr, tok::hash);
   PP->HandleDirective(Result);
 
   if (PP->hadModuleLoaderFatalFailure())
@@ -4559,6 +4579,11 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setRawIdentifierData(TokPtr);
     if (!isLexingRawMode()) {
       const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
+      if (Result.isModuleContextualKeyword() &&
+          PP->HandleModuleContextualKeyword(Result, Result.isAtStartOfLine())) {
+        PP->HandleDirective(Result);
+        return false;
+      }
       if (II->isHandleIdentifierCase())
         return PP->HandleIdentifier(Result);
     }

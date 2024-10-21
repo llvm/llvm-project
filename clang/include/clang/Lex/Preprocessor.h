@@ -128,6 +128,70 @@ enum class EmbedResult {
   Empty = 2,    // Corresponds to __STDC_EMBED_EMPTY__
 };
 
+/// Represents module or partition name token sequance.
+///
+///     module-name:
+///           module-name-qualifier[opt] identifier
+///
+///     partition-name: [C++20]
+///           : module-name-qualifier[opt] identifier
+///
+///     module-name-qualifier
+///           module-name-qualifier[opt] identifier .
+///
+/// This class can only be created by the preprocessor and guarantees that the
+/// two source array being contiguous in memory and only contains 3 kind of
+/// tokens (identifier, '.' and ':'). And only available when the preprocessor
+/// returns annot_module_name token.
+///
+/// For exmaple:
+///
+/// export module m.n:c.d
+///
+/// The module name array has 3 tokens ['m', '.', 'n'].
+/// The partition name array has 4 tokens [':', 'c', '.', 'd'].
+///
+/// When import a partition in a named module fragment (Eg. import :part1;),
+/// the module name array will be empty, and the partition name array has 2
+/// tokens.
+///
+/// When we meet a private-module-fragment (Eg. module :private;), preprocessor
+/// will not return a annot_module_name token, but will return 2 separate tokens
+/// [':', 'kw_private'].
+class ModuleNameInfo {
+  friend class Preprocessor;
+  ArrayRef<Token> ModuleName;
+  ArrayRef<Token> PartitionName;
+
+  ModuleNameInfo(ArrayRef<Token> AnnotToks, std::optional<unsigned> ColonIndex);
+
+public:
+  /// Return the contiguous token array.
+  ArrayRef<Token> getTokens() const {
+    if (ModuleName.empty())
+      return PartitionName;
+    if (PartitionName.empty())
+      return ModuleName;
+    return ArrayRef(ModuleName.begin(), PartitionName.end());
+  }
+  bool hasModuleName() const { return !ModuleName.empty(); }
+  bool hasPartitionName() const { return !PartitionName.empty(); }
+  ArrayRef<Token> getModuleName() const { return ModuleName; }
+  ArrayRef<Token> getPartitionName() const { return PartitionName; }
+  Token getColonToken() const {
+    assert(hasPartitionName() && "Do not have a partition name");
+    return getPartitionName().front();
+  }
+
+  /// Under the standard C++ Modules, the dot is just part of the module name,
+  /// and not a real hierarchy separator. Flatten such module names now.
+  std::string getFlatName() const;
+
+  void buildNamedModuleIdPath(
+      Preprocessor &P,
+      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) const;
+};
+
 /// Engages in a tight little dance with the lexer to efficiently
 /// preprocess tokens.
 ///
@@ -336,6 +400,15 @@ private:
 
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
+  
+  struct ExportContextualKeywordInfo {
+    Token ExportTok;
+    bool TokAtPhysicalStartOfLine;
+  };
+
+  /// Whether the last token we lexed was an 'export' keyword.
+  std::optional<ExportContextualKeywordInfo> LastTokenWasExportKeyword =
+      std::nullopt;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
@@ -1751,6 +1824,17 @@ public:
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
 
+  bool LexModuleNameOrHeaderName(Token &Result, bool IsImport);
+  /// Callback invoked when the lexer sees one of export, import or module token
+  /// at the start of a line.
+  ///
+  /// This consumes the import, module directive, modifies the
+  /// lexer/preprocessor state, and advances the lexer(s) so that the next token
+  /// read is the correct one.
+  bool HandleModuleContextualKeyword(Token &Result, bool TokAtPhysicalStartOfLine);
+
+  void HandleModuleDirective(Token &ModuleOrImportKeyword);
+  void LexAfterModuleImport(SmallVectorImpl<Token> &Suffix, bool IsImport);
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
@@ -2328,7 +2412,7 @@ public:
   ///
   /// \return The location of the end of the directive (the terminating
   /// newline).
-  SourceLocation CheckEndOfDirective(const char *DirType,
+  SourceLocation CheckEndOfDirective(StringRef DirType,
                                      bool EnableMacros = false);
 
   /// Read and discard all tokens remaining on the current line until
@@ -2634,10 +2718,16 @@ private:
 
   void removeCachedMacroExpandedTokensOfLastLexer();
 
+  /// Peek the next token. If so, return the token, if not, this
+  /// method should have no observable side-effect on the lexed tokens.
+  std::optional<Token> peekNextPPToken();
+
   /// Determine whether the next preprocessor token to be
   /// lexed is a '('.  If so, consume the token and return true, if not, this
   /// method should have no observable side-effect on the lexed tokens.
-  bool isNextPPTokenLParen();
+  bool isNextPPTokenLParen() {
+    return peekNextPPToken().value_or(Token{}).is(tok::l_paren);
+  }
 
   /// After reading "MACRO(", this method is invoked to read all of the formal
   /// arguments specified for the macro invocation.  Returns null on error.
@@ -2763,6 +2853,7 @@ private:
   void HandleIncludeNextDirective(SourceLocation HashLoc, Token &Tok);
   void HandleIncludeMacrosDirective(SourceLocation HashLoc, Token &Tok);
   void HandleImportDirective(SourceLocation HashLoc, Token &Tok);
+  void HandleCXXModuleOrImportDirective(Token &KeywordTok);
   void HandleMicrosoftImportDirective(Token &Tok);
 
 public:

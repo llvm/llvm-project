@@ -700,7 +700,8 @@ bool TokenLexer::Lex(Token &Tok) {
   HasLeadingSpace = false;
 
   // Handle recursive expansion!
-  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() != nullptr) {
+  if (!Tok.isAnnotation() && !Tok.isModuleContextualKeyword() &&
+      Tok.getIdentifierInfo() != nullptr) {
     // Change the kind of this identifier to the appropriate token kind, e.g.
     // turning "for" into a keyword.
     IdentifierInfo *II = Tok.getIdentifierInfo();
@@ -922,13 +923,13 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 }
 
 /// isNextTokenLParen - If the next token lexed will pop this macro off the
-/// expansion stack, return 2.  If the next unexpanded token is a '(', return
-/// 1, otherwise return 0.
-unsigned TokenLexer::isNextTokenLParen() const {
+/// expansion stack, return std::nullopt, otherwise return the next unexpanded
+/// token.
+std::optional<Token> TokenLexer::peekNextPPToken() const {
   // Out of tokens?
   if (isAtEnd())
-    return 2;
-  return Tokens[CurTokenIdx].is(tok::l_paren);
+    return std::nullopt;
+  return Tokens[CurTokenIdx];
 }
 
 /// isParsingPreprocessorDirective - Return true if we are in the middle of a
