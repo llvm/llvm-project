@@ -21,6 +21,9 @@
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -194,11 +197,28 @@ int Compilation::ExecuteCommand(const Command &C,
   if (LogOnly)
     return 0;
 
+  // We don't use any timers or llvm::TimeGroup's because those are tied into
+  // the global static timer list which, in principle, could be cleared without
+  // us knowing about it.
+  llvm::TimeRecord StartTime;
+  if (getArgs().hasArg(options::OPT_time))
+    StartTime = llvm::TimeRecord::getCurrentTime(/*Start=*/true);
+
   std::string Error;
   bool ExecutionFailed;
   int Res = C.Execute(Redirects, &Error, &ExecutionFailed);
   if (PostCallback)
     PostCallback(C, Res);
+
+  if (getArgs().hasArg(options::OPT_time)) {
+    llvm::TimeRecord Time = llvm::TimeRecord::getCurrentTime(/*Start=*/false);
+    Time -= StartTime;
+    llvm::StringRef Name = llvm::sys::path::filename(C.getExecutable());
+    llvm::errs() << "# " << Name << " "
+                 << llvm::format("%0.2f", Time.getUserTime()) << " "
+                 << llvm::format("%0.2f", Time.getSystemTime()) << "\n";
+  }
+
   if (!Error.empty()) {
     assert(Res && "Error string set with 0 result code!");
     getDriver().Diag(diag::err_drv_command_failure) << Error;
