@@ -316,9 +316,9 @@ void LoongArch::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void LoongArch::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
     if (ctx.arg.is64)
-      write64le(buf, s.getVA());
+      write64le(buf, s.getVA(ctx));
     else
-      write32le(buf, s.getVA());
+      write32le(buf, s.getVA(ctx));
   }
 }
 
