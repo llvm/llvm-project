@@ -344,6 +344,7 @@ class DXILOp<int opcode, DXILOpClass opclass> {
   // LLVM Intrinsic DXIL Operation maps to
   Intrinsic LLVMIntrinsic = ?;
 
+  // Non-trivial LLVM Intrinsics DXIL Operation maps to
   list<IntrinsicSelect> intrinsic_selects = [];
 
   // Result type of the op
