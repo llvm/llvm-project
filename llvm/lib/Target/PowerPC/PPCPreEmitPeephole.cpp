@@ -109,6 +109,149 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
+    // The funtion will simply the zeroing accumulator and spilling instrcutions
+    // into simple xxlxor and spilling instrcuctions.
+    // From:
+    // setaccz acci
+    // xxmfacc acci
+    // stxv vsr(i*4+0), D(Base)
+    // stxv vsr(i*4+1), D-16(Base)
+    // stxv vsr(i*4+2), D-32(Base)
+    // stxv vsr(i*4+3), D-48(Base)
+
+    // To:
+    // xxlxor vsr(i*4), 0, 0
+    // stxv vsr(i*4), D(Base)
+    // stxv vsr(i*4), D-16(Base)
+    // stxv vsr(i*4), D-32(Base)
+    // stxv vsr(i*4), D-48(Base)
+    bool
+    OptimizeZeroingAccumulatorSpilling(MachineBasicBlock &MBB,
+                                       const TargetRegisterInfo *TRI) const {
+      bool Changed = false;
+      DenseSet<MachineInstr *> InstrsToErase;
+      for (auto BBI = MBB.instr_begin(); BBI != MBB.instr_end(); ++BBI) {
+        if (BBI->getOpcode() != PPC::XXSETACCZ)
+          continue;
+        Register ACCZReg = BBI->getOperand(0).getReg();
+        MachineInstr *XXSETACCZInstr = nullptr;
+        MachineInstr *XXMFACCInstr = nullptr;
+        auto STXVInstrIter = MBB.begin();
+        bool isVSLRegBaseKilled = false;
+        Register VSLRegBase;
+
+        XXSETACCZInstr = &*BBI++;
+        for (auto TBBI = BBI; TBBI != MBB.instr_end(); ++TBBI) {
+          if (!XXMFACCInstr) {
+            if (TBBI->getOpcode() != PPC::XXMFACC) {
+              // Check whether the accumulator is redefined between XXSETACCZ
+              // and XXMFACC. we will not optimize them.
+              bool IsACCZRegRedefined = false;
+              for (unsigned i = 0; i < TBBI->getNumOperands(); i++) {
+                MachineOperand &Operand = TBBI->getOperand(i);
+                if (!Operand.isReg())
+                  continue;
+                Register OperandReg = Operand.getReg();
+                // Check whether the accumulator `ACCZReg` is redefined.
+                if (OperandReg == ACCZReg && Operand.isDef())
+                  IsACCZRegRedefined = true;
+              }
+              // If the ACCZReg is redefined, not check whether the `XXSETACCZ`
+              // has a corresponding `XXMFACC` any more.
+              if (IsACCZRegRedefined)
+                break;
+
+              continue;
+            } else {
+              // Check if XXSETACCZ uses the same accumulator as the `XXMFACC`
+              // instruction.
+              if (TBBI->getOperand(0).getReg() != ACCZReg)
+                continue;
+            }
+
+            XXMFACCInstr = &*TBBI++;
+            VSLRegBase = (ACCZReg - PPC::ACC0) * 4 + PPC::VSL0;
+          }
+
+          // Check whether it is a PPC::STXV instruction.
+          if (TBBI->getOpcode() != PPC::STXV) {
+            bool isVSLRedefinedOrUsed = false;
+            // Check whether the VSL register mapped to ACCWReg is redefined or
+            // used by non-STXV instructions.
+            for (unsigned i = 0; i < TBBI->getNumOperands(); i++) {
+              MachineOperand &Operand = TBBI->getOperand(i);
+              if (!Operand.isReg())
+                continue;
+              Register OperandReg = Operand.getReg();
+              Register VSRpBase = (ACCZReg - PPC::ACC0) * 2 + PPC::VSRp0;
+              if ((OperandReg >= VSLRegBase && OperandReg <= VSLRegBase + 3) ||
+                  (OperandReg > VSRpBase && OperandReg <= VSRpBase + 1)) {
+                isVSLRedefinedOrUsed = true;
+                break;
+              }
+            }
+            // If the VSL register mapped to ACCWReg is redefined or used by a
+            // non-STXV instruction, we will not perform the optimization.
+            if (isVSLRedefinedOrUsed) {
+              XXMFACCInstr = nullptr;
+              break;
+            }
+          } else {
+            // Check whether there are four STXV instructions continuously.
+            STXVInstrIter = TBBI;
+            for (unsigned InstrCount = 0; InstrCount < 4;
+                 ++InstrCount, ++TBBI) {
+              if (TBBI->getOpcode() == PPC::STXV) {
+                Register Reg0 = TBBI->getOperand(0).getReg();
+                // If the VSLRegBase Register is killed, we put the kill in the
+                // last STXV instruction.
+                // FIXME: We may need to update killed flag for other vsr as
+                // well.
+                if (Reg0 == VSLRegBase && TBBI->getOperand(0).isKill())
+                  isVSLRegBaseKilled = true;
+                if (Reg0 >= VSLRegBase && Reg0 <= VSLRegBase + 3)
+                  continue;
+                // The register operand of the STXV instruction is not a VSL
+                // register mapped to ACCWReg.
+                XXMFACCInstr = nullptr;
+                break;
+              }
+            }
+          }
+          // There are four consecutive STXV instructions.
+          break;
+        }
+
+        if (XXMFACCInstr && STXVInstrIter != MBB.begin()) {
+          for (unsigned InstrCount = 0; InstrCount < 4;
+               ++InstrCount, ++STXVInstrIter) {
+            Register VSLReg = STXVInstrIter->getOperand(0).getReg();
+            STXVInstrIter->substituteRegister(VSLReg, VSLRegBase, 0, *TRI);
+            STXVInstrIter->getOperand(0).setIsKill(false);
+          }
+
+          if (isVSLRegBaseKilled)
+            (--STXVInstrIter)->getOperand(0).setIsKill(true);
+
+          DebugLoc DL = XXMFACCInstr->getDebugLoc();
+          const PPCInstrInfo *TII = XXMFACCInstr->getMF()
+                                        ->getSubtarget<PPCSubtarget>()
+                                        .getInstrInfo();
+
+          BuildMI(MBB, XXMFACCInstr, DL, TII->get(PPC::XXLXOR), VSLRegBase)
+              .addReg(VSLRegBase, RegState::Undef)
+              .addReg(VSLRegBase, RegState::Undef);
+
+          InstrsToErase.insert(XXSETACCZInstr);
+          InstrsToErase.insert(XXMFACCInstr);
+          Changed |= true;
+        }
+      }
+      for (MachineInstr *MI : InstrsToErase)
+        MI->eraseFromParent();
+      return Changed;
+    }
+
     // This function removes any redundant load immediates. It has two level
     // loops - The outer loop finds the load immediates BBI that could be used
     // to replace following redundancy. The inner loop scans instructions that
@@ -466,6 +609,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
         Changed |= removeRedundantLIs(MBB, TRI);
         Changed |= addLinkerOpt(MBB, TRI);
         Changed |= removeAccPrimeUnprime(MBB);
+        Changed |= OptimizeZeroingAccumulatorSpilling(MBB, TRI);
         for (MachineInstr &MI : MBB) {
           unsigned Opc = MI.getOpcode();
           if (Opc == PPC::UNENCODED_NOP) {
