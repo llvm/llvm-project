@@ -1,5 +1,5 @@
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include %s 2>&1 | FileCheck -check-prefix=SDAG %s
-// RUN: llvm-tblgen -gen-global-isel -optimize-match-table=false -I %p/../../include %s -o - < %s | FileCheck -check-prefix=GISEL %s
+// RUN: llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include %s 2>&1 | FileCheck -check-prefix=SDAG %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -optimize-match-table=false -I %p/../../include %s -o - < %s | FileCheck -check-prefix=GISEL %s
 
 include "llvm/Target/Target.td"
 

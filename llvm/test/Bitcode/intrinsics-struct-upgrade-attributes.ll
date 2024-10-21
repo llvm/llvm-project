@@ -1,3 +1,4 @@
+; REQUIRES: aarch64-registered-target
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 
 %struct.__neon_int8x8x2_t = type { <8 x i8>, <8 x i8> }

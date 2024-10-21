@@ -3,6 +3,7 @@
 ; origin tracking. These tests are deliberately shorter than neon_vst.ll, due
 ; to the verbosity of the output.
 ;
+; REQUIRES: aarch64-registered-target
 ; RUN: opt < %s -passes=msan -msan-track-origins=2 -S | FileCheck %s
 ;
 ; Forked from llvm/test/CodeGen/AArch64/arm64-st1.ll

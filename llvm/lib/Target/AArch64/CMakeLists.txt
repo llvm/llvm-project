@@ -6,10 +6,10 @@ tablegen(LLVM AArch64GenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM AArch64GenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM AArch64GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
 tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
-tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
-tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel ${ENABLED_INTRINSIC_TARGETS})
+tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64O0PreLegalizerCombiner")
 tablegen(LLVM AArch64GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
@@ -18,7 +18,7 @@ tablegen(LLVM AArch64GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64PostLegalizerCombiner")
 tablegen(LLVM AArch64GenPostLegalizeGILowering.inc -gen-global-isel-combiner
               -combiners="AArch64PostLegalizerLowering")
-tablegen(LLVM AArch64GenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM AArch64GenInstrInfo.inc -gen-instr-info ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM AArch64GenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AArch64GenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM AArch64GenRegisterBank.inc -gen-register-bank)

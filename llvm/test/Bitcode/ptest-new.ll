@@ -1,4 +1,5 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; REQUIRES: x86-registered-target
 ; RUN: verify-uselistorder < %s
 
 define i32 @foo(<2 x i64> %bar) nounwind {

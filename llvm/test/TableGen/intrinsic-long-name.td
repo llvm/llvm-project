@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s
+// RUN: llvm-tblgen -gen-intrinsic-enums --enabled-targets=all -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s
 // XFAIL: vg_leak
 
 include "llvm/IR/Intrinsics.td"

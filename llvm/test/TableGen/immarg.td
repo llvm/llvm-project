@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-global-isel -optimize-match-table=false -I %p/Common -I %p/../../include %s -o - < %s | FileCheck -check-prefix=GISEL %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -optimize-match-table=false -I %p/Common -I %p/../../include %s -o - < %s | FileCheck -check-prefix=GISEL %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -10,7 +10,7 @@ def int_mytarget_sleep1 : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 // GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
 // GISEL-NEXT: // MIs[0] Operand 0
-// GISEL-NEXT: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode2(Intrinsic::mytarget_sleep0),
+// GISEL-NEXT: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode4(Intrinsic::mytarget_sleep0),
 // GISEL-NEXT: // MIs[0] src
 // GISEL-NEXT: GIM_CheckIsImm, /*MI*/0, /*Op*/1,
 // GISEL-NEXT: // (intrinsic_void {{[0-9]+}}:{ *:[iPTR] }, (timm:{ *:[i32] }):$src)  =>  (SLEEP0 (timm:{ *:[i32] }):$src)

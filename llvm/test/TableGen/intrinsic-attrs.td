@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include -DTEST_INTRINSICS_SUPPRESS_DEFS %s | FileCheck %s
+// RUN: llvm-tblgen -gen-intrinsic-impl --enabled-targets=all -I %p/../../include -DTEST_INTRINSICS_SUPPRESS_DEFS %s | FileCheck %s
 
 include "llvm/IR/Intrinsics.td"
 

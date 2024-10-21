@@ -1,3 +1,4 @@
+; REQUIRES: amdgpu-registered-target
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown < %s | FileCheck %s
 
 define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i32 %s) {

@@ -30,7 +30,7 @@ def InstA : Instruction {
 }
 
 // RUN: llvm-tblgen -gen-instr-info -I %p/../../include %s \
-// RUN:   -instr-info-expand-mi-operand-info=1 \
+// RUN:   -instr-info-expand-mi-operand-info=1 --enabled-targets=all \
 // RUN:   | FileCheck %s --check-prefix=CHECK-EXPAND
 // CHECK-EXPAND: #ifdef GET_INSTRINFO_OPERAND_TYPE
 // CHECK-EXPAND: OpcodeOperandTypes[] = {
@@ -39,7 +39,7 @@ def InstA : Instruction {
 // CHECK-EXPAND: #endif // GET_INSTRINFO_OPERAND_TYPE
 
 // RUN: llvm-tblgen -gen-instr-info -I %p/../../include %s \
-// RUN:   -instr-info-expand-mi-operand-info=0 \
+// RUN:   -instr-info-expand-mi-operand-info=0 --enabled-targets=all \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOEXPAND
 // CHECK-NOEXPAND: #ifdef GET_INSTRINFO_OPERAND_TYPE
 // CHECK-NOEXPAND: OpcodeOperandTypes[] = {
