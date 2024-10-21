@@ -46,6 +46,12 @@ code bases.
 
 - The ``clang-rename`` tool has been removed.
 
+- Removed support for RenderScript targets. This technology is
+  `officially deprecated <https://developer.android.com/guide/topics/renderscript/compute>`_
+  and users are encouraged to
+  `migrate to Vulkan <https://developer.android.com/guide/topics/renderscript/migrate>`_
+  or other options.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
