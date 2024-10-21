@@ -117,8 +117,9 @@ FileSystem::~FileSystem() = default;
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
-                             bool RequiresNullTerminator, bool IsVolatile) {
-  auto F = openFileForRead(Name);
+                             bool RequiresNullTerminator, bool IsVolatile,
+                             bool IsText) {
+  auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
 
@@ -279,6 +280,8 @@ public:
 
   ErrorOr<Status> status(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadBinary(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
@@ -300,6 +303,17 @@ private:
     Path.toVector(Storage);
     sys::fs::make_absolute(WD->get().Resolved, Storage);
     return Storage;
+  }
+
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadWithFlags(const Twine &Name, sys::fs::OpenFlags Flags) {
+    SmallString<256> RealName, Storage;
+    Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
+        adjustPath(Name, Storage), Flags, &RealName);
+    if (!FDOrErr)
+      return errorToErrorCode(FDOrErr.takeError());
+    return std::unique_ptr<File>(
+        new RealFile(*FDOrErr, Name.str(), RealName.str()));
   }
 
   struct WorkingDirectory {
@@ -324,13 +338,12 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
-  SmallString<256> RealName, Storage;
-  Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      adjustPath(Name, Storage), sys::fs::OF_None, &RealName);
-  if (!FDOrErr)
-    return errorToErrorCode(FDOrErr.takeError());
-  return std::unique_ptr<File>(
-      new RealFile(*FDOrErr, Name.str(), RealName.str()));
+  return openFileForReadWithFlags(Name, sys::fs::OF_Text);
+}
+
+ErrorOr<std::unique_ptr<File>>
+RealFileSystem::openFileForReadBinary(const Twine &Name) {
+  return openFileForReadWithFlags(Name, sys::fs::OF_None);
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
