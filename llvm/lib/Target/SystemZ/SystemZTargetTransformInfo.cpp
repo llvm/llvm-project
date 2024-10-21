@@ -1387,57 +1387,6 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
   return NumVectorMemOps + NumPermutes;
 }
 
-// EXPERIMENTAL
-static cl::opt<unsigned> REDLIM("redlim", cl::init(0));
-
-InstructionCost getFPReductionCost(unsigned NumVec, unsigned ScalarBits) {
-  unsigned NumEltsPerVecReg = (SystemZ::VectorBits / ScalarBits);
-  InstructionCost Cost = 0;
-  Cost += NumVec - 1;        // Full vector operations.
-  Cost += NumEltsPerVecReg;  // Last vector scalar operations.
-  return Cost;
-}
-
-InstructionCost
-SystemZTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                           std::optional<FastMathFlags> FMF,
-                                           TTI::TargetCostKind CostKind) {
-  if (!TTI::requiresOrderedReduction(FMF) && ST->hasVector() &&
-      (Opcode == Instruction::FAdd || Opcode == Instruction::FMul)) {
-    unsigned NumVectors = getNumVectorRegs(Ty);
-    unsigned ScalarBits = Ty->getScalarSizeInBits();
-
-    // // EXPERIMENTAL: better to not vectorize small vectors?:
-    // unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
-    // if (NumElts <= REDLIM)
-    //   return NumVectors * 8;  // => MachineCombiner
-
-    // // EXPERIMENTAL: Return a low cost to enable heavily.
-    // return NumVectors / 2;
-
-    return getFPReductionCost(NumVectors, ScalarBits);
-  }
-
-  return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
-}
-
-InstructionCost
-SystemZTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                       FastMathFlags FMF,
-                                       TTI::TargetCostKind CostKind) {
-  if (Ty->isFPOrFPVectorTy() && ST->hasVectorEnhancements1()) {
-    unsigned NumVectors = getNumVectorRegs(Ty);
-    unsigned ScalarBits = Ty->getScalarSizeInBits();
-
-    // // EXPERIMENTAL: Return a low cost to enable heavily.
-    // return NumVectors / 2;
-
-    return getFPReductionCost(NumVectors, ScalarBits);
-  }
-
-  return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
-}
-
 static int
 getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                             const SmallVectorImpl<Type *> &ParamTys) {
