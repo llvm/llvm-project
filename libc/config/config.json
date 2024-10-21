@@ -103,6 +103,10 @@
     "LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER": {
       "value": true,
       "doc": "Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved."
+    },
+    "LIBC_CONF_SETJMP_FORTIFICATION": {
+      "value": true,
+      "doc": "Protect jmp_buf by masking its contents and storing a simple checksum, to make it harder for an attacker to read meaningful information from a jmp_buf or to modify it. This is only supported on x86-64 Linux."
     }
   },
   "time": {
