@@ -1160,9 +1160,8 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
     } else if (auto dimOp = dyn_cast<AffineDimExpr>(result)) {
       auto pos = dimOp.getPosition();
       // Expect dim to be unset.
-      if (coeffientMap.find(pos) != coeffientMap.end())
+      if (!coeffientMap.try_emplace(pos, 0).second)
         return false;
-      coeffientMap[pos] = 0;
     } else {
       return false;
     }
