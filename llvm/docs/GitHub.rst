@@ -193,7 +193,7 @@ commonly used first:
 
   ::
 
-    git push -f
+    git push --force
     gh pr merge --squash --delete-branch
 
   This force push may ask if you intend to push hundreds, or potentially
@@ -294,7 +294,7 @@ checks:
   ninja check
 
   # Push the rebased changes to your fork.
-  git push origin my_change -f
+  git push origin my_change --force
 
   # Now merge it
   gh pr merge --squash --delete-branch
