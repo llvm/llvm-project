@@ -14,6 +14,18 @@ add_object_library(
     libc.src.errno.errno
 )
 
+add_object_library(
+  timezone
+  SRCS
+    timezone.cpp
+  HDRS
+    timezone.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.CPP.limits
+    libc.src.errno.errno
+)
+
 add_entrypoint_object(
   asctime
   SRCS
@@ -54,6 +66,43 @@ add_entrypoint_object(
     ctime_r.cpp
   HDRS
     ctime_r.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.include.time
+)
+
+add_entrypoint_object(
+  localtime
+  SRCS
+    localtime.cpp
+  HDRS
+    localtime.h
+  DEPENDS
+    .time_utils
+    .timezone
+    libc.hdr.types.time_t
+    libc.include.time
+)
+
+add_entrypoint_object(
+  localtime_r
+  SRCS
+    localtime_r.cpp
+  HDRS
+    localtime_r.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.include.time
+)
+
+add_entrypoint_object(
+  localtime_s
+  SRCS
+    localtime_s.cpp
+  HDRS
+    localtime_s.h
   DEPENDS
     .time_utils
     libc.hdr.types.time_t

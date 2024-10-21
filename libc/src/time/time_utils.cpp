@@ -8,8 +8,13 @@
 
 #include "src/time/time_utils.h"
 #include "src/__support/CPP/limits.h" // INT_MIN, INT_MAX
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/time/timezone.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
@@ -24,6 +29,26 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
     years--;
   *remainingDays -= years * daysPerYears;
   return years;
+}
+
+volatile int file_usage = 0;
+
+void release_file(FILE *fp, char *timezone) {
+  file_usage = 0;
+  fclose(fp);
+}
+
+void acquire_file(FILE *fp, char *timezone, size_t timezone_size) {
+  while (1) {
+    if (file_usage == 0) {
+      file_usage = 1;
+      break;
+    }
+  }
+
+  if (fgets(timezone, (int)timezone_size, fp) == NULL) {
+    release_file(fp, timezone);
+  }
 }
 
 // First, divide "total_seconds" by the number of seconds in a day to get the
@@ -129,6 +154,28 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   if (years > INT_MAX || years < INT_MIN)
     return time_utils::out_of_range();
 
+  char timezone[TimeConstants::TIMEZONE_SIZE];
+  char *env_tz = getenv("TZ");
+  FILE *fp = NULL;
+  if (env_tz) {
+    strncpy(timezone, env_tz, sizeof(timezone));
+    timezone[sizeof(timezone) - 1] = '\0';
+  } else {
+    fp = fopen("/etc/timezone", "rb");
+    if (fp == NULL) {
+      return time_utils::out_of_range();
+    }
+
+    acquire_file(fp, timezone, TimeConstants::TIMEZONE_SIZE);
+  }
+
+  if (fp != NULL && file_usage == 0) {
+    release_file(fp, timezone);
+    return time_utils::out_of_range();
+  }
+
+  int offset = timezone::get_timezone_offset(timezone);
+
   // All the data (years, month and remaining days) was calculated from
   // March, 2000. Thus adjust the data to be from January, 1900.
   tm->tm_year = static_cast<int>(years + 2000 - TimeConstants::TIME_YEAR_BASE);
@@ -144,10 +191,41 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
                        TimeConstants::SECONDS_PER_MIN);
   tm->tm_sec =
       static_cast<int>(remainingSeconds % TimeConstants::SECONDS_PER_MIN);
-  // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
-  tm->tm_isdst = 0;
+
+  set_dst(tm);
+  if (tm->tm_isdst > 0 && offset != 0) {
+    tm->tm_hour += 1;
+  }
+
+  if (offset != 0) {
+    tm->tm_hour += offset;
+  }
+
+  if (file_usage == 1) {
+    release_file(fp, timezone);
+  }
 
   return 0;
+}
+
+void set_dst(struct tm *tm) {
+  int dst;
+  int sunday;
+
+  dst = 0;
+  sunday = tm->tm_mday - tm->tm_wday;
+
+  if (tm->tm_mon < 3 || tm->tm_mon > 11) {
+    dst = 0;
+  } else if (tm->tm_mon > 3 && tm->tm_mon < 11) {
+    dst = 1;
+  } else if (tm->tm_mon == 3) {
+    dst = sunday >= 8;
+  } else {
+    dst = sunday <= 0;
+  }
+
+  tm->tm_isdst = dst;
 }
 
 } // namespace time_utils
