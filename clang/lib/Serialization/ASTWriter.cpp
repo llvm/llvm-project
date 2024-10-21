@@ -4793,6 +4793,24 @@ bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
     Changed = true;
   }
 
+  // If we are generating a normal PCH (EG. not a C++ module).
+  if (!WritingModule) {
+    // Use the vfs overlay if it exists to translate paths.
+    auto &FileSys =
+        Context->getSourceManager().getFileManager().getVirtualFileSystem();
+    if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FileSys)) {
+      if (auto Result = RFS->lookupPath(StringRef(Path.data(), Path.size()))) {
+        if (std::optional<StringRef> Redirect = Result->getExternalRedirect()) {
+          const char *data = Redirect->data();
+          const size_t size = Redirect->size();
+          Path.resize(size);
+          Path.assign(data, data + size);
+          Changed = true;
+        }
+      }
+    }
+  }
+
   return Changed;
 }
 
