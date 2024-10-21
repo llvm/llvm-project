@@ -72,6 +72,8 @@ FormatTokenLexer::FormatTokenLexer(
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
 
+  for (const auto &TemplateName : Style.TemplateNames)
+    TemplateNames.insert(&IdentTable.get(TemplateName));
   for (const auto &TypeName : Style.TypeNames)
     TypeNames.insert(&IdentTable.get(TypeName));
 }
@@ -100,6 +102,13 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
+  if (Style.InsertNewlineAtEOF) {
+    auto &TokEOF = *Tokens.back();
+    if (TokEOF.NewlinesBefore == 0) {
+      TokEOF.NewlinesBefore = 1;
+      TokEOF.OriginalColumn = 0;
+    }
+  }
   return Tokens;
 }
 
@@ -1361,6 +1370,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (TemplateNames.contains(Identifier))
+        FormatTok->setFinalizedType(TT_TemplateName);
       else if (TypeNames.contains(Identifier))
         FormatTok->setFinalizedType(TT_TypeName);
     }

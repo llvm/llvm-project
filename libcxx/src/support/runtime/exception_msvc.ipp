@@ -11,8 +11,7 @@
 #  error this header can only be used when targeting the MSVC ABI
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <__verbose_abort>
 
 extern "C" {
 typedef void(__cdecl* terminate_handler)();
@@ -43,20 +42,18 @@ terminate_handler set_terminate(terminate_handler func) noexcept { return ::set_
 terminate_handler get_terminate() noexcept { return ::_get_terminate(); }
 
 [[noreturn]] void terminate() noexcept {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     (*get_terminate())();
     // handler should not return
-    fprintf(stderr, "terminate_handler unexpectedly returned\n");
-    ::abort();
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+    __libcpp_verbose_abort("terminate_handler unexpectedly returned\n");
+#if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     // handler should not throw exception
-    fprintf(stderr, "terminate_handler unexpectedly threw an exception\n");
-    ::abort();
+    __libcpp_verbose_abort("terminate_handler unexpectedly threw an exception\n");
   }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 bool uncaught_exception() noexcept { return uncaught_exceptions() > 0; }

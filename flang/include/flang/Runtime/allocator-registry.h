@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_RUNTIME_ALLOCATOR_H_
-#define FORTRAN_RUNTIME_ALLOCATOR_H_
+#ifndef FORTRAN_RUNTIME_ALLOCATOR_REGISTRY_H_
+#define FORTRAN_RUNTIME_ALLOCATOR_REGISTRY_H_
 
 #include "flang/Common/api-attrs.h"
 #include <cstdlib>
@@ -62,4 +62,4 @@ RT_OFFLOAD_VAR_GROUP_END
 
 } // namespace Fortran::runtime
 
-#endif // FORTRAN_RUNTIME_ALLOCATOR_H_
+#endif // FORTRAN_RUNTIME_ALLOCATOR_REGISTRY_H_

@@ -49,6 +49,9 @@ struct VPlanTransforms {
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
 
+  /// Explicitly unroll \p Plan by \p UF.
+  static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
+
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
@@ -105,14 +108,21 @@ struct VPlanTransforms {
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
   /// \returns true if the transformation succeeds, or false if it doesn't.
-  static bool tryAddExplicitVectorLength(VPlan &Plan);
+  static bool
+  tryAddExplicitVectorLength(VPlan &Plan,
+                             const std::optional<unsigned> &MaxEVLSafeElements);
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
   // insertion point.
   static void createInterleaveGroups(
-      const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+      VPlan &Plan,
+      const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
+          &InterleaveGroups,
       VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
+
+  /// Remove dead recipes from \p Plan.
+  static void removeDeadRecipes(VPlan &Plan);
 };
 
 } // namespace llvm

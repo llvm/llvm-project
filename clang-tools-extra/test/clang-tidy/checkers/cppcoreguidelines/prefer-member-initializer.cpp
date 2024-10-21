@@ -641,9 +641,9 @@ struct S3 {
 }
 
 namespace GH82970 {
-struct InitFromBingingDecl {
+struct InitFromBindingDecl {
   int m;
-  InitFromBingingDecl() {
+  InitFromBindingDecl() {
     struct { int i; } a;
     auto [n] = a;
     m = n;

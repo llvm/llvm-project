@@ -622,7 +622,7 @@ public:
         return CU::UNWIND_ARM64_MODE_DWARF;
       case MCCFIInstruction::OpDefCfa: {
         // Defines a frame pointer.
-        unsigned XReg =
+        MCRegister XReg =
             getXRegFromWReg(*MRI.getLLVMRegNum(Inst.getRegister(), true));
 
         // Other CFA registers than FP are not supported by compact unwind.

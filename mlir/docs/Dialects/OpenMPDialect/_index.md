@@ -132,7 +132,8 @@ and optional list of `traits`, a list of `clauses` where all the applicable
 would have to be defined in the operation's body are the `summary` and
 `description`. For the latter, only the operation itself would have to be
 defined, and the description for its clause-inherited arguments is appended
-through the inherited `clausesDescription` property.
+through the inherited `clausesDescription` property. By convention, the list of
+clauses for an operation must be specified in alphabetical order.
 
 If the operation is intended to have a single region, this is better achieved by
 setting the `singleRegion=true` template argument of `OpenMP_Op` rather manually
@@ -238,14 +239,133 @@ corresponding operation, except if it is explicitly skipped as described
 tablegen failure while processing OpenMP dialect operations, earlier messages
 triggered by that pass can point to a likely solution.
 
+### Operand Structures
+
+One consequence of basing the representation of operations on the set of values
+and attributes defined for each clause applicable to the corresponding OpenMP
+directive is that operation argument lists tend to be long. This has the effect
+of making C++ operation builders difficult to work with and easy to mistakenly
+pass arguments in the wrong order, which may sometimes introduce hard to detect
+problems.
+
+A solution provided to this issue are operand structures. The main idea behind
+them is that there is one defined for each clause, holding a set of fields that
+contain the data needed to initialize each of the arguments associated with that
+clause. Clause operand structures are aggregated into operation operand
+structures via class inheritance. Then, a custom builder is defined for each
+operation taking the corresponding operand structure as a parameter. Since each
+argument is a named member of the structure, it becomes much simpler to set up
+the desired arguments to create a new operation.
+
+Ad-hoc operand structures available for use within the ODS definition of custom
+operation builders might be defined in
+[OpenMPClauseOperands.h](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/OpenMP/OpenMPClauseOperands.h).
+However, this is generally not needed for clause-based operation definitions.
+The `-gen-openmp-clause-ops` tablegen backend, triggered when building the 'omp'
+dialect, will automatically produce structures in the following way:
+
+- It will create a `<Name>ClauseOps` structure for each `OpenMP_Clause`
+definition with one field per argument.
+- The name of each field will match the tablegen name of the corresponding
+argument, except for replacing snake case with camel case.
+- The type of the field will be obtained from the corresponding tablegen
+argument's type:
+  - Values are represented with `mlir::Value`, except for `Variadic`, which
+  makes it an `llvm::SmallVector<mlir::Value>`.
+  - `OptionalAttr` is represented by the translation of its `baseAttr`.
+  - `TypedArrayAttrBase`-based attribute types are represented by wrapping the
+  translation of their `elementAttr` in an `llvm::SmallVector`. The only
+  exception for this case is if the `elementAttr` is a "scalar" (i.e. non
+  array-like) attribute type, in which case the more generic `mlir::Attribute`
+  will be used in place of its `storageType`.
+  - For `ElementsAttrBase`-based attribute types a best effort is attempted to
+  obtain an element type (`llvm::APInt`, `llvm::APFloat` or
+  `DenseArrayAttrBase`'s `returnType`) to be wrapped in an `llvm::SmallVector`.
+  If it cannot be obtained, which will happen with non-builtin direct subclasses
+  of `ElementsAttrBase`, a warning will be emitted and the `storageType` (i.e.
+  specific `mlir::Attribute` subclass) will be used instead.
+  - Other attribute types will be represented with their `storageType`.
+- It will create `<Name>Operands` structure for each operation, which is an
+empty structure subclassing all operand structures defined for the corresponding
+`OpenMP_Op`'s clauses.
+
+### Entry Block Argument-Defining Clauses
+
+In their MLIR representation, certain OpenMP clauses introduce a mapping between
+values defined outside the operation they are applied to and entry block
+arguments for the region of that MLIR operation. This enables, for example, the
+introduction of private copies of the same underlying variable defined outside
+the MLIR operation the clause is attached to. Currently, clauses with this
+property can be classified into three main categories:
+  - Map-like clauses: `map`, `use_device_addr` and `use_device_ptr`.
+  - Reduction-like clauses: `in_reduction`, `reduction` and `task_reduction`.
+  - Privatization clauses: `private`.
+
+All three kinds of entry block argument-defining clauses use a similar custom
+assembly format representation, only differing based on the different pieces of
+information attached to each kind. Below, one example of each is shown:
+
+```mlir
+omp.target map_entries(%x -> %x.m, %y -> %y.m : !llvm.ptr, !llvm.ptr) {
+  // Use %x.m, %y.m in place of %x and %y...
+}
+
+omp.wsloop reduction(@add.i32 %x -> %x.r, byref @add.f32 %y -> %y.r : !llvm.ptr, !llvm.ptr) {
+  // Use %x.r, %y.r in place of %x and %y...
+}
+
+omp.parallel private(@x.privatizer %x -> %x.p, @y.privatizer %y -> %y.p : !llvm.ptr, !llvm.ptr) {
+  // Use %x.p, %y.p in place of %x and %y...
+}
+```
+
+As a consequence of parsing and printing the operation's first region entry
+block argument names together with the custom assembly format of these clauses,
+entry block arguments (i.e. the `^bb0(...):` line) must not be explicitly
+defined for these operations. Additionally, it is not possible to implement this
+feature while allowing each clause to be independently parsed and printed,
+because they need to be printed/parsed together with the corresponding
+operation's first region. They must have a well-defined ordering in which
+multiple of these clauses are specified for a given operation, as well.
+
+The parsing/printing of these clauses together with the region provides the
+ability to define entry block arguments directly after the `->`. Forcing a
+specific ordering between these clauses makes the block argument ordering
+well-defined, which is the property used to easily match each clause with the
+entry block arguments defined by it.
+
+Custom printers and parsers for operation regions based on the entry block
+argument-defining clauses they take are implemented based on the
+`{parse,print}BlockArgRegion` functions, which take care of the sorting and
+formatting of each kind of clause, minimizing code duplication resulting from
+this approach. One example of the custom assembly format of an operation taking
+the `private` and `reduction` clauses is the following:
+
+```tablegen
+let assemblyFormat = clausesAssemblyFormat # [{
+  custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
+      $private_syms, $reduction_vars, type($reduction_vars), $reduction_byref,
+      $reduction_syms) attr-dict
+}];
+```
+
+The `BlockArgOpenMPOpInterface` has been introduced to simplify the addition and
+handling of these kinds of clauses. It holds `num<ClauseName>BlockArgs()`
+functions that by default return 0, to be overriden by each clause through the
+`extraClassDeclaration` property. Based on these functions and the expected
+alphabetical sorting between entry block argument-defining clauses, it
+implements `get<ClauseName>BlockArgs()` functions that are the intended method
+of accessing clause-defined block arguments.
+
 ## Loop-Associated Directives
 
 Loop-associated OpenMP constructs are represented in the dialect as loop wrapper
 operations. These implement the `LoopWrapperInterface`, which enforces a series
 of restrictions upon the operation:
-  - It contains a single region with a single block; and
-  - Its block contains exactly two operations: another loop wrapper or
-`omp.loop_nest` operation and a terminator.
+  - It has the `NoTerminator` and `SingleBlock` traits;
+  - It contains a single region; and
+  - Its only block contains exactly one operation, which must be another loop
+wrapper or `omp.loop_nest` operation.
 
 This approach splits the representation for a loop nest and the loop-associated
 constructs that specify how its iterations are executed, possibly across various
@@ -274,7 +394,6 @@ omp.parallel ... {
       store %sum, %c[%i] : memref<?xf32>
       omp.yield
     }
-    omp.terminator
   }
   ...
   omp.terminator
@@ -371,9 +490,7 @@ omp.distribute ... {
       ...
       omp.yield
     }
-    omp.terminator
   } {omp.composite}
-  omp.terminator
 } {omp.composite}
 ```
 
@@ -399,9 +516,7 @@ omp.parallel ... {
         ...
         omp.yield
       }
-      omp.terminator
     } {omp.composite}
-    omp.terminator
   } {omp.composite}
   ...
   omp.terminator

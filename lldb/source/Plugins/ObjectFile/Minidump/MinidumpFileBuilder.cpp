@@ -75,8 +75,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     if (stop_info_sp) {
       const StopReason &stop_reason = stop_info_sp->GetStopReason();
-      if (stop_reason == StopReason::eStopReasonException ||
-          stop_reason == StopReason::eStopReasonSignal)
+      if (stop_reason != lldb::eStopReasonInvalid)
         m_expected_directories++;
     }
   }
@@ -685,50 +684,45 @@ Status MinidumpFileBuilder::AddExceptions() {
   Status error;
   for (const ThreadSP &thread_sp : thread_list) {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
-    bool add_exception = false;
-    if (stop_info_sp) {
-      switch (stop_info_sp->GetStopReason()) {
-      case eStopReasonSignal:
-      case eStopReasonException:
-        add_exception = true;
-        break;
-      default:
-        break;
-      }
-    }
-    if (add_exception) {
-      constexpr size_t minidump_exception_size =
-          sizeof(llvm::minidump::ExceptionStream);
-      error = AddDirectory(StreamType::Exception, minidump_exception_size);
-      if (error.Fail())
-        return error;
+    // If we don't have a stop info, or if it's invalid, skip.
+    if (!stop_info_sp ||
+        stop_info_sp->GetStopReason() == lldb::eStopReasonInvalid)
+      continue;
 
-      StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
-      RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
-      Exception exp_record = {};
-      exp_record.ExceptionCode =
-          static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
-      exp_record.ExceptionFlags = static_cast<llvm::support::ulittle32_t>(0);
-      exp_record.ExceptionRecord = static_cast<llvm::support::ulittle64_t>(0);
-      exp_record.ExceptionAddress = reg_ctx_sp->GetPC();
-      exp_record.NumberParameters = static_cast<llvm::support::ulittle32_t>(0);
-      exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
-      // exp_record.ExceptionInformation;
+    constexpr size_t minidump_exception_size =
+        sizeof(llvm::minidump::ExceptionStream);
+    error = AddDirectory(StreamType::Exception, minidump_exception_size);
+    if (error.Fail())
+      return error;
 
-      ExceptionStream exp_stream;
-      exp_stream.ThreadId =
-          static_cast<llvm::support::ulittle32_t>(thread_sp->GetID());
-      exp_stream.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
-      exp_stream.ExceptionRecord = exp_record;
-      auto Iter = m_tid_to_reg_ctx.find(thread_sp->GetID());
-      if (Iter != m_tid_to_reg_ctx.end()) {
-        exp_stream.ThreadContext = Iter->second;
-      } else {
-        exp_stream.ThreadContext.DataSize = 0;
-        exp_stream.ThreadContext.RVA = 0;
-      }
-      m_data.AppendData(&exp_stream, minidump_exception_size);
+    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+    Exception exp_record = {};
+    exp_record.ExceptionCode =
+        static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
+    exp_record.ExceptionFlags =
+        static_cast<llvm::support::ulittle32_t>(Exception::LLDB_FLAG);
+    exp_record.ExceptionRecord = static_cast<llvm::support::ulittle64_t>(0);
+    exp_record.ExceptionAddress = reg_ctx_sp->GetPC();
+    exp_record.NumberParameters = static_cast<llvm::support::ulittle32_t>(1);
+    std::string description = stop_info_sp->GetDescription();
+    // We have 120 bytes to work with and it's unlikely description will
+    // overflow, but we gotta check.
+    memcpy(&exp_record.ExceptionInformation, description.c_str(),
+           std::max(description.size(), Exception::MaxParameterBytes));
+    exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
+    ExceptionStream exp_stream;
+    exp_stream.ThreadId =
+        static_cast<llvm::support::ulittle32_t>(thread_sp->GetID());
+    exp_stream.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
+    exp_stream.ExceptionRecord = exp_record;
+    auto Iter = m_tid_to_reg_ctx.find(thread_sp->GetID());
+    if (Iter != m_tid_to_reg_ctx.end()) {
+      exp_stream.ThreadContext = Iter->second;
+    } else {
+      exp_stream.ThreadContext.DataSize = 0;
+      exp_stream.ThreadContext.RVA = 0;
     }
+    m_data.AppendData(&exp_stream, minidump_exception_size);
   }
 
   return error;
@@ -837,21 +831,23 @@ Status MinidumpFileBuilder::AddMemoryList() {
   error = m_process_sp->CalculateCoreFileSaveRanges(m_save_core_options,
                                                     all_core_memory_ranges);
 
+  if (error.Fail())
+    return error;
+
+  lldb_private::Progress progress("Saving Minidump File", "",
+                                  all_core_memory_ranges.GetSize());
   std::vector<CoreFileMemoryRange> all_core_memory_vec;
   // Extract all the data into just a vector of data. So we can mutate this in
   // place.
   for (const auto &core_range : all_core_memory_ranges)
     all_core_memory_vec.push_back(core_range.data);
 
-  if (error.Fail())
-    return error;
-
   // Start by saving all of the stacks and ensuring they fit under the 32b
   // limit.
   uint64_t total_size = GetCurrentDataEndOffset();
   auto iterator = all_core_memory_vec.begin();
   while (iterator != all_core_memory_vec.end()) {
-    if (m_saved_stack_ranges.count(iterator->range.start()) > 0) {
+    if (m_thread_by_range_end.count(iterator->range.end()) > 0) {
       // We don't save stacks twice.
       ranges_32.push_back(*iterator);
       total_size +=
@@ -892,13 +888,13 @@ Status MinidumpFileBuilder::AddMemoryList() {
     }
   }
 
-  error = AddMemoryList_32(ranges_32);
+  error = AddMemoryList_32(ranges_32, progress);
   if (error.Fail())
     return error;
 
   // Add the remaining memory as a 64b range.
   if (!ranges_64.empty()) {
-    error = AddMemoryList_64(ranges_64);
+    error = AddMemoryList_64(ranges_64, progress);
     if (error.Fail())
       return error;
   }
@@ -972,8 +968,9 @@ GetLargestRangeSize(const std::vector<CoreFileMemoryRange> &ranges) {
   return max_size;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_32(
-    std::vector<CoreFileMemoryRange> &ranges) {
+Status
+MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
+                                      Progress &progress) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   if (ranges.size() == 0)
@@ -996,6 +993,7 @@ Status MinidumpFileBuilder::AddMemoryList_32(
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
+    progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     const size_t bytes_read =
         m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail() || bytes_read == 0) {
@@ -1049,8 +1047,9 @@ Status MinidumpFileBuilder::AddMemoryList_32(
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_64(
-    std::vector<CoreFileMemoryRange> &ranges) {
+Status
+MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
+                                      Progress &progress) {
   Status error;
   if (ranges.empty())
     return error;
@@ -1111,6 +1110,7 @@ Status MinidumpFileBuilder::AddMemoryList_64(
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
+    progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     const size_t bytes_read =
         m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail()) {

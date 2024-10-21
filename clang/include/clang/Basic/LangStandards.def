@@ -230,27 +230,27 @@ LANGSTANDARD_ALIAS_DEPR(openclcpp2021, "CLC++2021")
 // HLSL
 LANGSTANDARD(hlsl, "hlsl",
              HLSL, "High Level Shader Language",
-             LineComment | HLSL | CPlusPlus )
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
 
 LANGSTANDARD(hlsl2015, "hlsl2015",
              HLSL, "High Level Shader Language 2015",
-             LineComment | HLSL | CPlusPlus )
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
 
 LANGSTANDARD(hlsl2016, "hlsl2016",
              HLSL, "High Level Shader Language 2016",
-             LineComment | HLSL | CPlusPlus )
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
 
 LANGSTANDARD(hlsl2017, "hlsl2017",
              HLSL, "High Level Shader Language 2017",
-             LineComment | HLSL | CPlusPlus )
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
 
 LANGSTANDARD(hlsl2018, "hlsl2018",
              HLSL, "High Level Shader Language 2018",
-             LineComment | HLSL | CPlusPlus )
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
 
 LANGSTANDARD(hlsl2021, "hlsl2021",
              HLSL, "High Level Shader Language 2021",
-             LineComment | HLSL | CPlusPlus )
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
 
 LANGSTANDARD(hlsl202x, "hlsl202x",
              HLSL, "High Level Shader Language 202x",

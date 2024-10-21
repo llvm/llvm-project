@@ -750,12 +750,10 @@ bool Sema::UnifySection(StringRef SectionName, int SectionFlags,
   if (auto A = Decl->getAttr<SectionAttr>())
     if (A->isImplicit())
       PragmaLocation = A->getLocation();
-  auto SectionIt = Context.SectionInfos.find(SectionName);
-  if (SectionIt == Context.SectionInfos.end()) {
-    Context.SectionInfos[SectionName] =
-        ASTContext::SectionInfo(Decl, PragmaLocation, SectionFlags);
+  auto [SectionIt, Inserted] = Context.SectionInfos.try_emplace(
+      SectionName, Decl, PragmaLocation, SectionFlags);
+  if (Inserted)
     return false;
-  }
   // A pre-declared section takes precedence w/o diagnostic.
   const auto &Section = SectionIt->second;
   if (Section.SectionFlags == SectionFlags ||
@@ -1178,6 +1176,16 @@ void Sema::PrintPragmaAttributeInstantiationPoint() {
   assert(PragmaAttributeCurrentTargetDecl && "Expected an active declaration");
   Diags.Report(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
                diag::note_pragma_attribute_applied_decl_here);
+}
+
+void Sema::DiagnosePrecisionLossInComplexDivision() {
+  for (auto &[Type, Num] : ExcessPrecisionNotSatisfied) {
+    assert(LocationOfExcessPrecisionNotSatisfied.isValid() &&
+           "expected a valid source location");
+    Diag(LocationOfExcessPrecisionNotSatisfied,
+         diag::warn_excess_precision_not_supported)
+        << static_cast<bool>(Num);
+  }
 }
 
 void Sema::DiagnoseUnterminatedPragmaAttribute() {

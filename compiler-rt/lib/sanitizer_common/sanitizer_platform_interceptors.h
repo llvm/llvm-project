@@ -237,6 +237,9 @@
   (SI_FREEBSD || SI_NETBSD || SI_LINUX || SI_SOLARIS)
 #define SANITIZER_INTERCEPT_CLOCK_GETCPUCLOCKID \
   (SI_LINUX || SI_FREEBSD || SI_NETBSD)
+// TODO: This should be SI_POSIX, adding Linux first until I have time
+// to verify all timer_t typedefs on other platforms.
+#define SANITIZER_INTERCEPT_TIMER_CREATE SI_LINUX
 #define SANITIZER_INTERCEPT_GETITIMER SI_POSIX
 #define SANITIZER_INTERCEPT_TIME SI_POSIX
 #define SANITIZER_INTERCEPT_GLOB (SI_GLIBC || SI_SOLARIS)
@@ -279,8 +282,9 @@
 #if SI_LINUX_NOT_ANDROID &&                                                \
     (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
      defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
-     defined(__s390__) || defined(__loongarch__) || SANITIZER_RISCV64)
-#define SANITIZER_INTERCEPT_PTRACE 1
+     defined(__s390__) || defined(__loongarch__) || SANITIZER_RISCV64 ||   \
+     defined(__sparc__))
+#  define SANITIZER_INTERCEPT_PTRACE 1
 #else
 #define SANITIZER_INTERCEPT_PTRACE 0
 #endif
@@ -564,10 +568,8 @@
 #define SANITIZER_INTERCEPT_SHA1 SI_NETBSD
 #define SANITIZER_INTERCEPT_MD4 SI_NETBSD
 #define SANITIZER_INTERCEPT_RMD160 SI_NETBSD
-#define SANITIZER_INTERCEPT_MD5 (SI_NETBSD || SI_FREEBSD)
 #define SANITIZER_INTERCEPT_FSEEK (SI_NETBSD || SI_FREEBSD)
 #define SANITIZER_INTERCEPT_MD2 SI_NETBSD
-#define SANITIZER_INTERCEPT_SHA2 (SI_NETBSD || SI_FREEBSD)
 #define SANITIZER_INTERCEPT_CDB SI_NETBSD
 #define SANITIZER_INTERCEPT_VIS (SI_NETBSD || SI_FREEBSD)
 #define SANITIZER_INTERCEPT_POPEN SI_POSIX
@@ -606,7 +608,13 @@
 // FIXME: also available from musl 1.2.5
 #define SANITIZER_INTERCEPT_PREADV2 (SI_LINUX && __GLIBC_PREREQ(2, 26))
 #define SANITIZER_INTERCEPT_PWRITEV2 (SI_LINUX && __GLIBC_PREREQ(2, 26))
-
+#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
+    __MAC_OS_X_VERSION_MIN_REQUIRED >= 130000
+#  define SI_MAC_OS_DEPLOYMENT_MIN_13_00 1
+#else
+#  define SI_MAC_OS_DEPLOYMENT_MIN_13_00 0
+#endif
+#define SANITIZER_INTERCEPT_FREADLINK (SI_MAC && SI_MAC_OS_DEPLOYMENT_MIN_13_00)
 // This macro gives a way for downstream users to override the above
 // interceptor macros irrespective of the platform they are on. They have
 // to do two things:

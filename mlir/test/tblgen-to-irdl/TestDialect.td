@@ -13,12 +13,21 @@ class Test_Type<string name, string typeMnemonic, list<Trait> traits = []>
   let mnemonic = typeMnemonic;
 }
 
+class Test_Attr<string name, string attrMnemonic> : AttrDef<Test_Dialect, name> {
+  let mnemonic = attrMnemonic;
+}
+
 class Test_Op<string mnemonic, list<Trait> traits = []>
     : Op<Test_Dialect, mnemonic, traits>;
 
+// CHECK: irdl.type @"!singleton_a"
 def Test_SingletonAType : Test_Type<"SingletonAType", "singleton_a"> {}
+// CHECK: irdl.type @"!singleton_b"
 def Test_SingletonBType : Test_Type<"SingletonBType", "singleton_b"> {}
+// CHECK: irdl.type @"!singleton_c"
 def Test_SingletonCType : Test_Type<"SingletonCType", "singleton_c"> {}
+// CHECK: irdl.attribute @"#test"
+def Test_TestAttr : Test_Attr<"Test", "test"> {}
 
 
 // Check that AllOfType is converted correctly.
@@ -26,7 +35,7 @@ def Test_AndOp : Test_Op<"and"> {
   let arguments = (ins AllOfType<[Test_SingletonAType, AnyType]>:$in);
 }
 // CHECK-LABEL: irdl.operation @and {
-// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.base "!test.singleton_a"
+// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.base @test::@"!singleton_a"
 // CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.any
 // CHECK-NEXT:    %[[v2:[^ ]*]] = irdl.all_of(%[[v0]], %[[v1]])
 // CHECK-NEXT:    irdl.operands(%[[v2]])
@@ -40,6 +49,17 @@ def Test_AnyOp : Test_Op<"any"> {
 // CHECK-LABEL: irdl.operation @any {
 // CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.any
 // CHECK-NEXT:    irdl.operands(%[[v0]])
+// CHECK-NEXT:  }
+
+// Check attributes are converted correctly.
+def Test_AttributesOp : Test_Op<"attributes"> {
+  let arguments = (ins I16Attr:$int_attr,
+                       Test_TestAttr:$test_attr);
+}
+// CHECK-LABEL: irdl.operation @attributes {
+// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.base "!builtin.integer"
+// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.base @test::@"#test"
+// CHECK-NEXT:    irdl.attributes {"int_attr" = %[[v0]], "test_attr" = %[[v1]]}
 // CHECK-NEXT:  }
 
 // Check confined types are converted correctly.
@@ -79,11 +99,22 @@ def Test_OrOp : Test_Op<"or"> {
   let arguments = (ins AnyTypeOf<[Test_SingletonAType, Test_SingletonBType, Test_SingletonCType]>:$in);
 }
 // CHECK-LABEL: irdl.operation @or {
-// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.base "!test.singleton_a"
-// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.base "!test.singleton_b"
-// CHECK-NEXT:    %[[v2:[^ ]*]] = irdl.base "!test.singleton_c"
+// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.base @test::@"!singleton_a"
+// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.base @test::@"!singleton_b"
+// CHECK-NEXT:    %[[v2:[^ ]*]] = irdl.base @test::@"!singleton_c"
 // CHECK-NEXT:    %[[v3:[^ ]*]] = irdl.any_of(%[[v0]], %[[v1]], %[[v2]])
 // CHECK-NEXT:    irdl.operands(%[[v3]])
+// CHECK-NEXT:  }
+
+// Check regions are converted correctly.
+def Test_RegionsOp : Test_Op<"regions"> {
+  let regions = (region AnyRegion:$any_region,
+                        SizedRegion<1>:$single_block_region);
+}
+// CHECK-LABEL: irdl.operation @regions {
+// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.region
+// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.region with size 1
+// CHECK-NEXT:    irdl.regions(%[[v0]], %[[v1]])
 // CHECK-NEXT:  }
 
 // Check that various types are converted correctly.
@@ -114,8 +145,8 @@ def Test_VariadicityOp : Test_Op<"variadicity"> {
                        Test_SingletonCType:$required);
 }
 // CHECK-LABEL: irdl.operation @variadicity {
-// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.base "!test.singleton_a"
-// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.base "!test.singleton_b"
-// CHECK-NEXT:    %[[v2:[^ ]*]] = irdl.base "!test.singleton_c"
+// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.base @test::@"!singleton_a"
+// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.base @test::@"!singleton_b"
+// CHECK-NEXT:    %[[v2:[^ ]*]] = irdl.base @test::@"!singleton_c"
 // CHECK-NEXT:    irdl.operands(variadic %[[v0]], optional %[[v1]], %[[v2]])
 // CHECK-NEXT:  }

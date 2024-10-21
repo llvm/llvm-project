@@ -63,8 +63,8 @@ static bool isExplicitUnalign(const CodeGenInstruction *Inst) {
 }
 
 class X86FoldTablesEmitter {
-  RecordKeeper &Records;
-  CodeGenTarget Target;
+  const RecordKeeper &Records;
+  const CodeGenTarget Target;
 
   // Represents an entry in the folding table
   class X86FoldTableEntry {
@@ -196,7 +196,7 @@ class X86FoldTablesEmitter {
   FoldTable BroadcastTable4;
 
 public:
-  X86FoldTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  X86FoldTablesEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Generate the 6 X86 memory fold tables.
   void run(raw_ostream &OS);
@@ -251,7 +251,7 @@ static uint8_t byteFromBitsInit(const BitsInit *B) {
 
   uint8_t Value = 0;
   for (unsigned I = 0; I != N; ++I) {
-    BitInit *Bit = cast<BitInit>(B->getBit(I));
+    const BitInit *Bit = cast<BitInit>(B->getBit(I));
     Value |= Bit->getValue() << I;
   }
   return Value;
@@ -475,7 +475,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   StringRef RegInstName = RegRec->getName();
   unsigned DropLen =
       RegInstName.ends_with("rkz") ? 2 : (RegInstName.ends_with("rk") ? 1 : 0);
-  Record *BaseDef =
+  const Record *BaseDef =
       DropLen ? Records.getDef(RegInstName.drop_back(DropLen)) : nullptr;
   bool IsMoveReg =
       BaseDef ? Target.getInstruction(BaseDef).isMoveReg : RegInst->isMoveReg;
@@ -487,7 +487,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   uint8_t Enc = byteFromBitsInit(RegRec->getValueAsBitsInit("OpEncBits"));
   if (isExplicitAlign(RegInst)) {
     // The instruction require explicitly aligned memory.
-    BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
+    const BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
     Result.Alignment = Align(byteFromBitsInit(VectSize));
   } else if (!Enc && !isExplicitUnalign(RegInst) &&
              getMemOperandSize(MemOpRec) > 64) {
@@ -512,7 +512,7 @@ void X86FoldTablesEmitter::addBroadcastEntry(
   assert(Table.find(RegInst) == Table.end() && "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
 
-  DagInit *In = MemInst->TheDef->getValueAsDag("InOperandList");
+  const DagInit *In = MemInst->TheDef->getValueAsDag("InOperandList");
   for (unsigned I = 0, E = In->getNumArgs(); I != E; ++I) {
     Result.BroadcastKind =
         StringSwitch<X86FoldTableEntry::BcastType>(In->getArg(I)->getAsString())
@@ -670,7 +670,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   // added into memory fold tables.
   auto RegInstsForBroadcast = RegInsts;
 
-  Record *AsmWriter = Target.getAsmWriter();
+  const Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
   auto FixUp = [&](const CodeGenInstruction *RegInst) {
     StringRef RegInstName = RegInst->TheDef->getName();
@@ -721,8 +721,8 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
 
   // Add the manually mapped instructions listed above.
   for (const ManualMapEntry &Entry : ManualMapSet) {
-    Record *RegInstIter = Records.getDef(Entry.RegInstStr);
-    Record *MemInstIter = Records.getDef(Entry.MemInstStr);
+    const Record *RegInstIter = Records.getDef(Entry.RegInstStr);
+    const Record *MemInstIter = Records.getDef(Entry.MemInstStr);
 
     updateTables(&(Target.getInstruction(RegInstIter)),
                  &(Target.getInstruction(MemInstIter)), Entry.Strategy, true);

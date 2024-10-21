@@ -10,10 +10,8 @@ define <vscale x 4 x i32> @sext_inreg(<vscale x 4 x i32> %a) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
-  %in = insertelement <vscale x 4 x i32> undef, i32 16, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %sext = shl <vscale x 4 x i32> %a, %splat
-  %conv = ashr <vscale x 4 x i32> %sext, %splat
+  %sext = shl <vscale x 4 x i32> %a, splat(i32 16)
+  %conv = ashr <vscale x 4 x i32> %sext, splat(i32 16)
   ret <vscale x 4 x i32> %conv
 }
 
@@ -23,12 +21,8 @@ define <vscale x 4 x i32> @ashr_shl(<vscale x 4 x i32> %a)  {
 ; CHECK-NEXT:    lsl z0.s, z0.s, #8
 ; CHECK-NEXT:    asr z0.s, z0.s, #16
 ; CHECK-NEXT:    ret
-  %in1 = insertelement <vscale x 4 x i32> undef, i32 8, i32 0
-  %splat1 = shufflevector <vscale x 4 x i32> %in1, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %in2 = insertelement <vscale x 4 x i32> undef, i32 16, i32 0
-  %splat2 = shufflevector <vscale x 4 x i32> %in2, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i32> %a, %splat1
-  %r = ashr <vscale x 4 x i32> %shl, %splat2
+  %shl = shl <vscale x 4 x i32> %a, splat(i32 8)
+  %r = ashr <vscale x 4 x i32> %shl, splat(i32 16)
   ret <vscale x 4 x i32> %r
 }
 
@@ -38,12 +32,8 @@ define <vscale x 4 x i32> @ashr_shl_illegal_trunc_vec_ty(<vscale x 4 x i32> %a) 
 ; CHECK-NEXT:    lsl z0.s, z0.s, #8
 ; CHECK-NEXT:    asr z0.s, z0.s, #11
 ; CHECK-NEXT:    ret
-  %in1 = insertelement <vscale x 4 x i32> undef, i32 8, i32 0
-  %splat1 = shufflevector <vscale x 4 x i32> %in1, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %in2 = insertelement <vscale x 4 x i32> undef, i32 11, i32 0
-  %splat2 = shufflevector <vscale x 4 x i32> %in2, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i32> %a, %splat1
-  %r = ashr <vscale x 4 x i32> %shl, %splat2
+  %shl = shl <vscale x 4 x i32> %a, splat(i32 8)
+  %r = ashr <vscale x 4 x i32> %shl, splat(i32 11)
   ret <vscale x 4 x i32> %r
 }
 
@@ -55,12 +45,8 @@ define <vscale x 4 x i32> @ashr_add_shl_nxv4i8(<vscale x 4 x i32> %a) {
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    asr z0.s, z0.s, #24
 ; CHECK-NEXT:    ret
-  %in1 = insertelement <vscale x 4 x i32> undef, i32 24, i32 0
-  %splat1 = shufflevector <vscale x 4 x i32> %in1, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %in2 = insertelement <vscale x 4 x i32> undef, i32 16777216, i32 0
-  %splat2 = shufflevector <vscale x 4 x i32> %in2, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %conv = shl <vscale x 4 x i32> %a, %splat1
-  %sext = add <vscale x 4 x i32> %conv, %splat2
-  %conv1 = ashr <vscale x 4 x i32> %sext, %splat1
+  %conv = shl <vscale x 4 x i32> %a, splat(i32 24)
+  %sext = add <vscale x 4 x i32> %conv, splat(i32 16777216)
+  %conv1 = ashr <vscale x 4 x i32> %sext, splat(i32 24)
   ret <vscale x 4 x i32> %conv1
 }

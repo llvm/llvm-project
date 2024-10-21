@@ -150,7 +150,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ(0u, Replacements[0].Index);
   EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
-  EXPECT_EQ("foo", Replacements[0].Options);
+  EXPECT_EQ(" foo ", Replacements[0].Options);
 
   // 8. Everything after the first option specifier is part of the style, even
   // if it contains another option specifier.
@@ -282,6 +282,15 @@ TEST(FormatVariadicTest, AutomaticIndices) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
+
+  Replacements = parseFormatString("{}bar{}");
+  ASSERT_EQ(3u, Replacements.size());
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(ReplacementType::Literal, Replacements[1].Type);
+  EXPECT_EQ("bar", Replacements[1].Spec);
+  EXPECT_EQ(ReplacementType::Format, Replacements[2].Type);
+  EXPECT_EQ(1u, Replacements[2].Index);
 
   Replacements = parseFormatString("{}{}");
   ASSERT_EQ(2u, Replacements.size());
@@ -760,6 +769,8 @@ TEST(FormatVariadicTest, Validate) {
                "Replacement field indices cannot have holes");
   EXPECT_DEATH(formatv("{}{1}", 0, 1).str(),
                "Cannot mix automatic and explicit indices");
+  EXPECT_DEATH(formatv("{}{0}{}", 0, 1).str(),
+               "Cannot mix automatic and explicit indices");
 #else  // GTEST_HAS_DEATH_TEST
   GTEST_SKIP() << "No support for EXPECT_DEATH";
 #endif // GTEST_HAS_DEATH_TEST
@@ -768,6 +779,7 @@ TEST(FormatVariadicTest, Validate) {
   EXPECT_EQ(formatv("{0}", 1, 2).str(), "1");
   EXPECT_EQ(formatv("{0} {2}", 1, 2, 3).str(), "1 3");
   EXPECT_EQ(formatv("{}{1}", 0, 1).str(), "01");
+  EXPECT_EQ(formatv("{}{0}{}", 0, 1).str(), "001");
 #endif // NDEBUG
 }
 

@@ -14,6 +14,7 @@
 #include "flang/Evaluate/intrinsics-library.h"
 #include "fold-implementation.h"
 #include "host.h"
+#include "flang/Common/erfc-scaled.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
 #include <cfloat>
@@ -22,8 +23,9 @@
 #include <functional>
 #if HAS_QUADMATHLIB
 #include "quadmath.h"
-#include "flang/Common/float128.h"
 #endif
+#include "flang/Common/float128.h"
+#include "flang/Common/float80.h"
 #include <type_traits>
 
 namespace Fortran::evaluate {
@@ -230,6 +232,7 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
       FolderFactory<F, F{std::cosh}>::Create("cosh"),
       FolderFactory<F, F{std::erf}>::Create("erf"),
       FolderFactory<F, F{std::erfc}>::Create("erfc"),
+      FolderFactory<F, F{common::ErfcScaled}>::Create("erfc_scaled"),
       FolderFactory<F, F{std::exp}>::Create("exp"),
       FolderFactory<F, F{std::tgamma}>::Create("gamma"),
       FolderFactory<F, F{std::log}>::Create("log"),
@@ -414,7 +417,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
-#if LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
+#if defined(__GLIBC__) && (HAS_FLOAT80 || HAS_LDBL128)
 template <>
 struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<long double, long double>;
@@ -430,7 +433,7 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif // LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
+#endif // HAS_FLOAT80 || HAS_LDBL128
 #endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
 
 /// Define pgmath description

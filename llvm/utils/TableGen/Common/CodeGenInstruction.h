@@ -110,7 +110,7 @@ public:
 
     /// MIOperandInfo - Default MI operand type. Note an operand may be made
     /// up of multiple MI operands.
-    DagInit *MIOperandInfo;
+    const DagInit *MIOperandInfo;
 
     /// Constraint info for this operand.  This operand can have pieces, so we
     /// track constraint info for each.
@@ -118,7 +118,7 @@ public:
 
     OperandInfo(const Record *R, const std::string &N, const std::string &PMN,
                 const std::string &OT, unsigned MION, unsigned MINO,
-                DagInit *MIOI)
+                const DagInit *MIOI)
         : Rec(R), Name(N), SubOpNames(MINO), PrinterMethodName(PMN),
           EncoderMethodNames(MINO), OperandType(OT), MIOperandNo(MION),
           MINumOperands(MINO), DoNotEncode(MINO), MIOperandInfo(MIOI),
@@ -235,7 +235,7 @@ public:
 
   /// ImplicitDefs/ImplicitUses - These are lists of registers that are
   /// implicitly defined and used by the instruction.
-  std::vector<Record *> ImplicitDefs, ImplicitUses;
+  std::vector<const Record *> ImplicitDefs, ImplicitUses;
 
   // Various boolean values we track for the instruction.
   bool isPreISelOpcode : 1;

@@ -20,7 +20,7 @@
 // NORDC-H-DAG: @v1 = internal global i32 undef
 // RDC-H-DAG: @v1 = global i32 undef
 __device__ int v1;
-// DEV-DAG: @v2 = addrspace(4) externally_initialized global i32 0
+// DEV-DAG: @v2 = addrspace(4) externally_initialized constant i32 0
 // NORDC-H-DAG: @v2 = internal global i32 undef
 // RDC-H-DAG: @v2 = global i32 undef
 __constant__ int v2;
@@ -48,10 +48,10 @@ extern __managed__ int ev3;
 // HOST-DAG: @_ZL3sv1 = internal global i32 undef
 // CUDA-DAG: @_ZL3sv1__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
 static __device__ int sv1;
-// NORDC-DAG: @_ZL3sv2 = addrspace(4) externally_initialized global i32 0
-// RDC-DAG: @_ZL3sv2.static.[[HASH]] = addrspace(4) externally_initialized global i32 0
+// NORDC-DAG: @_ZL3sv2 = addrspace(4) externally_initialized constant i32 0
+// RDC-DAG: @_ZL3sv2.static.[[HASH]] = addrspace(4) externally_initialized constant i32 0
 // HOST-DAG: @_ZL3sv2 = internal global i32 undef
-// CUDA-DAG: @_ZL3sv2__static__[[HASH]] = addrspace(4) externally_initialized global i32 0
+// CUDA-DAG: @_ZL3sv2__static__[[HASH]] = addrspace(4) externally_initialized constant i32 0
 static __constant__ int sv2;
 // NORDC-DAG: @_ZL3sv3 = addrspace(1) externally_initialized global ptr addrspace(1) null
 // RDC-DAG: @_ZL3sv3.static.[[HASH]] = addrspace(1) externally_initialized global ptr addrspace(1) null

@@ -5,6 +5,7 @@
 
 #define INT_MIN (~__INT_MAX__)
 
+constexpr int a = -1 >> 3;
 
 namespace shifts {
   constexpr void test() { // ref-error {{constexpr function never produces a constant expression}} \

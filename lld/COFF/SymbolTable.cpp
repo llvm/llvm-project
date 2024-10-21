@@ -20,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -314,7 +315,7 @@ void SymbolTable::loadMinGWSymbols() {
             warn("Resolving " + origName + " by linking to " + newName);
           else
             log("Resolving " + origName + " by linking to " + newName);
-          undef->weakAlias = l;
+          undef->setWeakAlias(l);
           continue;
         }
       }
@@ -423,13 +424,11 @@ static void reportProblemSymbols(
       if (!sym)
         continue;
       if (undefs.count(sym)) {
-        auto it = firstDiag.find(sym);
-        if (it == firstDiag.end()) {
-          firstDiag[sym] = undefDiags.size();
+        auto [it, inserted] = firstDiag.try_emplace(sym, undefDiags.size());
+        if (inserted)
           undefDiags.push_back({sym, {{file, symIndex}}});
-        } else {
+        else
           undefDiags[it->second].files.push_back({file, symIndex});
-        }
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))
@@ -478,10 +477,11 @@ void SymbolTable::reportUnresolvable() {
                        /* localImports */ nullptr, true);
 }
 
-void SymbolTable::resolveRemainingUndefines() {
+bool SymbolTable::resolveRemainingUndefines() {
   llvm::TimeTraceScope timeScope("Resolve remaining undefined symbols");
   SmallPtrSet<Symbol *, 8> undefs;
   DenseMap<Symbol *, Symbol *> localImports;
+  bool foundLazy = false;
 
   for (auto &i : symMap) {
     Symbol *sym = i.second;
@@ -501,6 +501,19 @@ void SymbolTable::resolveRemainingUndefines() {
     // This odd rule is for compatibility with MSVC linker.
     if (name.starts_with("__imp_")) {
       Symbol *imp = find(name.substr(strlen("__imp_")));
+      if (imp) {
+        // The unprefixed symbol might come later in symMap, so handle it now
+        // so that the condition below can be appropriately applied.
+        auto *undef = dyn_cast<Undefined>(imp);
+        if (undef) {
+          undef->resolveWeakAlias();
+        }
+      }
+      if (imp && imp->isLazy()) {
+        forceLazy(imp);
+        foundLazy = true;
+        continue;
+      }
       if (imp && isa<Defined>(imp)) {
         auto *d = cast<Defined>(imp);
         replaceSymbol<DefinedLocalImport>(sym, ctx, name, d);
@@ -528,6 +541,7 @@ void SymbolTable::resolveRemainingUndefines() {
   reportProblemSymbols(
       ctx, undefs,
       ctx.config.warnLocallyDefinedImported ? &localImports : nullptr, false);
+  return foundLazy;
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
@@ -562,6 +576,9 @@ void SymbolTable::addExitThunk(Symbol *from, Symbol *to) {
 }
 
 void SymbolTable::initializeECThunks() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
   for (auto it : entryThunks) {
     auto *to = dyn_cast<Defined>(it.second);
     if (!to)
@@ -587,6 +604,19 @@ void SymbolTable::initializeECThunks() {
       sym = exitThunks.lookup(file->impECSym);
     file->impchkThunk->exitThunk = dyn_cast_or_null<Defined>(sym);
   }
+
+  // On ARM64EC, the __imp_ symbol references the auxiliary IAT, while the
+  // __imp_aux_ symbol references the regular IAT. However, x86_64 code expects
+  // both to reference the regular IAT, so adjust the symbol if necessary.
+  parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
+    if (file->getMachineType() != AMD64)
+      return;
+    for (auto &sym : file->getMutableSymbols()) {
+      auto impSym = dyn_cast_or_null<DefinedImportData>(sym);
+      if (impSym && impSym->file->impchkThunk && sym == impSym->file->impECSym)
+        sym = impSym->file->impSym;
+    }
+  });
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
@@ -798,13 +828,13 @@ DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f,
   return nullptr;
 }
 
-Symbol *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
-                                    ImportThunkChunk *chunk) {
+Defined *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
+                                     ImportThunkChunk *chunk) {
   auto [s, wasInserted] = insert(name, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
     replaceSymbol<DefinedImportThunk>(s, ctx, name, id, chunk);
-    return s;
+    return cast<Defined>(s);
   }
 
   reportDuplicate(s, id->file);

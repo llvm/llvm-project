@@ -1414,7 +1414,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
   auto InvalidateGroupIfMemberMayWrap = [&](InterleaveGroup<Instruction> *Group,
                                             int Index,
-                                            std::string FirstOrLast) -> bool {
+                                            const char *FirstOrLast) -> bool {
     Instruction *Member = Group->getMember(Index);
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
@@ -1454,12 +1454,11 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // that all the pointers in the group don't wrap.
     // So we check only group member 0 (which is always guaranteed to exist),
     // and group member Factor - 1; If the latter doesn't exist we rely on
-    // peeling (if it is a non-reversed accsess -- see Case 3).
-    if (InvalidateGroupIfMemberMayWrap(Group, 0, std::string("first")))
+    // peeling (if it is a non-reversed access -- see Case 3).
+    if (InvalidateGroupIfMemberMayWrap(Group, 0, "first"))
       continue;
     if (Group->getMember(Group->getFactor() - 1))
-      InvalidateGroupIfMemberMayWrap(Group, Group->getFactor() - 1,
-                                     std::string("last"));
+      InvalidateGroupIfMemberMayWrap(Group, Group->getFactor() - 1, "last");
     else {
       // Case 3: A non-reversed interleaved load group with gaps: We need
       // to execute at least one scalar epilogue iteration. This will ensure
@@ -1503,11 +1502,11 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // and the last group member. Case 3 (scalar epilog) is not relevant for
     // stores with gaps, which are implemented with masked-store (rather than
     // speculative access, as in loads).
-    if (InvalidateGroupIfMemberMayWrap(Group, 0, std::string("first")))
+    if (InvalidateGroupIfMemberMayWrap(Group, 0, "first"))
       continue;
     for (int Index = Group->getFactor() - 1; Index > 0; Index--)
       if (Group->getMember(Index)) {
-        InvalidateGroupIfMemberMayWrap(Group, Index, std::string("last"));
+        InvalidateGroupIfMemberMayWrap(Group, Index, "last");
         break;
       }
   }
