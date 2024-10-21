@@ -57,6 +57,11 @@ OPTIONS
   Do not strip a leading underscore. This is the default for all platforms
   except Mach-O based hosts.
 
+.. option:: --quote
+
+  Add `"` `"` around demangled function symbols. Do not quote already quoted
+  symbols.
+
 .. option:: --strip-underscore, -_
 
   Strip a single leading underscore, if present, from each input name before
