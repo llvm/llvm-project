@@ -88,7 +88,14 @@ Changes to the LLVM IR
   * `llvm.nvvm.ptr.shared.to.gen`
   * `llvm.nvvm.ptr.constant.to.gen`
   * `llvm.nvvm.ptr.local.to.gen`
-  
+
+* Remove the following intrinsics which can be relaced with a load from
+  addrspace(1) with an !invariant.load metadata
+
+  * `llvm.nvvm.ldg.global.i`
+  * `llvm.nvvm.ldg.global.f`
+  * `llvm.nvvm.ldg.global.p`
+
 * Operand bundle values can now be metadata strings.
 
 Changes to LLVM infrastructure
