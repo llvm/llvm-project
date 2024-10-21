@@ -68,3 +68,23 @@ define i32 @atomic_2vector_int() {
   %ret = load atomic volatile i32, ptr %indirect acquire, align 4
   ret i32 %ret
 }
+
+define i32 @atomic_2vector_nonbyte_illegal_int() {
+; CHECK-LABEL: define i32 @atomic_2vector_nonbyte_illegal_int() {
+; CHECK-NEXT:    [[SRC_SROA_1:%.*]] = alloca i17, align 4
+; CHECK-NEXT:    [[VAL_SROA_0:%.*]] = alloca i32, align 8
+; CHECK-NEXT:    [[VAL_SROA_2:%.*]] = alloca i17, align 4
+; CHECK-NEXT:    store i32 undef, ptr [[VAL_SROA_0]], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL_SROA_2]], ptr align 4 [[SRC_SROA_1]], i64 4, i1 false)
+; CHECK-NEXT:    [[VAL_SROA_0_0_VAL_SROA_0_0_RET:%.*]] = load atomic volatile i32, ptr [[VAL_SROA_0]] acquire, align 4
+; CHECK-NEXT:    ret i32 [[VAL_SROA_0_0_VAL_SROA_0_0_RET]]
+;
+  %src = alloca <2 x i17>
+  %val = alloca <2 x i17>
+  %direct = alloca ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr %val, ptr %src, i64 8, i1 false)
+  store ptr %val, ptr %direct
+  %indirect = load ptr, ptr %direct
+  %ret = load atomic volatile i32, ptr %indirect acquire, align 4
+  ret i32 %ret
+}

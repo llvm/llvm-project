@@ -2854,9 +2854,9 @@ private:
   bool visitLoadInst(LoadInst &LI) {
     LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
 
-    // Load atomic vector would be generated, which is illegal.
+    // A load atomic vector would be generated, which is illegal.
     // TODO: Generate a generic bitcast in machine codegen instead.
-    if (LI.isAtomic() && !LoadInst::isValidAtomicTy(NewAI.getAllocatedType()))
+    if (LI.isAtomic() && NewAI.getAllocatedType()->isVectorTy())
       return false;
 
     Value *OldOp = LI.getOperand(0);
@@ -2881,7 +2881,6 @@ private:
                (canConvertValue(DL, NewAllocaTy, TargetTy) ||
                 (IsLoadPastEnd && NewAllocaTy->isIntegerTy() &&
                  TargetTy->isIntegerTy() && !LI.isVolatile()))) {
-
       Value *NewPtr =
           getPtrToNewAI(LI.getPointerAddressSpace(), LI.isVolatile());
       LoadInst *NewLI = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), NewPtr,
