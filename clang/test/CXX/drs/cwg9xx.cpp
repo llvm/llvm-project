@@ -93,6 +93,38 @@ struct B : A {
 } // namespace example2
 } // namespace cwg952
 
+namespace cwg960 { // cwg960: 2.8
+struct a {};
+class A {
+#if __cplusplus >= 201103L
+  // Check lvalue ref vs rvalue ref vs pointer.
+  virtual a& rvalue_ref();
+  virtual a&& lvalue_ref();
+  virtual a& rvalue_vs_lvalue_ref(); // expected-note{{overridden virtual function is here}}
+  virtual a&& lvalue_vs_rvalue_ref(); // expected-note{{overridden virtual function is here}}
+  virtual a& rvalue_ref_vs_pointer(); // expected-note{{overridden virtual function is here}}
+  virtual a* pointer_vs_rvalue_ref(); // expected-note{{overridden virtual function is here}}
+  virtual a&& lvalue_ref_vs_pointer(); // expected-note{{overridden virtual function is here}}
+  virtual a* pointer_vs_lvalue_ref(); // expected-note{{overridden virtual function is here}}
+#endif
+};
+
+class B : A {
+#if __cplusplus >= 201103L
+  // Check lvalue ref vs rvalue ref vs pointer.
+  a& rvalue_ref() override;
+  a&& lvalue_ref() override;
+  a&& rvalue_vs_lvalue_ref() override; // expected-error{{virtual function 'rvalue_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a &')}}
+  a& lvalue_vs_rvalue_ref() override; // expected-error{{virtual function 'lvalue_vs_rvalue_ref' has a different return type ('a &') than the function it overrides (which has return type 'a &&')}}
+  a* rvalue_ref_vs_pointer() override; // expected-error{{virtual function 'rvalue_ref_vs_pointer' has a different return type ('a *') than the function it overrides (which has return type 'a &')}}
+  a& pointer_vs_rvalue_ref() override; // expected-error{{virtual function 'pointer_vs_rvalue_ref' has a different return type ('a &') than the function it overrides (which has return type 'a *')}}
+  a* lvalue_ref_vs_pointer() override; // expected-error{{virtual function 'lvalue_ref_vs_pointer' has a different return type ('a *') than the function it overrides (which has return type 'a &&')}}
+  a&& pointer_vs_lvalue_ref() override; // expected-error{{virtual function 'pointer_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a *')}}
+#endif
+};
+
+} // namespace cwg960
+
 namespace cwg974 { // cwg974: yes
 #if __cplusplus >= 201103L
   void test() {
