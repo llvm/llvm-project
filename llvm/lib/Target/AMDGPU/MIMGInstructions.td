@@ -1123,7 +1123,7 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
       defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP, renamed>;
       let VDataDwords = !if(isCmpSwap, 4, 2) in
       defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP, renamed>;
-      let VDataDwords = !if(isCmpSwap, 3, 3) in
+      let VDataDwords = 3 in
       defm _V3 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_96, 0, isFP, renamed>;
 
       if isCmpSwap then {
