@@ -18,9 +18,9 @@ using namespace mlir::pdll::ods;
 //===----------------------------------------------------------------------===//
 
 Operation::Operation(StringRef name, StringRef summary, StringRef desc,
-                     StringRef nativeClassName, bool supportsTypeInferrence,
+                     StringRef nativeClassName, bool supportsTypeInference,
                      llvm::SMLoc loc)
     : name(name.str()), summary(summary.str()), description(desc.str()),
       nativeClassName(nativeClassName.str()),
-      supportsTypeInferrence(supportsTypeInferrence),
+      supportsTypeInference(supportsTypeInference),
       location(loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)) {}

@@ -3,7 +3,7 @@
 // Demonstrates what happens when peeling the middle loop (2nd parallel
 // dimension) followed by vectorization in the presence of _scalable_ vectors
 // (these are introduced through scalable tiling). The main goal is to verify
-// that canonicalizations fold away the masks in the main loop.
+// that canonicalization fold away the masks in the main loop.
 
 func.func @matmul(%A: tensor<1024x512xf32>,
                   %B: tensor<512x2000xf32>,

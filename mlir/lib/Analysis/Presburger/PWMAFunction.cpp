@@ -416,7 +416,7 @@ static void addDivisionConstraints(IntegerRelation &rel,
 }
 
 IntegerRelation MultiAffineFunction::getAsRelation() const {
-  // Create a relation corressponding to the input space plus the divisions
+  // Create a relation corresponding to the input space plus the divisions
   // used in outputs.
   IntegerRelation result(PresburgerSpace::getRelationSpace(
       space.getNumDomainVars(), 0, space.getNumSymbolVars(),
