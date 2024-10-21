@@ -3,4 +3,5 @@
 .arch_extension lsfe
 .arch_extension nolsfe
 ldfadd h0, h1, [x2]
-// CHECK: ldfadd h0, h1, [x2]
+// CHECK: error: instruction requires: lsfe
+// CHECK-NEXT: ldfadd h0, h1, [x2]

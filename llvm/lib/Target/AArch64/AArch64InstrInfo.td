@@ -10378,9 +10378,9 @@ defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
 
-//===----------------------------===//
-// 2024 Architecture Extensions:
-//===----------------------------===//
+//===-----------------------------------------------------===//
+// Atomic floating-point in-memory instructions (FEAT_LSFE)
+//===-----------------------------------------------------===//
 
 let Predicates = [HasLSFE] in {
   // Floating-point Atomic Load
