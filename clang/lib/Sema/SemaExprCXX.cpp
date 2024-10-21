@@ -7973,18 +7973,6 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
 
   QualType BaseType = Base->getType();
   MayBePseudoDestructor = false;
-  if (BaseType->isDependentType()) {
-    // If we have a pointer to a dependent type and are using the -> operator,
-    // the object type is the type that the pointer points to. We might still
-    // have enough information about that type to do something useful.
-    if (OpKind == tok::arrow)
-      if (const PointerType *Ptr = BaseType->getAs<PointerType>())
-        BaseType = Ptr->getPointeeType();
-
-    ObjectType = ParsedType::make(BaseType);
-    MayBePseudoDestructor = true;
-    return Base;
-  }
 
   // C++ [over.match.oper]p8:
   //   [...] When operator->returns, the operator-> is applied  to the value
@@ -7999,7 +7987,8 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
     SmallVector<FunctionDecl*, 8> OperatorArrows;
     CTypes.insert(Context.getCanonicalType(BaseType));
 
-    while (BaseType->isRecordType()) {
+    while (
+        isa<InjectedClassNameType, RecordType>(BaseType.getCanonicalType())) {
       if (OperatorArrows.size() >= getLangOpts().ArrowDepth) {
         Diag(OpLoc, diag::err_operator_arrow_depth_exceeded)
           << StartingType << getLangOpts().ArrowDepth << Base->getSourceRange();
@@ -8009,15 +7998,26 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
         return ExprError();
       }
 
+      bool IsDependent;
       Result = BuildOverloadedArrowExpr(
-          S, Base, OpLoc,
+          Base, OpLoc,
           // When in a template specialization and on the first loop iteration,
           // potentially give the default diagnostic (with the fixit in a
           // separate note) instead of having the error reported back to here
           // and giving a diagnostic with a fixit attached to the error itself.
           (FirstIteration && CurFD && CurFD->isFunctionTemplateSpecialization())
               ? nullptr
-              : &NoArrowOperatorFound);
+              : &NoArrowOperatorFound,
+          IsDependent);
+
+      if (IsDependent) {
+        // BuildOverloadedArrowExpr sets IsDependent to indicate that we need
+        // to build a dependent overloaded arrow expression.
+        assert(Base->isTypeDependent());
+        BaseType = Context.DependentTy;
+        break;
+      }
+
       if (Result.isInvalid()) {
         if (NoArrowOperatorFound) {
           if (FirstIteration) {
@@ -8037,6 +8037,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
         }
         return ExprError();
       }
+
       Base = Result.get();
       if (CXXOperatorCallExpr *OpCall = dyn_cast<CXXOperatorCallExpr>(Base))
         OperatorArrows.push_back(OpCall->getDirectCallee());
@@ -8074,7 +8075,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   // it's legal for the type to be incomplete if this is a pseudo-destructor
   // call.  We'll do more incomplete-type checks later in the lookup process,
   // so just skip this check for ObjC types.
-  if (!BaseType->isRecordType()) {
+  if (BaseType->isDependentType() || !BaseType->isRecordType()) {
     ObjectType = ParsedType::make(BaseType);
     MayBePseudoDestructor = true;
     return Base;
@@ -8085,8 +8086,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   //   Unlike the object expression in other contexts, *this is not required to
   //   be of complete type for purposes of class member access (5.2.5) outside
   //   the member function body.
-  if (!BaseType->isDependentType() &&
-      !isThisOutsideMemberFunctionBody(BaseType) &&
+  if (!isThisOutsideMemberFunctionBody(BaseType) &&
       RequireCompleteType(OpLoc, BaseType,
                           diag::err_incomplete_member_access)) {
     return CreateRecoveryExpr(Base->getBeginLoc(), Base->getEndLoc(), {Base});
