@@ -14797,7 +14797,6 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return SDValue(CSrc, 0);
 }
 
-
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
@@ -16889,4 +16888,14 @@ SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   AI->replaceAllUsesWith(LI);
   AI->eraseFromParent();
   return LI;
+}
+
+bool SITargetLowering::hasAndNot(SDValue Op) const {
+  // Return false if the operation is divergent, as AND-NOT is a scalar-only
+  // instruction.
+  if (Op->isDivergent() || !Op->isMachineOpcode())
+    return false;
+
+  EVT VT = Op.getValueType();
+  return VT == MVT::i32 || VT == MVT::i64;
 }
