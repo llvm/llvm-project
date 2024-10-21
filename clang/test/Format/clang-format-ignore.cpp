@@ -46,5 +46,16 @@
 // CHECK5-NEXT: {{Formatting \[4/5] .*foo\.c}}
 // CHECK5-NOT: foo.js
 
+// RUN: echo "foo.*" > .clang-format-ignore
+// RUN: touch foo.c
+// RUN: echo "foo,bar" | clang-format -assume-filename=foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK6
+// CHECK6: foo,bar
+
+// RUN: touch bar.c
+// RUN: echo "foo,bar" | clang-format -assume-filename=bar.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK7 -allow-empty
+// CHECK7: foo, bar
+
 // RUN: cd ..
 // RUN: rm -r %t.dir

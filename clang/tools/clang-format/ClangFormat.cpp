@@ -707,8 +707,42 @@ int main(int argc, const char **argv) {
     errs() << "Clang-formatting " << LineNo << " files\n";
   }
 
-  if (FileNames.empty())
+  if (FileNames.empty()) {
+    if (!AssumeFileName.empty() && isIgnored(AssumeFileName)) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
+          MemoryBuffer::getSTDIN();
+      if (std::error_code EC = CodeOrErr.getError()) {
+        errs() << EC.message() << "\n";
+        return 1;
+      }
+      std::unique_ptr<llvm::MemoryBuffer> Code = std::move(CodeOrErr.get());
+      if (Code->getBufferSize() == 0)
+        return 0; // Empty files are formatted correctly.
+
+      StringRef BufStr = Code->getBuffer();
+
+      const char *InvalidBOM =
+          clang::SrcMgr::ContentCache::getInvalidBOM(BufStr);
+
+      if (InvalidBOM) {
+        errs() << "error: encoding with unsupported byte order mark \""
+               << InvalidBOM << "\" detected.\n";
+        return 1;
+      }
+
+      // Output the input to STDIN as is
+      if (OutputXML) {
+        unsigned CursorPosition = Cursor;
+        clang::format::outputXML(Replacements{}, Replacements{},
+                                 clang::format::FormattingAttemptStatus{},
+                                 Cursor, CursorPosition);
+      } else {
+        outs() << BufStr;
+      }
+      return 0;
+    }
     return clang::format::format("-", FailOnIncompleteFormat);
+  }
 
   if (FileNames.size() > 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
