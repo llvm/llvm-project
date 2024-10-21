@@ -185,10 +185,10 @@ Cost InstCostVisitor::getCodeSizeSavingsForArg(Argument *A, Constant *C) {
 /// for all Instructions in KnownConstants at once, it should be called only
 /// after every instruction has been visited, i.e. after:
 ///
-/// * getCodeSizeBonus has been run for every constant argument of a
+/// * getCodeSizeSavingsForArg has been run for every constant argument of a
 ///   specialization candidate
 ///
-/// * getCodeSizeBonusFromPendingPHIs has been run
+/// * getCodeSizeSavingsFromPendingPHIs has been run
 ///
 /// to ensure that the latency savings are calculated for all Instructions we
 /// have visited and found to be constant.
@@ -831,6 +831,9 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   return Clone;
 }
 
+/// Get the unsigned Value of given Cost object. Assumes the Cost is always
+/// non-negative, which is true for both TCK_CodeSize and TCK_Latency, and
+/// always Valid.
 static unsigned getCostValue(const Cost &C) {
   int64_t Value = *C.getValue();
 
@@ -915,49 +918,58 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       }
       CodeSize += Visitor.getCodeSizeSavingsFromPendingPHIs();
 
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization bonus {CodeSize = "
-                        << CodeSize << ", Inlining = " << Score << "}\n");
-
-      unsigned LatencySavings = 0;
-      unsigned CodeSizeSavings = getCostValue(CodeSize);
-      FunctionGrowth[F] += FuncSize - CodeSizeSavings;
-
-      auto IsProfitable = [](unsigned CodeSizeSavings, unsigned &LatencySavings,
-                             unsigned Score, unsigned FuncSize,
-                             unsigned FuncGrowth, InstCostVisitor &V) -> bool {
+      auto IsProfitable = [&]() -> bool {
         // No check required.
         if (ForceSpecialization)
           return true;
+
+        unsigned CodeSizeSavings = getCostValue(CodeSize);
+        // TODO: We should only accumulate codesize increase of specializations
+        // that are actually created.
+        FunctionGrowth[F] += FuncSize - CodeSizeSavings;
+
+        LLVM_DEBUG(
+            dbgs() << "FnSpecialization: Specialization bonus {Inlining = "
+                   << Score << " (" << (Score * 100 / FuncSize) << "%)}\n");
+
         // Minimum inlining bonus.
         if (Score > MinInliningBonus * FuncSize / 100)
           return true;
+
+        LLVM_DEBUG(
+            dbgs() << "FnSpecialization: Specialization bonus {CodeSize = "
+                   << CodeSizeSavings << " ("
+                   << (CodeSizeSavings * 100 / FuncSize) << "%)}\n");
+
         // Minimum codesize savings.
         if (CodeSizeSavings < MinCodeSizeSavings * FuncSize / 100)
           return false;
 
         // Lazily compute the Latency, to avoid unnecessarily computing BFI.
-        LatencySavings = getCostValue(V.getLatencySavingsForKnownConstants());
+        unsigned LatencySavings =
+            getCostValue(Visitor.getLatencySavingsForKnownConstants());
 
         LLVM_DEBUG(
             dbgs() << "FnSpecialization: Specialization bonus {Latency = "
-                   << LatencySavings << "}\n");
+                   << LatencySavings << " ("
+                   << (LatencySavings * 100 / FuncSize) << "%)}\n");
 
         // Minimum latency savings.
         if (LatencySavings < MinLatencySavings * FuncSize / 100)
           return false;
         // Maximum codesize growth.
-        if (FuncGrowth / FuncSize > MaxCodeSizeGrowth)
+        if (FunctionGrowth[F] / FuncSize > MaxCodeSizeGrowth)
           return false;
+
+        Score += std::max(CodeSizeSavings, LatencySavings);
         return true;
       };
 
       // Discard unprofitable specialisations.
-      if (!IsProfitable(CodeSizeSavings, LatencySavings, Score, FuncSize,
-                        FunctionGrowth[F], Visitor))
+      if (!IsProfitable())
         continue;
 
       // Create a new specialisation entry.
-      Score += std::max(CodeSizeSavings, LatencySavings);
       auto &Spec = AllSpecs.emplace_back(F, S, Score);
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);
