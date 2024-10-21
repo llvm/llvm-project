@@ -52,7 +52,7 @@ add_flang_library(FortranSemantics
   omp_gen
 
   LINK_LIBS
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
 

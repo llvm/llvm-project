@@ -43,10 +43,9 @@ add_flang_nongtest_unittest(intrinsics
   FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
-  FortranDecimal
   FortranSemantics
+  FortranSupport
   FortranParser
-  FortranRuntime
 )
 
 add_flang_nongtest_unittest(logical
@@ -64,7 +63,7 @@ set(LLVM_REQUIRES_RTTI ON)
 add_flang_nongtest_unittest(real
   FortranEvaluateTesting
   FortranEvaluate
-  FortranDecimal
+  FortranSupport
   FortranSemantics
 )
 llvm_update_compile_flags(real.test)
@@ -75,5 +74,3 @@ add_flang_nongtest_unittest(folding
   FortranEvaluate
   FortranSemantics
 )
-
-add_subdirectory(../../../flang-rt/unittests/Evaluate runtime)

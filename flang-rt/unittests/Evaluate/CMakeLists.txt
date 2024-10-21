@@ -6,16 +6,14 @@
 #
 #===------------------------------------------------------------------------===#
 
-add_flang_nongtest_unittest(reshape
-  FortranEvaluateTesting
-  FortranSemantics
-  FortranEvaluate
-  FortranRuntime
+add_flangrt_nongtest_unittest(reshape
+  reshape.cpp
+LINK_LIBS
+  flang_rt.unittest
 )
 
-add_flang_nongtest_unittest(ISO-Fortran-binding
-  FortranEvaluateTesting
-  FortranEvaluate
-  FortranSemantics
-  FortranRuntime
+add_flangrt_nongtest_unittest(ISO-Fortran-binding
+  ISO-Fortran-binding.cpp
+LINK_LIBS
+  flang_rt.unittest
 )

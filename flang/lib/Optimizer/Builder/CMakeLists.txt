@@ -1,7 +1,7 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
-add_flang_library(FIRBuilder PARTIAL_SOURCES_INTENDED
+add_flang_library(FIRBuilder
   BoxValue.cpp
   Character.cpp
   Complex.cpp

@@ -8,7 +8,7 @@
 
 ! This MODULE implements part of the ISO_FORTRAN_ENV module file, which
 ! partially requires linkable symbols for some entities defined
-! (e.g., real_kinds).
+! (e.g., real_kinds). Hence, this file is also used by Flang-RT.
 
 module iso_fortran_env_impl
   implicit none
