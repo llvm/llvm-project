@@ -198,6 +198,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
   }
 
+  setOperationAction(ISD::UADDO, isPPC64 ? MVT::i64 : MVT::i32, Custom);
+
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
@@ -11967,11 +11969,51 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   llvm_unreachable("ERROR:Should return for all cases within swtich.");
 }
 
+SDValue PPCTargetLowering::LowerUaddo(SDValue Op, SelectionDAG &DAG) const {
+  // Default to target independent lowering if there is a logical user of the
+  // carry-bit.
+  for (SDNode *U : Op->uses()) {
+    if (U->getOpcode() == ISD::SELECT)
+      return SDValue();
+    if (ISD::isBitwiseLogicOp(U->getOpcode())) {
+      for (unsigned i = 0, ie = U->getNumOperands(); i != ie; ++i) {
+        if (U->getOperand(i).getOpcode() != ISD::UADDO &&
+            U->getOperand(i).getOpcode() != ISD::MERGE_VALUES)
+          return SDValue();
+      }
+    }
+  }
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDLoc dl(Op);
+
+  // Default to target independent lowering for special cases handled there.
+  if (isOneConstant(RHS) || isAllOnesConstant(RHS))
+    return SDValue();
+
+  EVT VT = Op.getNode()->getValueType(0);
+
+  SDValue ADDC;
+  SDValue Overflow;
+  SDVTList VTs = Op.getNode()->getVTList();
+
+  ADDC = DAG.getNode(ISD::ADDC, dl, DAG.getVTList(VT, MVT::Glue), LHS, RHS);
+  Overflow = DAG.getNode(ISD::ADDE, dl, DAG.getVTList(VT, MVT::Glue),
+                         DAG.getConstant(0, dl, VT), DAG.getConstant(0, dl, VT),
+                         ADDC.getValue(1));
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+  SDValue Res =
+      DAG.getNode(ISD::MERGE_VALUES, dl, VTs, ADDC.getValue(0), OverflowTrunc);
+  return Res;
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Wasn't expecting to be able to lower this!");
+  case ISD::UADDO:              return LowerUaddo(Op, DAG);
   case ISD::FPOW:               return lowerPow(Op, DAG);
   case ISD::FSIN:               return lowerSin(Op, DAG);
   case ISD::FCOS:               return lowerCos(Op, DAG);
