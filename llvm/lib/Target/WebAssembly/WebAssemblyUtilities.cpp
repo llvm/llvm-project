@@ -117,7 +117,7 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     Sym->setUndefined();
   }
   // MVP object files can't have symtab entries for tables.
-  if (!(Subtarget && Subtarget->hasReferenceTypes()))
+  if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
     Sym->setOmitFromLinkingSection();
   return Sym;
 }
@@ -142,7 +142,7 @@ MCSymbolWasm *WebAssembly::getOrCreateFuncrefCallTableSymbol(
     Sym->setTableType(TableType);
   }
   // MVP object files can't have symtab entries for tables.
-  if (!(Subtarget && Subtarget->hasReferenceTypes()))
+  if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
     Sym->setOmitFromLinkingSection();
   return Sym;
 }

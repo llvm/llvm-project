@@ -16,8 +16,7 @@ multiclass BULK_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                   list<dag> pattern_r, string asmstr_r = "",
                   string asmstr_s = "", bits<32> simdop = -1> {
   defm "" : I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r, asmstr_s,
-              !or(0xfc00, !and(0xff, simdop))>,
-            Requires<[HasBulkMemory]>;
+              !or(0xfc00, !and(0xff, simdop))>;
 }
 
 // Bespoke types and nodes for bulk memory ops
@@ -43,13 +42,15 @@ defm MEMORY_INIT_A#B :
          (outs), (ins i32imm_op:$seg, i32imm_op:$idx),
          [],
          "memory.init\t$seg, $idx, $dest, $offset, $size",
-         "memory.init\t$seg, $idx", 0x08>;
+         "memory.init\t$seg, $idx", 0x08>,
+  Requires<[HasBulkMemory]>;
 
 let hasSideEffects = 1 in
 defm DATA_DROP :
   BULK_I<(outs), (ins i32imm_op:$seg), (outs), (ins i32imm_op:$seg),
          [],
-         "data.drop\t$seg", "data.drop\t$seg", 0x09>;
+         "data.drop\t$seg", "data.drop\t$seg", 0x09>,
+  Requires<[HasBulkMemory]>;
 
 let mayLoad = 1, mayStore = 1 in
 defm MEMORY_COPY_A#B :
@@ -60,7 +61,8 @@ defm MEMORY_COPY_A#B :
            rc:$dst, rc:$src, rc:$len
          )],
          "memory.copy\t$src_idx, $dst_idx, $dst, $src, $len",
-         "memory.copy\t$src_idx, $dst_idx", 0x0a>;
+         "memory.copy\t$src_idx, $dst_idx", 0x0a>,
+  Requires<[HasBulkMemoryOpt]>;
 
 let mayStore = 1 in
 defm MEMORY_FILL_A#B :
@@ -68,7 +70,8 @@ defm MEMORY_FILL_A#B :
          (outs), (ins i32imm_op:$idx),
          [(wasm_memset (i32 imm:$idx), rc:$dst, I32:$value, rc:$size)],
          "memory.fill\t$idx, $dst, $value, $size",
-         "memory.fill\t$idx", 0x0b>;
+         "memory.fill\t$idx", 0x0b>,
+  Requires<[HasBulkMemoryOpt]>;
 }
 
 defm : BulkMemoryOps<I32, "32">;

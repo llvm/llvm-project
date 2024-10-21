@@ -41,6 +41,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
 
   bool HasAtomics = false;
   bool HasBulkMemory = false;
+  bool HasBulkMemoryOpt = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
@@ -49,6 +50,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
+  bool HasCallIndirectOverlong = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
 
@@ -94,6 +96,7 @@ public:
   bool hasAddr64() const { return TargetTriple.isArch64Bit(); }
   bool hasAtomics() const { return HasAtomics; }
   bool hasBulkMemory() const { return HasBulkMemory; }
+  bool hasBulkMemoryOpt() const { return HasBulkMemoryOpt; }
   bool hasExceptionHandling() const { return HasExceptionHandling; }
   bool hasExtendedConst() const { return HasExtendedConst; }
   bool hasFP16() const { return HasFP16; }
@@ -102,6 +105,7 @@ public:
   bool hasMutableGlobals() const { return HasMutableGlobals; }
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasReferenceTypes() const { return HasReferenceTypes; }
+  bool hasCallIndirectOverlong() const { return HasCallIndirectOverlong; }
   bool hasRelaxedSIMD() const { return SIMDLevel >= RelaxedSIMD; }
   bool hasSignExt() const { return HasSignExt; }
   bool hasSIMD128() const { return SIMDLevel >= SIMD128; }

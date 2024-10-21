@@ -633,7 +633,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                                     MF.getContext(), Subtarget)
                               : WebAssembly::getOrCreateFunctionTableSymbol(
                                     MF.getContext(), Subtarget);
-    if (Subtarget->hasReferenceTypes()) {
+    if (Subtarget->hasCallIndirectOverlong()) {
       MIB.addSym(Table);
     } else {
       // For the MVP there is at most one table whose number is 0, but we can't
