@@ -10641,8 +10641,11 @@ bool clang::isBetterOverloadCandidate(
             FPT1->getNumParams() == FPT2->getNumParams()) {
           const auto &P1 = FPT1->getParamTypes();
           const auto &P2 = FPT2->getParamTypes();
-          bool ParamsHaveSameType = llvm::all_of(llvm::zip(P1, P2), [&](const std::tuple<const QualType &, const QualType &> &pair) {
-              return S.Context.hasSameType(std::get<0>(pair), std::get<1>(pair));
+          bool ParamsHaveSameType = llvm::all_of(
+              llvm::zip(P1, P2),
+              [&](const std::tuple<const QualType &, const QualType &> &pair) {
+                return S.Context.hasSameType(std::get<0>(pair),
+                                             std::get<1>(pair));
               });
 
           if (ParamsHaveSameType)
@@ -11804,12 +11807,14 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
              "Inherited constructor deduction guides must have a source");
       QualType DeducedRecordType(
           cast<ClassTemplateDecl>(DG->getDeducedTemplate())
-                       ->getTemplatedDecl()
-                       ->getTypeForDecl(), 0);
+              ->getTemplatedDecl()
+              ->getTypeForDecl(),
+          0);
       QualType InheritedRecordType(
           cast<ClassTemplateDecl>(Source->getDeducedTemplate())
-                       ->getTemplatedDecl()
-                       ->getTypeForDecl(), 0);
+              ->getTemplatedDecl()
+              ->getTypeForDecl(),
+          0);
       S.Diag(Templated->getLocation(),
              diag::note_ovl_candidate_inherited_constructor_deduction_failure)
           << DeducedRecordType << InheritedRecordType << TemplateArgString;

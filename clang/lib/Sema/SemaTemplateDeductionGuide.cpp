@@ -899,10 +899,11 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
       Context.getTrivialTypeSourceInfo(
           ReturnType), // type from which template arguments are deduced.
   };
-  return TypeTraitExpr::Create(Context, Context.getLogicalOperationType(),
-                               AliasTemplate->getLocation(), TypeTrait::BTT_IsDeducible,
-                               IsDeducibleTypeTraitArgs, AliasTemplate->getLocation(),
-                               /*Value*/ false);
+  return TypeTraitExpr::Create(
+      Context, Context.getLogicalOperationType(), AliasTemplate->getLocation(),
+      TypeTrait::BTT_IsDeducible, IsDeducibleTypeTraitArgs,
+      AliasTemplate->getLocation(),
+      /*Value*/ false);
 }
 
 std::pair<TemplateDecl *, llvm::ArrayRef<TemplateArgument>>
@@ -962,7 +963,8 @@ TypeSourceInfo *buildInheritedConstructorDeductionGuideType(
 
   MultiLevelTemplateArgumentList Args;
   Args.addOuterTemplateArguments(Info.DerivedClassTemplate,
-                                 TemplateArgument(FPT->getReturnType()), /*Final=*/false);
+                                 TemplateArgument(FPT->getReturnType()),
+                                 /*Final=*/false);
   Args.addOuterRetainedLevels(Info.DerivedClassTemplate->getTemplateDepth());
   TypeSourceInfo *ReturnTypeTSI = SemaRef.SubstType(
       Info.CCType, Args, Info.DerivedClassTemplate->getBeginLoc(),
@@ -993,8 +995,9 @@ TypeSourceInfo *buildInheritedConstructorDeductionGuideType(
 // deduction guide F.
 // If F is synthesized from a base class (as an inherited constructor),
 // then the return type will be transformed using FromInheritedCtor->CCType.
-// The resulting deduction guide is added to the FromInheritedCtor->DerivedClassTemplate,
-// as opposed to the given AliasTemplate.
+// The resulting deduction guide is added to the
+// FromInheritedCtor->DerivedClassTemplate, as opposed to the given
+// AliasTemplate.
 FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     FunctionTemplateDecl *F, SourceLocation Loc,
@@ -1185,15 +1188,16 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
                        ->getReturnType();
     }
 
-    // We omit the deducible constraint for inherited constructor deduction guides
-    // because they would take precedence over the derived class' own deduction guides
-    // due to [over.match.best.general]p2.5 and [temp.func.order]p6.4
-    // If the alias were not deducible in this case, the deduction guide would already not be
-    // deducible due to the partial specialization `CC<>` failing substitution.
+    // We omit the deducible constraint for inherited constructor deduction
+    // guides because they would take precedence over the derived class' own
+    // deduction guides due to [over.match.best.general]p2.5 and
+    // [temp.func.order]p6.4 If the alias were not deducible in this case, the
+    // deduction guide would already not be deducible due to the partial
+    // specialization `CC<>` failing substitution.
     Expr *IsDeducible = nullptr;
     if (!FromInheritedCtor)
-      IsDeducible = buildIsDeducibleConstraint(SemaRef, AliasTemplate, ReturnType,
-          FPrimeTemplateParams);
+      IsDeducible = buildIsDeducibleConstraint(
+          SemaRef, AliasTemplate, ReturnType, FPrimeTemplateParams);
     Expr *RequiresClause =
         buildAssociatedConstraints(SemaRef, F, AliasTemplate, DeduceResults,
                                    FirstUndeducedParamIdx, IsDeducible);
@@ -1295,16 +1299,17 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       // function. Per [dcl.decl]p4, the requires-clause shall be present only
       // if the declarator declares a templated function, a bug in standard?
       if (FromInheritedCtor) {
-        // We omit the deducible constraint for inherited constructor deduction guides
-        // because they would take precedence over the derived class' own deduction guides
-        // due to [over.match.best.general]p2.5 and [temp.func.order]p6.4
-        // If the alias were not deducible in this case, the deduction guide would already not be
-        // deducible due to the partial specialization `CC<>` failing substitution.
+        // We omit the deducible constraint for inherited constructor deduction
+        // guides because they would take precedence over the derived class' own
+        // deduction guides due to [over.match.best.general]p2.5 and
+        // [temp.func.order]p6.4 If the alias were not deducible in this case,
+        // the deduction guide would already not be deducible due to the partial
+        // specialization `CC<>` failing substitution.
         if (auto *RC = DG->getTrailingRequiresClause())
           Transformed->setTrailingRequiresClause(RC);
       } else {
-        auto *Constraint = buildIsDeducibleConstraint(
-            SemaRef, AliasTemplate, ReturnType, {});
+        auto *Constraint =
+            buildIsDeducibleConstraint(SemaRef, AliasTemplate, ReturnType, {});
         if (auto *RC = DG->getTrailingRequiresClause()) {
           auto Conjunction =
               SemaRef.BuildBinOp(SemaRef.getCurScope(), SourceLocation{},
@@ -1391,8 +1396,7 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
           TemplateTPL, BaseTST->template_arguments());
   llvm::SmallSet<unsigned int, 8> BaseDeducedTemplateParamsSet(
       BaseDeducedTemplateParamsList.begin(),
-      BaseDeducedTemplateParamsList.end()
-      );
+      BaseDeducedTemplateParamsList.end());
   SmallVector<NamedDecl *, 8> AliasTemplateParams;
   SmallVector<TemplateArgument, 8> SubstArgs;
   AliasTemplateParams.reserve(TemplateTPL->size());
@@ -1514,9 +1518,9 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   CXXRecordDecl *CCTemplateRD = CXXRecordDecl::Create(
       Context, CXXRecordDecl::TagKind::Struct, DC, SourceLocation(),
       SourceLocation(), nullptr, nullptr);
-  ClassTemplateDecl *CCTemplateDecl =
-      ClassTemplateDecl::Create(Context, DC, SourceLocation(),
-                                DeclarationName(CCTemplateII), CCTemplateTPL, CCTemplateRD);
+  ClassTemplateDecl *CCTemplateDecl = ClassTemplateDecl::Create(
+      Context, DC, SourceLocation(), DeclarationName(CCTemplateII),
+      CCTemplateTPL, CCTemplateRD);
   CCTemplateRD->setDescribedClassTemplate(CCTemplateDecl);
   CCTemplateDecl->setImplicit();
   CCTemplateRD->setImplicit();
@@ -1532,10 +1536,11 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   QualType CanonType =
       Context.getTemplateSpecializationType(CCTemplateName, TAL);
 
-  auto *CCPartialSpecialization = ClassTemplatePartialSpecializationDecl::Create(
-      Context, ClassTemplatePartialSpecializationDecl::TagKind::Struct, DC,
-      SourceLocation(), SourceLocation(), PartialSpecTPL, CCTemplateDecl, TAL,
-      CanonType, nullptr);
+  auto *CCPartialSpecialization =
+      ClassTemplatePartialSpecializationDecl::Create(
+          Context, ClassTemplatePartialSpecializationDecl::TagKind::Struct, DC,
+          SourceLocation(), SourceLocation(), PartialSpecTPL, CCTemplateDecl,
+          TAL, CanonType, nullptr);
   CCPartialSpecialization->setImplicit();
   CCPartialSpecialization->startDefinition();
 
