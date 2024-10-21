@@ -7847,6 +7847,8 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     XLD->setAtomic(AO);
     XRead = cast<Value>(XLD);
   } else if (XElemTy->isStructTy()) {
+    // FIXME: Add checks to ensure __atomic_load is emitted iff the
+    // target does not support `atomicrmw` of the size of the struct
     LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
     OldVal->setAtomic(AO);
     const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
