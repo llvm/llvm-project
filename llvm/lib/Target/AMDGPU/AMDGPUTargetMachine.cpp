@@ -443,6 +443,11 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
+static cl::opt<bool> NewRegBankSelect(
+    "new-reg-bank-select",
+    cl::desc("Run rb-select and rb-legalize instead of amdgpu-regbankselect"),
+    cl::init(false), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -459,6 +464,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
+  initializeAMDGPURBSelectPass(*PR);
+  initializeAMDGPURBLegalizePass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
   initializeAMDGPUMarkLastScratchLoadPass(*PR);
   initializeSILowerSGPRSpillsLegacyPass(*PR);
@@ -1371,7 +1378,12 @@ void GCNPassConfig::addPreRegBankSelect() {
 }
 
 bool GCNPassConfig::addRegBankSelect() {
-  addPass(new AMDGPURegBankSelect());
+  if (NewRegBankSelect) {
+    addPass(createAMDGPURBSelectPass());
+    addPass(createAMDGPURBLegalizePass());
+  } else {
+    addPass(new AMDGPURegBankSelect());
+  }
   return false;
 }
 
