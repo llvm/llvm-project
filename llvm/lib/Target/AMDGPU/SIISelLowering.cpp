@@ -16890,3 +16890,28 @@ SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
   return LI;
 }
+
+bool SITargetLowering::hasBitTest(SDValue X, SDValue Y) const {
+  if (X->isDivergent() || Y->isDivergent())
+    return false;
+
+  EVT VT = X.getValueType();
+
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return false;
+
+  if (VT.isVector()) {
+    EVT ScalarType = VT.getScalarType();
+    if (ScalarType != MVT::i32 && ScalarType != MVT::i64)
+      return false;
+  }
+
+  auto *IsConstOrIsConstSplat = dyn_cast<ConstantSDNode>(Y);
+  if (!dyn_cast<ConstantSDNode>(Y))
+    return false;
+
+  if (!IsConstOrIsConstSplat->getAPIntValue().isPowerOf2())
+    return false;
+
+  return true;
+}
