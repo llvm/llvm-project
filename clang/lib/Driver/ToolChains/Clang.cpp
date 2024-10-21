@@ -658,11 +658,13 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
             ? ColdFuncCoverageArg->getValue()
             : "");
     llvm::sys::path::append(Path, "default_%m.profraw");
+    // FIXME: Idealy the file path should be passed through
+    // `-fprofile-instrument-path=`(InstrProfileOutput), however, this field is
+    // shared with other profile use path(see PGOOptions), we need to refactor
+    // PGOOptions to make it work.
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--instrument-cold-function-coverage-path=") + Path));
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("--instrument-cold-function-coverage");
+        Twine("--instrument-cold-function-only-path=") + Path));
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--pgo-function-entry-coverage");
   }

@@ -1786,10 +1786,10 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   NegFlag<SetFalse>>;
 def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">, 
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
-    HelpText<"Generate instrumented code to cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
+    HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
 def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">, 
     Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<directory>">,
-    HelpText<"Generate instrumented code to cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">; 
+    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">; 
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;

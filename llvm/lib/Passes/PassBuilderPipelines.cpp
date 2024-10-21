@@ -296,13 +296,12 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
-static cl::opt<std::string> InstrumentColdFuncCoveragePath(
-    "instrument-cold-function-coverage-path", cl::init(""),
-    cl::desc("File path for cold function coverage instrumentation"),
-    cl::Hidden);
+static cl::opt<std::string> InstrumentColdFuncOnlyPath(
+    "instrument-cold-function-only-path", cl::init(""),
+    cl::desc("File path for cold function only instrumentation"), cl::Hidden);
 
 extern cl::opt<std::string> UseCtxProfile;
-extern cl::opt<bool> InstrumentColdFunctionCoverage;
+extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -1191,12 +1190,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
   // Enable cold function coverage instrumentation if
-  // InstrumentColdFuncCoveragePath is provided.
-  const bool IsColdFuncCoverageGen = InstrumentColdFunctionCoverage =
-      IsPGOPreLink && !InstrumentColdFuncCoveragePath.empty();
+  // InstrumentColdFuncOnlyPath is provided.
+  const bool IsColdFuncOnlyInstrGen = PGOInstrumentColdFunctionOnly =
+      IsPGOPreLink && !InstrumentColdFuncOnlyPath.empty();
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
-      IsCtxProfUse || IsColdFuncCoverageGen)
+      IsCtxProfUse || IsColdFuncOnlyInstrGen)
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -1218,10 +1217,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       return MPM;
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
-  } else if (IsColdFuncCoverageGen) {
+  } else if (IsColdFuncOnlyInstrGen) {
     addPGOInstrPasses(
         MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
-        /* AtomicCounterUpdate */ false, InstrumentColdFuncCoveragePath,
+        /* AtomicCounterUpdate */ false, InstrumentColdFuncOnlyPath,
         /* ProfileRemappingFile */ "", IntrusiveRefCntPtr<vfs::FileSystem>());
   }
 
