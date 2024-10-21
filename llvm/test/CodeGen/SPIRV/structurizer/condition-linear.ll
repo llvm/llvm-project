@@ -1,5 +1,5 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
-; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s --match-full-lines
+; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - -verify-machineinstrs | FileCheck %s --match-full-lines
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan-compute"
