@@ -156,7 +156,7 @@ void mlir::registerPass(const PassAllocatorFunction &function) {
                              "' pass that does not override `getArgument()`");
   StringRef description = pass->getDescription();
   PassInfo passInfo(arg, description, function);
-  passRegistry->try_emplace(arg, passInfo);
+  passRegistry->insert_or_assign(arg, passInfo);
 
   // Verify that the registered pass has the same ID as any registered to this
   // arg before it.

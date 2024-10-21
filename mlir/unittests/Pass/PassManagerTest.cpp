@@ -13,6 +13,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "gtest/gtest.h"
 
@@ -279,6 +280,64 @@ TEST(PassManagerTest, PassInitialization) {
   // Adding a second copy of the pass, we should also initialize it!
   pm.addPass(std::make_unique<InitializeCheckingPass>());
   EXPECT_TRUE(succeeded(pm.run(module.get())));
+}
+
+struct ReRegisterPass
+    : public PassWrapper<ReRegisterPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReRegisterPass)
+
+  StringRef getArgument() const final {
+    return "test-pass-reregistration-pass";
+  }
+  ReRegisterPass(std::string annotation) : annotation(annotation) {}
+
+  std::string annotation;
+
+  void runOnOperation() override {
+    ModuleOp op = this->getOperation();
+    Builder builder(op);
+    op->walk([this, &builder](Operation *op) {
+      op->setAttr(annotation, builder.getUnitAttr());
+    });
+  }
+};
+
+TEST(PassManagerTest, PassReRegistration) {
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+
+  std::string moduleStr = R"mlir(
+    module {
+      "custom.op1"() : () -> ()
+      "custom.op2"() : () -> ()
+    }
+  )mlir";
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+
+  // Register in first configuration.
+  registerPass([]() -> std::unique_ptr<mlir::Pass> {
+    return std::make_unique<ReRegisterPass>("custom.first");
+  });
+
+  // Run pass to verify first configuration is effective.
+  auto pm = PassManager::on<ModuleOp>(&context);
+  (void)parsePassPipeline("test-pass-reregistration-pass", pm, llvm::errs());
+  EXPECT_TRUE(succeeded(pm.run(module.get())));
+  module->walk([](Operation *op) { EXPECT_TRUE(op->hasAttr("custom.first")); });
+
+  // Register a "reconfiguration" of the pass, i.e., with a different
+  // annotation.
+  registerPass([]() -> std::unique_ptr<mlir::Pass> {
+    return std::make_unique<ReRegisterPass>("custom.second");
+  });
+
+  // Run pass to verify second configuration is effective.
+  (void)parsePassPipeline("test-pass-reregistration-pass", pm, llvm::errs());
+  EXPECT_TRUE(succeeded(pm.run(module.get())));
+  module->walk(
+      [](Operation *op) { EXPECT_TRUE(op->hasAttr("custom.second")); });
 }
 
 } // namespace
