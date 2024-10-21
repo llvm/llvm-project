@@ -63,6 +63,8 @@ bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
 
 bool Type::isIndex() const { return llvm::isa<IndexType>(*this); }
 
+bool Type::isFloat() const { return llvm::isa<FloatType>(*this); }
+
 bool Type::isInteger() const { return llvm::isa<IntegerType>(*this); }
 
 /// Return true if this is an integer type with the specified width.
@@ -109,26 +111,22 @@ bool Type::isUnsignedInteger(unsigned width) const {
 }
 
 bool Type::isSignlessIntOrIndex() const {
-  return isSignlessInteger() || llvm::isa<IndexType>(*this);
-}
-
-bool Type::isSignlessIntOrIndexOrFloat() const {
-  return isSignlessInteger() || llvm::isa<IndexType, FloatType>(*this);
+  return isSignlessInteger() || isIndex();
 }
 
 bool Type::isSignlessIntOrFloat() const {
-  return isSignlessInteger() || llvm::isa<FloatType>(*this);
+  return isSignlessInteger() || isFloat();
 }
 
-bool Type::isIntOrIndex() const {
-  return llvm::isa<IntegerType>(*this) || isIndex();
+bool Type::isSignlessIntOrIndexOrFloat() const {
+  return isSignlessIntOrIndex() || isFloat();
 }
 
-bool Type::isIntOrFloat() const {
-  return llvm::isa<IntegerType, FloatType>(*this);
-}
+bool Type::isIntOrIndex() const { return isInteger() || isIndex(); }
 
-bool Type::isIntOrIndexOrFloat() const { return isIntOrFloat() || isIndex(); }
+bool Type::isIntOrFloat() const { return isInteger() || isFloat(); }
+
+bool Type::isIntOrIndexOrFloat() const { return isIntOrIndex() || isFloat(); }
 
 unsigned Type::getIntOrFloatBitWidth() const {
   assert(isIntOrFloat() && "only integers and floats have a bitwidth");
