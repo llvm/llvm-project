@@ -288,14 +288,22 @@ BigPST test_return_big_pst(BigPST *p) {
 // CHECK-AAPCS:  define dso_local void @test_return_big_pst(ptr dead_on_unwind noalias nocapture writable writeonly sret(%struct.BigPST) align 16 %agg.result, ptr nocapture noundef readonly %p)
 // CHECK-DARWIN: define void @test_return_big_pst(ptr dead_on_unwind noalias nocapture writable writeonly sret(%struct.BigPST) align 16 %agg.result, ptr nocapture noundef readonly %p)
 
-// Variadic arguments are unnamed, PST passed indirectly
-//   0  -> x0
-//   *p -> memory, address -> x1
-void test_pass_variadic(PST *p) {
-    void pass_variadic_callee(int n, ...);
-    pass_variadic_callee(0, *p);
+// Variadic arguments are unnamed, PST passed indirectly.
+// (Passing SVE types to bvariadic fucntion currently unsupported by
+// the AArch64 backend)
+//   p->a    -> p0
+//   p->x    -> q0
+//   p->y[0] -> q1
+//   p->y[1] -> q2
+//   p->z    -> q3
+//   p->b    -> p1
+//   *q -> memory, address -> x1
+void test_pass_variadic(PST *p, PST *q) {
+    void pass_variadic_callee(PST, ...);
+    pass_variadic_callee(*p, *q);
 }
-// CHECK: declare void @pass_variadic_callee(i32 noundef, ...)
+// CHECK-AAPCS:  declare void @pass_variadic_callee(<vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1>, ...)
+// CHECK-DARWIN: declare void @pass_variadic_callee(ptr noundef, ...)
 
 
 // Test handling of a PST argument when passed in registers, from the callee side.
