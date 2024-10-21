@@ -127,6 +127,11 @@ extern volatile int PortabilityModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED PortabilityModuleAnchorDestination =
     PortabilityModuleAnchorSource;
 
+// This anchor is used to force the linker to link the QtClangTidyModule.
+extern volatile int QtClangTidyModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED QtClangTidyModuleAnchorDestination =
+    QtClangTidyModuleAnchorSource;
+
 // This anchor is used to force the linker to link the ReadabilityModule.
 extern volatile int ReadabilityModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ReadabilityModuleAnchorDestination =

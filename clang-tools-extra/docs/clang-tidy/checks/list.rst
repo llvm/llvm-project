@@ -30,6 +30,7 @@ Clang-Tidy Checks
    openmp/*
    performance/*
    portability/*
+   qt/*
    readability/*
    zircon/*
 
@@ -300,6 +301,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
    :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
    :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
+   :doc:`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>`, "Yes"
    :doc:`modernize-use-nodiscard <modernize/use-nodiscard>`, "Yes"
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
@@ -348,6 +350,7 @@ Clang-Tidy Checks
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
+   :doc:`qt-integer-sign-comparison <qt/integer-sign-comparison>`, "Yes"
    :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,

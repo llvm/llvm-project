@@ -131,12 +131,29 @@ New checks
   Finds cases when an uninstantiated virtual member function in a template class 
   causes cross-compiler incompatibility.
 
+- New :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check.
+
+  Performs comparisons between signed and unsigned integer types
+  mathematically correct. If C++20 is supported a fix-it replaces
+  integers comparisons to
+  std::cmp_{equal,not_equal,{less,greater}{,_equal}} functions.
+
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
 - New alias :doc:`cert-arr39-c <clang-tidy/checks/cert/arr39-c>` to
   :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` was added.
+
+- New alias :doc:`qt-integer-sign-comparison
+  <clang-tidy/checks/qt/integer-sign-comparison>` to
+  doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check.
+  If C++17 is supported, the fix-it replaces integers comparisons to
+  q20::cmp_{equal,not_equal,{less,greater}{,_equal}} functions.
+  The check assumes the analysed code is Qt-based code.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
