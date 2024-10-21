@@ -796,19 +796,26 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   assert((!NoUndefSelfMultiply || LHS == RHS) &&
          "Self multiplication knownbits mismatch");
 
-  // Compute the high known-0 bits by multiplying the unsigned max of each side.
-  // Conservatively, M active bits * N active bits results in M + N bits in the
-  // result. But if we know a value is a power-of-2 for example, then this
-  // computes one more leading zero.
-  // TODO: This could be generalized to number of sign bits (negative numbers).
-  APInt UMaxLHS = LHS.getMaxValue();
-  APInt UMaxRHS = RHS.getMaxValue();
+  // Compute the high known-0 or known-1 bits by multiplying the max of each
+  // side. Conservatively, M active bits * N active bits results in M + N bits
+  // in the result. But if we know a value is a power-of-2 for example, then
+  // this computes one more leading zero or one.
+  APInt MaxLHS = LHS.isNegative() ? LHS.getMinValue().abs() : LHS.getMaxValue(),
+        MaxRHS = RHS.isNegative() ? RHS.getMinValue().abs() : RHS.getMaxValue();
 
-  // For leading zeros in the result to be valid, the unsigned max product must
+  // For leading zeros or ones in the result to be valid, the max product must
   // fit in the bitwidth (it must not overflow).
   bool HasOverflow;
-  APInt UMaxResult = UMaxLHS.umul_ov(UMaxRHS, HasOverflow);
-  unsigned LeadZ = HasOverflow ? 0 : UMaxResult.countl_zero();
+  APInt Result = MaxLHS.umul_ov(MaxRHS, HasOverflow);
+  bool NegResult = LHS.isNegative() ^ RHS.isNegative();
+  unsigned LeadZ = 0, LeadO = 0;
+  if (!HasOverflow) {
+    // Do not set leading ones unless the result is known to be non-zero.
+    if (NegResult && LHS.isNonZero() && RHS.isNonZero())
+      LeadO = (-Result).countLeadingOnes();
+    else if (!NegResult)
+      LeadZ = Result.countLeadingZeros();
+  }
 
   // The result of the bottom bits of an integer multiply can be
   // inferred by looking at the bottom bits of both operands and
@@ -873,8 +880,9 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
 
   KnownBits Res(BitWidth);
   Res.Zero.setHighBits(LeadZ);
+  Res.One.setHighBits(LeadO);
   Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
-  Res.One = BottomKnown.getLoBits(ResultBitsKnown);
+  Res.One |= BottomKnown.getLoBits(ResultBitsKnown);
 
   // If we're self-multiplying then bit[1] is guaranteed to be zero.
   if (NoUndefSelfMultiply && BitWidth > 1) {
