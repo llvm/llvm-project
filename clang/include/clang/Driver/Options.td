@@ -4334,6 +4334,7 @@ defm ptrauth_indirect_gotos : OptInCC1FFlag<"ptrauth-indirect-gotos",
 defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
 defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini-address-discrimination",
   "Enable address discrimination of function pointers in init/fini arrays">;
+defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening", "Use hardened lowering for jump-table dispatch">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
