@@ -164,7 +164,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// The function hash.
   PGOHash Hash;
   /// The map of statements to counters.
-  llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
+  llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
   /// The state of MC/DC Coverage in this function.
   MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
@@ -175,7 +175,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   DiagnosticsEngine &Diag;
 
   MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
-                    llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
+                    llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
                     MCDC::State &MCDCState, unsigned MCDCMaxCond,
                     DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
@@ -1084,7 +1084,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
       (CGM.getCodeGenOpts().MCDCCoverage ? CGM.getCodeGenOpts().MCDCMaxConds
                                          : 0);
 
-  RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, CounterPair>);
   RegionMCDCState.reset(new MCDC::State);
   MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
                            *RegionMCDCState, MCDCMaxConditions, CGM.getDiags());
@@ -1138,6 +1138,19 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
   if (CoverageMapping.empty())
     return;
 
+  // Scan max(FalseCnt) and update NumRegionCounters.
+  unsigned MaxNumCounters = NumRegionCounters;
+  for (const auto [_, V] : *RegionCounterMap) {
+    auto HasCounters = V.getIsCounterPair();
+    assert((!HasCounters.first ||
+            MaxNumCounters > (V.first & CounterPair::Mask)) &&
+           "TrueCnt should not be reassigned");
+    if (HasCounters.second)
+      MaxNumCounters =
+          std::max(MaxNumCounters, (V.second & CounterPair::Mask) + 1);
+  }
+  NumRegionCounters = MaxNumCounters;
+
   CGM.getCoverageMapping()->addFunctionMappingRecord(
       FuncNameVar, FuncName, FunctionHash, CoverageMapping);
 }
@@ -1186,12 +1199,33 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
+std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
+  if (!RegionCounterMap || RegionCounterMap->count(S) == 0)
+    return {false, false};
+  return (*RegionCounterMap)[S].getIsCounterPair();
+}
+
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                           bool UseSkipPath, bool UseBoth,
                                            llvm::Value *StepV) {
-  if (!RegionCounterMap || !Builder.GetInsertBlock())
+  if (!RegionCounterMap)
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S];
+  unsigned Counter;
+  auto &TheMap = (*RegionCounterMap)[S];
+  auto IsCounter = TheMap.getIsCounterPair();
+  if (!UseSkipPath) {
+    if (!IsCounter.first)
+      return;
+    Counter = (TheMap.first & CounterPair::Mask);
+  } else {
+    if (!IsCounter.second)
+      return;
+    Counter = (TheMap.second & CounterPair::Mask);
+  }
+
+  if (!Builder.GetInsertBlock())
+    return;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
