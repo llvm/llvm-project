@@ -100,12 +100,12 @@ class A {
   // Check lvalue ref vs rvalue ref vs pointer.
   virtual a& rvalue_ref();
   virtual a&& lvalue_ref();
-  virtual a& rvalue_vs_lvalue_ref(); // expected-note{{overridden virtual function is here}}
-  virtual a&& lvalue_vs_rvalue_ref(); // expected-note{{overridden virtual function is here}}
-  virtual a& rvalue_ref_vs_pointer(); // expected-note{{overridden virtual function is here}}
-  virtual a* pointer_vs_rvalue_ref(); // expected-note{{overridden virtual function is here}}
-  virtual a&& lvalue_ref_vs_pointer(); // expected-note{{overridden virtual function is here}}
-  virtual a* pointer_vs_lvalue_ref(); // expected-note{{overridden virtual function is here}}
+  virtual a& rvalue_vs_lvalue_ref(); // #cwg960-A-rvalue_vs_lvalue_ref
+  virtual a&& lvalue_vs_rvalue_ref(); // #cwg960-A-lvalue_vs_rvalue_ref
+  virtual a& rvalue_ref_vs_pointer(); // #cwg960-A-rvalue_ref_vs_pointer
+  virtual a* pointer_vs_rvalue_ref(); // #cwg960-A-pointer_vs_rvalue_ref
+  virtual a&& lvalue_ref_vs_pointer(); // #cwg960-A-lvalue_ref_vs_pointer
+  virtual a* pointer_vs_lvalue_ref(); // #cwg960-A-pointer_vs_lvalue_ref
 #endif
 };
 
@@ -114,12 +114,30 @@ class B : A {
   // Check lvalue ref vs rvalue ref vs pointer.
   a& rvalue_ref() override;
   a&& lvalue_ref() override;
-  a&& rvalue_vs_lvalue_ref() override; // expected-error{{virtual function 'rvalue_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a &')}}
-  a& lvalue_vs_rvalue_ref() override; // expected-error{{virtual function 'lvalue_vs_rvalue_ref' has a different return type ('a &') than the function it overrides (which has return type 'a &&')}}
-  a* rvalue_ref_vs_pointer() override; // expected-error{{virtual function 'rvalue_ref_vs_pointer' has a different return type ('a *') than the function it overrides (which has return type 'a &')}}
-  a& pointer_vs_rvalue_ref() override; // expected-error{{virtual function 'pointer_vs_rvalue_ref' has a different return type ('a &') than the function it overrides (which has return type 'a *')}}
-  a* lvalue_ref_vs_pointer() override; // expected-error{{virtual function 'lvalue_ref_vs_pointer' has a different return type ('a *') than the function it overrides (which has return type 'a &&')}}
-  a&& pointer_vs_lvalue_ref() override; // expected-error{{virtual function 'pointer_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a *')}}
+
+  a&& rvalue_vs_lvalue_ref() override; 
+  // since-cxx11-error@-1 {{virtual function 'rvalue_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a &')}}
+  //   since-cxx11-note@#cwg960-A-rvalue_vs_lvalue_ref {{overridden virtual function is here}}
+
+  a& lvalue_vs_rvalue_ref() override;
+  // since-cxx11-error@-1 {{virtual function 'lvalue_vs_rvalue_ref' has a different return type ('a &') than the function it overrides (which has return type 'a &&')}}
+  //   since-cxx11-note@#cwg960-A-lvalue_vs_rvalue_ref {{overridden virtual function is here}}
+
+  a* rvalue_ref_vs_pointer() override;
+  // since-cxx11-error@-1 {{virtual function 'rvalue_ref_vs_pointer' has a different return type ('a *') than the function it overrides (which has return type 'a &')}}
+  //   since-cxx11-note@#cwg960-A-rvalue_ref_vs_pointer {{overridden virtual function is here}}
+
+  a& pointer_vs_rvalue_ref() override;
+  // since-cxx11-error@-1 {{virtual function 'pointer_vs_rvalue_ref' has a different return type ('a &') than the function it overrides (which has return type 'a *')}}
+  //   since-cxx11-note@#cwg960-A-pointer_vs_rvalue_ref {{overridden virtual function is here}}
+
+  a* lvalue_ref_vs_pointer() override;
+  // since-cxx11-error@-1 {{virtual function 'lvalue_ref_vs_pointer' has a different return type ('a *') than the function it overrides (which has return type 'a &&')}}
+  //   since-cxx11-note@#cwg960-A-lvalue_ref_vs_pointer {{overridden virtual function is here}}
+
+  a&& pointer_vs_lvalue_ref() override;
+  // since-cxx11-error@-1 {{virtual function 'pointer_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a *')}}
+  //   since-cxx11-note@#cwg960-A-pointer_vs_lvalue_ref {{overridden virtual function is here}}
 #endif
 };
 
