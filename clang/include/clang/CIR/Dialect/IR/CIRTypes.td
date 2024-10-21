@@ -202,7 +202,8 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 
 // Constraints
 
-def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_FP128, CIR_LongDouble]>;
+def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_FP128, CIR_LongDouble,
+    CIR_FP16, CIR_BFloat16]>;
 def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
 
 //===----------------------------------------------------------------------===//

@@ -584,6 +584,11 @@ public:
                                          getAttr<mlir::cir::FPAttr>(t, fpVal));
   }
 
+  mlir::cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
+                                         unsigned flags) {
+    return create<mlir::cir::IsFPClassOp>(loc, src, flags);
+  }
+
   /// Create constant nullptr for pointer-to-data-member type ty.
   mlir::cir::ConstantOp getNullDataMemberPtr(mlir::cir::DataMemberType ty,
                                              mlir::Location loc) {

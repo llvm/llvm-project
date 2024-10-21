@@ -4117,6 +4117,33 @@ public:
   }
 };
 
+class CIRIsFPClassOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::IsFPClassOp> {
+public:
+  using OpConversionPattern<mlir::cir::IsFPClassOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::IsFPClassOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto src = adaptor.getSrc();
+    auto flags = adaptor.getFlags();
+    auto retTy = rewriter.getI1Type();
+
+    auto loc = op->getLoc();
+
+    auto intrinsic =
+        rewriter.create<mlir::LLVM::IsFPClass>(loc, retTy, src, flags);
+    // FIMXE: CIR now will convert cir::BoolType to i8 type unconditionally.
+    // Remove this conversion after we fix
+    // https://github.com/llvm/clangir/issues/480
+    auto converted = rewriter.create<mlir::LLVM::ZExtOp>(
+        loc, rewriter.getI8Type(), intrinsic->getResult(0));
+
+    rewriter.replaceOp(op, converted);
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter,
                                          mlir::DataLayout &dataLayout) {
@@ -4149,7 +4176,7 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIREhTypeIdOpLowering, CIRCatchParamOpLowering, CIRResumeOpLowering,
       CIRAllocExceptionOpLowering, CIRFreeExceptionOpLowering,
       CIRThrowOpLowering, CIRIntrinsicCallLowering, CIRBaseClassAddrOpLowering,
-      CIRVTTAddrPointOpLowering
+      CIRVTTAddrPointOpLowering, CIRIsFPClassOpLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST

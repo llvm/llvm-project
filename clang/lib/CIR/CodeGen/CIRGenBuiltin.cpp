@@ -46,6 +46,17 @@ static RValue buildLibraryCall(CIRGenFunction &CGF, const FunctionDecl *FD,
   return CGF.buildCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
 }
 
+static mlir::Value tryUseTestFPKind(CIRGenFunction &CGF, unsigned BuiltinID,
+                                    mlir::Value V) {
+  if (CGF.getBuilder().getIsFPConstrained() &&
+      CGF.getBuilder().getDefaultConstrainedExcept() != fp::ebIgnore) {
+    if (mlir::Value Result = CGF.getTargetHooks().testFPKind(
+            V, BuiltinID, CGF.getBuilder(), CGF.CGM))
+      return Result;
+  }
+  return nullptr;
+}
+
 template <class Operation>
 static RValue buildUnaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
   auto Arg = CGF.buildScalarExpr(E.getArg(0));
@@ -1191,36 +1202,6 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_isunordered:
     llvm_unreachable("BI__builtin_isgreater and BI__builtin_isless like NYI");
 
-  case Builtin::BI__builtin_isnan:
-    llvm_unreachable("BI__builtin_isnan NYI");
-
-  case Builtin::BI__builtin_issignaling:
-    llvm_unreachable("BI__builtin_issignaling NYI");
-
-  case Builtin::BI__builtin_isinf:
-    llvm_unreachable("BI__builtin_isinf NYI");
-
-  case Builtin::BIfinite:
-  case Builtin::BI__finite:
-  case Builtin::BIfinitef:
-  case Builtin::BI__finitef:
-  case Builtin::BIfinitel:
-  case Builtin::BI__finitel:
-  case Builtin::BI__builtin_isfinite:
-    llvm_unreachable("Builtin::BIfinite like NYI");
-
-  case Builtin::BI__builtin_isnormal:
-    llvm_unreachable("BI__builtin_isnormal NYI");
-
-  case Builtin::BI__builtin_issubnormal:
-    llvm_unreachable("BI__builtin_issubnormal NYI");
-
-  case Builtin::BI__builtin_iszero:
-    llvm_unreachable("BI__builtin_iszero NYI");
-
-  case Builtin::BI__builtin_isfpclass:
-    llvm_unreachable("BI__builtin_isfpclass NYI");
-
   case Builtin::BI__builtin_nondeterministic_value:
     llvm_unreachable("BI__builtin_nondeterministic_value NYI");
 
@@ -1327,9 +1308,6 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_matrix_column_major_store:
     llvm_unreachable("BI__builtin_matrix_column_major_store NYI");
-
-  case Builtin::BI__builtin_isinf_sign:
-    llvm_unreachable("BI__builtin_isinf_sign NYI");
 
   case Builtin::BI__builtin_flt_rounds:
     llvm_unreachable("BI__builtin_flt_rounds NYI");
@@ -2080,6 +2058,110 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("BI__builtin_ms_va_copy NYI");
   case Builtin::BI__builtin_get_device_side_mangled_name:
     llvm_unreachable("BI__builtin_get_device_side_mangled_name NYI");
+
+  // From https://clang.llvm.org/docs/LanguageExtensions.html#builtin-isfpclass
+  // :
+  //
+  //  The `__builtin_isfpclass()` builtin is a generalization of functions
+  //  isnan, isinf, isfinite and some others defined by the C standard. It tests
+  //  if the floating-point value, specified by the first argument, falls into
+  //  any of data classes, specified by the second argument.
+  case Builtin::BI__builtin_isnan: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Value V = buildScalarExpr(E->getArg(0));
+    if (mlir::Value Result = tryUseTestFPKind(*this, BuiltinID, V))
+      return RValue::get(Result);
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+    // FIXME: We should use builder.createZExt once createZExt is available.
+    return RValue::get(builder.createZExtOrBitCast(
+        Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcNan),
+        ConvertType(E->getType())));
+  }
+
+  case Builtin::BI__builtin_issignaling: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Value V = buildScalarExpr(E->getArg(0));
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+    // FIXME: We should use builder.createZExt once createZExt is available.
+    return RValue::get(builder.createZExtOrBitCast(
+        Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcSNan),
+        ConvertType(E->getType())));
+  }
+
+  case Builtin::BI__builtin_isinf: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Value V = buildScalarExpr(E->getArg(0));
+    if (mlir::Value Result = tryUseTestFPKind(*this, BuiltinID, V))
+      return RValue::get(Result);
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+    // FIXME: We should use builder.createZExt once createZExt is available.
+    return RValue::get(builder.createZExtOrBitCast(
+        Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcInf),
+        ConvertType(E->getType())));
+  }
+
+  case Builtin::BIfinite:
+  case Builtin::BI__finite:
+  case Builtin::BIfinitef:
+  case Builtin::BI__finitef:
+  case Builtin::BIfinitel:
+  case Builtin::BI__finitel:
+  case Builtin::BI__builtin_isfinite: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Value V = buildScalarExpr(E->getArg(0));
+    if (mlir::Value Result = tryUseTestFPKind(*this, BuiltinID, V))
+      return RValue::get(Result);
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+    // FIXME: We should use builder.createZExt once createZExt is available.
+    return RValue::get(builder.createZExtOrBitCast(
+        Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcFinite),
+        ConvertType(E->getType())));
+  }
+
+  case Builtin::BI__builtin_isnormal: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Value V = buildScalarExpr(E->getArg(0));
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+    // FIXME: We should use builder.createZExt once createZExt is available.
+    return RValue::get(builder.createZExtOrBitCast(
+        Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcNormal),
+        ConvertType(E->getType())));
+  }
+
+  case Builtin::BI__builtin_issubnormal: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Value V = buildScalarExpr(E->getArg(0));
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+    // FIXME: We should use builder.createZExt once createZExt is available.
+    return RValue::get(builder.createZExtOrBitCast(
+        Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcSubnormal),
+        ConvertType(E->getType())));
+  }
+
+  case Builtin::BI__builtin_iszero: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Value V = buildScalarExpr(E->getArg(0));
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+    // FIXME: We should use builder.createZExt once createZExt is available.
+    return RValue::get(builder.createZExtOrBitCast(
+        Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcZero),
+        ConvertType(E->getType())));
+  }
+
+  case Builtin::BI__builtin_isfpclass: {
+    Expr::EvalResult Result;
+    if (!E->getArg(1)->EvaluateAsInt(Result, CGM.getASTContext()))
+      break;
+
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Value V = buildScalarExpr(E->getArg(0));
+    uint64_t Test = Result.Val.getInt().getLimitedValue();
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+
+    // FIXME: We should use builder.createZExt once createZExt is available.
+    return RValue::get(builder.createZExtOrBitCast(
+        Loc, builder.createIsFPClass(Loc, V, Test), ConvertType(E->getType())));
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

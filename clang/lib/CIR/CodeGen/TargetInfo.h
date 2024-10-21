@@ -25,6 +25,7 @@ namespace cir {
 
 class CIRGenFunction;
 class CIRGenModule;
+class CIRGenBuilderTy;
 
 /// This class organizes various target-specific codegeneration issues, like
 /// target-specific attributes, builtins and so on.
@@ -41,6 +42,15 @@ public:
   virtual bool isScalarizableAsmOperand(CIRGenFunction &CGF,
                                         mlir::Type Ty) const {
     return false;
+  }
+
+  /// Performs a target specific test of a floating point value for things
+  /// like IsNaN, Infinity, ... Nullptr is returned if no implementation
+  /// exists.
+  virtual mlir::Value testFPKind(mlir::Value V, unsigned BuiltinID,
+                                 CIRGenBuilderTy &Builder,
+                                 CIRGenModule &CGM) const {
+    return {};
   }
 
   /// Corrects the MLIR type for a given constraint and "usual"
