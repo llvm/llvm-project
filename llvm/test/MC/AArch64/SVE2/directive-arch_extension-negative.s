@@ -29,3 +29,9 @@ rax1 z0.d, z0.d, z0.d
 bgrp z21.s, z10.s, z21.s
 // CHECK: error: instruction requires: sve2-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s
+
+.arch_extension sve-bfscale
+.arch_extension nosve-bfscale
+bfscale z0.h, p0/m, z0.h, z0.h
+// CHECK: error: instruction requires: sve-bfscale
+// CHECK-NEXT: bfscale z0.h, p0/m, z0.h, z0.h
