@@ -2723,7 +2723,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         // should be preserved, if checked with `getUnsignedPredicate()`.
         // Relationship between Amin, Amax, Bmin, Bmax also will not be
         // affected, as they are created by effectively adding/substructing from
-        // A or B a value, derived from shadow, which can't result in overflow,
+        // A (or B) a value, derived from shadow, with no overflow, either
         // before or after sign flip.
         APInt MinVal =
             APInt::getSignedMinValue(V->getType()->getScalarSizeInBits());
