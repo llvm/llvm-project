@@ -1142,13 +1142,11 @@ defm VSEXT_VF2 : VALU_MV_VS2<"vsext.vf2", 0b010010, 0b00111>;
 
 // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 defm VADC_V : VALUm_IV_V_X_I<"vadc", 0b010000>;
-let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
-defm VMADC_V : VALUm_IV_V_X_I<"vmadc", 0b010001>;
-defm VMADC_V : VALUNoVm_IV_V_X_I<"vmadc", 0b010001>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
 defm VSBC_V : VALUm_IV_V_X<"vsbc", 0b010010>;
 let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint,
     DestEEW = EEW1 in {
+defm VMADC_V : VALUm_IV_V_X_I<"vmadc", 0b010001>;
+defm VMADC_V : VALUNoVm_IV_V_X_I<"vmadc", 0b010001>;
 defm VMSBC_V : VALUm_IV_V_X<"vmsbc", 0b010011>;
 defm VMSBC_V : VALUNoVm_IV_V_X<"vmsbc", 0b010011>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, DestEEW = EEW1
