@@ -2148,7 +2148,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   if (!Style.isCSharp())
     return false;
   // See if it's a property accessor.
-  if (FormatTok->Previous->isNot(tok::identifier))
+  if (!FormatTok->Previous || FormatTok->Previous->isNot(tok::identifier))
     return false;
 
   // See if we are inside a property accessor.
