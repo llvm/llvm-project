@@ -10299,6 +10299,78 @@ defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
 
+//===-----------------------------------------------------===//
+// Atomic floating-point in-memory instructions (FEAT_LSFE)
+//===-----------------------------------------------------===//
+
+let Predicates = [HasLSFE] in {
+  // Floating-point Atomic Load
+  defm LDFADDA    : AtomicFPLoad<0b10, 0b000, "ldfadda">;
+  defm LDFADDAL   : AtomicFPLoad<0b11, 0b000, "ldfaddal">;
+  defm LDFADD     : AtomicFPLoad<0b00, 0b000, "ldfadd">;
+  defm LDFADDL    : AtomicFPLoad<0b01, 0b000, "ldfaddl">;
+  defm LDFMAXA    : AtomicFPLoad<0b10, 0b100, "ldfmaxa">;
+  defm LDFMAXAL   : AtomicFPLoad<0b11, 0b100, "ldfmaxal">;
+  defm LDFMAX     : AtomicFPLoad<0b00, 0b100, "ldfmax">;
+  defm LDFMAXL    : AtomicFPLoad<0b01, 0b100, "ldfmaxl">;
+  defm LDFMINA    : AtomicFPLoad<0b10, 0b101, "ldfmina">;
+  defm LDFMINAL   : AtomicFPLoad<0b11, 0b101, "ldfminal">;
+  defm LDFMIN     : AtomicFPLoad<0b00, 0b101, "ldfmin">;
+  defm LDFMINL    : AtomicFPLoad<0b01, 0b101, "ldfminl">;
+  defm LDFMAXNMA  : AtomicFPLoad<0b10, 0b110, "ldfmaxnma">;
+  defm LDFMAXNMAL : AtomicFPLoad<0b11, 0b110, "ldfmaxnmal">;
+  defm LDFMAXNM   : AtomicFPLoad<0b00, 0b110, "ldfmaxnm">;
+  defm LDFMAXNML  : AtomicFPLoad<0b01, 0b110, "ldfmaxnml">;
+  defm LDFMINNMA  : AtomicFPLoad<0b10, 0b111, "ldfminnma">;
+  defm LDFMINNMAL : AtomicFPLoad<0b11, 0b111, "ldfminnmal">;
+  defm LDFMINMN   : AtomicFPLoad<0b00, 0b111, "ldfminnm">;
+  defm LDFMINNML  : AtomicFPLoad<0b01, 0b111, "ldfminnml">;
+  // BFloat16
+  def LDBFADDA    : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b000, "ldbfadda">;
+  def LDBFADDAL   : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b000, "ldbfaddal">;
+  def LDBFADD     : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b000, "ldbfadd">;
+  def LDBFADDL    : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b000, "ldbfaddl">;
+  def LDBFMAXA    : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b100, "ldbfmaxa">;
+  def LDBFMAXAL   : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b100, "ldbfmaxal">;
+  def LDBFMAX     : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b100, "ldbfmax">;
+  def LDBFMAXL    : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b100, "ldbfmaxl">;
+  def LDBFMINA    : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b101, "ldbfmina">;
+  def LDBFMINAL   : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b101, "ldbfminal">;
+  def LDBFMIN     : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b101, "ldbfmin">;
+  def LDBFMINL    : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b101, "ldbfminl">;
+  def LDBFMAXNMA  : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b110, "ldbfmaxnma">;
+  def LDBFMAXNMAL : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b110, "ldbfmaxnmal">;
+  def LDBFMAXNM   : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b110, "ldbfmaxnm">;
+  def LDBFMAXNML  : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b110, "ldbfmaxnml">;
+  def LDBFMINNMA  : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b111, "ldbfminnma">;
+  def LDBFMINNMAL : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b111, "ldbfminnmal">;
+  def LDBFMINNM   : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b111, "ldbfminnm">;
+  def LDBFMINNML  : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b111, "ldbfminnml">;
+
+  // Floating-point Atomic Store
+  defm STFADD    : AtomicFPStore<0b0, 0b000, "stfadd">;
+  defm STFADDL   : AtomicFPStore<0b1, 0b000, "stfaddl">;
+  defm STFMAX    : AtomicFPStore<0b0, 0b100, "stfmax">;
+  defm STFMAXL   : AtomicFPStore<0b1, 0b100, "stfmaxl">;
+  defm STFMIN    : AtomicFPStore<0b0, 0b101, "stfmin">;
+  defm STFMINL   : AtomicFPStore<0b1, 0b101, "stfminl">;
+  defm STFMAXNM  : AtomicFPStore<0b0, 0b110, "stfmaxnm">;
+  defm STFMAXNML : AtomicFPStore<0b1, 0b110, "stfmaxnml">;
+  defm STFMINNM  : AtomicFPStore<0b0, 0b111, "stfminnm">;
+  defm STFMINNML : AtomicFPStore<0b1, 0b111, "stfminnml">;
+  // BFloat16
+  def STBFADD    : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b000, "stbfadd">;
+  def STBFADDL   : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b000, "stbfaddl">;
+  def STBFMAX    : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b100, "stbfmax">;
+  def STBFMAXL   : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b100, "stbfmaxl">;
+  def STBFMIN    : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b101, "stbfmin">;
+  def STBFMINL   : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b101, "stbfminl">;
+  def STBFMAXNM  : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b110, "stbfmaxnm">;
+  def STBFMAXNML : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b110, "stbfmaxnml">;
+  def STBFMINNM  : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b111, "stbfminnm">;
+  def STBFMINNML : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b111, "stbfminnml">;
+}
+
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
 include "AArch64SMEInstrInfo.td"
