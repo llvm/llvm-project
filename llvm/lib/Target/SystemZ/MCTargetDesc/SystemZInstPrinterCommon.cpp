@@ -48,7 +48,7 @@ void SystemZInstPrinterCommon::printOperand(const MCOperand &MO,
     if (!MO.getReg())
       O << '0';
     else
-      printRegName(MAI, MO.getReg(), O);
+      printRegName(O, MO.getReg());
   } else if (MO.isImm())
     markup(O, Markup::Immediate) << MO.getImm();
   else if (MO.isExpr())
