@@ -649,6 +649,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_GraniterapidsD:
   case CK_Emeraldrapids:
   case CK_Clearwaterforest:
+  case CK_DiamondRapids:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -1613,6 +1614,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_GraniterapidsD:
     case CK_Emeraldrapids:
     case CK_Clearwaterforest:
+    case CK_DiamondRapids:
     case CK_KNL:
     case CK_KNM:
     // K7

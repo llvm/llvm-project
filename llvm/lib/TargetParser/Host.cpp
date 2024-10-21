@@ -1006,6 +1006,19 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     CPU = "pentium4";
     break;
   }
+  case 19:
+    switch (Model) {
+    // Diamondrapids:
+    case 0x01:
+      CPU = "diamondrapids";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_DIAMONDRAPIDS;
+      break;
+
+    default: // Unknown family 0x13 CPU.
+      break;
+    }
+    break;
   default:
     break; // Unknown.
   }
