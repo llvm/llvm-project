@@ -86,6 +86,13 @@ function (add_flangrt_library name)
   # For flang-rt's configured config.h to be found
   target_include_directories(${name} PRIVATE "${FLANGRT_BINARY_DIR}")
 
+  # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
+  # build, to avoid an unwanted dependency on libstdc++/libc++.so.
+  if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+    target_compile_options(${name} PUBLIC -U_GLIBCXX_ASSERTIONS)
+    target_compile_options(${name} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
+  endif ()
+
   # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
   # should only depend on msv(u)crt. LLVM still emits libgcc/compiler-rt
   # functions for 128-bit integer math (__udivti3, __modti3, __fixsfti,
