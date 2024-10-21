@@ -3751,6 +3751,7 @@ static const struct Extension {
     {"sme-fa64", {AArch64::FeatureSMEFA64}},
     {"cpa", {AArch64::FeatureCPA}},
     {"tlbiw", {AArch64::FeatureTLBIW}},
+    {"cmpbr", {AArch64::FeatureCMPBR}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
