@@ -4628,12 +4628,17 @@ static bool isParenthesizedADLCallee(const CallExpr *call) {
       (*lookup->decls_begin())->isCXXClassMember())
     return false;
 
-  // Must not have found a block scope declaration.  Note that a block scope
-  // declaration may be present alongside other declarations because of using
-  // declarations.
-  for (const auto &decl : lookup.decls())
+  // Must not have found a block scope declaration other than declarations
+  // resulting from using declarations.
+  for (const auto &decl : lookup->decls()) {
+    if (isa<UsingShadowDecl>(*decl))
+      continue;
     if (decl->isLocalExternDecl())
       return false;
+    // If, ignoring using declarations, a non-block scope declaration was
+    // found, then there are no block-scope declarations.
+    break;
+  }
 
   // Otherwise, ADL would have been triggered.
   return true;
