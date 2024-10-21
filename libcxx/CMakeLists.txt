@@ -126,6 +126,9 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    to provide compile-time errors when using features unavailable on some version of
    the shared library they shipped should turn this on and see `include/__configuration/availability.h`
    for more details." OFF)
+option(LIBCXX_ENABLE_OVERRIDDEN_FUNCTION_DETECTION
+  "Whether to support detecting if an overridable function (typically a weak symbol)
+   has been overidden by a user or not." ON)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -758,6 +761,7 @@ config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+config_define_if_not(LIBCXX_ENABLE_OVERRIDDEN_FUNCTION_DETECTION _LIBCPP_HAS_NO_OVERRIDDEN_FUNCTION_DETECTION)
 
 if (LIBCXX_ENABLE_ASSERTIONS)
   message(DEPRECATION "LIBCXX_ENABLE_ASSERTIONS is deprecated and will be removed in LLVM 20. Please use LIBCXX_HARDENING_MODE instead.")
