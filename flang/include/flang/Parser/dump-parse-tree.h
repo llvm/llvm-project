@@ -474,6 +474,8 @@ public:
   NODE(parser, NullInit)
   NODE(parser, ObjectDecl)
   NODE(parser, OldParameterStmt)
+  NODE(parser, OmpIteratorSpecifier)
+  NODE(parser, OmpIteratorModifier)
   NODE(parser, OmpAlignedClause)
   NODE(parser, OmpAtomic)
   NODE(parser, OmpAtomicCapture)

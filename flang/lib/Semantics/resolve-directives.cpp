@@ -591,9 +591,12 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
+    // There is only one `type' allowed, but it's parsed as a list. Multiple
+    // types are diagnosed in the semantic checks for OpenMP.
     if (const auto &mapType{
-            std::get<std::optional<parser::OmpMapClause::Type>>(x.t)}) {
-      switch (*mapType) {
+            std::get<std::optional<std::list<parser::OmpMapClause::Type>>>(
+                x.t)}) {
+      switch (mapType->front()) {
       case parser::OmpMapClause::Type::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
