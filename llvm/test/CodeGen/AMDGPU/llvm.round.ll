@@ -78,8 +78,6 @@ define amdgpu_kernel void @round_f32(ptr addrspace(1) %out, float %x) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; R600-LABEL: round_f32:
@@ -209,8 +207,6 @@ define amdgpu_kernel void @round_v2f32(ptr addrspace(1) %out, <2 x float> %in) #
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    v_add_f32_e32 v0, v2, v3
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; R600-LABEL: round_v2f32:
@@ -393,8 +389,6 @@ define amdgpu_kernel void @round_v4f32(ptr addrspace(1) %out, <4 x float> %in) #
 ; GFX11-NEXT:    v_bfi_b32 v7, 0x7fffffff, v7, s4
 ; GFX11-NEXT:    v_dual_add_f32 v1, v4, v6 :: v_dual_add_f32 v0, v5, v7
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; R600-LABEL: round_v4f32:
@@ -709,8 +703,6 @@ define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0 offset:16
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; R600-LABEL: round_v8f32:
@@ -853,8 +845,6 @@ define amdgpu_kernel void @round_f16(ptr addrspace(1) %out, i32 %x.arg) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; R600-LABEL: round_f16:
@@ -1007,8 +997,6 @@ define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; R600-LABEL: round_v2f16:
