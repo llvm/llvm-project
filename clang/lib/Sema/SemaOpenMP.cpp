@@ -18768,7 +18768,8 @@ static bool checkOMPArraySectionConstantForReduction(
         return false;
 
       // This is an array subscript which has implicit length 1!
-      ArraySizes.push_back(llvm::APSInt::get(1));
+      llvm::APSInt ConstantOne = llvm::APSInt::get(1);
+      ArraySizes.push_back(ConstantOne);
     } else {
       Expr::EvalResult Result;
       if (!Length->EvaluateAsInt(Result, Context))
@@ -18787,7 +18788,8 @@ static bool checkOMPArraySectionConstantForReduction(
   if (!SingleElement) {
     while (const auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base)) {
       // Has implicit length 1!
-      ArraySizes.push_back(llvm::APSInt::get(1));
+      llvm::APSInt ConstantOne = llvm::APSInt::get(1);
+      ArraySizes.push_back(ConstantOne);
       Base = TempASE->getBase()->IgnoreParenImpCasts();
     }
   }
