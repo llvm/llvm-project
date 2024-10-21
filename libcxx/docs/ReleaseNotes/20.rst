@@ -60,6 +60,9 @@ Improvements and New Features
   compile times and smaller debug information as well as better code generation if optimizations are disabled.
   The Chromium project measured a 5% reduction in object file and debug information size.
 
+- The ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` ABI configuration was added, which allows storing valid bounds
+  in ``std::array::iterator`` and detecting OOB accesses when the appropriate hardening mode is enabled.
+
 Deprecations and Removals
 -------------------------
 
