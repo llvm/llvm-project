@@ -511,8 +511,8 @@ void BreakpointLocation::GetDescription(Stream *s,
 
       // If there's a preferred line entry for printing, use that.
       bool show_function_info = true;
-      if (GetPreferredLineEntry()) {
-        sc.line_entry = *GetPreferredLineEntry();
+      if (auto preferred = GetPreferredLineEntry()) {
+        sc.line_entry = *preferred;
         // FIXME: We're going to get the function name wrong when the preferred
         // line entry is not the lowest one.  For now, just leave the function
         // out in this case, but we really should also figure out how to easily
@@ -549,8 +549,8 @@ void BreakpointLocation::GetDescription(Stream *s,
         if (sc.line_entry.line > 0) {
           s->EOL();
           s->Indent("location = ");
-          if (GetPreferredLineEntry())
-            GetPreferredLineEntry()->DumpStopContext(s, true);
+          if (auto preferred = GetPreferredLineEntry())
+            preferred->DumpStopContext(s, true);
           else
             sc.line_entry.DumpStopContext(s, true);
         }
@@ -672,9 +672,10 @@ void BreakpointLocation::SendBreakpointLocationChangedEvent(
 }
 
 std::optional<uint32_t> BreakpointLocation::GetSuggestedStackFrameIndex() {
-  if (!GetPreferredLineEntry())
+  auto preferred_opt = GetPreferredLineEntry();
+  if (!preferred_opt)
     return {};
-  LineEntry preferred = *GetPreferredLineEntry();
+  LineEntry preferred = *preferred_opt;
   SymbolContext sc;
   if (!m_address.CalculateSymbolContext(&sc))
     return {};
