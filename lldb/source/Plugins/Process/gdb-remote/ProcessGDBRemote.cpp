@@ -1649,6 +1649,11 @@ void ProcessGDBRemote::ParseExpeditedRegisters(
   }
 }
 
+std::shared_ptr<ThreadGDBRemote>
+ProcessGDBRemote::CreateThread(lldb::tid_t tid) {
+  return std::make_shared<ThreadGDBRemote>(*this, tid);
+}
+
 ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     lldb::tid_t tid, ExpeditedRegisterMap &expedited_register_map,
     uint8_t signo, const std::string &thread_name, const std::string &reason,
@@ -1673,7 +1678,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
     if (!thread_sp) {
       // Create the thread if we need to
-      thread_sp = std::make_shared<ThreadGDBRemote>(*this, tid);
+      thread_sp = CreateThread(tid);
       m_thread_list_real.AddThread(thread_sp);
     }
   }
