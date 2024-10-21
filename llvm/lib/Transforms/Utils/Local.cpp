@@ -3840,11 +3840,11 @@ static const std::optional<BitPart> &
 collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
                 std::map<Value *, std::optional<BitPart>> &BPS, int Depth,
                 bool &FoundRoot) {
-  auto I = BPS.find(V);
-  if (I != BPS.end())
+  auto [I, Inserted] = BPS.try_emplace(V);
+  if (!Inserted)
     return I->second;
 
-  auto &Result = BPS[V] = std::nullopt;
+  auto &Result = I->second;
   auto BitWidth = V->getType()->getScalarSizeInBits();
 
   // Can't do integer/elements > 128 bits.
