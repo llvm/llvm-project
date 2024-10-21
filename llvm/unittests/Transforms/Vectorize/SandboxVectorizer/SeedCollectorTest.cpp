@@ -356,7 +356,7 @@ bb:
   auto StoreSeedsRange = SC.getStoreSeeds();
   auto &SB = *StoreSeedsRange.begin();
   // Expect just one vector of store seeds
-  EXPECT_TRUE(std::next(StoreSeedsRange.begin()) == StoreSeedsRange.end());
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
   EXPECT_THAT(SB, testing::ElementsAre(St0, St1, St2, St3));
 }
 
