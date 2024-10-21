@@ -359,40 +359,24 @@ def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.ex
   }];
 }
 
-def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity">,  
-  Arguments<(ins LLVM_AnyPointer:$addr, I32:$phase, I32:$ticks)> {  
-  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
+def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_AnyPointer:$addr, I32:$phase, I32:$ticks)> {
+  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands) `->` type($res)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
-      return std::string(
-        "{\n\t"
-        ".reg .pred       P1; \n\t"
-        "LAB_WAIT: \n\t"
-        "mbarrier.try_wait.parity.b64 P1, [%0], %1, %2; \n\t"
-        "@P1 bra.uni DONE; \n\t"
-        "bra.uni     LAB_WAIT; \n\t"
-        "DONE: \n\t"
-        "}"
-      ); 
+      return std::string("mbarrier.try_wait.parity.b64 %0, [%1], %2, %3;");
     }
   }];
 }
 
-def NVVM_MBarrierTryWaitParitySharedOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity.shared">,  
-  Arguments<(ins LLVM_PointerShared:$addr, I32:$phase, I32:$ticks)> {  
-  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
+def NVVM_MBarrierTryWaitParitySharedOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity.shared">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_PointerShared:$addr, I32:$phase, I32:$ticks)> {
+  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands) `->` type($res)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
-      return std::string(
-        "{\n\t"
-        ".reg .pred       P1; \n\t"
-        "LAB_WAIT: \n\t"
-        "mbarrier.try_wait.parity.shared.b64 P1, [%0], %1, %2; \n\t"
-        "@P1 bra.uni DONE; \n\t"
-        "bra.uni     LAB_WAIT; \n\t"
-        "DONE: \n\t"
-        "}"
-      ); 
+      return std::string("mbarrier.try_wait.parity.shared.b64 %0, [%1], %2, %3;");
     }
   }];
 }
