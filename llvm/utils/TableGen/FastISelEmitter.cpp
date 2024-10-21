@@ -567,7 +567,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
           ++DstIndex;
         }
 
-        PhysRegInputs.push_back(PhysReg);
+        PhysRegInputs.push_back(std::move(PhysReg));
       }
 
       if (Op->getName() != "EXTRACT_SUBREG" && DstIndex < Dst.getNumChildren())
@@ -591,7 +591,8 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     // Ok, we found a pattern that we can handle. Remember it.
     InstructionMemo Memo(Pattern.getDstPattern().getOperator()->getName(),
-                         DstRC, SubRegNo, PhysRegInputs, PredicateCheck);
+                         DstRC, std::move(SubRegNo), std::move(PhysRegInputs),
+                         PredicateCheck);
 
     int complexity = Pattern.getPatternComplexity(CGP);
 
