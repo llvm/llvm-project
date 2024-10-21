@@ -806,7 +806,7 @@ public:
   }
 };
 
-/// Fold tensor.extract_slice(linalg.fill(<input>)) into <input>
+/// Fold tensor.extract_slice(linalg.fill(<input>)) into linalg.fill(<input>)
 struct FoldFillWithTensorExtractSlice
     : public OpRewritePattern<tensor::ExtractSliceOp> {
 public:
@@ -817,10 +817,10 @@ public:
     // See if tensor input of tensor.extract_slice op is the result of a
     // linalg.fill op.
     auto fillOp = extractSliceOp.getSource().getDefiningOp<linalg::FillOp>();
-    if (!fillOp)
+    if (!fillOp || !fillOp->hasOneUse())
       return failure();
 
-    Value fillInput = fillOp.getInputs()[0];
+    Value fillInput = fillOp.value();
 
     Location loc = extractSliceOp.getLoc();
     SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
@@ -965,11 +965,12 @@ struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldConcatsOfFill, FoldFillWithCopy, FoldFillWithTensorExtract,
-              FoldFillWithTensorExtractSlice, FoldFillWithPack, FoldFillWithPad,
+  results.add<FoldConcatsOfFill, FoldFillWithCopy, FoldFillWithPack,
+              FoldFillWithPad, FoldFillWithTensorExtract,
+              FoldFillWithTensorExtractSlice,
               FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
               FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-              FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
+              FoldFillWithTranspose, FoldInsertPadIntoFill>(context);
 }
 
 //===----------------------------------------------------------------------===//
