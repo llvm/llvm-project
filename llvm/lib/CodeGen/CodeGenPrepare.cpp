@@ -1779,29 +1779,35 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
   if (TLI.useSoftFloat() && isa<FCmpInst>(Cmp))
     return false;
 
+  // Collect a list of non-phis users that are in blocks that are different to
+  // the definition block.
+  BasicBlock *DefBB = Cmp->getParent();
+  SmallSet<User *, 4> Users;
+  for (auto *U : Cmp->users()) {
+    Instruction *User = cast<Instruction>(U);
+    if (isa<PHINode>(User))
+      continue;
+
+    if (User->getParent() == DefBB)
+      continue;
+
+    Users.insert(User);
+  }
+
+  // If this is a vector comparison the result will likely not depend upon
+  // setting a condition register, and it's probably too expensive to sink too
+  // many times.
+  VectorType *VecType = dyn_cast<VectorType>(Cmp->getType());
+  if (VecType && VecType->getElementCount().isVector() && Users.size() > 1)
+    return false;
+
   // Only insert a cmp in each block once.
   DenseMap<BasicBlock *, CmpInst *> InsertedCmps;
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
-       UI != E;) {
-    Use &TheUse = UI.getUse();
-    Instruction *User = cast<Instruction>(*UI);
-
-    // Preincrement use iterator so we don't invalidate it.
-    ++UI;
-
-    // Don't bother for PHI nodes.
-    if (isa<PHINode>(User))
-      continue;
-
-    // Figure out which BB this cmp is used in.
-    BasicBlock *UserBB = User->getParent();
-    BasicBlock *DefBB = Cmp->getParent();
-
-    // If this user is in the same block as the cmp, don't change the cmp.
-    if (UserBB == DefBB)
-      continue;
+  for (auto *U : Users) {
+    Instruction *UI = cast<Instruction>(U);
+    BasicBlock *UserBB = UI->getParent();
 
     // If we have already inserted a cmp into this block, use it.
     CmpInst *&InsertedCmp = InsertedCmps[UserBB];
@@ -1816,10 +1822,15 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
       InsertedCmp->setDebugLoc(Cmp->getDebugLoc());
     }
 
-    // Replace a use of the cmp with a use of the new cmp.
-    TheUse = InsertedCmp;
+    // Replace all uses of the cmp with a use of the new cmp and update the
+    // number of uses.
+    for (unsigned I = 0; I < U->getNumOperands(); I++)
+      if (U->getOperand(I) == Cmp) {
+        U->setOperand(I, InsertedCmp);
+        NumCmpUses++;
+      }
+
     MadeChange = true;
-    ++NumCmpUses;
   }
 
   // If we removed all uses, nuke the cmp.
