@@ -36,6 +36,8 @@ protected:
   SmallVector<std::pair<std::string, size_t>, 0> FileNames;
   // XCOFF specific: Optional compiler version.
   std::string CompilerVersion;
+  // AIX specific: CPU type.
+  std::string CPUType;
   std::vector<const MCSymbol *> AddrsigSyms;
   bool EmitAddrsigSection = false;
   bool SubsectionsViaSymbols = false;
@@ -100,6 +102,7 @@ public:
   void setCompilerVersion(StringRef CompilerVers) {
     CompilerVersion = CompilerVers;
   }
+  void setCPU(StringRef TargetCPU) { CPUType = TargetCPU; }
 
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
