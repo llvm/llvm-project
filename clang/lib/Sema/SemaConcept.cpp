@@ -847,7 +847,7 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
                                     bool ForOverloadResolution) {
   // Don't check constraints if the function is dependent. Also don't check if
   // this is a function template specialization, as the call to
-  // CheckInstantiatedFunctionTemplateConstraints after this will check it
+  // CheckFunctionTemplateConstraints after this will check it
   // better.
   if (FD->isDependentContext() ||
       FD->getTemplatedKind() ==
@@ -1555,7 +1555,7 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
 static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                                         const ConceptSpecializationExpr *CSE) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      CSE->getNamedConcept(), CSE->getNamedConcept()->getDeclContext(),
+      CSE->getNamedConcept(), CSE->getNamedConcept()->getLexicalDeclContext(),
       /*Final=*/false, CSE->getTemplateArguments(),
       /*RelativeToPrimary=*/true,
       /*ForConstraintInstantiation=*/true);

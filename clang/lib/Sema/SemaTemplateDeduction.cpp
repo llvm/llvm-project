@@ -3953,7 +3953,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
-  // C++ [temp.deduct.call]p10: [DR1391]
+  // C++ [temp.deduct.call]p10: [CWG1391]
   //   If deduction succeeds for all parameters that contain
   //   template-parameters that participate in template argument deduction,
   //   and all template arguments are explicitly specified, deduced, or

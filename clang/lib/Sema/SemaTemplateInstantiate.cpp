@@ -1928,8 +1928,8 @@ bool TemplateInstantiator::maybeInstantiateFunctionParameterToScope(
     ParmVarDecl *OldParm) {
   if (SemaRef.CurrentInstantiationScope->findInstantiationUnsafe(OldParm))
     return false;
-  // The current context might have been changed in the process of transforming
-  // lambda expression. So resume it before we substitute into the parameter.
+  // Make sure the instantiated parameters are owned by the function
+  // declaration.
   Sema::ContextRAII Context(SemaRef, OldParm->getDeclContext());
 
   SmallVector<QualType> PTypes;

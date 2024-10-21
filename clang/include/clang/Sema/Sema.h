@@ -12997,11 +12997,11 @@ public:
   /// instantiation arguments.
   ///
   /// \param DC In the event we don't HAVE a declaration yet, we instead provide
-  ///  the decl context where it will be created.  In this case, the \p
-  ///  Innermost should likely be provided.  If \p ND is non-null, this is ignored.
+  ///  the decl context where it will be created.  In this case, the `Innermost`
+  ///  should likely be provided.  If ND is non-null, this is ignored.
   ///
   /// \param Innermost if non-NULL, specifies a template argument list for the
-  /// template declaration passed as \p ND.
+  /// template declaration passed as ND.
   ///
   /// \param RelativeToPrimary true if we should get the template
   /// arguments relative to the primary template, even when we're
@@ -13286,8 +13286,7 @@ public:
   ExprResult
   SubstConstraintExpr(Expr *E,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
-
-  // Unlike the above, this does not evaluates constraints.
+  // Unlike the above, this does not evaluate constraints.
   ExprResult SubstConstraintExprWithoutSatisfaction(
       Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);
 
