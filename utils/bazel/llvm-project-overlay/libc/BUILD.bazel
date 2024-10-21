@@ -119,6 +119,11 @@ libc_support_library(
     hdrs = ["include/llvm-libc-macros/linux/fcntl-macros.h"],
 )
 
+libc_support_library(
+    name = "llvm_libc_types_size_t",
+    hdrs = ["include/llvm-libc-types/size_t.h"],
+)
+
 ########################### Macro Proxy Header Files ###########################
 
 libc_support_library(
@@ -3193,6 +3198,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bitset",
         ":__support_macros_optimization",
+        ":llvm_libc_types_size_t",
         ":string_memory_utils",
     ],
 )
