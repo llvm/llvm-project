@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(spirv-attach-target{ver=v1.0 caps=Addresses,Int64,Kernel},convert-gpu-to-spirv{use-64bit-index=true},gpu.module(spirv.module(spirv-lower-abi-attrs,spirv-update-vce)),func.func(llvm-request-c-wrappers),convert-scf-to-cf,convert-cf-to-llvm,convert-arith-to-llvm,convert-math-to-llvm,convert-func-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},gpu-module-to-binary,expand-strided-metadata,lower-affine,finalize-memref-to-llvm,reconcile-unrealized-casts)' \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(spirv-attach-target{ver=v1.0 caps=Addresses,Int64,Kernel},func.func(gpu-async-region),convert-gpu-to-spirv{use-64bit-index=true},gpu.module(spirv.module(spirv-lower-abi-attrs,spirv-update-vce)),func.func(llvm-request-c-wrappers),convert-scf-to-cf,convert-cf-to-llvm,convert-arith-to-llvm,convert-math-to-llvm,convert-func-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},gpu-module-to-binary,expand-strided-metadata,lower-affine,finalize-memref-to-llvm,reconcile-unrealized-casts)' \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_sycl_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -25,16 +25,12 @@ module @add attributes {gpu.container_module} {
     %memref_0 = gpu.alloc host_shared () : memref<2x2x2xf32>
     memref.copy %arg0, %memref_0 : memref<2x2x2xf32> to memref<2x2x2xf32>
     %memref_2 = gpu.alloc host_shared () : memref<2x2x2xf32>
-    %2 = gpu.wait async
-    %3 = gpu.launch_func async [%2] @test_kernel::@test_kernel blocks in (%c2, %c2, %c2) threads in (%c1, %c1, %c1) args(%memref_0 : memref<2x2x2xf32>, %mem : memref<2x2x2xf32>, %memref_2 : memref<2x2x2xf32>)
-    gpu.wait [%3]
+    gpu.launch_func @test_kernel::@test_kernel blocks in (%c2, %c2, %c2) threads in (%c1, %c1, %c1) args(%memref_0 : memref<2x2x2xf32>, %mem : memref<2x2x2xf32>, %memref_2 : memref<2x2x2xf32>)
     %alloc = memref.alloc() : memref<2x2x2xf32>
     memref.copy %memref_2, %alloc : memref<2x2x2xf32> to memref<2x2x2xf32>
-    %4 = gpu.wait async
-    %5 = gpu.dealloc async [%4] %memref_2 : memref<2x2x2xf32>
-    %6 = gpu.dealloc async [%5] %memref_0 : memref<2x2x2xf32>
-    %7 = gpu.dealloc async [%6] %mem : memref<2x2x2xf32>
-    gpu.wait [%7]
+    gpu.dealloc %memref_2 : memref<2x2x2xf32>
+    gpu.dealloc %memref_0 : memref<2x2x2xf32>
+    gpu.dealloc %mem : memref<2x2x2xf32>
     return %alloc : memref<2x2x2xf32>
   }
   gpu.module @test_kernel attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>} {
