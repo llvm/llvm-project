@@ -2359,6 +2359,13 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
                                                     : "llvm.aarch64.neon.sqsub";
     break;
   }
+  case NEON::BI__builtin_neon_vrhadd_v:
+  case NEON::BI__builtin_neon_vrhaddq_v: {
+    intrincsName = (intrinicId != altLLVMIntrinsic)
+                       ? "llvm.aarch64.neon.urhadd"
+                       : "llvm.aarch64.neon.srhadd";
+    break;
+  }
   }
   if (!intrincsName.empty())
     return buildCommonNeonCallPattern0(*this, intrincsName, {vTy, vTy}, ops,
