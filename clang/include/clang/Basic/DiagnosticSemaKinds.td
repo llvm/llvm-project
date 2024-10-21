@@ -12521,6 +12521,8 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 def warn_unsafe_buffer_usage_in_container : Warning<
   "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
+def note_unsafe_buffer_usage_in_container : Note<
+  "the 'std::span' constructor call here">;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

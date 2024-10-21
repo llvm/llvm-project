@@ -157,3 +157,61 @@ namespace test_flag {
 
   }
 } //namespace test_flag
+
+
+namespace ctor_initializer_list {
+  class Base {
+    std::span<int> S;
+
+  public:
+    Base(int *p, unsigned n) : S(p, n) {} // expected-note 4{{the 'std::span' constructor call here}}
+  };
+
+  class Derived : public Base {
+  public:
+    Derived(int *p, unsigned n) : Base(p, n) {}
+  };
+
+  class Friend {
+    Derived D;
+  public:
+    Friend(int *p, unsigned n) : D(p, n) {}
+  };
+
+  class FriendToo {
+    Friend F;
+  public:
+    FriendToo(int *p) : F(p, 10) {}
+  };
+
+  class SpanData {
+    int * P;
+  public:
+    SpanData(int *p) : P(std::span<int>(p, 10).data()) {} // expected-note 2{{the 'std::span' constructor call here}}
+  };
+
+  class SpanDataDerived : public SpanData {
+  public:
+    SpanDataDerived(int *p) : SpanData(p) {}
+  };
+
+  void foo(int *p) {
+    Base B(p, 10); // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    Derived D(p, 10); // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    Friend F(p, 10); // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    FriendToo FT(p); // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    SpanData SD(p);  // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    SpanDataDerived SDD(p);  // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage-in-container"
+    {
+      Base B(p, 10);
+      Derived D(p, 10);
+      Friend F(p, 10);
+      FriendToo FT(p);
+      SpanData SD(p);
+      SpanDataDerived SDD(p);
+    }
+#pragma clang diagnostic pop
+  }
+}  // ctor_initializer_list

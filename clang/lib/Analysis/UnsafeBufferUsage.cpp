@@ -455,6 +455,28 @@ AST_MATCHER_P(CallExpr, hasNumArgs, unsigned, Num) {
   return Node.getNumArgs() == Num;
 }
 
+// Matches a CXXConstructor call if it matches the `InnerMatcher` in a recursive
+// manner. I.e., either
+//  1) `Node` matches `InnerMatcher` directly, or
+//  2) a descendant of one of `Node`'s initializers matches
+//   `ctorOrForEachInitializerDescendant` with the `InnerMatcher`.
+AST_MATCHER_P(CXXConstructExpr, ctorOrForEachInitializerDescendant,
+              internal::Matcher<CXXConstructExpr>, InnerMatcher) {
+  if (InnerMatcher.matches(Node, Finder, Builder))
+    return true;
+
+  const CXXConstructorDecl *CD = Node.getConstructor();
+
+  // recursive on both base and member initializers:
+  for (const CXXCtorInitializer *Init : CD->inits()) {
+    if (forEachDescendantStmt(
+            cxxConstructExpr(ctorOrForEachInitializerDescendant(InnerMatcher)))
+            .matches(*Init->getInit(), Finder, Builder))
+      return true;
+  }
+  return false;
+}
+
 namespace libc_func_matchers {
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
 // functions in libc and unsafe calls to them.
@@ -1218,38 +1240,49 @@ public:
 };
 
 class SpanTwoParamConstructorGadget : public WarningGadget {
-  static constexpr const char *const SpanTwoParamConstructorTag =
-      "spanTwoParamConstructor";
-  const CXXConstructExpr *Ctor; // the span constructor expression
+  static constexpr const char *const InvocationExprTag =
+      "spanTwoParamConstructor_Invocation";
+  static constexpr const char *const SpanTwoParamCtorTag =
+      "spanTwoParamConstructor_Ctor";
+  // The constructor call that either 1) is a direct call to the unsafe span
+  // constructor, or 2) involves a call to the unsafe span constructor
+  // (recursively through constructor initializers):
+  const CXXConstructExpr *Invocation;
+  // In case 1) above, `Ctor == Invocation`; otherwise `Ctor` refers to the
+  // actual span constructor call involved in the `Invocation`.
+  const CXXConstructExpr *Ctor;
 
 public:
   SpanTwoParamConstructorGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::SpanTwoParamConstructor),
-        Ctor(Result.Nodes.getNodeAs<CXXConstructExpr>(
-            SpanTwoParamConstructorTag)) {}
+        Invocation(Result.Nodes.getNodeAs<CXXConstructExpr>(InvocationExprTag)),
+        Ctor(Result.Nodes.getNodeAs<CXXConstructExpr>(SpanTwoParamCtorTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::SpanTwoParamConstructor;
   }
 
   static Matcher matcher() {
-    auto HasTwoParamSpanCtorDecl = hasDeclaration(
-        cxxConstructorDecl(hasDeclContext(isInStdNamespace()), hasName("span"),
-                           parameterCountIs(2)));
-
-    return stmt(cxxConstructExpr(HasTwoParamSpanCtorDecl,
-                                 unless(isSafeSpanTwoParamConstruct()))
-                    .bind(SpanTwoParamConstructorTag));
+    auto HasTwoParamSpanCtorDecl =
+        cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
+                             hasDeclContext(isInStdNamespace()),
+                             hasName("span"), parameterCountIs(2))),
+                         unless(isSafeSpanTwoParamConstruct()))
+            .bind(SpanTwoParamCtorTag);
+    return stmt(cxxConstructExpr(
+                    ctorOrForEachInitializerDescendant(HasTwoParamSpanCtorDecl))
+                    .bind(InvocationExprTag));
   }
 
   static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
-    return stmt(unless(ignoreUnsafeBufferInContainer(Handler)), matcher());
+    return stmt(unless(ignoreUnsafeBufferInContainer(Handler)),
+                SpanTwoParamConstructorGadget::matcher());
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
-    Handler.handleUnsafeOperationInContainer(Ctor, IsRelatedToDecl, Ctx);
+    Handler.handleUnsafeOperationInContainer(Invocation, Ctor, IsRelatedToDecl, Ctx);
   }
   SourceLocation getSourceLoc() const override { return Ctor->getBeginLoc(); }
 
