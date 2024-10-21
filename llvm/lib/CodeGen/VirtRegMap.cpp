@@ -557,7 +557,8 @@ bool VirtRegRewriter::subRegLiveThrough(const MachineInstr &MI,
 }
 
 /// Compute a lanemask for undef lanes which need to be preserved out of the
-/// defining block for a register assignment.
+/// defining block for a register assignment for a subregister def. \p PhysReg
+/// is assigned to \p LI, which is the main range.
 LaneBitmask VirtRegRewriter::liveOutUndefPhiLanesForUndefSubregDef(
     const LiveInterval &LI, const MachineBasicBlock &MBB, unsigned SubReg,
     MCPhysReg PhysReg, const MachineInstr &MI) const {
@@ -565,6 +566,7 @@ LaneBitmask VirtRegRewriter::liveOutUndefPhiLanesForUndefSubregDef(
   LaneBitmask LiveOutUndefLanes;
 
   for (const LiveInterval::SubRange &SR : LI.subranges()) {
+    // Figure out which lanes are undef live into a successor.
     LaneBitmask NeedImpDefLanes = UndefMask & SR.LaneMask;
     if (NeedImpDefLanes.any() && !LIS->isLiveOutOfMBB(SR, &MBB)) {
       for (const MachineBasicBlock *Succ : MBB.successors()) {
