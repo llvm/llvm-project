@@ -2812,8 +2812,8 @@ Value TypeConverter::materializeArgumentConversion(OpBuilder &builder,
                                                    ValueRange inputs) const {
   for (const MaterializationCallbackFn &fn :
        llvm::reverse(argumentMaterializations))
-    if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
-      return *result;
+    if (Value result = fn(builder, resultType, inputs, loc))
+      return result;
   return nullptr;
 }
 
@@ -2822,8 +2822,8 @@ Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
                                                  ValueRange inputs) const {
   for (const MaterializationCallbackFn &fn :
        llvm::reverse(sourceMaterializations))
-    if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
-      return *result;
+    if (Value result = fn(builder, resultType, inputs, loc))
+      return result;
   return nullptr;
 }
 
@@ -2833,9 +2833,8 @@ Value TypeConverter::materializeTargetConversion(OpBuilder &builder,
                                                  Type originalType) const {
   for (const TargetMaterializationCallbackFn &fn :
        llvm::reverse(targetMaterializations))
-    if (std::optional<Value> result =
-            fn(builder, resultType, inputs, loc, originalType))
-      return *result;
+    if (Value result = fn(builder, resultType, inputs, loc, originalType))
+      return result;
   return nullptr;
 }
 

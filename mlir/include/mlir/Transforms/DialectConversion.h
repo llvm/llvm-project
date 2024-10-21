@@ -163,14 +163,14 @@ public:
 
   /// All of the following materializations require function objects that are
   /// convertible to the following form:
-  ///   `std::optional<Value>(OpBuilder &, T, ValueRange, Location)`,
+  ///   `Value(OpBuilder &, T, ValueRange, Location)`,
   /// where `T` is any subclass of `Type`. This function is responsible for
   /// creating an operation, using the OpBuilder and Location provided, that
   /// "casts" a range of values into a single value of the given type `T`. It
-  /// must return a Value of the type `T` on success, an `std::nullopt` if
-  /// it failed but other materialization can be attempted, and `nullptr` on
-  /// unrecoverable failure. Materialization functions must be provided when a
-  /// type conversion may persist after the conversion has finished.
+  /// must return a Value of the type `T` on success and `nullptr` if
+  /// it failed but other materialization should be attempted. Materialization
+  /// functions must be provided when a type conversion may persist after the
+  /// conversion has finished.
   ///
   /// Note: Target materializations may optionally accept an additional Type
   /// parameter, which is the original type of the SSA value.
@@ -335,14 +335,14 @@ private:
   /// conversion.
   ///
   /// Arguments: builder, result type, inputs, location
-  using MaterializationCallbackFn = std::function<std::optional<Value>(
-      OpBuilder &, Type, ValueRange, Location)>;
+  using MaterializationCallbackFn =
+      std::function<Value(OpBuilder &, Type, ValueRange, Location)>;
 
   /// The signature of the callback used to materialize a target conversion.
   ///
   /// Arguments: builder, result type, inputs, location, original type
-  using TargetMaterializationCallbackFn = std::function<std::optional<Value>(
-      OpBuilder &, Type, ValueRange, Location, Type)>;
+  using TargetMaterializationCallbackFn =
+      std::function<Value(OpBuilder &, Type, ValueRange, Location, Type)>;
 
   /// The signature of the callback used to convert a type attribute.
   using TypeAttributeConversionCallbackFn =
@@ -396,10 +396,10 @@ private:
   MaterializationCallbackFn wrapMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
-               Location loc) -> std::optional<Value> {
+               Location loc) -> Value {
       if (T derivedType = dyn_cast<T>(resultType))
         return callback(builder, derivedType, inputs, loc);
-      return std::nullopt;
+      return Value();
     };
   }
 
@@ -417,10 +417,10 @@ private:
   wrapTargetMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
-               Location loc, Type originalType) -> std::optional<Value> {
+               Location loc, Type originalType) -> Value {
       if (T derivedType = dyn_cast<T>(resultType))
         return callback(builder, derivedType, inputs, loc, originalType);
-      return std::nullopt;
+      return Value();
     };
   }
   /// With callback of form:
@@ -433,7 +433,7 @@ private:
     return wrapTargetMaterialization<T>(
         [callback = std::forward<FnT>(callback)](
             OpBuilder &builder, T resultType, ValueRange inputs, Location loc,
-            Type originalType) -> std::optional<Value> {
+            Type originalType) -> Value {
           return callback(builder, resultType, inputs, loc);
         });
   }
