@@ -435,6 +435,9 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
         continue;
       }
 
+      if (isa<MemTransferInst>(CurUser))
+        continue;
+
       // supported for grid_constant
       if (IsGridConstant &&
           (isa<CallInst>(CurUser) || isa<StoreInst>(CurUser) ||

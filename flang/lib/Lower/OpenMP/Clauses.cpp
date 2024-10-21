@@ -22,26 +22,6 @@
 #include <utility>
 #include <variant>
 
-namespace detail {
-template <typename C>
-llvm::omp::Clause getClauseIdForClass(C &&) {
-  using namespace Fortran;
-  using A = llvm::remove_cvref_t<C>; // A is referenced in OMP.inc
-  // The code included below contains a sequence of checks like the following
-  // for each OpenMP clause
-  //   if constexpr (std::is_same_v<A, parser::OmpClause::AcqRel>)
-  //     return llvm::omp::Clause::OMPC_acq_rel;
-  //   [...]
-#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
-#include "llvm/Frontend/OpenMP/OMP.inc"
-}
-} // namespace detail
-
-static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
-  return Fortran::common::visit(
-      [](auto &&s) { return detail::getClauseIdForClass(s); }, clause.u);
-}
-
 namespace Fortran::lower::omp {
 using SymbolWithDesignator = std::tuple<semantics::Symbol *, MaybeExpr>;
 
@@ -1253,8 +1233,7 @@ Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
   return Fortran::common::visit(
       [&](auto &&s) {
-        return makeClause(getClauseId(cls), clause::make(s, semaCtx),
-                          cls.source);
+        return makeClause(cls.Id(), clause::make(s, semaCtx), cls.source);
       },
       cls.u);
 }

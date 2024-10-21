@@ -888,26 +888,6 @@ void failureOrder(atomic_int *ptr, int *ptr2) {
 //
 void generalFailureOrder(atomic_int *ptr, int *ptr2, int success, int fail) {
   __opencl_atomic_compare_exchange_strong(ptr, ptr2, 42, success, fail, memory_scope_work_group);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 // CHECK-LABEL: define dso_local i32 @test_volatile(
@@ -931,3 +911,5 @@ int test_volatile(volatile atomic_int *i) {
 }
 
 #endif
+
+// CHECK: [[$NOPRIVATE]] = !{i32 5, i32 6}

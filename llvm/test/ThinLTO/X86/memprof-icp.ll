@@ -69,24 +69,29 @@
 
 ; RUN: split-file %s %t
 
-; RUN: opt -thinlto-bc %t/main.ll >%t/main.o
-; RUN: opt -thinlto-bc %t/foo.ll >%t/foo.o
+;; For now explicitly turn on this handling, which is off by default.
+; RUN: opt -thinlto-bc %t/main.ll -enable-memprof-indirect-call-support=true >%t/main.o
+; RUN: opt -thinlto-bc %t/foo.ll -enable-memprof-indirect-call-support=true >%t/foo.o
 
 ;; Check that we get the synthesized callsite records. There should be 2, one
 ;; for each profiled target in the VP metadata. They will have the same stackIds
 ;; since the debug information for the callsite is the same.
 ; RUN: llvm-dis %t/foo.o -o - | FileCheck %s --check-prefix=CALLSITES
-; CALLSITES: gv: (name: "_Z3fooR2B0j", {{.*}} callsites: ((callee: ^{{[0-9]+}}, clones: (0), stackIds: (16345663650247127235)), (callee: ^{{[0-9]+}}, clones: (0), stackIds: (16345663650247127235)))
+; CALLSITES: gv: (name: "_Z3fooR2B0j", {{.*}} callsites: ((callee: ^{{[0-9]+}}, clones: (0), stackIds: (16345663650247127235)), (callee: ^{{[0-9]+}}, clones: (0), stackIds: (16345663650247127235))
 
 ;; Make sure that we don't get the synthesized callsite records if the
 ;; -enable-memprof-indirect-call-support flag is false.
-; RUN: opt -thinlto-bc %t/foo.ll -enable-memprof-indirect-call-support=false -o - \
-; RUN: 	| llvm-dis -o - | FileCheck %s --implicit-check-not callsites
+; RUN: opt -thinlto-bc %t/foo.ll -enable-memprof-indirect-call-support=false >%t/foo.noicp.o
+; RUN: llvm-dis %t/foo.noicp.o -o - | FileCheck %s --implicit-check-not "stackIds: (16345663650247127235)"
+;; Currently this should be off by default as well.
+; RUN: opt -thinlto-bc %t/foo.ll -o - | llvm-dis -o - | FileCheck %s --implicit-check-not "stackIds: (16345663650247127235)"
 
 ;; First perform in-process ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
+; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_Z3xyzR2B0j, \
 ; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
 ; RUN:  -r=%t/main.o,_Znwm, \
 ; RUN:  -r=%t/main.o,_ZdlPvm, \
@@ -116,6 +121,7 @@
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -thinlto-distributed-indexes \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_Z3xyzR2B0j, \
 ; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
 ; RUN:  -r=%t/main.o,_Znwm, \
 ; RUN:  -r=%t/main.o,_ZdlPvm, \
@@ -136,10 +142,44 @@
 
 ;; Run ThinLTO backend
 ; RUN: opt -import-all-index -passes=function-import,memprof-context-disambiguation,inline \
+; RUN:  -enable-memprof-indirect-call-support=true \
 ; RUN:  -summary-file=%t/foo.o.thinlto.bc -memprof-import-summary=%t/foo.o.thinlto.bc \
 ; RUN:  -enable-import-metadata -stats -pass-remarks=. \
 ; RUN:  %t/foo.o -S 2>&1 | FileCheck %s --check-prefix=IR \
 ; RUN:  --check-prefix=STATS-BE-DISTRIB --check-prefix=REMARKS-FOO
+
+;; Retry with the ICP-disabled object file, and make sure we disable it again
+;; so we don't look for the synthesized callsite records when applying imports.
+;; We should not get any cloning.
+; RUN: llvm-lto2 run %t/main.o %t/foo.noicp.o -enable-memprof-context-disambiguation \
+; RUN:	-enable-memprof-indirect-call-support=false \
+; RUN:  -supports-hot-cold-new \
+; RUN:  -r=%t/foo.noicp.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.noicp.o,_Z3xyzR2B0j, \
+; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
+; RUN:  -r=%t/main.o,_Znwm, \
+; RUN:  -r=%t/main.o,_ZdlPvm, \
+; RUN:  -r=%t/main.o,_Z8externalPi, \
+; RUN:  -r=%t/main.o,main,plx \
+; RUN:  -r=%t/main.o,_ZN2B03barEj,plx \
+; RUN:  -r=%t/main.o,_ZN1B3barEj,plx \
+; RUN:  -r=%t/main.o,_ZTV1B,plx \
+; RUN:  -r=%t/main.o,_ZTVN10__cxxabiv120__si_class_type_infoE,plx \
+; RUN:  -r=%t/main.o,_ZTS1B,plx \
+; RUN:  -r=%t/main.o,_ZTVN10__cxxabiv117__class_type_infoE,plx \
+; RUN:  -r=%t/main.o,_ZTS2B0,plx \
+; RUN:  -r=%t/main.o,_ZTI2B0,plx \
+; RUN:  -r=%t/main.o,_ZTI1B,plx \
+; RUN:  -r=%t/main.o,_ZTV2B0,plx \
+; RUN:	-thinlto-threads=1 \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
+; RUN:  -pass-remarks=. -save-temps \
+; RUN:  -o %t.noicp.out 2>&1 | FileCheck %s --implicit-check-not "created clone"
+
+;; Verify that we did not do any cloning of the function with the indirect call
+;; when memprof ICP is off. However, we should still have removed the callsite
+;; metadata.
+; RUN: llvm-dis %t.noicp.out.2.4.opt.bc -o - | FileCheck %s --implicit-check-not "_Z3fooR2B0j.memprof" --implicit-check-not "!callsite"
 
 ; REMARKS-MAIN: call in clone main assigned to call function clone _Z3fooR2B0j.memprof.1
 ; REMARKS-MAIN: call in clone main assigned to call function clone _Z3fooR2B0j.memprof.1
@@ -215,15 +255,22 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+declare i32 @_Z3xyzR2B0j(ptr %b)
+
 define i32 @_Z3fooR2B0j(ptr %b) {
 entry:
   %0 = load ptr, ptr %b, align 8
   %call = tail call i32 %0(ptr null, i32 0), !prof !0, !callsite !1
+  ;; Add a dummy call to ensure that we have some callsite metadata,
+  ;; which triggers callsite record checking in the ThinLTO backend
+  ;; even with -enable-memprof-indirect-call-support=false.
+  %call2 = call i32 @_Z3xyzR2B0j(ptr null, i32 0), !callsite !2
   ret i32 0
 }
 
 !0 = !{!"VP", i32 0, i64 4, i64 4445083295448962937, i64 2, i64 -2718743882639408571, i64 2}
 !1 = !{i64 -2101080423462424381}
+!2 = !{i64 1234}
 
 ;--- main.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
