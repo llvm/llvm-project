@@ -3680,30 +3680,13 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
     Value *NewFAdd = Builder.CreateFAdd(NewSelect, C);
     NewFAdd->takeName(FAdd);
 
-    // Propagate rewrite-based flags
-    auto SelectFMF = SI.getFastMathFlags();
-    auto FAddFMF = FAdd->getFastMathFlags();
-    FastMathFlags CommonFMF, NewFAddFMF, NewSelectFMF;
-
-    CommonFMF.setAllowReassoc(SelectFMF.allowReassoc() &&
-                              FAddFMF.allowReassoc());
-    CommonFMF.setAllowReciprocal(SelectFMF.allowReciprocal() &&
-                                 FAddFMF.allowReciprocal());
-    CommonFMF.setAllowContract(SelectFMF.allowContract() &&
-                               FAddFMF.allowContract());
-    CommonFMF.setApproxFunc(SelectFMF.approxFunc() && FAddFMF.approxFunc());
-    NewSelectFMF = NewFAddFMF = CommonFMF;
-
     // Propagate FastMath flags
-    NewFAddFMF.setNoNaNs(FAddFMF.noNaNs());
-    NewFAddFMF.setNoInfs(FAddFMF.noInfs());
-    NewFAddFMF.setNoSignedZeros(FAddFMF.noSignedZeros());
-    cast<Instruction>(NewFAdd)->setFastMathFlags(NewFAddFMF);
-
-    NewSelectFMF.setNoNaNs(SelectFMF.noNaNs());
-    NewSelectFMF.setNoInfs(SelectFMF.noInfs());
-    NewSelectFMF.setNoSignedZeros(SelectFMF.noSignedZeros());
-    cast<Instruction>(NewSelect)->setFastMathFlags(NewSelectFMF);
+    FastMathFlags SelectFMF = SI.getFastMathFlags();
+    FastMathFlags FAddFMF = FAdd->getFastMathFlags();
+    FastMathFlags NewFMF = FastMathFlags::intersectRewrite(SelectFMF, FAddFMF) |
+                           FastMathFlags::unionValue(SelectFMF, FAddFMF);
+    cast<Instruction>(NewFAdd)->setFastMathFlags(NewFMF);
+    cast<Instruction>(NewSelect)->setFastMathFlags(NewFMF);
 
     return NewFAdd;
   }
