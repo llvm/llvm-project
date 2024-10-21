@@ -43,7 +43,7 @@ if (LLVM_TREE_AVAILABLE)
   # flang-new uses the same resource dir as clang.
   include(GetClangResourceDir)
   get_clang_resource_dir(FLANGRT_BUILD_LIB_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "lib${LLVM_LIBDIR_SUFFIX}")
-  get_clang_resource_dir(FLANGRT_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command find the install prefix itself
+  get_clang_resource_dir(FLANGRT_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command finds the install prefix itself
 else ()
   set(FLANGRT_BUILD_LIB_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
   set(FLANGRT_INSTALL_LIB_DIR "lib${LLVM_LIBDIR_SUFFIX}")

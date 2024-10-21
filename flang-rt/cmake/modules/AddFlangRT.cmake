@@ -102,8 +102,8 @@ function (add_flangrt_library name)
     else()
       llvm_map_components_to_libnames(llvm_libs Support)
     endif()
-    target_link_libraries(${name} PUBLIC  ${llvm_libs})
-    target_include_directories(${name} PRIVATE  ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(${name} PUBLIC ${llvm_libs})
+    target_include_directories(${name} PUBLIC ${LLVM_INCLUDE_DIRS})
   endif ()
 
   # If this is part of the toolchain, put it into the compiler's resource

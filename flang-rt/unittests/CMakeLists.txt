@@ -7,15 +7,18 @@
 #===------------------------------------------------------------------------===#
 
 # Add GTest if not already present.
-# Using a function so include_directories/LLVM_SUBPROJECT_TITLE does not propagate
+# Using a function so LLVM_SUBPROJECT_TITLE does not propagate.
 function (build_gtest)
-  include_directories("${LLVM_INCLUDE_DIR}" "${LLVM_MAIN_INCLUDE_DIR}")
   set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
   add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest")
 endfunction ()
 if (NOT TARGET llvm_gtest)
   build_gtest()
 endif ()
+
+# LLVM's modified GTest depends on LLVM, but not all runtime projects using
+# GTest also add the include search path.
+target_include_directories(llvm_gtest PUBLIC "${LLVM_INCLUDE_DIR}" "${LLVM_MAIN_INCLUDE_DIR}")
 
 # Required because LLVMSupport is compiled with this option (by default).
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
