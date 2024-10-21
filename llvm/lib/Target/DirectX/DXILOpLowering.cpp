@@ -105,20 +105,46 @@ public:
     return false;
   }
 
-  [[nodiscard]]
-  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+  struct ArgSelect {
+    enum class Type {
+      Index,
+      I8,
+      I32,
+    };
+    Type Type = Type::Index;
+    int Value = -1;
+  };
+
+  [[nodiscard]] bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
+                                           ArrayRef<ArgSelect> Args) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
     return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
       OpBuilder.getIRB().SetInsertPoint(CI);
-      if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
-      } else
-        Args.append(CI->arg_begin(), CI->arg_end());
+      SmallVector<Value *> NewArgs;
+      if (Args.size()) {
+        for (const ArgSelect &A : Args) {
+          switch (A.Type) {
+          case ArgSelect::Type::Index:
+            NewArgs.push_back(CI->getArgOperand(A.Value));
+            break;
+          case ArgSelect::Type::I8:
+            NewArgs.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
+            break;
+          case ArgSelect::Type::I32:
+            NewArgs.push_back(OpBuilder.getIRB().getInt32(A.Value));
+            break;
+          default:
+            llvm_unreachable("Invalid type of intrinsic arg select.");
+          }
+        }
+      } else if (IsVectorArgExpansion) {
+        NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
+      } else {
+        NewArgs.append(CI->arg_begin(), CI->arg_end());
+      }
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          DXILOp, NewArgs, CI->getName(), F.getReturnType());
       if (Error E = OpCall.takeError())
         return E;
 
@@ -471,9 +497,10 @@ public:
       switch (ID) {
       default:
         continue;
-#define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
+#define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
-    HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
+    HasErrors |=                                                               \
+        replaceFunctionWithOp(F, OpCode, ArrayRef<ArgSelect>{__VA_ARGS__});    \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
