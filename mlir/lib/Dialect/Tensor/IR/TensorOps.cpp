@@ -39,6 +39,59 @@ using llvm::divideCeilSigned;
 using llvm::divideFloorSigned;
 using llvm::mod;
 
+namespace {
+template <typename ExtractOpTy>
+OpFoldResult foldExtractFromElementsHelper(ExtractOpTy op,
+                                           FromElementsOp fromElementsOp,
+                                           ArrayRef<uint64_t> indices) {
+  // Fold extract(from_elements(...)).
+  auto tensorType = llvm::cast<RankedTensorType>(fromElementsOp.getType());
+  auto rank = tensorType.getRank();
+  assert(static_cast<int64_t>(indices.size()) == tensorType.getRank() &&
+         "rank mismatch");
+  int flatIndex = 0;
+  int stride = 1;
+  for (int i = rank - 1; i >= 0; --i) {
+    flatIndex += indices[i] * stride;
+    stride *= tensorType.getDimSize(i);
+  }
+  // Prevent out of bounds accesses. This can happen in invalid code that
+  // will never execute.
+  if (static_cast<int>(fromElementsOp.getElements().size()) <= flatIndex ||
+      flatIndex < 0)
+    return {};
+  return fromElementsOp.getElements()[flatIndex];
+}
+
+LogicalResult verifyStaticIndicesInBound(RankedTensorType type,
+                                         ArrayRef<int64_t> indices) {
+  ArrayRef<int64_t> shape = type.getShape();
+  for (auto [dim, index] : llvm::zip(shape, indices)) {
+    if (index < 0)
+      return failure();
+    if (ShapedType::isDynamic(dim))
+      continue;
+    if (index >= dim)
+      return failure();
+  }
+  return success();
+}
+
+template <typename InsertOpTy, typename AdapterTy>
+OpFoldResult insertOpFoldHelper(InsertOpTy insert, AdapterTy adaptor) {
+  Attribute scalar = adaptor.getScalar();
+  Attribute dest = adaptor.getDest();
+  if (scalar && dest) {
+    if (auto splatDest = llvm::dyn_cast<SplatElementsAttr>(dest)) {
+      if (scalar == splatDest.getSplatValue<Attribute>())
+        return dest;
+    }
+  }
+  return {};
+}
+
+} // namespace
+
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
 Operation *TensorDialect::materializeConstant(OpBuilder &builder,
@@ -1095,18 +1148,28 @@ namespace {
 /// to
 ///
 /// %extracted_element = tensor.extract %source[%c0] : tensor<?xi32>
-struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
-  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+template <typename ExtractOpTy>
+struct ExtractFromTensorCast : public OpRewritePattern<ExtractOpTy> {
+  using OpRewritePattern<ExtractOpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+  LogicalResult matchAndRewrite(ExtractOpTy extract,
                                 PatternRewriter &rewriter) const final {
-    auto tensorCast = extract.getTensor().getDefiningOp<tensor::CastOp>();
+    auto tensorCast =
+        extract.getTensor().template getDefiningOp<tensor::CastOp>();
     if (!tensorCast)
       return failure();
     if (!llvm::isa<RankedTensorType>(tensorCast.getSource().getType()))
       return failure();
-    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
-        extract, tensorCast.getSource(), extract.getIndices());
+    Operation *op = extract;
+    if (auto extractOp = llvm::dyn_cast<tensor::ExtractOp>(op)) {
+      rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
+          extractOp, tensorCast.getSource(), extractOp.getIndices());
+    } else if (auto extractStaticOp =
+                   llvm::dyn_cast<tensor::ExtractStaticOp>(op)) {
+      rewriter.replaceOpWithNewOp<tensor::ExtractStaticOp>(
+          extractStaticOp, tensorCast.getSource(),
+          extractStaticOp.getStaticIndices());
+    }
     return success();
   }
 };
@@ -1143,22 +1206,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
 
   // Fold extract(from_elements(...)).
   if (auto fromElementsOp = getTensor().getDefiningOp<FromElementsOp>()) {
-    auto tensorType = llvm::cast<RankedTensorType>(fromElementsOp.getType());
-    auto rank = tensorType.getRank();
-    assert(static_cast<int64_t>(indices.size()) == tensorType.getRank() &&
-           "rank mismatch");
-    int flatIndex = 0;
-    int stride = 1;
-    for (int i = rank - 1; i >= 0; --i) {
-      flatIndex += indices[i] * stride;
-      stride *= tensorType.getDimSize(i);
-    }
-    // Prevent out of bounds accesses. This can happen in invalid code that
-    // will never execute.
-    if (static_cast<int>(fromElementsOp.getElements().size()) <= flatIndex ||
-        flatIndex < 0)
-      return {};
-    return fromElementsOp.getElements()[flatIndex];
+    return foldExtractFromElementsHelper<ExtractOp>(*this, fromElementsOp,
+                                                    indices);
   }
 
   // If this is an elements attribute, query the value at the given indices.
@@ -1173,7 +1222,56 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractFromTensorCast>(context);
+  results.add<ExtractFromTensorCast<tensor::ExtractOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// ExtractStaticOp
+//===----------------------------------------------------------------------===//
+
+void ExtractStaticOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "extracted");
+}
+
+LogicalResult ExtractStaticOp::verify() {
+  // Verify the # indices match if we have a ranked type.
+  auto tensorType = llvm::cast<RankedTensorType>(getTensor().getType());
+  if (tensorType.getRank() != static_cast<int64_t>(getStaticIndices().size()))
+    return emitOpError("incorrect number of indices for extract_static");
+  if (failed(verifyStaticIndicesInBound(tensorType, getStaticIndices())))
+    return emitOpError("static index out of bound for extract_static");
+  return success();
+}
+
+OpFoldResult ExtractStaticOp::fold(FoldAdaptor adaptor) {
+  // If this is a splat elements attribute, simply return the value. All of
+  // the elements of a splat attribute are the same.
+  if (Attribute tensor = adaptor.getTensor()) {
+    if (auto splatTensor = llvm::dyn_cast<SplatElementsAttr>(tensor))
+      return splatTensor.getSplatValue<Attribute>();
+  }
+
+  SmallVector<uint64_t, 8> indices(getStaticIndices());
+  // Fold extract(from_elements(...)).
+  if (auto fromElementsOp = getTensor().getDefiningOp<FromElementsOp>()) {
+    return foldExtractFromElementsHelper<ExtractStaticOp>(*this, fromElementsOp,
+                                                          indices);
+  }
+
+  // If this is an elements attribute, query the value at the given indices.
+  if (Attribute tensor = adaptor.getTensor()) {
+    auto elementsAttr = llvm::dyn_cast<ElementsAttr>(tensor);
+    if (elementsAttr && elementsAttr.isValidIndex(indices))
+      return elementsAttr.getValues<Attribute>()[indices];
+  }
+
+  return {};
+}
+
+void ExtractStaticOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<ExtractFromTensorCast<tensor::ExtractStaticOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1366,13 +1464,34 @@ LogicalResult InsertOp::verify() {
 }
 
 OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
-  Attribute scalar = adaptor.getScalar();
-  Attribute dest = adaptor.getDest();
-  if (scalar && dest)
-    if (auto splatDest = llvm::dyn_cast<SplatElementsAttr>(dest))
-      if (scalar == splatDest.getSplatValue<Attribute>())
-        return dest;
-  return {};
+  return insertOpFoldHelper<InsertOp,
+                            InsertOpGenericAdaptor<ArrayRef<Attribute>>>(
+      *this, adaptor);
+}
+
+//===----------------------------------------------------------------------===//
+// InsertStaticOp
+//===----------------------------------------------------------------------===//
+
+void InsertStaticOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "inserted");
+}
+
+LogicalResult InsertStaticOp::verify() {
+  // Verify the # indices match if we have a ranked type.
+  auto destType = llvm::cast<RankedTensorType>(getDest().getType());
+  if (destType.getRank() != static_cast<int64_t>(getStaticIndices().size()))
+    return emitOpError("incorrect number of indices for insert_static");
+  if (failed(verifyStaticIndicesInBound(destType, getStaticIndices())))
+    return emitOpError("static index out of bound for insert_static");
+  return success();
+}
+
+OpFoldResult InsertStaticOp::fold(FoldAdaptor adaptor) {
+  return insertOpFoldHelper<InsertStaticOp,
+                            InsertStaticOpGenericAdaptor<ArrayRef<Attribute>>>(
+      *this, adaptor);
 }
 
 //===----------------------------------------------------------------------===//
