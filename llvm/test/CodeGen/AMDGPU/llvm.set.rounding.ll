@@ -1779,8 +1779,6 @@ define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   tail call void @llvm.set.rounding(i32 1)
   %set.mode = tail call i32 @llvm.get.rounding()
