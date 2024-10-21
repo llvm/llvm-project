@@ -351,6 +351,47 @@ public:
   void addSymbols(ThunkSection &isec) override;
 };
 
+static const uint32_t MASK_END_PACKET = 3 << 14;
+static const uint32_t END_OF_PACKET = 3 << 14;
+static const uint32_t END_OF_DUPLEX = 0 << 14;
+
+static std::optional<int32_t> getRealAddend(const InputSection &isec,
+                                            const Relocation &rel) {
+  const ArrayRef<uint8_t> SectContents = isec.content();
+  if (SectContents.size() < sizeof(int32_t))
+    // FIXME: assert?  emit a diagnostic?
+    return std::nullopt;
+  int32_t offset = rel.offset;
+
+  // Search as many as 4 instructions:
+  for (int i = 0; i < 4; i++) {
+    uint32_t instWord = 0;
+    const ArrayRef<uint8_t> InstWordContents = SectContents.drop_front(offset);
+    ::memcpy(&instWord, InstWordContents.data(), sizeof(instWord));
+    if (((instWord & MASK_END_PACKET) == END_OF_PACKET) ||
+        ((instWord & MASK_END_PACKET) == END_OF_DUPLEX))
+      break;
+    offset += sizeof(instWord);
+  }
+  return offset - rel.offset;
+}
+// Hexagon CPUs need thunks for <<FIXME TBD>>
+// when their destination is out of range [0, 0x_?].
+class HexagonThunk : public Thunk {
+public:
+  HexagonThunk(Ctx &ctx, const InputSection &isec, Relocation &rel,
+               Symbol &dest)
+      : Thunk(ctx, dest, 0), RealAddend(getRealAddend(isec, rel)),
+        RelOffset(rel.offset) {
+    alignment = 4;
+  }
+  std::optional<int32_t> RealAddend;
+  int32_t RelOffset;
+  uint32_t size() override { return ctx.arg.isPic ? 12 : 8; }
+  void writeTo(uint8_t *buf) override;
+  void addSymbols(ThunkSection &isec) override;
+};
+
 // MIPS LA25 thunk
 class MipsThunk final : public Thunk {
 public:
@@ -1365,6 +1406,39 @@ bool PPC64LongBranchThunk::isCompatibleWith(const InputSection &isec,
   return rel.type == R_PPC64_REL24 || rel.type == R_PPC64_REL14;
 }
 
+// Hexagon Target Thunks
+static uint64_t getHexagonThunkDestVA(Ctx &ctx, const Symbol &s, int64_t a) {
+  uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA(a);
+  return SignExtend64<32>(v); // FIXME: sign extend to 64-bit?
+}
+
+void HexagonThunk::writeTo(uint8_t *buf) {
+  uint64_t s = getHexagonThunkDestVA(ctx, destination, addend);
+  uint64_t p = getThunkTargetSym()->getVA();
+
+  if (ctx.arg.isPic) {
+    write32(ctx, buf + 0, 0x00004000); // {  immext(#0)
+    ctx.target->relocateNoSym(buf, R_HEX_B32_PCREL_X, s - p);
+    write32(ctx, buf + 4, 0x6a49c00e); //    r14 = add(pc,##0) }
+    ctx.target->relocateNoSym(buf + 4, R_HEX_6_PCREL_X, s - p);
+
+    write32(ctx, buf + 8, 0x528ec000); // {  jumpr r14 }
+  } else {
+    write32(ctx, buf + 0, 0x00004000); //  { immext
+    ctx.target->relocateNoSym(buf, R_HEX_B32_PCREL_X, s - p);
+    write32(ctx, buf + 4, 0x5800c000); //    jump <> }
+    ctx.target->relocateNoSym(buf + 4, R_HEX_B22_PCREL_X, s - p);
+  }
+}
+void HexagonThunk::addSymbols(ThunkSection &isec) {
+  Symbol *enclosing = isec.getEnclosingSymbol(RelOffset);
+  StringRef src = enclosing ? enclosing->getName() : isec.name;
+
+  addSymbol(saver().save("__trampoline_for_" + destination.getName() +
+                         "_from_" + src),
+            STT_FUNC, 0, isec);
+}
+
 Thunk::Thunk(Ctx &ctx, Symbol &d, int64_t a)
     : ctx(ctx), destination(d), addend(a), offset(0) {
   destination.thunkAccessed = true;
@@ -1526,6 +1600,27 @@ static Thunk *addThunkAVR(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
   }
 }
 
+static Thunk *addThunkHexagon(Ctx &ctx, const InputSection &isec,
+                              Relocation &rel, Symbol &s) {
+  switch (rel.type) {
+  case R_HEX_B9_PCREL:
+  case R_HEX_B13_PCREL:
+  case R_HEX_B15_PCREL:
+  case R_HEX_B22_PCREL:
+  case R_HEX_PLT_B22_PCREL:
+  case R_HEX_GD_PLT_B22_PCREL:
+#if 0
+    // FIXME: we don't need this for extended rels?
+  case R_HEX_B32_PCREL_X:
+  case R_HEX_6_PCREL_X:
+  case R_HEX_B22_PCREL_X:
+#endif
+    return make<HexagonThunk>(ctx, isec, rel, s);
+  default:
+    fatal("unrecognized relocation type " + toString(rel.type));
+  }
+}
+
 static Thunk *addThunkMips(Ctx &ctx, RelType type, Symbol &s) {
   if ((s.stOther & STO_MIPS_MICROMIPS) && isMipsR6(ctx))
     return make<MicroMipsR6Thunk>(ctx, s);
@@ -1591,8 +1686,11 @@ Thunk *elf::addThunk(Ctx &ctx, const InputSection &isec, Relocation &rel) {
     return addThunkPPC32(ctx, isec, rel, s);
   case EM_PPC64:
     return addThunkPPC64(ctx, rel.type, s, a);
+  case EM_HEXAGON:
+    return addThunkHexagon(ctx, isec, rel, s);
   default:
-    llvm_unreachable("add Thunk only supported for ARM, AVR, Mips and PowerPC");
+    llvm_unreachable(
+        "add Thunk only supported for ARM, AVR, Hexagon, Mips and PowerPC");
   }
 }
 
