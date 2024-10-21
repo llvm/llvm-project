@@ -8906,11 +8906,13 @@ bool SIInstrInfo::isPrologueOperandReload(const MachineInstr &MI) const {
   if ((isSGPRSpill(MI) &&
        (MI.mayLoad() || Opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)) ||
       (isWWMRegSpillOpcode(Opcode) && MI.mayLoad())) {
-    Register Reg = MI.defs().begin()->getReg();
+    Register Reg = MI.getOperand(0).getReg();
     const MachineBasicBlock *MBB = MI.getParent();
     MachineBasicBlock::const_instr_iterator I(MI), E = MBB->instr_end();
     while (++I != E) {
-      if (I->readsRegister(Reg, &RI) && isBasicBlockPrologue(*I))
+      if (!isBasicBlockPrologue(*I))
+        return false;
+      if (I->readsRegister(Reg, &RI))
         return true;
     }
   }
@@ -8933,9 +8935,10 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
 
   uint16_t Opcode = MI.getOpcode();
   return IsNullOrVectorRegister &&
-         (isPrologueOperandReload(MI) || Opcode == AMDGPU::IMPLICIT_DEF ||
+         (Opcode == AMDGPU::IMPLICIT_DEF ||
           (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
-           MI.modifiesRegister(AMDGPU::EXEC, &RI)));
+           MI.modifiesRegister(AMDGPU::EXEC, &RI)) ||
+              isPrologueOperandReload(MI));
 }
 
 MachineInstrBuilder
