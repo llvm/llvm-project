@@ -552,9 +552,9 @@ bool DynamicLoaderFreeBSDKernel::ParseKmods(Address linker_files_head_addr) {
   m_process->GetTarget().ModulesDidUnload(remove_modules, false);
 
   for (KModImageInfo &image_info : linker_files_list) {
-    if (m_kld_name_to_uuid.find(image_info.GetName()) !=
-        m_kld_name_to_uuid.end())
-      image_info.SetUUID(m_kld_name_to_uuid[image_info.GetName()]);
+    auto it = m_kld_name_to_uuid.find(image_info.GetName());
+    if (it != m_kld_name_to_uuid.end())
+      image_info.SetUUID(it->second);
     bool failed_to_load = false;
     if (!image_info.LoadImageUsingMemoryModule(m_process)) {
       image_info.LoadImageUsingFileAddress(m_process);
