@@ -153,7 +153,8 @@ COMPILER_RT_VISIBILITY int lprofLockFd(int fd) {
     }
   }
   return 0;
-#elif defined(COMPILER_RT_HAS_FLOCK)
+#elif defined(COMPILER_RT_HAS_FLOCK) || defined(_WIN32)
+  // Windows doesn't have flock but WindowsMMap.h provides a shim
   flock(fd, LOCK_EX);
   return 0;
 #else
@@ -180,7 +181,8 @@ COMPILER_RT_VISIBILITY int lprofUnlockFd(int fd) {
     }
   }
   return 0;
-#elif defined(COMPILER_RT_HAS_FLOCK)
+#elif defined(COMPILER_RT_HAS_FLOCK) || defined(_WIN32)
+  // Windows doesn't have flock but WindowsMMap.h provides a shim
   flock(fd, LOCK_UN);
   return 0;
 #else
