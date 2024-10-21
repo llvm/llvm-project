@@ -2849,7 +2849,7 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
 
   if (isElf) {
     MCSymbolELF *LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
-    int Flags = F.hasComdat() ? (unsigned)ELF::SHF_GROUP : 0;
+    int Flags = F.hasComdat() ? static_cast<int>(ELF::SHF_GROUP) : 0;
 
     JumpTableSizesSection = OutContext.getELFSection(
         sectionName, ELF::SHT_LLVM_JT_SIZES, Flags, 0, GroupName, F.hasComdat(),
