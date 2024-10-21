@@ -21807,6 +21807,70 @@ unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
   return isCtpopFast(VT) ? 0 : 1;
 }
 
+void RISCVTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  if (!Subtarget.doCSRSavesInRA() || !F.doesNotThrow()) {
+    TargetLoweringBase::finalizeLowering(MF);
+    return;
+  }
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const RISCVRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+  const RISCVFrameLowering &TFI = *Subtarget.getFrameLowering();
+
+  SmallVector<MachineBasicBlock *, 4> RestoreMBBs;
+  SmallVector<MachineBasicBlock *, 4> SaveMBBs;
+  SaveMBBs.push_back(&MF.front());
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.isReturnBlock())
+      RestoreMBBs.push_back(&MBB);
+  }
+
+  BitVector MustCalleeSavedRegs;
+  TFI.determineMustCalleeSaves(MF, MustCalleeSavedRegs);
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+  SmallVector<MCPhysReg, 4> EligibleRegs;
+  for (int i = 0; CSRegs[i]; ++i) {
+    if (!MustCalleeSavedRegs[i])
+      EligibleRegs.push_back(CSRegs[i]);
+  }
+
+  dbgs() << "EligibleRegs: " << EligibleRegs.size() << "\n";
+  SmallVector<Register, 4> VRegs;
+  for (MachineBasicBlock *SaveMBB : SaveMBBs) {
+    for (MCPhysReg Reg : EligibleRegs) {
+      SaveMBB->addLiveIn(Reg);
+      // TODO: should we use Maximal register class instead?
+      Register VReg =
+          MRI.createVirtualRegister(TRI.getMinimalPhysRegClass(Reg));
+      VRegs.push_back(VReg);
+      BuildMI(*SaveMBB, SaveMBB->begin(),
+              SaveMBB->findDebugLoc(SaveMBB->begin()),
+              TII.get(TargetOpcode::COPY), VReg)
+          .addReg(Reg);
+    }
+  }
+
+  for (MachineBasicBlock *RestoreMBB : RestoreMBBs) {
+    MachineInstr &ReturnMI = RestoreMBB->back();
+    assert(ReturnMI.isReturn() && "Expected return instruction!");
+    auto VRegI = VRegs.begin();
+    for (MCPhysReg Reg : EligibleRegs) {
+      Register VReg = *VRegI;
+      BuildMI(*RestoreMBB, ReturnMI.getIterator(), ReturnMI.getDebugLoc(),
+              TII.get(TargetOpcode::COPY), Reg)
+          .addReg(VReg);
+      ReturnMI.addOperand(MF, MachineOperand::CreateReg(Reg,
+                                                        /*isDef=*/false,
+                                                        /*isImplicit=*/true));
+      VRegI++;
+    }
+  }
+
+  TargetLoweringBase::finalizeLowering(MF);
+}
+
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // GISel support is in progress or complete for these opcodes.

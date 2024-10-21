@@ -1060,12 +1060,51 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return Offset;
 }
 
-void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                              BitVector &SavedRegs,
-                                              RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  // Unconditionally spill RA and FP only if the function uses a frame
-  // pointer.
+void RISCVFrameLowering::determineMustCalleeSaves(MachineFunction &MF,
+                                                  BitVector &SavedRegs) const {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
+  // Resize before the early returns. Some backends expect that
+  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
+  // saved registers.
+  SavedRegs.resize(TRI.getNumRegs());
+
+  // When interprocedural register allocation is enabled caller saved registers
+  // are preferred over callee saved registers.
+  if (MF.getTarget().Options.EnableIPRA &&
+      isSafeForNoCSROpt(MF.getFunction()) &&
+      isProfitableForNoCSROpt(MF.getFunction()))
+    return;
+
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+
+  // Early exit if there are no callee saved registers.
+  if (!CSRegs || CSRegs[0] == 0)
+    return;
+
+  // In Naked functions we aren't going to save any registers.
+  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
+    return;
+
+  // Noreturn+nounwind functions never restore CSR, so no saves are needed.
+  // Purely noreturn functions may still return through throws, so those must
+  // save CSR for caller exception handlers.
+  //
+  // If the function uses longjmp to break out of its current path of
+  // execution we do not need the CSR spills either: setjmp stores all CSRs
+  // it was called with into the jmp_buf, which longjmp then restores.
+  if (MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
+      MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+      !MF.getFunction().hasFnAttribute(Attribute::UWTable) &&
+      enableCalleeSaveSkip(MF))
+    return;
+
+  // Functions which call __builtin_unwind_init get all their registers saved.
+  if (MF.callsUnwindInit()) {
+    SavedRegs.set();
+    return;
+  }
   if (hasFP(MF)) {
     SavedRegs.set(RISCV::X1);
     SavedRegs.set(RISCV::X8);
@@ -1078,6 +1117,18 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
     SavedRegs.set(RISCV::X27);
+}
+
+void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                              BitVector &SavedRegs,
+                                              RegScavenger *RS) const {
+  const auto &ST = MF.getSubtarget<RISCVSubtarget>();
+  const Function &F = MF.getFunction();
+  determineMustCalleeSaves(MF, SavedRegs);
+  if (ST.doCSRSavesInRA() && F.doesNotThrow())
+    return;
+
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 }
 
 std::pair<int64_t, Align>
