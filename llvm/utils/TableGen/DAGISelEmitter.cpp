@@ -54,8 +54,8 @@ static unsigned getResultPatternCost(TreePatternNode &P,
     if (II.usesCustomInserter)
       Cost += 10;
   }
-  for (unsigned i = 0, e = P.getNumChildren(); i != e; ++i)
-    Cost += getResultPatternCost(P.getChild(i), CGP);
+  for (unsigned I = 0, E = P.getNumChildren(); I != E; ++I)
+    Cost += getResultPatternCost(P.getChild(I), CGP);
   return Cost;
 }
 
@@ -71,8 +71,8 @@ static unsigned getResultPatternSize(TreePatternNode &P,
   if (Op->isSubClassOf("Instruction")) {
     Cost += Op->getValueAsInt("CodeSize");
   }
-  for (unsigned i = 0, e = P.getNumChildren(); i != e; ++i)
-    Cost += getResultPatternSize(P.getChild(i), CGP);
+  for (unsigned I = 0, E = P.getNumChildren(); I != E; ++I)
+    Cost += getResultPatternSize(P.getChild(I), CGP);
   return Cost;
 }
 
