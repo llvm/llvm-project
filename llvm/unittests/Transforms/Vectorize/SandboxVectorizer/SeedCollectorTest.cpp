@@ -312,7 +312,7 @@ bb:
   auto StoreSeedsRange = SC.getStoreSeeds();
   auto &SB = *StoreSeedsRange.begin();
   // Expect just one vector of store seeds
-  EXPECT_TRUE(std::next(StoreSeedsRange.begin()) == StoreSeedsRange.end());
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
   EXPECT_THAT(SB, testing::ElementsAre(St0, St1, St2, St3));
 }
 
@@ -365,7 +365,7 @@ TEST_F(SeedBundleTest, VectorStores) {
 define void @foo(ptr noalias %ptr, <2 x float> %val) {
 bb:
   %ptr0 = getelementptr float, ptr %ptr, i32 0
-  %ptr1 = getelementptr float, ptr %ptr, i32 2
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
   store <2 x float> %val, ptr %ptr1
   store <2 x float> %val, ptr %ptr0
   ret void
