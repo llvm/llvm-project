@@ -180,7 +180,7 @@ def parse_args():
         help="When enabled, lit will add a unique element to the output file name, "
         'before the extension. For example "results.xml" will become '
         '"results.<something>.xml". The "<something>" is not ordered in any '
-        "way and is chosen so that existing are not overwritten. [Default: Off]",
+        "way and is chosen so that existing files are not overwritten. [Default: Off]",
         action="store_true",
     )
     execution_group.add_argument(
