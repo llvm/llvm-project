@@ -538,7 +538,7 @@ body:             |
     ; RV32-NEXT: [[READ_VLENB:%[0-9]+]]:_(s64) = G_READ_VLENB
     ; RV32-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; RV32-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[READ_VLENB]], [[C1]](s64)
-    ; RV32-NEXT: [[VMV_V_V_VL:%[0-9]+]]:_(<vscale x 4 x s16>) = G_VMV_V_V_VL [[EXTRACT_SUBVECTOR]], [[INSERT_SUBVECTOR]](<vscale x 4 x s16>), [[LSHR]](s64)
+    ; RV32-NEXT: [[VMV_V_V_VL:%[0-9]+]]:_(<vscale x 4 x s16>) = G_VMV_V_V_VL [[EXTRACT_SUBVECTOR]], [[INSERT_SUBVECTOR]], [[LSHR]](s64)
     ; RV32-NEXT: [[INSERT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 8 x s16>) = G_INSERT_SUBVECTOR [[COPY]], [[VMV_V_V_VL]](<vscale x 4 x s16>), 4
     ; RV32-NEXT: $v8 = COPY [[INSERT_SUBVECTOR1]](<vscale x 8 x s16>)
     ; RV32-NEXT: PseudoRET implicit $v8
@@ -556,7 +556,7 @@ body:             |
     ; RV64-NEXT: [[READ_VLENB:%[0-9]+]]:_(s32) = G_READ_VLENB
     ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; RV64-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[READ_VLENB]], [[C1]](s32)
-    ; RV64-NEXT: [[VMV_V_V_VL:%[0-9]+]]:_(<vscale x 4 x s16>) = G_VMV_V_V_VL [[EXTRACT_SUBVECTOR]], [[INSERT_SUBVECTOR]](<vscale x 4 x s16>), [[LSHR]](s32)
+    ; RV64-NEXT: [[VMV_V_V_VL:%[0-9]+]]:_(<vscale x 4 x s16>) = G_VMV_V_V_VL [[EXTRACT_SUBVECTOR]], [[INSERT_SUBVECTOR]], [[LSHR]](s32)
     ; RV64-NEXT: [[INSERT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 8 x s16>) = G_INSERT_SUBVECTOR [[COPY]], [[VMV_V_V_VL]](<vscale x 4 x s16>), 4
     ; RV64-NEXT: $v8 = COPY [[INSERT_SUBVECTOR1]](<vscale x 8 x s16>)
     ; RV64-NEXT: PseudoRET implicit $v8
