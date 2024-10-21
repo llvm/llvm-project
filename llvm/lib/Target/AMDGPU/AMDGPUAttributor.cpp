@@ -911,7 +911,9 @@ struct AAAMDMaxNumWorkgroups
     };
 
     bool AllCallSitesKnown = true;
-    if (!A.checkForAllCallSites(CheckCallSite, *this, true, AllCallSitesKnown))
+    if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                /*RequireAllCallSites=*/true,
+                                AllCallSitesKnown))
       return indicatePessimisticFixpoint();
 
     return Change;
