@@ -757,103 +757,10 @@ public:
       throw py::error_already_set();
     }
     auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
-    SmallVector<int64_t> shape;
-    if (explicitShape) {
-      shape.append(explicitShape->begin(), explicitShape->end());
-    } else {
-      shape.append(view.shape, view.shape + view.ndim);
-    }
 
-    MlirAttribute encodingAttr = mlirAttributeGetNull();
     MlirContext context = contextWrapper->get();
-
-    // Detect format codes that are suitable for bulk loading. This includes
-    // all byte aligned integer and floating point types up to 8 bytes.
-    // Notably, this excludes, bool (which needs to be bit-packed) and
-    // other exotics which do not have a direct representation in the buffer
-    // protocol (i.e. complex, etc).
-    std::optional<MlirType> bulkLoadElementType;
-    if (explicitType) {
-      bulkLoadElementType = *explicitType;
-    } else {
-      std::string_view format(view.format);
-      if (format == "f") {
-        // f32
-        assert(view.itemsize == 4 && "mismatched array itemsize");
-        bulkLoadElementType = mlirF32TypeGet(context);
-      } else if (format == "d") {
-        // f64
-        assert(view.itemsize == 8 && "mismatched array itemsize");
-        bulkLoadElementType = mlirF64TypeGet(context);
-      } else if (format == "e") {
-        // f16
-        assert(view.itemsize == 2 && "mismatched array itemsize");
-        bulkLoadElementType = mlirF16TypeGet(context);
-      } else if (isSignedIntegerFormat(format)) {
-        if (view.itemsize == 4) {
-          // i32
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 32)
-                                    : mlirIntegerTypeSignedGet(context, 32);
-        } else if (view.itemsize == 8) {
-          // i64
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 64)
-                                    : mlirIntegerTypeSignedGet(context, 64);
-        } else if (view.itemsize == 1) {
-          // i8
-          bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
-                                         : mlirIntegerTypeSignedGet(context, 8);
-        } else if (view.itemsize == 2) {
-          // i16
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 16)
-                                    : mlirIntegerTypeSignedGet(context, 16);
-        }
-      } else if (isUnsignedIntegerFormat(format)) {
-        if (view.itemsize == 4) {
-          // unsigned i32
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 32)
-                                    : mlirIntegerTypeUnsignedGet(context, 32);
-        } else if (view.itemsize == 8) {
-          // unsigned i64
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 64)
-                                    : mlirIntegerTypeUnsignedGet(context, 64);
-        } else if (view.itemsize == 1) {
-          // i8
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 8)
-                                    : mlirIntegerTypeUnsignedGet(context, 8);
-        } else if (view.itemsize == 2) {
-          // i16
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 16)
-                                    : mlirIntegerTypeUnsignedGet(context, 16);
-        }
-      }
-      if (!bulkLoadElementType) {
-        throw std::invalid_argument(
-            std::string("unimplemented array format conversion from format: ") +
-            std::string(format));
-      }
-    }
-
-    MlirType shapedType;
-    if (mlirTypeIsAShaped(*bulkLoadElementType)) {
-      if (explicitShape) {
-        throw std::invalid_argument("Shape can only be specified explicitly "
-                                    "when the type is not a shaped type.");
-      }
-      shapedType = *bulkLoadElementType;
-    } else {
-      shapedType = mlirRankedTensorTypeGet(shape.size(), shape.data(),
-                                           *bulkLoadElementType, encodingAttr);
-    }
-    size_t rawBufferSize = view.len;
-    MlirAttribute attr =
-        mlirDenseElementsAttrRawBufferGet(shapedType, rawBufferSize, view.buf);
+    MlirAttribute attr = getAttributeFromBuffer(view, signless, explicitType,
+                                                explicitShape, context);
     if (mlirAttributeIsNull(attr)) {
       throw std::invalid_argument(
           "DenseElementsAttr could not be constructed from the given buffer. "
@@ -963,6 +870,21 @@ public:
         // unsigned i16
         return bufferInfo<uint16_t>(shapedType);
       }
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 1) {
+      // i1 / bool
+      if (!m_boolBuffer.has_value()) {
+        // Because i1's are bitpacked within MLIR, we need to convert it into
+        // the one bool per byte representation used by numpy. We allocate a new
+        // array to keep around for this purpose.
+        int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
+        m_boolBuffer = SmallVector<bool, 8>(numBooleans);
+        for (int i = 0; i < numBooleans; i++) {
+          bool value = mlirDenseElementsAttrGetBoolValue(*this, i);
+          m_boolBuffer.value()[i] = value;
+        }
+      }
+      return bufferInfo<bool>(shapedType, "?", m_boolBuffer.value().data());
     }
 
     // TODO: Currently crashes the program.
@@ -1000,6 +922,8 @@ public:
   }
 
 private:
+  std::optional<SmallVector<bool, 8>> m_boolBuffer;
+
   static bool isUnsignedIntegerFormat(std::string_view format) {
     if (format.empty())
       return false;
@@ -1016,14 +940,158 @@ private:
            code == 'q';
   }
 
+  static MlirType
+  getShapedType(std::optional<MlirType> bulkLoadElementType,
+                std::optional<std::vector<int64_t>> explicitShape,
+                Py_buffer &view) {
+    SmallVector<int64_t> shape;
+    if (explicitShape) {
+      shape.append(explicitShape->begin(), explicitShape->end());
+    } else {
+      shape.append(view.shape, view.shape + view.ndim);
+    }
+
+    if (mlirTypeIsAShaped(*bulkLoadElementType)) {
+      if (explicitShape) {
+        throw std::invalid_argument("Shape can only be specified explicitly "
+                                    "when the type is not a shaped type.");
+      }
+      return *bulkLoadElementType;
+    } else {
+      MlirAttribute encodingAttr = mlirAttributeGetNull();
+      return mlirRankedTensorTypeGet(shape.size(), shape.data(),
+                                     *bulkLoadElementType, encodingAttr);
+    }
+  }
+
+  static MlirAttribute getAttributeFromBuffer(
+      Py_buffer &view, bool signless, std::optional<PyType> explicitType,
+      std::optional<std::vector<int64_t>> explicitShape, MlirContext &context) {
+    // Detect format codes that are suitable for bulk loading. This includes
+    // all byte aligned integer and floating point types up to 8 bytes.
+    // Notably, this excludes exotics types which do not have a direct
+    // representation in the buffer protocol (i.e. complex, etc).
+    std::optional<MlirType> bulkLoadElementType;
+    if (explicitType) {
+      bulkLoadElementType = *explicitType;
+    } else {
+      std::string_view format(view.format);
+      if (format == "f") {
+        // f32
+        assert(view.itemsize == 4 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF32TypeGet(context);
+      } else if (format == "d") {
+        // f64
+        assert(view.itemsize == 8 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF64TypeGet(context);
+      } else if (format == "e") {
+        // f16
+        assert(view.itemsize == 2 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF16TypeGet(context);
+      } else if (format == "?") {
+        // i1
+        // The i1 type needs to be bit-packed, so we will handle it seperately
+        return getAttributeFromBufferBoolBitpack(view, explicitShape, context);
+      } else if (isSignedIntegerFormat(format)) {
+        if (view.itemsize == 4) {
+          // i32
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 32)
+                                    : mlirIntegerTypeSignedGet(context, 32);
+        } else if (view.itemsize == 8) {
+          // i64
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 64)
+                                    : mlirIntegerTypeSignedGet(context, 64);
+        } else if (view.itemsize == 1) {
+          // i8
+          bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
+                                         : mlirIntegerTypeSignedGet(context, 8);
+        } else if (view.itemsize == 2) {
+          // i16
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 16)
+                                    : mlirIntegerTypeSignedGet(context, 16);
+        }
+      } else if (isUnsignedIntegerFormat(format)) {
+        if (view.itemsize == 4) {
+          // unsigned i32
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 32)
+                                    : mlirIntegerTypeUnsignedGet(context, 32);
+        } else if (view.itemsize == 8) {
+          // unsigned i64
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 64)
+                                    : mlirIntegerTypeUnsignedGet(context, 64);
+        } else if (view.itemsize == 1) {
+          // i8
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 8)
+                                    : mlirIntegerTypeUnsignedGet(context, 8);
+        } else if (view.itemsize == 2) {
+          // i16
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 16)
+                                    : mlirIntegerTypeUnsignedGet(context, 16);
+        }
+      }
+      if (!bulkLoadElementType) {
+        throw std::invalid_argument(
+            std::string("unimplemented array format conversion from format: ") +
+            std::string(format));
+      }
+    }
+
+    MlirType type = getShapedType(bulkLoadElementType, explicitShape, view);
+    return mlirDenseElementsAttrRawBufferGet(type, view.len, view.buf);
+  }
+
+  // There is a complication for boolean numpy arrays, as numpy represent them
+  // as 8 bits per boolean, whereas MLIR bitpacks them into 8 booleans per byte.
+  // This function does the bit-packing respecting endianess.
+  static MlirAttribute getAttributeFromBufferBoolBitpack(
+      Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
+      MlirContext &context) {
+    // First read the content of the python buffer as u8's, to correct for
+    // endianess
+    MlirType byteType = getShapedType(mlirIntegerTypeUnsignedGet(context, 8),
+                                      explicitShape, view);
+    MlirAttribute intermediateAttr =
+        mlirDenseElementsAttrRawBufferGet(byteType, view.len, view.buf);
+
+    // Pack the boolean array according to the i1 bitpacking layout
+    const int numPackedBytes = (view.len + 7) / 8;
+    SmallVector<uint8_t, 8> bitpacked(numPackedBytes);
+    for (int byteNum = 0; byteNum < numPackedBytes; byteNum++) {
+      uint8_t byte = 0;
+      for (int bitNr = 0; 8 * byteNum + bitNr < view.len; bitNr++) {
+        int pos = 8 * byteNum + bitNr;
+        uint8_t boolVal =
+            mlirDenseElementsAttrGetUInt8Value(intermediateAttr, pos) << bitNr;
+        byte |= boolVal;
+      }
+      bitpacked[byteNum] = byte;
+    }
+
+    MlirType bitpackedType =
+        getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
+    return mlirDenseElementsAttrRawBufferGet(bitpackedType, numPackedBytes,
+                                             bitpacked.data());
+  }
+
   template <typename Type>
   py::buffer_info bufferInfo(MlirType shapedType,
-                             const char *explicitFormat = nullptr) {
+                             const char *explicitFormat = nullptr,
+                             Type *dataOverride = nullptr) {
     intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the data for the buffer_info.
     // Buffer is configured for read-only access below.
     Type *data = static_cast<Type *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
+    if (dataOverride != nullptr) {
+      data = dataOverride;
+    }
     // Prepare the shape for the buffer_info.
     SmallVector<intptr_t, 4> shape;
     for (intptr_t i = 0; i < rank; ++i)
