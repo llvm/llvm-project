@@ -6109,6 +6109,12 @@ let TargetPrefix = "x86" in {
         DefaultAttrsIntrinsic<[llvm_v8i32_ty],
         [llvm_v8i32_ty, llvm_v8i32_ty],
         [IntrNoMem]>;
+def int_x86_vsm4key4512 : ClangBuiltin<"__builtin_ia32_vsm4key4512">,
+        Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_v16i32_ty],
+        [IntrNoMem]>;
+def int_x86_vsm4rnds4512 : ClangBuiltin<"__builtin_ia32_vsm4rnds4512">,
+        Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_v16i32_ty],
+        [IntrNoMem]>;
 }
 //===----------------------------------------------------------------------===//
 // RAO-INT intrinsics

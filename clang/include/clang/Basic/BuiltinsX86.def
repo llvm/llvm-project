@@ -2179,6 +2179,10 @@ TARGET_BUILTIN(__builtin_ia32_vsm4key4256, "V8UiV8UiV8Ui", "nV:256:", "sm4")
 TARGET_BUILTIN(__builtin_ia32_vsm4rnds4128, "V4UiV4UiV4Ui", "nV:128:", "sm4")
 TARGET_BUILTIN(__builtin_ia32_vsm4rnds4256, "V8UiV8UiV8Ui", "nV:256:", "sm4")
 
+// SM4_EVEX
+TARGET_BUILTIN(__builtin_ia32_vsm4key4512, "V16UiV16UiV16Ui", "nV:512:", "avx10.2-512,sm4")
+TARGET_BUILTIN(__builtin_ia32_vsm4rnds4512, "V16UiV16UiV16Ui", "nV:512:", "avx10.2-512,sm4")
+
 // AVX10 MINMAX
 TARGET_BUILTIN(__builtin_ia32_vminmaxnepbf16128, "V8yV8yV8yIi", "nV:128:", "avx10.2-256")
 TARGET_BUILTIN(__builtin_ia32_vminmaxnepbf16256, "V16yV16yV16yIi", "nV:256:", "avx10.2-256")

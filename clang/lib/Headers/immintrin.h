@@ -665,6 +665,9 @@ _storebe_i64(void * __P, long long __D) {
 #include <avx10_2_512niintrin.h>
 #include <avx10_2_512satcvtdsintrin.h>
 #include <avx10_2_512satcvtintrin.h>
+#if (defined(__SM4__))
+#include <sm4evexintrin.h>
+#endif
 #endif
 
 #if !defined(__SCE__) || __has_feature(modules) || defined(__ENQCMD__)

@@ -1647,3 +1647,23 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def : InstAlias<"vmovw.s\t{$src, $dst|$dst, $src}",
                   (VMOVZPWILo2PWIZrr2 VR128X:$dst, VR128X:$src), 0>;
 }
+
+// SM4(EVEX)
+multiclass avx10_sm4_base<string OpStr> {
+  // SM4_Base is in X86InstrSSE.td.
+  let Predicates = [HasSM4, HasAVX10_2] in {
+    defm Z128 : SM4_Base<OpStr, avx512vl_i32_info.info128.RC,
+                "128", avx512vl_i32_info.info128.LdFrag,
+                avx512vl_i32_info.info128.MemOp>, EVEX_V128;
+    defm Z256 : SM4_Base<OpStr, avx512vl_i32_info.info256.RC,
+                "256", avx512vl_i32_info.info256.LdFrag,
+                avx512vl_i32_info.info256.MemOp>, EVEX_V256;
+  }
+  let Predicates = [HasSM4, HasAVX10_2_512] in
+    defm Z : SM4_Base<OpStr, avx512vl_i32_info.info512.RC,
+              "512", avx512vl_i32_info.info512.LdFrag,
+              avx512vl_i32_info.info512.MemOp>, EVEX_V512;
+}
+
+defm VSM4KEY4 : avx10_sm4_base<"vsm4key4">, T8, XS, EVEX, VVVV;
+defm VSM4RNDS4 : avx10_sm4_base<"vsm4rnds4">, T8, XD, EVEX, VVVV;
