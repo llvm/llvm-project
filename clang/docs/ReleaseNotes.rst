@@ -99,17 +99,24 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
-- Clang will now correctly not consider pointers to non classes for covariance.
+- Clang will now correctly not consider pointers to non classes for covariance
+  and disallow changing return type to a type that doesn't have the same or less cv-qualifications.
 
   .. code-block:: c++
 
     struct A {
       virtual const int *f() const;
+      virtual const std::string *g() const;
     };
     struct B : A {
       // Return type has less cv-qualification but doesn't point to a class.
       // Error will be generated.
       int *f() const override;
+
+      // Return type doesn't have more cv-qualification also not the same or
+      // less cv-qualification.
+      // Error will be generated.
+      volatile std::string *g() const override;
     };
 
 - The warning ``-Wdeprecated-literal-operator`` is now on by default, as this is
@@ -265,6 +272,7 @@ Non-comprehensive list of changes in this release
   ``__builtin_signbit`` can now be used in constant expressions.
 - Plugins can now define custom attributes that apply to statements
   as well as declarations.
+- ``__builtin_abs`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -411,7 +419,7 @@ Improvements to Clang's diagnostics
 - The warning for an unsupported type for a named register variable is now phrased ``unsupported type for named register variable``,
   instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
   suboptimal in some way the error fails to mention (#GH111550).
-  
+
 - Clang now emits a ``-Wdepredcated-literal-operator`` diagnostic, even if the
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
@@ -530,6 +538,7 @@ Bug Fixes to C++ Support
   certain situations. (#GH47400), (#GH90896)
 - Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 - During the lookup for a base class name, non-type names are ignored. (#GH16855)
+- Fix a crash when recovering an invalid expression involving an explicit object member conversion operator. (#GH112559)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -692,8 +701,10 @@ clang-format
 - Adds ``BreakBinaryOperations`` option.
 - Adds ``TemplateNames`` option.
 - Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
-- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of multi-line comments
-  without touching their contents, renames ``false`` to ``Never``, and ``true`` to ``Always``.
+- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of
+  multi-line comments without touching their contents, renames ``false`` to
+  ``Never``, and ``true`` to ``Always``.
+- Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 
 libclang
 --------

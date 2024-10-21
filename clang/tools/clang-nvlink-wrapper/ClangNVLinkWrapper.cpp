@@ -344,7 +344,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
   Conf.RemarksFormat = RemarksFormat;
 
-  Conf.MAttrs = {Args.getLastArgValue(OPT_feature, "").str()};
+  Conf.MAttrs = llvm::codegen::getMAttrs();
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");

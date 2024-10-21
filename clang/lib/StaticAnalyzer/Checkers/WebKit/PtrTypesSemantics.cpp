@@ -273,16 +273,29 @@ class TrivialFunctionAnalysisVisitor
     return true;
   }
 
-  template <typename CheckFunction>
-  bool WithCachedResult(const Stmt *S, CheckFunction Function) {
-    // If the statement isn't in the cache, conservatively assume that
-    // it's not trivial until analysis completes. Insert false to the cache
-    // first to avoid infinite recursion.
-    auto [It, IsNew] = Cache.insert(std::make_pair(S, false));
+  template <typename StmtOrDecl, typename CheckFunction>
+  bool WithCachedResult(const StmtOrDecl *S, CheckFunction Function) {
+    auto CacheIt = Cache.find(S);
+    if (CacheIt != Cache.end())
+      return CacheIt->second;
+
+    // Treat a recursive statement to be trivial until proven otherwise.
+    auto [RecursiveIt, IsNew] = RecursiveFn.insert(std::make_pair(S, true));
     if (!IsNew)
-      return It->second;
+      return RecursiveIt->second;
+
     bool Result = Function();
+
+    if (!Result) {
+      for (auto &It : RecursiveFn)
+        It.second = false;
+    }
+    RecursiveIt = RecursiveFn.find(S);
+    assert(RecursiveIt != RecursiveFn.end());
+    Result = RecursiveIt->second;
+    RecursiveFn.erase(RecursiveIt);
     Cache[S] = Result;
+
     return Result;
   }
 
@@ -292,16 +305,7 @@ public:
   TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
 
   bool IsFunctionTrivial(const Decl *D) {
-    auto CacheIt = Cache.find(D);
-    if (CacheIt != Cache.end())
-      return CacheIt->second;
-
-    // Treat a recursive function call to be trivial until proven otherwise.
-    auto [RecursiveIt, IsNew] = RecursiveFn.insert(std::make_pair(D, true));
-    if (!IsNew)
-      return RecursiveIt->second;
-
-    bool Result = [&]() {
+    return WithCachedResult(D, [&]() {
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
         for (auto *CtorInit : CtorDecl->inits()) {
           if (!Visit(CtorInit->getInit()))
@@ -312,20 +316,7 @@ public:
       if (!Body)
         return false;
       return Visit(Body);
-    }();
-
-    if (!Result) {
-      // D and its mutually recursive callers are all non-trivial.
-      for (auto &It : RecursiveFn)
-        It.second = false;
-    }
-    RecursiveIt = RecursiveFn.find(D);
-    assert(RecursiveIt != RecursiveFn.end());
-    Result = RecursiveIt->second;
-    RecursiveFn.erase(RecursiveIt);
-    Cache[D] = Result;
-
-    return Result;
+    });
   }
 
   bool VisitStmt(const Stmt *S) {
@@ -586,11 +577,6 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
-  // If the statement isn't in the cache, conservatively assume that
-  // it's not trivial until analysis completes. Unlike a function case,
-  // we don't insert an entry into the cache until Visit returns
-  // since Visit* functions themselves make use of the cache.
-
   TrivialFunctionAnalysisVisitor V(Cache);
   bool Result = V.Visit(S);
   assert(Cache.contains(S) && "Top-level statement not properly cached!");

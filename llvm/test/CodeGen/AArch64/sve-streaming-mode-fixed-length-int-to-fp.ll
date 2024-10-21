@@ -1140,18 +1140,14 @@ define void @ucvtf_v8i32_v8f64(ptr %a, ptr %b) {
 define <2 x half> @ucvtf_v2i64_v2f16(<2 x i64> %op1) {
 ; CHECK-LABEL: ucvtf_v2i64_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z1.d, z0.d[1]
 ; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov x9, d1
 ; CHECK-NEXT:    ucvtf h0, x8
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    ucvtf h1, x8
-; CHECK-NEXT:    str h0, [sp, #8]
-; CHECK-NEXT:    str h1, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ucvtf h1, x9
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_v2i64_v2f16:
@@ -2598,18 +2594,14 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 define <2 x half> @scvtf_v2i64_v2f16(<2 x i64> %op1) {
 ; CHECK-LABEL: scvtf_v2i64_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z1.d, z0.d[1]
 ; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov x9, d1
 ; CHECK-NEXT:    scvtf h0, x8
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    scvtf h1, x8
-; CHECK-NEXT:    str h0, [sp, #8]
-; CHECK-NEXT:    str h1, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    scvtf h1, x9
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_v2i64_v2f16:

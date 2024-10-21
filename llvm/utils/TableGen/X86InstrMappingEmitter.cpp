@@ -112,7 +112,7 @@ static uint8_t byteFromBitsInit(const BitsInit *B) {
 
   uint8_t Value = 0;
   for (unsigned I = 0; I != N; ++I) {
-    BitInit *Bit = cast<BitInit>(B->getBit(I));
+    const BitInit *Bit = cast<BitInit>(B->getBit(I));
     Value |= Bit->getValue() << I;
   }
   return Value;

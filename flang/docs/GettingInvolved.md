@@ -17,6 +17,11 @@ The Flang Project welcomes contributions of all kinds.
 Please feel free to join the mailing list or the slack channel for discussions related to development of Flang.
 To understand the status of various developments in Flang please join the respective call.
 
+## Contributing
+
+Contributions to Flang are done using GitHub Pull Requests and follow the
+[LLVM contribution process](https://llvm.org/docs/Contributing.html).
+
 ## Forum and Mailing Lists
 
 [Forum](https://discourse.llvm.org/c/subprojects/flang)
@@ -27,8 +32,7 @@ To understand the status of various developments in Flang please join the respec
 [Commits Archive (flang-commits)](http://lists.llvm.org/pipermail/flang-commits)
 
   This list contains all commit messages that are made when Flang developers
-  commit code changes to the repository. It also serves as a forum for
-  patch review (i.e. send patches here). It is useful for those who want to
+  commit code changes to the repository. It is useful for those who want to
   stay on the bleeding edge of Flang development. This list is high
   volume.
 

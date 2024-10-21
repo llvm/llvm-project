@@ -1531,8 +1531,10 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     }
     if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
       BuilderTy::FastMathFlagGuard Guard(Builder);
-      Builder.setFastMathFlags(LHS->getFastMathFlags() |
-                               RHS->getFastMathFlags());
+      FastMathFlags NewFlag = LHS->getFastMathFlags();
+      if (!IsLogicalSelect)
+        NewFlag |= RHS->getFastMathFlags();
+      Builder.setFastMathFlags(NewFlag);
 
       Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);
       return Builder.CreateFCmp(PredL, FAbs,
@@ -3105,8 +3107,7 @@ static Instruction *matchOrConcat(Instruction &Or,
     Value *NewUpper = Builder.CreateZExt(Hi, Ty);
     NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
     Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
-    Function *F = Intrinsic::getOrInsertDeclaration(Or.getModule(), id, Ty);
-    return Builder.CreateCall(F, BinOp);
+    return Builder.CreateIntrinsic(id, Ty, BinOp);
   };
 
   // BSWAP: Push the concat down, swapping the lower/upper sources.
