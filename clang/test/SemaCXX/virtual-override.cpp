@@ -83,7 +83,7 @@ namespace T6 {
 struct a { };
 
 class A {
-  // Check cv-qualification.
+  // Classes.
   virtual const a* const_vs_unqualified_class();
   virtual a* unqualified_vs_const_class(); // expected-note{{overridden virtual function is here}}
 
@@ -102,13 +102,13 @@ class A {
   virtual const volatile a* const_volatile_vs_unualified_class();
   virtual a* unqualified_vs_const_volatile_class(); // expected-note{{overridden virtual function is here}}
 
-  // Check non class.
+  // Non Classes.
   virtual const int* const_vs_unqualified_non_class(); // expected-note{{overridden virtual function is here}}
   virtual int* unqualified_vs_const_non_class(); // expected-note{{overridden virtual function is here}}
 };
 
 class B : A {
-  // Check cv-qualification.
+  // Classes.
   a* const_vs_unqualified_class() override;
   const a* unqualified_vs_const_class() override; // expected-error{{return type of virtual function 'unqualified_vs_const_class' is not covariant with the return type of the function it overrides (class type 'const a *' does not have the same cv-qualification as or less cv-qualification than class type 'a *')}}
 
@@ -127,7 +127,7 @@ class B : A {
   a* const_volatile_vs_unualified_class() override;
   const volatile a* unqualified_vs_const_volatile_class() override; // expected-error{{return type of virtual function 'unqualified_vs_const_volatile_class' is not covariant with the return type of the function it overrides (class type 'const volatile a *' does not have the same cv-qualification as or less cv-qualification than class type 'a *')}}
 
-  // Check non class.
+  // Non Classes.
   int* const_vs_unqualified_non_class() override; // expected-error{{virtual function 'const_vs_unqualified_non_class' has a different return type ('int *') than the function it overrides (which has return type 'const int *')}}
   const int* unqualified_vs_const_non_class() override; // expected-error{{virtual function 'unqualified_vs_const_non_class' has a different return type ('const int *') than the function it overrides (which has return type 'int *')}}
 };
