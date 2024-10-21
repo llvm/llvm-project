@@ -208,6 +208,15 @@ bool ABI::PrepareTrivialCall(Thread &thread, lldb::addr_t sp,
   llvm_unreachable("Should never get here!");
 }
 
+bool ABI::PrepareTrivialCall(Thread &thread, lldb::addr_t sp,
+                             lldb::addr_t functionAddress,
+                             lldb::addr_t tocAddress,
+                             lldb::addr_t returnAddress,
+                             llvm::ArrayRef<lldb::addr_t> args) const {
+  // dummy prepare trivial call
+  llvm_unreachable("Should never get here!");
+}
+
 bool ABI::GetFallbackRegisterLocation(
     const RegisterInfo *reg_info,
     UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc) {

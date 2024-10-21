@@ -1520,6 +1520,18 @@ bool Module::SetLoadAddress(Target &target, lldb::addr_t value,
   return false;
 }
 
+bool Module::SetLoadAddressByType(Target &target, lldb::addr_t value,
+                            bool value_is_offset, bool &changed, int type_id) {
+  ObjectFile *object_file = GetObjectFile();
+  if (object_file != nullptr) {
+    changed = object_file->SetLoadAddressByType(target, value, value_is_offset, type_id);
+    return true;
+  } else {
+    changed = false;
+  }
+  return false;
+}
+
 bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
   const UUID &uuid = module_ref.GetUUID();
 
