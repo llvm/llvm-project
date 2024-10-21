@@ -135,6 +135,36 @@ Counter CounterExpressionBuilder::subtract(Counter LHS, Counter RHS,
   return Simplify ? simplify(Cnt) : Cnt;
 }
 
+Counter CounterExpressionBuilder::replace(Counter C, const ReplaceMap &Map) {
+  // Replace C with the value found in Map even if C is Expression.
+  if (auto I = Map.find(C); I != Map.end())
+    return I->second;
+
+  if (!C.isExpression())
+    return C;
+
+  // Traverse both sides of Expression.
+  auto CE = Expressions[C.getExpressionID()];
+  auto NewLHS = replace(CE.LHS, Map);
+  auto NewRHS = replace(CE.RHS, Map);
+
+  // Reconstruct Expression with induced subexpressions.
+  switch (CE.Kind) {
+  case CounterExpression::Add:
+    C = add(NewLHS, NewRHS);
+    break;
+  case CounterExpression::Subtract:
+    C = subtract(NewLHS, NewRHS);
+    break;
+  }
+
+  // Reconfirm if the reconstructed expression would hit the Map.
+  if (auto I = Map.find(C); I != Map.end())
+    return I->second;
+
+  return C;
+}
+
 void CounterMappingContext::dump(const Counter &C, raw_ostream &OS) const {
   switch (C.getKind()) {
   case Counter::Zero:
@@ -608,6 +638,10 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
   unsigned MaxCounterID = 0;
   for (const auto &Region : Record.MappingRegions) {
     MaxCounterID = std::max(MaxCounterID, Ctx.getMaxCounterID(Region.Count));
+    if (Region.Kind == CounterMappingRegion::BranchRegion ||
+        Region.Kind == CounterMappingRegion::MCDCBranchRegion)
+      MaxCounterID =
+          std::max(MaxCounterID, Ctx.getMaxCounterID(Region.FalseCount));
   }
   return MaxCounterID;
 }
@@ -805,6 +839,7 @@ Error CoverageMapping::loadFunctionRecord(
   else
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
 
+  bool SingleByteCoverage = ProfileReader.hasSingleByteCoverage();
   CounterMappingContext Ctx(Record.Expressions);
 
   std::vector<uint64_t> Counts;
@@ -870,8 +905,10 @@ Error CoverageMapping::loadFunctionRecord(
       consumeError(std::move(E));
       return Error::success();
     }
-    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount,
-                        ProfileReader.hasSingleByteCoverage());
+    Function.pushRegion(
+        Region, (SingleByteCoverage && *ExecutionCount ? 1 : *ExecutionCount),
+        (SingleByteCoverage && *AltExecutionCount ? 1 : *AltExecutionCount),
+        SingleByteCoverage);
 
     // Record ExpansionRegion.
     if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
