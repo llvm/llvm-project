@@ -362,6 +362,10 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
+  bool preferFixedOverScalableIfEqualCost() const {
+    return ST->useFixedOverScalableIfEqualCost();
+  }
+
   enum RISCVRegisterClass { GPRRC, FPRRC, VRRC };
   unsigned getNumberOfRegisters(unsigned ClassID) const {
     switch (ClassID) {
