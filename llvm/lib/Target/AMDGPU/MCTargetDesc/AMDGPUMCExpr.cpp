@@ -537,8 +537,12 @@ static void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
 
     // Variable value retrieval is not for actual use but only for knownbits
     // analysis.
-    knownBitsMapHelper(Sym.getVariableValue(/*SetUsed=*/false), KBM, Depth + 1);
-    KBM[Expr] = KBM[Sym.getVariableValue(/*SetUsed=*/false)];
+    const MCExpr *SymVal = Sym.getVariableValue(/*setUsed=*/false);
+    knownBitsMapHelper(SymVal, KBM, Depth + 1);
+
+    // Explicitly copy-construct so that there exists a local KnownBits in case
+    // KBM[SymVal] gets invalidated after a potential growth through KBM[Expr].
+    KBM[Expr] = KnownBits(KBM[SymVal]);
     return;
   }
   case MCExpr::ExprKind::Unary: {
