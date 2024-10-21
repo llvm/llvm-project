@@ -43,19 +43,16 @@ function(_pdll_tablegen project ofn)
   endif()
 
   # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
-  if(CMAKE_GENERATOR MATCHES "Ninja")
-    # Make output path relative to build.ninja, assuming located on
-    # ${CMAKE_BINARY_DIR}.
+  cmake_policy(GET CMP0116 cmp0116_state)
+  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW)
     # CMake emits build targets as relative paths but Ninja doesn't identify
-    # absolute path (in *.d) as relative path (in build.ninja)
-    # Note that tblgen is executed on ${CMAKE_BINARY_DIR} as working directory.
-    file(RELATIVE_PATH ofn_rel
-      ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${ofn})
+    # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
+    # CMake handles this discrepancy for us. Otherwise, we use the fallback
+    # logic.
     set(additional_cmdline
-      -o ${ofn_rel}
-      -d ${ofn_rel}.d
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      DEPFILE ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.d
+      -o ${ofn}
+      -d ${ofn}.d
+      DEPFILE ${ofn}.d
       )
     set(local_tds)
     set(global_tds)
