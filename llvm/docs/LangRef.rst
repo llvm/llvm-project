@@ -16729,17 +16729,16 @@ Some applications like Clang, can call '``llvm.minnum.*``' with '``nsz``' attrib
 to archive the same behaivor of libm's fmin.
 
 For some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, they have the
-strict same instructions; thus it is quite simple for these architectures.
+strictly same instructions; thus it is quite simple for these architectures.
 For other architectures, the custom or expand methods may provide '``nsz``' flavor.
 
 Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
-sNaN for qNaN vs sNaN. Withe recent libc versions, libc follows IEEE754-2008:
+sNaN for qNaN vs sNaN. With the recent libc versions, libc follows IEEE754-2008:
 NUM vs sNaN -> qNaN; NUM vs qNaN -> NUM; qNaN vs sNaN -> qNaN; sNaN vs sNaN -> qNaN.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
 If the operands compare equal, returns either one of the operands.
-For example, this means that fmin(+0.0, -0.0) returns either operand.
 
 .. _i_maxnum:
 
@@ -16782,13 +16781,16 @@ Some applications like Clang, can call '``llvm.maxnum.*``' with '``nsz``' attrib
 to archive the same behaivor of libm's fmax.
 
 For some architecturs, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, they have the
-strict same instructions; thus it is quite simple for these architectures.
+strictly same instructions; thus it is quite simple for these architectures.
 For other architectures, the custom or expand methods may provide '``nsz``' flavor.
+
+Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
+sNaN for qNaN vs sNaN. With the recent libc versions, libc follows IEEE754-2008:
+NUM vs sNaN -> qNaN; NUM vs qNaN -> NUM; qNaN vs sNaN -> qNaN; sNaN vs sNaN -> qNaN.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
 If the operands compare equal, returns either one of the operands.
-For example, this means that fmin(+0.0, -0.0) returns either operand.
 
 .. _i_minimum:
 
