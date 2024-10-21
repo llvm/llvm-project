@@ -7159,15 +7159,16 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     SDValue N0Op0 = N0.getOperand(0);
     if (N0Op0.getOpcode() == ISD::AND &&
         (ExtOpc != ISD::ZERO_EXTEND || !TLI.isZExtFree(N0Op0, VT)) &&
-        DAG.isConstantIntBuildVectorOrConstantInt(N1) &&
-        DAG.isConstantIntBuildVectorOrConstantInt(N0Op0.getOperand(1)) &&
         N0->hasOneUse() && N0Op0->hasOneUse()) {
-      SDValue NewMask =
-          DAG.getNode(ISD::AND, DL, VT, N1,
-                      DAG.getNode(ExtOpc, DL, VT, N0Op0.getOperand(1)));
-      return DAG.getNode(ISD::AND, DL, VT,
-                         DAG.getNode(ExtOpc, DL, VT, N0Op0.getOperand(0)),
-                         NewMask);
+      if (SDValue NewExt = DAG.FoldConstantArithmetic(ExtOpc, DL, VT,
+                                                      {N0Op0.getOperand(1)})) {
+        if (SDValue NewMask =
+                DAG.FoldConstantArithmetic(ISD::AND, DL, VT, {N1, NewExt})) {
+          return DAG.getNode(ISD::AND, DL, VT,
+                             DAG.getNode(ExtOpc, DL, VT, N0Op0.getOperand(0)),
+                             NewMask);
+        }
+      }
     }
   }
 
@@ -14819,8 +14820,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
     return DAG.getConstant(0, DL, VT);
 
   // fold (sext_in_reg c1) -> c1
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N0, N1);
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(ISD::SIGN_EXTEND_INREG, DL, VT, {N0, N1}))
+    return C;
 
   // If the input is already sign extended, just drop the extension.
   if (ExtVTBits >= DAG.ComputeMaxSignificantBits(N0))

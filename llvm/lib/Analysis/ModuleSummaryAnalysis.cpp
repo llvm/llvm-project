@@ -82,7 +82,7 @@ static cl::opt<std::string> ModuleSummaryDotFile(
     cl::desc("File to emit dot graph of new summary into"));
 
 static cl::opt<bool> EnableMemProfIndirectCallSupport(
-    "enable-memprof-indirect-call-support", cl::init(true), cl::Hidden,
+    "enable-memprof-indirect-call-support", cl::init(false), cl::Hidden,
     cl::desc(
         "Enable MemProf support for summarizing and cloning indirect calls"));
 
@@ -503,6 +503,10 @@ static void computeFunctionSummary(
       if (!IsThinLTO)
         continue;
 
+      // Skip indirect calls if we haven't enabled memprof ICP.
+      if (!CalledFunction && !EnableMemProfIndirectCallSupport)
+        continue;
+
       // Ensure we keep this analysis in sync with the handling in the ThinLTO
       // backend (see MemProfContextDisambiguation::applyImport). Save this call
       // so that we can skip it in checking the reverse case later.
@@ -561,7 +565,8 @@ static void computeFunctionSummary(
           auto CalleeValueInfo =
               Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
           Callsites.push_back({CalleeValueInfo, StackIdIndices});
-        } else if (EnableMemProfIndirectCallSupport) {
+        } else {
+          assert(EnableMemProfIndirectCallSupport);
           // For indirect callsites, create multiple Callsites, one per target.
           // This enables having a different set of clone versions per target,
           // and we will apply the cloning decisions while speculatively
@@ -1223,6 +1228,9 @@ bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
     if (CI && CalledFunction->isIntrinsic())
       return false;
   } else {
+    // Skip indirect calls if we haven't enabled memprof ICP.
+    if (!EnableMemProfIndirectCallSupport)
+      return false;
     // Skip inline assembly calls.
     if (CI && CI->isInlineAsm())
       return false;

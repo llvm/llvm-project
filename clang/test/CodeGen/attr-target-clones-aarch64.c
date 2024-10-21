@@ -4,10 +4,10 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +mte -target-feature +bti -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-MTE-BTI
 
 int __attribute__((target_clones("lse+aes", "sve2"))) ftc(void) { return 0; }
-int __attribute__((target_clones("sha2", "sha2+memtag2", " default "))) ftc_def(void) { return 1; }
+int __attribute__((target_clones("sha2", "sha2+memtag", " default "))) ftc_def(void) { return 1; }
 int __attribute__((target_clones("sha2", "default"))) ftc_dup1(void) { return 2; }
 int __attribute__((target_clones("fp", "crc+dotprod"))) ftc_dup2(void) { return 3; }
-int __attribute__((target_clones("memtag2", "bti"))) ftc_dup3(void) { return 4; }
+int __attribute__((target_clones("memtag", "bti"))) ftc_dup3(void) { return 4; }
 int foo() {
   return ftc() + ftc_def() + ftc_dup1() + ftc_dup2() + ftc_dup3();
 }
@@ -90,7 +90,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_def._Mmemtag2Msha2
+// CHECK-LABEL: define {{[^@]+}}@ftc_def._MmemtagMsha2
 // CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
@@ -105,7 +105,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @ftc_def._Mmemtag2Msha2
+// CHECK-NEXT:    ret ptr @ftc_def._MmemtagMsha2
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4096
@@ -176,7 +176,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag2
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag
 // CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 4
@@ -206,7 +206,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
-// CHECK-NEXT:    ret ptr @ftc_dup3._Mmemtag2
+// CHECK-NEXT:    ret ptr @ftc_dup3._Mmemtag
 // CHECK:       resolver_else2:
 // CHECK-NEXT:    ret ptr @ftc_dup3.default
 //
@@ -547,7 +547,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def._Mmemtag2Msha2
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def._MmemtagMsha2
 // CHECK-MTE-BTI-SAME: () #[[ATTR2]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
@@ -562,7 +562,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-MTE-BTI-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK-MTE-BTI:       resolver_return:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_def._Mmemtag2Msha2
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_def._MmemtagMsha2
 // CHECK-MTE-BTI:       resolver_else:
 // CHECK-MTE-BTI-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4096
@@ -633,7 +633,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag2
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag
 // CHECK-MTE-BTI-SAME: () #[[ATTR5:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 4
@@ -663,7 +663,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-MTE-BTI-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK-MTE-BTI:       resolver_return1:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup3._Mmemtag2
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup3._Mmemtag
 // CHECK-MTE-BTI:       resolver_else2:
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup3.default
 //

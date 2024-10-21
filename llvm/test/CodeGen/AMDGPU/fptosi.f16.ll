@@ -59,8 +59,6 @@ define amdgpu_kernel void @fptosi_f16_to_i16(
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, v0.l
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_nop 0
-; GFX11-TRUE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: fptosi_f16_to_i16:
@@ -79,8 +77,6 @@ define amdgpu_kernel void @fptosi_f16_to_i16(
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_cvt_i16_f16_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
-; GFX11-FAKE16-NEXT:    s_nop 0
-; GFX11-FAKE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -148,8 +144,6 @@ define amdgpu_kernel void @fptosi_f16_to_i32(
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_nop 0
-; GFX11-TRUE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: fptosi_f16_to_i32:
@@ -170,8 +164,6 @@ define amdgpu_kernel void @fptosi_f16_to_i32(
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
-; GFX11-FAKE16-NEXT:    s_nop 0
-; GFX11-FAKE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -245,8 +237,6 @@ define amdgpu_kernel void @fptosi_f16_to_i64(
 ; GFX11-TRUE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX11-TRUE16-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_nop 0
-; GFX11-TRUE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: fptosi_f16_to_i64:
@@ -268,8 +258,6 @@ define amdgpu_kernel void @fptosi_f16_to_i64(
 ; GFX11-FAKE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX11-FAKE16-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
-; GFX11-FAKE16-NEXT:    s_nop 0
-; GFX11-FAKE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -351,8 +339,6 @@ define amdgpu_kernel void @fptosi_v2f16_to_v2i16(
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_nop 0
-; GFX11-TRUE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: fptosi_v2f16_to_v2i16:
@@ -377,8 +363,6 @@ define amdgpu_kernel void @fptosi_v2f16_to_v2i16(
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
-; GFX11-FAKE16-NEXT:    s_nop 0
-; GFX11-FAKE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -455,8 +439,6 @@ define amdgpu_kernel void @fptosi_v2f16_to_v2i32(
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX11-TRUE16-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_nop 0
-; GFX11-TRUE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: fptosi_v2f16_to_v2i32:
@@ -481,8 +463,6 @@ define amdgpu_kernel void @fptosi_v2f16_to_v2i32(
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX11-FAKE16-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
-; GFX11-FAKE16-NEXT:    s_nop 0
-; GFX11-FAKE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -569,8 +549,6 @@ define amdgpu_kernel void @fptosi_v2f16_to_v2i64(
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX11-TRUE16-NEXT:    buffer_store_b128 v[0:3], off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_nop 0
-; GFX11-TRUE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: fptosi_v2f16_to_v2i64:
@@ -598,8 +576,6 @@ define amdgpu_kernel void @fptosi_v2f16_to_v2i64(
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX11-FAKE16-NEXT:    buffer_store_b128 v[0:3], off, s[4:7], 0
-; GFX11-FAKE16-NEXT:    s_nop 0
-; GFX11-FAKE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -649,8 +625,6 @@ define amdgpu_kernel void @fptosi_f16_to_i1(ptr addrspace(1) %out, half %in) {
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_f16_e32 vcc_lo, -1.0, v0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    buffer_store_b8 v0, off, s[0:3], 0
-; GFX11-TRUE16-NEXT:    s_nop 0
-; GFX11-TRUE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: fptosi_f16_to_i1:
@@ -665,8 +639,6 @@ define amdgpu_kernel void @fptosi_f16_to_i1(ptr addrspace(1) %out, half %in) {
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX11-FAKE16-NEXT:    buffer_store_b8 v0, off, s[0:3], 0
-; GFX11-FAKE16-NEXT:    s_nop 0
-; GFX11-FAKE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FAKE16-NEXT:    s_endpgm
 entry:
   %conv = fptosi half %in to i1
