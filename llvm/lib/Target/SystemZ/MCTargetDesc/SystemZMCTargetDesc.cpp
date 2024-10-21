@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZGNUInstPrinter.h"
 #include "SystemZMCTargetDesc.h"
+#include "SystemZGNUInstPrinter.h"
 #include "SystemZHLASMInstPrinter.h"
 #include "SystemZMCAsmInfo.h"
 #include "SystemZTargetStreamer.h"

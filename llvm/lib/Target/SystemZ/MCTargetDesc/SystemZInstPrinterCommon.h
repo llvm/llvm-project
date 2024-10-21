@@ -26,7 +26,7 @@ class SystemZInstPrinterCommon : public MCInstPrinter {
 public:
   SystemZInstPrinterCommon(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                            const MCRegisterInfo &MRI)
-    : MCInstPrinter(MAI, MII, MRI) {}
+      : MCInstPrinter(MAI, MII, MRI) {}
 
   // Print an address with the given base, displacement and index.
   void printAddress(const MCAsmInfo *MAI, MCRegister Base,

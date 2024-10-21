@@ -34,7 +34,7 @@ void SystemZInstPrinterCommon::printAddress(const MCAsmInfo *MAI,
       O << ',';
     }
     if (Base)
-      printRegName(O, Index);
+      printRegName(O, Base);
     else
       O << '0';
     O << ')';
