@@ -89,67 +89,67 @@ void SystemZInstPrinterCommon::printSImmOperand(const MCInst *MI, int OpNum,
 }
 
 void SystemZInstPrinterCommon::printU1ImmOperand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
+                                                 raw_ostream &O) {
   printUImmOperand<1>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU2ImmOperand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
+                                                 raw_ostream &O) {
   printUImmOperand<2>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU3ImmOperand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
+                                                 raw_ostream &O) {
   printUImmOperand<3>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU4ImmOperand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
+                                                 raw_ostream &O) {
   printUImmOperand<4>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printS8ImmOperand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
+                                                 raw_ostream &O) {
   printSImmOperand<8>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU8ImmOperand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
+                                                 raw_ostream &O) {
   printUImmOperand<8>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU12ImmOperand(const MCInst *MI, int OpNum,
-                                            raw_ostream &O) {
+                                                  raw_ostream &O) {
   printUImmOperand<12>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printS16ImmOperand(const MCInst *MI, int OpNum,
-                                            raw_ostream &O) {
+                                                  raw_ostream &O) {
   printSImmOperand<16>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU16ImmOperand(const MCInst *MI, int OpNum,
-                                            raw_ostream &O) {
+                                                  raw_ostream &O) {
   printUImmOperand<16>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printS32ImmOperand(const MCInst *MI, int OpNum,
-                                            raw_ostream &O) {
+                                                  raw_ostream &O) {
   printSImmOperand<32>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU32ImmOperand(const MCInst *MI, int OpNum,
-                                            raw_ostream &O) {
+                                                  raw_ostream &O) {
   printUImmOperand<32>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU48ImmOperand(const MCInst *MI, int OpNum,
-                                            raw_ostream &O) {
+                                                  raw_ostream &O) {
   printUImmOperand<48>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printPCRelOperand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
+                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isImm()) {
     WithMarkup M = markup(O, Markup::Immediate);
@@ -160,8 +160,8 @@ void SystemZInstPrinterCommon::printPCRelOperand(const MCInst *MI, int OpNum,
 }
 
 void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
-                                              uint64_t Address, int OpNum,
-                                              raw_ostream &O) {
+                                                    uint64_t Address, int OpNum,
+                                                    raw_ostream &O) {
   // Output the PC-relative operand.
   printPCRelOperand(MI, OpNum, O);
 
@@ -170,38 +170,38 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
     const MCOperand &MO = MI->getOperand(OpNum + 1);
     const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*MO.getExpr());
     switch (refExp.getKind()) {
-      case MCSymbolRefExpr::VK_TLSGD:
-        O << ":tls_gdcall:";
-        break;
-      case MCSymbolRefExpr::VK_TLSLDM:
-        O << ":tls_ldcall:";
-        break;
-      default:
-        llvm_unreachable("Unexpected symbol kind");
+    case MCSymbolRefExpr::VK_TLSGD:
+      O << ":tls_gdcall:";
+      break;
+    case MCSymbolRefExpr::VK_TLSLDM:
+      O << ":tls_ldcall:";
+      break;
+    default:
+      llvm_unreachable("Unexpected symbol kind");
     }
     O << refExp.getSymbol().getName();
   }
 }
 
 void SystemZInstPrinterCommon::printOperand(const MCInst *MI, int OpNum,
-                                      raw_ostream &O) {
+                                            raw_ostream &O) {
   printOperand(MI->getOperand(OpNum), &MAI, O);
 }
 
 void SystemZInstPrinterCommon::printBDAddrOperand(const MCInst *MI, int OpNum,
-                                            raw_ostream &O) {
+                                                  raw_ostream &O) {
   printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
                0, O);
 }
 
 void SystemZInstPrinterCommon::printBDXAddrOperand(const MCInst *MI, int OpNum,
-                                             raw_ostream &O) {
+                                                   raw_ostream &O) {
   printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
                MI->getOperand(OpNum + 2).getReg(), O);
 }
 
 void SystemZInstPrinterCommon::printBDLAddrOperand(const MCInst *MI, int OpNum,
-                                             raw_ostream &O) {
+                                                   raw_ostream &O) {
   unsigned Base = MI->getOperand(OpNum).getReg();
   const MCOperand &DispMO = MI->getOperand(OpNum + 1);
   uint64_t Length = MI->getOperand(OpNum + 2).getImm();
@@ -215,7 +215,7 @@ void SystemZInstPrinterCommon::printBDLAddrOperand(const MCInst *MI, int OpNum,
 }
 
 void SystemZInstPrinterCommon::printBDRAddrOperand(const MCInst *MI, int OpNum,
-                                             raw_ostream &O) {
+                                                   raw_ostream &O) {
   unsigned Base = MI->getOperand(OpNum).getReg();
   const MCOperand &DispMO = MI->getOperand(OpNum + 1);
   unsigned Length = MI->getOperand(OpNum + 2).getReg();
@@ -230,17 +230,16 @@ void SystemZInstPrinterCommon::printBDRAddrOperand(const MCInst *MI, int OpNum,
 }
 
 void SystemZInstPrinterCommon::printBDVAddrOperand(const MCInst *MI, int OpNum,
-                                             raw_ostream &O) {
+                                                   raw_ostream &O) {
   printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
                MI->getOperand(OpNum + 2).getReg(), O);
 }
 
 void SystemZInstPrinterCommon::printCond4Operand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
-  static const char *const CondNames[] = {
-    "o", "h", "nle", "l", "nhe", "lh", "ne",
-    "e", "nlh", "he", "nl", "le", "nh", "no"
-  };
+                                                 raw_ostream &O) {
+  static const char *const CondNames[] = {"o",  "h",  "nle", "l",   "nhe",
+                                          "lh", "ne", "e",   "nlh", "he",
+                                          "nl", "le", "nh",  "no"};
   uint64_t Imm = MI->getOperand(OpNum).getImm();
   assert(Imm > 0 && Imm < 15 && "Invalid condition");
   O << CondNames[Imm - 1];
