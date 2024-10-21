@@ -22,6 +22,40 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
+#define LARCH_GET_RD(insn) (insn & 0x1f)
+#define LARCH_GET_RJ(insn) ((insn >> 5) & 0x1f)
+#define LARCH_MK_ADDI_D 0xffc00000
+#define LARCH_OP_ADDI_D 0x02c00000
+#define LARCH_MK_PCADDI 0xfe000000
+#define LARCH_OP_PCADDI 0x18000000
+#define LARCH_MK_PCALAU12I 0xfe000000
+#define LARCH_OP_PCALAU12I 0x1a000000
+#define LARCH_MK_LD_D 0xffc00000
+#define LARCH_OP_LD_D 0x28c00000
+#define LARCH_MK_LD_W 0xffc00000
+#define LARCH_OP_LD_W 0x28800000
+#define LARCH_MK_LU12I_W 0xfe000000
+#define LARCH_OP_LU12I_W 0x14000000
+#define LARCH_MK_ORI 0xffc00000
+#define LARCH_OP_ORI 0x03800000
+#define LARCH_MK_B 0xfc000000
+#define LARCH_OP_B 0x50000000
+#define LARCH_MK_BL 0xfc000000
+#define LARCH_OP_BL 0x54000000
+#define LARCH_MK_JIRL 0xfc000000
+#define LARCH_OP_JIRL 0x4c000000
+#define LARCH_INSN_OPS(insn, op) ((insn & LARCH_MK_##op) == LARCH_OP_##op)
+#define LARCH_INSN_ADDI_D(insn) LARCH_INSN_OPS((insn), ADDI_D)
+#define LARCH_INSN_PCADDI(insn) LARCH_INSN_OPS((insn), PCADDI)
+#define LARCH_INSN_PCALAU12I(insn) LARCH_INSN_OPS((insn), PCALAU12I)
+#define LARCH_INSN_LD_D(insn) LARCH_INSN_OPS((insn), LD_D)
+#define LARCH_INSN_LD_W(insn) LARCH_INSN_OPS((insn), LD_W)
+#define LARCH_INSN_LU12I_W(insn) LARCH_INSN_OPS((insn), LU12I_W)
+#define LARCH_INSN_ORI(insn) LARCH_INSN_OPS((insn), ORI)
+#define LARCH_INSN_B(insn) LARCH_INSN_OPS((insn), B)
+#define LARCH_INSN_BL(insn) LARCH_INSN_OPS((insn), BL)
+#define LARCH_INSN_JIRL(insn) LARCH_INSN_OPS((insn), JIRL)
+
 class LoongArch final : public TargetInfo {
 public:
   LoongArch(Ctx &);
@@ -38,10 +72,15 @@ public:
   bool usesOnlyLowPageBits(RelType type) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
   void finalizeRelax(int passes) const override;
 };
 } // end anonymous namespace
+
+// The internal relocation number for local got relaxation which isn't part
+// of the psABI spec.
+#define INTERNAL_R_LARCH_PCALA_LO12 256
 
 namespace {
 enum Op {
@@ -63,6 +102,7 @@ enum Reg {
   R_ZERO = 0,
   R_RA = 1,
   R_TP = 2,
+  R_A0 = 4,
   R_T0 = 12,
   R_T1 = 13,
   R_T2 = 14,
@@ -744,6 +784,70 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
+static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
+  return i + 1 != relocs.size() && relocs[i + 1].type == R_LARCH_RELAX;
+}
+
+// Returns true if the two instructions corresponding to the i-th reloc
+// entry and the i+2-th reloc entry can apply relaxation. For scenarios
+// with fewer than four reloc entries, e.g., R_ALRCH_CALL36, this function
+// should not be used to make a judgment.
+static bool isPair(ArrayRef<Relocation> relocs, size_t i) {
+  return relaxable(relocs, i) && relaxable(relocs, i + 2) &&
+         relocs[i].offset + 4 == relocs[i + 2].offset;
+}
+
+void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  const unsigned bits = ctx.arg.is64 ? 64 : 32;
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
+  const ArrayRef<Relocation> relocs = sec.relocs();
+  for (size_t i = 0, size = relocs.size(); i != size; ++i) {
+    const Relocation &rel = relocs[i];
+    uint8_t *loc = buf + rel.offset;
+    uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
+
+    switch (rel.expr) {
+    case R_RELAX_HINT:
+      continue;
+    default:
+      break;
+    }
+    relocate(loc, rel, val);
+  }
+}
+
+// Relax pcalau12i,addi.d => pcaddi.
+static void relaxPcalaAddi(const InputSection &sec, size_t i, uint64_t loc,
+                           Relocation &r_hi, uint32_t &remove) {
+  const uint64_t symval =
+      (r_hi.expr == R_LOONGARCH_PLT_PAGE_PC ? r_hi.sym->getPltVA(ctx)
+                                            : r_hi.sym->getVA()) +
+      r_hi.addend;
+  const int64_t dist = symval - loc;
+  uint32_t pca = read32le(sec.content().data() + r_hi.offset);
+  uint32_t add = read32le(sec.content().data() + r_hi.offset + 4);
+  uint32_t rd = LARCH_GET_RD(pca);
+
+  if (!LARCH_INSN_ADDI_D(add)
+      // Is pcalau12i $rd + addi.d $rd, $rd?
+      || LARCH_GET_RD(add) != rd ||
+      LARCH_GET_RJ(add) != rd
+      // 4 bytes align
+      || symval & 0x3 || !isInt<22>(dist))
+    return;
+
+  // remove the first insn
+  sec.relaxAux->relocTypes[i] = R_LARCH_RELAX;
+  sec.relaxAux->relocTypes[i + 2] = R_LARCH_PCREL20_S2;
+  sec.relaxAux->writes.push_back(LARCH_OP_PCADDI | rd); // pcaddi
+  remove = 4;
+}
+
 static bool relax(Ctx &ctx, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
@@ -782,6 +886,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       }
       break;
     }
+    case R_LARCH_PCALA_HI20:
+      if (isPair(relocs, i) && relocs[i + 2].type == R_LARCH_PCALA_LO12)
+        relaxPcalaAddi(sec, i, loc, r, remove);
+      break;
     }
 
     // For all anchors whose offsets are <= r.offset, they are preceded by
@@ -852,6 +960,7 @@ void LoongArch::finalizeRelax(int passes) const {
       MutableArrayRef<Relocation> rels = sec->relocs();
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
+      size_t writesIdx = 0;
       uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
@@ -872,7 +981,24 @@ void LoongArch::finalizeRelax(int passes) const {
         uint64_t size = r.offset - offset;
         memcpy(p, old.data() + offset, size);
         p += size;
-        offset = r.offset + remove;
+
+        int64_t skip = 0;
+        if (r.type != R_LARCH_ALIGN) {
+          RelType newType = aux.relocTypes[i];
+          switch (newType) {
+          case R_LARCH_RELAX:
+            break;
+          case R_LARCH_PCREL20_S2:
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            break;
+          default:
+            llvm_unreachable("unsupported type");
+          }
+        }
+
+        p += skip;
+        offset = r.offset + remove + skip;
       }
       memcpy(p, old.data() + offset, old.size() - offset);
 
