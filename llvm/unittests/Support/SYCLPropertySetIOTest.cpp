@@ -202,7 +202,6 @@ TEST(SYCLPropertySet, Mask) {
     // Serialize
     PropSet.write(OS);
   }
-  llvm::errs() << Serialized << "\n";
   EXPECT_EQ(Serialized, Expected);
 }
 
@@ -225,7 +224,6 @@ TEST(SYCLPropertySet, SYCLPropertyValues) {
     // Serialize
     PropSet.write(OS);
   }
-  llvm::errs() << Serialized << "\n";
   EXPECT_EQ(Serialized, Expected);
 }
 
@@ -270,7 +268,6 @@ TEST(SYCLPropertySet, MapToStruct) {
     // Serialize
     PropSet.write(OS);
   }
-  llvm::errs() << Serialized << "\n";
   EXPECT_EQ(Serialized, Expected);
 }
 
@@ -288,7 +285,6 @@ TEST(SYCLPropertySet, VectorOfChars) {
     // Serialize
     PropSet.write(OS);
   }
-  llvm::errs() << Serialized << "\n";
   EXPECT_EQ(Serialized, Expected);
 }
 
@@ -308,7 +304,6 @@ TEST(SYCLPropertySet, ListOfNameValuePairs) {
     // Serialize
     PropSet.write(OS);
   }
-  llvm::errs() << Serialized << "\n";
   EXPECT_EQ(Serialized, Expected);
 }
 } // namespace
