@@ -114,7 +114,7 @@ class XunitReport(object):
                 skipped += 1
             if t.isFailure():
                 failures += 1
-            time += t.result.elapsed
+            time += t.result.elapsed or 0.0
 
         name = suite.config.name.replace(".", "-")
         file.write(
