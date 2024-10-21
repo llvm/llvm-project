@@ -595,11 +595,15 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   if (!SGV)
     return nullptr;
 
+  // If SGV is from dest, it was already materialized when dest was loaded.
+  if (SGV->getParent() == &DstM)
+    return nullptr;
+
   // When linking a global from other modules than source & dest, skip
   // materializing it because it would be mapped later when its containing
   // module is linked. Linking it now would potentially pull in many types that
   // may not be mapped properly.
-  if (SGV->getParent() != &DstM && SGV->getParent() != SrcM.get())
+  if (SGV->getParent() != SrcM.get())
     return nullptr;
 
   Expected<Constant *> NewProto = linkGlobalValueProto(SGV, ForIndirectSymbol);
