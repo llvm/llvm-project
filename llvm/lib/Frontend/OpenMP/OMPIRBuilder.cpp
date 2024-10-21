@@ -7836,7 +7836,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
          "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
   assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy()) &&
+          XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
          "OMP atomic read expected a scalar type");
 
   Value *XRead = nullptr;
@@ -7846,6 +7846,18 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
         Builder.CreateLoad(XElemTy, X.Var, X.IsVolatile, "omp.atomic.read");
     XLD->setAtomic(AO);
     XRead = cast<Value>(XLD);
+  } else if (XElemTy->isStructTy()) {
+    LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
+    OldVal->setAtomic(AO);
+    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize =
+        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+    OpenMPIRBuilder::AtomicInfo atomicInfo(
+        &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
+        OldVal->getAlign(), true /* UseLibcall */, X.Var);
+    auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
+    XRead = AtomicLoadRes.first;
+    OldVal->eraseFromParent();
   } else {
     // We need to perform atomic op as integer
     IntegerType *IntCastTy =
