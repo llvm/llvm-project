@@ -53,7 +53,14 @@ public:
   SanitizerMask getSupportedSanitizers() const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;
+  std::string ComputeEffectiveClangTriple(
+      const llvm::opt::ArgList &Args,
+      types::ID InputType = types::TY_INVALID) const override;
   std::string computeSysRoot() const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
   std::string getDynamicLinker(const llvm::opt::ArgList &Args) const override;
 

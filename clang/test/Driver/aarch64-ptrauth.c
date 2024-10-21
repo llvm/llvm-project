@@ -22,24 +22,38 @@
 // RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
 // RUN: %clang -### -c --target=aarch64-linux-pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
 // PAUTHABI1:      "-cc1"{{.*}} "-triple" "aarch64-unknown-linux-pauthtest"
-// PAUTHABI1-SAME: "-target-abi" "pauthtest"
 // PAUTHABI1-SAME: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini" "-fptrauth-init-fini-address-discrimination" "-faarch64-jump-table-hardening"
+// PAUTHABI1-SAME: "-target-abi" "pauthtest"
+// PAUTHABI1-NOT: "-fptrauth-function-pointer-type-discrimination"
 
-// RUN: %clang -### -c --target=aarch64 -mabi=pauthtest -fno-ptrauth-intrinsics \
+// RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fno-ptrauth-indirect-gotos \
 // RUN:   -fno-ptrauth-init-fini -fno-ptrauth-init-fini-address-discrimination \
 // RUN:   -fno-aarch64-jump-table-hardening %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
-// RUN: %clang -### -c --target=aarch64-pauthtest -fno-ptrauth-intrinsics \
+// RUN: %clang -### -c --target=aarch64-linux-pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fno-ptrauth-indirect-gotos \
 // RUN:   -fno-ptrauth-init-fini -fno-ptrauth-init-fini-address-discrimination \
 // RUN:   -fno-aarch64-jump-table-hardening %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
-// PAUTHABI2:     "-cc1"
-// PAUTHABI2-NOT: "-fptrauth-
+
+//// Non-linux OS: pauthtest ABI has no effect in terms of passing ptrauth cc1 flags.
+//// An error about unsupported ABI will be emitted later in pipeline (see ERR2 below)
+// RUN: %clang -### -c --target=aarch64 -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
+
+// PAUTHABI2:      "-cc1"
+// PAUTHABI2-SAME: "-target-abi" "pauthtest"
+// PAUTHABI2-NOT:  "-fptrauth-
 // PAUTHABI2-NOT: "-faarch64-jump-table-hardening"
+
+//// Non-linux OS: pauthtest environment does not correspond to pauthtest ABI; aapcs is the default.
+// RUN: %clang -### -c --target=aarch64-pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI3
+// PAUTHABI3:      "-cc1"
+// PAUTHABI3-SAME: "-target-abi" "aapcs"
+// PAUTHABI3-NOT:  "-fptrauth-
+// PAUTHABI3-NOT: "-faarch64-jump-table-hardening"
 
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
@@ -57,10 +71,12 @@
 // ERR1-NEXT: error: unsupported option '-fptrauth-init-fini-address-discrimination' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-faarch64-jump-table-hardening' for target '{{.*}}'
 
-//// Only support PAuth ABI for Linux as for now.
-// RUN: not %clang -o /dev/null -c --target=aarch64-unknown -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR2
-// RUN: not %clang -o /dev/null -c --target=aarch64-unknown-pauthtest       %s 2>&1 | FileCheck %s --check-prefix=ERR2
-// ERR2: error: ABI 'pauthtest' is not supported for 'aarch64-unknown-unknown-pauthtest'
+
+// RUN: not %clang -c --target=aarch64 -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR2
+//// The ABI is not specified explicitly, and for non-Linux pauthtest environment does not correspond
+//// to pauthtest ABI (each OS target defines this behavior separately). Do not emit an error.
+// RUN:     %clang -c --target=aarch64-pauthtest       %s -o /dev/null
+// ERR2: error: unknown target ABI 'pauthtest'
 
 //// PAuth ABI is encoded as environment part of the triple, so don't allow to explicitly set other environments.
 // RUN: not %clang -### -c --target=aarch64-linux-gnu -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR3
