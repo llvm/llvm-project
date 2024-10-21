@@ -2,6 +2,7 @@
 add_mlir_library(MLIRTestPass
   TestDynamicPipeline.cpp
   TestPassManager.cpp
+  TestSPIRVCPURunnerPipeline.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
