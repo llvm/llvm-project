@@ -25,7 +25,7 @@ define noundef i32 @main() #2 {
   ret i32 0
 }
 
-attributes #0 = { mustprogress noinline sanitize_realtime_unsafe optnone ssp uwtable(sync) }
+attributes #0 = { mustprogress noinline sanitize_realtime_blocking optnone ssp uwtable(sync) }
 ;.
-; CHECK: attributes #[[ATTR0]] = { mustprogress noinline optnone sanitize_realtime_unsafe ssp uwtable(sync) }
+; CHECK: attributes #[[ATTR0]] = { mustprogress noinline optnone sanitize_realtime_blocking ssp uwtable(sync) }
 ;.

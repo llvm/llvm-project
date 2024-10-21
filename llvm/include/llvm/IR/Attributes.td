@@ -334,7 +334,7 @@ def SanitizeRealtime : EnumAttr<"sanitize_realtime", IntersectPreserve, [FnAttr]
 
 /// RealtimeSanitizer should error if a real-time unsafe function is invoked
 /// during a real-time sanitized function (see `sanitize_realtime`).
-def SanitizeRealtimeUnsafe : EnumAttr<"sanitize_realtime_unsafe", IntersectPreserve, [FnAttr]>;
+def SanitizeRealtimeBlocking : EnumAttr<"sanitize_realtime_blocking", IntersectPreserve, [FnAttr]>;
 
 /// Speculative Load Hardening is enabled.
 ///
@@ -430,7 +430,7 @@ def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
 def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
 def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
-def : CompatRule<"isEqual<SanitizeRealtimeUnsafeAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeBlockingAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

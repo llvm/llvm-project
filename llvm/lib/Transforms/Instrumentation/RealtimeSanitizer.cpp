@@ -69,7 +69,7 @@ static PreservedAnalyses runSanitizeRealtime(Function &Fn) {
   return rtsanPreservedCFGAnalyses();
 }
 
-static PreservedAnalyses runSanitizeRealtimeUnsafe(Function &Fn) {
+static PreservedAnalyses runSanitizeRealtimeBlocking(Function &Fn) {
   IRBuilder<> Builder(&Fn.front().front());
   Value *Name = Builder.CreateGlobalString(demangle(Fn.getName()));
   insertCallAtFunctionEntryPoint(Fn, "__rtsan_notify_blocking_call", {Name});
@@ -84,8 +84,8 @@ PreservedAnalyses RealtimeSanitizerPass::run(Function &Fn,
   if (Fn.hasFnAttribute(Attribute::SanitizeRealtime))
     return runSanitizeRealtime(Fn);
 
-  if (Fn.hasFnAttribute(Attribute::SanitizeRealtimeUnsafe))
-    return runSanitizeRealtimeUnsafe(Fn);
+  if (Fn.hasFnAttribute(Attribute::SanitizeRealtimeBlocking))
+    return runSanitizeRealtimeBlocking(Fn);
 
   return PreservedAnalyses::all();
 }
