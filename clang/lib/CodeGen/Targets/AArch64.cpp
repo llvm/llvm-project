@@ -34,10 +34,10 @@ private:
   AArch64ABIKind getABIKind() const { return Kind; }
   bool isDarwinPCS() const { return Kind == AArch64ABIKind::DarwinPCS; }
 
-  ABIArgInfo classifyReturnType(QualType RetTy, bool IsVariadic) const;
-  ABIArgInfo classifyArgumentType(QualType RetTy, bool IsVariadic,
-                                  unsigned CallingConvention, unsigned &NSRN,
-                                  unsigned &NPRN) const;
+  ABIArgInfo classifyReturnType(QualType RetTy, bool IsVariadicFn) const;
+  ABIArgInfo classifyArgumentType(QualType RetTy, bool IsVariadicFn,
+                                  bool IsNamedArg, unsigned CallingConvention,
+                                  unsigned &NSRN, unsigned &NPRN) const;
   llvm::Type *convertFixedToScalableVectorType(const VectorType *VT) const;
   ABIArgInfo coerceIllegalVector(QualType Ty, unsigned &NSRN,
                                  unsigned &NPRN) const;
@@ -65,8 +65,9 @@ private:
 
     unsigned NSRN = 0, NPRN = 0;
     for (auto &it : FI.arguments())
-      it.info = classifyArgumentType(it.type, FI.isVariadic(),
-                                     FI.getCallingConvention(), NSRN, NPRN);
+      it.info =
+          classifyArgumentType(it.type, FI.isVariadic(), /* IsNamedArg */ true,
+                               FI.getCallingConvention(), NSRN, NPRN);
   }
 
   RValue EmitDarwinVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
@@ -343,7 +344,8 @@ ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
   return ABIArgInfo::getCoerceAndExpand(CoerceToType, UnpaddedCoerceToType);
 }
 
-ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
+ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
+                                                bool IsNamedArg,
                                                 unsigned CallingConvention,
                                                 unsigned &NSRN,
                                                 unsigned &NPRN) const {
@@ -408,7 +410,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
   uint64_t Members = 0;
   bool IsWin64 = Kind == AArch64ABIKind::Win64 ||
                  CallingConvention == llvm::CallingConv::Win64;
-  bool IsWinVariadic = IsWin64 && IsVariadic;
+  bool IsWinVariadic = IsWin64 && IsVariadicFn;
   // In variadic functions on Windows, all composite types are treated alike,
   // no special handling of HFAs/HVAs.
   if (!IsWinVariadic && isHomogeneousAggregate(Ty, Base, Members)) {
@@ -429,7 +431,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
 
   // In AAPCS named arguments of a Pure Scalable Type are passed expanded in
   // registers, or indirectly if there are not enough registers.
-  if (Kind == AArch64ABIKind::AAPCS && !IsVariadic) {
+  if (Kind == AArch64ABIKind::AAPCS && IsNamedArg) {
     unsigned NVec = 0, NPred = 0;
     SmallVector<llvm::Type *> UnpaddedCoerceToSeq;
     if (passAsPureScalableType(Ty, NVec, NPred, UnpaddedCoerceToSeq) &&
@@ -468,7 +470,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
 }
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
-                                              bool IsVariadic) const {
+                                              bool IsVariadicFn) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
@@ -506,7 +508,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
   uint64_t Members = 0;
   if (isHomogeneousAggregate(RetTy, Base, Members) &&
       !(getTarget().getTriple().getArch() == llvm::Triple::aarch64_32 &&
-        IsVariadic))
+        IsVariadicFn))
     // Homogeneous Floating-point Aggregates (HFAs) are returned directly.
     return ABIArgInfo::getDirect();
 
@@ -796,7 +798,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   // `classifyArgumentType` here.
   unsigned NSRN = 0, NPRN = 0;
   ABIArgInfo AI =
-      classifyArgumentType(Ty, /*IsVariadic=*/true,
+      classifyArgumentType(Ty, /*IsVariadicFn=*/true, /* IsNamedArg */ false,
                            CGF.CurFnInfo->getCallingConvention(), NSRN, NPRN);
   // Empty records are ignored for parameter passing purposes.
   if (AI.isIgnore())
