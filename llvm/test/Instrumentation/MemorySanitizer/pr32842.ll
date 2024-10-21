@@ -15,8 +15,33 @@ define zeroext i1 @_Z1fii(i32 %x, i32 %y) sanitize_memory {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[_MSPROP]], 0
+; CHECK-NEXT:    [[TMP28:%.*]] = shl i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP28]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[TMP1]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP10]], -1
+; CHECK-NEXT:    [[TMP12:%.*]] = and i32 [[Y]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i32 [[TMP12]], [[TMP9]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i32 [[TMP7]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr i32 [[TMP15]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = xor i32 [[TMP0]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = xor i32 [[TMP17]], -1
+; CHECK-NEXT:    [[TMP19:%.*]] = and i32 [[X]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = or i32 [[TMP19]], [[TMP16]]
+; CHECK-NEXT:    [[TMP21:%.*]] = shl i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP22:%.*]] = lshr i32 [[TMP21]], 1
+; CHECK-NEXT:    [[TMP23:%.*]] = xor i32 [[TMP1]], [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = xor i32 [[TMP22]], -1
+; CHECK-NEXT:    [[TMP25:%.*]] = and i32 [[Y]], [[TMP24]]
+; CHECK-NEXT:    [[TMP26:%.*]] = or i32 [[TMP25]], [[TMP23]]
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp slt i32 [[TMP20]], [[TMP26]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP14]], [[TMP27]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    store i1 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i1 [[CMP]]
