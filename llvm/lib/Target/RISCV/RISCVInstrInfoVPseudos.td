@@ -50,7 +50,7 @@
 /// each of the preceding fields which are relevant for a given instruction
 /// in the opcode space.
 ///
-/// Currently, the policy is represented via the following instrinsic families:
+/// Currently, the policy is represented via the following intrinsic families:
 /// * _MASK - Can represent all three policy states for both tail and mask.  If
 ///   passthrough is IMPLICIT_DEF (or NoReg), then represents "undefined".
 ///   Otherwise, policy operand and tablegen flags drive the interpretation.

@@ -108,7 +108,9 @@ struct VPlanTransforms {
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
   /// \returns true if the transformation succeeds, or false if it doesn't.
-  static bool tryAddExplicitVectorLength(VPlan &Plan);
+  static bool
+  tryAddExplicitVectorLength(VPlan &Plan,
+                             const std::optional<unsigned> &MaxEVLSafeElements);
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its

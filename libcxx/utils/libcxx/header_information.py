@@ -15,7 +15,6 @@ header_restrictions = {
 
     # headers with #error directives
     "ios": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "locale.h": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     # transitive includers of the above headers
     "clocale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "codecvt": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
@@ -53,7 +52,6 @@ lit_header_restrictions = {
     "istream": "// UNSUPPORTED: no-localization",
     "latch": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "locale": "// UNSUPPORTED: no-localization",
-    "locale.h": "// UNSUPPORTED: no-localization",
     "mutex": "// UNSUPPORTED: no-threads, c++03",
     "ostream": "// UNSUPPORTED: no-localization",
     "print": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14, c++17, c++20, availability-fp_to_chars-missing", # TODO PRINT investigate

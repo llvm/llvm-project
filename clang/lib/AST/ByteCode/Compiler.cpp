@@ -4132,10 +4132,16 @@ template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this);
 
+  // If we won't destroy the toplevel scope, check for memory leaks first.
+  if (!DestroyToplevelScope) {
+    if (!this->emitCheckAllocations(E))
+      return false;
+  }
+
   auto maybeDestroyLocals = [&]() -> bool {
     if (DestroyToplevelScope)
-      return RootScope.destroyLocals();
-    return true;
+      return RootScope.destroyLocals() && this->emitCheckAllocations(E);
+    return this->emitCheckAllocations(E);
   };
 
   // Void expressions.
@@ -4171,8 +4177,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  (void)maybeDestroyLocals();
-  return false;
+  return maybeDestroyLocals() && this->emitCheckAllocations(E) && false;
 }
 
 template <class Emitter>
@@ -4214,7 +4219,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
     DeclScope<Emitter> LS(this, VD);
     if (!this->visit(VD->getAnyInitializer()))
       return false;
-    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals();
+    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals() &&
+           this->emitCheckAllocations(VD);
   }
 
   LocalScope<Emitter> VDScope(this, VD);
@@ -4260,7 +4266,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
     return false;
   }
 
-  return VDScope.destroyLocals();
+  return VDScope.destroyLocals() && this->emitCheckAllocations(VD);
 }
 
 template <class Emitter>
@@ -5732,9 +5738,17 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult)
+    if (DiscardResult) {
+      // assert(false);
       return this->discard(SubExpr);
-    return this->visit(SubExpr);
+    }
+
+    if (!this->visit(SubExpr))
+      return false;
+    if (classifyPrim(SubExpr) == PT_Ptr)
+      return this->emitNarrowPtr(E);
+    return true;
+
   case UO_Not: // ~x
     if (!T)
       return this->emitError(E);

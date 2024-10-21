@@ -134,6 +134,7 @@ interesting areas to contribute to lldb.
    use/intel_pt
    use/ondemand
    use/aarch64-linux
+   use/symbolfilejson
    use/troubleshooting
    use/links
    Man Page <man/lldb>
