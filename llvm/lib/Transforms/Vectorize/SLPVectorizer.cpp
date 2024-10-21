@@ -12466,7 +12466,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // Build a list of tree entries where V is used.
     SmallPtrSet<const TreeEntry *, 4> VToTEs;
     for (const TreeEntry *TEPtr : ValueToGatherNodes.find(V)->second) {
-      if (TEPtr == TE)
+      if (TEPtr == TE || TEPtr->Idx == 0)
         continue;
       assert(any_of(TEPtr->Scalars,
                     [&](Value *V) { return GatheredScalars.contains(V); }) &&
