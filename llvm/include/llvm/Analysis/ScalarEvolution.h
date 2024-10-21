@@ -1044,6 +1044,11 @@ public:
   bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
                               bool OrNegative = false);
 
+  /// Test if Expr can be represented as (A urem B) * Multiplier. If successful,
+  /// assign A and B to LHS and RHS, respectively.
+  bool isURemWithKnownMultiplier(const SCEV *Expr, const SCEV *Multiplier,
+                                 const SCEV *&LHS, const SCEV *&RHS);
+
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L
   /// with initial value of that SCEV. The second is obtained from \p S by
