@@ -218,7 +218,7 @@ static bool branchDestInFirstRegion(Ctx &ctx, const InputSection *isec,
   // or the PLT.
   if (r) {
     uint64_t dst =
-        (r->expr == R_PLT_PC) ? r->sym->getPltVA(ctx) : r->sym->getVA();
+        r->expr == R_PLT_PC ? r->sym->getPltVA(ctx) : r->sym->getVA(ctx);
     // Account for Thumb PC bias, usually cancelled to 0 by addend of -4.
     destAddr = dst + r->addend + 4;
   } else {
@@ -449,7 +449,7 @@ static void implementPatch(ScanResult sr, InputSection *isec,
       // Thunk from the patch to the target.
       uint64_t dstSymAddr = (sr.rel->expr == R_PLT_PC)
                                 ? sr.rel->sym->getPltVA(ctx)
-                                : sr.rel->sym->getVA();
+                                : sr.rel->sym->getVA(ctx);
       destIsARM = (dstSymAddr & 1) == 0;
     }
     psec = make<Patch657417Section>(ctx, isec, sr.off, sr.instr, destIsARM);
