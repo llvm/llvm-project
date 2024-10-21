@@ -113,11 +113,6 @@ class MapsForPrivatizedSymbolsPass
     for (auto mapInfoOp : mapInfoOps)
       addMapInfoOp(targetOp, mapInfoOp);
   }
-  void addMapInfoOps(omp::TargetOp targetOp,
-                     llvm::SmallVectorImpl<omp::MapInfoOp> &mapInfoOps) {
-    for (auto mapInfoOp : mapInfoOps)
-      addMapInfoOp(targetOp, mapInfoOp);
-  }
   void runOnOperation() override {
     ModuleOp module = getOperation()->getParentOfType<ModuleOp>();
     fir::KindMapping kindMap = fir::getKindMapping(module);
