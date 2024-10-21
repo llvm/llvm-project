@@ -1297,7 +1297,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       } else {
         auto NewName = StaticFuncMap.find(Name);
         if (NewName != StaticFuncMap.end()) {
-          It = InstrProfileMap.find(NewName->second.str());
+          It = InstrProfileMap.find(NewName->second);
           if (NewName->second != DuplicateNameStr) {
             NewRootName = &NewName->second;
           }
@@ -1382,7 +1382,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     if (It == InstrProfileMap.end()) {
       auto NewName = StaticFuncMap.find(Name);
       if (NewName != StaticFuncMap.end()) {
-        It = InstrProfileMap.find(NewName->second.str());
+        It = InstrProfileMap.find(NewName->second);
         if (NewName->second == DuplicateNameStr) {
           WithColor::warning()
               << "Static function " << Name
