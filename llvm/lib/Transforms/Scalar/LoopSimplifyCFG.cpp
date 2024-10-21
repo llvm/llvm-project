@@ -588,6 +588,15 @@ public:
       return false;
     }
 
+    // we can't handle the case when the loop isn't in LoopSimplifyForm.
+    // eg: indirectbranch
+    if (!DeadExitBlocks.empty() && !L.isLoopSimplifyForm()) {
+      LLVM_DEBUG(dbgs() << "Give up constant terminator folding in loop "
+                        << Header->getName()
+                        << ": loop isn't in SimplifyForm.\n");
+      return false;
+    }
+
     SE.forgetTopmostLoop(&L);
     // Dump analysis results.
     LLVM_DEBUG(dump());
