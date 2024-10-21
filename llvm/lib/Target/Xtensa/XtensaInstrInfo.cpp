@@ -209,7 +209,6 @@ bool XtensaInstrInfo::reverseBranchCondition(
   case Xtensa::BGEU:
     Cond[0].setImm(Xtensa::BLTU);
     return false;
-
   case Xtensa::BEQI:
     Cond[0].setImm(Xtensa::BNEI);
     return false;
@@ -228,7 +227,6 @@ bool XtensaInstrInfo::reverseBranchCondition(
   case Xtensa::BLTUI:
     Cond[0].setImm(Xtensa::BGEUI);
     return false;
-
   case Xtensa::BEQZ:
     Cond[0].setImm(Xtensa::BNEZ);
     return false;
@@ -241,7 +239,6 @@ bool XtensaInstrInfo::reverseBranchCondition(
   case Xtensa::BGEZ:
     Cond[0].setImm(Xtensa::BLTZ);
     return false;
-
   default:
     report_fatal_error("Invalid branch condition!");
   }
@@ -367,7 +364,7 @@ unsigned XtensaInstrInfo::insertBranch(
     // Need to build two branches then
     // one to branch to TBB on Cond
     // and a second one immediately after to unconditionally jump to FBB
-    Count = InsertBranchAtInst(MBB, MBB.end(), TBB, Cond, DL, BytesAdded);
+    Count = insertBranchAtInst(MBB, MBB.end(), TBB, Cond, DL, BytesAdded);
     auto &MI = *BuildMI(&MBB, DL, get(Xtensa::J)).addMBB(FBB);
     Count++;
     if (BytesAdded)
@@ -375,11 +372,11 @@ unsigned XtensaInstrInfo::insertBranch(
     return Count;
   }
   // This function inserts the branch at the end of the MBB
-  Count += InsertBranchAtInst(MBB, MBB.end(), TBB, Cond, DL, BytesAdded);
+  Count += insertBranchAtInst(MBB, MBB.end(), TBB, Cond, DL, BytesAdded);
   return Count;
 }
 
-unsigned XtensaInstrInfo::InsertBranchAtInst(MachineBasicBlock &MBB,
+unsigned XtensaInstrInfo::insertBranchAtInst(MachineBasicBlock &MBB,
                                              MachineBasicBlock::iterator I,
                                              MachineBasicBlock *TBB,
                                              ArrayRef<MachineOperand> Cond,

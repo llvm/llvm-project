@@ -90,7 +90,7 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
-  unsigned InsertBranchAtInst(MachineBasicBlock &MBB,
+  unsigned insertBranchAtInst(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I,
                               MachineBasicBlock *TBB,
                               ArrayRef<MachineOperand> Cond, const DebugLoc &DL,
