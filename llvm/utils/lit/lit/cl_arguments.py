@@ -177,11 +177,10 @@ def parse_args():
     )
     execution_group.add_argument(
         "--use-unique-output-file-name",
-        help="When enabled, lit will not overwrite existing test report files. "
-        "Instead it will write to a new file named the same as the output file "
-        "name but with an extra part before the file extension. For example "
-        "if results.xml already exists, results.<something>.xml will be written "
-        "to. The <something> is not ordered in any way. [Default: Off]",
+        help="When enabled, lit will add a unique element to the output file name, "
+        'before the extension. For example "results.xml" will become '
+        '"results.<something>.xml". The "<something>" is not ordered in any '
+        "way and is chosen so that existing are not overwritten. [Default: Off]",
         action="store_true",
     )
     execution_group.add_argument(
