@@ -828,12 +828,9 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
           .setMIFlag(MachineInstr::FrameSetup);
     } else {
       // We're being asked to probe a stack frame that's 4 GiB or larger,
-      // but our stack pointer is only 32 bits.
-      DiagnosticInfoResourceLimit Diag(MF.getFunction(),
-                                       "probed stack frame size", BoundOffset,
-                                       0xffffffff, DS_Error, DK_ResourceLimit);
-      MF.getFunction().getContext().diagnose(Diag);
-      return;
+      // but our stack pointer is only 32 bits.  This might be unreachable
+      // code, so don't complain now; just trap if it's reached at runtime.
+      BuildMI(MBB, MBBI, DL, TII.get(X86::TRAP));
     }
 
     // while in the loop, use loop-invariant reg for CFI,
