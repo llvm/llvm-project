@@ -382,7 +382,7 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     // libraries to stubify.
     StringRef LibToCheck = Found->second;
     for (int i = 0; i < 20; ++i) {
-      auto LinkIt = SymLinks.find(LibToCheck.str());
+      auto LinkIt = SymLinks.find(LibToCheck);
       if (LinkIt != SymLinks.end()) {
         for (auto &SymInfo : LinkIt->second) {
           SmallString<PATH_MAX> LinkSrc(SymInfo.SrcPath);
