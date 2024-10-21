@@ -913,9 +913,8 @@ public:
   bool isEquality() const { return isEquality(getPredicate()); }
 
   /// Determine if one operand of this compare can always be replaced by the
-  /// other operand, ignoring provenance considerations. If \p Invert is false,
-  /// check for equivalence with an equals predicate; otherwise, check for
-  /// equivalence with a not-equals predicate.
+  /// other operand, ignoring provenance considerations. If \p Invert, check for
+  /// equivalence with the inverse predicate.
   bool isEquivalence(bool Invert = false) const;
 
   /// Return true if the predicate is relational (not EQ or NE).

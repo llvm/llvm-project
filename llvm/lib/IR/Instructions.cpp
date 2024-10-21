@@ -3488,23 +3488,15 @@ static bool hasNonZeroFPOperands(const CmpInst *Cmp) {
 // -0.0, when comparing NaN with another value, or when flushing
 // denormals-to-zero.
 bool CmpInst::isEquivalence(bool Invert) const {
-  switch (getPredicate()) {
+  switch (Invert ? getInversePredicate() : getPredicate()) {
   case CmpInst::Predicate::ICMP_EQ:
-    return !Invert;
-  case CmpInst::Predicate::ICMP_NE:
-    return Invert;
+    return true;
   case CmpInst::Predicate::FCMP_UEQ:
     if (!hasNoNaNs())
       return false;
     [[fallthrough]];
   case CmpInst::Predicate::FCMP_OEQ:
-    return !Invert && hasNonZeroFPOperands(this);
-  case CmpInst::Predicate::FCMP_ONE:
-    if (!hasNoNaNs())
-      return false;
-    [[fallthrough]];
-  case CmpInst::Predicate::FCMP_UNE:
-    return Invert && hasNonZeroFPOperands(this);
+    return hasNonZeroFPOperands(this);
   default:
     return false;
   }
