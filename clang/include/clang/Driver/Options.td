@@ -4566,6 +4566,15 @@ def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clan
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
+def iexternal : JoinedOrSeparate<["-"], "iexternal">, Group<I_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Add directory to include search path with warnings suppressed">, MetaVarName<"<dir>">;
+def iexternal_after : JoinedOrSeparate<["-"], "iexternal-after">, Group<clang_i_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Add directory to include search path with warnings suppressed">, MetaVarName<"<dir>">;
+def iexternal_env_EQ : Joined<["-"], "iexternal-env=">, Group<clang_i_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Add dirs in env var <var> to include search path with warnings suppressed">, MetaVarName<"<var>">;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to SYSTEM framework search path">;
@@ -8433,9 +8442,12 @@ def _SLASH_diagnostics_classic : CLFlag<"diagnostics:classic">,
 def _SLASH_D : CLJoinedOrSeparate<"D", [CLOption, DXCOption]>,
   HelpText<"Define macro">, MetaVarName<"<macro[=value]>">, Alias<D>;
 def _SLASH_E : CLFlag<"E">, HelpText<"Preprocess to stdout">, Alias<E>;
-def _SLASH_external_COLON_I : CLJoinedOrSeparate<"external:I">, Alias<isystem>,
+def _SLASH_external_COLON_I : CLJoinedOrSeparate<"external:I">, Alias<iexternal>,
   HelpText<"Add directory to include search path with warnings suppressed">,
   MetaVarName<"<dir>">;
+def _SLASH_external_env : CLJoined<"external:env:">, Alias<iexternal_env_EQ>,
+  HelpText<"Add dirs in env var <var> to include search path with warnings suppressed">,
+  MetaVarName<"<var>">;
 def _SLASH_fp_contract : CLFlag<"fp:contract">, HelpText<"">, Alias<ffp_contract>, AliasArgs<["on"]>;
 def _SLASH_fp_except : CLFlag<"fp:except">, HelpText<"">, Alias<ffp_exception_behavior_EQ>, AliasArgs<["strict"]>;
 def _SLASH_fp_except_ : CLFlag<"fp:except-">, HelpText<"">, Alias<ffp_exception_behavior_EQ>, AliasArgs<["ignore"]>;
@@ -8665,9 +8677,6 @@ def _SLASH_volatile_Group : OptionGroup<"</volatile group>">,
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;
-def _SLASH_external_env : CLJoined<"external:env:">,
-  HelpText<"Add dirs in env var <var> to include search path with warnings suppressed">,
-  MetaVarName<"<var>">;
 def _SLASH_FA : CLJoined<"FA">,
   HelpText<"Output assembly code file during compilation">;
 def _SLASH_Fa : CLJoined<"Fa">,

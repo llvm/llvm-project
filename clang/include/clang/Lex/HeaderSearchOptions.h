@@ -38,6 +38,22 @@ enum IncludeDirGroup {
   /// Like Angled, but marks header maps used when building frameworks.
   IndexHeaderMap,
 
+  /// Like Angled, but marks system-like directories while retaining relative
+  /// order with user directories.
+  // FIXME: External is intended to match the semantics of the MSVC /external:I
+  // FIXME: option. MSVC handles such paths similarly to system paths, but
+  // FIXME: allows for separate specification of diagnostic level via the
+  // FIXME: /external:Wn option. That option does not affect the diagnostic
+  // FIXME: level used for system paths (those present in the INCLUDE env var).
+  // FIXME: Supporting the diagnostic level controls will likely require adding
+  // FIXME: an additional C_External enumerator to SrcMgr::CharacteristicKind.
+  External,
+
+  // Like External, but searched after other external directories but before
+  // system directories. This is intended to match the semantics of the MSVC
+  // /external:env option.
+  ExternalAfter,
+
   /// Like Angled, but marks system directories.
   System,
 

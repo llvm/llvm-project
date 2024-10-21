@@ -1298,7 +1298,9 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   // Check for missing include directories.
   if (!Diags.isIgnored(diag::warn_missing_include_dirs, SourceLocation())) {
-    for (auto IncludeDir : Args.getAllArgValues(options::OPT_I_Group)) {
+    for (auto IncludeDir :
+        Args.getAllArgValues(options::OPT_I_Group, 
+                             options::OPT_iexternal_after)) {
       if (!VFS->exists(IncludeDir))
         Diag(diag::warn_missing_include_dirs) << IncludeDir;
     }

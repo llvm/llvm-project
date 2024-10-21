@@ -644,27 +644,10 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                   "include");
   }
 
+  // FIXME: Why does the -imsvc option exist?
   // Add %INCLUDE%-like directories from the -imsvc flag.
   for (const auto &Path : DriverArgs.getAllArgValues(options::OPT__SLASH_imsvc))
     addSystemInclude(DriverArgs, CC1Args, Path);
-
-  auto AddSystemIncludesFromEnv = [&](StringRef Var) -> bool {
-    if (auto Val = llvm::sys::Process::GetEnv(Var)) {
-      SmallVector<StringRef, 8> Dirs;
-      StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-      if (!Dirs.empty()) {
-        addSystemIncludes(DriverArgs, CC1Args, Dirs);
-        return true;
-      }
-    }
-    return false;
-  };
-
-  // Add %INCLUDE%-like dirs via /external:env: flags.
-  for (const auto &Var :
-       DriverArgs.getAllArgValues(options::OPT__SLASH_external_env)) {
-    AddSystemIncludesFromEnv(Var);
-  }
 
   // Add DIA SDK include if requested.
   if (const Arg *A = DriverArgs.getLastArg(options::OPT__SLASH_diasdkdir,
@@ -682,14 +665,26 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
-  // paths set by vcvarsall.bat. Skip if the user expressly set a vctoolsdir.
+  // Add system paths from the %INCLUDE% environment variable if neither a
+  // vctoolsdir or winsysroot directory has been explicitly specified.
+  // If any paths are present in %INCLUDE%, skip adding additional system
+  // directories.
+  // FIXME: Paths specified by the INCLUDE environment variable should be
+  // FIXME: handled as system paths distinct from external paths added by
+  // FIXME: /external:I or /external:env since /external:Wn options do not
+  // FIXME: apply to these paths. These paths are currently mapped to
+  // FIXME: -iexternal-after to avoid include path ordering issues when
+  // FIXME: duplicate paths are present.
   if (!DriverArgs.getLastArg(options::OPT__SLASH_vctoolsdir,
                              options::OPT__SLASH_winsysroot)) {
-    bool Found = AddSystemIncludesFromEnv("INCLUDE");
-    Found |= AddSystemIncludesFromEnv("EXTERNAL_INCLUDE");
-    if (Found)
-      return;
+    if (auto Val = llvm::sys::Process::GetEnv("INCLUDE")) {
+      SmallVector<StringRef, 8> Dirs;
+      StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+      if (!Dirs.empty()) {
+        addExternalAfterIncludes(DriverArgs, CC1Args, Dirs);
+        return;
+      }
+    }
   }
 
   // When built with access to the proper Windows APIs, try to actually find

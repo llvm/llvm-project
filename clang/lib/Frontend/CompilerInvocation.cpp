@@ -3194,8 +3194,10 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
   auto It = Opts.UserEntries.begin();
   auto End = Opts.UserEntries.end();
 
-  // Add -I..., -F..., and -index-header-map options in order.
-  for (; It < End && Matches(*It, {frontend::IndexHeaderMap, frontend::Angled},
+  // Add the -I..., -F..., -index-header-map, and MSVC /external:I options
+  // in order.
+  for (; It < End && Matches(*It, {frontend::IndexHeaderMap, frontend::Angled,
+                                   frontend::External},
                              std::nullopt, true);
        ++It) {
     OptSpecifier Opt = [It, Matches]() {
@@ -3207,13 +3209,20 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
         return OPT_F;
       if (Matches(*It, frontend::Angled, false, true))
         return OPT_I;
+      if (Matches(*It, frontend::External, false, true))
+        return OPT_iexternal;
       llvm_unreachable("Unexpected HeaderSearchOptions::Entry.");
     }();
 
     if (It->Group == frontend::IndexHeaderMap)
       GenerateArg(Consumer, OPT_index_header_map);
     GenerateArg(Consumer, Opt, It->Path);
-  };
+  }
+
+  // Add the paths for the MSVC /external:env and -iexternal-after options
+  // in order.
+  for (; It < End && Matches(*It, {frontend::ExternalAfter}, false, true); ++It)
+    GenerateArg(Consumer, OPT_iexternal_after, It->Path);
 
   // Note: some paths that came from "[-iprefix=xx] -iwithprefixbefore=yy" may
   // have already been generated as "-I[xx]yy". If that's the case, their
@@ -3323,8 +3332,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
         llvm::CachedHashString(MacroDef.split('=').first));
   }
 
-  // Add -I..., -F..., and -index-header-map options in order.
-  bool IsIndexHeaderMap = false;
   bool IsSysrootSpecified =
       Args.hasArg(OPT__sysroot_EQ) || Args.hasArg(OPT_isysroot);
 
@@ -3343,20 +3350,44 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     return A->getValue();
   };
 
-  for (const auto *A : Args.filtered(OPT_I, OPT_F, OPT_index_header_map)) {
+  // Add the -I..., -F..., -index-header-map, and MSVC /external:I options
+  // options in order.
+  bool IsIndexHeaderMap = false;
+  for (const auto *A : Args.filtered(OPT_I, OPT_F, OPT_index_header_map,
+                                     OPT_iexternal)) {
+    frontend::IncludeDirGroup Group =
+        IsIndexHeaderMap ? frontend::IndexHeaderMap : frontend::Angled;
+
     if (A->getOption().matches(OPT_index_header_map)) {
       // -index-header-map applies to the next -I or -F.
       IsIndexHeaderMap = true;
       continue;
     }
-
-    frontend::IncludeDirGroup Group =
-        IsIndexHeaderMap ? frontend::IndexHeaderMap : frontend::Angled;
+    if (A->getOption().matches(OPT_iexternal))
+      Group = frontend::External;
 
     bool IsFramework = A->getOption().matches(OPT_F);
     Opts.AddPath(PrefixHeaderPath(A, IsFramework), Group, IsFramework,
                  /*IgnoreSysroot*/ true);
     IsIndexHeaderMap = false;
+  }
+
+  // Add the MSVC /external:env and -iexternal-after options in order.
+  for (const auto *A :
+      Args.filtered(OPT_iexternal_after, OPT_iexternal_env_EQ)) {
+    if (A->getOption().matches(OPT_iexternal_after))
+      Opts.AddPath(A->getValue(), frontend::ExternalAfter,
+                   /*IsFramework=*/false, /*IgnoreSysRoot=*/true);
+    else {
+      if (auto Val = llvm::sys::Process::GetEnv(A->getValue())) {
+        SmallVector<StringRef, 8> Dirs;
+        StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+        for (const auto &Dir : Dirs) {
+          Opts.AddPath(Dir, frontend::ExternalAfter, /*IsFramework=*/false,
+                       /*IgnoreSysRoot=*/true);
+        }
+      }
+    }
   }
 
   // Add -iprefix/-iwithprefix/-iwithprefixbefore options.
