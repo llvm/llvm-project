@@ -2301,11 +2301,10 @@ public:
   Align getEVTAlign(EVT MemoryVT) const;
 
   /// Test whether the given value is a constant int or similar node.
-  bool isConstantIntBuildVectorOrConstantInt(SDValue N,
-                                             bool AllowOpaques = true) const;
+  SDNode *isConstantIntBuildVectorOrConstantInt(SDValue N) const;
 
   /// Test whether the given value is a constant FP or similar node.
-  bool isConstantFPBuildVectorOrConstantFP(SDValue N) const;
+  SDNode *isConstantFPBuildVectorOrConstantFP(SDValue N) const ;
 
   /// \returns true if \p N is any kind of constant or build_vector of
   /// constants, int or float. If a vector, it may not necessarily be a splat.
