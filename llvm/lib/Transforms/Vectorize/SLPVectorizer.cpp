@@ -13502,7 +13502,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       // loaded directly into a vector element for free.
       APInt FreeEltLoads = APInt::getZero(VL.size());
       if (TTI->supportsEfficientVectorElementLoadStore())
-        for (unsigned I = 0, E = VL.size(); I < E; ++I)
+        for (unsigned I : seq<unsigned>(VL.size()))
           if (VL[I]->hasOneUse() && isa<LoadInst>(VL[I]))
             FreeEltLoads.setBit(I);
       APInt DemandedElts = ~ShuffledElements & ~FreeEltLoads;
