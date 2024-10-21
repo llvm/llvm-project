@@ -1244,7 +1244,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   MachineOperand::printOperandOffset(OS, getOffset());
   if (!getSize().hasValue() ||
-      getAlign() != getSize().getValue().getKnownMinValue())
+      (!getSize().isZero() &&
+       getAlign() != getSize().getValue().getKnownMinValue()))
     OS << ", align " << getAlign().value();
   if (getAlign() != getBaseAlign())
     OS << ", basealign " << getBaseAlign().value();
