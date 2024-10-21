@@ -1296,13 +1296,6 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     bool Allowed = EmptySubobjects->CanPlaceBaseAtOffset(Base, Offset);
     (void)Allowed;
     assert(Allowed && "Base subobject externally placed at overlapping offset");
-
-    if (InferAlignment && Offset < getDataSize().alignTo(AlignTo)) {
-      // The externally-supplied base offset is before the base offset we
-      // computed. Assume that the structure is packed.
-      Alignment = CharUnits::One();
-      InferAlignment = false;
-    }
   }
 
   if (!Base->Class->isEmpty()) {
@@ -2255,9 +2248,27 @@ ItaniumRecordLayoutBuilder::updateExternalFieldOffset(const FieldDecl *Field,
                                                       uint64_t ComputedOffset) {
   uint64_t ExternalFieldOffset = External.getExternalFieldOffset(Field);
 
-  if (InferAlignment && ExternalFieldOffset < ComputedOffset) {
-    // The externally-supplied field offset is before the field offset we
-    // computed. Assume that the structure is packed.
+  // DWARF doesn't tell us whether a structure was declared as packed.
+  // So we try to figure out if the supplied Field is at a packed offset
+  // (i.e., the externally-supplied offset is less than the layout builder
+  // expected).
+  //
+  // There are cases where fields are placed at overlapping offsets (e.g.,
+  // as a result of [[no_unique_address]]). In those cases we don't want
+  // to incorrectly deduce that they are placed at packed offsets. Hence,
+  // ignore empty fields (which are the only fields that can overlap).
+  //
+  // FIXME: emit enough information in DWARF to get rid of InferAlignment.
+  //
+  CXXRecordDecl *CXX = nullptr;
+  if (auto *RT = dyn_cast<RecordType>(Field->getType()))
+    CXX = RT->getAsCXXRecordDecl();
+
+  const bool assume_packed = ExternalFieldOffset > 0 &&
+                             ExternalFieldOffset < ComputedOffset &&
+                             !(CXX && CXX->isEmpty());
+
+  if (InferAlignment && assume_packed) {
     Alignment = CharUnits::One();
     PreferredAlignment = CharUnits::One();
     InferAlignment = false;
