@@ -501,9 +501,6 @@ class SPIRVStructurizer : public FunctionPass {
 
       AllocaInst *Variable = CreateVariable(F, ExitBuilder.getInt32Ty(),
                                             F.begin()->getFirstInsertionPt());
-      // PHINode *PhiNode = ExitBuilder.CreatePHI(ExitBuilder.getInt32Ty(),
-      // FixedEdges.size());
-
       for (auto &[Src, Dst] : FixedEdges) {
         IRBuilder<> B2(Src);
         B2.SetInsertPoint(Src->getFirstInsertionPt());

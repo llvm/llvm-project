@@ -95,14 +95,6 @@ public:
   // order (order is stable).
   bool compare(const BasicBlock *LHS, const BasicBlock *RHS) const;
 
-  size_t getRank(const BasicBlock *BB) const {
-    return BlockToOrder.at(const_cast<BasicBlock *>(BB)).Rank;
-  }
-
-  size_t getTraversalIndex(const BasicBlock *BB) const {
-    return BlockToOrder.at(const_cast<BasicBlock *>(BB)).TraversalIndex;
-  }
-
   // Visit the function starting from the basic block |Start|, and calling |Op|
   // on each visited BB. This traversal ignores back-edges, meaning this won't
   // visit a node to which |Start| is not an ancestor.
