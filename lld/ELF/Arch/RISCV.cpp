@@ -214,9 +214,9 @@ void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
     if (ctx.arg.is64)
-      write64le(buf, s.getVA());
+      write64le(buf, s.getVA(ctx));
     else
-      write32le(buf, s.getVA());
+      write32le(buf, s.getVA(ctx));
   }
 }
 
@@ -466,7 +466,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case INTERNAL_R_RISCV_GPREL_I:
   case INTERNAL_R_RISCV_GPREL_S: {
     Defined *gp = ctx.sym.riscvGlobalPointer;
-    int64_t displace = SignExtend64(val - gp->getVA(), bits);
+    int64_t displace = SignExtend64(val - gp->getVA(ctx), bits);
     checkInt(ctx, loc, displace, 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_GP << 15);
     if (rel.type == INTERNAL_R_RISCV_GPREL_I)
@@ -657,7 +657,8 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         const Relocation &rel1 = relocs[i + 1];
         if (rel.type == R_RISCV_SET_ULEB128 &&
             rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
-          auto val = rel.sym->getVA(rel.addend) - rel1.sym->getVA(rel1.addend);
+          auto val = rel.sym->getVA(ctx, rel.addend) -
+                     rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
             errorOrWarn(sec.getLocation(rel.offset) + ": ULEB128 value " +
                         Twine(val) + " exceeds available space; references '" +
@@ -737,7 +738,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
   const uint64_t dest =
-      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA()) + r.addend;
+      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA(ctx)) + r.addend;
   const int64_t displace = dest - loc;
 
   if (rvc && isInt<12>(displace) && rd == 0) {
@@ -759,7 +760,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
 // Relax local-exec TLS when hi20 is zero.
 static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
                        Relocation &r, uint32_t &remove) {
-  uint64_t val = r.sym->getVA(r.addend);
+  uint64_t val = r.sym->getVA(ctx, r.addend);
   if (hi20(val) != 0)
     return;
   uint32_t insn = read32le(sec.content().data() + r.offset);
@@ -791,7 +792,7 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   if (!gp)
     return;
 
-  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
+  if (!isInt<12>(r.sym->getVA(ctx, r.addend) - gp->getVA(ctx)))
     return;
 
   switch (r.type) {
@@ -863,7 +864,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
       tlsdescRelax = relaxable(relocs, i);
       toLeShortForm = tlsdescRelax && r.expr == R_RELAX_TLS_GD_TO_LE &&
-                      !hi20(r.sym->getVA(r.addend));
+                      !hi20(r.sym->getVA(ctx, r.addend));
       [[fallthrough]];
     case R_RISCV_TLSDESC_LOAD_LO12:
       // For TLSDESC=>LE/IE, AUIPC and L[DW] are removed if relaxable.
