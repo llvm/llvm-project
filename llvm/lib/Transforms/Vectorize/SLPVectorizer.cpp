@@ -9044,51 +9044,6 @@ static SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
   return ArgTys;
 }
 
-// The cost model may determine that vectorizing and eliminating a series of
-// ExtractElements is beneficial. However, if the input vector is a function
-// argument, the calling convention may require extractions in the geneerated
-// code. In this scenario, vectorizaino would then not eliminate the
-// ExtractElement sequence, but would add additional vectorization code.
-// getCCCostFromScalars does the proper accounting for this.
-static unsigned getCCCostFromScalars(ArrayRef<Value *> &Scalars,
-                                     unsigned ScalarSize,
-                                     TargetTransformInfo *TTI) {
-  SetVector<Value *> ArgRoots;
-  for (unsigned I = 0; I < ScalarSize; I++) {
-    auto *Scalar = Scalars[I];
-    if (!Scalar)
-      continue;
-    auto *EE = dyn_cast<ExtractElementInst>(Scalar);
-    if (!EE)
-      continue;
-
-    auto *Vec = EE->getOperand(0);
-    if (!Vec->getType()->isVectorTy())
-      continue;
-
-    auto F = EE->getFunction();
-    auto FoundIt = find_if(
-        F->args(), [&Vec](Argument &I) { return Vec == cast<Value>(&I); });
-
-    if (FoundIt == F->arg_end())
-      continue;
-
-    if (!ArgRoots.contains(Vec))
-      ArgRoots.insert(Vec);
-  }
-
-  if (!ArgRoots.size())
-    return 0;
-
-  unsigned Cost = 0;
-  for (auto ArgOp : ArgRoots) {
-    Cost += TTI->getDataFlowCost(ArgOp->getType(), /*IsCallingConv*/ true)
-                .getValue()
-                .value_or(0);
-  }
-  return Cost;
-}
-
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -9120,7 +9075,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   auto *FinalVecTy = FixedVectorType::get(ScalarTy, EntryVF);
 
   bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
-  InstructionCost CommonCost = getCCCostFromScalars(VL, VL.size(), TTI);
+  InstructionCost CommonCost = 0;
   if (E->State == TreeEntry::NeedToGather) {
     if (allConstant(VL))
       return CommonCost;
@@ -9266,6 +9221,18 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           if (!OpTE->ReuseShuffleIndices.empty())
             ScalarCost += TTI::TCC_Basic * (OpTE->ReuseShuffleIndices.size() -
                                             OpTE->Scalars.size());
+    }
+
+    // Calculate the cost difference of propagating a vector vs series of
+    // scalars across blocks. This may be nonzero in the case of illegal
+    // vectors.
+    Type *ScalarTy = VL0->getType()->getScalarType();
+    if (ScalarTy && isValidElementType(ScalarTy)) {
+      ScalarCost += TTI->getDataFlowCost(ScalarTy,
+                                         /*IsCallingConv=*/false) *
+                    EntryVF;
+      CommonCost += TTI->getDataFlowCost(
+          FixedVectorType::get(ScalarTy, EntryVF), /*IsCallingConv=*/false);
     }
 
     return CommonCost - ScalarCost;
@@ -10291,24 +10258,20 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     // Calculate the cost difference of propagating a vector vs series of scalars
     // across blocks. This may be nonzero in the case of illegal vectors.
     Instruction *VL0 = TE.getMainOp();
-    bool IsAPhi = VL0 && isa<PHINode>(VL0);
-    bool HasNextEntry = VL0 && ((I + 1) < VectorizableTree.size());
-    bool LiveThru = false;
-    if (HasNextEntry) {
+    if (VL0 && ((I + 1) < VectorizableTree.size())) {
       Instruction *VL1 = VectorizableTree[I + 1]->getMainOp();
-      LiveThru = VL1 && (VL0->getParent() != VL1->getParent());
-    }
-    if (IsAPhi || LiveThru) {
-      VectorType *VTy = dyn_cast<VectorType>(VL0->getType());
-      Type *ScalarTy = VTy ? VTy->getElementType() : VL0->getType();
-      if (ScalarTy && isValidElementType(ScalarTy)) {
-        InstructionCost ScalarDFlow =
-            TTI->getDataFlowCost(ScalarTy,
-                                 /*IsCallingConv*/ false) *
-            TE.getVectorFactor();
-        InstructionCost VectorDFlow =
-            TTI->getDataFlowCost(FixedVectorType::get(ScalarTy, TE.getVectorFactor()), /*IsCallingConv*/ false);
-        Cost += (VectorDFlow - ScalarDFlow);
+      if (VL1 && (VL0->getParent() != VL1->getParent())) {
+        Type *ScalarTy = VL0->getType()->getScalarType();
+        if (ScalarTy && isValidElementType(ScalarTy)) {
+          InstructionCost ScalarDFlow =
+              TTI->getDataFlowCost(ScalarTy,
+                                 /*IsCallingConv=*/false) *
+              TE.getVectorFactor();
+          InstructionCost VectorDFlow = TTI->getDataFlowCost(
+              FixedVectorType::get(ScalarTy, TE.getVectorFactor()),
+              /*IsCallingConv=*/false);
+          Cost += (VectorDFlow - ScalarDFlow);
+        }
       }
     }
 
@@ -10338,17 +10301,15 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     if (EphValues.count(EU.User))
       continue;
 
-    // Account for any additional costs required by CallingConvention for the
-    // type.
-    if (isa_and_nonnull<ReturnInst>(EU.User)) {
-      Cost +=
-          TTI->getDataFlowCost(EU.Scalar->getType(), /*IsCallingConv*/ true);
+    // No extract cost for vector "scalar"
+    if (isa<FixedVectorType>(EU.Scalar->getType())) {
+      // Account for any additional costs required by CallingConvention for the
+      // type.
+      if (isa_and_nonnull<ReturnInst>(EU.User))
+        Cost +=
+            TTI->getDataFlowCost(EU.Scalar->getType(), /*IsCallingConv=*/true);
       continue;
     }
-
-    // No extract cost for vector "scalar"
-    if (isa<FixedVectorType>(EU.Scalar->getType()))
-      continue;
 
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
@@ -10646,6 +10607,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   if (ViewSLPTree)
     ViewGraph(this, "SLP" + F->getName(), false, Str);
 #endif
+
   return Cost;
 }
 
