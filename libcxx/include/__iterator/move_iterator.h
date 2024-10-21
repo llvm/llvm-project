@@ -140,7 +140,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() && { return std::move(__current_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr reference operator*() const { return ranges::iter_move(__current_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](difference_type __n) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](difference_type __n) const _LIBCPP_LIFETIMEBOUND {
     return ranges::iter_move(__current_ + __n);
   }
 
@@ -174,7 +174,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference operator*() const {
     return static_cast<reference>(*__current_);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference operator[](difference_type __n) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference operator[](difference_type __n) const _LIBCPP_LIFETIMEBOUND {
     return static_cast<reference>(__current_[__n]);
   }
 

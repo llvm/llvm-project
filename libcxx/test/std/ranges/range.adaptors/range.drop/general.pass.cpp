@@ -37,8 +37,11 @@ bool orderedFibonacci(View v, int n = 1) {
   if (v.size() < 3)
     return true;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wdangling"
   if (v[2] != v[0] + v[1])
     return false;
+#pragma clang diagnostic pop
 
   return orderedFibonacci(std::ranges::drop_view(v.base(), n), n + 1);
 }

@@ -93,6 +93,8 @@ constexpr bool testSpan()
     assert(s3.data() == val && s3.size() == 2);
     assert(s4.data() == val && s4.size() == 2);
 
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wdangling"
     std::span<const int> s5 = {{1,2}};
 #if TEST_STD_VER >= 26
     std::span<const int, 2> s6({1, 2});
@@ -101,6 +103,7 @@ constexpr bool testSpan()
 #endif
     assert(s5.size() == 2);  // and it dangles
     assert(s6.size() == 2);  // and it dangles
+#pragma clang diagnostic pop
 
     return true;
 }
