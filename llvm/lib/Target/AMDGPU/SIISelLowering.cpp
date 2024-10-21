@@ -899,6 +899,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FADD,
                        ISD::FSUB,
                        ISD::FDIV,
+                       ISD::FMUL,
                        ISD::FMINNUM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
@@ -14551,6 +14552,66 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performFMulCombine(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  EVT IntVT = VT.changeElementType(MVT::i32);
+
+  SDLoc SL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDNodeFlags Flags = N->getFlags();
+  SDNodeFlags LHSFlags = LHS->getFlags();
+
+  // It is cheaper to realize i32 inline constants as compared against
+  // as materializing f16 or f64 (or even non-inline f32) values,
+  // possible via ldexp usage, as shown below :
+  //
+  // Given : A = 2^a  &  B = 2^b ; where a and b are integers.
+  // fmul x, (select y, A, B)     -> ldexp( x, (select i32 y, a, b) )
+  // fmul x, (select y, -A, -B)   -> ldexp( (fneg x), (select i32 y, a, b) )
+  if (VT.getScalarType() == MVT::f64 || VT.getScalarType() == MVT::f32 ||
+      VT.getScalarType() == MVT::f16) {
+    if (RHS.hasOneUse() && RHS.getOpcode() == ISD::SELECT) {
+      const ConstantFPSDNode *TrueNode =
+          isConstOrConstSplatFP(RHS.getOperand(1));
+      const ConstantFPSDNode *FalseNode =
+          isConstOrConstSplatFP(RHS.getOperand(2));
+
+      bool AreNodesFP = TrueNode && FalseNode;
+      if (!AreNodesFP)
+        return SDValue();
+
+      if (TrueNode->isNegative() != FalseNode->isNegative())
+        return SDValue();
+
+      // For f32, only non-inline constants should be transformed.
+      const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+      if (VT.getScalarType() == MVT::f32 &&
+          TII->isInlineConstant(TrueNode->getValueAPF()) &&
+          TII->isInlineConstant(FalseNode->getValueAPF()))
+        return SDValue();
+
+      LHS = TrueNode->isNegative()
+                ? DAG.getNode(ISD::FNEG, SL, VT, LHS, LHSFlags)
+                : LHS;
+      int TrueNodeExpVal = TrueNode->getValueAPF().getExactLog2Abs();
+      int FalseNodeExpVal = FalseNode->getValueAPF().getExactLog2Abs();
+      if (TrueNodeExpVal != INT_MIN && FalseNodeExpVal != INT_MIN) {
+        SDValue SelectNode =
+            DAG.getNode(ISD::SELECT, SL, IntVT, RHS.getOperand(0),
+                        DAG.getConstant(TrueNodeExpVal, SL, IntVT),
+                        DAG.getConstant(FalseNodeExpVal, SL, IntVT));
+        return DAG.getNode(ISD::FLDEXP, SL, VT, LHS, SelectNode, Flags);
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performFMACombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -14840,6 +14901,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFSubCombine(N, DCI);
   case ISD::FDIV:
     return performFDivCombine(N, DCI);
+  case ISD::FMUL:
+    return performFMulCombine(N, DCI);
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
   case ISD::FMAXNUM:
