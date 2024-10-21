@@ -1253,6 +1253,10 @@ static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const Function *Func,
                                        const CallExpr *Call) {
+  if (!Call->getArg(0)->getType()->isIntegerType() ||
+      !Call->getArg(1)->getType()->isIntegerType())
+    return false;
+
   PrimType ValT = *S.Ctx.classify(Call->getArg(0));
   PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
   APSInt Val = peekToAPSInt(S.Stk, ValT,
