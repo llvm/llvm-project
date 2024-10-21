@@ -188,7 +188,7 @@ void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends)
-    write64be(buf, s.getVA());
+    write64be(buf, s.getVA(ctx));
 }
 
 void SystemZ::writePltHeader(uint8_t *buf) const {

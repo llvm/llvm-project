@@ -1,6 +1,6 @@
 // RUN: %clangxx -fsanitize=realtime %s -o %t
 // RUN: %env_rtsan_opts=halt_on_error=false %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NOSUPPRESSIONS
-// RUN: %env_rtsan_opts=suppressions='%s.supp' not %run %t 2>&1 | FileCheck %s
+// RUN: %env_rtsan_opts=suppressions='%s.supp':print_stats_on_exit=true not %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: ios
 
 // Intent: Ensure that suppressions work as intended
@@ -60,6 +60,9 @@ int main() {
 // CHECK-NOT: vector
 // CHECK-NOT: free
 // CHECK-NOT: BlockFunc
+
+// CHECK: RealtimeSanitizer exit stats:
+// CHECK: Suppression count: 7
 
 // CHECK-NOSUPPRESSIONS: malloc
 // CHECK-NOSUPPRESSIONS: vector

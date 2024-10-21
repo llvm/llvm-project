@@ -3824,7 +3824,7 @@ IntrinsicLibrary::genReduction(FN func, FD funcDim, llvm::StringRef errMsg,
   if (absentDim || rank == 1) {
     mlir::Type ty = array.getType();
     mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
     if (fir::isa_complex(eleTy)) {
       mlir::Value result = builder.createTemporary(loc, eleTy);
       func(builder, loc, array, mask, result);
@@ -6137,7 +6137,7 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
 
   mlir::Type ty = array.getType();
   mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
 
   // Handle optional arguments
   bool absentDim = isStaticallyAbsent(args[2]);
