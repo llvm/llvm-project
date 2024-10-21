@@ -719,14 +719,17 @@ bool GIMatchTableExecutor::executeMatchTable(
       }
       break;
     }
+    case GIM_CheckIntPtr:
     case GIM_CheckPointerToAny: {
+      bool IsPointerCheck = MatcherOpcode == GIM_CheckPointerToAny;
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();
       uint64_t SizeInBits = readULEB();
 
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": GIM_CheckPointerToAny(MIs["
-                             << InsnID << "]->getOperand(" << OpIdx
+                      dbgs() << CurrentIdx << ": GIM_Check"
+                             << (IsPointerCheck ? "PointerToAny" : "IntPtr")
+                             << "(MIs[" << InsnID << "]->getOperand(" << OpIdx
                              << "), SizeInBits=" << SizeInBits << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
@@ -735,14 +738,15 @@ bool GIMatchTableExecutor::executeMatchTable(
       // iPTR must be looked up in the target.
       if (SizeInBits == 0) {
         MachineFunction *MF = State.MIs[InsnID]->getParent()->getParent();
-        const unsigned AddrSpace = Ty.getAddressSpace();
+        const unsigned AddrSpace = IsPointerCheck ? Ty.getAddressSpace() : 0;
         SizeInBits = MF->getDataLayout().getPointerSizeInBits(AddrSpace);
       }
 
       assert(SizeInBits != 0 && "Pointer size must be known");
 
       if (MO.isReg()) {
-        if (!Ty.isPointer() || Ty.getSizeInBits() != SizeInBits)
+        if ((IsPointerCheck && !Ty.isPointer()) ||
+            Ty.getSizeInBits() != SizeInBits)
           if (handleReject() == RejectAndGiveUp)
             return false;
       } else if (handleReject() == RejectAndGiveUp)
