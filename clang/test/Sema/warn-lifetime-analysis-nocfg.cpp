@@ -636,18 +636,27 @@ void test() {
   std::optional<std::string_view> o3 = std::optional<std::string>(s); // expected-warning {{object backing the pointer}}
   std::optional<std::string_view> o4 = std::optional<std::string_view>(s);
 
-  // FIXME: should work for assignment cases
-  v1 = {std::string()};
-  o1 = std::string();
+  v1 = {std::string()}; // expected-warning {{object backing the pointer}}
+  o1 = std::string(); // expected-warning {{object backing the pointer}}
 
   // no warning on copying pointers.
   std::vector<std::string_view> n1 = {std::string_view()};
+  n1 = {std::string_view()};
   std::optional<std::string_view> n2 = {std::string_view()};
+  n2 = {std::string_view()};
   std::optional<std::string_view> n3 = std::string_view();
+  n3 = std::string_view();
   std::optional<std::string_view> n4 = std::make_optional(std::string_view());
+  n4 = std::make_optional(std::string_view());
   const char* b = "";
   std::optional<std::string_view> n5 = std::make_optional(b);
+  n5 = std::make_optional(b);
   std::optional<std::string_view> n6 = std::make_optional("test");
+  n6 = std::make_optional("test");
+  // Deeper nested containers are not supported; only first-level nesting is
+  // supported.
+  std::vector<std::vector<std::string_view>> n7 = {{std::string()}};
+  n7 = {{std::string()}};
 }
 
 std::vector<std::string_view> test2(int i) {
@@ -685,7 +694,9 @@ std::optional<std::string_view> test3(int i) {
    return s; // expected-warning {{address of stack memory associated}}
   return sv; // fine
   Container2<std::string_view> c1 = Container1<Foo>(); // no diagnostic as Foo is not an Owner.
+  c1 = Container1<Foo>();
   Container2<std::string_view> c2 = Container1<FooOwner>(); // expected-warning {{object backing the pointer will be destroyed}}
+  c2 = Container1<FooOwner>(); // expected-warning {{object backing the pointer}}
   return GetFoo(); // fine, we don't know Foo is owner or not, be conservative.
   return GetFooOwner(); // expected-warning {{returning address of local temporary object}}
 }
@@ -715,10 +726,12 @@ struct [[gsl::Pointer]] Span {
 // Pointer from Owner<Pointer>
 std::string_view test5() {
   std::string_view a = StatusOr<std::string_view>().valueLB(); // expected-warning {{object backing the pointer will be dest}}
+  a = StatusOr<std::string_view>().valueLB(); // expected-warning {{object backing the pointer}}
   return StatusOr<std::string_view>().valueLB(); // expected-warning {{returning address of local temporary}}
 
   // No dangling diagnostics on non-lifetimebound methods.
   std::string_view b = StatusOr<std::string_view>().valueNoLB();
+  b = StatusOr<std::string_view>().valueNoLB();
   return StatusOr<std::string_view>().valueNoLB();
 }
 
@@ -775,8 +788,10 @@ const int& test12(Span<int> a) {
 void test13() {
   // FIXME: RHS is Owner<Pointer>, we skip this case to avoid false positives.
   std::optional<Span<int*>> abc = std::vector<int*>{};
+  abc = std::vector<int*> {};
 
   std::optional<Span<int>> t = std::vector<int> {}; // expected-warning {{object backing the pointer will be destroyed}}
+  t = std::vector<int> {}; // expected-warning {{object backing the pointer}}
 }
 
 } // namespace GH100526
