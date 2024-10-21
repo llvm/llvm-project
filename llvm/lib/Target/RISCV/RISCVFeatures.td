@@ -933,7 +933,7 @@ def FeatureStdExtSmepmp
 
 def FeatureStdExtSmrnmi
     : RISCVExtension<"smrnmi", 1, 0,
-                     "'Smrnmi' (Extension for Resumable Non-Maskable Interrupts)">;
+                     "'Smrnmi' (Resumable Non-Maskable Interrupts)">;
 def HasStdExtSmrnmi : Predicate<"Subtarget->hasStdExtSmrnmi()">,
                        AssemblerPredicate<(all_of FeatureStdExtSmrnmi),
                            "'Smrnmi' (Resumable Non-Maskable Interrupts)">; 
