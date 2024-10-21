@@ -3595,6 +3595,9 @@ private:
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
 
+  /// Parses the 'permutation' clause of a '#pragma omp interchange' directive.
+  OMPClause *ParseOpenMPPermutationClause();
+
   /// Parses clause without any additional arguments.
   ///
   /// \param Kind Kind of current clause.
@@ -3786,14 +3789,23 @@ private:
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
                                                       OpenACCClauseKind CK,
                                                       SourceLocation Loc);
+
   /// Parses the 'size-expr', which is an integral value, or an asterisk.
-  bool ParseOpenACCSizeExpr();
+  /// Asterisk is represented by a OpenACCAsteriskSizeExpr
+  ExprResult ParseOpenACCSizeExpr(OpenACCClauseKind CK);
   /// Parses a comma delimited list of 'size-expr's.
-  bool ParseOpenACCSizeExprList();
+  bool ParseOpenACCSizeExprList(OpenACCClauseKind CK,
+                                llvm::SmallVectorImpl<Expr *> &SizeExprs);
   /// Parses a 'gang-arg-list', used for the 'gang' clause.
-  bool ParseOpenACCGangArgList(SourceLocation GangLoc);
-  /// Parses a 'gang-arg', used for the 'gang' clause.
-  bool ParseOpenACCGangArg(SourceLocation GangLoc);
+  bool ParseOpenACCGangArgList(SourceLocation GangLoc,
+                               llvm::SmallVectorImpl<OpenACCGangKind> &GKs,
+                               llvm::SmallVectorImpl<Expr *> &IntExprs);
+
+  using OpenACCGangArgRes = std::pair<OpenACCGangKind, ExprResult>;
+  /// Parses a 'gang-arg', used for the 'gang' clause. Returns a pair of the
+  /// ExprResult (which contains the validity of the expression), plus the gang
+  /// kind for the current argument.
+  OpenACCGangArgRes ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
 

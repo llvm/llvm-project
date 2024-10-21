@@ -403,9 +403,9 @@ static InstructionCost computeSpeculationCost(const User *I,
 }
 
 /// If we have a merge point of an "if condition" as accepted above,
-/// return true if the specified value dominates the block.  We
-/// don't handle the true generality of domination here, just a special case
-/// which works well enough for us.
+/// return true if the specified value dominates the block.  We don't handle
+/// the true generality of domination here, just a special case which works
+/// well enough for us.
 ///
 /// If AggressiveInsts is non-null, and if V does not dominate BB, we check to
 /// see if V (which must be an instruction) and its recursive operands
@@ -1594,7 +1594,7 @@ static void hoistLockstepIdenticalDbgVariableRecords(
 
 static bool areIdenticalUpToCommutativity(const Instruction *I1,
                                           const Instruction *I2) {
-  if (I1->isIdenticalToWhenDefined(I2))
+  if (I1->isIdenticalToWhenDefined(I2, /*IntersectAttrs=*/true))
     return true;
 
   if (auto *Cmp1 = dyn_cast<CmpInst>(I1))
@@ -1910,6 +1910,14 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
           if (!I2->use_empty())
             I2->replaceAllUsesWith(I1);
           I1->andIRFlags(I2);
+          if (auto *CB = dyn_cast<CallBase>(I1)) {
+            bool Success = CB->tryIntersectAttributes(cast<CallBase>(I2));
+            assert(Success && "We should not be trying to hoist callbases "
+                              "with non-intersectable attributes");
+            // For NDEBUG Compile.
+            (void)Success;
+          }
+
           combineMetadataForCSE(I1, I2, true);
           // I1 and I2 are being combined into a single instruction.  Its debug
           // location is the merged locations of the original instructions.
@@ -2130,7 +2138,7 @@ static bool canSinkInstructions(
   const Instruction *I0 = Insts.front();
   const auto I0MMRA = MMRAMetadata(*I0);
   for (auto *I : Insts) {
-    if (!I->isSameOperationAs(I0))
+    if (!I->isSameOperationAs(I0, Instruction::CompareUsingIntersectedAttrs))
       return false;
 
     // swifterror pointers can only be used by a load or store; sinking a load
@@ -2287,6 +2295,13 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
       combineMetadataForCSE(I0, I, true);
       I0->andIRFlags(I);
+      if (auto *CB = dyn_cast<CallBase>(I0)) {
+        bool Success = CB->tryIntersectAttributes(cast<CallBase>(I));
+        assert(Success && "We should not be trying to sink callbases "
+                          "with non-intersectable attributes");
+        // For NDEBUG Compile.
+        (void)Success;
+      }
     }
 
   for (User *U : make_early_inc_range(I0->users())) {
@@ -2764,7 +2779,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
   // including operand bundles.
   const InvokeInst *II0 = Invokes.front();
   for (auto *II : Invokes.drop_front())
-    if (!II->isSameOperationAs(II0))
+    if (!II->isSameOperationAs(II0, Instruction::CompareUsingIntersectedAttrs))
       return false;
 
   // Can we theoretically form the data operands for the merged `invoke`?
@@ -2903,6 +2918,10 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     for (BasicBlock *OrigSuccBB : successors(II->getParent()))
       OrigSuccBB->removePredecessor(II->getParent());
     BranchInst::Create(MergedInvoke->getParent(), II->getParent());
+    bool Success = MergedInvoke->tryIntersectAttributes(II);
+    assert(Success && "Merged invokes with incompatible attributes");
+    // For NDEBUG Compile
+    (void)Success;
     II->replaceAllUsesWith(MergedInvoke);
     II->eraseFromParent();
     ++NumInvokesMerged;
@@ -7224,7 +7243,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
-    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base);
+    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base, true);
     Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
   }
   return true;

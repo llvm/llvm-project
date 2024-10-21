@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"

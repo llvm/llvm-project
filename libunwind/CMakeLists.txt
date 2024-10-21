@@ -68,7 +68,11 @@ set(LIBUNWIND_LIBRARY_VERSION "1.0" CACHE STRING
    this also controls the linker's 'current_version' property.")
 
 if(MINGW)
-  set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-mingw.cfg.in")
+  if (LIBUNWIND_ENABLE_SHARED)
+    set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-shared-mingw.cfg.in")
+  else()
+    set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-static-mingw.cfg.in")
+  endif()
 elseif (LIBUNWIND_ENABLE_SHARED)
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-shared.cfg.in")
 else()
@@ -158,8 +162,7 @@ set(LIBUNWIND_C_FLAGS "")
 set(LIBUNWIND_CXX_FLAGS "")
 set(LIBUNWIND_COMPILE_FLAGS "")
 set(LIBUNWIND_LINK_FLAGS "")
-set(LIBUNWIND_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+set(LIBUNWIND_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING "See documentation for LIBCXX_ADDITIONAL_COMPILE_FLAGS")
 set(LIBUNWIND_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libunwind is linked to which can be provided in cache")
 

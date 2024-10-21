@@ -64,6 +64,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceManagerInternals.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/TokenKinds.h"
@@ -3912,6 +3913,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       FPPragmaOptions.swap(Record);
       break;
 
+    case DECLS_WITH_EFFECTS_TO_VERIFY:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
+      break;
+
     case OPENCL_EXTENSIONS:
       for (unsigned I = 0, E = Record.size(); I != E; ) {
         auto Name = ReadString(Record, I);
@@ -5328,7 +5334,9 @@ std::string ASTReader::getOriginalSourceFile(
     const PCHContainerReader &PCHContainerRdr, DiagnosticsEngine &Diags) {
   // Open the AST file.
   auto Buffer = FileMgr.getBufferForFile(ASTFileName, /*IsVolatile=*/false,
-                                         /*RequiresNullTerminator=*/false);
+                                         /*RequiresNullTerminator=*/false,
+                                         /*MaybeLimit=*/std::nullopt,
+                                         /*IsText=*/false);
   if (!Buffer) {
     Diags.Report(diag::err_fe_unable_to_read_pch_file)
         << ASTFileName << Buffer.getError().message();
@@ -7488,7 +7496,7 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   case PREDEF_TYPE_##Id##_ID:                                                  \
     T = Context.SingletonId;                                                   \
     break;
@@ -8412,6 +8420,17 @@ void ASTReader::InitializeSema(Sema &S) {
     SemaObj->CurFPFeatures =
         NewOverrides.applyOverrides(SemaObj->getLangOpts());
   }
+
+  for (GlobalDeclID ID : DeclsWithEffectsToVerify) {
+    Decl *D = GetDecl(ID);
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      SemaObj->addDeclWithEffects(FD, FD->getFunctionEffects());
+    else if (auto *BD = dyn_cast<BlockDecl>(D))
+      SemaObj->addDeclWithEffects(BD, BD->getFunctionEffects());
+    else
+      llvm_unreachable("unexpected Decl type in DeclsWithEffectsToVerify");
+  }
+  DeclsWithEffectsToVerify.clear();
 
   SemaObj->OpenCLFeatures = OpenCLExtensions;
 
@@ -9632,18 +9651,15 @@ DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) const {
   return Diags.Report(Loc, DiagID);
 }
 
-void ASTReader::warnStackExhausted(SourceLocation Loc) {
+void ASTReader::runWithSufficientStackSpace(SourceLocation Loc,
+                                            llvm::function_ref<void()> Fn) {
   // When Sema is available, avoid duplicate errors.
   if (SemaObj) {
-    SemaObj->warnStackExhausted(Loc);
+    SemaObj->runWithSufficientStackSpace(Loc, Fn);
     return;
   }
 
-  if (WarnedStackExhausted)
-    return;
-  WarnedStackExhausted = true;
-
-  Diag(Loc, diag::warn_stack_exhausted);
+  StackHandler.runWithSufficientStackSpace(Loc, Fn);
 }
 
 /// Retrieve the identifier table associated with the
@@ -9987,7 +10003,8 @@ void ASTReader::finishPendingActions() {
 
     auto RTD = cast<RedeclarableTemplateDecl>(D)->getCanonicalDecl();
     for (auto *R = getMostRecentExistingDecl(RTD); R; R = R->getPreviousDecl())
-      cast<RedeclarableTemplateDecl>(R)->Common = RTD->Common;
+      cast<RedeclarableTemplateDecl>(R)->setCommonPtr(
+          RTD->getCommonPtrInternal());
   }
   PendingDefinitions.clear();
 
@@ -10492,13 +10509,14 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                      bool AllowConfigurationMismatch, bool ValidateSystemInputs,
                      bool ValidateASTInputFilesContent, bool UseGlobalIndex,
                      std::unique_ptr<llvm::Timer> ReadTimer)
-    : Listener(bool(DisableValidationKind &DisableValidationForModuleKind::PCH)
+    : Listener(bool(DisableValidationKind & DisableValidationForModuleKind::PCH)
                    ? cast<ASTReaderListener>(new SimpleASTReaderListener(PP))
                    : cast<ASTReaderListener>(new PCHValidator(PP, *this))),
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
-      PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()), PP(PP),
-      ContextObj(Context), ModuleMgr(PP.getFileManager(), ModuleCache,
-                                     PCHContainerRdr, PP.getHeaderSearchInfo()),
+      PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()),
+      StackHandler(Diags), PP(PP), ContextObj(Context),
+      ModuleMgr(PP.getFileManager(), ModuleCache, PCHContainerRdr,
+                PP.getHeaderSearchInfo()),
       DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
       DisableValidationKind(DisableValidationKind),
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
@@ -10586,6 +10604,11 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_sizes: {
     unsigned NumSizes = Record.readInt();
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
+    break;
+  }
+  case llvm::omp::OMPC_permutation: {
+    unsigned NumLoops = Record.readInt();
+    C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
     break;
   }
   case llvm::omp::OMPC_full:
@@ -10972,6 +10995,12 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPPermutationClause(OMPPermutationClause *C) {
+  for (Expr *&E : C->getArgsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }
@@ -12283,11 +12312,49 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCIndependentClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Auto:
     return OpenACCAutoClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::Collapse: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool HasForce = readBool();
+    Expr *LoopCount = readSubExpr();
+    return OpenACCCollapseClause::Create(getContext(), BeginLoc, LParenLoc,
+                                         HasForce, LoopCount, EndLoc);
+  }
+  case OpenACCClauseKind::Tile: {
+    SourceLocation LParenLoc = readSourceLocation();
+    unsigned NumClauses = readInt();
+    llvm::SmallVector<Expr *> SizeExprs;
+    for (unsigned I = 0; I < NumClauses; ++I)
+      SizeExprs.push_back(readSubExpr());
+    return OpenACCTileClause::Create(getContext(), BeginLoc, LParenLoc,
+                                     SizeExprs, EndLoc);
+  }
+  case OpenACCClauseKind::Gang: {
+    SourceLocation LParenLoc = readSourceLocation();
+    unsigned NumExprs = readInt();
+    llvm::SmallVector<OpenACCGangKind> GangKinds;
+    llvm::SmallVector<Expr *> Exprs;
+    for (unsigned I = 0; I < NumExprs; ++I) {
+      GangKinds.push_back(readEnum<OpenACCGangKind>());
+      Exprs.push_back(readSubExpr());
+    }
+    return OpenACCGangClause::Create(getContext(), BeginLoc, LParenLoc,
+                                     GangKinds, Exprs, EndLoc);
+  }
+  case OpenACCClauseKind::Worker: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *WorkerExpr = readBool() ? readSubExpr() : nullptr;
+    return OpenACCWorkerClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       WorkerExpr, EndLoc);
+  }
+  case OpenACCClauseKind::Vector: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *VectorExpr = readBool() ? readSubExpr() : nullptr;
+    return OpenACCVectorClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       VectorExpr, EndLoc);
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Delete:
@@ -12296,12 +12363,9 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::Tile:
-  case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

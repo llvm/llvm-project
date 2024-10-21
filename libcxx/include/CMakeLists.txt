@@ -560,7 +560,6 @@ set(files
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
-  __memory/voidify.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -688,7 +687,6 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
-  __std_clang_module
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
@@ -749,6 +747,7 @@ set(files
   __type_traits/common_type.h
   __type_traits/conditional.h
   __type_traits/conjunction.h
+  __type_traits/container_traits.h
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
@@ -789,6 +788,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
   __type_traits/is_literal_type.h
@@ -967,7 +967,6 @@ set(files
   limits
   list
   locale
-  locale.h
   map
   math.h
   mdspan
@@ -998,7 +997,6 @@ set(files
   stdbool.h
   stddef.h
   stdexcept
-  stdint.h
   stdio.h
   stdlib.h
   stop_token

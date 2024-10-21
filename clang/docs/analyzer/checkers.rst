@@ -1288,6 +1288,34 @@ by explicitly marking the ``size`` parameter as sanitized. See the
     delete[] ptr;
   }
 
+.. _optin-taint-TaintedDiv:
+
+optin.taint.TaintedDiv (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""
+This checker warns when the denominator in a division
+operation is a tainted (potentially attacker controlled) value.
+If the attacker can set the denominator to 0, a runtime error can
+be triggered. The checker warns when the denominator is a tainted
+value and the analyzer cannot prove that it is not 0. This warning
+is more pessimistic than the :ref:`core-DivideZero` checker
+which warns only when it can prove that the denominator is 0.
+
+.. code-block:: c
+
+  int vulnerable(int n) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    return n / size; // warn: Division by a tainted value, possibly zero
+  }
+
+  int not_vulnerable(int n) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    if (!size)
+      return 0;
+    return n / size; // no warning
+  }
+
 .. _security-checkers:
 
 security
@@ -3343,12 +3371,23 @@ Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmem
 
 alpha.unix.cstring.NotNullTerminated (C)
 """"""""""""""""""""""""""""""""""""""""
-Check for arguments which are not null-terminated strings; applies to: ``strlen, strnlen, strcpy, strncpy, strcat, strncat, wcslen, wcsnlen``.
+Check for arguments which are not null-terminated strings;
+applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
+
+Only very fundamental cases are detected where the passed memory block is
+absolutely different from a null-terminated string. This checker does not
+find if a memory buffer is passed where the terminating zero character
+is missing.
 
 .. code-block:: c
 
- void test() {
-   int y = strlen((char *)&test); // warn
+ void test1() {
+   int l = strlen((char *)&test); // warn
+ }
+
+ void test2() {
+ label:
+   int l = strlen((char *)&&label); // warn
  }
 
 .. _alpha-unix-cstring-OutOfBounds:

@@ -205,8 +205,7 @@ static LogicalResult verifyAllocLikeOp(AllocLikeOp op) {
   if (!memRefType)
     return op.emitOpError("result must be a memref");
 
-  if (static_cast<int64_t>(op.getDynamicSizes().size()) !=
-      memRefType.getNumDynamicDims())
+  if (op.getDynamicSizes().size() != memRefType.getNumDynamicDims())
     return op.emitOpError("dimension operand count does not equal memref "
                           "dynamic dimension count");
 
@@ -283,8 +282,7 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
     // Create new memref type (which will have fewer dynamic dimensions).
     MemRefType newMemRefType =
         MemRefType::Builder(memrefType).setShape(newShapeConstants);
-    assert(static_cast<int64_t>(dynamicSizes.size()) ==
-           newMemRefType.getNumDynamicDims());
+    assert(dynamicSizes.size() == newMemRefType.getNumDynamicDims());
 
     // Create and insert the alloc op for the new memref.
     auto newAlloc = rewriter.create<AllocLikeOp>(

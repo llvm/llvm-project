@@ -1735,9 +1735,10 @@ Expr<TO> FoldOperation(
               if (converted.overflow &&
                   msvcWorkaround.context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingException)) {
-                ctx.messages().Say(
-                    "INTEGER(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
-                    Operand::kind, TO::kind);
+                ctx.messages().Say(common::UsageWarning::FoldingException,
+                    "conversion of %s_%d to INTEGER(%d) overflowed; result is %s"_warn_en_US,
+                    value->SignedDecimal(), Operand::kind, TO::kind,
+                    converted.value.SignedDecimal());
               }
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
@@ -1745,7 +1746,7 @@ Expr<TO> FoldOperation(
               if (msvcWorkaround.context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingException)) {
                 if (converted.flags.test(RealFlag::InvalidArgument)) {
-                  ctx.messages().Say(
+                  ctx.messages().Say(common::UsageWarning::FoldingException,
                       "REAL(%d) to INTEGER(%d) conversion: invalid argument"_warn_en_US,
                       Operand::kind, TO::kind);
                 } else if (converted.flags.test(RealFlag::Overflow)) {
@@ -1864,7 +1865,7 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
       if (negated.overflow &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingException)) {
-        context.messages().Say(
+        context.messages().Say(common::UsageWarning::FoldingException,
             "INTEGER(%d) negation overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{std::move(negated.value)}};
@@ -1906,7 +1907,7 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
       if (sum.overflow &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingException)) {
-        context.messages().Say(
+        context.messages().Say(common::UsageWarning::FoldingException,
             "INTEGER(%d) addition overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{sum.value}};
@@ -1934,7 +1935,7 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
       if (difference.overflow &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingException)) {
-        context.messages().Say(
+        context.messages().Say(common::UsageWarning::FoldingException,
             "INTEGER(%d) subtraction overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{difference.value}};
@@ -1962,7 +1963,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
       if (product.SignedMultiplicationOverflowed() &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingException)) {
-        context.messages().Say(
+        context.messages().Say(common::UsageWarning::FoldingException,
             "INTEGER(%d) multiplication overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{product.lower}};
@@ -2008,7 +2009,7 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
       if (quotAndRem.divisionByZero) {
         if (context.languageFeatures().ShouldWarn(
                 common::UsageWarning::FoldingException)) {
-          context.messages().Say(
+          context.messages().Say(common::UsageWarning::FoldingException,
               "INTEGER(%d) division by zero"_warn_en_US, T::kind);
         }
         return Expr<T>{std::move(x)};
@@ -2016,7 +2017,7 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
       if (quotAndRem.overflow &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingException)) {
-        context.messages().Say(
+        context.messages().Say(common::UsageWarning::FoldingException,
             "INTEGER(%d) division overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{quotAndRem.quotient}};
@@ -2059,13 +2060,13 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       if (context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingException)) {
         if (power.divisionByZero) {
-          context.messages().Say(
+          context.messages().Say(common::UsageWarning::FoldingException,
               "INTEGER(%d) zero to negative power"_warn_en_US, T::kind);
         } else if (power.overflow) {
-          context.messages().Say(
+          context.messages().Say(common::UsageWarning::FoldingException,
               "INTEGER(%d) power overflowed"_warn_en_US, T::kind);
         } else if (power.zeroToZero) {
-          context.messages().Say(
+          context.messages().Say(common::UsageWarning::FoldingException,
               "INTEGER(%d) 0**0 is not defined"_warn_en_US, T::kind);
         }
       }
@@ -2076,7 +2077,7 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
             Constant<T>{(*callable)(context, folded->first, folded->second)}};
       } else if (context.languageFeatures().ShouldWarn(
                      common::UsageWarning::FoldingFailure)) {
-        context.messages().Say(
+        context.messages().Say(common::UsageWarning::FoldingFailure,
             "Power for %s cannot be folded on host"_warn_en_US,
             T{}.AsFortran());
       }
@@ -2162,7 +2163,7 @@ Expr<Type<TypeCategory::Real, KIND>> ToReal(
           if (original != converted &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingValueChecks)) { // C1601
-            context.messages().Say(
+            context.messages().Say(common::UsageWarning::FoldingValueChecks,
                 "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_warn_en_US);
           }
         } else if constexpr (IsNumericCategoryExpr<From>()) {

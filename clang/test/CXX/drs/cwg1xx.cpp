@@ -119,6 +119,20 @@ namespace cwg109 { // cwg109: yes
   };
 }
 
+namespace cwg110 { // cwg110: 2.8
+template <typename T>
+void f(T);
+
+class f {};
+
+template <typename T>
+void f(T, T);
+
+class f g;
+void (*h)(int) = static_cast<void(*)(int)>(f);
+void (*i)(int, int) = static_cast<void(*)(int, int)>(f);
+} // namespace cwg110
+
 namespace cwg111 { // cwg111: dup 535
   struct A { A(); A(volatile A&, int = 0); A(A&, const char * = "foo"); };
   struct B : A { B(); }; // #cwg111-B

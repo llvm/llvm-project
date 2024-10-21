@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "rtsan/rtsan_stats.h"
+#include "rtsan/rtsan_flags.h"
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -18,23 +19,32 @@
 using namespace __sanitizer;
 using namespace __rtsan;
 
-static atomic_uint32_t rtsan_total_error_count{0};
-static atomic_uint32_t rtsan_unique_error_count{0};
+static atomic_uint32_t total_error_count{0};
+static atomic_uint32_t unique_error_count{0};
+static atomic_uint32_t suppressed_count{0};
 
 void __rtsan::IncrementTotalErrorCount() {
-  atomic_fetch_add(&rtsan_total_error_count, 1, memory_order_relaxed);
+  atomic_fetch_add(&total_error_count, 1, memory_order_relaxed);
 }
 
 void __rtsan::IncrementUniqueErrorCount() {
-  atomic_fetch_add(&rtsan_unique_error_count, 1, memory_order_relaxed);
+  atomic_fetch_add(&unique_error_count, 1, memory_order_relaxed);
 }
 
 static u32 GetTotalErrorCount() {
-  return atomic_load(&rtsan_total_error_count, memory_order_relaxed);
+  return atomic_load(&total_error_count, memory_order_relaxed);
 }
 
 static u32 GetUniqueErrorCount() {
-  return atomic_load(&rtsan_unique_error_count, memory_order_relaxed);
+  return atomic_load(&unique_error_count, memory_order_relaxed);
+}
+
+void __rtsan::IncrementSuppressedCount() {
+  atomic_fetch_add(&suppressed_count, 1, memory_order_relaxed);
+}
+
+static u32 GetSuppressedCount() {
+  return atomic_load(&suppressed_count, memory_order_relaxed);
 }
 
 void __rtsan::PrintStatisticsSummary() {
@@ -42,4 +52,7 @@ void __rtsan::PrintStatisticsSummary() {
   Printf("RealtimeSanitizer exit stats:\n");
   Printf("    Total error count: %u\n", GetTotalErrorCount());
   Printf("    Unique error count: %u\n", GetUniqueErrorCount());
+
+  if (flags().ContainsSuppresionFile())
+    Printf("    Suppression count: %u\n", GetSuppressedCount());
 }

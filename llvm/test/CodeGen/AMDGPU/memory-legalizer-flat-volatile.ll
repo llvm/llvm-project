@@ -1042,7 +1042,6 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0

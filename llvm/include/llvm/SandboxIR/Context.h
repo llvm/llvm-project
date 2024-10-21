@@ -68,10 +68,11 @@ protected:
   }
   /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
   Constant *getOrCreateConstant(llvm::Constant *LLVMC);
+  friend class Utils; // For getMemoryBase
 
   // Friends for getOrCreateConstant().
 #define DEF_CONST(ID, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 
   /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
   /// also create all contents of the block.
