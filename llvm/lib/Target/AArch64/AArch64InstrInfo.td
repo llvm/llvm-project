@@ -5430,14 +5430,14 @@ defm SCVTF  : SIMDTwoVectorIntToFP<0, 0, 0b11101, "scvtf", any_sint_to_fp>;
 defm SHLL   : SIMDVectorLShiftLongBySizeBHS;
 defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
 defm SQNEG  : SIMDTwoVectorBHSD<1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
-defm SQXTN  : SIMDMixedTwoVector<0, 0b10100, "sqxtn", int_aarch64_neon_sqxtn>;
-defm SQXTUN : SIMDMixedTwoVector<1, 0b10010, "sqxtun", int_aarch64_neon_sqxtun>;
+defm SQXTN  : SIMDMixedTwoVector<0, 0b10100, "sqxtn", truncssat_s>;
+defm SQXTUN : SIMDMixedTwoVector<1, 0b10010, "sqxtun", truncssat_u>;
 defm SUQADD : SIMDTwoVectorBHSDTied<0, 0b00011, "suqadd",int_aarch64_neon_suqadd>;
 defm UADALP : SIMDLongTwoVectorTied<1, 0b00110, "uadalp",
        BinOpFrag<(add node:$LHS, (AArch64uaddlp node:$RHS))> >;
 defm UADDLP : SIMDLongTwoVector<1, 0b00010, "uaddlp", AArch64uaddlp>;
 defm UCVTF  : SIMDTwoVectorIntToFP<1, 0, 0b11101, "ucvtf", any_uint_to_fp>;
-defm UQXTN  : SIMDMixedTwoVector<1, 0b10100, "uqxtn", int_aarch64_neon_uqxtn>;
+defm UQXTN  : SIMDMixedTwoVector<1, 0b10100, "uqxtn", truncusat_u>;
 defm URECPE : SIMDTwoVectorS<0, 1, 0b11100, "urecpe", int_aarch64_neon_urecpe>;
 defm URSQRTE: SIMDTwoVectorS<1, 1, 0b11100, "ursqrte", int_aarch64_neon_ursqrte>;
 defm USQADD : SIMDTwoVectorBHSDTied<1, 0b00011, "usqadd",int_aarch64_neon_usqadd>;
@@ -5475,85 +5475,6 @@ multiclass SIMDVectorLShiftLongBySizeBHSPats<SDPatternOperator ext> {
 defm : SIMDVectorLShiftLongBySizeBHSPats<anyext>;
 defm : SIMDVectorLShiftLongBySizeBHSPats<zext>;
 defm : SIMDVectorLShiftLongBySizeBHSPats<sext>;
-
-// Constant vector values, used in the S/UQXTN patterns below.
-def VImmFF:   PatLeaf<(AArch64NvCast (v2i64 (AArch64movi_edit (i32 85))))>;
-def VImmFFFF: PatLeaf<(AArch64NvCast (v2i64 (AArch64movi_edit (i32 51))))>;
-def VImm7F:   PatLeaf<(AArch64movi_shift (i32 127), (i32 0))>;
-def VImm80:   PatLeaf<(AArch64mvni_shift (i32 127), (i32 0))>;
-def VImm7FFF: PatLeaf<(AArch64movi_msl (i32 127), (i32 264))>;
-def VImm8000: PatLeaf<(AArch64mvni_msl (i32 127), (i32 264))>;
-
-// trunc(umin(X, 255)) -> UQXTRN v8i8
-def : Pat<(v8i8 (truncusat_u (v8i16 V128:$Vn))),
-          (UQXTNv8i8 V128:$Vn)>;
-// trunc(umin(X, 65535)) -> UQXTRN v4i16
-def : Pat<(v4i16 (truncusat_u (v4i32 V128:$Vn))),
-          (UQXTNv4i16 V128:$Vn)>;
-// trunc(umin(X, 4294967295)) -> UQXTRN v2i32
-def : Pat<(v2i32 (truncusat_u (v2i64 V128:$Vn))),
-          (UQXTNv2i32 V128:$Vn)>;
-// trunc(smin(smax(X, -128), 128)) -> SQXTRN
-def : Pat<(v8i8 (truncssat_s (v8i16 V128:$Vn))),
-          (SQXTNv8i8 V128:$Vn)>;
-// trunc(smin(smax(X, -32768), 32767)) -> SQXTRN
-def : Pat<(v4i16 (truncssat_s (v4i32 V128:$Vn))),
-          (SQXTNv4i16 V128:$Vn)>;
-// trunc(smin(smax(X, -2147483648), 2147483647)) -> SQXTRN
-def : Pat<(v2i32 (truncssat_s (v2i64 V128:$Vn))),
-          (SQXTNv2i32 V128:$Vn)>;
-// trunc(umin(smax(X, 0), 255)) -> SQXTUN
-def : Pat<(v8i8 (truncssat_u (v8i16 V128:$Vn))),
-          (SQXTUNv8i8 V128:$Vn)>;
-// trunc(umin(smax(X, 0), 65535)) -> SQXTUN
-def : Pat<(v4i16 (truncssat_u (v4i32 V128:$Vn))),
-          (SQXTUNv4i16 V128:$Vn)>;
-// trunc(umin(smax(X, 0), 4294967295)) -> SQXTUN
-def : Pat<(v2i32 (truncssat_u (v2i64 V128:$Vn))),
-          (SQXTUNv2i32 V128:$Vn)>;
-
-// truncusat_u
-// concat_vectors(Vd, truncusat_u(Vn)) ~> UQXTRN(Vd, Vn)
-def : Pat<(v16i8 (concat_vectors
-                 (v8i8 V64:$Vd),
-                 (v8i8 (truncusat_u (v8i16 V128:$Vn))))),
-          (UQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v8i16 (concat_vectors
-                 (v4i16 V64:$Vd),
-                 (v4i16 (truncusat_u (v4i32 V128:$Vn))))),
-          (UQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v4i32 (concat_vectors
-                 (v2i32 V64:$Vd),
-                 (v2i32 (truncusat_u (v2i64 V128:$Vn))))),
-          (UQXTNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-
-// concat_vectors(Vd, truncssat_s(Vn)) ~> SQXTN2(Vd, Vn)
-def : Pat<(v16i8 (concat_vectors
-                 (v8i8 V64:$Vd),
-                 (v8i8 (truncssat_s (v8i16 V128:$Vn))))),
-          (SQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v8i16 (concat_vectors
-                 (v4i16 V64:$Vd),
-                 (v4i16 (truncssat_s (v4i32 V128:$Vn))))),
-          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v4i32 (concat_vectors
-                 (v2i32 V64:$Vd),
-                 (v2i32 (truncssat_s (v2i64 V128:$Vn))))),
-          (SQXTNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-
-// concat_vectors(Vd, truncssat_u(Vn)) ~> SQXTUN2(Vd, Vn)
-def : Pat<(v16i8 (concat_vectors
-                 (v8i8 V64:$Vd),
-                 (v8i8 (truncssat_u (v8i16 V128:$Vn))))),
-          (SQXTUNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v8i16 (concat_vectors
-                 (v4i16 V64:$Vd),
-                 (v4i16 (truncssat_u (v4i32 V128:$Vn))))),
-          (SQXTUNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v4i32 (concat_vectors
-                 (v2i32 V64:$Vd),
-                 (v2i32 (truncssat_u (v2i64 V128:$Vn))))),
-          (SQXTUNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
 
 // Select BSWAP vector instructions into REV instructions
 def : Pat<(v4i16 (bswap (v4i16 V64:$Rn))), 
