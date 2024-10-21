@@ -132,13 +132,6 @@ public:
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
-  // Get the OpenMP Clause Kind for the corresponding Parser class
-  template <typename A>
-  llvm::omp::Clause GetClauseKindForParserClass(const A &) {
-#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
-#include "llvm/Frontend/OpenMP/OMP.inc"
-  }
-
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);

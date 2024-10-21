@@ -14,7 +14,7 @@ target triple = "nvptx64-nvidia-cuda"
 %complex_half = type { half, half }
 
 ; CHECK: .param .align 2 .b8 param2[4];
-; CHECK: st.param.b16   [param2+0], %rs1;
+; CHECK: st.param.b16   [param2], %rs1;
 ; CHECK: st.param.b16   [param2+2], %rs2;
 ; CHECK: .param .align 2 .b8 retval0[4];
 ; CHECK-NEXT: prototype_0 : .callprototype (.param .align 2 .b8 _[4]) _ (.param .b32 _, .param .b32 _, .param .align 2 .b8 _[4]);
@@ -37,7 +37,7 @@ define internal void @callee(ptr byval(%"class.complex") %byval_arg) {
 define void @boom() {
   %fp = call ptr @usefp(ptr @callee)
   ; CHECK: .param .align 2 .b8 param0[4];
-  ; CHECK: st.param.b16 [param0+0], %rs1;
+  ; CHECK: st.param.b16 [param0], %rs1;
   ; CHECK: st.param.b16 [param0+2], %rs2;
   ; CHECK: .callprototype ()_ (.param .align 2 .b8 _[4]);
   call void %fp(ptr byval(%"class.complex") null)

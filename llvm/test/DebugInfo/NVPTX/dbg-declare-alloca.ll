@@ -10,7 +10,7 @@
 ; CHECK: .loc 1 5 3                   // t.c:5:3
 ; CHECK: { // callseq 0, 0
 ; CHECK: .param .b64 param0;
-; CHECK: st.param.b64 [param0+0], %rd1;
+; CHECK: st.param.b64 [param0], %rd1;
 ; CHECK: call.uni
 ; CHECK: escape_foo,
 ; CHECK: (

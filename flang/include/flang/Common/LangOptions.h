@@ -27,6 +27,14 @@ namespace Fortran::common {
 class LangOptionsBase {
 
 public:
+  enum SignedOverflowBehaviorTy {
+    // -fno-wrapv (default behavior in Flang)
+    SOB_Undefined,
+
+    // -fwrapv
+    SOB_Defined,
+  };
+
   enum FPModeKind {
     // Do not fuse FP ops
     FPM_Off,

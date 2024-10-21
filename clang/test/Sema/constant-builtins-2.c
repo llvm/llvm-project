@@ -35,7 +35,7 @@ long double  g11 = __builtin_nansl("");
 __float128   g11_2 = __builtin_nansf128("");
 #endif
 
-//int          g12 = __builtin_abs(-12);
+int g12 = __builtin_abs(-12);
 
 double       g13 = __builtin_fabs(-12.);
 double       g13_0 = __builtin_fabs(-0.);
@@ -456,6 +456,17 @@ char clrsb9[__builtin_clrsb(1 << (BITSIZE(int) - 1)) == 0 ? 1 : -1];
 char clrsb10[__builtin_clrsb(~(1 << (BITSIZE(int) - 1))) == 0 ? 1 : -1];
 char clrsb11[__builtin_clrsb(0xf) == BITSIZE(int) - 5 ? 1 : -1];
 char clrsb12[__builtin_clrsb(~0x1f) == BITSIZE(int) - 6 ? 1 : -1];
+
+char abs1[__builtin_abs(-12)];
+char abs2[__builtin_labs(-12L)];
+char abs3[__builtin_llabs(-12LL)];
+int abs4 = __builtin_abs(1 << (BITSIZE(int) - 1)); // expected-error {{not a compile-time constant}}
+char abs5[__builtin_abs((1 << (BITSIZE(int) - 1)) + 1)];
+long abs6 = __builtin_labs(1L << (BITSIZE(long) - 1)); // expected-error {{not a compile-time constant}}
+long abs7 = __builtin_labs((1L << (BITSIZE(long) - 1)) + 1);
+long long abs8 = __builtin_llabs(1LL << (BITSIZE(long long) - 1)); // expected-error {{not a compile-time constant}}
+long long abs9 = __builtin_llabs((1LL << (BITSIZE(long long) - 1)) + 1);
+
 #undef BITSIZE
 
 // GCC misc stuff

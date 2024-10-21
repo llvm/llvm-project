@@ -1439,7 +1439,24 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
-bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
+/// If MaxSafeElements is provided, the function adds the following recipes:
+/// vector.ph:
+/// ...
+///
+/// vector.body:
+/// ...
+/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
+///                                               [ %NextEVLIV, %vector.body ]
+/// %AVL = sub original TC, %EVLPhi
+/// %cmp = cmp ult %AVL, MaxSafeElements
+/// %SAFE_AVL = select %cmp, %AVL, MaxSafeElements
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %SAFE_AVL
+/// ...
+/// %NextEVLIV = add IVSize (cast i32 %VPEVL to IVSize), %EVLPhi
+/// ...
+///
+bool VPlanTransforms::tryAddExplicitVectorLength(
+    VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
@@ -1464,14 +1481,19 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
-  // TODO: Add support for MaxSafeDist for correct loop emission.
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Compute original TC - IV as the AVL (application vector length).
-  auto *AVL = new VPInstruction(Instruction::Sub, {Plan.getTripCount(), EVLPhi},
-                                DebugLoc(), "avl");
-  AVL->insertBefore(*Header, Header->getFirstNonPhi());
-  auto *VPEVL =
-      new VPInstruction(VPInstruction::ExplicitVectorLength, AVL, DebugLoc());
-  VPEVL->insertAfter(AVL);
+  VPValue *AVL = Builder.createNaryOp(
+      Instruction::Sub, {Plan.getTripCount(), EVLPhi}, DebugLoc(), "avl");
+  if (MaxSafeElements) {
+    // Support for MaxSafeDist for correct loop emission.
+    VPValue *AVLSafe = Plan.getOrAddLiveIn(
+        ConstantInt::get(CanonicalIVPHI->getScalarType(), *MaxSafeElements));
+    VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
+    AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc(), "safe_avl");
+  }
+  auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
+                                     DebugLoc());
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());

@@ -67,7 +67,7 @@ bool CodeGenInstAlias::tryAliasOpMatch(const DagInit *Result,
   // Handle explicit registers.
   if (ADI && ADI->getDef()->isSubClassOf("Register")) {
     if (InstOpRec->isSubClassOf("OptionalDefOperand")) {
-      DagInit *DI = InstOpRec->getValueAsDag("MIOperandInfo");
+      const DagInit *DI = InstOpRec->getValueAsDag("MIOperandInfo");
       // The operand info should only have a single (register) entry. We
       // want the register class of it.
       InstOpRec = cast<DefInit>(DI->getArg(0))->getDef();
@@ -172,7 +172,7 @@ CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
   AsmString = std::string(R->getValueAsString("AsmString"));
 
   // Verify that the root of the result is an instruction.
-  DefInit *DI = dyn_cast<DefInit>(Result->getOperator());
+  const DefInit *DI = dyn_cast<DefInit>(Result->getOperator());
   if (!DI || !DI->getDef()->isSubClassOf("Instruction"))
     PrintFatalError(R->getLoc(),
                     "result of inst alias should be an instruction");

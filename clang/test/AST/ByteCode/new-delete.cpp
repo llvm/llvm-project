@@ -796,6 +796,28 @@ static_assert(virt_delete(false)); // both-error {{not an integral constant expr
                                    // both-note {{in call to}}
 
 
+namespace ToplevelScopeInTemplateArg {
+  class string {
+  public:
+    char *mem;
+    constexpr string() {
+      this->mem = new char(1);
+    }
+    constexpr ~string() {
+      delete this->mem;
+    }
+    constexpr unsigned size() const { return 4; }
+  };
+
+
+  template <unsigned N>
+  void test() {};
+
+  void f() {
+      test<string().size()>();
+      static_assert(string().size() == 4);
+  }
+}
 
 #else
 /// Make sure we reject this prior to C++20

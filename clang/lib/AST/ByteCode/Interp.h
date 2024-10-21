@@ -3007,6 +3007,10 @@ static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool CheckAllocations(InterpState &S, CodePtr OpPC) {
+  return S.maybeDiagnoseDanglingAllocations();
+}
+
 /// Check if the initializer and storage types of a placement-new expression
 /// match.
 bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,

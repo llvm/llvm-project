@@ -1574,7 +1574,7 @@ public:
     mlir::Location loc = getLoc();
     mlir::Value addr = fir::getBase(array);
     mlir::Type arrTy = fir::dyn_cast_ptrEleTy(addr.getType());
-    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
     mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(eleTy));
     mlir::Type refTy = builder.getRefType(eleTy);
     mlir::Value base = builder.createConvert(loc, seqTy, addr);
@@ -1659,7 +1659,7 @@ public:
     mlir::Location loc = getLoc();
     mlir::Value addr = fir::getBase(exv);
     mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(addr.getType());
-    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
     mlir::Type refTy = builder.getRefType(eleTy);
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> arrayCoorArgs;
@@ -4145,7 +4145,7 @@ private:
     mlir::Location loc = getLoc();
     return [=, builder = &converter.getFirOpBuilder()](IterSpace iters) {
       mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(tmp.getType());
-      auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+      auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
       mlir::Type eleRefTy = builder->getRefType(eleTy);
       mlir::IntegerType i1Ty = builder->getI1Type();
       // Adjust indices for any shift of the origin of the array.
@@ -5759,7 +5759,7 @@ private:
         return fir::BoxValue(embox, lbounds, nonDeferredLenParams);
       };
     }
-    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
     if (isReferentiallyOpaque()) {
       // Semantics are an opaque reference to an array.
       // This case forwards a continuation that will generate the address

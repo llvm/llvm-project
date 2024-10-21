@@ -2363,11 +2363,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   SetContextClause(x);
 
-  llvm::omp::Clause clauseId = std::visit(
-      [this](auto &&s) { return GetClauseKindForParserClass(s); }, x.u);
-
   // The visitors for these clauses do their own checks.
-  switch (clauseId) {
+  switch (x.Id()) {
   case llvm::omp::Clause::OMPC_copyprivate:
   case llvm::omp::Clause::OMPC_enter:
   case llvm::omp::Clause::OMPC_lastprivate:
@@ -3244,7 +3241,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   DirectivesClauseTriple dirClauseTriple;
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(objectList, currSymbols);
-  CheckDefinableObjects(currSymbols, GetClauseKindForParserClass(x));
+  CheckDefinableObjects(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_lastprivate);
 
@@ -3257,7 +3254,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
           llvm::omp::Directive::OMPD_parallel, llvm::omp::privateReductionSet));
 
   CheckPrivateSymbolsInOuterCxt(
-      currSymbols, dirClauseTriple, GetClauseKindForParserClass(x));
+      currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_lastprivate);
 
   using LastprivateModifier = parser::OmpLastprivateClause::LastprivateModifier;
   const auto &maybeMod{std::get<std::optional<LastprivateModifier>>(x.v.t)};

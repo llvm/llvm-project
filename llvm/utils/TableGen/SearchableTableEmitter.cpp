@@ -196,7 +196,7 @@ private:
                           bool IsPrimary, raw_ostream &OS);
   void emitIfdef(StringRef Guard, raw_ostream &OS);
 
-  bool parseFieldType(GenericField &Field, Init *II);
+  bool parseFieldType(GenericField &Field, const Init *II);
   std::unique_ptr<SearchIndex>
   parseSearchIndex(GenericTable &Table, const RecordVal *RecVal, StringRef Name,
                    ArrayRef<StringRef> Key, bool EarlyOut, bool ReturnRange);
@@ -233,8 +233,8 @@ int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
 bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
                                        const SearchIndex &Index) {
   for (const auto &Field : Index.Fields) {
-    Init *LHSI = LHS->getValueInit(Field.Name);
-    Init *RHSI = RHS->getValueInit(Field.Name);
+    const Init *LHSI = LHS->getValueInit(Field.Name);
+    const Init *RHSI = RHS->getValueInit(Field.Name);
 
     if (isa<BitsRecTy>(Field.RecType) || isa<IntRecTy>(Field.RecType)) {
       int64_t LHSi = getAsInt(LHSI);
@@ -574,7 +574,8 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
   OS << "#endif\n\n";
 }
 
-bool SearchableTableEmitter::parseFieldType(GenericField &Field, Init *TypeOf) {
+bool SearchableTableEmitter::parseFieldType(GenericField &Field,
+                                            const Init *TypeOf) {
   auto Type = dyn_cast<StringInit>(TypeOf);
   if (!Type)
     return false;

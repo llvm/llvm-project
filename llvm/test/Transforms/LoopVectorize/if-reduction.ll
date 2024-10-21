@@ -1659,6 +1659,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret i64 %1
 }
 
+; FIXME: %indvars.iv.next is poison on first iteration due to sub nuw 0, 1.
 define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK-LABEL: define i32 @fcmp_0_sub_select1(
 ; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -1668,8 +1669,7 @@ define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK:       [[FOR_HEADER]]:
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[ZEXT]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]

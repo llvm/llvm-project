@@ -579,8 +579,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     if (const ListInit *AddrSpaces = Predicate.getAddressSpaces()) {
       SmallVector<unsigned, 4> ParsedAddrSpaces;
 
-      for (Init *Val : AddrSpaces->getValues()) {
-        IntInit *IntVal = dyn_cast<IntInit>(Val);
+      for (const Init *Val : AddrSpaces->getValues()) {
+        const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           return failedImport("Address space is not an integer");
         ParsedAddrSpaces.push_back(IntVal->getValue());
@@ -2023,7 +2023,10 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   auto &DstI = Target.getInstruction(DstOp);
   StringRef DstIName = DstI.TheDef->getName();
 
-  unsigned DstNumDefs = DstI.Operands.NumDefs,
+  // Count both implicit and explicit defs in the dst instruction.
+  // This avoids errors importing patterns that have inherent implicit defs.
+  unsigned DstExpDefs = DstI.Operands.NumDefs,
+           DstNumDefs = DstI.ImplicitDefs.size() + DstExpDefs,
            SrcNumDefs = Src.getExtTypes().size();
   if (DstNumDefs < SrcNumDefs) {
     if (DstNumDefs != 0)
@@ -2045,7 +2048,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   // The root of the match also has constraints on the register bank so that it
   // matches the result instruction.
   unsigned OpIdx = 0;
-  unsigned N = std::min(DstNumDefs, SrcNumDefs);
+  unsigned N = std::min(DstExpDefs, SrcNumDefs);
   for (unsigned I = 0; I < N; ++I) {
     const TypeSetByHwMode &VTy = Src.getExtType(I);
 

@@ -56,6 +56,8 @@ Improvements to clangd
 Inlay hints
 ^^^^^^^^^^^
 
+- Added `DefaultArguments` Inlay Hints option.
+
 Diagnostics
 ^^^^^^^^^^^
 

@@ -26,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ProfileList.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -336,7 +337,7 @@ private:
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
-  bool WarnedStackExhausted = false;
+  StackExhaustionHandler StackHandler;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -1297,9 +1298,6 @@ public:
 
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
-
-  /// Warn that the stack is nearly exhausted.
-  void warnStackExhausted(SourceLocation Loc);
 
   /// Run some code with "sufficient" stack space. (Currently, at least 256K is
   /// guaranteed). Produces a warning if we're low on stack space and allocates

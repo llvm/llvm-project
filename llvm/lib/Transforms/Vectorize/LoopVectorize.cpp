@@ -539,10 +539,10 @@ protected:
   friend class LoopVectorizationPlanner;
 
   /// Set up the values of the IVs correctly when exiting the vector loop.
-  void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
-                    Value *VectorTripCount, Value *EndValue,
-                    BasicBlock *MiddleBlock, VPlan &Plan,
-                    VPTransformState &State);
+  virtual void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
+                            Value *VectorTripCount, Value *EndValue,
+                            BasicBlock *MiddleBlock, VPlan &Plan,
+                            VPTransformState &State);
 
   /// Iteratively sink the scalarized operands of a predicated instruction into
   /// the block that was created for it.
@@ -770,6 +770,11 @@ protected:
   BasicBlock *emitIterationCountCheck(BasicBlock *Bypass, bool ForEpilogue);
   void printDebugTracesAtStart() override;
   void printDebugTracesAtEnd() override;
+
+  void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
+                    Value *VectorTripCount, Value *EndValue,
+                    BasicBlock *MiddleBlock, VPlan &Plan,
+                    VPTransformState &State) override {};
 };
 
 // A specialized derived class of inner loop vectorizer that performs
@@ -1427,12 +1432,9 @@ public:
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
-    bool EVLIsLegal =
-        IsScalableVF && UserIC <= 1 &&
-        TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-        !EnableVPlanNativePath &&
-        // FIXME: implement support for max safe dependency distance.
-        Legal->isSafeForAnyVectorWidth();
+    bool EVLIsLegal = UserIC <= 1 &&
+                      TTI.hasActiveVectorLength(0, nullptr, Align()) &&
+                      !EnableVPlanNativePath;
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -1456,6 +1458,15 @@ public:
     // IVUpdateMayOverflow flag in getTailFoldingStyle.
     return getTailFoldingStyle() != TailFoldingStyle::None;
   }
+
+  /// Return maximum safe number of elements to be processed per vector
+  /// iteration, which do not prevent store-load forwarding and are safe with
+  /// regard to the memory dependencies. Required for EVL-based VPlans to
+  /// correctly calculate AVL (application vector length) as min(remaining AVL,
+  /// MaxSafeElements).
+  /// TODO: need to consider adjusting cost model to use this value as a
+  /// vectorization factor for EVL-based vectorization.
+  std::optional<unsigned> getMaxSafeElements() const { return MaxSafeElements; }
 
   /// Returns true if the instructions in this block requires predication
   /// for any reason, e.g. because tail folding now requires a predicate
@@ -1515,6 +1526,10 @@ public:
   std::optional<InstructionCost>
   getReductionPatternCost(Instruction *I, ElementCount VF, Type *VectorTy,
                           TTI::TargetCostKind CostKind) const;
+
+  /// Returns true if \p Op should be considered invariant and if it is
+  /// trivially hoistable.
+  bool shouldConsiderInvariant(Value *Op);
 
 private:
   unsigned NumPredStores = 0;
@@ -1607,6 +1622,12 @@ private:
 
   /// true if scalable vectorization is supported and enabled.
   std::optional<bool> IsScalableVectorizationAllowed;
+
+  /// Maximum safe number of elements to be processed per vector iteration,
+  /// which do not prevent store-load forwarding and are safe with regard to the
+  /// memory dependencies. Required for EVL-based veectorization, where this
+  /// value is used as the upper bound of the safe AVL.
+  std::optional<unsigned> MaxSafeElements;
 
   /// A map holding scalar costs for different vectorization factors. The
   /// presence of a cost for an instruction in the mapping indicates that the
@@ -2435,12 +2456,26 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   };
 
   TailFoldingStyle Style = Cost->getTailFoldingStyle();
-  if (Style == TailFoldingStyle::None)
-    CheckMinIters =
-        Builder.CreateICmp(P, Count, CreateStep(), "min.iters.check");
-  else if (VF.isScalable() &&
-           !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
-           Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
+  if (Style == TailFoldingStyle::None) {
+    Value *Step = CreateStep();
+    ScalarEvolution &SE = *PSE.getSE();
+    // TODO: Emit unconditional branch to vector preheader instead of
+    // conditional branch with known condition.
+    const SCEV *TripCountSCEV = SE.applyLoopGuards(SE.getSCEV(Count), OrigLoop);
+    // Check if the trip count is < the step.
+    if (SE.isKnownPredicate(P, TripCountSCEV, SE.getSCEV(Step))) {
+      // TODO: Ensure step is at most the trip count when determining max VF and
+      // UF, w/o tail folding.
+      CheckMinIters = Builder.getTrue();
+    } else if (!SE.isKnownPredicate(CmpInst::getInversePredicate(P),
+                                    TripCountSCEV, SE.getSCEV(Step))) {
+      // Generate the minimum iteration check only if we cannot prove the
+      // check is known to be true, or known to be false.
+      CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
+    } // else step known to be < trip count, use CheckMinIters preset to false.
+  } else if (VF.isScalable() &&
+             !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
+             Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee
     // an overflow to zero when updating induction variables and so an
     // additional overflow check is required before entering the vector loop.
@@ -2450,8 +2485,18 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
         ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask());
     Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
 
+    Value *Step = CreateStep();
+#ifndef NDEBUG
+    ScalarEvolution &SE = *PSE.getSE();
+    const SCEV *TC2OverflowSCEV = SE.applyLoopGuards(SE.getSCEV(LHS), OrigLoop);
+    assert(
+        !isIndvarOverflowCheckKnownFalse(Cost, VF * UF) &&
+        !SE.isKnownPredicate(CmpInst::getInversePredicate(ICmpInst::ICMP_ULT),
+                             TC2OverflowSCEV, SE.getSCEV(Step)) &&
+        "unexpectedly proved overflow check to be known");
+#endif
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
+    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, Step);
   }
 
   // Create new preheader for vector loop.
@@ -3858,6 +3903,8 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
 
   auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElements);
   auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElements);
+  if (!Legal->isSafeForAnyVectorWidth())
+    this->MaxSafeElements = MaxSafeElements;
 
   LLVM_DEBUG(dbgs() << "LV: The max safe fixed VF is: " << MaxSafeFixedVF
                     << ".\n");
@@ -5700,13 +5747,14 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 InstructionCost
 LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
                                                    ElementCount VF) {
-  Type *ValTy = getLoadStoreType(I);
-  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
-  unsigned AS = getLoadStoreAddressSpace(I);
-  enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-
   const auto *Group = getInterleavedAccessGroup(I);
   assert(Group && "Fail to get an interleaved access group.");
+
+  Instruction *InsertPos = Group->getInsertPos();
+  Type *ValTy = getLoadStoreType(InsertPos);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  unsigned AS = getLoadStoreAddressSpace(InsertPos);
+  enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   unsigned InterleaveFactor = Group->getFactor();
   auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
@@ -5722,8 +5770,9 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed()) ||
       (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
-      I->getOpcode(), WideVecTy, Group->getFactor(), Indices, Group->getAlign(),
-      AS, CostKind, Legal->isMaskRequired(I), UseMaskForGaps);
+      InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
+      Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
+      UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
@@ -6337,6 +6386,17 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
   }
 }
 
+bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) {
+  if (!Legal->isInvariant(Op))
+    return false;
+  // Consider Op invariant, if it or its operands aren't predicated
+  // instruction in the loop. In that case, it is not trivially hoistable.
+  return !isa<Instruction>(Op) || !TheLoop->contains(cast<Instruction>(Op)) ||
+         (!isPredicatedInst(cast<Instruction>(Op)) &&
+          all_of(cast<Instruction>(Op)->operands(),
+                 [this](Value *Op) { return shouldConsiderInvariant(Op); }));
+}
+
 InstructionCost
 LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                                                ElementCount VF) {
@@ -6576,19 +6636,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
     }
     auto Op2Info = TTI.getOperandInfo(Op2);
-    std::function<bool(Value *)> IsInvariant =
-        [this, &IsInvariant](Value *Op) -> bool {
-      if (!Legal->isInvariant(Op))
-        return false;
-      // Consider Op2invariant, if it or its operands aren't predicated
-      // instruction in the loop. In that case, it is not trivially hoistable.
-      return !isa<Instruction>(Op) ||
-             !TheLoop->contains(cast<Instruction>(Op)) ||
-             (!isPredicatedInst(cast<Instruction>(Op)) &&
-              all_of(cast<Instruction>(Op)->operands(),
-                     [&IsInvariant](Value *Op) { return IsInvariant(Op); }));
-    };
-    if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue && IsInvariant(Op2))
+    if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
+        shouldConsiderInvariant(Op2))
       Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
     SmallVector<const Value *, 4> Operands(I->operand_values());
@@ -8686,8 +8735,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       VPlanTransforms::optimize(*Plan);
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
-      if (CM.foldTailWithEVL() &&
-          !VPlanTransforms::tryAddExplicitVectorLength(*Plan))
+      if (CM.foldTailWithEVL() && !VPlanTransforms::tryAddExplicitVectorLength(
+                                      *Plan, CM.getMaxSafeElements()))
         break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
@@ -8821,11 +8870,8 @@ static void addLiveOutsForFirstOrderRecurrences(
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
   } else if (ExitUsersToFix.empty()) {
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
-  }
-  if (!ScalarPHVPBB) {
-    assert(ExitUsersToFix.empty() &&
-           "missed inserting extracts for exiting values");
-    return;
+  } else {
+    llvm_unreachable("unsupported CFG in VPlan");
   }
 
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);

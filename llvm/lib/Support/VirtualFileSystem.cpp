@@ -750,7 +750,7 @@ public:
 
 class InMemoryDirectory : public InMemoryNode {
   Status Stat;
-  std::map<std::string, std::unique_ptr<InMemoryNode>> Entries;
+  std::map<std::string, std::unique_ptr<InMemoryNode>, std::less<>> Entries;
 
 public:
   InMemoryDirectory(Status Stat)
@@ -766,7 +766,7 @@ public:
   UniqueID getUniqueID() const { return Stat.getUniqueID(); }
 
   InMemoryNode *getChild(StringRef Name) const {
-    auto I = Entries.find(Name.str());
+    auto I = Entries.find(Name);
     if (I != Entries.end())
       return I->second.get();
     return nullptr;

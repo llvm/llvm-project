@@ -360,7 +360,7 @@ void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
 
 void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends)
-    write64(ctx, buf, s.getVA());
+    write64(ctx, buf, s.getVA(ctx));
 }
 
 void AArch64::writePltHeader(uint8_t *buf) const {
@@ -416,7 +416,7 @@ bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
       type != R_AARCH64_PLT32)
     return false;
-  uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(a);
+  uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(ctx, a);
   return !inBranchRange(type, branchAddr, dst);
 }
 
@@ -808,7 +808,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
 
   Symbol &sym = *adrpRel.sym;
   // Check if the address difference is within 1MiB range.
-  int64_t val = sym.getVA() - (secAddr + addRel.offset);
+  int64_t val = sym.getVA(ctx) - (secAddr + addRel.offset);
   if (val < -1024 * 1024 || val >= 1024 * 1024)
     return false;
 
@@ -874,7 +874,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
     return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
-      getAArch64Page(sym.getVA()) - getAArch64Page(secAddr + adrpRel.offset);
+      getAArch64Page(sym.getVA(ctx)) - getAArch64Page(secAddr + adrpRel.offset);
   if (val != llvm::SignExtend64(val, 33))
     return false;
 
@@ -890,11 +890,11 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
 
   ctx.target->relocate(
       buf + adrpSymRel.offset, adrpSymRel,
-      SignExtend64(getAArch64Page(sym.getVA()) -
+      SignExtend64(getAArch64Page(sym.getVA(ctx)) -
                        getAArch64Page(secAddr + adrpSymRel.offset),
                    64));
   ctx.target->relocate(buf + addRel.offset, addRel,
-                       SignExtend64(sym.getVA(), 64));
+                       SignExtend64(sym.getVA(ctx), 64));
   tryRelaxAdrpAdd(adrpSymRel, addRel, secAddr, buf);
   return true;
 }

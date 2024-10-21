@@ -209,7 +209,7 @@ bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     return true;
   if (s.isUndefWeak())
     return false;
-  return !PPC::inBranchRange(type, branchAddr, s.getVA(a));
+  return !PPC::inBranchRange(type, branchAddr, s.getVA(ctx, a));
 }
 
 uint32_t PPC::getThunkSectionSpacing() const { return 0x2000000; }

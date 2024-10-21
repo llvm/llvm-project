@@ -35,9 +35,12 @@ using namespace mlir::tblgen;
 
 using llvm::DagInit;
 using llvm::DefInit;
+using llvm::Init;
+using llvm::ListInit;
 using llvm::Record;
+using llvm::StringInit;
 
-Operator::Operator(const llvm::Record &def)
+Operator::Operator(const Record &def)
     : dialect(def.getValueAsDef("opDialect")), def(def) {
   // The first `_` in the op's TableGen def name is treated as separating the
   // dialect prefix and the op class name. The dialect prefix will be ignored if
@@ -179,7 +182,7 @@ StringRef Operator::getExtraClassDefinition() const {
   return def.getValueAsString(attr);
 }
 
-const llvm::Record &Operator::getDef() const { return def; }
+const Record &Operator::getDef() const { return def; }
 
 bool Operator::skipDefaultBuilders() const {
   return def.getValueAsBit("skipDefaultBuilders");
@@ -429,7 +432,7 @@ void Operator::populateTypeInferenceInfo(
   // Use `AllTypesMatch` and `TypesMatchWith` operation traits to build the
   // result type inference graph.
   for (const Trait &trait : traits) {
-    const llvm::Record &def = trait.getDef();
+    const Record &def = trait.getDef();
 
     // If the infer type op interface was manually added, then treat it as
     // intention that the op needs special handling.
@@ -614,9 +617,8 @@ void Operator::populateOpStructure() {
             def.getLoc(),
             "unsupported attribute modelling, only single class expected");
       }
-      attributes.push_back(
-          {cast<llvm::StringInit>(val.getNameInit())->getValue(),
-           Attribute(cast<DefInit>(val.getValue()))});
+      attributes.push_back({cast<StringInit>(val.getNameInit())->getValue(),
+                            Attribute(cast<DefInit>(val.getValue()))});
     }
   }
 
@@ -701,7 +703,7 @@ void Operator::populateOpStructure() {
   // tablegen is easy, making them unique less so, so dedupe here.
   if (auto *traitList = def.getValueAsListInit("traits")) {
     // This is uniquing based on pointers of the trait.
-    SmallPtrSet<const llvm::Init *, 32> traitSet;
+    SmallPtrSet<const Init *, 32> traitSet;
     traits.reserve(traitSet.size());
 
     // The declaration order of traits imply the verification order of traits.
@@ -721,8 +723,8 @@ void Operator::populateOpStructure() {
                   " to precede it in traits list");
     };
 
-    std::function<void(const llvm::ListInit *)> insert;
-    insert = [&](const llvm::ListInit *traitList) {
+    std::function<void(const ListInit *)> insert;
+    insert = [&](const ListInit *traitList) {
       for (auto *traitInit : *traitList) {
         auto *def = cast<DefInit>(traitInit)->getDef();
         if (def->isSubClassOf("TraitList")) {
@@ -777,11 +779,10 @@ void Operator::populateOpStructure() {
   }
 
   // Populate the builders.
-  auto *builderList =
-      dyn_cast_or_null<llvm::ListInit>(def.getValueInit("builders"));
+  auto *builderList = dyn_cast_or_null<ListInit>(def.getValueInit("builders"));
   if (builderList && !builderList->empty()) {
-    for (const llvm::Init *init : builderList->getValues())
-      builders.emplace_back(cast<llvm::DefInit>(init)->getDef(), def.getLoc());
+    for (const Init *init : builderList->getValues())
+      builders.emplace_back(cast<DefInit>(init)->getDef(), def.getLoc());
   } else if (skipDefaultBuilders()) {
     PrintFatalError(
         def.getLoc(),
@@ -814,13 +815,12 @@ StringRef Operator::getSummary() const {
 
 bool Operator::hasAssemblyFormat() const {
   auto *valueInit = def.getValueInit("assemblyFormat");
-  return isa<llvm::StringInit>(valueInit);
+  return isa<StringInit>(valueInit);
 }
 
 StringRef Operator::getAssemblyFormat() const {
-  return TypeSwitch<const llvm::Init *, StringRef>(
-             def.getValueInit("assemblyFormat"))
-      .Case<llvm::StringInit>([&](auto *init) { return init->getValue(); });
+  return TypeSwitch<const Init *, StringRef>(def.getValueInit("assemblyFormat"))
+      .Case<StringInit>([&](auto *init) { return init->getValue(); });
 }
 
 void Operator::print(llvm::raw_ostream &os) const {
@@ -833,9 +833,9 @@ void Operator::print(llvm::raw_ostream &os) const {
   }
 }
 
-auto Operator::VariableDecoratorIterator::unwrap(const llvm::Init *init)
+auto Operator::VariableDecoratorIterator::unwrap(const Init *init)
     -> VariableDecorator {
-  return VariableDecorator(cast<llvm::DefInit>(init)->getDef());
+  return VariableDecorator(cast<DefInit>(init)->getDef());
 }
 
 auto Operator::getArgToOperandOrAttribute(int index) const

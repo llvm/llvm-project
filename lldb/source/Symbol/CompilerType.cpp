@@ -540,6 +540,14 @@ ConstString CompilerType::GetDisplayTypeName() const {
   return ConstString("<invalid>");
 }
 
+ConstString CompilerType::GetMangledTypeName() const {
+  if (IsValid()) {
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetMangledTypeName(m_type);
+  }
+  return ConstString("<invalid>");
+}
+
 uint32_t CompilerType::GetTypeInfo(
     CompilerType *pointee_or_element_compiler_type) const {
   if (IsValid())

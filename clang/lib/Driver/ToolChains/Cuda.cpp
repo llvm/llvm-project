@@ -634,8 +634,8 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::vector<StringRef> Features;
   getNVPTXTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
                          Features);
-  for (StringRef Feature : Features)
-    CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
+  CmdArgs.push_back(
+      Args.MakeArgString("--plugin-opt=-mattr=" + llvm::join(Features, ",")));
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =

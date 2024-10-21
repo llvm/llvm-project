@@ -220,7 +220,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
-      CurScope(nullptr), Ident_super(nullptr),
+      StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
       AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
@@ -562,17 +562,9 @@ Sema::~Sema() {
   SemaPPCallbackHandler->reset();
 }
 
-void Sema::warnStackExhausted(SourceLocation Loc) {
-  // Only warn about this once.
-  if (!WarnedStackExhausted) {
-    Diag(Loc, diag::warn_stack_exhausted);
-    WarnedStackExhausted = true;
-  }
-}
-
 void Sema::runWithSufficientStackSpace(SourceLocation Loc,
                                        llvm::function_ref<void()> Fn) {
-  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
+  StackHandler.runWithSufficientStackSpace(Loc, Fn);
 }
 
 bool Sema::makeUnavailableInSystemHeader(SourceLocation loc,

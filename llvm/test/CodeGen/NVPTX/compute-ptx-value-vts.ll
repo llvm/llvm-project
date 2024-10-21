@@ -10,7 +10,7 @@ define <6 x half> @half6() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b16 %rs1, 0x0000;
-; CHECK-NEXT:    st.param.v4.b16 [func_retval0+0], {%rs1, %rs1, %rs1, %rs1};
+; CHECK-NEXT:    st.param.v4.b16 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b16 [func_retval0+8], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
   ret <6 x half> zeroinitializer
@@ -23,7 +23,7 @@ define <10 x half> @half10() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b16 %rs1, 0x0000;
-; CHECK-NEXT:    st.param.v4.b16 [func_retval0+0], {%rs1, %rs1, %rs1, %rs1};
+; CHECK-NEXT:    st.param.v4.b16 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b16 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b16 [func_retval0+16], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
@@ -37,7 +37,7 @@ define <12 x i8> @byte12() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.u16 %rs1, 0;
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0+0], {%rs1, %rs1, %rs1, %rs1};
+; CHECK-NEXT:    st.param.v4.b8 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
@@ -51,7 +51,7 @@ define <20 x i8> @byte20() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.u16 %rs1, 0;
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0+0], {%rs1, %rs1, %rs1, %rs1};
+; CHECK-NEXT:    st.param.v4.b8 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+12], {%rs1, %rs1, %rs1, %rs1};

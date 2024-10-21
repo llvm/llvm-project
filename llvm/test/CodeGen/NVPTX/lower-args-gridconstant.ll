@@ -43,7 +43,7 @@ define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly
 ; PTX-NEXT:    ld.param.u64 %rd4, [non_kernel_function_param_0+8];
 ; PTX-NEXT:    st.u64 [%rd3], %rd4;
 ; PTX-NEXT:    ld.param.u64 %rd5, [non_kernel_function_param_0];
-; PTX-NEXT:    st.u64 [%SP+0], %rd5;
+; PTX-NEXT:    st.u64 [%SP], %rd5;
 ; PTX-NEXT:    mov.u64 %rd6, gi;
 ; PTX-NEXT:    cvta.global.u64 %rd7, %rd6;
 ; PTX-NEXT:    selp.b64 %rd8, %rd2, %rd7, %p1;
@@ -58,7 +58,7 @@ define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly
 ; PTX-NEXT:    shl.b32 %r8, %r7, 24;
 ; PTX-NEXT:    or.b32 %r9, %r8, %r6;
 ; PTX-NEXT:    or.b32 %r10, %r9, %r4;
-; PTX-NEXT:    st.param.b32 [func_retval0+0], %r10;
+; PTX-NEXT:    st.param.b32 [func_retval0], %r10;
 ; PTX-NEXT:    ret;
 entry:
   %a. = select i1 %b, ptr %a, ptr addrspacecast (ptr addrspace(1) @gi to ptr), !dbg !17
@@ -147,7 +147,7 @@ define void @grid_const_escape(ptr byval(%struct.s) align 4 %input) {
 ; PTX-NEXT:    mov.u64 %rd1, escape;
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0+0], %rd4;
+; PTX-NEXT:    st.param.b64 [param0], %rd4;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    prototype_0 : .callprototype (.param .b32 _) _ (.param .b64 _);
 ; PTX-NEXT:    call (retval0),
@@ -156,7 +156,7 @@ define void @grid_const_escape(ptr byval(%struct.s) align 4 %input) {
 ; PTX-NEXT:    param0
 ; PTX-NEXT:    )
 ; PTX-NEXT:    , prototype_0;
-; PTX-NEXT:    ld.param.b32 %r1, [retval0+0];
+; PTX-NEXT:    ld.param.b32 %r1, [retval0];
 ; PTX-NEXT:    } // callseq 0
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define void @grid_const_escape(
@@ -194,11 +194,11 @@ define void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 %input, i32
 ; PTX-NEXT:    mov.u64 %rd1, escape3;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0+0], %rd7;
+; PTX-NEXT:    st.param.b64 [param0], %rd7;
 ; PTX-NEXT:    .param .b64 param1;
-; PTX-NEXT:    st.param.b64 [param1+0], %rd8;
+; PTX-NEXT:    st.param.b64 [param1], %rd8;
 ; PTX-NEXT:    .param .b64 param2;
-; PTX-NEXT:    st.param.b64 [param2+0], %rd5;
+; PTX-NEXT:    st.param.b64 [param2], %rd5;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b64 _, .param .b64 _, .param .b64 _);
 ; PTX-NEXT:    call (retval0),
@@ -209,7 +209,7 @@ define void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 %input, i32
 ; PTX-NEXT:    param2
 ; PTX-NEXT:    )
 ; PTX-NEXT:    , prototype_1;
-; PTX-NEXT:    ld.param.b32 %r2, [retval0+0];
+; PTX-NEXT:    ld.param.b32 %r2, [retval0];
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define void @multiple_grid_const_escape(
@@ -307,7 +307,7 @@ define void @grid_const_partial_escape(ptr byval(i32) %input, ptr %output) {
 ; PTX-NEXT:    mov.u64 %rd1, escape;
 ; PTX-NEXT:    { // callseq 2, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0+0], %rd6;
+; PTX-NEXT:    st.param.b64 [param0], %rd6;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    prototype_2 : .callprototype (.param .b32 _) _ (.param .b64 _);
 ; PTX-NEXT:    call (retval0),
@@ -316,7 +316,7 @@ define void @grid_const_partial_escape(ptr byval(i32) %input, ptr %output) {
 ; PTX-NEXT:    param0
 ; PTX-NEXT:    )
 ; PTX-NEXT:    , prototype_2;
-; PTX-NEXT:    ld.param.b32 %r3, [retval0+0];
+; PTX-NEXT:    ld.param.b32 %r3, [retval0];
 ; PTX-NEXT:    } // callseq 2
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define void @grid_const_partial_escape(
@@ -356,7 +356,7 @@ define i32 @grid_const_partial_escapemem(ptr byval(%struct.s) %input, ptr %outpu
 ; PTX-NEXT:    mov.u64 %rd1, escape;
 ; PTX-NEXT:    { // callseq 3, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0+0], %rd6;
+; PTX-NEXT:    st.param.b64 [param0], %rd6;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    prototype_3 : .callprototype (.param .b32 _) _ (.param .b64 _);
 ; PTX-NEXT:    call (retval0),
@@ -365,9 +365,9 @@ define i32 @grid_const_partial_escapemem(ptr byval(%struct.s) %input, ptr %outpu
 ; PTX-NEXT:    param0
 ; PTX-NEXT:    )
 ; PTX-NEXT:    , prototype_3;
-; PTX-NEXT:    ld.param.b32 %r4, [retval0+0];
+; PTX-NEXT:    ld.param.b32 %r4, [retval0];
 ; PTX-NEXT:    } // callseq 3
-; PTX-NEXT:    st.param.b32 [func_retval0+0], %r3;
+; PTX-NEXT:    st.param.b32 [func_retval0], %r3;
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define i32 @grid_const_partial_escapemem(
 ; OPT-SAME: ptr byval([[STRUCT_S:%.*]]) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
@@ -574,7 +574,7 @@ define i32 @grid_const_ptrtoint(ptr byval(i32) %input) {
 ; PTX-NEXT:    cvta.param.u64 %rd3, %rd2;
 ; PTX-NEXT:    cvt.u32.u64 %r2, %rd3;
 ; PTX-NEXT:    add.s32 %r3, %r1, %r2;
-; PTX-NEXT:    st.param.b32 [func_retval0+0], %r3;
+; PTX-NEXT:    st.param.b32 [func_retval0], %r3;
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define i32 @grid_const_ptrtoint(
 ; OPT-SAME: ptr byval(i32) align 4 [[INPUT:%.*]]) #[[ATTR0]] {

@@ -116,11 +116,8 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_iOS_SaveList;
 
   if (PushPopSplit == ARMSubtarget::SplitR7)
-    return STI.createAAPCSFrameChain() ? CSR_AAPCS_SplitPush_R7_SaveList
+    return STI.createAAPCSFrameChain() ? CSR_AAPCS_SplitPush_SaveList
                                        : CSR_ATPCS_SplitPush_SaveList;
-
-  if (PushPopSplit == ARMSubtarget::SplitR11AAPCSSignRA)
-    return CSR_AAPCS_SplitPush_R11_SaveList;
 
   return CSR_AAPCS_SaveList;
 }

@@ -1,23 +1,23 @@
 ; REQUIRES: asserts
 ; RUN: opt -mtriple=aarch64 -mattr=+sve \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=GENERIC,VF-VSCALE16
+; RUN:     | FileCheck %s --check-prefixes=GENERIC,VF-VSCALE4
 
 ; RUN: opt -mtriple=aarch64 -mattr=+sve -mcpu=generic \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=GENERIC,VF-VSCALE16
+; RUN:     | FileCheck %s --check-prefixes=GENERIC,VF-VSCALE4
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-v1 \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-V1,VF-VSCALE16
+; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-V1,VF-VSCALE4
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-n2 \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-N2,VF-VSCALE16
+; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-N2,VF-VSCALE4
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-n2 \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-N2,VF-VSCALE16
+; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-N2,VF-VSCALE4
 
 ; GENERIC: LV: Vector loop of width vscale x 2 costs: 3 (assuming a minimum vscale of 2).
 ; GENERIC: LV: Vector loop of width vscale x 4 costs: 1 (assuming a minimum vscale of 2).
@@ -29,7 +29,7 @@
 ; NEOVERSE-N2: LV: Vector loop of width vscale x 4 costs: 3 (assuming a minimum vscale of 1).
 
 ; VF-4: <4 x i32>
-; VF-VSCALE16: <vscale x 16 x i32>
+; VF-VSCALE4: <16 x i32>
 define void @test0(ptr %a, ptr %b, ptr %c) #0 {
 entry:
   br label %loop

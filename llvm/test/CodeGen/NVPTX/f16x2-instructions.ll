@@ -32,7 +32,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:     mov.b32         [[R:%r[0-9+]]], 1073757184;
-; CHECK:     st.param.b32    [func_retval0+0], [[R]];
+; CHECK:     st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_ret_const() #0 {
   ret <2 x half> <half 1.0, half 2.0>
@@ -41,7 +41,7 @@ define <2 x half> @test_ret_const() #0 {
 ; CHECK-LABEL: test_extract_0(
 ; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_extract_0_param_0];
 ; CHECK:      mov.b32         {[[R:%rs[0-9]+]], tmp}, [[A]];
-; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      st.param.b16    [func_retval0], [[R]];
 ; CHECK:      ret;
 define half @test_extract_0(<2 x half> %a) #0 {
   %e = extractelement <2 x half> %a, i32 0
@@ -51,7 +51,7 @@ define half @test_extract_0(<2 x half> %a) #0 {
 ; CHECK-LABEL: test_extract_1(
 ; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_extract_1_param_0];
 ; CHECK:      mov.b32         {tmp, [[R:%rs[0-9]+]]}, [[A]];
-; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      st.param.b16    [func_retval0], [[R]];
 ; CHECK:      ret;
 define half @test_extract_1(<2 x half> %a) #0 {
   %e = extractelement <2 x half> %a, i32 1
@@ -64,7 +64,7 @@ define half @test_extract_1(<2 x half> %a) #0 {
 ; CHECK-DAG:  setp.eq.s64     [[PRED:%p[0-9]+]], [[IDX]], 0;
 ; CHECK-DAG:  mov.b32         {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[A]];
 ; CHECK:      selp.b16        [[R:%rs[0-9]+]], [[E0]], [[E1]], [[PRED]];
-; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      st.param.b16    [func_retval0], [[R]];
 ; CHECK:      ret;
 define half @test_extract_i(<2 x half> %a, i64 %idx) #0 {
   %e = extractelement <2 x half> %a, i64 %idx
@@ -89,7 +89,7 @@ define half @test_extract_i(<2 x half> %a, i64 %idx) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_fadd(<2 x half> %a, <2 x half> %b) #0 {
   %r = fadd <2 x half> %a, %b
@@ -112,7 +112,7 @@ define <2 x half> @test_fadd(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_fadd_imm_0(<2 x half> %a) #0 {
   %r = fadd <2 x half> <half 1.0, half 2.0>, %a
@@ -134,7 +134,7 @@ define <2 x half> @test_fadd_imm_0(<2 x half> %a) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_fadd_imm_1(<2 x half> %a) #0 {
   %r = fadd <2 x half> %a, <half 1.0, half 2.0>
@@ -159,7 +159,7 @@ define <2 x half> @test_fadd_imm_1(<2 x half> %a) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_fsub(<2 x half> %a, <2 x half> %b) #0 {
   %r = fsub <2 x half> %a, %b
@@ -182,7 +182,7 @@ define <2 x half> @test_fsub(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_fneg(<2 x half> %a) #0 {
   %r = fsub <2 x half> <half 0.0, half 0.0>, %a
@@ -206,7 +206,7 @@ define <2 x half> @test_fneg(<2 x half> %a) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_fmul(<2 x half> %a, <2 x half> %b) #0 {
   %r = fmul <2 x half> %a, %b
@@ -227,7 +227,7 @@ define <2 x half> @test_fmul(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[FR0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[FR1]];
 ; CHECK-NEXT: mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_fdiv(<2 x half> %a, <2 x half> %b) #0 {
   %r = fdiv <2 x half> %a, %b
@@ -265,7 +265,7 @@ define <2 x half> @test_fdiv(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; -- merge into f16x2 and return it.
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
   %r = frem <2 x half> %a, %b
@@ -333,15 +333,15 @@ declare <2 x half> @test_callee(<2 x half> %a, <2 x half> %b) #0
 ; CHECK:      {
 ; CHECK-DAG:  .param .align 4 .b8 param0[4];
 ; CHECK-DAG:  .param .align 4 .b8 param1[4];
-; CHECK-DAG:  st.param.b32    [param0+0], [[A]];
-; CHECK-DAG:  st.param.b32    [param1+0], [[B]];
+; CHECK-DAG:  st.param.b32    [param0], [[A]];
+; CHECK-DAG:  st.param.b32    [param1], [[B]];
 ; CHECK-DAG:  .param .align 4 .b8 retval0[4];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );
-; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
+; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0];
 ; CHECK-NEXT: }
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_call(<2 x half> %a, <2 x half> %b) #0 {
   %r = call <2 x half> @test_callee(<2 x half> %a, <2 x half> %b)
@@ -354,15 +354,15 @@ define <2 x half> @test_call(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK:      {
 ; CHECK-DAG:  .param .align 4 .b8 param0[4];
 ; CHECK-DAG:  .param .align 4 .b8 param1[4];
-; CHECK-DAG:  st.param.b32    [param0+0], [[B]];
-; CHECK-DAG:  st.param.b32    [param1+0], [[A]];
+; CHECK-DAG:  st.param.b32    [param0], [[B]];
+; CHECK-DAG:  st.param.b32    [param1], [[A]];
 ; CHECK-DAG:  .param .align 4 .b8 retval0[4];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );
-; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
+; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0];
 ; CHECK-NEXT: }
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_call_flipped(<2 x half> %a, <2 x half> %b) #0 {
   %r = call <2 x half> @test_callee(<2 x half> %b, <2 x half> %a)
@@ -375,15 +375,15 @@ define <2 x half> @test_call_flipped(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK:      {
 ; CHECK-DAG:  .param .align 4 .b8 param0[4];
 ; CHECK-DAG:  .param .align 4 .b8 param1[4];
-; CHECK-DAG:  st.param.b32    [param0+0], [[B]];
-; CHECK-DAG:  st.param.b32    [param1+0], [[A]];
+; CHECK-DAG:  st.param.b32    [param0], [[B]];
+; CHECK-DAG:  st.param.b32    [param1], [[A]];
 ; CHECK-DAG:  .param .align 4 .b8 retval0[4];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );
-; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
+; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0];
 ; CHECK-NEXT: }
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_tailcall_flipped(<2 x half> %a, <2 x half> %b) #0 {
   %r = tail call <2 x half> @test_callee(<2 x half> %b, <2 x half> %a)
@@ -396,7 +396,7 @@ define <2 x half> @test_tailcall_flipped(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-DAG:  ld.param.u8     [[C:%rs[0-9]+]], [test_select_param_2]
 ; CHECK-DAG:  setp.eq.b16     [[PRED:%p[0-9]+]], %rs{{.*}}, 1;
 ; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], [[A]], [[B]], [[PRED]];
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_select(<2 x half> %a, <2 x half> %b, i1 zeroext %c) #0 {
   %r = select i1 %c, <2 x half> %a, <2 x half> %b
@@ -425,7 +425,7 @@ define <2 x half> @test_select(<2 x half> %a, <2 x half> %b, i1 zeroext %c) #0 {
 ; CHECK-DAG:  selp.b16        [[R0:%rs[0-9]+]], [[A0]], [[B0]], [[P0]];
 ; CHECK-DAG:  selp.b16        [[R1:%rs[0-9]+]], [[A1]], [[B1]], [[P1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_select_cc(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) #0 {
   %cc = fcmp une <2 x half> %c, %d
@@ -451,7 +451,7 @@ define <2 x half> @test_select_cc(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ;
 ; CHECK-DAG: selp.f32        [[R0:%f[0-9]+]], [[A0]], [[B0]], [[P0]];
 ; CHECK-DAG: selp.f32        [[R1:%f[0-9]+]], [[A1]], [[B1]], [[P1]];
-; CHECK-NEXT: st.param.v2.f32    [func_retval0+0], {[[R0]], [[R1]]};
+; CHECK-NEXT: st.param.v2.f32    [func_retval0], {[[R0]], [[R1]]};
 ; CHECK-NEXT: ret;
 define <2 x float> @test_select_cc_f32_f16(<2 x float> %a, <2 x float> %b,
                                            <2 x half> %c, <2 x half> %d) #0 {
@@ -472,7 +472,7 @@ define <2 x float> @test_select_cc_f32_f16(<2 x float> %a, <2 x float> %b,
 ; CHECK-DAG:  selp.b16        [[R0:%rs[0-9]+]], [[A0]], [[B0]], [[P0]];
 ; CHECK-DAG:  selp.b16        [[R1:%rs[0-9]+]], [[A1]], [[B1]], [[P1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_select_cc_f16_f32(<2 x half> %a, <2 x half> %b,
                                           <2 x float> %c, <2 x float> %d) #0 {
@@ -494,7 +494,7 @@ define <2 x half> @test_select_cc_f16_f32(<2 x half> %a, <2 x half> %b,
 ; CHECK-NOF16-DAG:  setp.neu.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.neu.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8  [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8  [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8  [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -516,7 +516,7 @@ define <2 x i1> @test_fcmp_une(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.equ.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.equ.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -538,7 +538,7 @@ define <2 x i1> @test_fcmp_ueq(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.gtu.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.gtu.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -560,7 +560,7 @@ define <2 x i1> @test_fcmp_ugt(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.geu.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.geu.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -582,7 +582,7 @@ define <2 x i1> @test_fcmp_uge(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.ltu.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.ltu.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -604,7 +604,7 @@ define <2 x i1> @test_fcmp_ult(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.leu.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.leu.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -627,7 +627,7 @@ define <2 x i1> @test_fcmp_ule(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.nan.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.nan.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -649,7 +649,7 @@ define <2 x i1> @test_fcmp_uno(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.ne.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.ne.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -671,7 +671,7 @@ define <2 x i1> @test_fcmp_one(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.eq.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.eq.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -693,7 +693,7 @@ define <2 x i1> @test_fcmp_oeq(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.gt.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.gt.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -715,7 +715,7 @@ define <2 x i1> @test_fcmp_ogt(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.ge.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.ge.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -737,7 +737,7 @@ define <2 x i1> @test_fcmp_oge(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.lt.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.lt.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -759,7 +759,7 @@ define <2 x i1> @test_fcmp_olt(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.le.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.le.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -781,7 +781,7 @@ define <2 x i1> @test_fcmp_ole(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  setp.num.f32   [[P0:%p[0-9]+]], [[FA0]], [[FB0]]
 ; CHECK-NOF16-DAG:  setp.num.f32   [[P1:%p[0-9]+]], [[FA1]], [[FB1]]
 ; CHECK-DAG:  selp.u16        [[R0:%rs[0-9]+]], -1, 0, [[P0]];
-; CHECK-NEXT: st.param.b8     [func_retval0+0], [[R0]];
+; CHECK-NEXT: st.param.b8     [func_retval0], [[R0]];
 ; CHECK-DAG:  selp.u16        [[R1:%rs[0-9]+]], -1, 0, [[P1]];
 ; CHECK-NEXT: st.param.b8     [func_retval0+1], [[R1]];
 ; CHECK-NEXT: ret;
@@ -795,7 +795,7 @@ define <2 x i1> @test_fcmp_ord(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.rzi.s32.f16 [[R0:%r[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rzi.s32.f16 [[R1:%r[0-9]+]], [[A1]];
-; CHECK:      st.param.v2.b32 [func_retval0+0], {[[R0]], [[R1]]}
+; CHECK:      st.param.v2.b32 [func_retval0], {[[R0]], [[R1]]}
 ; CHECK:      ret;
 define <2 x i32> @test_fptosi_i32(<2 x half> %a) #0 {
   %r = fptosi <2 x half> %a to <2 x i32>
@@ -807,7 +807,7 @@ define <2 x i32> @test_fptosi_i32(<2 x half> %a) #0 {
 ; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.rzi.s64.f16 [[R0:%rd[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rzi.s64.f16 [[R1:%rd[0-9]+]], [[A1]];
-; CHECK:      st.param.v2.b64 [func_retval0+0], {[[R0]], [[R1]]}
+; CHECK:      st.param.v2.b64 [func_retval0], {[[R0]], [[R1]]}
 ; CHECK:      ret;
 define <2 x i64> @test_fptosi_i64(<2 x half> %a) #0 {
   %r = fptosi <2 x half> %a to <2 x i64>
@@ -819,7 +819,7 @@ define <2 x i64> @test_fptosi_i64(<2 x half> %a) #0 {
 ; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.rzi.u32.f16 [[R0:%r[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rzi.u32.f16 [[R1:%r[0-9]+]], [[A1]];
-; CHECK:      st.param.v2.b32 [func_retval0+0], {[[R0]], [[R1]]}
+; CHECK:      st.param.v2.b32 [func_retval0], {[[R0]], [[R1]]}
 ; CHECK:      ret;
 define <2 x i32> @test_fptoui_2xi32(<2 x half> %a) #0 {
   %r = fptoui <2 x half> %a to <2 x i32>
@@ -831,7 +831,7 @@ define <2 x i32> @test_fptoui_2xi32(<2 x half> %a) #0 {
 ; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.rzi.u64.f16 [[R0:%rd[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rzi.u64.f16 [[R1:%rd[0-9]+]], [[A1]];
-; CHECK:      st.param.v2.b64 [func_retval0+0], {[[R0]], [[R1]]}
+; CHECK:      st.param.v2.b64 [func_retval0], {[[R0]], [[R1]]}
 ; CHECK:      ret;
 define <2 x i64> @test_fptoui_2xi64(<2 x half> %a) #0 {
   %r = fptoui <2 x half> %a to <2 x i64>
@@ -843,7 +843,7 @@ define <2 x i64> @test_fptoui_2xi64(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.rn.f16.u32  [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rn.f16.u32  [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_uitofp_2xi32(<2 x i32> %a) #0 {
   %r = uitofp <2 x i32> %a to <2 x half>
@@ -855,7 +855,7 @@ define <2 x half> @test_uitofp_2xi32(<2 x i32> %a) #0 {
 ; CHECK-DAG:  cvt.rn.f16.u64  [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rn.f16.u64  [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_uitofp_2xi64(<2 x i64> %a) #0 {
   %r = uitofp <2 x i64> %a to <2 x half>
@@ -867,7 +867,7 @@ define <2 x half> @test_uitofp_2xi64(<2 x i64> %a) #0 {
 ; CHECK-DAG:  cvt.rn.f16.s32  [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rn.f16.s32  [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sitofp_2xi32(<2 x i32> %a) #0 {
   %r = sitofp <2 x i32> %a to <2 x half>
@@ -879,7 +879,7 @@ define <2 x half> @test_sitofp_2xi32(<2 x i32> %a) #0 {
 ; CHECK-DAG:  cvt.rn.f16.s64  [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rn.f16.s64  [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sitofp_2xi64(<2 x i64> %a) #0 {
   %r = sitofp <2 x i64> %a to <2 x half>
@@ -906,7 +906,7 @@ define <2 x half> @test_sitofp_2xi64(<2 x i64> %a) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x half> %b) #0 {
   %c = uitofp <2 x i32> %a to <2 x half>
@@ -934,7 +934,7 @@ define <2 x half> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sitofp_2xi32_fadd(<2 x i32> %a, <2 x half> %b) #0 {
   %c = sitofp <2 x i32> %a to <2 x half>
@@ -947,7 +947,7 @@ define <2 x half> @test_sitofp_2xi32_fadd(<2 x i32> %a, <2 x half> %b) #0 {
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_fptrunc_2xfloat(<2 x float> %a) #0 {
   %r = fptrunc <2 x float> %a to <2 x half>
@@ -959,7 +959,7 @@ define <2 x half> @test_fptrunc_2xfloat(<2 x float> %a) #0 {
 ; CHECK-DAG:  cvt.rn.f16.f64  [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rn.f16.f64  [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_fptrunc_2xdouble(<2 x double> %a) #0 {
   %r = fptrunc <2 x double> %a to <2 x half>
@@ -971,7 +971,7 @@ define <2 x half> @test_fptrunc_2xdouble(<2 x double> %a) #0 {
 ; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.f32.f16     [[R0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[R1:%f[0-9]+]], [[A1]];
-; CHECK-NEXT: st.param.v2.f32 [func_retval0+0], {[[R0]], [[R1]]};
+; CHECK-NEXT: st.param.v2.f32 [func_retval0], {[[R0]], [[R1]]};
 ; CHECK:      ret;
 define <2 x float> @test_fpext_2xfloat(<2 x half> %a) #0 {
   %r = fpext <2 x half> %a to <2 x float>
@@ -983,7 +983,7 @@ define <2 x float> @test_fpext_2xfloat(<2 x half> %a) #0 {
 ; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.f64.f16     [[R0:%fd[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f64.f16     [[R1:%fd[0-9]+]], [[A1]];
-; CHECK-NEXT: st.param.v2.f64 [func_retval0+0], {[[R0]], [[R1]]};
+; CHECK-NEXT: st.param.v2.f64 [func_retval0], {[[R0]], [[R1]]};
 ; CHECK:      ret;
 define <2 x double> @test_fpext_2xdouble(<2 x half> %a) #0 {
   %r = fpext <2 x half> %a to <2 x double>
@@ -993,7 +993,7 @@ define <2 x double> @test_fpext_2xdouble(<2 x half> %a) #0 {
 
 ; CHECK-LABEL: test_bitcast_2xhalf_to_2xi16(
 ; CHECK:      ld.param.u32    [[A:%r[0-9]+]], [test_bitcast_2xhalf_to_2xi16_param_0];
-; CHECK:      st.param.b32 [func_retval0+0], [[A]]
+; CHECK:      st.param.b32 [func_retval0], [[A]]
 ; CHECK:      ret;
 define <2 x i16> @test_bitcast_2xhalf_to_2xi16(<2 x half> %a) #0 {
   %r = bitcast <2 x half> %a to <2 x i16>
@@ -1002,7 +1002,7 @@ define <2 x i16> @test_bitcast_2xhalf_to_2xi16(<2 x half> %a) #0 {
 
 ; CHECK-LABEL: test_bitcast_2xi16_to_2xhalf(
 ; CHECK:      ld.param.u32         [[R:%r[0-9]+]], [test_bitcast_2xi16_to_2xhalf_param_0];
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_bitcast_2xi16_to_2xhalf(<2 x i16> %a) #0 {
   %r = bitcast <2 x i16> %a to <2 x half>
@@ -1012,7 +1012,7 @@ define <2 x half> @test_bitcast_2xi16_to_2xhalf(<2 x i16> %a) #0 {
 ; CHECK-LABEL: test_bitcast_float_to_2xhalf(
 ; CHECK: ld.param.f32 	[[AF1:%f[0-9]+]], [test_bitcast_float_to_2xhalf_param_0];
 ; CHECK: mov.b32 	[[R:%r[0-9]+]], [[AF1]];
-; CHECK: st.param.b32 	[func_retval0+0], [[R]];
+; CHECK: st.param.b32 	[func_retval0], [[R]];
 ; CHECK: ret;
 define <2 x half> @test_bitcast_float_to_2xhalf(float %a) #0 {
   %r = bitcast float %a to <2 x half>
@@ -1022,7 +1022,7 @@ define <2 x half> @test_bitcast_float_to_2xhalf(float %a) #0 {
 ; CHECK-LABEL: test_bitcast_2xhalf_to_float(
 ; CHECK: ld.param.u32 	[[R:%r[0-9]+]], [test_bitcast_2xhalf_to_float_param_0];
 ; CHECK: mov.b32 	[[AF1:%f[0-9]+]], [[R]];
-; CHECK: st.param.f32 	[func_retval0+0], [[AF1]];
+; CHECK: st.param.f32 	[func_retval0], [[AF1]];
 ; CHECK: ret;
 define float @test_bitcast_2xhalf_to_float(<2 x half> %a) #0 {
   %r = bitcast <2 x half> %a to float
@@ -1063,7 +1063,7 @@ declare <2 x half> @llvm.fmuladd.f16(<2 x half> %a, <2 x half> %b, <2 x half> %c
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sqrt(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.sqrt.f16(<2 x half> %a)
@@ -1087,7 +1087,7 @@ define <2 x half> @test_sqrt(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sin(<2 x half> %a) #0 #1 {
   %r = call <2 x half> @llvm.sin.f16(<2 x half> %a)
@@ -1104,7 +1104,7 @@ define <2 x half> @test_sin(<2 x half> %a) #0 #1 {
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_cos(<2 x half> %a) #0 #1 {
   %r = call <2 x half> @llvm.cos.f16(<2 x half> %a)
@@ -1175,7 +1175,7 @@ define <2 x half> @test_cos(<2 x half> %a) #0 #1 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret
 define <2 x half> @test_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
   %r = call <2 x half> @llvm.fma.f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
@@ -1193,7 +1193,7 @@ define <2 x half> @test_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; CHECK-NOF16:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK-F16:        and.b32         [[R:%r[0-9]+]], [[A]], 2147450879;
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_fabs(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.fabs.f16(<2 x half> %a)
@@ -1214,7 +1214,7 @@ define <2 x half> @test_fabs(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_minnum(<2 x half> %a, <2 x half> %b) #0 {
   %r = call <2 x half> @llvm.minnum.f16(<2 x half> %a, <2 x half> %b)
@@ -1235,7 +1235,7 @@ define <2 x half> @test_minnum(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_maxnum(<2 x half> %a, <2 x half> %b) #0 {
   %r = call <2 x half> @llvm.maxnum.f16(<2 x half> %a, <2 x half> %b)
@@ -1257,7 +1257,7 @@ define <2 x half> @test_maxnum(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-F16-DAG:    and.b32         [[R0:%r[0-9]+]], [[B]], -2147450880;
 ; CHECK-F16-DAG:    and.b32         [[R1:%r[0-9]+]], [[A]], 2147450879;
 ; CHECK-F16-DAG:    or.b32          [[R:%r[0-9]+]], [[R1]], [[R0]]
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_copysign(<2 x half> %a, <2 x half> %b) #0 {
   %r = call <2 x half> @llvm.copysign.f16(<2 x half> %a, <2 x half> %b)
@@ -1285,7 +1285,7 @@ define <2 x half> @test_copysign(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-F16-DAG:    and.b32         [[R3:%r[0-9]+]], [[R2]], -2147450880;
 ; CHECK-F16-DAG:    and.b32         [[R4:%r[0-9]+]], [[A]], 2147450879;
 ; CHECK-F16-DAG:    or.b32          [[R:%r[0-9]+]], [[R4]], [[R3]]
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_copysign_f32(<2 x half> %a, <2 x float> %b) #0 {
   %tb = fptrunc <2 x float> %b to <2 x half>
@@ -1316,7 +1316,7 @@ define <2 x half> @test_copysign_f32(<2 x half> %a, <2 x float> %b) #0 {
 ; CHECK-F16-DAG:      and.b32         [[R3:%r[0-9]+]], [[R2]], -2147450880;
 ; CHECK-F16-DAG:      and.b32         [[R4:%r[0-9]+]], [[A]], 2147450879;
 ; CHECK-F16-DAG:      or.b32          [[R:%r[0-9]+]], [[R4]], [[R3]];
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
   %tb = fptrunc <2 x double> %b to <2 x half>
@@ -1343,7 +1343,7 @@ define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
 ; CHECK-F16-DAG:    mov.b32         {[[R3:%rs[0-9]+]], [[R4:%rs[0-9]+]]}, [[R2]]
 ; CHECK-F16-DAG:    cvt.f32.f16     [[XR0:%f[0-9]+]], [[R3]]
 ; CHECK-F16-DAG:    cvt.f32.f16     [[XR1:%f[0-9]+]], [[R4]]
-; CHECK:      st.param.v2.f32 [func_retval0+0], {[[XR0]], [[XR1]]};
+; CHECK:      st.param.v2.f32 [func_retval0], {[[XR0]], [[XR1]]};
 ; CHECK:      ret;
 define <2 x float> @test_copysign_extended(<2 x half> %a, <2 x half> %b) #0 {
   %r = call <2 x half> @llvm.copysign.f16(<2 x half> %a, <2 x half> %b)
@@ -1357,7 +1357,7 @@ define <2 x float> @test_copysign_extended(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-DAG:  cvt.rmi.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.rmi.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_floor(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.floor.f16(<2 x half> %a)
@@ -1370,7 +1370,7 @@ define <2 x half> @test_floor(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.rpi.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.rpi.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_ceil(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.ceil.f16(<2 x half> %a)
@@ -1383,7 +1383,7 @@ define <2 x half> @test_ceil(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.rzi.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.rzi.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_trunc(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.trunc.f16(<2 x half> %a)
@@ -1396,7 +1396,7 @@ define <2 x half> @test_trunc(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_rint(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.rint.f16(<2 x half> %a)
@@ -1409,7 +1409,7 @@ define <2 x half> @test_rint(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_nearbyint(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.nearbyint.f16(<2 x half> %a)
@@ -1422,7 +1422,7 @@ define <2 x half> @test_nearbyint(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_roundeven(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.roundeven.f16(<2 x half> %a)
@@ -1436,7 +1436,7 @@ define <2 x half> @test_roundeven(<2 x half> %a) #0 {
 ; CHECK:      or.b32 {{.*}}, [[R1]], 1056964608;
 ; CHECK:      and.b32 [[R2:%r[0-9]+]], {{.*}}, -2147483648;
 ; CHECK:      or.b32 {{.*}}, [[R2]], 1056964608;
-; CHECK:      st.param.b32    [func_retval0+0], {{.*}};
+; CHECK:      st.param.b32    [func_retval0], {{.*}};
 ; CHECK:      ret;
 define <2 x half> @test_round(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.round.f16(<2 x half> %a)
@@ -1465,7 +1465,7 @@ define <2 x half> @test_round(<2 x half> %a) #0 {
 ; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
 ; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_fmuladd(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
   %r = call <2 x half> @llvm.fmuladd.f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)

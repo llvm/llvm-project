@@ -102,8 +102,10 @@ static ResourceClass getResourceClass(RegisterType RT) {
     return ResourceClass::Sampler;
   case RegisterType::C:
   case RegisterType::I:
-    llvm_unreachable("unexpected RegisterType value");
+    // Deliberately falling through to the unreachable below.
+    break;
   }
+  llvm_unreachable("unexpected RegisterType value");
 }
 
 DeclBindingInfo *ResourceBindings::addDeclBindingInfo(const VarDecl *VD,

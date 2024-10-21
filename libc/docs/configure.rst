@@ -33,6 +33,7 @@ to learn about the defaults for your platform and target.
 * **"general" options**
     - ``LIBC_ADD_NULL_CHECKS``: Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior.
 * **"math" options**
+    - ``LIBC_CONF_FREXP_INF_NAN_EXPONENT``: The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configue an explicit exp value for Inf/NaN inputs.
     - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST.
 * **"printf" options**
     - ``LIBC_CONF_PRINTF_DISABLE_FIXED_POINT``: Disable printing fixed point values in printf and friends.

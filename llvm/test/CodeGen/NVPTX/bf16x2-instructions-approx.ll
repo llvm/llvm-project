@@ -16,7 +16,7 @@ declare <2 x bfloat> @llvm.cos.f16(<2 x bfloat> %a) #0
 ; CHECK-DAG:  cvt.rn.bf16.f32  [[R0:%rs[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.bf16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x bfloat> @test_sin(<2 x bfloat> %a) #0 #1 {
   %r = call <2 x bfloat> @llvm.sin.f16(<2 x bfloat> %a)
@@ -33,7 +33,7 @@ define <2 x bfloat> @test_sin(<2 x bfloat> %a) #0 #1 {
 ; CHECK-DAG:  cvt.rn.bf16.f32  [[R0:%rs[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.bf16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x bfloat> @test_cos(<2 x bfloat> %a) #0 #1 {
   %r = call <2 x bfloat> @llvm.cos.f16(<2 x bfloat> %a)

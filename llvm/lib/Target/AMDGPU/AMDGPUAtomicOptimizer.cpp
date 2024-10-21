@@ -580,7 +580,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   auto *ActiveBits = B.CreatePHI(WaveTy, 2, "ActiveBits");
   ActiveBits->addIncoming(Ballot, EntryBB);
 
-  // Use llvm.cttz instrinsic to find the lowest remaining active lane.
+  // Use llvm.cttz intrinsic to find the lowest remaining active lane.
   auto *FF1 =
       B.CreateIntrinsic(Intrinsic::cttz, WaveTy, {ActiveBits, B.getTrue()});
 

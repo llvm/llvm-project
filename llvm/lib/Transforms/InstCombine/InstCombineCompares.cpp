@@ -870,8 +870,7 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
       if (ICmp && ICmp->isEquality() && getUnderlyingObject(*U) == Alloca) {
         // Collect equality icmps of the alloca, and don't treat them as
         // captures.
-        auto Res = ICmps.insert({ICmp, 0});
-        Res.first->second |= 1u << U->getOperandNo();
+        ICmps[ICmp] |= 1u << U->getOperandNo();
         return false;
       }
 
