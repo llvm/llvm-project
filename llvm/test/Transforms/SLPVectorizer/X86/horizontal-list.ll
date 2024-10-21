@@ -318,14 +318,22 @@ entry:
 define float @f(ptr nocapture readonly %x) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <48 x float>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call fast float @llvm.vector.reduce.fadd.v48f32(float 0.000000e+00, <48 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_32:%.*]] = getelementptr inbounds float, ptr [[X]], i64 32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr [[ARRAYIDX_32]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v32f32(float 0.000000e+00, <32 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret float [[OP_RDX]]
 ;
 ; THRESHOLD-LABEL: @f(
 ; THRESHOLD-NEXT:  entry:
-; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <48 x float>, ptr [[X:%.*]], align 4
-; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = call fast float @llvm.vector.reduce.fadd.v48f32(float 0.000000e+00, <48 x float> [[TMP0]])
+; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[X:%.*]], align 4
+; THRESHOLD-NEXT:    [[ARRAYIDX_32:%.*]] = getelementptr inbounds float, ptr [[X]], i64 32
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr [[ARRAYIDX_32]], align 4
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v32f32(float 0.000000e+00, <32 x float> [[TMP0]])
+; THRESHOLD-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP1]])
+; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP2]], [[TMP3]]
 ; THRESHOLD-NEXT:    ret float [[OP_RDX]]
 ;
   entry:
@@ -598,14 +606,18 @@ define float @loadadd31(ptr nocapture readonly %x) {
 ; CHECK-LABEL: @loadadd31(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load <24 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_16:%.*]] = getelementptr inbounds float, ptr [[X]], i64 17
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[ARRAYIDX_16]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX_24:%.*]] = getelementptr inbounds float, ptr [[X]], i64 25
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX_24]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX_28:%.*]] = getelementptr inbounds float, ptr [[X]], i64 29
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX_28]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX_29:%.*]] = getelementptr inbounds float, ptr [[X]], i64 30
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX_29]], align 4
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call fast float @llvm.vector.reduce.fadd.v24f32(float 0.000000e+00, <24 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], [[TMP7]]
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[TMP3]]
@@ -615,14 +627,18 @@ define float @loadadd31(ptr nocapture readonly %x) {
 ; THRESHOLD-LABEL: @loadadd31(
 ; THRESHOLD-NEXT:  entry:
 ; THRESHOLD-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i64 1
-; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <24 x float>, ptr [[ARRAYIDX]], align 4
+; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[ARRAYIDX]], align 4
+; THRESHOLD-NEXT:    [[ARRAYIDX_16:%.*]] = getelementptr inbounds float, ptr [[X]], i64 17
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[ARRAYIDX_16]], align 4
 ; THRESHOLD-NEXT:    [[ARRAYIDX_24:%.*]] = getelementptr inbounds float, ptr [[X]], i64 25
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX_24]], align 4
 ; THRESHOLD-NEXT:    [[ARRAYIDX_28:%.*]] = getelementptr inbounds float, ptr [[X]], i64 29
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX_28]], align 4
 ; THRESHOLD-NEXT:    [[ARRAYIDX_29:%.*]] = getelementptr inbounds float, ptr [[X]], i64 30
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX_29]], align 4
-; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = call fast float @llvm.vector.reduce.fadd.v24f32(float 0.000000e+00, <24 x float> [[TMP0]])
+; THRESHOLD-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP0]])
+; THRESHOLD-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP1]])
+; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP5]], [[TMP6]]
 ; THRESHOLD-NEXT:    [[TMP7:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], [[TMP7]]
 ; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[TMP3]]
