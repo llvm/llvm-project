@@ -1439,8 +1439,8 @@ void ArmCmseSGSection::finalizeContents() {
   for (size_t i = 0; i < sgVeneers.size(); ++i) {
     ArmCmseSGVeneer *s = sgVeneers[i];
     s->offset = i * s->size;
-    Defined(file, StringRef(), s->sym->binding, s->sym->stOther, s->sym->type,
-            s->offset | 1, s->size, this)
+    Defined(ctx, file, StringRef(), s->sym->binding, s->sym->stOther,
+            s->sym->type, s->offset | 1, s->size, this)
         .overwrite(*s->sym);
   }
 }
@@ -1474,7 +1474,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
-        ctx.internalFile, d->getName(), d->computeBinding(ctx),
+        ctx, ctx.internalFile, d->getName(), d->computeBinding(ctx),
         /*stOther=*/0, STT_FUNC, d->getVA(), d->getSize(), nullptr));
   }
 
