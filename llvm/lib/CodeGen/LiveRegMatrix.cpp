@@ -39,7 +39,7 @@ char LiveRegMatrix::ID = 0;
 INITIALIZE_PASS_BEGIN(LiveRegMatrix, "liveregmatrix",
                       "Live Register Matrix", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(LiveRegMatrix, "liveregmatrix",
                     "Live Register Matrix", false, false)
 
@@ -48,14 +48,14 @@ LiveRegMatrix::LiveRegMatrix() : MachineFunctionPass(ID) {}
 void LiveRegMatrix::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
-  AU.addRequiredTransitive<VirtRegMap>();
+  AU.addRequiredTransitive<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 bool LiveRegMatrix::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  VRM = &getAnalysis<VirtRegMap>();
+  VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
 
   unsigned NumRegUnits = TRI->getNumRegUnits();
   if (NumRegUnits != Matrix.size())
