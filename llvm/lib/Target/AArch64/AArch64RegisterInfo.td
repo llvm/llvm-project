@@ -1210,15 +1210,6 @@ def ZPRMul2AsmOp32_Hi : ZPRAsmOperand<"VectorS_Hi", 32, "Mul2_Hi">;
 def ZPRMul2AsmOp64_Lo : ZPRAsmOperand<"VectorD_Lo", 64, "Mul2_Lo">;
 def ZPRMul2AsmOp64_Hi : ZPRAsmOperand<"VectorD_Hi", 64, "Mul2_Hi">;
 
-def ZPR_K : RegisterClass<"AArch64", [untyped], 128,
-                          (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>;
-
-def ZK : RegisterOperand<ZPR_K, "printSVERegOp<>">{
-  let EncoderMethod = "EncodeZK";
-  let DecoderMethod = "DecodeZK";
-  let ParserMatchClass = ZPRAsmOperand<"Vector_20to23or28to31", 0, "_K">;
-}
-
 def ZPR8Mul2_Lo  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Lo,   0, 14, ElementSizeB, ZPRMul2_Lo>;
 def ZPR8Mul2_Hi  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Hi,  16, 30, ElementSizeB, ZPRMul2_Hi>;
 def ZPR16Mul2_Lo : ZPRMul2_MinToMaxRegOp<"h", ZPRMul2AsmOp16_Lo,  0, 14, ElementSizeH, ZPRMul2_Lo>;
