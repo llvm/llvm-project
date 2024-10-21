@@ -19,6 +19,7 @@
 
 #include "AMDGPU.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include <optional>
 
 namespace llvm {
@@ -178,41 +179,19 @@ public:
     if (FromAS == ToAS)
       return false;
 
-    if (FromAS == AMDGPUAS::FLAT_ADDRESS ||
-        FromAS == AMDGPUAS::GLOBAL_ADDRESS ||
-        FromAS == AMDGPUAS::CONSTANT_ADDRESS ||
-        FromAS > AMDGPUAS::MAX_AMDGPU_ADDRESS) {
-      // Casting any 64-bit AS to another 64-bit AS or to a 32-bit AS is
-      // valid.
-      switch (ToAS) {
-      case AMDGPUAS::FLAT_ADDRESS:
-      case AMDGPUAS::GLOBAL_ADDRESS:
-      case AMDGPUAS::LOCAL_ADDRESS:
-      case AMDGPUAS::CONSTANT_ADDRESS:
-      case AMDGPUAS::PRIVATE_ADDRESS:
-      case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
-        return true;
-      default:
-        break;
-      }
-      if (ToAS > AMDGPUAS::MAX_AMDGPU_ADDRESS)
-        return true;
-    } else if (FromAS == AMDGPUAS::LOCAL_ADDRESS ||
-               FromAS == AMDGPUAS::PRIVATE_ADDRESS ||
-               FromAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
-      // Casting from a 32-bit AS to any 64-bit AS is valid.
-      switch (ToAS) {
-      case AMDGPUAS::FLAT_ADDRESS:
-      case AMDGPUAS::GLOBAL_ADDRESS:
-      case AMDGPUAS::CONSTANT_ADDRESS:
-        return true;
-      default:
-        break;
-      }
-      if (ToAS > AMDGPUAS::MAX_AMDGPU_ADDRESS)
-        return true;
-    }
-    // Everything else is not valid.
+    if (FromAS == AMDGPUAS::FLAT_ADDRESS)
+      return AMDGPU::isExtendedGlobalAddrSpace(ToAS) ||
+             ToAS == AMDGPUAS::LOCAL_ADDRESS ||
+             ToAS == AMDGPUAS::PRIVATE_ADDRESS;
+
+    if (AMDGPU::isExtendedGlobalAddrSpace(FromAS))
+      return AMDGPU::isFlatGlobalAddrSpace(ToAS) ||
+             ToAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
+
+    if (FromAS == AMDGPUAS::LOCAL_ADDRESS ||
+        FromAS == AMDGPUAS::PRIVATE_ADDRESS)
+      return ToAS == AMDGPUAS::FLAT_ADDRESS;
+
     return false;
   }
 
