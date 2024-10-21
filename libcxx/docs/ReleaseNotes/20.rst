@@ -130,4 +130,8 @@ ABI Affecting Changes
 Build System Changes
 --------------------
 
-- TODO
+- The following CMake options to control how the ABI library is linked into libc++ have been deprecated:
+  ``LIBCXX_ENABLE_STATIC_ABI_LIBRARY``, ``LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY``,
+  ``LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY``. If you want to merge the objects of libc++abi into
+  libc++, please specify ``-DLIBCXX_CXX_ABI=merged-libcxxabi`` instead. These options will be
+  removed entirely in LLVM 21.

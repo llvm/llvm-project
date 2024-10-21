@@ -118,13 +118,14 @@ We use the MS runtime.
 
 The CMake files will need to be edited to prevent them adding GNU specific libraries to the link line.
 
-Building libc++abi:
--------------------
+Building libc++ and libc++abi:
+------------------------------
 
+* ``-DLIBCXX_ENABLE_SHARED=ON``
+* ``-DLIBCXX_ENABLE_STATIC=OFF``
+* ``-DLIBCXX_CXX_ABI="merged-libcxxabi"``
 * ``-DLIBCXXABI_ENABLE_SHARED=OFF``
 * ``-DLIBCXXABI_ENABLE_STATIC=ON``
-* ``-DLIBCXX_ENABLE_SHARED=ON'``
-* ``-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON``
 
 To break the symbol dependency between libc++abi and libc++ we
 build libc++abi as a static library and then statically link it
@@ -132,18 +133,6 @@ into the libc++ DLL. This necessitates setting the CMake file
 to ensure that the visibility macros (which expand to dllexport/import)
 are expanded as they will be needed when creating the final libc++
 DLL later, see: https://reviews.llvm.org/D90021.
-
-* ``-DLIBCXXABI_LIBCXX_INCLUDES=<path to libcxx>/include``
-
-Where to find the libc++ headers
-
-Building libc++:
-----------------
-
-* ``-DLIBCXX_ENABLE_SHARED=ON``
-* ``-DLIBCXX_ENABLE_STATIC=OFF``
-
-We build libc++ as a DLL and statically link libc++abi into it.
 
 * ``-DLIBCXX_INSTALL_HEADERS=ON``
 
@@ -156,13 +145,6 @@ We use the MS runtime.
 * ``-DLIBCXX_HAS_WIN32_THREAD_API=ON``
 
 Windows Itanium does not offer a POSIX-like layer over WIN32.
-
-* ``-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON``
-* ``-DLIBCXX_CXX_ABI=libcxxabi``
-* ``-DLIBCXX_CXX_ABI_INCLUDE_PATHS=<libcxxabi src path>/include``
-* ``-DLIBCXX_CXX_ABI_LIBRARY_PATH=<libcxxabi build path>/lib``
-
-Use the static libc++abi library built earlier.
 
 * ``-DLIBCXX_NO_VCRUNTIME=ON``
 

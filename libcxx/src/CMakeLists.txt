@@ -172,10 +172,13 @@ endif()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
+include(HandleLibC)
+include(HandleLibCXXABI)
+
 # Build the shared library.
 add_library(cxx_shared SHARED ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(cxx_shared PUBLIC cxx-headers libcxx-libc-shared
+target_link_libraries(cxx_shared PUBLIC cxx-headers libcxx-libc-shared libcxx-abi-shared
                                   PRIVATE ${LIBCXX_LIBRARIES})
 set_target_properties(cxx_shared
   PROPERTIES
@@ -199,17 +202,10 @@ if(ZOS)
   )
 endif()
 
-# Link against libc++abi
-if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-  target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
-else()
-  target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
-endif()
-
 # Maybe force some symbols to be weak, not weak or not exported.
 # TODO: This shouldn't depend on the platform, and ideally it should be done in the sources.
-if (APPLE AND LIBCXX_CXX_ABI MATCHES "libcxxabi$"
-          AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
+if (APPLE AND LIBCXX_ABILIB_FOR_SHARED MATCHES "(.*)libcxxabi$"
+          AND NOT LIBCXX_ABILIB_FOR_SHARED MATCHES "^merged-(.+)")
   target_link_libraries(cxx_shared PRIVATE
     "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
     "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
@@ -295,10 +291,6 @@ endif()
 
 if (LIBCXX_ENABLE_STATIC)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
-endif()
-# Attempt to merge the libc++.a archive and the ABI library archive into one.
-if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
-  target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
 endif()
 
 # Add a meta-target for both libraries.
