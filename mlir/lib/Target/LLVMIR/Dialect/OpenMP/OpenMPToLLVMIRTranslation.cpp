@@ -41,7 +41,6 @@
 #include <optional>
 #include <utility>
 
-#define DEBUG_TYPE "openmp-to-llvm-ir-translation"
 using namespace mlir;
 
 namespace {
@@ -3322,6 +3321,14 @@ static bool privatizerNeedsMap(omp::PrivateClauseOp &privatizer) {
   Value blockArg0 = allocRegion.getArgument(0);
   return !blockArg0.use_empty();
 }
+
+// Return the llvm::Value * corresponding to the privateVar that
+// is being privatized. It isn't always as simple as looking up
+// moduleTranslation with privateVar. For instance, in case of
+// an allocatable, the descriptor for the allocatable is privatized.
+// This descriptor is mapped using an MapInfoOp. So, this function
+// will return a pointer to the llvm::Value corresponding to the
+// block argument for the mapped descriptor.
 static llvm::Value *
 findHostAssociatedValue(Value privateVar, omp::TargetOp targetOp,
                         llvm::DenseMap<Value, int> &mappedPrivateVars,
@@ -3336,17 +3343,8 @@ findHostAssociatedValue(Value privateVar, omp::TargetOp targetOp,
            "A block argument corresponding to a mapped var should have "
            "!llvm.ptr type");
 
-    LLVM_DEBUG(llvm::dbgs() << "privVarType = ");
-    LLVM_DEBUG(privVarType.dump());
-    LLVM_DEBUG(llvm::dbgs() << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "blockArgType = ");
-    LLVM_DEBUG(blockArg.getType().dump());
-    LLVM_DEBUG(llvm::dbgs() << "\n");
-
     if (privVarType == blockArg.getType()) {
       llvm::Value *v = moduleTranslation.lookupValue(blockArg);
-      LLVM_DEBUG(llvm::dbgs() << "Host Associated Value : ");
-      LLVM_DEBUG(v->dump());
       return v;
     }
 
@@ -3358,13 +3356,9 @@ findHostAssociatedValue(Value privateVar, omp::TargetOp targetOp,
       llvm::Value *load =
           builder.CreateLoad(moduleTranslation.convertType(privVarType),
                              moduleTranslation.lookupValue(blockArg));
-      LLVM_DEBUG(llvm::dbgs() << "Host Associated Value : ");
-      LLVM_DEBUG(load->dump());
       return load;
     }
   }
-  LLVM_DEBUG(llvm::dbgs() << "Host Associated Value : ");
-  LLVM_DEBUG(moduleTranslation.lookupValue(privateVar)->dump());
   return moduleTranslation.lookupValue(privateVar);
 }
 static LogicalResult
@@ -3415,53 +3409,35 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     OperandRange privateVars = targetOp.getPrivateVars();
     std::optional<ArrayAttr> privateSyms = targetOp.getPrivateSyms();
     auto reverseIt = mapVars.rbegin();
-    LLVM_DEBUG(llvm::dbgs() << "****Private Vars*******\n");
     for (auto [privVar, privSym] :
          llvm::reverse(llvm::zip_equal(privateVars, *privateSyms))) {
-      LLVM_DEBUG(llvm::dbgs() << "-- {\n");
-      LLVM_DEBUG(privVar.dump());
-      LLVM_DEBUG(llvm::dbgs() << "Type:-> ");
-      LLVM_DEBUG(privVar.getType().dump());
       SymbolRefAttr privatizerName = llvm::cast<SymbolRefAttr>(privSym);
-      LLVM_DEBUG(llvm::dbgs() << "Privatizer: " << privatizerName << "\n}");
-
       omp::PrivateClauseOp privatizer =
-          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
-              targetOp, privatizerName);
-      if (!privatizerNeedsMap(privatizer)) {
-        LLVM_DEBUG(llvm::dbgs() << "    - DOES NOT need map\n");
+          findPrivatizer(targetOp, privatizerName);
+      if (!privatizerNeedsMap(privatizer))
         continue;
-      }
-      LLVM_DEBUG(llvm::dbgs() << "      - NEEDS map");
-      LLVM_DEBUG(llvm::dbgs() << " -> Mapped Arg : -> ");
-      LLVM_DEBUG((*reverseIt).dump());
-      LLVM_DEBUG(llvm::dbgs() << " ->  Block Arg:  -> ");
-      LLVM_DEBUG(targetOp.getRegion().getArgument(lastMapBlockArgsIdx).dump());
-      LLVM_DEBUG(llvm::dbgs() << "\n");
 
       // The MapInfoOp defining the map var isn't really needed later.
-      // We'll do some sanity checks on it right now.
+      // So, we don't store it in any datastructure. Instead, we just
+      // do some sanity checks on it right now.
       omp::MapInfoOp mapInfoOp =
           llvm::cast<omp::MapInfoOp>((*reverseIt).getDefiningOp());
       Type varType = mapInfoOp.getVarType();
-      LLVM_DEBUG(llvm::dbgs() << "mapInfoOp.getVarType() = ");
-      LLVM_DEBUG(varType.dump());
-      LLVM_DEBUG(llvm::dbgs() << "\n");
 
+      // Check #1: Check that the type of the private variable matches
+      // the type of the variable being mapped.
       if (!isa<LLVM::LLVMPointerType>(privVar.getType()))
         assert(
             varType == privVar.getType() &&
             "Type of private var doesn't match the type of the mapped value");
+
+      // Ok, only 1 sanity check for now.
+      // Record the index of the block argument corresponding to this
+      // mapvar.
       mappedPrivateVars.insert({privVar, lastMapBlockArgsIdx});
       lastMapBlockArgsIdx--;
       reverseIt++;
     }
-  }
-  for (auto [privVar, blockArgIdx] : mappedPrivateVars) {
-    LLVM_DEBUG(llvm::dbgs() << "*****Private->MappedVars****\n");
-    LLVM_DEBUG(privVar.dump());
-    LLVM_DEBUG(llvm::dbgs() << "->\n");
-    LLVM_DEBUG(targetRegion.getArgument(blockArgIdx).dump());
   }
   LogicalResult bodyGenStatus = success();
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
@@ -3488,17 +3464,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       auto mapInfoOp = cast<omp::MapInfoOp>(mapOp.getDefiningOp());
       llvm::Value *mapOpValue =
           moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
-      LLVM_DEBUG(llvm::dbgs()
-                 << "ModuleTranslation Mapping Table for mapVars\n");
-      LLVM_DEBUG(arg.dump());
-      LLVM_DEBUG(llvm::dbgs() << "---->"; mapOpValue->dump());
-      LLVM_DEBUG(llvm::dbgs() << "\n");
       moduleTranslation.mapValue(arg, mapOpValue);
     }
-    LLVM_DEBUG(llvm::dbgs() << "LLVM Module before privatization\n");
-    LLVM_DEBUG(llvm::dbgs() << "------------------------------------\n");
-    LLVM_DEBUG(builder.GetInsertBlock()->getParent()->getParent()->dump());
-    LLVM_DEBUG(llvm::dbgs() << "------------------------------------\n");
     // Do privatization after moduleTranslation has already recorded
     // mapped values.
     SmallVector<llvm::Value *> llvmPrivateVars;
