@@ -238,9 +238,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     BB.setExecutionCount(YamlBB.ExecCount);
 
     for (const yaml::bolt::CallSiteInfo &YamlCSI : YamlBB.CallSites) {
-      BinaryFunction *Callee = YamlCSI.DestId < YamlProfileToFunction.size()
-                                   ? YamlProfileToFunction[YamlCSI.DestId]
-                                   : nullptr;
+      BinaryFunction *Callee = YamlProfileToFunction.lookup(YamlCSI.DestId);
       bool IsFunction = Callee ? true : false;
       MCSymbol *CalleeSymbol = nullptr;
       if (IsFunction)
@@ -703,7 +701,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       break;
     }
   }
-  YamlProfileToFunction.resize(YamlBP.Functions.size() + 1);
+  YamlProfileToFunction.reserve(YamlBP.Functions.size());
 
   // Computes hash for binary functions.
   if (opts::MatchProfileWithFunctionHash) {
@@ -756,12 +754,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   NormalizeByCalls = usesEvent("branches");
   uint64_t NumUnused = 0;
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
-    if (YamlBF.Id >= YamlProfileToFunction.size()) {
-      // Such profile was ignored.
-      ++NumUnused;
-      continue;
-    }
-    if (BinaryFunction *BF = YamlProfileToFunction[YamlBF.Id])
+    if (BinaryFunction *BF = YamlProfileToFunction.lookup(YamlBF.Id))
       parseFunctionProfile(*BF, YamlBF);
     else
       ++NumUnused;
