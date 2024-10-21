@@ -67,3 +67,20 @@ def G_VSLIDEDOWN_VL : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_VSLIDEDOWN_VL, riscv_slidedown_vl>;
 
+// Pseudo equivalent to a RISCVISD::VMV_V_V_VL
+def G_VMV_V_V_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type2:$vl);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VMV_V_V_VL, riscv_vmv_v_v_vl>;
+
+// Pseudo equivalent to a RISCVISD::VSLIDEUP_VL
+def G_VSLIDEUP_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$merge, type0:$vec, type1:$idx, type2:$mask,
+                       type3:$vl, type4:$policy);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VSLIDEUP_VL, riscv_slideup_vl>;
+
