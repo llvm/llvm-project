@@ -128,6 +128,7 @@ static void processOmpAtomicTODO(mlir::Type elementType,
                              Fortran::parser::OmpAtomicClauseList>()) {
     // Based on assertion for supported element types in OMPIRBuilder.cpp
     // createAtomicRead
+    // TODO: Enumerate remaining unsupported types for atomics
     mlir::Type unwrappedEleTy = fir::unwrapRefType(elementType);
     bool supportedAtomicType = fir::isa_trivial(unwrappedEleTy);
     if (!supportedAtomicType)
