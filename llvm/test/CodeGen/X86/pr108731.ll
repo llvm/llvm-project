@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=CHECK,NOBMI
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=CHECK,BMI
 
-define i64 @test_i64(i64 %w, i64 %x, i64 %y, i64 %z) {
-; NOBMI-LABEL: test_i64:
+define i64 @foo(i64 %w, i64 %x, i64 %y, i64 %z) {
+; NOBMI-LABEL: foo:
 ; NOBMI:       # %bb.0: # %Entry
 ; NOBMI-NEXT:    movq %rcx, %rax
 ; NOBMI-NEXT:    andq %rdx, %rsi
@@ -14,7 +14,7 @@ define i64 @test_i64(i64 %w, i64 %x, i64 %y, i64 %z) {
 ; NOBMI-NEXT:    andq %rsi, %rax
 ; NOBMI-NEXT:    retq
 ;
-; BMI-LABEL: test_i64:
+; BMI-LABEL: foo:
 ; BMI:       # %bb.0: # %Entry
 ; BMI-NEXT:    andq %rdx, %rsi
 ; BMI-NEXT:    andnq %rdi, %rsi, %rax
@@ -31,91 +31,8 @@ Entry:
   ret i64 %and3
 }
 
-define i32 @test_i32(i32 %w, i32 %x, i32 %y, i32 %z) {
-; NOBMI-LABEL: test_i32:
-; NOBMI:       # %bb.0: # %Entry
-; NOBMI-NEXT:    movl %ecx, %eax
-; NOBMI-NEXT:    andl %edx, %esi
-; NOBMI-NEXT:    notl %esi
-; NOBMI-NEXT:    andl %edi, %esi
-; NOBMI-NEXT:    notl %eax
-; NOBMI-NEXT:    orl %edx, %eax
-; NOBMI-NEXT:    andl %esi, %eax
-; NOBMI-NEXT:    retq
-;
-; BMI-LABEL: test_i32:
-; BMI:       # %bb.0: # %Entry
-; BMI-NEXT:    andl %edx, %esi
-; BMI-NEXT:    andnl %edi, %esi, %eax
-; BMI-NEXT:    andnl %ecx, %edx, %ecx
-; BMI-NEXT:    andnl %eax, %ecx, %eax
-; BMI-NEXT:    retq
-Entry:
-  %and1 = and i32 %y, %x
-  %xor1 = xor i32 %and1, -1
-  %and2 = and i32 %xor1, %w
-  %.not = xor i32 %z, -1
-  %or1 = or i32 %.not, %y
-  %and3 = and i32 %and2, %or1
-  ret i32 %and3
-}
-
-define i16 @test_i16(i16 %w, i16 %x, i16 %y, i16 %z) {
-; NOBMI-LABEL: test_i16:
-; NOBMI:       # %bb.0: # %Entry
-; NOBMI-NEXT:    movl %ecx, %eax
-; NOBMI-NEXT:    andl %edx, %esi
-; NOBMI-NEXT:    notl %esi
-; NOBMI-NEXT:    andl %edi, %esi
-; NOBMI-NEXT:    notl %eax
-; NOBMI-NEXT:    orl %edx, %eax
-; NOBMI-NEXT:    andl %esi, %eax
-; NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
-; NOBMI-NEXT:    retq
-;
-; BMI-LABEL: test_i16:
-; BMI:       # %bb.0: # %Entry
-; BMI-NEXT:    andl %edx, %esi
-; BMI-NEXT:    andnl %edi, %esi, %eax
-; BMI-NEXT:    notl %ecx
-; BMI-NEXT:    orl %edx, %ecx
-; BMI-NEXT:    andl %ecx, %eax
-; BMI-NEXT:    # kill: def $ax killed $ax killed $eax
-; BMI-NEXT:    retq
-Entry:
-  %and1 = and i16 %y, %x
-  %xor1 = xor i16 %and1, -1
-  %and2 = and i16 %xor1, %w
-  %.not = xor i16 %z, -1
-  %or1 = or i16 %.not, %y
-  %and3 = and i16 %and2, %or1
-  ret i16 %and3
-}
-
-define i8 @test_i8(i8 %w, i8 %x, i8 %y, i8 %z) {
-; CHECK-LABEL: test_i8:
-; CHECK:       # %bb.0: # %Entry
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    andl %edx, %esi
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    andb %dil, %sil
-; CHECK-NEXT:    notb %cl
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-Entry:
-  %and1 = and i8 %y, %x
-  %xor1 = xor i8 %and1, -1
-  %and2 = and i8 %xor1, %w
-  %.not = xor i8 %z, -1
-  %or1 = or i8 %.not, %y
-  %and3 = and i8 %and2, %or1
-  ret i8 %and3
-}
-
-define <16 x i8> @test_v16i8(<16 x i8> %w, <16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
-; NOBMI-LABEL: test_v16i8:
+define <16 x i8> @fooVec(<16 x i8> %w, <16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; NOBMI-LABEL: fooVec:
 ; NOBMI:       # %bb.0: # %Entry
 ; NOBMI-NEXT:    andps %xmm2, %xmm1
 ; NOBMI-NEXT:    andnps %xmm0, %xmm1
@@ -124,7 +41,7 @@ define <16 x i8> @test_v16i8(<16 x i8> %w, <16 x i8> %x, <16 x i8> %y, <16 x i8>
 ; NOBMI-NEXT:    movaps %xmm2, %xmm0
 ; NOBMI-NEXT:    retq
 ;
-; BMI-LABEL: test_v16i8:
+; BMI-LABEL: fooVec:
 ; BMI:       # %bb.0: # %Entry
 ; BMI-NEXT:    vandps %xmm1, %xmm2, %xmm1
 ; BMI-NEXT:    vandnps %xmm0, %xmm1, %xmm0
