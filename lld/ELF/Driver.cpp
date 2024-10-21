@@ -91,6 +91,13 @@ void elf::errorOrWarn(const Twine &msg) {
     error(msg);
 }
 
+ELFSyncStream elf::Log(Ctx &ctx) { return {ctx, DiagLevel::Log}; }
+ELFSyncStream elf::Warn(Ctx &ctx) { return {ctx, DiagLevel::Warn}; }
+ELFSyncStream elf::Err(Ctx &ctx) {
+  return {ctx, ctx.arg.noinhibitExec ? DiagLevel::Warn : DiagLevel::Err};
+}
+ELFSyncStream elf::Fatal(Ctx &ctx) { return {ctx, DiagLevel::Fatal}; }
+
 Ctx::Ctx() : driver(*this) {}
 
 void Ctx::reset() {
@@ -100,6 +107,8 @@ void Ctx::reset() {
   new (&driver) LinkerDriver(*this);
   script = nullptr;
   target.reset();
+
+  errHandler = nullptr;
 
   bufferStart = nullptr;
   mainPart = nullptr;
@@ -169,6 +178,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   Ctx &ctx = elf::ctx;
   LinkerScript script(ctx);
   ctx.script = &script;
+  ctx.errHandler = &context->e;
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
@@ -1693,7 +1703,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     parallel::strategy = hardware_concurrency(threads);
     ctx.arg.thinLTOJobs = v;
   } else if (parallel::strategy.compute_thread_count() > 16) {
-    log("set maximum concurrency to 16, specify --threads= to change");
+    Log(ctx) << "set maximum concurrency to 16, specify --threads= to change";
     parallel::strategy = hardware_concurrency(16);
   }
   if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
@@ -2495,7 +2505,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   // sizes of the Partition fields in InputSectionBase and Symbol, as well as
   // the amount of space devoted to the partition number in RankFlags.
   if (ctx.partitions.size() == 254)
-    fatal("may not have more than 254 partitions");
+    Fatal(ctx) << "may not have more than 254 partitions";
 
   ctx.partitions.emplace_back(ctx);
   Partition &newPart = ctx.partitions.back();
@@ -2780,8 +2790,9 @@ static void readSecurityNotes(Ctx &ctx) {
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
       if (ctx.arg.zBtiReport == "none")
-        warn(toString(f) + ": -z force-bti: file does not have "
-                           "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
+        Warn(ctx) << f
+                  << ": -z force-bti: file does not have "
+                     "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
     } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
       if (ctx.arg.zCetReport == "none")
@@ -3048,7 +3059,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       oldFilenames.insert(f->getName());
     for (InputFile *newFile : newInputFiles)
       if (!oldFilenames.contains(newFile->getName()))
-        errorOrWarn("input file '" + newFile->getName() + "' added after LTO");
+        Err(ctx) << "input file '" << newFile->getName() << "' added after LTO";
   }
 
   // Handle --exclude-libs again because lto.tmp may reference additional
