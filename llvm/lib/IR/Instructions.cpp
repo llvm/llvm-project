@@ -3487,34 +3487,24 @@ static bool hasNonZeroFPOperands(const CmpInst *Cmp) {
 // Floating-point equality is not an equivalence when comparing +0.0 with
 // -0.0, when comparing NaN with another value, or when flushing
 // denormals-to-zero.
-bool CmpInst::isEqEquivalence() const {
+bool CmpInst::isEquivalence(bool Invert) const {
   switch (getPredicate()) {
   case CmpInst::Predicate::ICMP_EQ:
-    return true;
+    return !Invert;
+  case CmpInst::Predicate::ICMP_NE:
+    return Invert;
   case CmpInst::Predicate::FCMP_UEQ:
     if (!hasNoNaNs())
       return false;
     [[fallthrough]];
   case CmpInst::Predicate::FCMP_OEQ:
-    return hasNonZeroFPOperands(this);
-  default:
-    return false;
-  }
-}
-
-// Floating-point equality is not an equivalence when comparing +0.0 with
-// -0.0, when comparing NaN with another value, or when flushing
-// denormals-to-zero.
-bool CmpInst::isNeEquivalence() const {
-  switch (getPredicate()) {
-  case CmpInst::Predicate::ICMP_NE:
-    return true;
+    return !Invert && hasNonZeroFPOperands(this);
   case CmpInst::Predicate::FCMP_ONE:
     if (!hasNoNaNs())
       return false;
     [[fallthrough]];
   case CmpInst::Predicate::FCMP_UNE:
-    return hasNonZeroFPOperands(this);
+    return Invert && hasNonZeroFPOperands(this);
   default:
     return false;
   }
