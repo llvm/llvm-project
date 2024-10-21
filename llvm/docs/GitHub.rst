@@ -389,7 +389,7 @@ checks:
   ninja check
 
   # Push the rebased changes to your fork.
-  git push origin my_change -f
+  git push origin my_change --force
 
 Once your PR is approved, rebased, and tests are passing, click `Squash and
 Merge` on your PR in the GitHub web interface.
