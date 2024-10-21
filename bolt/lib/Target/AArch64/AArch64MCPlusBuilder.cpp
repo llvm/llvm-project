@@ -1403,6 +1403,8 @@ public:
     case ELF::R_AARCH64_TLSDESC_CALL:
     case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
     case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+    case ELF::R_AARCH64_LD64_GOTPAGE_LO15:
+    case ELF::R_AARCH64_LD64_GOTOFF_LO15:
       return false;
     default:
       llvm_unreachable("Unexpected AArch64 relocation type in code");
