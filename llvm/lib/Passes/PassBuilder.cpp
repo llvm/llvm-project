@@ -1179,15 +1179,13 @@ Expected<StructuralHashOptions>
 parseStructuralHashPrinterPassOptions(StringRef Params) {
   if (Params.empty())
     return StructuralHashOptions::None;
-  else if (Params == "detailed")
+  if (Params == "detailed")
     return StructuralHashOptions::Detailed;
-  else if (Params == "call-target-ignored")
+  if (Params == "call-target-ignored")
     return StructuralHashOptions::CallTargetIgnored;
-  else
-    return make_error<StringError>(
-        formatv("invalid structural hash printer parameter '{0}' ", Params)
-            .str(),
-        inconvertibleErrorCode());
+  return make_error<StringError>(
+      formatv("invalid structural hash printer parameter '{0}' ", Params).str(),
+      inconvertibleErrorCode());
 }
 
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
