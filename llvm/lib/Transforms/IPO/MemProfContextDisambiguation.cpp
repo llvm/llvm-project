@@ -4432,6 +4432,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
       continue;
     for (auto &BB : F) {
       for (auto &I : BB) {
+        if (!isa<CallBase>(I))
+          continue;
         I.setMetadata(LLVMContext::MD_memprof, nullptr);
         I.setMetadata(LLVMContext::MD_callsite, nullptr);
       }
