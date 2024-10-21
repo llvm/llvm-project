@@ -105,7 +105,7 @@ public:
     return false;
   }
 
-  struct Arg {
+  struct ArgSelect {
     enum class Type {
       Index,
       I8,
@@ -116,25 +116,25 @@ public:
   };
 
   [[nodiscard]] bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
-                                           ArrayRef<Arg> Args) {
+                                           ArrayRef<ArgSelect> Args) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> NewArgs;
       if (Args.size()) {
-        for (const Arg &A : Args) {
+        for (const ArgSelect &A : Args) {
           switch (A.Type) {
-          case Arg::Type::Index:
+          case ArgSelect::Type::Index:
             NewArgs.push_back(CI->getArgOperand(A.Value));
             break;
-          case Arg::Type::I8:
+          case ArgSelect::Type::I8:
             NewArgs.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
             break;
-          case Arg::Type::I32:
+          case ArgSelect::Type::I32:
             NewArgs.push_back(OpBuilder.getIRB().getInt32(A.Value));
             break;
           default:
-            llvm_unreachable("Invalid type of intrinsic arg.");
+            llvm_unreachable("Invalid type of intrinsic arg select.");
           }
         }
       } else if (IsVectorArgExpansion) {
@@ -497,10 +497,10 @@ public:
       switch (ID) {
       default:
         continue;
-#define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                   \
-  case Intrin:                                                                   \
-    HasErrors |= replaceFunctionWithOp(F, OpCode,                                \
-                                       ArrayRef<Arg>{ __VA_ARGS__ });            \
+#define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
+  case Intrin:                                                                 \
+    HasErrors |= replaceFunctionWithOp(F, OpCode,                              \
+                                       ArrayRef<ArgSelect>{ __VA_ARGS__ });    \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:

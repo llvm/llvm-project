@@ -452,16 +452,16 @@ static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
       OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
          << ", Intrinsic::" << MappedIntr.Intrinsic;
       for (const DXILArgSelect &ArgSelect : MappedIntr.Args) {
-        OS << ", (Arg { ";
+        OS << ", (ArgSelect { ";
         switch (ArgSelect.Type) {
         case DXILArgSelect::Type::Index:
-          OS << "Arg::Type::Index, ";
+          OS << "ArgSelect::Type::Index, ";
           break;
         case DXILArgSelect::Type::I8:
-          OS << "Arg::Type::I8, ";
+          OS << "ArgSelect::Type::I8, ";
           break;
         case DXILArgSelect::Type::I32:
-          OS << "Arg::Type::I32, ";
+          OS << "ArgSelect::Type::I32, ";
           break;
         }
         OS << ArgSelect.Value << "})";
