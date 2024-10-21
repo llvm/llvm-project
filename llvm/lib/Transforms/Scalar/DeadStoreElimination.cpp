@@ -266,6 +266,54 @@ static OverwriteResult isMaskedStoreOverwrite(const Instruction *KillingI,
   return OW_Unknown;
 }
 
+// Given a fixed/scalable LocationSize for DeadSize, we compute the
+// upper-range(DeadSize), by factoring in VScale.
+uint64_t getDeadSizeFactoringVScale(const LocationSize &DeadSz,
+                                    const Function &F) {
+  APInt DeadSize = APInt(64, DeadSz.getValue().getKnownMinValue());
+  ConstantRange CR = getVScaleRange(&F, 64);
+  if (DeadSz.isScalable()) {
+    bool Overflow;
+    APInt UpperRange = CR.getUnsignedMax().umul_ov(DeadSize, Overflow);
+    if (!Overflow)
+      DeadSize = UpperRange;
+  }
+  return DeadSize.getZExtValue();
+}
+
+// Given fixed/scalable LocationSizes for KillingSize and DeadSize, we compute
+// the lower-range(KillingSize) and upper-range(DeadSize), by factoring in
+// VScale.
+std::pair<uint64_t, uint64_t>
+getSizesFactoringVScale(const LocationSize &KillingSz,
+                        const LocationSize &DeadSz, const Function &F) {
+  APInt KillingSize = APInt(64, KillingSz.getValue().getKnownMinValue());
+  APInt DeadSize = APInt(64, DeadSz.getValue().getKnownMinValue());
+
+  ConstantRange CR = getVScaleRange(&F, 64);
+  bool OverflowL, OverflowU;
+  if (KillingSz.isScalable() && DeadSz.isScalable()) {
+    // We have a special-case when both are scalable, so we ensure that we don't
+    // set one of the values, if UpperRange overflows but LowerRange doesn't, or
+    // vice-versa.
+    APInt LowerRange = CR.getUnsignedMin().umul_ov(KillingSize, OverflowL);
+    APInt UpperRange = CR.getUnsignedMax().umul_ov(DeadSize, OverflowU);
+    if (!OverflowL && !OverflowU) {
+      KillingSize = LowerRange;
+      DeadSize = UpperRange;
+    }
+  } else if (KillingSz.isScalable()) {
+    APInt LowerRange = CR.getUnsignedMin().umul_ov(KillingSize, OverflowL);
+    if (!OverflowL)
+      KillingSize = LowerRange;
+  } else if (DeadSz.isScalable()) {
+    APInt UpperRange = CR.getUnsignedMax().umul_ov(DeadSize, OverflowU);
+    if (!OverflowU)
+      DeadSize = UpperRange;
+  }
+  return {KillingSize.getZExtValue(), DeadSize.getZExtValue()};
+}
+
 /// Return 'OW_Complete' if a store to the 'KillingLoc' location completely
 /// overwrites a store to the 'DeadLoc' location, 'OW_End' if the end of the
 /// 'DeadLoc' location is completely overwritten by 'KillingLoc', 'OW_Begin'
@@ -280,9 +328,11 @@ static OverwriteResult isPartialOverwrite(const MemoryLocation &KillingLoc,
                                           const MemoryLocation &DeadLoc,
                                           int64_t KillingOff, int64_t DeadOff,
                                           Instruction *DeadI,
-                                          InstOverlapIntervalsTy &IOL) {
-  const uint64_t KillingSize = KillingLoc.Size.getValue();
-  const uint64_t DeadSize = DeadLoc.Size.getValue();
+                                          InstOverlapIntervalsTy &IOL,
+                                          const Function &F) {
+  auto [KillingSize, DeadSize] =
+      getSizesFactoringVScale(KillingLoc.Size, DeadLoc.Size, F);
+
   // We may now overlap, although the overlap is not complete. There might also
   // be other incomplete overlaps, and together, they might cover the complete
   // dead store.
@@ -1016,15 +1066,9 @@ struct DSEState {
       return isMaskedStoreOverwrite(KillingI, DeadI, BatchAA);
     }
 
-    const TypeSize KillingSize = KillingLocSize.getValue();
-    const TypeSize DeadSize = DeadLoc.Size.getValue();
-    // Bail on doing Size comparison which depends on AA for now
-    // TODO: Remove AnyScalable once Alias Analysis deal with scalable vectors
-    const bool AnyScalable =
-        DeadSize.isScalable() || KillingLocSize.isScalable();
+    auto [KillingSize, DeadSize] =
+        getSizesFactoringVScale(KillingLocSize, DeadLoc.Size, F);
 
-    if (AnyScalable)
-      return OW_Unknown;
     // Query the alias information
     AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
 
@@ -2101,7 +2145,7 @@ struct DSEState {
 
       const Value *Ptr = Loc.Ptr->stripPointerCasts();
       int64_t DeadStart = 0;
-      uint64_t DeadSize = Loc.Size.getValue();
+      uint64_t DeadSize = getDeadSizeFactoringVScale(Loc.Size, F);
       GetPointerBaseWithConstantOffset(Ptr, DeadStart, DL);
       OverlapIntervalsTy &IntervalMap = OI.second;
       Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize);
@@ -2262,7 +2306,7 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
         auto &IOL = IOLs[DeadLocWrapper.DefInst->getParent()];
         OR = isPartialOverwrite(KillingLocWrapper.MemLoc, DeadLocWrapper.MemLoc,
                                 KillingOffset, DeadOffset,
-                                DeadLocWrapper.DefInst, IOL);
+                                DeadLocWrapper.DefInst, IOL, F);
       }
       if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
         auto *DeadSI = dyn_cast<StoreInst>(DeadLocWrapper.DefInst);
