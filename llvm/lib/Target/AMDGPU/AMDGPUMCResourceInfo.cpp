@@ -91,6 +91,44 @@ MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
 }
 
+// The expression should have no recursion in it. Test a (sub-)expression to see
+// if it needs to be further visited, or if a recursion has been found. Returns
+// true if Sym is found within Expr (i.e., has a recurrance of Sym found), false
+// otherwise.
+static bool findSymbolInExpr(MCSymbol *Sym, const MCExpr *Expr,
+                             SmallPtrSetImpl<const MCExpr *> &Exprs) {
+  switch (Expr->getKind()) {
+  default:
+    return false;
+  case MCExpr::ExprKind::SymbolRef: {
+    const MCSymbolRefExpr *SymRefExpr = cast<MCSymbolRefExpr>(Expr);
+    const MCSymbol &SymRef = SymRefExpr->getSymbol();
+    if (Sym == &SymRef)
+      return true;
+    if (SymRef.isVariable())
+      Exprs.insert(SymRef.getVariableValue(/*isUsed=*/false));
+    return false;
+  }
+  case MCExpr::ExprKind::Binary: {
+    const MCBinaryExpr *BExpr = cast<MCBinaryExpr>(Expr);
+    Exprs.insert(BExpr->getLHS());
+    Exprs.insert(BExpr->getRHS());
+    return false;
+  }
+  case MCExpr::ExprKind::Unary: {
+    const MCUnaryExpr *UExpr = cast<MCUnaryExpr>(Expr);
+    Exprs.insert(UExpr->getSubExpr());
+    return false;
+  }
+  case MCExpr::ExprKind::Target: {
+    const AMDGPUMCExpr *AGVK = cast<AMDGPUMCExpr>(Expr);
+    for (const MCExpr *E : AGVK->getArgs())
+      Exprs.insert(E);
+    return false;
+  }
+  }
+}
+
 void MCResourceInfo::assignResourceInfoExpr(
     int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
@@ -98,23 +136,38 @@ void MCResourceInfo::assignResourceInfoExpr(
   const MCConstantExpr *LocalConstExpr =
       MCConstantExpr::create(LocalValue, OutContext);
   const MCExpr *SymVal = LocalConstExpr;
+  MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
   if (!Callees.empty()) {
     SmallVector<const MCExpr *, 8> ArgExprs;
-    // Avoid recursive symbol assignment.
     SmallPtrSet<const Function *, 8> Seen;
     ArgExprs.push_back(LocalConstExpr);
-    const Function &F = MF.getFunction();
-    Seen.insert(&F);
 
     for (const Function *Callee : Callees) {
       if (!Seen.insert(Callee).second)
         continue;
+
+      SmallPtrSet<const MCExpr *, 8> WorkSet;
       MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
-      ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+      if (CalleeValSym->isVariable())
+        WorkSet.insert(CalleeValSym->getVariableValue(/*IsUsed=*/false));
+      else
+        ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+
+      bool FoundRecursion = false;
+      while (!WorkSet.empty() && !FoundRecursion) {
+        auto It = WorkSet.begin();
+        const MCExpr *Expr = *It;
+        WorkSet.erase(Expr);
+
+        FoundRecursion = findSymbolInExpr(Sym, Expr, WorkSet);
+      }
+
+      if (CalleeValSym->isVariable() && !FoundRecursion)
+        ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
     }
-    SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
+    if (ArgExprs.size() > 1)
+      SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
   }
-  MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
   Sym->setVariableValue(SymVal);
 }
 
@@ -155,6 +208,7 @@ void MCResourceInfo::gatherResourceInfo(
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
     SmallVector<const MCExpr *, 8> ArgExprs;
+    MCSymbol *Sym = getSymbol(MF.getName(), RIK_PrivateSegSize, OutContext);
     if (FRI.CalleeSegmentSize)
       ArgExprs.push_back(
           MCConstantExpr::create(FRI.CalleeSegmentSize, OutContext));
@@ -165,9 +219,24 @@ void MCResourceInfo::gatherResourceInfo(
       if (!Seen.insert(Callee).second)
         continue;
       if (!Callee->isDeclaration()) {
-        MCSymbol *calleeValSym =
+        SmallPtrSet<const MCExpr *, 8> WorkSet;
+        MCSymbol *CalleeValSym =
             getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
-        ArgExprs.push_back(MCSymbolRefExpr::create(calleeValSym, OutContext));
+        if (CalleeValSym->isVariable())
+          WorkSet.insert(CalleeValSym->getVariableValue(/*IsUsed=*/false));
+        else
+          ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+
+        bool FoundRecursion = false;
+        while (!WorkSet.empty() && !FoundRecursion) {
+          auto It = WorkSet.begin();
+          const MCExpr *Expr = *It;
+          WorkSet.erase(Expr);
+
+          FoundRecursion = findSymbolInExpr(Sym, Expr, WorkSet);
+        }
+        if (CalleeValSym->isVariable() && !FoundRecursion)
+          ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
       }
     }
     const MCExpr *localConstExpr =
@@ -178,8 +247,7 @@ void MCResourceInfo::gatherResourceInfo(
       localConstExpr =
           MCBinaryExpr::createAdd(localConstExpr, transitiveExpr, OutContext);
     }
-    getSymbol(MF.getName(), RIK_PrivateSegSize, OutContext)
-        ->setVariableValue(localConstExpr);
+    Sym->setVariableValue(localConstExpr);
   }
 
   auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
