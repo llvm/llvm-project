@@ -738,31 +738,15 @@ constexpr uint4 countbits(uint16_t4 x) {
 }
 #endif
 
-constexpr uint countbits(int x) {
-  return __builtin_elementwise_popcount(x);
-}  
-constexpr uint2 countbits(int2 x) {
-  return __builtin_elementwise_popcount(x);
-}
-constexpr uint3 countbits(int3 x) {
-  return __builtin_elementwise_popcount(x);
-}
-constexpr uint4 countbits(int4 x) {
-  return __builtin_elementwise_popcount(x);
-}
+constexpr uint countbits(int x) { return __builtin_elementwise_popcount(x); }
+constexpr uint2 countbits(int2 x) { return __builtin_elementwise_popcount(x); }
+constexpr uint3 countbits(int3 x) { return __builtin_elementwise_popcount(x); }
+constexpr uint4 countbits(int4 x) { return __builtin_elementwise_popcount(x); }
 
-constexpr uint countbits(uint x) {
-  return __builtin_elementwise_popcount(x);
-}
-constexpr uint2 countbits(uint2 x) {
-  return __builtin_elementwise_popcount(x);
-}
-constexpr uint3 countbits(uint3 x) {
-  return __builtin_elementwise_popcount(x);
-}
-constexpr uint4 countbits(uint4 x) {
-  return __builtin_elementwise_popcount(x);
-}
+constexpr uint countbits(uint x) { return __builtin_elementwise_popcount(x); }
+constexpr uint2 countbits(uint2 x) { return __builtin_elementwise_popcount(x); }
+constexpr uint3 countbits(uint3 x) { return __builtin_elementwise_popcount(x); }
+constexpr uint4 countbits(uint4 x) { return __builtin_elementwise_popcount(x); }
 
 constexpr uint countbits(int64_t x) {
   return __builtin_elementwise_popcount(x);
