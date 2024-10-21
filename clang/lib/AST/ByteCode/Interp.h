@@ -2818,9 +2818,18 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
   return false;
 }
 
-inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
-                           const DeclRefExpr *DR) {
+inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
+                           bool InitializerFailed) {
   assert(DR);
+
+  if (InitializerFailed) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    const auto *VD = cast<VarDecl>(DR->getDecl());
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+    return false;
+  }
+
   return CheckDeclRef(S, OpPC, DR);
 }
 
