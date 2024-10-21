@@ -2719,11 +2719,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     auto GetMinMaxUnsigned = [&](Value *V, Value *S) {
       if (IsSigned) {
-        // Map from signed range to unsigned range. Relation A vs B should be
-        // preserved if checked with `getUnsignedPredicate()`.
-        // Calcualting Amin, Amax, Bmin, Bmax also will not be affected, as they
-        // are created by effectively adding/substructing from A or B a value,
-        // derived from shadow, which can't result in overflow.
+        // Sign-flip to map from signed range to unsigned range. Relation A vs B
+        // should be preserved, if checked with `getUnsignedPredicate()`.
+        // Relationship between Amin, Amax, Bmin, Bmax also will not be
+        // affected, as they are created by effectively adding/substructing from
+        // A or B a value, derived from shadow, which can't result in overflow,
+        // before or after sign flip.
         APInt MinVal =
             APInt::getSignedMinValue(V->getType()->getScalarSizeInBits());
         V = IRB.CreateXor(V, ConstantInt::get(V->getType(), MinVal));
