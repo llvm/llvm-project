@@ -41,7 +41,7 @@ define void @foo(ptr nocapture %a, ptr nocapture readonly %c, ptr nocapture %b) 
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[B]], ptr readonly align 16 [[C]], i64 16, i1 false), !noalias [[META0]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr readonly align 16 [[C]], i64 16, i1 false), !alias.scope [[META5:![0-9]+]]
 ; CHECK-NEXT:    call void @hey(), !noalias [[META5]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[L_I]], ptr nocapture readonly align 16 [[C]], i64 16, i1 false), !noalias [[META0]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[L_I]], ptr readonly align 16 [[C]], i64 16, i1 false), !noalias [[META0]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 512, ptr [[L_I]])
 ; CHECK-NEXT:    ret void
 ;
@@ -84,7 +84,7 @@ define void @foo_cs(ptr nocapture %a, ptr nocapture readonly %c, ptr nocapture %
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[B]], ptr readonly align 16 [[C]], i64 16, i1 false), !noalias [[META6]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr readonly align 16 [[C]], i64 16, i1 false), !alias.scope [[META11:![0-9]+]]
 ; CHECK-NEXT:    call void @hey(), !noalias [[META11]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[L_I]], ptr nocapture readonly align 16 [[C]], i64 16, i1 false), !noalias [[META6]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[L_I]], ptr readonly align 16 [[C]], i64 16, i1 false), !noalias [[META6]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 512, ptr [[L_I]])
 ; CHECK-NEXT:    ret void
 ;

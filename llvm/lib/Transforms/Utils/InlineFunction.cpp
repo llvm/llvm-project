@@ -1375,28 +1375,32 @@ static bool CheckPathFromBB(DenseMap<BasicBlock *, bool> &CachedRes,
   if (!Inserted)
     return Iter->second;
 
-  bool Res = true;
-  auto BBRange = BB->instructionsWithoutDebug();
   if (From) {
     // Continue checking successors
-    Res = ContainsSideEffects(BBRange);
+    if (ContainsSideEffects(BB->instructionsWithoutDebug())) {
+      CachedRes[BB] = false;
+      return false;
+    }
     for (BasicBlock *Succ : successors(BB)) {
-      if (!Res)
-        break;
-      Res = CheckPathFromBB(CachedRes, Succ, From);
+      if (!CheckPathFromBB(CachedRes, Succ, From)) {
+        CachedRes[BB] = false;
+        return false;
+      }
     }
   } else {
     // Continue checking preds
-    Res = ContainsScratchSpace(BBRange);
+    if (ContainsScratchSpace(BB->instructionsWithoutDebug())) {
+      CachedRes[BB] = false;
+      return false;
+    }
     for (BasicBlock *Pred : predecessors(BB)) {
-      if (!Res)
-        break;
-      Res = CheckPathFromBB(CachedRes, Pred, From);
+      if (!CheckPathFromBB(CachedRes, Pred, From)) {
+        CachedRes[BB] = false;
+        return false;
+      }
     }
   }
-  if (!Res)
-    CachedRes[BB] = false;
-  return Res;
+  return true;
 }
 
 // Assuming we have:
@@ -1430,11 +1434,12 @@ CanPropagateNoCaptureAtCB(DenseMap<BasicBlock *, bool> &PureFromBB,
         return false;
 
   // Can't capture via return, so if no side-effects we are set.
-  if (!CB->mayHaveSideEffects())
-    return true;
+  //  if (!CB->mayHaveSideEffects())
+  // return true;
 
   auto It = CB->getIterator();
   ++It;
+
   if (ContainsSideEffects(make_range(It, BB->end())) ||
       ContainsScratchSpace(make_range(BB->begin(), CB->getIterator())))
     return false;
@@ -1447,7 +1452,7 @@ CanPropagateNoCaptureAtCB(DenseMap<BasicBlock *, bool> &PureFromBB,
   }
   for (BasicBlock *Pred : predecessors(BB)) {
     if (!CheckPathFromBB(NoLocalStateToBB, Pred, /*From=*/false)) {
-      PureFromBB[Pred] = false;
+      NoLocalStateToBB[Pred] = false;
       return false;
     }
   }
@@ -1573,11 +1578,13 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
 
         AttributeSet AS = AttributeSet::get(Context, ValidObjParamAttrs[ArgNo]);
         // Check if we can propagate `nocapture`.
-        if (AS.hasAttribute(Attribute::NoCapture) &&
-            !NewInnerCB->paramHasAttr(I, Attribute::NoCapture))
-          if (!CanPropagateNoCaptureAtCB(PureFromBB, NoLocalStateToBB, &BB,
-                                         cast<CallBase>(&Ins)))
+        if (AS.hasAttribute(Attribute::NoCapture)) {
+          if (NewInnerCB->paramHasAttr(I, Attribute::NoCapture))
             AS = AS.removeAttribute(Context, Attribute::NoCapture);
+          else if (!CanPropagateNoCaptureAtCB(PureFromBB, NoLocalStateToBB, &BB,
+                                              cast<CallBase>(&Ins)))
+            AS = AS.removeAttribute(Context, Attribute::NoCapture);
+        }
 
         // If so, propagate its access attributes.
         AL = AL.addParamAttributes(Context, I, AttrBuilder{Context, AS});
