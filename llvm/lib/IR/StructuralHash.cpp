@@ -56,11 +56,12 @@ public:
       Hashes.emplace_back(hashArbitaryType(ConstInt->getValue()));
     } else if (ConstantFP *ConstFP = dyn_cast<ConstantFP>(C)) {
       Hashes.emplace_back(hashArbitaryType(ConstFP->getValue()));
-    } else if (Function *Func = dyn_cast<Function>(C))
+    } else if (Function *Func = dyn_cast<Function>(C)) {
       // Hashing the name will be deterministic as LLVM's hashing infrastructure
       // has explicit support for hashing strings and will not simply hash
       // the pointer.
       Hashes.emplace_back(hashArbitaryType(Func->getName()));
+    }
 
     return stable_hash_combine(Hashes);
   }
@@ -129,7 +130,7 @@ public:
 
     SmallVector<stable_hash> Hashes;
     Hashes.emplace_back(Hash);
-    Hashes.emplace_back(0x62642d6b6b2d6b72); // Function header
+    Hashes.emplace_back(stable_hash_name("Function Header"));
 
     Hashes.emplace_back(F.isVarArg());
     Hashes.emplace_back(F.arg_size());
@@ -148,7 +149,7 @@ public:
       // This random value acts as a block header, as otherwise the partition of
       // opcodes into BBs wouldn't affect the hash, only the order of the
       // opcodes
-      Hashes.emplace_back(45798);
+      Hashes.emplace_back(stable_hash_name("Block Header"));
       for (auto &Inst : *BB)
         Hashes.emplace_back(hashInstruction(Inst));
 
@@ -169,7 +170,7 @@ public:
       return;
     SmallVector<stable_hash> Hashes;
     Hashes.emplace_back(Hash);
-    Hashes.emplace_back(23456); // Global header
+    Hashes.emplace_back(stable_hash_name("Global Header"));
     Hashes.emplace_back(GV.getValueType()->getTypeID());
 
     // Update the combined hash in place.
