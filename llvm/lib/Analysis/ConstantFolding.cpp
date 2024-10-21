@@ -3628,10 +3628,6 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_sqrtf:
         return Op.isNaN() || Op.isZero() || !Op.isNegative();
 
-      case LibFunc_erf:
-      case LibFunc_erff:
-        return true;
-
       // FIXME: Add more functions: sqrt_finite, atanh, expm1, log1p,
       // maybe others?
       default:
