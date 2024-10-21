@@ -43,6 +43,7 @@ void fi1(atomic_int *i) {
   // CHECK: load atomic i32, ptr %{{[.0-9A-Z_a-z]+}} syncscope("agent") seq_cst, align 4{{$}}
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_device);
 
+  // CHECK: load atomic i32, ptr %{{[.0-9A-Z_a-z]+}} seq_cst, align 4{{$}}
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_all_svm_devices);
 
   // CHECK: load atomic i32, ptr %{{[.0-9A-Z_a-z]+}} syncscope("wavefront") seq_cst, align 4{{$}}
