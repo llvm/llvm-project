@@ -11595,6 +11595,15 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
 
   MachineFunction &MF = DAG.getMachineFunction();
   SDValue Op0 = Op.getOperand(0);
+  EVT ValVT = Op0.getValueType();
+  unsigned EltSize = Op.getValueType().getScalarSizeInBits();
+  if (isa<ConstantSDNode>(Op0) && EltSize <= 32) {
+    int64_t IntVal = Op.getConstantOperandVal(0);
+    if (IntVal >= -16 && IntVal <= 15)
+      return getCanonicalConstSplat(IntVal, EltSize / 8, Op.getValueType(), DAG,
+                                    dl);
+  }
+
   ReuseLoadInfo RLI;
   if (Subtarget.hasLFIWAX() && Subtarget.hasVSX() &&
       Op.getValueType() == MVT::v4i32 && Op0.getOpcode() == ISD::LOAD &&
@@ -11619,7 +11628,6 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
   SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
   SDValue Val = Op0;
-  EVT ValVT = Val.getValueType();
   // P10 hardware store forwarding requires that a single store contains all
   // the data for the load. P10 is able to merge a pair of adjacent stores. Try
   // to avoid load hit store on P10 when running binaries compiled for older

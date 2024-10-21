@@ -356,11 +356,9 @@ define void @test6(ptr %a, ptr %in) {
 ;
 ; P9-AIX32-LABEL: test6:
 ; P9-AIX32:       # %bb.0: # %entry
-; P9-AIX32-NEXT:    li r5, 0
-; P9-AIX32-NEXT:    stw r5, -16(r1)
 ; P9-AIX32-NEXT:    lwz r5, L..C2(r2) # %const.0
 ; P9-AIX32-NEXT:    lxvwsx vs1, 0, r4
-; P9-AIX32-NEXT:    lxv vs2, -16(r1)
+; P9-AIX32-NEXT:    xxlxor vs2, vs2, vs2
 ; P9-AIX32-NEXT:    lxv vs0, 0(r5)
 ; P9-AIX32-NEXT:    xxperm vs1, vs2, vs0
 ; P9-AIX32-NEXT:    stxv vs1, 0(r3)
@@ -368,13 +366,10 @@ define void @test6(ptr %a, ptr %in) {
 ;
 ; P8-AIX32-LABEL: test6:
 ; P8-AIX32:       # %bb.0: # %entry
-; P8-AIX32-NEXT:    li r5, 0
-; P8-AIX32-NEXT:    stw r5, -16(r1)
 ; P8-AIX32-NEXT:    lfiwzx f0, 0, r4
 ; P8-AIX32-NEXT:    lwz r4, L..C2(r2) # %const.0
+; P8-AIX32-NEXT:    xxlxor v4, v4, v4
 ; P8-AIX32-NEXT:    lxvw4x v3, 0, r4
-; P8-AIX32-NEXT:    addi r4, r1, -16
-; P8-AIX32-NEXT:    lxvw4x v4, 0, r4
 ; P8-AIX32-NEXT:    xxspltw v2, vs0, 1
 ; P8-AIX32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX32-NEXT:    stxvw4x v2, 0, r3
@@ -382,13 +377,10 @@ define void @test6(ptr %a, ptr %in) {
 ;
 ; P7-AIX32-LABEL: test6:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    li r5, 0
-; P7-AIX32-NEXT:    stw r5, -16(r1)
 ; P7-AIX32-NEXT:    lfiwzx f0, 0, r4
 ; P7-AIX32-NEXT:    lwz r4, L..C2(r2) # %const.0
+; P7-AIX32-NEXT:    xxlxor v4, v4, v4
 ; P7-AIX32-NEXT:    lxvw4x v3, 0, r4
-; P7-AIX32-NEXT:    addi r4, r1, -16
-; P7-AIX32-NEXT:    lxvw4x v4, 0, r4
 ; P7-AIX32-NEXT:    xxspltw v2, vs0, 1
 ; P7-AIX32-NEXT:    vperm v2, v4, v2, v3
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3

@@ -849,16 +849,12 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(ptr nocapture rea
 ;
 ; P8-AIX-32-LABEL: no_RAUW_in_combine_during_legalize:
 ; P8-AIX-32:       # %bb.0: # %entry
-; P8-AIX-32-NEXT:    li r5, 0
 ; P8-AIX-32-NEXT:    slwi r4, r4, 2
-; P8-AIX-32-NEXT:    xxlxor v3, v3, v3
-; P8-AIX-32-NEXT:    stw r5, -16(r1)
+; P8-AIX-32-NEXT:    xxlxor v2, v2, v2
 ; P8-AIX-32-NEXT:    lfiwzx f0, r3, r4
-; P8-AIX-32-NEXT:    addi r3, r1, -16
-; P8-AIX-32-NEXT:    lxvw4x vs1, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw vs0, vs0, 1
-; P8-AIX-32-NEXT:    xxmrghw v2, vs1, vs0
-; P8-AIX-32-NEXT:    vmrghb v2, v2, v3
+; P8-AIX-32-NEXT:    xxmrghw v3, v2, vs0
+; P8-AIX-32-NEXT:    vmrghb v2, v3, v2
 ; P8-AIX-32-NEXT:    blr
 entry:
   %idx.ext = sext i32 %offset to i64
