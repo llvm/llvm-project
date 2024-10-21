@@ -1853,6 +1853,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
                               Hash);
     }
 
+    // For Swift, mangled names are put into DW_AT_linkage_name.
     if (Success && AttrInfo.MangledName &&
         RuntimeLang == dwarf::DW_LANG_Swift &&
         !AttrInfo.MangledName.getString().empty() &&
