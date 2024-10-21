@@ -5288,6 +5288,54 @@ Value *llvm::simplifyExtractElementInst(Value *Vec, Value *Idx,
   return ::simplifyExtractElementInst(Vec, Idx, Q, RecursionLimit);
 }
 
+static Value *getCommonPHIValue(Value *PreviousCommon, Value *Current,
+                                const SimplifyQuery &Q) {
+  if (!PreviousCommon)
+    return Current;
+
+  if (PreviousCommon == Current)
+    return PreviousCommon;
+
+  Constant *PreviousCommonC, *CurrentC;
+  if (match(PreviousCommon, m_Constant(PreviousCommonC)) &&
+      match(Current, m_Constant(CurrentC))) {
+    auto *VecTy = dyn_cast<FixedVectorType>(PreviousCommonC->getType());
+    if (VecTy) {
+      SmallVector<Constant *> NewCommonC;
+      unsigned NumElts = VecTy->getNumElements();
+      for (unsigned I = 0; I != NumElts; ++I) {
+        Constant *PrevElt = PreviousCommonC->getAggregateElement(I);
+        Constant *CurrElt = CurrentC->getAggregateElement(I);
+        if (!PrevElt || !CurrElt)
+          return nullptr;
+
+        if (PrevElt == CurrElt)
+          NewCommonC.push_back(PrevElt);
+        else if (isa<PoisonValue>(PrevElt) ||
+                 (Q.isUndefValue(PrevElt) &&
+                  isGuaranteedNotToBePoison(CurrElt)))
+          NewCommonC.push_back(CurrElt);
+        else if (isa<PoisonValue>(CurrElt) ||
+                 (Q.isUndefValue(CurrElt) &&
+                  isGuaranteedNotToBePoison(PrevElt)))
+          NewCommonC.push_back(PrevElt);
+        else
+          return nullptr;
+      }
+
+      return ConstantVector::get(NewCommonC);
+    }
+  }
+
+  if (Q.isUndefValue(PreviousCommon))
+    return Current;
+
+  if (Q.isUndefValue(Current))
+    return PreviousCommon;
+
+  return nullptr;
+}
+
 /// See if we can fold the given phi. If not, returns null.
 static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
                               const SimplifyQuery &Q) {
@@ -5309,20 +5357,18 @@ static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
       continue;
     }
     if (Q.isUndefValue(Incoming)) {
-      // Remember that we saw an undef value, but otherwise ignore them.
+      // Remember that we saw an undef value.
       HasUndefInput = true;
-      continue;
     }
-    if (CommonValue && Incoming != CommonValue)
+    CommonValue = getCommonPHIValue(CommonValue, Incoming, Q);
+    if (!CommonValue)
       return nullptr; // Not the same, bail out.
-    CommonValue = Incoming;
   }
 
-  // If CommonValue is null then all of the incoming values were either undef,
-  // poison or equal to the phi node itself.
+  // If CommonValue is null then all of the incoming values were either poison
+  // or equal to the phi node itself.
   if (!CommonValue)
-    return HasUndefInput ? UndefValue::get(PN->getType())
-                         : PoisonValue::get(PN->getType());
+    return PoisonValue::get(PN->getType());
 
   if (HasPoisonInput || HasUndefInput) {
     // If we have a PHI node like phi(X, undef, X), where X is defined by some
