@@ -1922,12 +1922,12 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
 DivModValue mlir::affine::getDivMod(OpBuilder &b, Location loc, Value lhs,
                                     Value rhs) {
   DivModValue result;
-  AffineExpr d0, d1;
-  bindDims(b.getContext(), d0, d1);
+  AffineExpr d0 = b.getAffineDimExpr(0);
+  AffineExpr s0 = b.getAffineSymbolExpr(0);
   result.quotient =
-      affine::makeComposedAffineApply(b, loc, d0.floorDiv(d1), {lhs, rhs});
+      affine::makeComposedAffineApply(b, loc, d0.floorDiv(s0), {lhs, rhs});
   result.remainder =
-      affine::makeComposedAffineApply(b, loc, d0 % d1, {lhs, rhs});
+      affine::makeComposedAffineApply(b, loc, d0 % s0, {lhs, rhs});
   return result;
 }
 
