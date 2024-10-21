@@ -111,7 +111,7 @@ bool GlobalValue::isInterposable() const {
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
   if (isTagged()) {
-    // Cannot create local aliases to MTE tagged globals. Th address of a
+    // Cannot create local aliases to MTE tagged globals. The address of a
     // tagged global includes a tag that is assigned by the loader in the
     // GOT.
     return false;
