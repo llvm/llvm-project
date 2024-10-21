@@ -898,6 +898,7 @@ module std [system] {
 
   module charconv {
     module chars_format               { header "__charconv/chars_format.h" }
+    module from_chars_floating_point  { header "__charconv/from_chars_floating_point.h" }
     module from_chars_integral        { header "__charconv/from_chars_integral.h" }
     module from_chars_result          { header "__charconv/from_chars_result.h" }
     module tables                     { header "__charconv/tables.h" }
