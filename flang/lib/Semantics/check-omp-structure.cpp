@@ -566,8 +566,7 @@ void OmpStructureChecker::CheckIteratorRange(
   // a proper interval.
   const auto &[begin, end, step]{std::get<parser::SubscriptTriplet>(x.t).t};
   if (!begin || !end) {
-    context_.Say(
-        x.source,
+    context_.Say(x.source,
         "The begin and end expressions in iterator range-specification are "
         "mandatory"_err_en_US);
   }
@@ -575,20 +574,20 @@ void OmpStructureChecker::CheckIteratorRange(
   // value is implicitly defined to be 1.
   if (auto stepv{step ? GetIntValue(*step) : std::optional<int64_t>{1}}) {
     if (*stepv == 0) {
-      context_.Say(x.source,
-                   "The step value in the iterator range is 0"_warn_en_US);
+      context_.Say(
+          x.source, "The step value in the iterator range is 0"_warn_en_US);
     } else if (begin && end) {
       std::optional<int64_t> beginv{GetIntValue(*begin)};
       std::optional<int64_t> endv{GetIntValue(*end)};
       if (beginv && endv) {
         if (*stepv > 0 && *beginv > *endv) {
           context_.Say(x.source,
-            "The begin value is greater than the end value in iterator "
-            "range-specification with a positive step"_warn_en_US);
+              "The begin value is greater than the end value in iterator "
+              "range-specification with a positive step"_warn_en_US);
         } else if (*stepv < 0 && *beginv < *endv) {
           context_.Say(x.source,
-            "The begin value is less than the end value in iterator "
-            "range-specification with a negative step"_warn_en_US);
+              "The begin value is less than the end value in iterator "
+              "range-specification with a negative step"_warn_en_US);
         }
       }
     }
@@ -612,7 +611,7 @@ void OmpStructureChecker::CheckIteratorModifier(
     }
     if (!isInteger) {
       context_.Say(iterSpec.source,
-                   "The iterator variable must be of integer type"_err_en_US);
+          "The iterator variable must be of integer type"_err_en_US);
     }
     CheckIteratorRange(iterSpec);
   }

@@ -56,13 +56,13 @@ struct ConcatSeparated {
       if (auto first{firstParser.Parse(state)}) {
         if (attempt(std::get<0>(sepAndParsers_)).Parse(state)) {
           return std::tuple_cat(TupleFor<Parser>(std::move(*first)),
-                                std::move(*restParser.Parse(state)));
+              std::move(*restParser.Parse(state)));
         }
         return std::tuple_cat(TupleFor<Parser>{std::move(*first)},
-                              std::tuple<OptListOf<Parsers>...>{});
+            std::tuple<OptListOf<Parsers>...>{});
       }
-      return std::tuple_cat(TupleFor<Parser>{},
-                            std::move(*restParser.Parse(state)));
+      return std::tuple_cat(
+          TupleFor<Parser>{}, std::move(*restParser.Parse(state)));
     }
   }
 
@@ -90,8 +90,7 @@ private:
 // [1] Any of the commas are optional, but that syntax has been deprecated
 // in OpenMP 5.2, and the parsing code keeps a record of whether the commas
 // were present.
-template <typename Separator>
-struct MapModifiers {
+template <typename Separator> struct MapModifiers {
   constexpr MapModifiers(Separator sep) : sep_(sep) {}
   constexpr MapModifiers(const MapModifiers &) = default;
   constexpr MapModifiers(MapModifiers &&) = default;
@@ -143,10 +142,10 @@ static std::list<EntityDecl> makeEntityList(std::list<ObjectName> &&names) {
   return entities;
 }
 
-static TypeDeclarationStmt makeIterSpecDecl(DeclarationTypeSpec &&spec,
-                                            std::list<ObjectName> &&names) {
-  return TypeDeclarationStmt(std::move(spec), std::list<AttrSpec>{},
-                             makeEntityList(std::move(names)));
+static TypeDeclarationStmt makeIterSpecDecl(
+    DeclarationTypeSpec &&spec, std::list<ObjectName> &&names) {
+  return TypeDeclarationStmt(
+      std::move(spec), std::list<AttrSpec>{}, makeEntityList(std::move(names)));
 }
 
 static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
@@ -155,7 +154,7 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
       IntrinsicTypeSpec{IntegerTypeSpec{std::nullopt}});
 
   return TypeDeclarationStmt(std::move(typeSpec), std::list<AttrSpec>{},
-                             makeEntityList(std::move(names)));
+      makeEntityList(std::move(names)));
 }
 
 TYPE_PARSER(construct<OmpIteratorSpecifier>(
@@ -167,16 +166,15 @@ TYPE_PARSER(construct<OmpIteratorSpecifier>(
     // 2. integer :: j = i:10 will be flagged as an error because the
     // initializer 'i' must be constant (in declarations). In an iterator
     // specifier the 'j' is not an initializer and can be a variable.
-    (applyFunction<TypeDeclarationStmt>(
-         makeIterSpecDecl, Parser<DeclarationTypeSpec>{} / maybe("::"_tok),
+    (applyFunction<TypeDeclarationStmt>(makeIterSpecDecl,
+         Parser<DeclarationTypeSpec>{} / maybe("::"_tok),
          nonemptyList(Parser<ObjectName>{}) / "="_tok) ||
-     applyFunction<TypeDeclarationStmt>(
-         makeIterSpecDecl, nonemptyList(Parser<ObjectName>{}) / "="_tok)),
+        applyFunction<TypeDeclarationStmt>(
+            makeIterSpecDecl, nonemptyList(Parser<ObjectName>{}) / "="_tok)),
     subscriptTriplet))
 
 // [5.0] 2.1.6 iterator -> iterator-specifier-list
-TYPE_PARSER(construct<OmpIteratorModifier>(
-    "ITERATOR" >>
+TYPE_PARSER(construct<OmpIteratorModifier>("ITERATOR" >>
     parenthesized(nonemptyList(sourced(Parser<OmpIteratorSpecifier>{})))))
 
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
@@ -213,22 +211,21 @@ TYPE_PARSER(
         "TOFROM" >> pure(OmpMapClause::Type::Tofrom)))
 
 template <bool CommasEverywhere>
-static inline OmpMapClause
-makeMapClause(std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
-                         std::optional<std::list<OmpIteratorModifier>>,
-                         std::optional<std::list<OmpMapClause::Type>>> &&mods,
-              OmpObjectList &&objs) {
+static inline OmpMapClause makeMapClause(
+    std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
+        std::optional<std::list<OmpIteratorModifier>>,
+        std::optional<std::list<OmpMapClause::Type>>> &&mods,
+    OmpObjectList &&objs) {
   auto &&[tm, it, ty] = std::move(mods);
   return OmpMapClause{std::move(tm), std::move(it), std::move(ty),
-                      std::move(objs), CommasEverywhere};
+      std::move(objs), CommasEverywhere};
 }
 
 TYPE_PARSER(construct<OmpMapClause>(
-    applyFunction<OmpMapClause>(makeMapClause<true>, MapModifiers(","_tok),
-                                Parser<OmpObjectList>{}) ||
+    applyFunction<OmpMapClause>(
+        makeMapClause<true>, MapModifiers(","_tok), Parser<OmpObjectList>{}) ||
     applyFunction<OmpMapClause>(makeMapClause<false>,
-                                MapModifiers(maybe(","_tok)),
-                                Parser<OmpObjectList>{})))
+        MapModifiers(maybe(","_tok)), Parser<OmpObjectList>{})))
 
 // [OpenMP 5.0]
 // 2.19.7.2 defaultmap(implicit-behavior[:variable-category])

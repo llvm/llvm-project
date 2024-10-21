@@ -3475,10 +3475,10 @@ struct OmpMapClause {
   // In OpenMP 5.2 the non-comma syntax has been deprecated: keep the
   // information about separator presence to emit a diagnostic if needed.
   std::tuple<std::optional<std::list<TypeModifier>>,
-             std::optional<std::list<OmpIteratorModifier>>, // unique
-             std::optional<std::list<Type>>,                // unique
-             OmpObjectList,
-             bool> // were the modifiers comma-separated
+      std::optional<std::list<OmpIteratorModifier>>, // unique
+      std::optional<std::list<Type>>, // unique
+      OmpObjectList,
+      bool> // were the modifiers comma-separated
       t;
 };
 
