@@ -1,6 +1,4 @@
 ; RUN: opt < %s -S -passes='module(msan)' -msan-check-access-address=0                                      | FileCheck %s --allow-deprecated-dag-overlap --implicit-check-not="call void @__msan_warning" --check-prefixes=CHECK,NOORIGINS
-; RUN: opt < %s -S -passes='module(msan)' -msan-check-access-address=0                                      | FileCheck %s --allow-deprecated-dag-overlap --implicit-check-not="call void @__msan_warning" --check-prefixes=CHECK,NOORIGINS
-; RUN: opt < %s -S -passes='module(msan)' -msan-check-access-address=0                -msan-track-origins=1 | FileCheck %s --allow-deprecated-dag-overlap --implicit-check-not="call void @__msan_warning" --check-prefixes=CHECK,ORIGINS
 ; RUN: opt < %s -S -passes='module(msan)' -msan-check-access-address=0                -msan-track-origins=1 | FileCheck %s --allow-deprecated-dag-overlap --implicit-check-not="call void @__msan_warning" --check-prefixes=CHECK,ORIGINS
 ; RUN: opt < %s -S -passes='module(msan)' -msan-instrumentation-with-call-threshold=0 -msan-track-origins=1 | FileCheck %s --allow-deprecated-dag-overlap --implicit-check-not="call void @__msan_warning" --check-prefixes=CHECK-CALLS
 
