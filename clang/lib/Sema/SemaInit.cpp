@@ -7400,7 +7400,7 @@ PerformConstructorInitialization(Sema &S,
 
 void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                                     Expr *Init) {
-  return sema::checkExprLifetime(*this, Entity, Init);
+  return sema::checkInitLifetime(*this, Entity, Init);
 }
 
 static void DiagnoseNarrowingInInitList(Sema &S,
