@@ -4788,7 +4788,7 @@ Here are some examples:
 
     entry:
       %poison = sub nuw i32 0, 1           ; Results in a poison value.
-      %poison2 = sub i32 poison, 1         ; Also results in a poison value.
+      %poison2 = sub i32 %poison, 1         ; Also results in a poison value.
       %still_poison = and i32 %poison, 0   ; 0, but also poison.
       %poison_yet_again = getelementptr i32, ptr @h, i32 %still_poison
       store i32 0, ptr %poison_yet_again   ; Undefined behavior due to
