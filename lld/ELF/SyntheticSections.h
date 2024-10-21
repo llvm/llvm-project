@@ -547,13 +547,7 @@ public:
   void mergeRels();
   void partitionRels();
   void finalizeContents() override;
-  static bool classof(const SectionBase *d) {
-    return SyntheticSection::classof(d) &&
-           (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
-            d->type == llvm::ELF::SHT_RELR ||
-            (d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR &&
-             elf::ctx.arg.emachine == llvm::ELF::EM_AARCH64));
-  }
+
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
 

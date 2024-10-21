@@ -5738,9 +5738,17 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult)
+    if (DiscardResult) {
+      // assert(false);
       return this->discard(SubExpr);
-    return this->visit(SubExpr);
+    }
+
+    if (!this->visit(SubExpr))
+      return false;
+    if (classifyPrim(SubExpr) == PT_Ptr)
+      return this->emitNarrowPtr(E);
+    return true;
+
   case UO_Not: // ~x
     if (!T)
       return this->emitError(E);
@@ -6089,7 +6097,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
           if (VD->evaluateValue())
             return revisit(VD);
-          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E), E);
+          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                          /*InitializerFailed=*/true, E);
         }
       }
     } else {
@@ -6115,7 +6124,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   }
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return this->emitInvalidDeclRef(DRE, E);
+    return this->emitInvalidDeclRef(DRE, /*InitializerFailed=*/false, E);
   return false;
 }
 
