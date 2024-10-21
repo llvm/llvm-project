@@ -24,6 +24,7 @@ namespace clang {
   class ASTContext;
   class CodeGenOptions;
   class LangOptions;
+  class MangleContext;
   class QualType;
   class Type;
 
@@ -119,6 +120,7 @@ class CodeGenTBAA {
   llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
+  std::unique_ptr<MangleContext> MangleCtx;
 
   // MDHelper - Helper for creating metadata.
   llvm::MDBuilder MDHelper;
