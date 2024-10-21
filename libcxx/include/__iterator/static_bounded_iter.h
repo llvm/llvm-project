@@ -38,10 +38,10 @@ struct __static_bounded_iter_storage {
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __static_bounded_iter_storage(_Iterator __current, _Iterator __begin)
       : __current_(__current), __begin_(__begin) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator& __current() _NOEXCEPT { return __current_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __current() const _NOEXCEPT { return __current_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __begin() const _NOEXCEPT { return __begin_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __end() const _NOEXCEPT { return __begin_ + _Size; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator& __current() _NOEXCEPT { return __current_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __current() const _NOEXCEPT { return __current_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __begin() const _NOEXCEPT { return __begin_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __end() const _NOEXCEPT { return __begin_ + _Size; }
 
 private:
   _Iterator __current_; // current iterator
@@ -55,10 +55,10 @@ struct __static_bounded_iter_storage<_Iterator, 0> {
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __static_bounded_iter_storage(_Iterator __current, _Iterator /* __begin */)
       : __current_(__current) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator& __current() _NOEXCEPT { return __current_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __current() const _NOEXCEPT { return __current_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __begin() const _NOEXCEPT { return __current_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __end() const _NOEXCEPT { return __current_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator& __current() _NOEXCEPT { return __current_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __current() const _NOEXCEPT { return __current_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __begin() const _NOEXCEPT { return __current_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __end() const _NOEXCEPT { return __current_; }
 
 private:
   _Iterator __current_; // current iterator
