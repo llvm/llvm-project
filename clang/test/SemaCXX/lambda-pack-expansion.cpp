@@ -115,6 +115,7 @@ struct S {
         S var(foo<Types>);
         foo<Types>;
         bar<Values>;
+        int a = Values;
       } &&
        ...);
     };
@@ -125,6 +126,7 @@ struct S {
       ([] {
         Is;
         baz<TTPs>;
+        TTPs<int> D;
       } && ...);
     };
   }
