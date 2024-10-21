@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
@@ -41,7 +42,6 @@
 #include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
-using namespace mlir::cir;
 
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsStructs.cpp.inc"
@@ -58,7 +58,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
-    if (auto structType = dyn_cast<StructType>(type)) {
+    if (auto structType = dyn_cast<mlir::cir::StructType>(type)) {
       StringAttr nameAttr = structType.getName();
       if (!nameAttr)
         os << "ty_anon_" << structType.getKindAsStr();
@@ -66,7 +66,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
         os << "ty_" << nameAttr.getValue();
       return AliasResult::OverridableAlias;
     }
-    if (auto intType = dyn_cast<IntType>(type)) {
+    if (auto intType = dyn_cast<mlir::cir::IntType>(type)) {
       // We only provide alias for standard integer types (i.e. integer types
       // whose width is divisible by 8).
       if (intType.getWidth() % 8 != 0)
@@ -74,7 +74,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << intType.getAlias();
       return AliasResult::OverridableAlias;
     }
-    if (auto voidType = dyn_cast<VoidType>(type)) {
+    if (auto voidType = dyn_cast<mlir::cir::VoidType>(type)) {
       os << voidType.getAlias();
       return AliasResult::OverridableAlias;
     }
@@ -114,7 +114,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 
 /// Dialect initialization, the instance will be owned by the context. This is
 /// the point of registration of types and operations for the dialect.
-void cir::CIRDialect::initialize() {
+void mlir::cir::CIRDialect::initialize() {
   registerTypes();
   registerAttributes();
   addOperations<
@@ -124,10 +124,10 @@ void cir::CIRDialect::initialize() {
   addInterfaces<CIROpAsmDialectInterface>();
 }
 
-Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
-                                                mlir::Attribute value,
-                                                mlir::Type type,
-                                                mlir::Location loc) {
+Operation *mlir::cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
+                                                      mlir::Attribute value,
+                                                      mlir::Type type,
+                                                      mlir::Location loc) {
   return builder.create<mlir::cir::ConstantOp>(
       loc, type, mlir::cast<mlir::TypedAttr>(value));
 }
@@ -152,9 +152,13 @@ namespace {
 template <typename Ty> struct EnumTraits {};
 
 #define REGISTER_ENUM_TYPE(Ty)                                                 \
-  template <> struct EnumTraits<Ty> {                                          \
-    static StringRef stringify(Ty value) { return stringify##Ty(value); }      \
-    static unsigned getMaxEnumVal() { return getMaxEnumValFor##Ty(); }         \
+  template <> struct EnumTraits<mlir::cir::Ty> {                               \
+    static StringRef stringify(mlir::cir::Ty value) {                          \
+      return stringify##Ty(value);                                             \
+    }                                                                          \
+    static unsigned getMaxEnumVal() {                                          \
+      return mlir::cir::getMaxEnumValFor##Ty();                                \
+    }                                                                          \
   }
 #define REGISTER_ENUM_TYPE_WITH_NS(NS, Ty)                                     \
   template <> struct EnumTraits<NS::Ty> {                                      \
@@ -166,7 +170,7 @@ template <typename Ty> struct EnumTraits {};
 
 REGISTER_ENUM_TYPE(GlobalLinkageKind);
 REGISTER_ENUM_TYPE(CallingConv);
-REGISTER_ENUM_TYPE_WITH_NS(sob, SignedOverflowBehavior);
+REGISTER_ENUM_TYPE_WITH_NS(mlir::cir::sob, SignedOverflowBehavior);
 } // namespace
 
 /// Parse an enum from the keyword, or default to the provided default value.
@@ -219,7 +223,7 @@ LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
     return parser.emitError(errLoc, "empty region must not omit terminator");
 
   // Terminator was omited correctly: recreate it.
-  region.back().push_back(builder.create<cir::YieldOp>(eLoc));
+  region.back().push_back(builder.create<mlir::cir::YieldOp>(eLoc));
   return success();
 }
 
@@ -227,7 +231,7 @@ LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
 bool omitRegionTerm(mlir::Region &r) {
   const auto singleNonEmptyBlock = r.hasOneBlock() && !r.back().empty();
   const auto yieldsNothing = [&r]() {
-    YieldOp y = dyn_cast<YieldOp>(r.back().getTerminator());
+    auto y = dyn_cast<mlir::cir::YieldOp>(r.back().getTerminator());
     return y && y.getArgs().empty();
   };
   return singleNonEmptyBlock && yieldsNothing();
@@ -236,10 +240,10 @@ bool omitRegionTerm(mlir::Region &r) {
 void printVisibilityAttr(OpAsmPrinter &printer,
                          mlir::cir::VisibilityAttr &visibility) {
   switch (visibility.getValue()) {
-  case VisibilityKind::Hidden:
+  case mlir::cir::VisibilityKind::Hidden:
     printer << "hidden";
     break;
-  case VisibilityKind::Protected:
+  case mlir::cir::VisibilityKind::Protected:
     printer << "protected";
     break;
   default:
@@ -249,14 +253,14 @@ void printVisibilityAttr(OpAsmPrinter &printer,
 
 void parseVisibilityAttr(OpAsmParser &parser,
                          mlir::cir::VisibilityAttr &visibility) {
-  VisibilityKind visibilityKind;
+  mlir::cir::VisibilityKind visibilityKind;
 
   if (parser.parseOptionalKeyword("hidden").succeeded()) {
-    visibilityKind = VisibilityKind::Hidden;
+    visibilityKind = mlir::cir::VisibilityKind::Hidden;
   } else if (parser.parseOptionalKeyword("protected").succeeded()) {
-    visibilityKind = VisibilityKind::Protected;
+    visibilityKind = mlir::cir::VisibilityKind::Protected;
   } else {
-    visibilityKind = VisibilityKind::Default;
+    visibilityKind = mlir::cir::VisibilityKind::Default;
   }
 
   visibility =
@@ -302,10 +306,11 @@ static void printOmitDefaultVisibility(mlir::OpAsmPrinter &printer,
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
-void AllocaOp::build(::mlir::OpBuilder &odsBuilder,
-                     ::mlir::OperationState &odsState, ::mlir::Type addr,
-                     ::mlir::Type allocaType, ::llvm::StringRef name,
-                     ::mlir::IntegerAttr alignment) {
+void mlir::cir::AllocaOp::build(::mlir::OpBuilder &odsBuilder,
+                                ::mlir::OperationState &odsState,
+                                ::mlir::Type addr, ::mlir::Type allocaType,
+                                ::llvm::StringRef name,
+                                ::mlir::IntegerAttr alignment) {
   odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
                         ::mlir::TypeAttr::get(allocaType));
   odsState.addAttribute(getNameAttrName(odsState.name),
@@ -320,7 +325,7 @@ void AllocaOp::build(::mlir::OpBuilder &odsBuilder,
 // BreakOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult BreakOp::verify() {
+LogicalResult mlir::cir::BreakOp::verify() {
   if (!getOperation()->getParentOfType<LoopOpInterface>() &&
       !getOperation()->getParentOfType<SwitchOp>())
     return emitOpError("must be within a loop or switch");
@@ -334,7 +339,7 @@ LogicalResult BreakOp::verify() {
 //===----------------------------------
 // BranchOpTerminatorInterface Methods
 
-void ConditionOp::getSuccessorRegions(
+void mlir::cir::ConditionOp::getSuccessorRegions(
     ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
   // TODO(cir): The condition value may be folded to a constant, narrowing
   // down its list of possible successors.
@@ -352,12 +357,12 @@ void ConditionOp::getSuccessorRegions(
 }
 
 MutableOperandRange
-ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
+mlir::cir::ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
   // No values are yielded to the successor region.
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
-LogicalResult ConditionOp::verify() {
+LogicalResult mlir::cir::ConditionOp::verify() {
   if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
   return success();
@@ -369,19 +374,19 @@ LogicalResult ConditionOp::verify() {
 
 static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
                                         mlir::Attribute attrType) {
-  if (isa<ConstPtrAttr>(attrType)) {
+  if (isa<mlir::cir::ConstPtrAttr>(attrType)) {
     if (::mlir::isa<::mlir::cir::PointerType>(opType))
       return success();
     return op->emitOpError("nullptr expects pointer type");
   }
 
-  if (isa<DataMemberAttr, MethodAttr>(attrType)) {
+  if (isa<mlir::cir::DataMemberAttr, mlir::cir::MethodAttr>(attrType)) {
     // More detailed type verifications are already done in
     // DataMemberAttr::verify. Don't need to repeat here.
     return success();
   }
 
-  if (isa<ZeroAttr>(attrType)) {
+  if (isa<mlir::cir::ZeroAttr>(attrType)) {
     if (::mlir::isa<::mlir::cir::StructType, ::mlir::cir::ArrayType,
                     ::mlir::cir::ComplexType>(opType))
       return success();
@@ -427,20 +432,22 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
          << cast<TypedAttr>(attrType).getType() << " not supported";
 }
 
-LogicalResult ConstantOp::verify() {
+LogicalResult mlir::cir::ConstantOp::verify() {
   // ODS already generates checks to make sure the result type is valid. We just
   // need to additionally check that the value's attribute type is consistent
   // with the result type.
   return checkConstantTypes(getOperation(), getType(), getValue());
 }
 
-OpFoldResult ConstantOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
+OpFoldResult mlir::cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
+  return getValue();
+}
 
 //===----------------------------------------------------------------------===//
 // ContinueOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ContinueOp::verify() {
+LogicalResult mlir::cir::ContinueOp::verify() {
   if (!this->getOperation()->getParentOfType<LoopOpInterface>())
     return emitOpError("must be within a loop");
   return success();
@@ -450,7 +457,7 @@ LogicalResult ContinueOp::verify() {
 // CastOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult CastOp::verify() {
+LogicalResult mlir::cir::CastOp::verify() {
   auto resType = getResult().getType();
   auto srcType = getSrc().getType();
 
@@ -714,14 +721,14 @@ bool isIntOrBoolCast(mlir::cir::CastOp op) {
          kind == mlir::cir::CastKind::integral;
 }
 
-Value tryFoldCastChain(CastOp op) {
-  CastOp head = op, tail = op;
+Value tryFoldCastChain(mlir::cir::CastOp op) {
+  mlir::cir::CastOp head = op, tail = op;
 
   while (op) {
     if (!isIntOrBoolCast(op))
       break;
     head = op;
-    op = dyn_cast_or_null<CastOp>(head.getSrc().getDefiningOp());
+    op = dyn_cast_or_null<mlir::cir::CastOp>(head.getSrc().getDefiningOp());
   }
 
   if (head == tail)
@@ -743,7 +750,7 @@ Value tryFoldCastChain(CastOp op) {
   return {};
 }
 
-OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
+OpFoldResult mlir::cir::CastOp::fold(FoldAdaptor adaptor) {
   if (getSrc().getType() == getResult().getType()) {
     switch (getKind()) {
     case mlir::cir::CastKind::integral: {
@@ -769,7 +776,7 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 }
 
 static bool isBoolNot(mlir::cir::UnaryOp op) {
-  return isa<BoolType>(op.getInput().getType()) &&
+  return isa<mlir::cir::BoolType>(op.getInput().getType()) &&
          op.getKind() == mlir::cir::UnaryOpKind::Not;
 }
 
@@ -782,7 +789,7 @@ static bool isBoolNot(mlir::cir::UnaryOp op) {
 // ```
 //
 // and the argument of the first one (%0) will be used instead.
-OpFoldResult UnaryOp::fold(FoldAdaptor adaptor) {
+OpFoldResult mlir::cir::UnaryOp::fold(FoldAdaptor adaptor) {
   if (isBoolNot(*this))
     if (auto previous = dyn_cast_or_null<UnaryOp>(getInput().getDefiningOp()))
       if (isBoolNot(previous))
@@ -795,7 +802,7 @@ OpFoldResult UnaryOp::fold(FoldAdaptor adaptor) {
 // DynamicCastOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult DynamicCastOp::verify() {
+LogicalResult mlir::cir::DynamicCastOp::verify() {
   auto resultPointeeTy =
       mlir::cast<mlir::cir::PointerType>(getType()).getPointee();
   if (!mlir::isa<mlir::cir::VoidType, mlir::cir::StructType>(resultPointeeTy))
@@ -809,7 +816,7 @@ LogicalResult DynamicCastOp::verify() {
 // ComplexCreateOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ComplexCreateOp::verify() {
+LogicalResult mlir::cir::ComplexCreateOp::verify() {
   if (getType().getElementTy() != getReal().getType()) {
     emitOpError()
         << "operand type of cir.complex.create does not match its result type";
@@ -819,7 +826,7 @@ LogicalResult ComplexCreateOp::verify() {
   return success();
 }
 
-OpFoldResult ComplexCreateOp::fold(FoldAdaptor adaptor) {
+OpFoldResult mlir::cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
   auto real = adaptor.getReal();
   auto imag = adaptor.getImag();
 
@@ -843,7 +850,7 @@ OpFoldResult ComplexCreateOp::fold(FoldAdaptor adaptor) {
 // ComplexRealOp and ComplexImagOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ComplexRealOp::verify() {
+LogicalResult mlir::cir::ComplexRealOp::verify() {
   if (getType() != getOperand().getType().getElementTy()) {
     emitOpError() << "cir.complex.real result type does not match operand type";
     return failure();
@@ -851,7 +858,7 @@ LogicalResult ComplexRealOp::verify() {
   return success();
 }
 
-OpFoldResult ComplexRealOp::fold(FoldAdaptor adaptor) {
+OpFoldResult mlir::cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
   auto input =
       mlir::cast_if_present<mlir::cir::ComplexAttr>(adaptor.getOperand());
   if (input)
@@ -859,7 +866,7 @@ OpFoldResult ComplexRealOp::fold(FoldAdaptor adaptor) {
   return nullptr;
 }
 
-LogicalResult ComplexImagOp::verify() {
+LogicalResult mlir::cir::ComplexImagOp::verify() {
   if (getType() != getOperand().getType().getElementTy()) {
     emitOpError() << "cir.complex.imag result type does not match operand type";
     return failure();
@@ -867,7 +874,7 @@ LogicalResult ComplexImagOp::verify() {
   return success();
 }
 
-OpFoldResult ComplexImagOp::fold(FoldAdaptor adaptor) {
+OpFoldResult mlir::cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
   auto input =
       mlir::cast_if_present<mlir::cir::ComplexAttr>(adaptor.getOperand());
   if (input)
@@ -879,7 +886,7 @@ OpFoldResult ComplexImagOp::fold(FoldAdaptor adaptor) {
 // ComplexRealPtrOp and ComplexImagPtrOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ComplexRealPtrOp::verify() {
+LogicalResult mlir::cir::ComplexRealPtrOp::verify() {
   auto resultPointeeTy =
       mlir::cast<mlir::cir::PointerType>(getType()).getPointee();
   auto operandPtrTy =
@@ -896,7 +903,7 @@ LogicalResult ComplexRealPtrOp::verify() {
   return success();
 }
 
-LogicalResult ComplexImagPtrOp::verify() {
+LogicalResult mlir::cir::ComplexImagPtrOp::verify() {
   auto resultPointeeTy =
       mlir::cast<mlir::cir::PointerType>(getType()).getPointee();
   auto operandPtrTy =
@@ -917,7 +924,7 @@ LogicalResult ComplexImagPtrOp::verify() {
 // VecCreateOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult VecCreateOp::verify() {
+LogicalResult mlir::cir::VecCreateOp::verify() {
   // Verify that the number of arguments matches the number of elements in the
   // vector, and that the type of all the arguments matches the type of the
   // elements in the vector.
@@ -942,7 +949,7 @@ LogicalResult VecCreateOp::verify() {
 // VecTernaryOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult VecTernaryOp::verify() {
+LogicalResult mlir::cir::VecTernaryOp::verify() {
   // Verify that the condition operand has the same number of elements as the
   // other operands.  (The automatic verification already checked that all
   // operands are vector types and that the second and third operands are the
@@ -960,7 +967,7 @@ LogicalResult VecTernaryOp::verify() {
 // VecShuffle
 //===----------------------------------------------------------------------===//
 
-LogicalResult VecShuffleOp::verify() {
+LogicalResult mlir::cir::VecShuffleOp::verify() {
   // The number of elements in the indices array must match the number of
   // elements in the result type.
   if (getIndices().size() != getResult().getType().getSize()) {
@@ -987,7 +994,7 @@ LogicalResult VecShuffleOp::verify() {
 // VecShuffleDynamic
 //===----------------------------------------------------------------------===//
 
-LogicalResult VecShuffleDynamicOp::verify() {
+LogicalResult mlir::cir::VecShuffleDynamicOp::verify() {
   // The number of elements in the two input vectors must match.
   if (getVec().getType().getSize() !=
       mlir::cast<mlir::cir::VectorType>(getIndices().getType()).getSize()) {
@@ -1001,8 +1008,8 @@ LogicalResult VecShuffleDynamicOp::verify() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-static mlir::LogicalResult checkReturnAndFunction(ReturnOp op,
-                                                  cir::FuncOp function) {
+static mlir::LogicalResult checkReturnAndFunction(mlir::cir::ReturnOp op,
+                                                  mlir::cir::FuncOp function) {
   // ReturnOps currently only have a single optional operand.
   if (op.getNumOperands() > 1)
     return op.emitOpError() << "expects at most 1 return operand";
@@ -1019,7 +1026,7 @@ static mlir::LogicalResult checkReturnAndFunction(ReturnOp op,
   return mlir::success();
 }
 
-mlir::LogicalResult ReturnOp::verify() {
+mlir::LogicalResult mlir::cir::ReturnOp::verify() {
   // Returns can be present in multiple different scopes, get the
   // wrapping function and start from there.
   auto *fnOp = getOperation()->getParentOp();
@@ -1037,7 +1044,7 @@ mlir::LogicalResult ReturnOp::verify() {
 // ThrowOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult ThrowOp::verify() {
+mlir::LogicalResult mlir::cir::ThrowOp::verify() {
   // For the no-rethrow version, it must have at least the exception pointer.
   if (rethrows())
     return success();
@@ -1055,7 +1062,8 @@ mlir::LogicalResult ThrowOp::verify() {
 // IfOp
 //===----------------------------------------------------------------------===//
 
-ParseResult cir::IfOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult mlir::cir::IfOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
   // Create the regions for 'then'.
   result.regions.reserve(2);
   Region *thenRegion = result.addRegion();
@@ -1092,7 +1100,7 @@ ParseResult cir::IfOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-void cir::IfOp::print(OpAsmPrinter &p) {
+void mlir::cir::IfOp::print(OpAsmPrinter &p) {
   p << " " << getCondition() << " ";
   auto &thenRegion = this->getThenRegion();
   p.printRegion(thenRegion,
@@ -1119,8 +1127,8 @@ void mlir::cir::buildTerminatedBody(OpBuilder &builder, Location loc) {}
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
-                               SmallVectorImpl<RegionSuccessor> &regions) {
+void mlir::cir::IfOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
     regions.push_back(RegionSuccessor());
@@ -1151,10 +1159,10 @@ void IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   return;
 }
 
-void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
-                 bool withElseRegion,
-                 function_ref<void(OpBuilder &, Location)> thenBuilder,
-                 function_ref<void(OpBuilder &, Location)> elseBuilder) {
+void mlir::cir::IfOp::build(
+    OpBuilder &builder, OperationState &result, Value cond, bool withElseRegion,
+    function_ref<void(OpBuilder &, Location)> thenBuilder,
+    function_ref<void(OpBuilder &, Location)> elseBuilder) {
   assert(thenBuilder && "the builder callback for 'then' must be present");
 
   result.addOperands(cond);
@@ -1172,7 +1180,7 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
   elseBuilder(builder, result.location);
 }
 
-LogicalResult IfOp::verify() { return success(); }
+LogicalResult mlir::cir::IfOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // ScopeOp
@@ -1183,8 +1191,8 @@ LogicalResult IfOp::verify() { return success(); }
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void ScopeOp::getSuccessorRegions(mlir::RegionBranchPoint point,
-                                  SmallVectorImpl<RegionSuccessor> &regions) {
+void mlir::cir::ScopeOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The only region always branch back to the parent operation.
   if (!point.isParent()) {
     regions.push_back(RegionSuccessor(getODSResults(0)));
@@ -1195,7 +1203,7 @@ void ScopeOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   regions.push_back(RegionSuccessor(&getScopeRegion()));
 }
 
-void ScopeOp::build(
+void mlir::cir::ScopeOp::build(
     OpBuilder &builder, OperationState &result,
     function_ref<void(OpBuilder &, Type &, Location)> scopeBuilder) {
   assert(scopeBuilder && "the builder callback for 'then' must be present");
@@ -1211,8 +1219,9 @@ void ScopeOp::build(
     result.addTypes(TypeRange{yieldTy});
 }
 
-void ScopeOp::build(OpBuilder &builder, OperationState &result,
-                    function_ref<void(OpBuilder &, Location)> scopeBuilder) {
+void mlir::cir::ScopeOp::build(
+    OpBuilder &builder, OperationState &result,
+    function_ref<void(OpBuilder &, Location)> scopeBuilder) {
   assert(scopeBuilder && "the builder callback for 'then' must be present");
   OpBuilder::InsertionGuard guard(builder);
   Region *scopeRegion = result.addRegion();
@@ -1220,13 +1229,13 @@ void ScopeOp::build(OpBuilder &builder, OperationState &result,
   scopeBuilder(builder, result.location);
 }
 
-LogicalResult ScopeOp::verify() { return success(); }
+LogicalResult mlir::cir::ScopeOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // TryOp
 //===----------------------------------------------------------------------===//
 
-void TryOp::build(
+void mlir::cir::TryOp::build(
     OpBuilder &builder, OperationState &result,
     function_ref<void(OpBuilder &, Location)> tryBodyBuilder,
     function_ref<void(OpBuilder &, Location, OperationState &)> catchBuilder) {
@@ -1243,29 +1252,29 @@ void TryOp::build(
   catchBuilder(builder, result.location, result);
 }
 
-mlir::Region *TryOp::getCatchLastRegion() {
+mlir::Region *mlir::cir::TryOp::getCatchLastRegion() {
   unsigned numCatchRegions = getCatchRegions().size();
   assert(numCatchRegions && "expected at least one region");
   auto &lastRegion = getCatchRegions()[numCatchRegions - 1];
   return &lastRegion;
 }
 
-mlir::Block *TryOp::getCatchUnwindEntryBlock() {
+mlir::Block *mlir::cir::TryOp::getCatchUnwindEntryBlock() {
   return &getCatchLastRegion()->getBlocks().front();
 }
 
-mlir::Block *TryOp::getCatchAllEntryBlock() {
+mlir::Block *mlir::cir::TryOp::getCatchAllEntryBlock() {
   return &getCatchLastRegion()->getBlocks().front();
 }
 
-bool TryOp::isCatchAllOnly() {
+bool mlir::cir::TryOp::isCatchAllOnly() {
   mlir::ArrayAttr catchAttrList = getCatchTypesAttr();
   return catchAttrList.size() == 1 &&
          isa<mlir::cir::CatchAllAttr>(catchAttrList[0]);
 }
 
-void TryOp::getSuccessorRegions(mlir::RegionBranchPoint point,
-                                SmallVectorImpl<RegionSuccessor> &regions) {
+void mlir::cir::TryOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // If any index all the underlying regions branch back to the parent
   // operation.
   if (!point.isParent()) {
@@ -1283,7 +1292,7 @@ void TryOp::getSuccessorRegions(mlir::RegionBranchPoint point,
     regions.push_back(RegionSuccessor(&r));
 }
 
-void printCatchRegions(OpAsmPrinter &p, TryOp op,
+void printCatchRegions(OpAsmPrinter &p, mlir::cir::TryOp op,
                        mlir::MutableArrayRef<::mlir::Region> regions,
                        mlir::ArrayAttr catchList) {
 
@@ -1384,8 +1393,8 @@ ParseResult parseCatchRegions(
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void TernaryOp::getSuccessorRegions(mlir::RegionBranchPoint point,
-                                    SmallVectorImpl<RegionSuccessor> &regions) {
+void mlir::cir::TernaryOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The `true` and the `false` region branch back to the parent operation.
   if (!point.isParent()) {
     regions.push_back(RegionSuccessor(this->getODSResults(0)));
@@ -1403,9 +1412,10 @@ void TernaryOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   return;
 }
 
-void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
-                      function_ref<void(OpBuilder &, Location)> trueBuilder,
-                      function_ref<void(OpBuilder &, Location)> falseBuilder) {
+void mlir::cir::TernaryOp::build(
+    OpBuilder &builder, OperationState &result, Value cond,
+    function_ref<void(OpBuilder &, Location)> trueBuilder,
+    function_ref<void(OpBuilder &, Location)> falseBuilder) {
   result.addOperands(cond);
   OpBuilder::InsertionGuard guard(builder);
   Region *trueRegion = result.addRegion();
@@ -1426,7 +1436,7 @@ void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult SelectOp::fold(FoldAdaptor adaptor) {
+OpFoldResult mlir::cir::SelectOp::fold(FoldAdaptor adaptor) {
   auto condition = adaptor.getCondition();
   if (condition) {
     auto conditionValue = mlir::cast<mlir::cir::BoolAttr>(condition).getValue();
@@ -1448,24 +1458,28 @@ OpFoldResult SelectOp::fold(FoldAdaptor adaptor) {
 // BrOp
 //===----------------------------------------------------------------------===//
 
-mlir::SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
+mlir::SuccessorOperands mlir::cir::BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
   return mlir::SuccessorOperands(getDestOperandsMutable());
 }
 
-Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
+Block *mlir::cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
+  return getDest();
+}
 
 //===----------------------------------------------------------------------===//
 // BrCondOp
 //===----------------------------------------------------------------------===//
 
-mlir::SuccessorOperands BrCondOp::getSuccessorOperands(unsigned index) {
+mlir::SuccessorOperands
+mlir::cir::BrCondOp::getSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
   return SuccessorOperands(index == 0 ? getDestOperandsTrueMutable()
                                       : getDestOperandsFalseMutable());
 }
 
-Block *BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+Block *
+mlir::cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
   if (IntegerAttr condAttr = dyn_cast_if_present<IntegerAttr>(operands.front()))
     return condAttr.getValue().isOne() ? getDestTrue() : getDestFalse();
   return nullptr;
@@ -1556,7 +1570,7 @@ parseSwitchOp(OpAsmParser &parser,
     mlir::ArrayAttr caseValueList;
 
     switch (kindAttr.getValue()) {
-    case cir::CaseOpKind::Equal: {
+    case mlir::cir::CaseOpKind::Equal: {
       if (parser.parseComma().failed())
         return mlir::failure();
       int64_t val = 0;
@@ -1565,8 +1579,8 @@ parseSwitchOp(OpAsmParser &parser,
       caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(intCondType, val));
       break;
     }
-    case cir::CaseOpKind::Range:
-    case cir::CaseOpKind::Anyof: {
+    case mlir::cir::CaseOpKind::Range:
+    case mlir::cir::CaseOpKind::Anyof: {
       if (parser.parseComma().failed())
         return mlir::failure();
       if (parser.parseLSquare().failed())
@@ -1584,10 +1598,10 @@ parseSwitchOp(OpAsmParser &parser,
         return mlir::failure();
       break;
     }
-    case cir::CaseOpKind::Default: {
+    case mlir::cir::CaseOpKind::Default: {
       if (parser.parseRParen().failed())
         return parser.emitError(parser.getCurrentLocation(), "expected ')'");
-      cases.push_back(cir::CaseAttr::get(
+      cases.push_back(mlir::cir::CaseAttr::get(
           parser.getContext(), parser.getBuilder().getArrayAttr({}), kindAttr));
       return parseAndCheckRegion();
     }
@@ -1595,7 +1609,7 @@ parseSwitchOp(OpAsmParser &parser,
 
     caseValueList = parser.getBuilder().getArrayAttr(caseEltValueListAttr);
     cases.push_back(
-        cir::CaseAttr::get(parser.getContext(), caseValueList, kindAttr));
+        mlir::cir::CaseAttr::get(parser.getContext(), caseValueList, kindAttr));
     if (succeeded(parser.parseOptionalColon())) {
       Type caseIntTy;
       if (parser.parseType(caseIntTy).failed())
@@ -1632,7 +1646,7 @@ parseSwitchOp(OpAsmParser &parser,
   return ::mlir::success();
 }
 
-void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
+void printSwitchOp(OpAsmPrinter &p, mlir::cir::SwitchOp op,
                    mlir::MutableArrayRef<::mlir::Region> regions,
                    mlir::ArrayAttr casesAttr, mlir::Value condition,
                    mlir::Type condType) {
@@ -1650,10 +1664,12 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
   for (auto &r : regions) {
     p << "case (";
 
-    auto attr = cast<CaseAttr>(casesAttr[idx]);
+    auto attr = cast<mlir::cir::CaseAttr>(casesAttr[idx]);
     auto kind = attr.getKind().getValue();
-    assert((kind == CaseOpKind::Default || kind == CaseOpKind::Equal ||
-            kind == CaseOpKind::Anyof || kind == CaseOpKind::Range) &&
+    assert((kind == mlir::cir::CaseOpKind::Default ||
+            kind == mlir::cir::CaseOpKind::Equal ||
+            kind == mlir::cir::CaseOpKind::Anyof ||
+            kind == mlir::cir::CaseOpKind::Range) &&
            "unknown case");
 
     // Case kind
@@ -1661,22 +1677,22 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
 
     // Case value
     switch (kind) {
-    case cir::CaseOpKind::Equal: {
+    case mlir::cir::CaseOpKind::Equal: {
       p << ", ";
-      auto intAttr = cast<cir::IntAttr>(attr.getValue()[0]);
-      auto intAttrTy = cast<cir::IntType>(intAttr.getType());
+      auto intAttr = cast<mlir::cir::IntAttr>(attr.getValue()[0]);
+      auto intAttrTy = cast<mlir::cir::IntType>(intAttr.getType());
       (intAttrTy.isSigned() ? p << intAttr.getSInt() : p << intAttr.getUInt());
       break;
     }
-    case cir::CaseOpKind::Range:
+    case mlir::cir::CaseOpKind::Range:
       assert(attr.getValue().size() == 2 && "range must have two values");
       // The print format of the range is the same as anyof
       LLVM_FALLTHROUGH;
-    case cir::CaseOpKind::Anyof: {
+    case mlir::cir::CaseOpKind::Anyof: {
       p << ", [";
       llvm::interleaveComma(attr.getValue(), p, [&](const Attribute &a) {
-        auto intAttr = cast<cir::IntAttr>(a);
-        auto intAttrTy = cast<cir::IntType>(intAttr.getType());
+        auto intAttr = cast<mlir::cir::IntAttr>(a);
+        auto intAttrTy = cast<mlir::cir::IntType>(intAttr.getType());
         (intAttrTy.isSigned() ? p << intAttr.getSInt()
                               : p << intAttr.getUInt());
       });
@@ -1686,7 +1702,7 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
       p.printType(typedAttr.getType());
       break;
     }
-    case cir::CaseOpKind::Default:
+    case mlir::cir::CaseOpKind::Default:
       break;
     }
 
@@ -1706,8 +1722,8 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
 /// during the flow of control. `operands` is a set of optional attributes
 /// that correspond to a constant value for each operand, or null if that
 /// operand is not a constant.
-void SwitchOp::getSuccessorRegions(mlir::RegionBranchPoint point,
-                                   SmallVectorImpl<RegionSuccessor> &regions) {
+void mlir::cir::SwitchOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // If any index all the underlying regions branch back to the parent
   // operation.
   if (!point.isParent()) {
@@ -1735,13 +1751,13 @@ void SwitchOp::getSuccessorRegions(mlir::RegionBranchPoint point,
     regions.push_back(RegionSuccessor(&r));
 }
 
-LogicalResult SwitchOp::verify() {
+LogicalResult mlir::cir::SwitchOp::verify() {
   if (getCases().has_value() && getCases()->size() != getNumRegions())
     return emitOpError("number of cases attributes and regions must match");
   return success();
 }
 
-void SwitchOp::build(
+void mlir::cir::SwitchOp::build(
     OpBuilder &builder, OperationState &result, Value cond,
     function_ref<void(OpBuilder &, Location, OperationState &)> switchBuilder) {
   assert(switchBuilder && "the builder callback for regions must be present");
@@ -1754,11 +1770,12 @@ void SwitchOp::build(
 // SwitchFlatOp
 //===----------------------------------------------------------------------===//
 
-void SwitchFlatOp::build(OpBuilder &builder, OperationState &result,
-                         Value value, Block *defaultDestination,
-                         ValueRange defaultOperands, ArrayRef<APInt> caseValues,
-                         BlockRange caseDestinations,
-                         ArrayRef<ValueRange> caseOperands) {
+void mlir::cir::SwitchFlatOp::build(OpBuilder &builder, OperationState &result,
+                                    Value value, Block *defaultDestination,
+                                    ValueRange defaultOperands,
+                                    ArrayRef<APInt> caseValues,
+                                    BlockRange caseDestinations,
+                                    ArrayRef<ValueRange> caseOperands) {
 
   std::vector<mlir::Attribute> caseValuesAttrs;
   for (auto &val : caseValues) {
@@ -1788,7 +1805,7 @@ static ParseResult parseSwitchFlatOpCases(
     if (failed(parser.parseInteger(value)))
       return failure();
 
-    values.push_back(IntAttr::get(flagType, value));
+    values.push_back(mlir::cir::IntAttr::get(flagType, value));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -1814,7 +1831,7 @@ static ParseResult parseSwitchFlatOpCases(
   return parser.parseRSquare();
 }
 
-static void printSwitchFlatOpCases(OpAsmPrinter &p, SwitchFlatOp op,
+static void printSwitchFlatOpCases(OpAsmPrinter &p, mlir::cir::SwitchFlatOp op,
                                    Type flagType, mlir::ArrayAttr caseValues,
                                    SuccessorRange caseDestinations,
                                    OperandRangeRange caseOperands,
@@ -1848,31 +1865,35 @@ static void printSwitchFlatOpCases(OpAsmPrinter &p, SwitchFlatOp op,
 // LoopOpInterface Methods
 //===----------------------------------------------------------------------===//
 
-void DoWhileOp::getSuccessorRegions(
+void mlir::cir::DoWhileOp::getSuccessorRegions(
     ::mlir::RegionBranchPoint point,
     ::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
   LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
 }
 
-::llvm::SmallVector<Region *> DoWhileOp::getLoopRegions() {
+::llvm::SmallVector<Region *> mlir::cir::DoWhileOp::getLoopRegions() {
   return {&getBody()};
 }
 
-void WhileOp::getSuccessorRegions(
+void mlir::cir::WhileOp::getSuccessorRegions(
     ::mlir::RegionBranchPoint point,
     ::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
   LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
 }
 
-::llvm::SmallVector<Region *> WhileOp::getLoopRegions() { return {&getBody()}; }
+::llvm::SmallVector<Region *> mlir::cir::WhileOp::getLoopRegions() {
+  return {&getBody()};
+}
 
-void ForOp::getSuccessorRegions(
+void mlir::cir::ForOp::getSuccessorRegions(
     ::mlir::RegionBranchPoint point,
     ::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
   LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
 }
 
-::llvm::SmallVector<Region *> ForOp::getLoopRegions() { return {&getBody()}; }
+::llvm::SmallVector<Region *> mlir::cir::ForOp::getLoopRegions() {
+  return {&getBody()};
+}
 
 //===----------------------------------------------------------------------===//
 // GlobalOp
@@ -1890,17 +1911,19 @@ static void printConstant(OpAsmPrinter &p, Attribute value) {
   p.printAttribute(value);
 }
 
-static ParseResult parseGlobalOpAddrSpace(OpAsmParser &p,
-                                          AddressSpaceAttr &addrSpaceAttr) {
+static ParseResult
+parseGlobalOpAddrSpace(OpAsmParser &p,
+                       mlir::cir::AddressSpaceAttr &addrSpaceAttr) {
   return parseAddrSpaceAttribute(p, addrSpaceAttr);
 }
 
-static void printGlobalOpAddrSpace(OpAsmPrinter &p, GlobalOp op,
-                                   AddressSpaceAttr addrSpaceAttr) {
+static void printGlobalOpAddrSpace(OpAsmPrinter &p, mlir::cir::GlobalOp op,
+                                   mlir::cir::AddressSpaceAttr addrSpaceAttr) {
   printAddrSpaceAttribute(p, addrSpaceAttr);
 }
 
-static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
+static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p,
+                                             mlir::cir::GlobalOp op,
                                              TypeAttr type, Attribute initAttr,
                                              mlir::Region &ctorRegion,
                                              mlir::Region &dtorRegion) {
@@ -1993,7 +2016,7 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
   return success();
 }
 
-LogicalResult GlobalOp::verify() {
+LogicalResult mlir::cir::GlobalOp::verify() {
   // Verify that the initial value, if present, is either a unit attribute or
   // an attribute CIR supports.
   if (getInitialValue().has_value()) {
@@ -2070,12 +2093,12 @@ LogicalResult GlobalOp::verify() {
   return success();
 }
 
-void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                     StringRef sym_name, Type sym_type, bool isConstant,
-                     cir::GlobalLinkageKind linkage,
-                     cir::AddressSpaceAttr addrSpace,
-                     function_ref<void(OpBuilder &, Location)> ctorBuilder,
-                     function_ref<void(OpBuilder &, Location)> dtorBuilder) {
+void mlir::cir::GlobalOp::build(
+    OpBuilder &odsBuilder, OperationState &odsState, StringRef sym_name,
+    Type sym_type, bool isConstant, cir::GlobalLinkageKind linkage,
+    cir::AddressSpaceAttr addrSpace,
+    function_ref<void(OpBuilder &, Location)> ctorBuilder,
+    function_ref<void(OpBuilder &, Location)> dtorBuilder) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
@@ -2113,8 +2136,8 @@ void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void GlobalOp::getSuccessorRegions(mlir::RegionBranchPoint point,
-                                   SmallVectorImpl<RegionSuccessor> &regions) {
+void mlir::cir::GlobalOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The `ctor` and `dtor` regions always branch back to the parent operation.
   if (!point.isParent()) {
     regions.push_back(RegionSuccessor());
@@ -2143,7 +2166,7 @@ void GlobalOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+mlir::cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Verify that the result type underlying pointer type matches the type of
   // the referenced cir.global or cir.func op.
   auto op = symbolTable.lookupNearestSymbolFrom(*this, getNameAttr());
@@ -2186,8 +2209,8 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // VTableAddrPointOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+LogicalResult mlir::cir::VTableAddrPointOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
   // vtable ptr is not coming from a symbol.
   if (!getName())
     return success();
@@ -2209,7 +2232,7 @@ VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return success();
 }
 
-LogicalResult cir::VTableAddrPointOp::verify() {
+LogicalResult mlir::cir::VTableAddrPointOp::verify() {
   // The operation uses either a symbol or a value to operate, but not both
   if (getName() && getSymAddr())
     return emitOpError("should use either a symbol or value, but not both");
@@ -2235,8 +2258,8 @@ LogicalResult cir::VTableAddrPointOp::verify() {
 // VTTAddrPointOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-VTTAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+LogicalResult mlir::cir::VTTAddrPointOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
   // VTT ptr is not coming from a symbol.
   if (!getName())
     return success();
@@ -2258,7 +2281,7 @@ VTTAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return success();
 }
 
-LogicalResult cir::VTTAddrPointOp::verify() {
+LogicalResult mlir::cir::VTTAddrPointOp::verify() {
   // The operation uses either a symbol or a value to operate, but not both
   if (getName() && getSymAddr())
     return emitOpError("should use either a symbol or value, but not both");
@@ -2287,11 +2310,12 @@ LogicalResult cir::VTTAddrPointOp::verify() {
 /// the name of the attribute in ODS.
 static StringRef getLinkageAttrNameString() { return "linkage"; }
 
-void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name, cir::FuncType type,
-                        GlobalLinkageKind linkage, CallingConv callingConv,
-                        ArrayRef<NamedAttribute> attrs,
-                        ArrayRef<DictionaryAttr> argAttrs) {
+void mlir::cir::FuncOp::build(OpBuilder &builder, OperationState &result,
+                              StringRef name, mlir::cir::FuncType type,
+                              GlobalLinkageKind linkage,
+                              CallingConv callingConv,
+                              ArrayRef<NamedAttribute> attrs,
+                              ArrayRef<DictionaryAttr> argAttrs) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
@@ -2315,7 +2339,8 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
       getResAttrsAttrName(result.name));
 }
 
-ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
+ParseResult mlir::cir::FuncOp::parse(OpAsmParser &parser,
+                                     OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
 
   auto builtinNameAttr = getBuiltinAttrName(state.name);
@@ -2336,6 +2361,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
+  // TODO: Missing comdat
+  assert(!::cir::MissingFeatures::setComdat());
+
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
                      GlobalLinkageKindAttr::get(
@@ -2354,11 +2382,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   parseVisibilityAttr(parser, cirVisibilityAttr);
   state.addAttribute(visibilityNameAttr, cirVisibilityAttr);
 
+  // TODO: It is unclear whether this is printed in the pretty-printer
   if (parser.parseOptionalKeyword(dsolocalNameAttr).succeeded())
     state.addAttribute(dsolocalNameAttr, parser.getBuilder().getUnitAttr());
-
-  if (parser.parseOptionalKeyword(annotationsNameAttr).succeeded())
-    state.addAttribute(annotationsNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
   SmallVector<OpAsmParser::Argument, 8> arguments;
@@ -2396,6 +2422,15 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return failure();
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(fnType));
+
+  {
+    // Parse an OptionalAttr<ArrayAttr>:$annotations
+    mlir::ArrayAttr annotations;
+    // TODO: Is there a way to restrict the element type to cir.annotation?
+    // parseOptionalAttribute takes a type, but unclear how to use this.
+    if (auto oa = parser.parseOptionalAttribute(annotations); oa.has_value())
+      state.addAttribute(annotationsNameAttr, annotations);
+  }
 
   // If additional attributes are present, parse them.
   if (parser.parseOptionalAttrDictWithKeyword(state.attributes))
@@ -2509,7 +2544,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   return success();
 }
 
-bool cir::FuncOp::isDeclaration() {
+bool mlir::cir::FuncOp::isDeclaration() {
   auto aliasee = getAliasee();
   if (!aliasee)
     return isExternal();
@@ -2521,7 +2556,7 @@ bool cir::FuncOp::isDeclaration() {
   return targetFn.isDeclaration();
 }
 
-::mlir::Region *cir::FuncOp::getCallableRegion() {
+::mlir::Region *mlir::cir::FuncOp::getCallableRegion() {
   auto aliasee = getAliasee();
   if (!aliasee)
     return isExternal() ? nullptr : &getBody();
@@ -2535,7 +2570,7 @@ bool cir::FuncOp::isDeclaration() {
   return targetFn.getCallableRegion();
 }
 
-void cir::FuncOp::print(OpAsmPrinter &p) {
+void mlir::cir::FuncOp::print(OpAsmPrinter &p) {
   p << ' ';
 
   // When adding a specific keyword here, do not forget to omit it in
@@ -2565,6 +2600,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   auto cirVisibilityAttr = getGlobalVisibilityAttr();
   printVisibilityAttr(p, cirVisibilityAttr);
+  // TODO: This is a problematic space to be handled conditionally by
+  // printVisibilityAttr which leads often to a double space in the output. But
+  // it looks like from here we have also switched from adding a conditional
+  // trailing space to inserting a leading space, to avoid trailing space at
+  // EOL.
+  // TODO: Only use the "insert leading space everywhere".
   p << " ";
 
   // Print function name, signature, and control.
@@ -2638,7 +2679,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 // Hook for OpTrait::FunctionLike, called after verifying that the 'type'
 // attribute is present.  This can check for preconditions of the
 // getNumArguments hook not failing.
-LogicalResult cir::FuncOp::verifyType() {
+LogicalResult mlir::cir::FuncOp::verifyType() {
   auto type = getFunctionType();
   if (!isa<cir::FuncType>(type))
     return emitOpError("requires '" + getFunctionTypeAttrName().str() +
@@ -2649,7 +2690,7 @@ LogicalResult cir::FuncOp::verifyType() {
   return success();
 }
 
-LogicalResult cir::IntrinsicCallOp::verify() {
+LogicalResult mlir::cir::IntrinsicCallOp::verify() {
   if (!getIntrinsicName().starts_with("llvm."))
     return emitOpError() << "intrinsic name must start with 'llvm.'";
   return success();
@@ -2659,7 +2700,7 @@ LogicalResult cir::IntrinsicCallOp::verify() {
 // - functions don't have 'common' linkage
 // - external functions have 'external' or 'extern_weak' linkage
 // - coroutine body must use at least one cir.await operation.
-LogicalResult cir::FuncOp::verify() {
+LogicalResult mlir::cir::FuncOp::verify() {
   if (getLinkage() == cir::GlobalLinkageKind::CommonLinkage)
     return emitOpError() << "functions cannot have '"
                          << stringifyGlobalLinkageKind(
@@ -2724,29 +2765,29 @@ LogicalResult cir::FuncOp::verify() {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-mlir::Value cir::CallOp::getIndirectCall() {
+mlir::Value mlir::cir::CallOp::getIndirectCall() {
   assert(isIndirect());
   return getOperand(0);
 }
 
-mlir::Operation::operand_iterator cir::CallOp::arg_operand_begin() {
+mlir::Operation::operand_iterator mlir::cir::CallOp::arg_operand_begin() {
   auto arg_begin = operand_begin();
   if (isIndirect())
     arg_begin++;
   return arg_begin;
 }
-mlir::Operation::operand_iterator cir::CallOp::arg_operand_end() {
+mlir::Operation::operand_iterator mlir::cir::CallOp::arg_operand_end() {
   return operand_end();
 }
 
 /// Return the operand at index 'i', accounts for indirect call.
-Value cir::CallOp::getArgOperand(unsigned i) {
+Value mlir::cir::CallOp::getArgOperand(unsigned i) {
   if (isIndirect())
     i++;
   return getOperand(i);
 }
 /// Return the number of operands, accounts for indirect call.
-unsigned cir::CallOp::getNumArgOperands() {
+unsigned mlir::cir::CallOp::getNumArgOperands() {
   if (isIndirect())
     return this->getOperation()->getNumOperands() - 1;
   return this->getOperation()->getNumOperands();
@@ -2759,7 +2800,7 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
   if (!fnAttr)
     return success();
 
-  FuncOp fn =
+  mlir::cir::FuncOp fn =
       symbolTable.lookupNearestSymbolFrom<mlir::cir::FuncOp>(op, fnAttr);
   if (!fn)
     return op->emitOpError() << "'" << fnAttr.getValue()
@@ -2940,7 +2981,7 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
                    {static_cast<int32_t>(continueOperands.size()),
                     static_cast<int32_t>(landingPadOperands.size()),
                     static_cast<int32_t>(ops.size())}),
-               result.getOrAddProperties<TryCallOp::Properties>()
+               result.getOrAddProperties<mlir::cir::TryCallOp::Properties>()
                    .operandSegmentSizes.begin());
     if (parser.resolveOperands(continueOperands, continueTypes,
                                continueOperandsLoc, result.operands))
@@ -3083,17 +3124,17 @@ void printCallCommon(Operation *op, mlir::Value indirectCallee,
 }
 
 LogicalResult
-cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+mlir::cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return verifyCallCommInSymbolUses(*this, symbolTable);
 }
 
-::mlir::ParseResult CallOp::parse(::mlir::OpAsmParser &parser,
-                                  ::mlir::OperationState &result) {
+::mlir::ParseResult mlir::cir::CallOp::parse(::mlir::OpAsmParser &parser,
+                                             ::mlir::OperationState &result) {
 
   return parseCallCommon(parser, result, getExtraAttrsAttrName(result.name));
 }
 
-void CallOp::print(::mlir::OpAsmPrinter &state) {
+void mlir::cir::CallOp::print(::mlir::OpAsmPrinter &state) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   mlir::cir::CallingConv callingConv = getCallingConv();
   mlir::UnitAttr exception = getExceptionAttr();
@@ -3105,54 +3146,56 @@ void CallOp::print(::mlir::OpAsmPrinter &state) {
 // TryCallOp
 //===----------------------------------------------------------------------===//
 
-mlir::Value cir::TryCallOp::getIndirectCall() {
+mlir::Value mlir::cir::TryCallOp::getIndirectCall() {
   assert(isIndirect());
   return getOperand(0);
 }
 
-mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_begin() {
+mlir::Operation::operand_iterator mlir::cir::TryCallOp::arg_operand_begin() {
   auto arg_begin = operand_begin();
   if (isIndirect())
     arg_begin++;
   return arg_begin;
 }
-mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_end() {
+mlir::Operation::operand_iterator mlir::cir::TryCallOp::arg_operand_end() {
   return operand_end();
 }
 
 /// Return the operand at index 'i', accounts for indirect call.
-Value cir::TryCallOp::getArgOperand(unsigned i) {
+Value mlir::cir::TryCallOp::getArgOperand(unsigned i) {
   if (isIndirect())
     i++;
   return getOperand(i);
 }
 /// Return the number of operands, accounts for indirect call.
-unsigned cir::TryCallOp::getNumArgOperands() {
+unsigned mlir::cir::TryCallOp::getNumArgOperands() {
   if (isIndirect())
     return this->getOperation()->getNumOperands() - 1;
   return this->getOperation()->getNumOperands();
 }
 
 LogicalResult
-cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+mlir::cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return verifyCallCommInSymbolUses(*this, symbolTable);
 }
 
-::mlir::ParseResult TryCallOp::parse(::mlir::OpAsmParser &parser,
-                                     ::mlir::OperationState &result) {
+::mlir::ParseResult
+mlir::cir::TryCallOp::parse(::mlir::OpAsmParser &parser,
+                            ::mlir::OperationState &result) {
 
   return parseCallCommon(parser, result, getExtraAttrsAttrName(result.name),
                          /*hasDestinationBlocks=*/true);
 }
 
-void TryCallOp::print(::mlir::OpAsmPrinter &state) {
+void mlir::cir::TryCallOp::print(::mlir::OpAsmPrinter &state) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   mlir::cir::CallingConv callingConv = getCallingConv();
   printCallCommon(*this, indirectCallee, getCalleeAttr(), state,
                   getExtraAttrs(), callingConv, {}, getCont(), getLandingPad());
 }
 
-mlir::SuccessorOperands TryCallOp::getSuccessorOperands(unsigned index) {
+mlir::SuccessorOperands
+mlir::cir::TryCallOp::getSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
   if (index == 0)
     return SuccessorOperands(getContOperandsMutable());
@@ -3167,7 +3210,7 @@ mlir::SuccessorOperands TryCallOp::getSuccessorOperands(unsigned index) {
 // UnaryOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult UnaryOp::verify() {
+LogicalResult mlir::cir::UnaryOp::verify() {
   switch (getKind()) {
   case cir::UnaryOpKind::Inc:
   case cir::UnaryOpKind::Dec:
@@ -3185,11 +3228,11 @@ LogicalResult UnaryOp::verify() {
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
-void AwaitOp::build(OpBuilder &builder, OperationState &result,
-                    mlir::cir::AwaitKind kind,
-                    function_ref<void(OpBuilder &, Location)> readyBuilder,
-                    function_ref<void(OpBuilder &, Location)> suspendBuilder,
-                    function_ref<void(OpBuilder &, Location)> resumeBuilder) {
+void mlir::cir::AwaitOp::build(
+    OpBuilder &builder, OperationState &result, mlir::cir::AwaitKind kind,
+    function_ref<void(OpBuilder &, Location)> readyBuilder,
+    function_ref<void(OpBuilder &, Location)> suspendBuilder,
+    function_ref<void(OpBuilder &, Location)> resumeBuilder) {
   result.addAttribute(getKindAttrName(result.name),
                       cir::AwaitKindAttr::get(builder.getContext(), kind));
   {
@@ -3219,8 +3262,8 @@ void AwaitOp::build(OpBuilder &builder, OperationState &result,
 /// during the flow of control. `operands` is a set of optional attributes
 /// that correspond to a constant value for each operand, or null if that
 /// operand is not a constant.
-void AwaitOp::getSuccessorRegions(mlir::RegionBranchPoint point,
-                                  SmallVectorImpl<RegionSuccessor> &regions) {
+void mlir::cir::AwaitOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // If any index all the underlying regions branch back to the parent
   // operation.
   if (!point.isParent()) {
@@ -3235,7 +3278,7 @@ void AwaitOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   regions.push_back(RegionSuccessor(&this->getResume()));
 }
 
-LogicalResult AwaitOp::verify() {
+LogicalResult mlir::cir::AwaitOp::verify() {
   if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
   return success();
@@ -3338,8 +3381,8 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
   return eltTypeCheck;
 }
 
-::mlir::Attribute ConstArrayAttr::parse(::mlir::AsmParser &parser,
-                                        ::mlir::Type type) {
+::mlir::Attribute mlir::cir::ConstArrayAttr::parse(::mlir::AsmParser &parser,
+                                                   ::mlir::Type type) {
   ::mlir::FailureOr<::mlir::Type> resultTy;
   ::mlir::FailureOr<Attribute> resultVal;
   ::llvm::SMLoc loc = parser.getCurrentLocation();
@@ -3407,10 +3450,10 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
       loc, parser.getContext(), resultTy.value(), resultVal.value(), zeros);
 }
 
-void ConstArrayAttr::print(::mlir::AsmPrinter &printer) const {
+void mlir::cir::ConstArrayAttr::print(::mlir::AsmPrinter &printer) const {
   printer << "<";
   printer.printStrippedAttrOrType(getElts());
-  if (auto zeros = getTrailingZerosNum())
+  if (getTrailingZerosNum())
     printer << ", trailing_zeros";
   printer << ">";
 }
@@ -3448,8 +3491,8 @@ LogicalResult mlir::cir::ConstVectorAttr::verify(
   return elementTypeCheck;
 }
 
-::mlir::Attribute ConstVectorAttr::parse(::mlir::AsmParser &parser,
-                                         ::mlir::Type type) {
+::mlir::Attribute mlir::cir::ConstVectorAttr::parse(::mlir::AsmParser &parser,
+                                                    ::mlir::Type type) {
   ::mlir::FailureOr<::mlir::Type> resultType;
   ::mlir::FailureOr<ArrayAttr> resultValue;
   ::llvm::SMLoc loc = parser.getCurrentLocation();
@@ -3489,14 +3532,15 @@ LogicalResult mlir::cir::ConstVectorAttr::verify(
       loc, parser.getContext(), resultType.value(), resultValue.value());
 }
 
-void ConstVectorAttr::print(::mlir::AsmPrinter &printer) const {
+void mlir::cir::ConstVectorAttr::print(::mlir::AsmPrinter &printer) const {
   printer << "<";
   printer.printStrippedAttrOrType(getElts());
   printer << ">";
 }
 
-::mlir::Attribute SignedOverflowBehaviorAttr::parse(::mlir::AsmParser &parser,
-                                                    ::mlir::Type type) {
+::mlir::Attribute
+mlir::cir::SignedOverflowBehaviorAttr::parse(::mlir::AsmParser &parser,
+                                             ::mlir::Type type) {
   if (parser.parseLess())
     return {};
   auto behavior = parseOptionalCIRKeyword(
@@ -3507,7 +3551,8 @@ void ConstVectorAttr::print(::mlir::AsmPrinter &printer) const {
   return SignedOverflowBehaviorAttr::get(parser.getContext(), behavior);
 }
 
-void SignedOverflowBehaviorAttr::print(::mlir::AsmPrinter &printer) const {
+void mlir::cir::SignedOverflowBehaviorAttr::print(
+    ::mlir::AsmPrinter &printer) const {
   printer << "<";
   switch (getBehavior()) {
   case sob::SignedOverflowBehavior::undefined:
@@ -3523,7 +3568,7 @@ void SignedOverflowBehaviorAttr::print(::mlir::AsmPrinter &printer) const {
   printer << ">";
 }
 
-LogicalResult TypeInfoAttr::verify(
+LogicalResult mlir::cir::TypeInfoAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     ::mlir::Type type, ::mlir::ArrayAttr typeinfoData) {
 
@@ -3541,9 +3586,9 @@ LogicalResult TypeInfoAttr::verify(
   return success();
 }
 
-LogicalResult
-VTableAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
-                   ::mlir::Type type, ::mlir::ArrayAttr vtableData) {
+LogicalResult mlir::cir::VTableAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::mlir::Type type, ::mlir::ArrayAttr vtableData) {
   auto sTy = mlir::dyn_cast_if_present<mlir::cir::StructType>(type);
   if (!sTy) {
     emitError() << "expected !cir.struct type result";
@@ -3592,7 +3637,7 @@ VTableAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
 // CopyOp Definitions
 //===----------------------------------------------------------------------===//
 
-LogicalResult CopyOp::verify() {
+LogicalResult mlir::cir::CopyOp::verify() {
 
   // A data layout is required for us to know the number of bytes to be copied.
   if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
@@ -3608,7 +3653,7 @@ LogicalResult CopyOp::verify() {
 // MemCpyOp Definitions
 //===----------------------------------------------------------------------===//
 
-LogicalResult MemCpyOp::verify() {
+LogicalResult mlir::cir::MemCpyOp::verify() {
   auto voidPtr =
       cir::PointerType::get(getContext(), cir::VoidType::get(getContext()));
 
@@ -3625,7 +3670,7 @@ LogicalResult MemCpyOp::verify() {
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
-LogicalResult GetMemberOp::verify() {
+LogicalResult mlir::cir::GetMemberOp::verify() {
 
   const auto recordTy = dyn_cast<StructType>(getAddrTy().getPointee());
   if (!recordTy)
@@ -3647,7 +3692,7 @@ LogicalResult GetMemberOp::verify() {
 // GetRuntimeMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
-LogicalResult GetRuntimeMemberOp::verify() {
+LogicalResult mlir::cir::GetRuntimeMemberOp::verify() {
   auto recordTy =
       cast<StructType>(cast<PointerType>(getAddr().getType()).getPointee());
   auto memberPtrTy = getMember().getType();
@@ -3669,7 +3714,7 @@ LogicalResult GetRuntimeMemberOp::verify() {
 // GetMethodOp Definitions
 //===----------------------------------------------------------------------===//
 
-LogicalResult GetMethodOp::verify() {
+LogicalResult mlir::cir::GetMethodOp::verify() {
   auto methodTy = getMethod().getType();
 
   // Assume objectTy is !cir.ptr<!T>
@@ -3724,7 +3769,7 @@ LogicalResult GetMethodOp::verify() {
 // InlineAsmOp Definitions
 //===----------------------------------------------------------------------===//
 
-void cir::InlineAsmOp::print(OpAsmPrinter &p) {
+void mlir::cir::InlineAsmOp::print(OpAsmPrinter &p) {
   p << '(' << getAsmFlavor() << ", ";
   p.increaseIndent();
   p.printNewline();
@@ -3773,8 +3818,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
     p << " -> " << v.getType();
 }
 
-ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
-                                    OperationState &result) {
+ParseResult mlir::cir::InlineAsmOp::parse(OpAsmParser &parser,
+                                          OperationState &result) {
   llvm::SmallVector<mlir::Attribute> operand_attrs;
   llvm::SmallVector<int32_t> operandsGroupSizes;
   std::string asm_string, constraints;
@@ -3904,7 +3949,7 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 // Atomic Definitions
 //===----------------------------------------------------------------------===//
 
-LogicalResult AtomicFetch::verify() {
+LogicalResult mlir::cir::AtomicFetch::verify() {
   if (getBinop() == mlir::cir::AtomicFetchKind::Add ||
       getBinop() == mlir::cir::AtomicFetchKind::Sub)
     return mlir::success();
@@ -3915,7 +3960,7 @@ LogicalResult AtomicFetch::verify() {
   return mlir::success();
 }
 
-LogicalResult BinOp::verify() {
+LogicalResult mlir::cir::BinOp::verify() {
   bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
 
   if (!isa<mlir::cir::IntType>(getType()) && noWrap)
@@ -3942,7 +3987,7 @@ LogicalResult BinOp::verify() {
 //===----------------------------------------------------------------------===//
 // ShiftOp Definitions
 //===----------------------------------------------------------------------===//
-LogicalResult ShiftOp::verify() {
+LogicalResult mlir::cir::ShiftOp::verify() {
   mlir::Operation *op = getOperation();
   mlir::Type resType = getResult().getType();
   bool isOp0Vec = mlir::isa<mlir::cir::VectorType>(op->getOperand(0).getType());
@@ -3960,7 +4005,7 @@ LogicalResult ShiftOp::verify() {
 // LabelOp Definitions
 //===----------------------------------------------------------------------===//
 
-LogicalResult LabelOp::verify() {
+LogicalResult mlir::cir::LabelOp::verify() {
   auto *op = getOperation();
   auto *blk = op->getBlock();
   if (&blk->front() != op)
@@ -3972,7 +4017,8 @@ LogicalResult LabelOp::verify() {
 // EhTypeIdOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+LogicalResult
+mlir::cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   auto op = symbolTable.lookupNearestSymbolFrom(*this, getTypeSymAttr());
   if (!isa<GlobalOp>(op))
     return emitOpError("'")
@@ -3984,7 +4030,7 @@ LogicalResult EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // CatchParamOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult cir::CatchParamOp::verify() {
+LogicalResult mlir::cir::CatchParamOp::verify() {
   if (getExceptionPtr()) {
     auto kind = getKind();
     if (!kind || *kind != mlir::cir::CatchParamKind::begin)
