@@ -131,7 +131,6 @@ private:
 
     NF->setAttributes(AL);
     F.replaceAllUsesWith(NF);
-    F.setCallingConv(CallingConv::C);
 
     return NF;
   }
@@ -169,8 +168,9 @@ public:
   }
 
   // Try to allocate SGPRs to preload implicit kernel arguments.
-  void tryAllocImplicitArgPreloadSGPRs(uint64_t ImplicitArgsBaseOffset,
-                                       IRBuilder<> &Builder) {
+  void tryAllocImplicitArgPreloadSGPRs(
+      uint64_t ImplicitArgsBaseOffset, IRBuilder<> &Builder,
+      SmallVectorImpl<Function *> &FunctionsToErase) {
     Function *ImplicitArgPtr = Intrinsic::getDeclarationIfExists(
         F.getParent(), Intrinsic::amdgcn_implicitarg_ptr);
     if (!ImplicitArgPtr)
@@ -239,6 +239,7 @@ public:
     unsigned LastHiddenArgIndex = getHiddenArgFromOffset(PreloadEnd[-1].second);
     Function *NF = cloneFunctionWithPreloadImplicitArgs(LastHiddenArgIndex);
     assert(NF);
+    FunctionsToErase.push_back(&F);
     for (const auto *I = ImplicitArgLoads.begin(); I != PreloadEnd; ++I) {
       LoadInst *LoadInst = I->first;
       unsigned LoadOffset = I->second;
@@ -250,264 +251,284 @@ public:
   }
 };
 
-class AMDGPULowerKernelArguments : public FunctionPass {
+class AMDGPULowerKernelArguments {
+  const TargetMachine &TM;
+  SmallVector<Function *> FunctionsToErase;
+
+public:
+  AMDGPULowerKernelArguments(const TargetMachine &TM) : TM(TM) {}
+
+  // skip allocas
+  static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
+    BasicBlock::iterator InsPt = BB.getFirstInsertionPt();
+    for (BasicBlock::iterator E = BB.end(); InsPt != E; ++InsPt) {
+      AllocaInst *AI = dyn_cast<AllocaInst>(&*InsPt);
+
+      // If this is a dynamic alloca, the value may depend on the loaded kernargs,
+      // so loads will need to be inserted before it.
+      if (!AI || !AI->isStaticAlloca())
+        break;
+    }
+
+    return InsPt;
+  }
+
+  bool lowerKernelArguments(Function &F) {
+    CallingConv::ID CC = F.getCallingConv();
+    if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
+      return false;
+
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+    LLVMContext &Ctx = F.getParent()->getContext();
+    const DataLayout &DL = F.getDataLayout();
+    BasicBlock &EntryBlock = *F.begin();
+    IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
+
+    const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
+    const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
+
+    Align MaxAlign;
+    // FIXME: Alignment is broken with explicit arg offset.;
+    const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F, MaxAlign);
+    if (TotalKernArgSize == 0)
+      return false;
+
+    CallInst *KernArgSegment =
+        Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
+                                nullptr, F.getName() + ".kernarg.segment");
+    KernArgSegment->addRetAttr(Attribute::NonNull);
+    KernArgSegment->addRetAttr(
+        Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
+
+    uint64_t ExplicitArgOffset = 0;
+    // Preloaded kernel arguments must be sequential.
+    bool InPreloadSequence = true;
+    PreloadKernelArgInfo PreloadInfo(F, ST);
+
+    for (Argument &Arg : F.args()) {
+      const bool IsByRef = Arg.hasByRefAttr();
+      Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
+      MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
+      Align ABITypeAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
+
+      uint64_t Size = DL.getTypeSizeInBits(ArgTy);
+      uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
+
+      uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
+      uint64_t LastExplicitArgOffset = ExplicitArgOffset;
+      ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
+
+      // Guard against the situation where hidden arguments have already been
+      // lowered and added to the kernel function signiture, i.e. in a situation
+      // where this pass has run twice.
+      if (Arg.hasAttribute("amdgpu-hidden-argument"))
+        break;
+
+      // Try to preload this argument into user SGPRs.
+      if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
+          !Arg.getType()->isAggregateType())
+        if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
+                                            LastExplicitArgOffset))
+          continue;
+
+      InPreloadSequence = false;
+
+      if (Arg.use_empty())
+        continue;
+
+      // If this is byval, the loads are already explicit in the function. We just
+      // need to rewrite the pointer values.
+      if (IsByRef) {
+        Value *ArgOffsetPtr = Builder.CreateConstInBoundsGEP1_64(
+            Builder.getInt8Ty(), KernArgSegment, EltOffset,
+            Arg.getName() + ".byval.kernarg.offset");
+
+        Value *CastOffsetPtr =
+            Builder.CreateAddrSpaceCast(ArgOffsetPtr, Arg.getType());
+        Arg.replaceAllUsesWith(CastOffsetPtr);
+        continue;
+      }
+
+      if (PointerType *PT = dyn_cast<PointerType>(ArgTy)) {
+        // FIXME: Hack. We rely on AssertZext to be able to fold DS addressing
+        // modes on SI to know the high bits are 0 so pointer adds don't wrap. We
+        // can't represent this with range metadata because it's only allowed for
+        // integer types.
+        if ((PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
+            PT->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) &&
+            !ST.hasUsableDSOffset())
+          continue;
+
+        // FIXME: We can replace this with equivalent alias.scope/noalias
+        // metadata, but this appears to be a lot of work.
+        if (Arg.hasNoAliasAttr())
+          continue;
+      }
+
+      auto *VT = dyn_cast<FixedVectorType>(ArgTy);
+      bool IsV3 = VT && VT->getNumElements() == 3;
+      bool DoShiftOpt = Size < 32 && !ArgTy->isAggregateType();
+
+      VectorType *V4Ty = nullptr;
+
+      int64_t AlignDownOffset = alignDown(EltOffset, 4);
+      int64_t OffsetDiff = EltOffset - AlignDownOffset;
+      Align AdjustedAlign = commonAlignment(
+          KernArgBaseAlign, DoShiftOpt ? AlignDownOffset : EltOffset);
+
+      Value *ArgPtr;
+      Type *AdjustedArgTy;
+      if (DoShiftOpt) { // FIXME: Handle aggregate types
+        // Since we don't have sub-dword scalar loads, avoid doing an extload by
+        // loading earlier than the argument address, and extracting the relevant
+        // bits.
+        // TODO: Update this for GFX12 which does have scalar sub-dword loads.
+        //
+        // Additionally widen any sub-dword load to i32 even if suitably aligned,
+        // so that CSE between different argument loads works easily.
+        ArgPtr = Builder.CreateConstInBoundsGEP1_64(
+            Builder.getInt8Ty(), KernArgSegment, AlignDownOffset,
+            Arg.getName() + ".kernarg.offset.align.down");
+        AdjustedArgTy = Builder.getInt32Ty();
+      } else {
+        ArgPtr = Builder.CreateConstInBoundsGEP1_64(
+            Builder.getInt8Ty(), KernArgSegment, EltOffset,
+            Arg.getName() + ".kernarg.offset");
+        AdjustedArgTy = ArgTy;
+      }
+
+      if (IsV3 && Size >= 32) {
+        V4Ty = FixedVectorType::get(VT->getElementType(), 4);
+        // Use the hack that clang uses to avoid SelectionDAG ruining v3 loads
+        AdjustedArgTy = V4Ty;
+      }
+
+      LoadInst *Load =
+          Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
+      Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
+
+      MDBuilder MDB(Ctx);
+
+      if (isa<PointerType>(ArgTy)) {
+        if (Arg.hasNonNullAttr())
+          Load->setMetadata(LLVMContext::MD_nonnull, MDNode::get(Ctx, {}));
+
+        uint64_t DerefBytes = Arg.getDereferenceableBytes();
+        if (DerefBytes != 0) {
+          Load->setMetadata(
+            LLVMContext::MD_dereferenceable,
+            MDNode::get(Ctx,
+                        MDB.createConstant(
+                          ConstantInt::get(Builder.getInt64Ty(), DerefBytes))));
+        }
+
+        uint64_t DerefOrNullBytes = Arg.getDereferenceableOrNullBytes();
+        if (DerefOrNullBytes != 0) {
+          Load->setMetadata(
+            LLVMContext::MD_dereferenceable_or_null,
+            MDNode::get(Ctx,
+                        MDB.createConstant(ConstantInt::get(Builder.getInt64Ty(),
+                                                            DerefOrNullBytes))));
+        }
+
+        if (MaybeAlign ParamAlign = Arg.getParamAlign()) {
+          Load->setMetadata(
+              LLVMContext::MD_align,
+              MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                  Builder.getInt64Ty(), ParamAlign->value()))));
+        }
+      }
+
+      // TODO: Convert noalias arg to !noalias
+
+      if (DoShiftOpt) {
+        Value *ExtractBits = OffsetDiff == 0 ?
+          Load : Builder.CreateLShr(Load, OffsetDiff * 8);
+
+        IntegerType *ArgIntTy = Builder.getIntNTy(Size);
+        Value *Trunc = Builder.CreateTrunc(ExtractBits, ArgIntTy);
+        Value *NewVal = Builder.CreateBitCast(Trunc, ArgTy,
+                                              Arg.getName() + ".load");
+        Arg.replaceAllUsesWith(NewVal);
+      } else if (IsV3) {
+        Value *Shuf = Builder.CreateShuffleVector(Load, ArrayRef<int>{0, 1, 2},
+                                                  Arg.getName() + ".load");
+        Arg.replaceAllUsesWith(Shuf);
+      } else {
+        Load->setName(Arg.getName() + ".load");
+        Arg.replaceAllUsesWith(Load);
+      }
+    }
+
+    KernArgSegment->addRetAttr(
+        Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
+
+    if (InPreloadSequence) {
+      uint64_t ImplicitArgsBaseOffset =
+          alignTo(ExplicitArgOffset, ST.getAlignmentForImplicitArgPtr()) +
+          BaseOffset;
+      PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset,
+                                                  Builder, FunctionsToErase);
+    }
+
+    return true;
+  }
+
+  bool runOnModule(Module &M) {
+    bool Changed = false;
+
+    for (Function &F : M)
+      Changed |= lowerKernelArguments(F);
+
+    for (Function *F : FunctionsToErase)
+      F->eraseFromParent();
+
+    return Changed;
+  }
+};
+
+class AMDGPULowerKernelArgumentsLegacy : public ModulePass {
 public:
   static char ID;
+  const TargetMachine *TM;
 
-  AMDGPULowerKernelArguments() : FunctionPass(ID) {}
+  AMDGPULowerKernelArgumentsLegacy(const TargetMachine *TM = nullptr)
+      : ModulePass(ID), TM(TM) {}
 
-  bool runOnFunction(Function &F) override;
+  bool runOnModule(Module &M) override {
+    if (!TM) {
+      auto &TPC = getAnalysis<TargetPassConfig>();
+      TM = &TPC.getTM<TargetMachine>();
+    }
+
+    return AMDGPULowerKernelArguments(*TM).runOnModule(M);
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetPassConfig>();
+    if (!TM)
+      AU.addRequired<TargetPassConfig>();
+
     AU.setPreservesAll();
- }
+  }
 };
 
 } // end anonymous namespace
 
-// skip allocas
-static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
-  BasicBlock::iterator InsPt = BB.getFirstInsertionPt();
-  for (BasicBlock::iterator E = BB.end(); InsPt != E; ++InsPt) {
-    AllocaInst *AI = dyn_cast<AllocaInst>(&*InsPt);
-
-    // If this is a dynamic alloca, the value may depend on the loaded kernargs,
-    // so loads will need to be inserted before it.
-    if (!AI || !AI->isStaticAlloca())
-      break;
-  }
-
-  return InsPt;
-}
-
-static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
-  CallingConv::ID CC = F.getCallingConv();
-  if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
-    return false;
-
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  LLVMContext &Ctx = F.getParent()->getContext();
-  const DataLayout &DL = F.getDataLayout();
-  BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
-
-  const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
-  const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
-
-  Align MaxAlign;
-  // FIXME: Alignment is broken with explicit arg offset.;
-  const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F, MaxAlign);
-  if (TotalKernArgSize == 0)
-    return false;
-
-  CallInst *KernArgSegment =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
-                              nullptr, F.getName() + ".kernarg.segment");
-  KernArgSegment->addRetAttr(Attribute::NonNull);
-  KernArgSegment->addRetAttr(
-      Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
-
-  uint64_t ExplicitArgOffset = 0;
-  // Preloaded kernel arguments must be sequential.
-  bool InPreloadSequence = true;
-  PreloadKernelArgInfo PreloadInfo(F, ST);
-
-  for (Argument &Arg : F.args()) {
-    const bool IsByRef = Arg.hasByRefAttr();
-    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
-    Align ABITypeAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
-
-    uint64_t Size = DL.getTypeSizeInBits(ArgTy);
-    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
-
-    uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
-    uint64_t LastExplicitArgOffset = ExplicitArgOffset;
-    ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
-
-    // Guard against the situation where hidden arguments have already been
-    // lowered and added to the kernel function signiture, i.e. in a situation
-    // where this pass has run twice.
-    if (Arg.hasAttribute("amdgpu-hidden-argument"))
-      break;
-
-    // Try to preload this argument into user SGPRs.
-    if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
-        !Arg.getType()->isAggregateType())
-      if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
-                                           LastExplicitArgOffset))
-        continue;
-
-    InPreloadSequence = false;
-
-    if (Arg.use_empty())
-      continue;
-
-    // If this is byval, the loads are already explicit in the function. We just
-    // need to rewrite the pointer values.
-    if (IsByRef) {
-      Value *ArgOffsetPtr = Builder.CreateConstInBoundsGEP1_64(
-          Builder.getInt8Ty(), KernArgSegment, EltOffset,
-          Arg.getName() + ".byval.kernarg.offset");
-
-      Value *CastOffsetPtr =
-          Builder.CreateAddrSpaceCast(ArgOffsetPtr, Arg.getType());
-      Arg.replaceAllUsesWith(CastOffsetPtr);
-      continue;
-    }
-
-    if (PointerType *PT = dyn_cast<PointerType>(ArgTy)) {
-      // FIXME: Hack. We rely on AssertZext to be able to fold DS addressing
-      // modes on SI to know the high bits are 0 so pointer adds don't wrap. We
-      // can't represent this with range metadata because it's only allowed for
-      // integer types.
-      if ((PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
-           PT->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) &&
-          !ST.hasUsableDSOffset())
-        continue;
-
-      // FIXME: We can replace this with equivalent alias.scope/noalias
-      // metadata, but this appears to be a lot of work.
-      if (Arg.hasNoAliasAttr())
-        continue;
-    }
-
-    auto *VT = dyn_cast<FixedVectorType>(ArgTy);
-    bool IsV3 = VT && VT->getNumElements() == 3;
-    bool DoShiftOpt = Size < 32 && !ArgTy->isAggregateType();
-
-    VectorType *V4Ty = nullptr;
-
-    int64_t AlignDownOffset = alignDown(EltOffset, 4);
-    int64_t OffsetDiff = EltOffset - AlignDownOffset;
-    Align AdjustedAlign = commonAlignment(
-        KernArgBaseAlign, DoShiftOpt ? AlignDownOffset : EltOffset);
-
-    Value *ArgPtr;
-    Type *AdjustedArgTy;
-    if (DoShiftOpt) { // FIXME: Handle aggregate types
-      // Since we don't have sub-dword scalar loads, avoid doing an extload by
-      // loading earlier than the argument address, and extracting the relevant
-      // bits.
-      // TODO: Update this for GFX12 which does have scalar sub-dword loads.
-      //
-      // Additionally widen any sub-dword load to i32 even if suitably aligned,
-      // so that CSE between different argument loads works easily.
-      ArgPtr = Builder.CreateConstInBoundsGEP1_64(
-          Builder.getInt8Ty(), KernArgSegment, AlignDownOffset,
-          Arg.getName() + ".kernarg.offset.align.down");
-      AdjustedArgTy = Builder.getInt32Ty();
-    } else {
-      ArgPtr = Builder.CreateConstInBoundsGEP1_64(
-          Builder.getInt8Ty(), KernArgSegment, EltOffset,
-          Arg.getName() + ".kernarg.offset");
-      AdjustedArgTy = ArgTy;
-    }
-
-    if (IsV3 && Size >= 32) {
-      V4Ty = FixedVectorType::get(VT->getElementType(), 4);
-      // Use the hack that clang uses to avoid SelectionDAG ruining v3 loads
-      AdjustedArgTy = V4Ty;
-    }
-
-    LoadInst *Load =
-        Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
-    Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
-
-    MDBuilder MDB(Ctx);
-
-    if (isa<PointerType>(ArgTy)) {
-      if (Arg.hasNonNullAttr())
-        Load->setMetadata(LLVMContext::MD_nonnull, MDNode::get(Ctx, {}));
-
-      uint64_t DerefBytes = Arg.getDereferenceableBytes();
-      if (DerefBytes != 0) {
-        Load->setMetadata(
-          LLVMContext::MD_dereferenceable,
-          MDNode::get(Ctx,
-                      MDB.createConstant(
-                        ConstantInt::get(Builder.getInt64Ty(), DerefBytes))));
-      }
-
-      uint64_t DerefOrNullBytes = Arg.getDereferenceableOrNullBytes();
-      if (DerefOrNullBytes != 0) {
-        Load->setMetadata(
-          LLVMContext::MD_dereferenceable_or_null,
-          MDNode::get(Ctx,
-                      MDB.createConstant(ConstantInt::get(Builder.getInt64Ty(),
-                                                          DerefOrNullBytes))));
-      }
-
-      if (MaybeAlign ParamAlign = Arg.getParamAlign()) {
-        Load->setMetadata(
-            LLVMContext::MD_align,
-            MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                                 Builder.getInt64Ty(), ParamAlign->value()))));
-      }
-    }
-
-    // TODO: Convert noalias arg to !noalias
-
-    if (DoShiftOpt) {
-      Value *ExtractBits = OffsetDiff == 0 ?
-        Load : Builder.CreateLShr(Load, OffsetDiff * 8);
-
-      IntegerType *ArgIntTy = Builder.getIntNTy(Size);
-      Value *Trunc = Builder.CreateTrunc(ExtractBits, ArgIntTy);
-      Value *NewVal = Builder.CreateBitCast(Trunc, ArgTy,
-                                            Arg.getName() + ".load");
-      Arg.replaceAllUsesWith(NewVal);
-    } else if (IsV3) {
-      Value *Shuf = Builder.CreateShuffleVector(Load, ArrayRef<int>{0, 1, 2},
-                                                Arg.getName() + ".load");
-      Arg.replaceAllUsesWith(Shuf);
-    } else {
-      Load->setName(Arg.getName() + ".load");
-      Arg.replaceAllUsesWith(Load);
-    }
-  }
-
-  KernArgSegment->addRetAttr(
-      Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
-
-  if (InPreloadSequence) {
-    uint64_t ImplicitArgsBaseOffset =
-        alignTo(ExplicitArgOffset, ST.getAlignmentForImplicitArgPtr()) +
-        BaseOffset;
-    PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset,
-                                                Builder);
-  }
-
-  return true;
-}
-
-bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
-  auto &TPC = getAnalysis<TargetPassConfig>();
-  const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  return lowerKernelArguments(F, TM);
-}
-
-INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArguments, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArgumentsLegacy, DEBUG_TYPE,
                       "AMDGPU Lower Kernel Arguments", false, false)
-INITIALIZE_PASS_END(AMDGPULowerKernelArguments, DEBUG_TYPE, "AMDGPU Lower Kernel Arguments",
-                    false, false)
+INITIALIZE_PASS_END(AMDGPULowerKernelArgumentsLegacy, DEBUG_TYPE,
+                    "AMDGPU Lower Kernel Arguments", false, false)
 
-char AMDGPULowerKernelArguments::ID = 0;
+char AMDGPULowerKernelArgumentsLegacy::ID = 0;
 
-FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
-  return new AMDGPULowerKernelArguments();
+ModulePass *
+llvm::createAMDGPULowerKernelArgumentsLegacyPass(const TargetMachine *TM) {
+  return new AMDGPULowerKernelArgumentsLegacy(TM);
 }
 
 PreservedAnalyses
-AMDGPULowerKernelArgumentsPass::run(Function &F, FunctionAnalysisManager &AM) {
-  bool Changed = lowerKernelArguments(F, TM);
-  if (Changed) {
-    // TODO: Preserves a lot more.
-    PreservedAnalyses PA;
-    PA.preserveSet<CFGAnalyses>();
-    return PA;
-  }
-
-  return PreservedAnalyses::all();
+AMDGPULowerKernelArgumentsPass::run(Module &M, ModuleAnalysisManager &AM) {
+  return AMDGPULowerKernelArguments(TM).runOnModule(M)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }
