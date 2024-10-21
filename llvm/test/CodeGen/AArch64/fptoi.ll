@@ -7616,10 +7616,9 @@ define <2 x i16> @fptos_v2f128_v2i16(<2 x fp128> %a) {
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov w19, w0
 ; CHECK-GI-NEXT:    bl __fixtfsi
-; CHECK-GI-NEXT:    fmov s0, w19
+; CHECK-GI-NEXT:    mov v0.s[0], w19
 ; CHECK-GI-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v0.h[1], w0
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    mov v0.s[1], w0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #32
 ; CHECK-GI-NEXT:    ret
@@ -7660,10 +7659,9 @@ define <2 x i16> @fptou_v2f128_v2i16(<2 x fp128> %a) {
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov w19, w0
 ; CHECK-GI-NEXT:    bl __fixunstfsi
-; CHECK-GI-NEXT:    fmov s0, w19
+; CHECK-GI-NEXT:    mov v0.s[0], w19
 ; CHECK-GI-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v0.h[1], w0
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    mov v0.s[1], w0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #32
 ; CHECK-GI-NEXT:    ret
