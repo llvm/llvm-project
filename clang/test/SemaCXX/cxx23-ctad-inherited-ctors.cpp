@@ -41,9 +41,9 @@ namespace test1 {
                                                                       // expected-note 2{{implicit deduction guide declared as }}
     using NonTemplateDGuideBase<T>::NonTemplateDGuideBase; // expected-note {{candidate function not viable: no known conversion from 'const char[1]' to 'int' for 1st argument}} \
                                                            // expected-note {{candidate template ignored: could not deduce template arguments for 'NonTemplateDGuideDerived<T>' from 'NonTemplateDGuideBase<T>' [with T = const char *]}} \
-                                                           // expected-note {{implicit deduction guide declared as 'template <NoPointers<> T> requires __is_deducible(test1::NonTemplateDGuideDerived, typename __ctad_CC_NonTemplateDGuideBase_to_NonTemplateDGuideDerived_0<NonTemplateDGuideBase<T>>::type) NonTemplateDGuideDerived(T) -> typename __ctad_CC_NonTemplateDGuideBase_to_NonTemplateDGuideDerived_0<NonTemplateDGuideBase<T>>::type'}} \
+                                                           // expected-note {{implicit deduction guide declared as 'template <NoPointers<> T> NonTemplateDGuideDerived(T) -> typename __ctad_CC_NonTemplateDGuideBase_to_NonTemplateDGuideDerived_0<NonTemplateDGuideBase<T>>::type'}} \
                                                            // expected-note {{candidate template ignored: could not match 'NonTemplateDGuideBase<T>' against 'const char *'}} \
-                                                           // expected-note {{implicit deduction guide declared as 'template <NoPointers<> T> requires __is_deducible(test1::NonTemplateDGuideDerived, typename __ctad_CC_NonTemplateDGuideBase_to_NonTemplateDGuideDerived_0<NonTemplateDGuideBase<T>>::type) NonTemplateDGuideDerived(NonTemplateDGuideBase<T>) -> typename __ctad_CC_NonTemplateDGuideBase_to_NonTemplateDGuideDerived_0<NonTemplateDGuideBase<T>>::type'}}
+                                                           // expected-note {{implicit deduction guide declared as 'template <NoPointers<> T> NonTemplateDGuideDerived(NonTemplateDGuideBase<T>) -> typename __ctad_CC_NonTemplateDGuideBase_to_NonTemplateDGuideDerived_0<NonTemplateDGuideBase<T>>::type'}}
   };
 
   NonTemplateDGuideDerived ntdg(1);
@@ -66,10 +66,10 @@ namespace test1 {
                                                     // expected-note 2{{implicit deduction guide declared as }}
 
     using ExplicitBase<T>::ExplicitBase; // expected-note {{candidate template ignored: couldn't infer template argument 'T'}} \
-                                         // expected-note {{implicit deduction guide declared as 'template <NoPointers<> T, typename V> requires __is_deducible(test1::ExplicitDerived, typename __ctad_CC_ExplicitBase_to_ExplicitDerived_0<ExplicitBase<T>>::type) ExplicitDerived(V) -> typename __ctad_CC_ExplicitBase_to_ExplicitDerived_0<ExplicitBase<T>>::type'}} \
+                                         // expected-note {{implicit deduction guide declared as 'template <NoPointers<> T, typename V> ExplicitDerived(V) -> typename __ctad_CC_ExplicitBase_to_ExplicitDerived_0<ExplicitBase<T>>::type'}} \
                                          // expected-note {{candidate template ignored: could not match 'ExplicitBase<T>' against 'const char *'}} \
                                          // expected-note {{candidate template ignored: could not deduce template arguments for 'ExplicitDerived<T>' from 'ExplicitBase<T>' [with T = const char *]}} \
-                                         // expected-note {{implicit deduction guide declared as 'template <NoPointers<> T> requires __is_deducible(test1::ExplicitDerived, typename __ctad_CC_ExplicitBase_to_ExplicitDerived_0<ExplicitBase<T>>::type) ExplicitDerived(ExplicitBase<T>) -> typename __ctad_CC_ExplicitBase_to_ExplicitDerived_0<ExplicitBase<T>>::type'}}
+                                         // expected-note {{implicit deduction guide declared as 'template <NoPointers<> T> ExplicitDerived(ExplicitBase<T>) -> typename __ctad_CC_ExplicitBase_to_ExplicitDerived_0<ExplicitBase<T>>::type'}}
   };
 
   ExplicitDerived ed(10);
@@ -86,6 +86,24 @@ namespace test1 {
   InheritsCtors ic2(1);
   static_assert(__is_same(InheritsCtors<char>, decltype(ic2)));
 #endif
+
+  template<typename T> struct BaseFalseRequiresClause {
+    template<typename V = T> requires false // expected-note {{because 'false' evaluated to false}}
+    BaseFalseRequiresClause(T);
+  };
+
+  template<typename T> struct InheritedFalseRequiresClause : BaseFalseRequiresClause<T> { // expected-note {{candidate template ignored: could not match 'InheritedFalseRequiresClause<T>' against 'int'}} \
+                                                                                          // expected-note {{candidate template ignored: could not match 'BaseFalseRequiresClause<T>' against 'int'}} \
+                                                                                          // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}} \
+                                                                                          // expected-note 3{{implicit deduction guide declared as }}
+
+    using BaseFalseRequiresClause<T>::BaseFalseRequiresClause; // expected-note {{candidate template ignored: constraints not satisfied [with T = int, V = int]}} \
+                                                               // expected-note {{candidate template ignored: could not match 'BaseFalseRequiresClause<T>' against 'int'}} \
+                                                               // expected-note {{implicit deduction guide declared as 'template <typename T> InheritedFalseRequiresClause(BaseFalseRequiresClause<T>) -> typename __ctad_CC_BaseFalseRequiresClause_to_InheritedFalseRequiresClause_0<BaseFalseRequiresClause<T>>::type'}} \
+                                                               // expected-note {{implicit deduction guide declared as 'template <typename T, typename V = T> requires false InheritedFalseRequiresClause(T) -> typename __ctad_CC_BaseFalseRequiresClause_to_InheritedFalseRequiresClause_0<BaseFalseRequiresClause<T>>::type'}}
+  };
+
+  InheritedFalseRequiresClause ifrc(10); // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 }
 
 namespace test2 {
@@ -115,9 +133,9 @@ namespace test3 {
                                                                              // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}} \
                                                                              // expected-note 3{{implicit deduction guide declared as}}
     using Base<T>::Base; // expected-note {{candidate template ignored: could not deduce template arguments for 'NotEnoughParams<T, U>' from 'Base<T>' [with T = int]}} \
-                         // expected-note {{implicit deduction guide declared as 'template <typename T> requires __is_deducible(test3::NotEnoughParams, typename __ctad_CC_Base_to_NotEnoughParams_0<Base<T>>::type) NotEnoughParams(T) -> typename __ctad_CC_Base_to_NotEnoughParams_0<Base<T>>::type'}} \
+                         // expected-note {{implicit deduction guide declared as 'template <typename T> NotEnoughParams(T) -> typename __ctad_CC_Base_to_NotEnoughParams_0<Base<T>>::type'}} \
                          // expected-note {{candidate template ignored: could not match 'Base<T>' against 'int'}} \
-                         // expected-note {{implicit deduction guide declared as 'template <typename T> requires __is_deducible(test3::NotEnoughParams, typename __ctad_CC_Base_to_NotEnoughParams_0<Base<T>>::type) NotEnoughParams(Base<T>) -> typename __ctad_CC_Base_to_NotEnoughParams_0<Base<T>>::type'}}
+                         // expected-note {{implicit deduction guide declared as 'template <typename T> NotEnoughParams(Base<T>) -> typename __ctad_CC_Base_to_NotEnoughParams_0<Base<T>>::type'}}
   };
 
   NotEnoughParams notEnoughParams(1); // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
@@ -181,9 +199,9 @@ namespace test6 {
                                          // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}} \
                                          // expected-note 3{{implicit deduction guide declared as}}
       using Base<F>::Base; // expected-note {{candidate template ignored: could not deduce template arguments for 'DerivedFalse<F>' from 'Base<T>' [with F = int]}} \
-                           // expected-note {{implicit deduction guide declared as 'template <False<> F> requires __is_deducible(test6::DerivedFalse, typename __ctad_CC_Base_to_DerivedFalse_0<Base<F>>::type) DerivedFalse(F) -> typename __ctad_CC_Base_to_DerivedFalse_0<Base<F>>::type'}} \
+                           // expected-note {{implicit deduction guide declared as 'template <False<> F> DerivedFalse(F) -> typename __ctad_CC_Base_to_DerivedFalse_0<Base<F>>::type'}} \
                            // expected-note {{candidate template ignored: could not match 'Base<F>' against 'int'}} \
-                           // expected-note {{implicit deduction guide declared as 'template <False<> F> requires __is_deducible(test6::DerivedFalse, typename __ctad_CC_Base_to_DerivedFalse_0<Base<F>>::type) DerivedFalse(Base<F>) -> typename __ctad_CC_Base_to_DerivedFalse_0<Base<F>>::type'}}
+                           // expected-note {{implicit deduction guide declared as 'template <False<> F> DerivedFalse(Base<F>) -> typename __ctad_CC_Base_to_DerivedFalse_0<Base<F>>::type'}}
     };
 
   template<True F>
@@ -212,8 +230,8 @@ namespace test7 {
 
   template<typename T = int, typename U = int>
   struct MultipleInheritance : public Base1<T, U*> , Base2<U*, T> { 
-    using Base1<T, U*>::Base1; // expected-note {{candidate function [with T = int, U = int]}}
-    using Base2<U*, T>::Base2; // expected-note {{candidate function [with T = int, U = int]}}
+    using Base1<T, U*>::Base1;
+    using Base2<U*, T>::Base2;
   };
 
   MultipleInheritance mi1(1, "");
@@ -222,10 +240,8 @@ namespace test7 {
   MultipleInheritance mi2("", 1);
   static_assert(__is_same(MultipleInheritance<int, const char>, decltype(mi2)));
 
-  // This is an odd case.
-  // Since the base DGs have the deducible constraint, they are more specialized than MultipleInheritance's
-  // ctor, and take priority before the new clause in P2582R1 is applied.
-  MultipleInheritance mi3; // expected-error {{ambiguous deduction for template arguments of 'MultipleInheritance'}}
+  MultipleInheritance mi3;
+  static_assert(__is_same(MultipleInheritance<int, int>, decltype(mi3)));
 
   template<typename T>
   struct MultipleInheritanceSameBase : public Base1<T, const T*>, Base1<const T*, T> {
@@ -281,4 +297,20 @@ namespace test10 {
   };
 
   Derived d; // expected-note {{in instantiation of template class 'test10::Derived<>' requested here}}
+
+  struct NonTP {
+    NonTP(int x);
+  };
+
+  // defining-type-id is not of the form [typename] [nested-name-specifier] [template] simple-template-id
+  // This is not a deducible template
+  template<typename T>
+  using NonTPAlias = NonTP;
+
+  template<typename T = int>
+  struct NonTPDerived : public NonTPAlias<T> {
+      using NonTPAlias<T>::NonTPAlias;
+  };
+
+  NonTPDerived ntpd(10);
 }

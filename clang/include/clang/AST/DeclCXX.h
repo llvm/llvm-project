@@ -1961,7 +1961,8 @@ class CXXDeductionGuideDecl : public FunctionDecl {
   void anchor() override;
 
 public:
-  enum class SourceKind : bool {
+  enum class SourceKind {
+    None,
     Alias,
     InheritedConstructor,
   };
@@ -1988,8 +1989,8 @@ private:
   // The deduction guide, if any, that this deduction guide was generated from,
   // in the case of alias template deduction or CTAD from inherited
   // constructors. The SourceKind member indicates which of these two sources
-  // applies, if there is a source, otherwise it is meaningless.
-  llvm::PointerIntPair<CXXDeductionGuideDecl *, 1, SourceKind>
+  // applies, or is None otherwise.
+  llvm::PointerIntPair<CXXDeductionGuideDecl *, 2, SourceKind>
       SourceDeductionGuide;
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
@@ -2005,7 +2006,7 @@ public:
          DeductionCandidate Kind = DeductionCandidate::Normal,
          Expr *TrailingRequiresClause = nullptr,
          CXXDeductionGuideDecl *SourceDG = nullptr,
-         SourceKind SK = SourceKind::Alias);
+         SourceKind SK = SourceKind::None);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);

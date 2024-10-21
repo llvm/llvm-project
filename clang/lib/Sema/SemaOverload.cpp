@@ -10639,18 +10639,11 @@ bool clang::isBetterOverloadCandidate(
         // F2 are either both ellipses or have the same type
         if (FPT1->isVariadic() == FPT2->isVariadic() &&
             FPT1->getNumParams() == FPT2->getNumParams()) {
-          bool ParamsHaveSameType = true;
-          const auto &A1 = FPT1->getParamTypes();
-          const auto &A2 = FPT2->getParamTypes();
-          for (unsigned I = 0, N = FPT1->getNumParams(); I != N; ++I) {
-            llvm::FoldingSetNodeID ID1, ID2;
-            S.Context.getCanonicalType(A1[I]).Profile(ID1);
-            S.Context.getCanonicalType(A2[I]).Profile(ID2);
-            if (ID1 != ID2) {
-              ParamsHaveSameType = false;
-              break;
-            }
-          }
+          const auto &P1 = FPT1->getParamTypes();
+          const auto &P2 = FPT2->getParamTypes();
+          bool ParamsHaveSameType = llvm::all_of(llvm::zip(P1, P2), [&](const std::tuple<const QualType &, const QualType &> &pair) {
+              return S.Context.hasSameType(std::get<0>(pair), std::get<1>(pair));
+              });
 
           if (ParamsHaveSameType)
             return G2Inherited;
@@ -11809,16 +11802,14 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       CXXDeductionGuideDecl *Source = DG->getSourceDeductionGuide();
       assert(Source &&
              "Inherited constructor deduction guides must have a source");
-      auto DeducedRecordType =
-          QualType(cast<ClassTemplateDecl>(DG->getDeducedTemplate())
+      QualType DeducedRecordType(
+          cast<ClassTemplateDecl>(DG->getDeducedTemplate())
                        ->getTemplatedDecl()
-                       ->getTypeForDecl(),
-                   0);
-      auto InheritedRecordType =
-          QualType(cast<ClassTemplateDecl>(Source->getDeducedTemplate())
+                       ->getTypeForDecl(), 0);
+      QualType InheritedRecordType(
+          cast<ClassTemplateDecl>(Source->getDeducedTemplate())
                        ->getTemplatedDecl()
-                       ->getTypeForDecl(),
-                   0);
+                       ->getTypeForDecl(), 0);
       S.Diag(Templated->getLocation(),
              diag::note_ovl_candidate_inherited_constructor_deduction_failure)
           << DeducedRecordType << InheritedRecordType << TemplateArgString;

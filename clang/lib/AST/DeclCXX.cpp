@@ -2255,7 +2255,7 @@ CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
       QualType(), nullptr, SourceLocation(), nullptr,
       DeductionCandidate::Normal, nullptr,
-      /*GeneratedFrom=*/nullptr, SourceKind::Alias);
+      /*GeneratedFrom=*/nullptr, SourceKind::None);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
