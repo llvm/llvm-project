@@ -1454,8 +1454,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::UINT_TO_FP, VT, Custom);
       setOperationAction(ISD::SINT_TO_FP, VT, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Custom);
       setOperationAction(ISD::FP_TO_UINT, VT, Custom);
       setOperationAction(ISD::FP_TO_SINT, VT, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::MUL, VT, Custom);
       setOperationAction(ISD::MULHS, VT, Custom);
@@ -2138,6 +2142,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FP_ROUND, VT, Default);
   setOperationAction(ISD::FP_TO_SINT, VT, Default);
   setOperationAction(ISD::FP_TO_UINT, VT, Default);
+  setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Default);
+  setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Default);
   setOperationAction(ISD::FRINT, VT, Default);
   setOperationAction(ISD::LRINT, VT, Default);
   setOperationAction(ISD::LLRINT, VT, Default);
@@ -2164,6 +2170,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::SIGN_EXTEND, VT, Default);
   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Default);
   setOperationAction(ISD::SINT_TO_FP, VT, Default);
+  setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Default);
   setOperationAction(ISD::SMAX, VT, Default);
   setOperationAction(ISD::SMIN, VT, Default);
   setOperationAction(ISD::SPLAT_VECTOR, VT, Default);
@@ -2174,6 +2181,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::TRUNCATE, VT, Default);
   setOperationAction(ISD::UDIV, VT, Default);
   setOperationAction(ISD::UINT_TO_FP, VT, Default);
+  setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Default);
   setOperationAction(ISD::UMAX, VT, Default);
   setOperationAction(ISD::UMIN, VT, Default);
   setOperationAction(ISD::VECREDUCE_ADD, VT, Default);
@@ -4550,9 +4558,10 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   EVT VT = Op.getValueType();
 
   if (VT.isScalableVector()) {
-    unsigned Opcode = Op.getOpcode() == ISD::FP_TO_UINT
-                          ? AArch64ISD::FCVTZU_MERGE_PASSTHRU
-                          : AArch64ISD::FCVTZS_MERGE_PASSTHRU;
+    unsigned Opc = Op.getOpcode();
+    bool IsSigned = Opc == ISD::FP_TO_SINT || Opc == ISD::STRICT_FP_TO_SINT;
+    unsigned Opcode = IsSigned ? AArch64ISD::FCVTZS_MERGE_PASSTHRU
+                               : AArch64ISD::FCVTZU_MERGE_PASSTHRU;
     return LowerToPredicatedOp(Op, DAG, Opcode);
   }
 
@@ -4628,6 +4637,51 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   return Op;
 }
 
+static bool CanLowerToScalarSVEFPIntConversion(EVT VT) {
+  if (!VT.isSimple())
+    return false;
+  // There are SVE instructions that can convert to/from all pairs of these int
+  // and float types. Note: We don't bother with i8 or i16 as those are illegal
+  // types for scalars.
+  return is_contained({MVT::i32, MVT::i64, MVT::f16, MVT::f32, MVT::f64},
+                      VT.getSimpleVT().SimpleTy);
+}
+
+/// Lowers a scalar FP conversion (to/from) int to SVE.
+static SDValue LowerScalarFPConversionToSVE(SDValue Op, SelectionDAG &DAG) {
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+  EVT SrcTy = SrcVal.getValueType();
+  EVT DestTy = Op.getValueType();
+  EVT SrcVecTy;
+  EVT DestVecTy;
+  // Use a packed vector for the larger type.
+  // Note: For conversions such as FCVTZS_ZPmZ_DtoS, and UCVTF_ZPmZ_StoD that
+  // notionally take or return a nxv2i32 type we must instead use a nxv4i32, as
+  // (unlike floats) nxv2i32 is an illegal unpacked type.
+  if (DestTy.bitsGT(SrcTy)) {
+    DestVecTy = getPackedSVEVectorVT(DestTy);
+    SrcVecTy = SrcTy == MVT::i32 ? getPackedSVEVectorVT(SrcTy)
+                                 : DestVecTy.changeVectorElementType(SrcTy);
+  } else {
+    SrcVecTy = getPackedSVEVectorVT(SrcTy);
+    DestVecTy = DestTy == MVT::i32 ? getPackedSVEVectorVT(DestTy)
+                                   : SrcVecTy.changeVectorElementType(DestTy);
+  }
+  SDLoc dl(Op);
+  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, dl);
+  SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, SrcVecTy,
+                            DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
+  Vec = IsStrict ? DAG.getNode(Op.getOpcode(), dl, {DestVecTy, MVT::Other},
+                               {Op.getOperand(0), Vec})
+                 : DAG.getNode(Op.getOpcode(), dl, DestVecTy, Vec);
+  SDValue Scalar =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op.getValueType(), Vec, ZeroIdx);
+  if (IsStrict)
+    return DAG.getMergeValues({Scalar, Vec.getValue(1)}, dl);
+  return Scalar;
+}
+
 SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
                                               SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
@@ -4635,6 +4689,12 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
 
   if (SrcVal.getValueType().isVector())
     return LowerVectorFP_TO_INT(Op, DAG);
+
+  if (!Subtarget->isNeonAvailable() &&
+      Subtarget->isSVEorStreamingSVEAvailable() &&
+      CanLowerToScalarSVEFPIntConversion(SrcVal.getValueType()) &&
+      CanLowerToScalarSVEFPIntConversion(Op.getValueType()))
+    return LowerScalarFPConversionToSVE(Op, DAG);
 
   // f16 conversions are promoted to f32 when full fp16 is not supported.
   if ((SrcVal.getValueType() == MVT::f16 && !Subtarget->hasFullFP16()) ||
@@ -4938,6 +4998,12 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
 
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+
+  if (!Subtarget->isNeonAvailable() &&
+      Subtarget->isSVEorStreamingSVEAvailable() &&
+      CanLowerToScalarSVEFPIntConversion(SrcVal.getValueType()) &&
+      CanLowerToScalarSVEFPIntConversion(Op.getValueType()))
+    return LowerScalarFPConversionToSVE(Op, DAG);
 
   bool IsSigned = Op->getOpcode() == ISD::STRICT_SINT_TO_FP ||
                   Op->getOpcode() == ISD::SINT_TO_FP;
@@ -28327,7 +28393,21 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
                                                    unsigned NewOp) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
-  auto Pg = getPredicateForVector(DAG, DL, VT);
+  SDValue Pg;
+
+  // FCVTZS_ZPmZ_DtoS and FCVTZU_ZPmZ_DtoS are special cases. These operations
+  // return nxv4i32 rather than the correct nxv2i32, as nxv2i32 is an illegal
+  // unpacked type. So, in this case, we take the predicate size from the
+  // operand.
+  SDValue LastOp{};
+  if ((NewOp == AArch64ISD::FCVTZU_MERGE_PASSTHRU ||
+       NewOp == AArch64ISD::FCVTZS_MERGE_PASSTHRU) &&
+      VT == MVT::nxv4i32 &&
+      (LastOp = Op->ops().back().get()).getValueType() == MVT::nxv2f64) {
+    Pg = getPredicateForVector(DAG, DL, LastOp.getValueType());
+  } else {
+    Pg = getPredicateForVector(DAG, DL, VT);
+  }
 
   if (VT.isFixedLengthVector()) {
     assert(isTypeLegal(VT) && "Expected only legal fixed-width types");
@@ -28363,7 +28443,12 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
   assert(VT.isScalableVector() && "Only expect to lower scalable vector op!");
 
   SmallVector<SDValue, 4> Operands = {Pg};
+  SDValue Chain{};
   for (const SDValue &V : Op->op_values()) {
+    if (!isa<CondCodeSDNode>(V) && V.getValueType() == MVT::Other) {
+      Chain = V;
+      continue;
+    }
     assert((!V.getValueType().isVector() ||
             V.getValueType().isScalableVector()) &&
            "Only scalable vectors are supported!");
@@ -28373,7 +28458,10 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
   if (isMergePassthruOpcode(NewOp))
     Operands.push_back(DAG.getUNDEF(VT));
 
-  return DAG.getNode(NewOp, DL, VT, Operands, Op->getFlags());
+  auto NewNode = DAG.getNode(NewOp, DL, VT, Operands, Op->getFlags());
+  if (Chain)
+    return DAG.getMergeValues({NewNode, Chain}, DL);
+  return NewNode;
 }
 
 // If a fixed length vector operation has no side effects when applied to

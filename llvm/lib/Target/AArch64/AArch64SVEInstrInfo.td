@@ -2338,8 +2338,8 @@ let Predicates = [HasSVEorSME] in {
   defm UCVTF_ZPmZ_DtoH  : sve_fp_2op_p_zd< 0b0110111, "ucvtf",  ZPR64, ZPR16, int_aarch64_sve_ucvtf_f16i64,  AArch64ucvtf_mt,  nxv2f16, nxv2i1, nxv2i64, ElementSizeD>;
   defm SCVTF_ZPmZ_DtoD  : sve_fp_2op_p_zd< 0b1110110, "scvtf",  ZPR64, ZPR64, null_frag,                     AArch64scvtf_mt,  nxv2f64, nxv2i1, nxv2i64, ElementSizeD>;
   defm UCVTF_ZPmZ_DtoD  : sve_fp_2op_p_zd< 0b1110111, "ucvtf",  ZPR64, ZPR64, null_frag,                     AArch64ucvtf_mt,  nxv2f64, nxv2i1, nxv2i64, ElementSizeD>;
-  defm FCVTZS_ZPmZ_DtoS : sve_fp_2op_p_zd< 0b1111000, "fcvtzs", ZPR64, ZPR32, int_aarch64_sve_fcvtzs_i32f64, null_frag,        nxv4i32, nxv2i1, nxv2f64, ElementSizeD>;
-  defm FCVTZU_ZPmZ_DtoS : sve_fp_2op_p_zd< 0b1111001, "fcvtzu", ZPR64, ZPR32, int_aarch64_sve_fcvtzu_i32f64, null_frag,        nxv4i32, nxv2i1, nxv2f64, ElementSizeD>;
+  defm FCVTZS_ZPmZ_DtoS : sve_fp_2op_p_zd< 0b1111000, "fcvtzs", ZPR64, ZPR32, int_aarch64_sve_fcvtzs_i32f64, AArch64fcvtzs_mt, nxv4i32, nxv2i1, nxv2f64, ElementSizeD>;
+  defm FCVTZU_ZPmZ_DtoS : sve_fp_2op_p_zd< 0b1111001, "fcvtzu", ZPR64, ZPR32, int_aarch64_sve_fcvtzu_i32f64, AArch64fcvtzu_mt, nxv4i32, nxv2i1, nxv2f64, ElementSizeD>;
   defm FCVTZS_ZPmZ_StoD : sve_fp_2op_p_zd< 0b1111100, "fcvtzs", ZPR32, ZPR64, int_aarch64_sve_fcvtzs_i64f32, AArch64fcvtzs_mt, nxv2i64, nxv2i1, nxv2f32, ElementSizeD>;
   defm FCVTZS_ZPmZ_HtoS : sve_fp_2op_p_zd< 0b0111100, "fcvtzs", ZPR16, ZPR32, int_aarch64_sve_fcvtzs_i32f16, AArch64fcvtzs_mt, nxv4i32, nxv4i1, nxv4f16, ElementSizeS>;
   defm FCVTZS_ZPmZ_HtoD : sve_fp_2op_p_zd< 0b0111110, "fcvtzs", ZPR16, ZPR64, int_aarch64_sve_fcvtzs_i64f16, AArch64fcvtzs_mt, nxv2i64, nxv2i1, nxv2f16, ElementSizeD>;
@@ -2420,42 +2420,6 @@ let Predicates = [HasSVEorSME] in {
   defm FRECPX_ZPmZ : sve_fp_2op_p_zd_HSD<0b01100, "frecpx", AArch64frecpx_mt>;
   defm FSQRT_ZPmZ  : sve_fp_2op_p_zd_HSD<0b01101, "fsqrt",  AArch64fsqrt_mt>;
 } // End HasSVEorSME
-
-// Helper for creating scalar fp -> int -> fp conversions using SVE.
-class sve_scalar_fp_int_fp_cvt
-  <Instruction PTRUE, Instruction FROM_INT, Instruction TO_INT, SubRegIndex sub>
-  : OutPatFrag<(ops node: $Rn),
-    (EXTRACT_SUBREG
-      (FROM_INT (IMPLICIT_DEF), (PTRUE 1),
-        (TO_INT (IMPLICIT_DEF), (PTRUE 1),
-          (INSERT_SUBREG (IMPLICIT_DEF), $Rn, sub))), sub)>;
-
-// Some scalar float -> int -> float conversion patterns where we want to keep
-// the int values in FP registers to avoid costly GPR <-> FPR register
-// transfers using SVE instructions. Only used when NEON is not available (e.g.
-// in streaming functions).
-// TODO: When +sme2p2 is available Neon single-element vectors should be preferred.
-def HasNoNEON : Predicate<"!Subtarget->isNeonAvailable()">;
-let Predicates = [HasSVEorSME, HasNoNEON] in {
-def : Pat<
-  (f64 (sint_to_fp (i64 (fp_to_sint f64:$Rn)))),
-  (sve_scalar_fp_int_fp_cvt<PTRUE_D, SCVTF_ZPmZ_DtoD, FCVTZS_ZPmZ_DtoD, dsub> $Rn)>;
-def : Pat<
-  (f64 (uint_to_fp (i64 (fp_to_uint f64:$Rn)))),
-  (sve_scalar_fp_int_fp_cvt<PTRUE_D, UCVTF_ZPmZ_DtoD, FCVTZU_ZPmZ_DtoD, dsub> $Rn)>;
-def : Pat<
-  (f32 (sint_to_fp (i32 (fp_to_sint f32:$Rn)))),
-  (sve_scalar_fp_int_fp_cvt<PTRUE_S, SCVTF_ZPmZ_StoS, FCVTZS_ZPmZ_StoS, ssub> $Rn)>;
-def : Pat<
-  (f32 (uint_to_fp (i32 (fp_to_uint f32:$Rn)))),
-  (sve_scalar_fp_int_fp_cvt<PTRUE_S, UCVTF_ZPmZ_StoS, FCVTZU_ZPmZ_StoS, ssub> $Rn)>;
-def : Pat<
-  (f16 (sint_to_fp (i32 (fp_to_sint f16:$Rn)))),
-  (sve_scalar_fp_int_fp_cvt<PTRUE_H, SCVTF_ZPmZ_HtoH, FCVTZS_ZPmZ_HtoH, hsub> $Rn)>;
-def : Pat<
-  (f16 (uint_to_fp (i32 (fp_to_uint f16:$Rn)))),
-  (sve_scalar_fp_int_fp_cvt<PTRUE_H, UCVTF_ZPmZ_HtoH, FCVTZU_ZPmZ_HtoH, hsub> $Rn)>;
-} // End HasSVEorSME, HasNoNEON
 
 let Predicates = [HasBF16, HasSVEorSME] in {
   defm BFDOT_ZZZ    : sve_float_dot<0b1, 0b0, ZPR32, ZPR16, "bfdot", nxv8bf16, int_aarch64_sve_bfdot>;

@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define double @t1(double %x) {
 ; CHECK-LABEL: t1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
@@ -29,7 +29,7 @@ entry:
 define float @t2(float %x) {
 ; CHECK-LABEL: t2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
@@ -50,10 +50,10 @@ entry:
 define half @t3(half %x)  {
 ; CHECK-LABEL: t3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    fcvtzs z0.h, p0/m, z0.h
-; CHECK-NEXT:    scvtf z0.h, p0/m, z0.h
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.h
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -73,7 +73,7 @@ entry:
 define double @t4(double %x) {
 ; CHECK-LABEL: t4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
@@ -94,7 +94,7 @@ entry:
 define float @t5(float %x) {
 ; CHECK-LABEL: t5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
@@ -115,10 +115,10 @@ entry:
 define half @t6(half %x)  {
 ; CHECK-LABEL: t6:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    fcvtzu z0.h, p0/m, z0.h
-; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.h
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.h
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
 ;
