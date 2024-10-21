@@ -120,21 +120,11 @@ public:
   template <typename QueryT> bool isA() const { return isA(QueryT::classID()); }
 
   bool isA(const void *const ClassID) const override {
-    return ClassID == classID() || parentsAreA<ParentTs...>(ClassID);
+    return ClassID == classID() || (ParentTs::isA(ClassID) || ...);
   }
 
   template <typename T> static bool classof(const T *R) {
     return R->template isA<ThisT>();
-  }
-
-private:
-  template <typename T> bool parentsAreA(const void *const ClassID) const {
-    return T::isA(ClassID);
-  }
-
-  template <typename T, typename T2, typename... Ts>
-  bool parentsAreA(const void *const ClassID) const {
-    return T::isA(ClassID) || parentsAreA<T2, Ts...>(ClassID);
   }
 };
 
