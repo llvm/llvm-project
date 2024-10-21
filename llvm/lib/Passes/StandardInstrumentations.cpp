@@ -2444,10 +2444,12 @@ void DotCfgChangeReporter::registerCallbacks(
 
 StandardInstrumentations::StandardInstrumentations(
     LLVMContext &Context, bool DebugLogging, bool VerifyEach,
-    PrintPassOptions PrintPassOpts)
+    PrintPassOptions PrintPassOpts, bool EnableTimePasses,
+    bool EnableTimePassesPerRun)
     : PrintPass(DebugLogging, PrintPassOpts),
-      OptNone(DebugLogging),
-      OptPassGate(Context),
+      TimePasses(TimePassesIsEnabled ? TimePassesIsEnabled : EnableTimePasses,
+                 TimePassesPerRun ? TimePassesPerRun : EnableTimePassesPerRun),
+      OptNone(DebugLogging), OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
