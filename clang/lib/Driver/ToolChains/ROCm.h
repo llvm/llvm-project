@@ -199,7 +199,7 @@ public:
 
   /// Check whether the target triple is for Windows.
   bool isHostWindows() const { return IsHostMSVC; }
-  void setHostWindows(bool val) { IsHostMSVC=val; /* salinas */ fprintf(stderr,"DAVE: RocmInstallationDetector::setHostWindows()\n"); }
+  void setHostWindows(bool val) { IsHostMSVC=val;}
 
   /// Print information about the detected ROCm installation.
   void print(raw_ostream &OS) const;

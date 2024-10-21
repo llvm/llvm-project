@@ -180,8 +180,6 @@ bool RocmInstallationDetector::parseHIPVersionFile(llvm::StringRef V) {
 const SmallVectorImpl<RocmInstallationDetector::Candidate> &
 RocmInstallationDetector::getInstallationPathCandidates() {
 
-	/* salinas */ fprintf(stderr,"DAVE: RocmInstallationDetector::getInstallationPathCandidates() ...\n");
-
   // Return the cached candidate list if it has already been populated.
   if (!ROCmSearchDirs.empty())
     return ROCmSearchDirs;
@@ -309,10 +307,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     }
   }
 
-  fprintf(stderr,"DAVE: checking isHostWindows() ...\n"); /* salinas */
-
-  if (!isHostWindows()) { /* salinas */
-    fprintf(stderr, "\t NOT WINDOWS ....\n");
+  if (!isHostWindows()) {
     
     if (!LatestROCm.empty())
       ROCmSearchDirs.emplace_back(D.SysRoot + "/opt/" + LatestROCm,
@@ -322,7 +317,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
                                 /*StrictChecking=*/true);
     ROCmSearchDirs.emplace_back(D.SysRoot + "/usr",
                                 /*StrictChecking=*/true);
-  } /* salinas */ else fprintf(stderr,"\t IS WINDOWS!\n");
+  }
 
   DoPrintROCmSearchDirs();
   return ROCmSearchDirs;
@@ -333,7 +328,6 @@ RocmInstallationDetector::RocmInstallationDetector(
     const llvm::opt::ArgList &Args /*, SALINAS bool DetectHIPRuntime,
     bool DetectDeviceLib, bool isMSVC*/) 
     : D(D), TargetTriple(TargetTriple) {
-	    /* salinas */ fprintf(stderr,"RocmInstallationDetector::RocmInstallationDetector() ... \n");
   /* SALINAS IsHostMSVC = isMSVC; */
   Verbose = Args.hasArg(options::OPT_v);
   RocmPathArg = Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ);
@@ -388,9 +382,8 @@ RocmInstallationDetector::RocmInstallationDetector(
                           .str();
   }
 
-  //if (DetectHIPRuntime) /* salinas */ {
-  //  fprintf(stderr, "DAVE: RocmInstallationDetector ctor: calling "
-  //                  "detectHIPRuntime() ...\n");
+  // SALINAS
+  //if (DetectHIPRuntime) 
   //  detectHIPRuntime();
   //}
   //if (DetectDeviceLib)
@@ -450,7 +443,6 @@ void RocmInstallationDetector::detectDeviceLibrary() {
 
   // Find device libraries in a legacy ROCm directory structure
   // ${ROCM_ROOT}/amdgcn/bitcode/*
-  /* salinas */ fprintf(stderr,"DAVE 1: calling getInstallationPathCandidates()\n");
   auto &ROCmDirs = getInstallationPathCandidates();
   for (const auto &Candidate : ROCmDirs) {
     LibDevicePath = Candidate.Path;
@@ -461,11 +453,7 @@ void RocmInstallationDetector::detectDeviceLibrary() {
   }
 }
 
-void RocmInstallationDetector::detectHIPRuntime() { /* salinas */
-  fprintf(stderr, "DAVE: RocmInstallationDetector::detectHIPRuntime()\n");
-  /* salinas */ std::optional<std::string> dave =
-      llvm::sys::Process::GetEnv("HIP_PATH");
-  /* salinas */ if (dave) fprintf(stderr, "DAVE: in detectHIPRuntime(): HIP_PATH  = %s\n",(*dave).c_str());
+void RocmInstallationDetector::detectHIPRuntime() {
   SmallVector<Candidate, 4> HIPSearchDirs;
   if (!HIPPathArg.empty())
     HIPSearchDirs.emplace_back(HIPPathArg.str());
@@ -474,12 +462,8 @@ void RocmInstallationDetector::detectHIPRuntime() { /* salinas */
     if (!HIPPathEnv->empty())
       HIPSearchDirs.emplace_back(std::move(*HIPPathEnv));
   }
-  if (HIPSearchDirs.empty()) { /* salinas */
-  /* salinas */ fprintf(stderr,"DAVE 1: calling getInstallationPathCandidates()\n");
+  if (HIPSearchDirs.empty())
     HIPSearchDirs.append(getInstallationPathCandidates());
-  } /* salinas */ else
-    fprintf(stderr,
-            "DAVE: detectHIPRuntime() .... HIPSearchDirs is NOT empty!\n");
   auto &FS = D.getVFS();
 
   for (const auto &Candidate : HIPSearchDirs) {
@@ -711,15 +695,12 @@ AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args),
       OptionsDefault({{options::OPT_O, "3"},
-                      {options::OPT_cl_std_EQ, "CL1.2"}}) { /* salinas */
-  fprintf(stderr, "========= DAVE ===========   AMDGPUToolChain() ctor ....\n");
+                      {options::OPT_cl_std_EQ, "CL1.2"}}) {
   // Check code object version options. Emit warnings for legacy options
   // and errors for the last invalid code object version options.
   // It is done here to avoid repeated warning or error messages for
   // each tool invocation.
   checkAMDGPUCodeObjectVersion(D, Args);
-  /* salinas */ fprintf(
-      stderr, " ===== DVE: AMDGPUToolChain ctor END ..... =========\n");
 }
 
 Tool *AMDGPUToolChain::buildLinker() const {
@@ -848,13 +829,10 @@ bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
 /// ROCM Toolchain
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args, bool isHostTCMSVC)
-    : AMDGPUToolChain(D, Triple, Args) { /* salinas */ fprintf(stderr,"DAVE: ROCMToolChain::ROCMToolChain() ...\n");
-  /* salinas */ fprintf(
-      stderr, "DAVE: in ROCMToolChain ctor calling setHostWindows()\n");
+    : AMDGPUToolChain(D, Triple, Args) {
   RocmInstallation->setHostWindows(isHostTCMSVC);
 
   RocmInstallation->detectDeviceLibrary();
-  /* salinas */ fprintf(stderr, "DAVE: end of ROCMToolChain ctor\n");
 }
 
 void AMDGPUToolChain::addClangTargetOptions(

@@ -932,8 +932,6 @@ MachO::MachO(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 Darwin::Darwin(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : MachO(D, Triple, Args), TargetInitialized(false),
       CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args) {
-  /* SALINAS*/
-  RocmInstallation->init();
 }
 
 types::ID MachO::LookupTypeForExtension(StringRef Ext) const {

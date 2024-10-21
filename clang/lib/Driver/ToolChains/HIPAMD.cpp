@@ -250,7 +250,7 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
 HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
                                  const ToolChain &HostTC, const ArgList &Args)
-    : ROCMToolChain(D, Triple, Args, HostTC.getTriple().isWindowsMSVCEnvironment()), HostTC(HostTC) { /* salinas */ fprintf(stderr,"DAVE: HIPAMDToolChain::HIPAMDToolChain() ...\n");
+    : ROCMToolChain(D, Triple, Args, HostTC.getTriple().isWindowsMSVCEnvironment()), HostTC(HostTC) {
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
@@ -265,7 +265,6 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
       D.getDiags().Report(clang::diag::warn_drv_unsupported_option_for_target)
           << A->getAsString(Args) << getTriple().str();
   }
-  /* salinas */ fprintf(stderr, "DAVE: end of HIPAMDToolChain ctor\n");
 }
 
 void HIPAMDToolChain::addClangTargetOptions(
