@@ -1058,6 +1058,7 @@ public:
   const parser::Name *ResolveDesignator(const parser::Designator &);
   int GetVectorElementKind(
       TypeCategory category, const std::optional<parser::KindSelector> &kind);
+  std::optional<DerivedTypeSpec> ResolveDerivedType(const parser::Name &);
 
 protected:
   bool BeginDecl();
@@ -1205,7 +1206,6 @@ private:
   Symbol &DeclareProcEntity(
       const parser::Name &, Attrs, const Symbol *interface);
   void SetType(const parser::Name &, const DeclTypeSpec &);
-  std::optional<DerivedTypeSpec> ResolveDerivedType(const parser::Name &);
   std::optional<DerivedTypeSpec> ResolveExtendsType(
       const parser::Name &, const parser::Name *);
   Symbol *MakeTypeSymbol(const SourceName &, Details &&);
@@ -1468,6 +1468,10 @@ public:
     AddOmpSourceRange(x.source);
     return true;
   }
+
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
+  void Post(const parser::OpenMPDeclareMapperConstruct &) { PopScope(); };
+
   void Post(const parser::OmpBeginLoopDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1603,6 +1607,26 @@ void OmpVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   if (NeedsScope(x)) {
     PopScope();
   }
+}
+
+bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  AddOmpSourceRange(x.source);
+  BeginDeclTypeSpec();
+  PushScope(Scope::Kind::OtherConstruct, nullptr);
+  const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
+  if (const auto &mapperName{
+          std::get<std::optional<Fortran::parser::Name>>(spec.t)}) {
+    Symbol *mapperSym{&MakeSymbol(*mapperName, Attrs{})};
+    mapperName->symbol = mapperSym;
+  }
+  Walk(std::get<Fortran::parser::TypeSpec>(spec.t));
+  const auto &varName{std::get<Fortran::parser::ObjectName>(spec.t)};
+  DeclareObjectEntity(varName);
+
+  Walk(std::get<std::list<std::list<Fortran::parser::OmpMapClause>>>(x.t));
+
+  EndDeclTypeSpec();
+  return false;
 }
 
 // Walk the parse tree and resolve names to symbols.

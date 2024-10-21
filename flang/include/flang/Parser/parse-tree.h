@@ -3872,6 +3872,19 @@ struct OpenMPDeclareTargetConstruct {
   std::tuple<Verbatim, OmpDeclareTargetSpecifier> t;
 };
 
+struct OmpDeclareMapperSpecifier {
+  TUPLE_CLASS_BOILERPLATE(OmpDeclareMapperSpecifier);
+  std::tuple<std::optional<Name>, TypeSpec, Name> t;
+};
+
+struct OpenMPDeclareMapperConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareMapperConstruct);
+  CharBlock source;
+  std::tuple<Verbatim, OmpDeclareMapperSpecifier,
+      std::list<std::list<OmpMapClause>>>
+      t;
+};
+
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
 struct OmpReductionCombiner {
@@ -3924,7 +3937,8 @@ struct OpenMPDeclarativeConstruct {
   CharBlock source;
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareReductionConstruct,
       OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OpenMPThreadprivate, OpenMPRequiresConstruct>
+      OpenMPThreadprivate, OpenMPRequiresConstruct,
+      OpenMPDeclareMapperConstruct>
       u;
 };
 

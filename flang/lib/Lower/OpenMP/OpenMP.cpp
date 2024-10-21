@@ -2600,6 +2600,13 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+       const parser::OpenMPDeclareMapperConstruct &declareMapperConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPDeclareMapperConstruct");
+}
+
+static void
+genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareTargetConstruct &declareTargetConstruct) {
   mlir::omp::DeclareTargetOperands clauseOps;
   llvm::SmallVector<DeclareTargetCapturePair> symbolAndClause;

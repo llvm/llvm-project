@@ -431,6 +431,9 @@ public:
   bool Pre(const parser::OpenMPDeclareTargetConstruct &);
   void Post(const parser::OpenMPDeclareTargetConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
+  void Post(const parser::OpenMPDeclareMapperConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
 
@@ -1941,6 +1944,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
       }
     }
   }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_declare_mapper);
+
   return true;
 }
 

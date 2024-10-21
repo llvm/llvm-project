@@ -2665,6 +2665,29 @@ public:
               EndOpenMP();
               return false;
             },
+            [&](const OpenMPDeclareMapperConstruct &z) {
+              Word("DECLARE MAPPER (");
+              const auto &spec{std::get<OmpDeclareMapperSpecifier>(z.t)};
+              if (auto mapname{std::get<std::optional<Name>>(spec.t)}) {
+                Walk(mapname);
+                Put(":");
+              }
+              Walk(std::get<TypeSpec>(spec.t));
+              Put("::");
+              Walk(std::get<Name>(spec.t));
+              Put(")");
+
+              const auto &list{
+                  std::get<std::list<std::list<Fortran::parser::OmpMapClause>>>(
+                      z.t)};
+              for (const auto &m : list) {
+                Put(" MAP(");
+                Walk(m);
+                Put(")");
+              }
+              Put("\n");
+              return false;
+            },
             [&](const OpenMPDeclareReductionConstruct &) {
               Word("DECLARE REDUCTION ");
               return true;
