@@ -2904,19 +2904,18 @@ void CodeGenFunction::EmitMultiVersionResolver(
   }
 }
 
-static int getPriorityFromAttrString(StringRef AttrStr) {
+static unsigned getPriorityFromAttrString(StringRef AttrStr) {
   SmallVector<StringRef, 8> Attrs;
 
   AttrStr.split(Attrs, ';');
 
   // Default Priority is zero.
-  int Priority = 0;
+  unsigned Priority = 0;
   for (auto Attr : Attrs) {
     if (Attr.consume_front("priority=")) {
-      int Result;
-      if (!Attr.getAsInteger(0, Result)) {
+      unsigned Result;
+      if (!Attr.getAsInteger(0, Result))
         Priority = Result;
-      }
     }
   }
 
