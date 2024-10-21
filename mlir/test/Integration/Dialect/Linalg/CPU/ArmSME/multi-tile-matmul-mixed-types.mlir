@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
-// RUN:   -transform-interpreter -test-transform-dialect-erase-schedule  \
-// RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
+// RUN:   -transform-interpreter="debug-payload-root-tag=payload" -test-transform-dialect-erase-schedule \
+// RUN:   -canonicalize \
 // RUN:   -test-lower-to-arm-sme -convert-vector-to-llvm="enable-arm-sve" \
 // RUN:   -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
@@ -8,6 +8,10 @@
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
 // RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib,%native_mlir_arm_runner_utils | \
 // RUN: FileCheck %s
+
+module @payload attributes { transform.target_tag = "payload" } {
+
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)
 
 /// This is very similar to the SME multi-tile-matmul.mlir test, except that it
 /// tests a mixed i8 to i32 matmul and outer product fusion which fuses 16
@@ -65,6 +69,8 @@ func.func @main() {
 
   return
 }
+
+} // end payload
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module : !transform.any_op {transform.consumed}) {

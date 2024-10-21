@@ -1,11 +1,15 @@
 // RUN: mlir-opt %s \
-// RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
+// RUN:   -transform-interpreter="debug-payload-root-tag=payload" -test-transform-dialect-erase-schedule \
 // RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
 // RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib | \
 // RUN: FileCheck %s
+
+module @payload attributes { transform.target_tag = "payload" } {
+
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)
 
 func.func @matmul(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : tensor<?x?xf32>) {
   %res = linalg.matmul ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
@@ -51,6 +55,8 @@ func.func @main() {
 
   return
 }
+
+} // end payload
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module : !transform.any_op {transform.consumed}) {
@@ -101,5 +107,3 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-
-func.func private @printMemrefF32(%ptr : tensor<*xf32>)
