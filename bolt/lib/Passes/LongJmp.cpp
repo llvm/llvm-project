@@ -641,9 +641,6 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   auto &MIB = BC.MIB;
 
-  if (!BF.isSimple())
-    return;
-
   // Quick path.
   if (!BF.isSplit() && BF.estimateSize() < ShortestJumpSpan)
     return;
@@ -667,7 +664,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
   // Function fragments are relaxed independently.
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     // Fill out code size estimation for the fragment. Use output BB address
-    // ranges to store offsets from the start of the function.
+    // ranges to store offsets from the start of the function fragment.
     uint64_t CodeSize = 0;
     for (BinaryBasicBlock *BB : FF) {
       BB->setOutputStartAddress(CodeSize);
@@ -757,8 +754,9 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       BB->replaceSuccessor(TargetBB, TrampolineBB, BI.Count);
     }
 
-    /// Relax the branch \p Inst. Return true if basic block offsets need an
-    /// update after the trampoline insertion.
+    /// Relax the branch \p Inst in basic block \p BB that targets \p TargetBB.
+    /// \p InstAddress contains offset of the branch from the start of the
+    /// containing function fragment.
     auto relaxBranch = [&](BinaryBasicBlock *BB, MCInst &Inst,
                            uint64_t InstAddress, BinaryBasicBlock *TargetBB) {
       BinaryFunction *BF = BB->getParent();
