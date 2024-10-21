@@ -1080,6 +1080,7 @@ cc_library(
         ":ast_matchers",
         ":basic",
         ":lex",
+        ":support",
         "//llvm:Support",
     ],
 )
@@ -1232,6 +1233,7 @@ cc_library(
         ":ast",
         ":basic",
         ":lex",
+        ":support",
         "//llvm:Support",
     ],
 )
