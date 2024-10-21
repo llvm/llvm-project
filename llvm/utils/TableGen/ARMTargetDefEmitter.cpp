@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -77,6 +78,15 @@ static void EmitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     return NameA.compare(NameB) < 0; // A lexographically less than B
   };
   sort(SortedExtensions, Alphabetical);
+
+  // Cache Extension records for quick lookup.
+  DenseMap<StringRef, const Record *> ExtensionMap;
+  for (const Record *Rec : SortedExtensions) {
+    auto Name = Rec->getValueAsString("UserVisibleName");
+    if (Name.empty())
+      Name = Rec->getValueAsString("Name");
+    ExtensionMap[Name] = Rec;
+  }
 
   // The ARMProcFamilyEnum values are initialised by SubtargetFeature defs
   // which set the ARMProcFamily field. We can generate the enum from these defs
@@ -153,7 +163,12 @@ static void EmitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     OS << "  I.emplace_back(";
     OS << "\"" << Rec->getValueAsString("Name") << "\"";
     OS << ", " << Rec->getValueAsString("Bit");
-    OS << ", \"" << Rec->getValueAsString("BackendFeatures") << "\"";
+    auto FeatName = Rec->getValueAsString("BackendFeature");
+    const Record *FeatRec = ExtensionMap[FeatName];
+    if (FeatRec)
+      OS << ", " << FeatRec->getValueAsString("ArchExtKindSpelling").upper();
+    else
+      OS << ", std::nullopt";
     OS << ", " << (uint64_t)Rec->getValueAsInt("Priority");
     OS << ");\n";
   };

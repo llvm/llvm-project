@@ -14251,10 +14251,12 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
 static std::vector<std::string> getFMVBackendFeaturesFor(
     const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
   std::vector<std::string> BackendFeats;
+  llvm::AArch64::ExtensionSet FeatureBits;
   for (StringRef F : FMVFeatStrings)
     if (auto FMVExt = llvm::AArch64::parseFMVExtension(F))
-      for (StringRef F : FMVExt->getImpliedFeatures())
-        BackendFeats.push_back(F.str());
+      if (FMVExt->ID)
+        FeatureBits.enable(*FMVExt->ID);
+  FeatureBits.toLLVMFeatureList(BackendFeats);
   return BackendFeats;
 }
 

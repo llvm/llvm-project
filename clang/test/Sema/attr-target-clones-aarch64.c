@@ -78,4 +78,4 @@ int useage(void) {
 // expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}
 int __attribute__((target_clones("sve2-sha3+ssbs", "sm4"))) mv_after_use(void) { return 1; }
 // expected-error@+1 {{'main' cannot be a multiversioned function}}
-int __attribute__((target_clones("sve-i8mm"))) main() { return 1; }
+int __attribute__((target_clones("sve"))) main() { return 1; }
