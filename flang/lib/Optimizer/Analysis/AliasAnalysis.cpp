@@ -372,6 +372,17 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   return attrs;
 }
 
+static std::optional<omp::BlockArgOpenMPOpInterface>
+getOpenMPBlockArgInterface(Operation *op) {
+  std::optional<omp::BlockArgOpenMPOpInterface> blockArgOpenMPOpInterface;
+  if (!op)
+    return blockArgOpenMPOpInterface;
+  if (llvm::isa<omp::TargetOp>(op) || llvm::isa<omp::ParallelOp>(op)) {
+    blockArgOpenMPOpInterface = dyn_cast<omp::BlockArgOpenMPOpInterface>(op);
+  }
+  return blockArgOpenMPOpInterface;
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getInstantiationPoint) {
   auto *defOp = v.getDefiningOp();
@@ -470,20 +481,56 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
-          // If declare operation is inside omp target region,
-          // continue alias analysis outside the target region
-          if (auto targetOp =
-                  llvm::dyn_cast<omp::TargetOp>(op->getParentOp())) {
-            auto argIface = cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
-            for (auto [opArg, blockArg] : llvm::zip_equal(
-                     targetOp.getMapVars(), argIface.getMapBlockArgs())) {
-              if (blockArg == op.getMemref()) {
-                omp::MapInfoOp mapInfo =
-                    llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
-                v = mapInfo.getVarPtr();
-                defOp = v.getDefiningOp();
-                return;
-              }
+          auto argIface = getOpenMPBlockArgInterface(op->getParentOp());
+          if (argIface) {
+            Value ompValArg;
+            llvm::TypeSwitch<Operation *>(op->getParentOp())
+                .template Case<omp::TargetOp>([&](auto targetOp) {
+                  // If declare operation is inside omp target region,
+                  // continue alias analysis outside the target region
+                  for (auto [opArg, blockArg] :
+                       llvm::zip_equal(targetOp.getMapVars(),
+                                       (*argIface).getMapBlockArgs())) {
+                    if (blockArg == op.getMemref()) {
+                      omp::MapInfoOp mapInfo =
+                          llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
+                      ompValArg = mapInfo.getVarPtr();
+                      break;
+                    }
+                  }
+                })
+                .template Case<omp::ParallelOp>([&](auto parallelOp) {
+                  // TODO private clause can be part of multiple
+                  // OpenMP directives( target, simd, etc.)
+                  // We should extend alias analysis when Flang
+                  // will handle private clause for different than parallel
+                  // directives.
+                  if (!parallelOp.getPrivateSyms().has_value())
+                    return;
+                  for (auto [opSym, blockArg] :
+                       llvm::zip_equal(*parallelOp.getPrivateSyms(),
+                                       (*argIface).getPrivateBlockArgs())) {
+                    if (blockArg == op.getMemref()) {
+                      omp::PrivateClauseOp privateOp =
+                          SymbolTable::lookupNearestSymbolFrom<
+                              omp::PrivateClauseOp>(parallelOp,
+                                                    cast<SymbolRefAttr>(opSym));
+                      privateOp.walk([&](omp::YieldOp yieldOp) {
+                        llvm::TypeSwitch<Operation *>(
+                            yieldOp.getResults()[0].getDefiningOp())
+                            .template Case<fir::DeclareOp, hlfir::DeclareOp>(
+                                [&](auto declOp) {
+                                  ompValArg = declOp.getMemref();
+                                });
+                      });
+                      return;
+                    }
+                  }
+                });
+            if (ompValArg) {
+              v = ompValArg;
+              defOp = ompValArg.getDefiningOp();
+              return;
             }
           }
           auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
