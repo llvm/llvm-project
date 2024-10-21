@@ -169,6 +169,12 @@ if (APPLE AND LLVM_USE_SANITIZER)
   endif()
 endif()
 
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists("copy_file_range" "unistd.h" LIBCXX_USE_COPY_FILE_RANGE)
+if(LIBCXX_USE_COPY_FILE_RANGE)
+  list(APPEND LIBCXX_COMPILE_FLAGS "-D_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE")
+endif()
+
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
