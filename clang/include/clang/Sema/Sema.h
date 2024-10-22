@@ -13438,7 +13438,7 @@ public:
   using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
 
   /// \brief create a Requirement::SubstitutionDiagnostic with only a
-  /// SubstitutedEntity and DiagLoc using Sema's allocator.
+  /// SubstitutedEntity and DiagLoc using ASTContext's allocator.
   concepts::Requirement::SubstitutionDiagnostic *
   createSubstDiagAt(SourceLocation Location, EntityPrinter Printer);
 
