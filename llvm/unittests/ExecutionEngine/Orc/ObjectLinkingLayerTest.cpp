@@ -255,11 +255,14 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
 }
 
 TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
-  class TestEPC : public UnsupportedExecutorProcessControl {
+  class TestEPC : public UnsupportedExecutorProcessControl,
+                  public DylibManager {
   public:
     TestEPC()
         : UnsupportedExecutorProcessControl(nullptr, nullptr,
-                                            "x86_64-apple-darwin") {}
+                                            "x86_64-apple-darwin") {
+      this->DylibMgr = this;
+    }
 
     Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override {
       return ExecutorAddr::fromPtr((void *)nullptr);

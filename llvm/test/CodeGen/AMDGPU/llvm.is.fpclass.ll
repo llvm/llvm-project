@@ -81,8 +81,6 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX11CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; GFX11CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11CHECK-NEXT:    s_nop 0
-; GFX11CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; nan
   %sext = sext i1 %result to i32
@@ -166,8 +164,6 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX11CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; GFX11CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11CHECK-NEXT:    s_nop 0
-; GFX11CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f64(double %x, i32 3)  ; nan
   %sext = sext i1 %result to i32

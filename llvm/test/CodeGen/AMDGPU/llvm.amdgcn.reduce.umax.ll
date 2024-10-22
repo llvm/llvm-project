@@ -89,8 +89,6 @@ define amdgpu_kernel void @uniform_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX1164DAGISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1164DAGISEL-NEXT:    s_nop 0
-; GFX1164DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX1164GISEL-LABEL: uniform_value:
@@ -102,8 +100,6 @@ define amdgpu_kernel void @uniform_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1164GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1164GISEL-NEXT:    s_nop 0
-; GFX1164GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164GISEL-NEXT:    s_endpgm
 ;
 ; GFX1132DAGISEL-LABEL: uniform_value:
@@ -114,8 +110,6 @@ define amdgpu_kernel void @uniform_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
 ; GFX1132DAGISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1132DAGISEL-NEXT:    s_nop 0
-; GFX1132DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX1132GISEL-LABEL: uniform_value:
@@ -126,8 +120,6 @@ define amdgpu_kernel void @uniform_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s4
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1132GISEL-NEXT:    s_nop 0
-; GFX1132GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132GISEL-NEXT:    s_endpgm
 entry:
     %result = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 %in, i32 1)
@@ -199,8 +191,6 @@ define amdgpu_kernel void @const_value(ptr addrspace(1) %out) {
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1164DAGISEL-NEXT:    s_nop 0
-; GFX1164DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX1164GISEL-LABEL: const_value:
@@ -210,8 +200,6 @@ define amdgpu_kernel void @const_value(ptr addrspace(1) %out) {
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1164GISEL-NEXT:    s_nop 0
-; GFX1164GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164GISEL-NEXT:    s_endpgm
 ;
 ; GFX1132DAGISEL-LABEL: const_value:
@@ -220,8 +208,6 @@ define amdgpu_kernel void @const_value(ptr addrspace(1) %out) {
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7b
 ; GFX1132DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132DAGISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1132DAGISEL-NEXT:    s_nop 0
-; GFX1132DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX1132GISEL-LABEL: const_value:
@@ -230,8 +216,6 @@ define amdgpu_kernel void @const_value(ptr addrspace(1) %out) {
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v0, 0x7b :: v_dual_mov_b32 v1, 0
 ; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1132GISEL-NEXT:    s_nop 0
-; GFX1132GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132GISEL-NEXT:    s_endpgm
 entry:
     %result = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 123, i32 1)
@@ -452,8 +436,6 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1164DAGISEL-NEXT:    s_nop 0
-; GFX1164DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX1164GISEL-LABEL: divergent_value:
@@ -476,8 +458,6 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1164GISEL-NEXT:    s_nop 0
-; GFX1164GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164GISEL-NEXT:    s_endpgm
 ;
 ; GFX1132DAGISEL-LABEL: divergent_value:
@@ -499,8 +479,6 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1132DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132DAGISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1132DAGISEL-NEXT:    s_nop 0
-; GFX1132DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX1132GISEL-LABEL: divergent_value:
@@ -522,8 +500,6 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 0
 ; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1132GISEL-NEXT:    s_nop 0
-; GFX1132GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132GISEL-NEXT:    s_endpgm
 entry:
     %id.x = call i32 @llvm.amdgcn.workitem.id.x()
@@ -847,8 +823,6 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1164DAGISEL-NEXT:    s_nop 0
-; GFX1164DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX1164GISEL-LABEL: divergent_cfg:
@@ -886,8 +860,6 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1164GISEL-NEXT:    s_nop 0
-; GFX1164GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164GISEL-NEXT:    s_endpgm
 ;
 ; GFX1132DAGISEL-LABEL: divergent_cfg:
@@ -926,8 +898,6 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1132DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132DAGISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1132DAGISEL-NEXT:    s_nop 0
-; GFX1132DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX1132GISEL-LABEL: divergent_cfg:
@@ -964,8 +934,6 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, 0
 ; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    global_store_b32 v1, v0, s[2:3]
-; GFX1132GISEL-NEXT:    s_nop 0
-; GFX1132GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132GISEL-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
