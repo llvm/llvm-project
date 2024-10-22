@@ -92,7 +92,7 @@ class Header:
         experimental headers.
         """
         # These headers have been removed in C++20 so are never part of a module.
-        removed_in_20 = ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+        removed_in_20 = ["ccomplex", "ciso646", "cstdalign", "cstdbool", "ctgmath"]
         return self.is_public() and not self.is_experimental() and not self.is_C_compatibility() and not self._name in removed_in_20
 
     def is_in_modulemap(self) -> bool:

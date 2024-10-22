@@ -22,7 +22,9 @@ from libcxx.header_information import (
 )
 
 for header in public_headers:
-    header_guard = lambda h: f"_LIBCPP_{str(h).upper().replace('.', '_').replace('/', '_')}"
+    header_guard = (
+        lambda h: f"_LIBCPP_{str(h).upper().replace('.', '_').replace('/', '_')}"
+    )
 
     # <cassert> has no header guards
     if header == "cassert":
