@@ -287,7 +287,8 @@ if [[ "${linux_projects}" != "" ]]; then
     CXX: 'clang++'
   commands:
   - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"'
-- plugins:
+- label: ':windows: Report Linux x64 Test Results'
+  plugins:
     - junit-annotate#v2.5.0:
         artifacts: build/test-results-linux*.xml
         context: "linux-test-results"
@@ -320,7 +321,8 @@ if [[ "${windows_projects}" != "" ]]; then
   commands:
   - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
   - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'
-- plugins:
+- label: ':windows: Report Windows x64 Test Results'
+  plugins:
     - junit-annotate#v2.5.0:
         artifacts: build/test-results-windows*.xml
         context: "windows-test-results"
