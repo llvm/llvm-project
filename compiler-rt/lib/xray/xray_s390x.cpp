@@ -17,11 +17,9 @@
 #include <cassert>
 #include <cstring>
 
-namespace __xray {
-
-bool patchFunctionEntry(const bool Enable, uint32_t FuncId,
-                        const XRaySledEntry &Sled,
-                        void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
+bool __xray::patchFunctionEntry(const bool Enable, uint32_t FuncId,
+                                const XRaySledEntry &Sled,
+                                void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
   const uint64_t Address = Sled.address();
   if (Enable) {
     // The resulting code is:
@@ -43,8 +41,9 @@ bool patchFunctionEntry(const bool Enable, uint32_t FuncId,
   return true;
 }
 
-bool patchFunctionExit(const bool Enable, uint32_t FuncId,
-                       const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+bool __xray::patchFunctionExit(const bool Enable, uint32_t FuncId,
+                               const XRaySledEntry &Sled)
+    XRAY_NEVER_INSTRUMENT {
   const uint64_t Address = Sled.address();
   if (Enable) {
     // The resulting code is:
@@ -66,25 +65,24 @@ bool patchFunctionExit(const bool Enable, uint32_t FuncId,
   return true;
 }
 
-bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
-                           const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+bool __xray::patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
+                                   const XRaySledEntry &Sled)
+    XRAY_NEVER_INSTRUMENT {
   return patchFunctionExit(Enable, FuncId, Sled);
 }
 
-bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
-                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  // FIXME: Implement.
+bool __xray::patchCustomEvent(const bool Enable, const uint32_t FuncId,
+                              const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  // TODO Implement.
   return false;
 }
 
-bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
-                     const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  // FIXME: Implement.
+bool __xray::patchTypedEvent(const bool Enable, const uint32_t FuncId,
+                             const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  // TODO Implement.
   return false;
 }
-
-} // namespace __xray
 
 extern "C" void __xray_ArgLoggerEntry() XRAY_NEVER_INSTRUMENT {
-  // FIXME: this will have to be implemented in the trampoline assembly file.
+  // TODO this will have to be implemented in the trampoline assembly file.
 }
