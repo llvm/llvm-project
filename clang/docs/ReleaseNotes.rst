@@ -416,8 +416,8 @@ Improvements to Clang's diagnostics
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
 
-- Clang now includes the return type of the function or constructor in the warning generated
-  when `[[nodiscard]]` is triggered by its placement on return types instead of function itself.
+- When diagnosing an unused return value of a type declared ``[[nodiscard]]``, the type
+  itself is now included in the diagnostic.
 
 Improvements to Clang's time-trace
 ----------------------------------
