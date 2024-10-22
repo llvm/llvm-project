@@ -915,7 +915,6 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I, bool &FromCache) {
     return It->second;
   }
 
-
   bool IsReduction = RealPHI == R && (!ImagPHI || ImagPHI == I);
   if (!IsReduction && R->getType() != I->getType())
     return nullptr;
