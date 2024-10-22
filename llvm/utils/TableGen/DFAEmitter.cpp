@@ -306,7 +306,7 @@ StringRef Automaton::getActionSymbolType(StringRef A) {
 }
 
 Transition::Transition(const Record *R, Automaton *Parent) {
-  BitsInit *NewStateInit = R->getValueAsBitsInit("NewState");
+  const BitsInit *NewStateInit = R->getValueAsBitsInit("NewState");
   NewState = 0;
   assert(NewStateInit->getNumBits() <= sizeof(uint64_t) * 8 &&
          "State cannot be represented in 64 bits!");

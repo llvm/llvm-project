@@ -918,6 +918,10 @@ public:
   bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  // unmerge_values(anyext(build vector)) -> build vector(anyext)
+  bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
+                                           BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;

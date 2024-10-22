@@ -720,6 +720,7 @@ protected:
 
   bool inSpecificationPart_{false};
   bool deferImplicitTyping_{false};
+  bool skipImplicitTyping_{false};
   bool inEquivalenceStmt_{false};
 
   // Some information is collected from a specification part for deferred
@@ -756,6 +757,10 @@ protected:
       return &deferred_.emplace(&currScope(), DeferredDeclarationState{})
                   .first->second;
     }
+  }
+
+  void SkipImplicitTyping(bool skip) {
+    deferImplicitTyping_ = skipImplicitTyping_ = skip;
   }
 
 private:
@@ -1504,6 +1509,42 @@ public:
     return true;
   }
   void Post(const parser::OmpEndCriticalDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::OpenMPThreadprivate &) {
+    SkipImplicitTyping(true);
+    return true;
+  }
+  void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
+  bool Pre(const parser::OpenMPDeclareTargetConstruct &) {
+    SkipImplicitTyping(true);
+    return true;
+  }
+  void Post(const parser::OpenMPDeclareTargetConstruct &) {
+    SkipImplicitTyping(false);
+  }
+  bool Pre(const parser::OpenMPDeclarativeAllocate &) {
+    SkipImplicitTyping(true);
+    return true;
+  }
+  void Post(const parser::OpenMPDeclarativeAllocate &) {
+    SkipImplicitTyping(false);
+  }
+  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OpenMPDeclarativeConstruct &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::OpenMPAtomicConstruct &x) {
+    return common::visit(common::visitors{[&](const auto &u) -> bool {
+      AddOmpSourceRange(u.source);
+      return true;
+    }},
+        x.u);
+  }
+  void Post(const parser::OpenMPAtomicConstruct &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
 };
@@ -2557,8 +2598,10 @@ void ScopeHandler::ApplyImplicitRules(
     return;
   }
   if (const DeclTypeSpec * type{GetImplicitType(symbol)}) {
-    symbol.set(Symbol::Flag::Implicit);
-    symbol.SetType(*type);
+    if (!skipImplicitTyping_) {
+      symbol.set(Symbol::Flag::Implicit);
+      symbol.SetType(*type);
+    }
     return;
   }
   if (symbol.has<ProcEntityDetails>() && !symbol.attrs().test(Attr::EXTERNAL)) {
