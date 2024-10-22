@@ -74,20 +74,17 @@ static void countNumMemAccesses(const Value *Ptr, unsigned &NumStores,
     }
 }
 
-static void getNumGEPIndexUses(const Value *V, unsigned &NumGEPIdxUses) {
+static bool usedAsGEPIndex(const Value *V) {
+  assert(V->getType()->isIntegerTy() && "Expected an integer value.");
   for (const User *U : V->users()) {
-    if (const auto *LI = dyn_cast<LoadInst>(U)) {
-      assert(isa<AllocaInst>(V) && LI->getType()->isIntegerTy() &&
-             "Expected a load only from the alloca, with integer type.");
-      getNumGEPIndexUses(LI, NumGEPIdxUses);
-    }
-    else if (const auto *SExtI = dyn_cast<SExtInst>(U))
-      getNumGEPIndexUses(SExtI, NumGEPIdxUses);
+    if (const auto *SExtI = dyn_cast<SExtInst>(U))
+      return usedAsGEPIndex(SExtI);
     else if (const auto *ZExtI = dyn_cast<ZExtInst>(U))
-      getNumGEPIndexUses(ZExtI, NumGEPIdxUses);
+      return usedAsGEPIndex(ZExtI);
     else if (isa<GetElementPtrInst>(U))
-      NumGEPIdxUses++;
+      return true;
   }
+  return false;
 }
 
 // Return true if Arg is used in a Load; Add/Sub; Store sequence.
@@ -172,9 +169,14 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
     Argument *CalleeArg = Callee->getArg(OpIdx);
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(CallerArg))
       if (AI->getAllocatedType()->isIntegerTy() && !AI->isArrayAllocation()) {
-        unsigned NumGEPIdxUses = 0;
-        getNumGEPIndexUses(AI, NumGEPIdxUses);
-        if (NumGEPIdxUses && looksLikeIVUpdate(Callee, CalleeArg)) {
+        bool UsedAsGEPIndex = false;
+        for (const User *U : AI->users())
+          if (const auto *LI = dyn_cast<LoadInst>(U))
+            if (usedAsGEPIndex(LI)) {
+              UsedAsGEPIndex = true;
+              break;
+            }
+        if (UsedAsGEPIndex && looksLikeIVUpdate(Callee, CalleeArg)) {
           Bonus = 1000;
           break;
         }
