@@ -85,3 +85,4 @@ end_across_sec:
   // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Cannot represent a difference across sections
   // CHECK-NEXT: cmp w0, #(sec_y - sec_x)
   // CHECK-NEXT: ^
+  // CHECK-NEXT: this will fail
