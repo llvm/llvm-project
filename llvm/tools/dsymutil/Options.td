@@ -65,6 +65,10 @@ def no_swiftmodule_timestamp: F<"no-swiftmodule-timestamp">,
   HelpText<"Don't check timestamp for swiftmodule files.">,
   Group<grp_general>;
 
+def no_object_timestamp: F<"no-object-timestamp">,
+  HelpText<"Don't check timestamp for object files.">,
+  Group<grp_general>;
+
 def no_odr: F<"no-odr">,
   HelpText<"Do not use ODR (One Definition Rule) for type uniquing.">,
   Group<grp_general>;
