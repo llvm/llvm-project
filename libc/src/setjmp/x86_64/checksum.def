@@ -1,0 +1,34 @@
+//===-- Common macros for jmpbuf checksum -----------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// For now, the checksum is computed with a simple multiply-xor-rotation
+// algorithm. The pesudo code is as follows:
+//
+// def checksum(x, acc):
+//     masked = x ^ MASK
+//     high, low = full_multiply(masked, acc)
+//     return rotate(high ^ low, ROTATION)
+//
+// Similar other multiplication-based hashing, zero inputs
+// for the `full_multiply` function may pollute the checksum with zero.
+// However, user inputs are always masked where the initial ACC amd MASK are
+// generated with random entropy and ROTATION is a fixed prime number. It should
+// be of a ultra-low chance for masked or acc being zero given a good quality of
+// system-level entropy.
+
+#define ACCUMULATE_CHECKSUM()                                                  \
+  "mul %[checksum]\n\t"                                                        \
+  "xor %%rax, %[checksum]\n\t"                                                 \
+  "rol $%c[rotation], %[checksum]\n\t"
+
+#define LOAD_CHKSUM_STATE_REGISTERS()                                          \
+  asm("mov %[value_mask], %[mask]\n\t"                                         \
+      "mov %[checksum_cookie], %[checksum]\n\t"                                \
+      : [mask] "=r"(mask), [checksum] "=r"(checksum)                           \
+      : [value_mask] "m"(jmpbuf::value_mask), [checksum_cookie] "m"(           \
+                                                  jmpbuf::checksum_cookie));

@@ -21,6 +21,10 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
+#if LIBC_COPT_SETJMP_FORTIFICATION
+#include "src/setjmp/checksum.h"
+#endif
+
 extern "C" int main(int argc, char **argv, char **envp);
 
 extern "C" {
@@ -130,6 +134,10 @@ void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
   init_tls(tls);
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
+
+#if LIBC_COPT_SETJMP_FORTIFICATION
+  jmpbuf::initialize();
+#endif
 
   self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
