@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTLIST_H
-#define LLDB_CORE_VALUEOBJECTLIST_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTLIST_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTLIST_H
 
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
@@ -60,4 +60,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTLIST_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTLIST_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCAST_H
-#define LLDB_CORE_VALUEOBJECTCAST_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTCAST_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTCAST_H
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -63,4 +63,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCAST_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTCAST_H

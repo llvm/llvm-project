@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
-#define LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTCHILD_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTCHILD_H
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
@@ -78,4 +78,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTCHILD_H

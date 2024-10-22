@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTMEMORY_H
-#define LLDB_CORE_VALUEOBJECTMEMORY_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTMEMORY_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTMEMORY_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -79,4 +79,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTMEMORY_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTMEMORY_H

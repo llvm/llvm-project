@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCHILD_H
-#define LLDB_CORE_VALUEOBJECTCHILD_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTCHILD_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTCHILD_H
 
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -88,4 +88,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCHILD_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTCHILD_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTDYNAMICVALUE_H
-#define LLDB_CORE_VALUEOBJECTDYNAMICVALUE_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTDYNAMICVALUE_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTDYNAMICVALUE_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -126,4 +126,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTDYNAMICVALUE_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTDYNAMICVALUE_H
