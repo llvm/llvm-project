@@ -127,11 +127,11 @@ else()
   set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
 endif()
 
-set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the mlir CUDA runner")
-set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the mlir ROCm runner")
-set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the mlir Sycl runner")
-set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the mlir SPIR-V cpu runner")
-set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the mlir Vulkan runner")
+set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the MLIR CUDA runner")
+set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the MLIR ROCm runner")
+set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the MLIR SYCL runner")
+set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the MLIR SPIR-V cpu runner")
+set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the MLIR Vulkan runner")
 set(MLIR_ENABLE_NVPTXCOMPILER 0 CACHE BOOL
     "Statically link the nvptxlibrary instead of calling ptxas as a subprocess \
     for compiling PTX to cubin")
