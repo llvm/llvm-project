@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
@@ -191,6 +192,31 @@ template <typename T> struct FPTest : public Test {
       fputil::testing::RoundingMode::TowardZero,
   };
 };
+
+// Add facility to test Flush-Denormal-To-Zero (FTZ) and Denormal-As-Zero (DAZ)
+// modes.
+// These tests to ensure that our implementations will not crash under these
+// modes.
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) && __has_builtin(__builtin_ia32_stmxcsr)
+
+#define LIBC_TEST_FTZ_DAZ
+
+static constexpr unsigned FTZ = 0x8000; // Flush denormal to zero
+static constexpr unsigned DAZ = 0x0040; // Denormal as zero
+
+struct ModifyMXCSR {
+  ModifyMXCSR(unsigned flags) {
+    old_mxcsr = __builtin_ia32_stmxcsr();
+    __builtin_ia32_ldmxcsr(old_mxcsr | flags);
+  }
+
+  ~ModifyMXCSR() { __builtin_ia32_ldmxcsr(old_mxcsr); }
+
+private:
+  unsigned old_mxcsr;
+};
+
+#endif
 
 } // namespace testing
 } // namespace LIBC_NAMESPACE_DECL
@@ -373,5 +399,18 @@ template <typename T> struct FPTest : public Test {
                                                          expected_except)      \
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
       (expected), (actual), (expected_except), RoundingMode::TowardZero)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(expected, actual,             \
+                                                 expected_except)              \
+  do {                                                                         \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST((expected), (actual),         \
+                                                 (expected_except));           \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD((expected), (actual),          \
+                                                (expected_except));            \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD((expected), (actual),        \
+                                                  (expected_except));          \
+    EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO((expected), (actual),     \
+                                                     (expected_except));       \
+  } while (0)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

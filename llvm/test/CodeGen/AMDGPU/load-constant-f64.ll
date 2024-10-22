@@ -54,8 +54,6 @@ define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspac
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %ld = load double, ptr addrspace(4) %in
   store double %ld, ptr addrspace(1) %out
@@ -155,8 +153,6 @@ define amdgpu_kernel void @constant_load_2v4f64(ptr addrspace(4) noalias nocaptu
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f64_e32 v[0:1], s[14:15], v[0:1]
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[18:19]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %out_ptr.promoted = load double, ptr addrspace(1) %out_ptr, align 4

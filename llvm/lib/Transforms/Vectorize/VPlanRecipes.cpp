@@ -13,6 +13,7 @@
 
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
+#include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,6 +24,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -79,6 +81,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
+  case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
@@ -392,6 +395,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
+  case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -440,9 +444,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
-    Value *Cond = State.get(getOperand(0));
-    Value *Op1 = State.get(getOperand(1));
-    Value *Op2 = State.get(getOperand(2));
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    Value *Cond = State.get(getOperand(0), OnlyFirstLaneUsed);
+    Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
+    Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
   }
   case VPInstruction::ActiveLaneMask: {
@@ -742,6 +747,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ICmp:
+  case Instruction::Select:
   case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
@@ -1195,6 +1201,46 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
   State.set(this, Sel);
   State.addMetadata(Sel, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+}
+
+InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
+                                                 VPCostContext &Ctx) const {
+  SelectInst *SI = cast<SelectInst>(getUnderlyingValue());
+  bool ScalarCond = getOperand(0)->isDefinedOutsideLoopRegions();
+  Type *ScalarTy = Ctx.Types.inferScalarType(this);
+  Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  VPValue *Op0, *Op1;
+  using namespace llvm::VPlanPatternMatch;
+  if (!ScalarCond && ScalarTy->getScalarSizeInBits() == 1 &&
+      (match(this, m_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1))) ||
+       match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1))))) {
+    // select x, y, false --> x & y
+    // select x, true, y --> x | y
+    const auto [Op1VK, Op1VP] = Ctx.getOperandInfo(Op0);
+    const auto [Op2VK, Op2VP] = Ctx.getOperandInfo(Op1);
+
+    SmallVector<const Value *, 2> Operands;
+    if (all_of(operands(),
+               [](VPValue *Op) { return Op->getUnderlyingValue(); }))
+      Operands.append(SI->op_begin(), SI->op_end());
+    bool IsLogicalOr = match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
+    return Ctx.TTI.getArithmeticInstrCost(
+        IsLogicalOr ? Instruction::Or : Instruction::And, VectorTy, CostKind,
+        {Op1VK, Op1VP}, {Op2VK, Op2VP}, Operands, SI);
+  }
+
+  Type *CondTy = Ctx.Types.inferScalarType(getOperand(0));
+  if (!ScalarCond)
+    CondTy = VectorType::get(CondTy, VF);
+
+  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  if (auto *Cmp = dyn_cast<CmpInst>(SI->getCondition()))
+    Pred = Cmp->getPredicate();
+  return Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VectorTy, CondTy, Pred,
+                                    CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+                                    {TTI::OK_AnyValue, TTI::OP_None}, SI);
 }
 
 VPRecipeWithIRFlags::FastMathFlagsTy::FastMathFlagsTy(
@@ -2955,11 +3001,20 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
-  Instruction *I = getInsertPos();
+  Instruction *InsertPos = getInsertPos();
+  // Find the VPValue index of the interleave group. We need to skip gaps.
+  unsigned InsertPosIdx = 0;
+  for (unsigned Idx = 0; IG->getFactor(); ++Idx)
+    if (auto *Member = IG->getMember(Idx)) {
+      if (Member == InsertPos)
+        break;
+      InsertPosIdx++;
+    }
   Type *ValTy = Ctx.Types.inferScalarType(
-      getNumDefinedValues() > 0 ? getVPValue(0) : getStoredValues()[0]);
+      getNumDefinedValues() > 0 ? getVPValue(InsertPosIdx)
+                                : getStoredValues()[InsertPosIdx]);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
-  unsigned AS = getLoadStoreAddressSpace(I);
+  unsigned AS = getLoadStoreAddressSpace(InsertPos);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   unsigned InterleaveFactor = IG->getFactor();
@@ -2973,8 +3028,8 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
 
   // Calculate the cost of the whole interleaved group.
   InstructionCost Cost = Ctx.TTI.getInterleavedMemoryOpCost(
-      I->getOpcode(), WideVecTy, IG->getFactor(), Indices, IG->getAlign(), AS,
-      CostKind, getMask(), NeedsMaskForGaps);
+      InsertPos->getOpcode(), WideVecTy, IG->getFactor(), Indices,
+      IG->getAlign(), AS, CostKind, getMask(), NeedsMaskForGaps);
 
   if (!IG->isReverse())
     return Cost;
