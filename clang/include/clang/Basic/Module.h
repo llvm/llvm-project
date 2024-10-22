@@ -271,8 +271,22 @@ public:
     DirectoryEntryRef Entry;
   };
 
-  /// The headers that are part of this module.
-  SmallVector<Header, 2> Headers[5];
+private:
+  unsigned HeaderKindBeginIndex[6] = {};
+  SmallVector<Header, 2> HeadersStorage;
+
+public:
+  ArrayRef<Header> getHeaders(HeaderKind HK) const {
+    auto BeginIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK];
+    auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
+    return {BeginIt, EndIt};
+  }
+  void addHeader(HeaderKind HK, Header H) {
+    auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
+    HeadersStorage.insert(EndIt, std::move(H));
+    for (unsigned HKI = HK + 1; HKI != 6; ++HKI)
+      ++HeaderKindBeginIndex[HKI];
+  }
 
   /// Stored information about a header directive that was found in the
   /// module map file but has not been resolved to a file.
