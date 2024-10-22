@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_MIRPATTERNS_CXXPREDICATES_H
-#define LLVM_UTILS_MIRPATTERNS_CXXPREDICATES_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CXXPREDICATES_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CXXPREDICATES_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
@@ -37,7 +37,7 @@ class CXXPredicateCode {
   using CXXPredicateCodePool =
       DenseMap<hash_code, std::unique_ptr<CXXPredicateCode>>;
   static CXXPredicateCodePool AllCXXMatchCode;
-  static CXXPredicateCodePool AllCXXApplyCode;
+  static CXXPredicateCodePool AllCXXCustomActionCode;
 
   /// Sorts a `CXXPredicateCodePool` by their IDs and returns it.
   static std::vector<const CXXPredicateCode *>
@@ -55,16 +55,16 @@ public:
     return get(AllCXXMatchCode, std::move(Code));
   }
 
-  static const CXXPredicateCode &getApplyCode(std::string Code) {
-    return get(AllCXXApplyCode, std::move(Code));
+  static const CXXPredicateCode &getCustomActionCode(std::string Code) {
+    return get(AllCXXCustomActionCode, std::move(Code));
   }
 
   static std::vector<const CXXPredicateCode *> getAllMatchCode() {
     return getSorted(AllCXXMatchCode);
   }
 
-  static std::vector<const CXXPredicateCode *> getAllApplyCode() {
-    return getSorted(AllCXXApplyCode);
+  static std::vector<const CXXPredicateCode *> getAllCustomActionsCode() {
+    return getSorted(AllCXXCustomActionCode);
   }
 
   const std::string Code;
@@ -83,4 +83,4 @@ public:
 } // namespace gi
 } // end namespace llvm
 
-#endif // ifndef LLVM_UTILS_MIRPATTERNS_CXXPREDICATES_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CXXPREDICATES_H

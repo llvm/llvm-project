@@ -72,6 +72,14 @@ public:
 
   void SetSpawnThread(bool);
 
+  bool GetAllowRepeats() const;
+
+  /// By default, RunCommandInterpreter will discard repeats if the
+  /// IOHandler being used is not interactive.  Setting AllowRepeats to true
+  /// will override this behavior and always process empty lines in the input
+  /// as a repeat command.
+  void SetAllowRepeats(bool);
+
 private:
   lldb_private::CommandInterpreterRunOptions *get() const;
 

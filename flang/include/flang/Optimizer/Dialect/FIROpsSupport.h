@@ -75,19 +75,6 @@ constexpr llvm::StringRef getOptionalAttrName() { return "fir.optional"; }
 /// Attribute to mark Fortran entities with the TARGET attribute.
 static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
 
-/// Attribute to mark Fortran entities with the CUDA attribute.
-static constexpr llvm::StringRef getCUDAAttrName() { return "fir.cuda_attr"; }
-
-/// Attribute to carry CUDA launch_bounds values.
-static constexpr llvm::StringRef getCUDALaunchBoundsAttrName() {
-  return "fir.cuda_launch_bounds";
-}
-
-/// Attribute to carry CUDA cluster_dims values.
-static constexpr llvm::StringRef getCUDAClusterDimsAttrName() {
-  return "fir.cuda_cluster_dims";
-}
-
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
@@ -161,6 +148,22 @@ static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
 }
 
+static constexpr llvm::StringRef getFuncPureAttrName() {
+  return "fir.func_pure";
+}
+
+static constexpr llvm::StringRef getFuncElementalAttrName() {
+  return "fir.func_elemental";
+}
+
+static constexpr llvm::StringRef getFuncRecursiveAttrName() {
+  return "fir.func_recursive";
+}
+
+static constexpr llvm::StringRef getFortranProcedureFlagsAttrName() {
+  return "fir.proc_attrs";
+}
+
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
 // eliminate these.
@@ -171,6 +174,28 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
   return {mlir::StringAttr::get(builder.getContext(),
                                 fir::getAdaptToByRefAttrName()),
           builder.getUnitAttr()};
+}
+
+bool isDummyArgument(mlir::Value v);
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
+  return flags && bitEnumContainsAny(flags.getValue(), Flag);
+}
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(mlir::Operation *op) {
+  if (auto firCallOp = mlir::dyn_cast<fir::CallOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  if (auto firCallOp = mlir::dyn_cast<fir::DispatchOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  return hasProcedureAttr<Flag>(
+      op->getAttrOfType<fir::FortranProcedureFlagsEnumAttr>(
+          getFortranProcedureFlagsAttrName()));
+}
+
+inline bool hasBindcAttr(mlir::Operation *op) {
+  return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
 }
 
 } // namespace fir

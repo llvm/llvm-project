@@ -421,13 +421,14 @@ define void @foo_zext_v2i64_v2i32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-BE-NEXT:    vmov.32 q1[3], r1
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:  .LBB7_4: @ %else2
-; CHECK-BE-NEXT:    vrev64.32 q3, q2
+; CHECK-BE-NEXT:    vmov.i64 q1, #0xffffffff00000000
 ; CHECK-BE-NEXT:    movs r1, #0
-; CHECK-BE-NEXT:    vmov r2, s15
-; CHECK-BE-NEXT:    vmov.i64 q1, #0xffffffff
-; CHECK-BE-NEXT:    vand q0, q0, q1
+; CHECK-BE-NEXT:    vrev64.32 q3, q1
+; CHECK-BE-NEXT:    vrev64.32 q1, q2
+; CHECK-BE-NEXT:    vmov r2, s7
+; CHECK-BE-NEXT:    vand q0, q0, q3
 ; CHECK-BE-NEXT:    rsbs r3, r2, #0
-; CHECK-BE-NEXT:    vmov r3, s13
+; CHECK-BE-NEXT:    vmov r3, s5
 ; CHECK-BE-NEXT:    sbcs.w r2, r1, r2, asr #31
 ; CHECK-BE-NEXT:    csetm r12, lt
 ; CHECK-BE-NEXT:    rsbs r2, r3, #0
@@ -537,13 +538,14 @@ define void @foo_zext_v2i64_v2i32_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-BE-NEXT:    vmov.32 q1[3], r1
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:  .LBB8_4: @ %else2
-; CHECK-BE-NEXT:    vrev64.32 q3, q2
+; CHECK-BE-NEXT:    vmov.i64 q1, #0xffffffff00000000
 ; CHECK-BE-NEXT:    movs r1, #0
-; CHECK-BE-NEXT:    vmov r2, s15
-; CHECK-BE-NEXT:    vmov.i64 q1, #0xffffffff
-; CHECK-BE-NEXT:    vand q0, q0, q1
+; CHECK-BE-NEXT:    vrev64.32 q3, q1
+; CHECK-BE-NEXT:    vrev64.32 q1, q2
+; CHECK-BE-NEXT:    vmov r2, s7
+; CHECK-BE-NEXT:    vand q0, q0, q3
 ; CHECK-BE-NEXT:    rsbs r3, r2, #0
-; CHECK-BE-NEXT:    vmov r3, s13
+; CHECK-BE-NEXT:    vmov r3, s5
 ; CHECK-BE-NEXT:    sbcs.w r2, r1, r2, asr #31
 ; CHECK-BE-NEXT:    csetm r12, lt
 ; CHECK-BE-NEXT:    rsbs r2, r3, #0

@@ -452,6 +452,20 @@ public:
   bool hasNoFPExcept() const { return NoFPExcept; }
   bool hasUnpredictable() const { return Unpredictable; }
 
+  bool operator==(const SDNodeFlags &Other) const {
+    return NoUnsignedWrap == Other.NoUnsignedWrap &&
+           NoSignedWrap == Other.NoSignedWrap && Exact == Other.Exact &&
+           Disjoint == Other.Disjoint && NonNeg == Other.NonNeg &&
+           NoNaNs == Other.NoNaNs && NoInfs == Other.NoInfs &&
+           NoSignedZeros == Other.NoSignedZeros &&
+           AllowReciprocal == Other.AllowReciprocal &&
+           AllowContract == Other.AllowContract &&
+           ApproximateFuncs == Other.ApproximateFuncs &&
+           AllowReassociation == Other.AllowReassociation &&
+           NoFPExcept == Other.NoFPExcept &&
+           Unpredictable == Other.Unpredictable;
+  }
+
   /// Clear any flags in this flag set that aren't also set in Flags. All
   /// flags will be cleared if Flags are undefined.
   void intersectWith(const SDNodeFlags Flags) {
@@ -479,17 +493,12 @@ private:
   /// The operation that this node performs.
   int32_t NodeType;
 
-public:
-  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
-  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
-  /// intentionally because it adds unneeded complexity without noticeable
-  /// benefits (see discussion with @thakis in D120714).
-  uint16_t PersistentId = 0xffff;
+  SDNodeFlags Flags;
 
 protected:
   // We define a set of mini-helper classes to help us interpret the bits in our
   // SubclassData.  These are designed to fit within a uint16_t so they pack
-  // with PersistentId.
+  // with SDNodeFlags.
 
 #if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
 // Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
@@ -542,6 +551,7 @@ BEGIN_TWO_BYTE_PACK()
     friend class MaskedLoadStoreSDNode;
     friend class MaskedGatherScatterSDNode;
     friend class VPGatherScatterSDNode;
+    friend class MaskedHistogramSDNode;
 
     uint16_t : NumMemSDNodeBits;
 
@@ -552,6 +562,7 @@ BEGIN_TWO_BYTE_PACK()
     //   MaskedLoadStoreBaseSDNode => enum ISD::MemIndexedMode
     //   VPGatherScatterSDNode => enum ISD::MemIndexType
     //   MaskedGatherScatterSDNode => enum ISD::MemIndexType
+    //   MaskedHistogramSDNode => enum ISD::MemIndexType
     uint16_t AddressingMode : 3;
   };
   enum { NumLSBaseSDNodeBits = NumMemSDNodeBits + 3 };
@@ -564,6 +575,7 @@ BEGIN_TWO_BYTE_PACK()
     friend class MaskedLoadSDNode;
     friend class MaskedGatherSDNode;
     friend class VPGatherSDNode;
+    friend class MaskedHistogramSDNode;
 
     uint16_t : NumLSBaseSDNodeBits;
 
@@ -608,6 +620,14 @@ END_TWO_BYTE_PACK()
   static_assert(sizeof(LoadSDNodeBitfields) <= 2, "field too wide");
   static_assert(sizeof(StoreSDNodeBitfields) <= 2, "field too wide");
 
+public:
+  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+  /// intentionally because it adds unneeded complexity without noticeable
+  /// benefits (see discussion with @thakis in D120714). Currently, there are
+  /// two padding bytes after this field.
+  uint16_t PersistentId = 0xffff;
+
 private:
   friend class SelectionDAG;
   // TODO: unfriend HandleSDNode once we fix its operand handling.
@@ -643,7 +663,10 @@ private:
   /// Return a pointer to the specified value type.
   static const EVT *getValueTypeList(EVT VT);
 
-  SDNodeFlags Flags;
+  /// Index in worklist of DAGCombiner, or negative if the node is not in the
+  /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
+  /// combined at least once.
+  int CombinerWorklistIndex = -1;
 
   uint32_t CFIType = 0;
 
@@ -743,6 +766,12 @@ public:
 
   /// Set unique node id.
   void setNodeId(int Id) { NodeId = Id; }
+
+  /// Get worklist index for DAGCombiner
+  int getCombinerWorklistIndex() const { return CombinerWorklistIndex; }
+
+  /// Set worklist index for DAGCombiner
+  void setCombinerWorklistIndex(int Index) { CombinerWorklistIndex = Index; }
 
   /// Return the node ordering.
   unsigned getIROrder() const { return IROrder; }
@@ -1420,6 +1449,7 @@ public:
       return getOperand(2);
     case ISD::MGATHER:
     case ISD::MSCATTER:
+    case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
       return getOperand(3);
     default:
       return getOperand(1);
@@ -1454,6 +1484,8 @@ public:
     case ISD::ATOMIC_LOAD_FMIN:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
+    case ISD::ATOMIC_LOAD_USUB_COND:
+    case ISD::ATOMIC_LOAD_USUB_SAT:
     case ISD::ATOMIC_LOAD:
     case ISD::ATOMIC_STORE:
     case ISD::MLOAD:
@@ -1468,6 +1500,7 @@ public:
     case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     case ISD::GET_FPENV_MEM:
     case ISD::SET_FPENV_MEM:
+    case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
       return true;
     default:
       return N->isMemIntrinsic() || N->isTargetMemoryOpcode();
@@ -1519,27 +1552,29 @@ public:
 
   // Methods to support isa and dyn_cast
   static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::ATOMIC_CMP_SWAP     ||
+    return N->getOpcode() == ISD::ATOMIC_CMP_SWAP ||
            N->getOpcode() == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS ||
-           N->getOpcode() == ISD::ATOMIC_SWAP         ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_ADD     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_SUB     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_AND     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_CLR     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_OR      ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_XOR     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_NAND    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_MIN     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_MAX     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_UMIN    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_UMAX    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_FADD    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_FSUB    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_FMAX    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_FMIN    ||
+           N->getOpcode() == ISD::ATOMIC_SWAP ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_ADD ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_SUB ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_AND ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_CLR ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_OR ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_XOR ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_NAND ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_MIN ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_MAX ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_UMIN ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_UMAX ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FADD ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FSUB ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAX ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
-           N->getOpcode() == ISD::ATOMIC_LOAD         ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_USUB_SAT ||
+           N->getOpcode() == ISD::ATOMIC_LOAD ||
            N->getOpcode() == ISD::ATOMIC_STORE;
   }
 };
@@ -1643,6 +1678,7 @@ class ConstantSDNode : public SDNode {
       : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DebugLoc(),
                VTs),
         Value(val) {
+    assert(!isa<VectorType>(val->getType()) && "Unexpected vector type!");
     ConstantSDNodeBits.IsOpaque = isOpaque;
   }
 
@@ -1695,7 +1731,9 @@ class ConstantFPSDNode : public SDNode {
   ConstantFPSDNode(bool isTarget, const ConstantFP *val, SDVTList VTs)
       : SDNode(isTarget ? ISD::TargetConstantFP : ISD::ConstantFP, 0,
                DebugLoc(), VTs),
-        Value(val) {}
+        Value(val) {
+    assert(!isa<VectorType>(val->getType()) && "Unexpected vector type!");
+  }
 
 public:
   const APFloat& getValueAPF() const { return Value->getValueAPF(); }
@@ -1736,6 +1774,9 @@ public:
 
 /// Returns true if \p V is a constant integer zero.
 bool isNullConstant(SDValue V);
+
+/// Returns true if \p V is a constant integer zero or an UNDEF node.
+bool isNullConstantOrUndef(SDValue V);
 
 /// Returns true if \p V is an FP constant with a value of positive zero.
 bool isNullFPConstant(SDValue V);
@@ -2897,8 +2938,8 @@ public:
   const SDValue &getScale()   const { return getOperand(5); }
 
   static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::MGATHER ||
-           N->getOpcode() == ISD::MSCATTER;
+    return N->getOpcode() == ISD::MGATHER || N->getOpcode() == ISD::MSCATTER ||
+           N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM;
   }
 };
 
@@ -2950,6 +2991,32 @@ public:
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MSCATTER;
+  }
+};
+
+class MaskedHistogramSDNode : public MaskedGatherScatterSDNode {
+public:
+  friend class SelectionDAG;
+
+  MaskedHistogramSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs,
+                        EVT MemVT, MachineMemOperand *MMO,
+                        ISD::MemIndexType IndexType)
+      : MaskedGatherScatterSDNode(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, Order, DL,
+                                  VTs, MemVT, MMO, IndexType) {}
+
+  ISD::MemIndexType getIndexType() const {
+    return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);
+  }
+
+  const SDValue &getBasePtr() const { return getOperand(3); }
+  const SDValue &getIndex() const { return getOperand(4); }
+  const SDValue &getMask() const { return getOperand(2); }
+  const SDValue &getScale() const { return getOperand(5); }
+  const SDValue &getInc() const { return getOperand(1); }
+  const SDValue &getIntID() const { return getOperand(6); }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM;
   }
 };
 

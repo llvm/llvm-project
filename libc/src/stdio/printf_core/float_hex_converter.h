@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -20,7 +21,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 LIBC_INLINE int convert_float_hex_exp(Writer *writer,
@@ -199,13 +200,13 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   constexpr cpp::string_view HEXADECIMAL_POINT(".");
 
   // This is for the letter 'p' before the exponent.
-  const char exp_seperator = a + ('p' - 'a');
-  constexpr int EXP_SEPERATOR_LEN = 1;
+  const char exp_separator = a + ('p' - 'a');
+  constexpr int EXP_SEPARATOR_LEN = 1;
 
   padding = static_cast<int>(to_conv.min_width - (sign_char > 0 ? 1 : 0) -
                              PREFIX_LEN - mant_digits - trailing_zeroes -
                              static_cast<int>(has_hexadecimal_point) -
-                             EXP_SEPERATOR_LEN - (EXP_LEN - exp_cur));
+                             EXP_SEPARATOR_LEN - (EXP_LEN - exp_cur));
   if (padding < 0)
     padding = 0;
 
@@ -223,7 +224,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
       RET_IF_RESULT_NEGATIVE(writer->write({mant_buffer + 1, mant_digits - 1}));
     if (trailing_zeroes > 0)
       RET_IF_RESULT_NEGATIVE(writer->write('0', trailing_zeroes));
-    RET_IF_RESULT_NEGATIVE(writer->write(exp_seperator));
+    RET_IF_RESULT_NEGATIVE(writer->write(exp_separator));
     RET_IF_RESULT_NEGATIVE(
         writer->write({exp_buffer + exp_cur, EXP_LEN - exp_cur}));
     if (padding > 0)
@@ -247,7 +248,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
       RET_IF_RESULT_NEGATIVE(writer->write({mant_buffer + 1, mant_digits - 1}));
     if (trailing_zeroes > 0)
       RET_IF_RESULT_NEGATIVE(writer->write('0', trailing_zeroes));
-    RET_IF_RESULT_NEGATIVE(writer->write(exp_seperator));
+    RET_IF_RESULT_NEGATIVE(writer->write(exp_separator));
     RET_IF_RESULT_NEGATIVE(
         writer->write({exp_buffer + exp_cur, EXP_LEN - exp_cur}));
   }
@@ -255,6 +256,6 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_HEX_CONVERTER_H

@@ -1,6 +1,6 @@
 // RUN: llvm-mc -filetype=asm -triple powerpc-ibm-aix-xcoff %s | FileCheck %s
 
-// CHECK-label:       .csect .text[PR],2
+// CHECK-LABEL:       .csect ..text..[PR],5
 // CHECK:L..tmp0:
 // CHECK-NEXT:        lwarx 3, 0, 4
 // CHECK-NEXT:        cmpw    5, 3

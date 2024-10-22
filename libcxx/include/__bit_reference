@@ -16,6 +16,7 @@
 #include <__bit/countr.h>
 #include <__bit/invert_if.h>
 #include <__bit/popcount.h>
+#include <__compare/ordering.h>
 #include <__config>
 #include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
@@ -95,8 +96,8 @@ public:
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __bit_reference(
-      __storage_pointer __s, __storage_type __m) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __bit_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
       : __seg_(__s),
         __mask_(__m) {}
 };
@@ -149,6 +150,7 @@ public:
   using __container = typename _Cp::__self;
 
   _LIBCPP_HIDE_FROM_ABI __bit_const_reference(const __bit_const_reference&) = default;
+  __bit_const_reference& operator=(const __bit_const_reference&)            = delete;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_const_reference(const __bit_reference<_Cp>& __x) _NOEXCEPT
       : __seg_(__x.__seg_),
@@ -163,12 +165,10 @@ public:
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __bit_const_reference(
-      __storage_pointer __s, __storage_type __m) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR explicit __bit_const_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
       : __seg_(__s),
         __mask_(__m) {}
-
-  __bit_const_reference& operator=(const __bit_const_reference&) = delete;
 };
 
 // copy
@@ -914,6 +914,7 @@ public:
     return __x.__seg_ == __y.__seg_ && __x.__ctz_ == __y.__ctz_;
   }
 
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
   operator!=(const __bit_iterator& __x, const __bit_iterator& __y) {
     return !(__x == __y);
@@ -938,10 +939,22 @@ public:
   operator>=(const __bit_iterator& __x, const __bit_iterator& __y) {
     return !(__x < __y);
   }
+#else  // _LIBCPP_STD_VER <= 17
+  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering
+  operator<=>(const __bit_iterator& __x, const __bit_iterator& __y) {
+    if (__x.__seg_ < __y.__seg_)
+      return strong_ordering::less;
+
+    if (__x.__seg_ == __y.__seg_)
+      return __x.__ctz_ <=> __y.__ctz_;
+
+    return strong_ordering::greater;
+  }
+#endif // _LIBCPP_STD_VER <= 17
 
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __bit_iterator(
-      __storage_pointer __s, unsigned __ctz) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __bit_iterator(__storage_pointer __s, unsigned __ctz) _NOEXCEPT
       : __seg_(__s),
         __ctz_(__ctz) {}
 
@@ -1000,8 +1013,8 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, _IC>
       __find_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
   template <bool _ToCount, class _Dp, bool _IC>
-  friend typename __bit_iterator<_Dp, _IC>::difference_type _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-      __count_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
+  friend typename __bit_iterator<_Dp, _IC>::difference_type _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 __count_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
 };
 
 _LIBCPP_END_NAMESPACE_STD

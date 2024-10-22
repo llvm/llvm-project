@@ -348,6 +348,15 @@ class StmtComparer {
     return true;
   }
 
+  bool IsStmtEquivalent(const CXXDependentScopeMemberExpr *E1,
+                        const CXXDependentScopeMemberExpr *E2) {
+    if (!IsStructurallyEquivalent(Context, E1->getMember(), E2->getMember())) {
+      return false;
+    }
+    return IsStructurallyEquivalent(Context, E1->getBaseType(),
+                                    E2->getBaseType());
+  }
+
   bool IsStmtEquivalent(const UnaryExprOrTypeTraitExpr *E1,
                         const UnaryExprOrTypeTraitExpr *E2) {
     if (E1->getKind() != E2->getKind())
@@ -636,6 +645,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
      // It is sufficient to check value of getAsTemplateDecl.
      break;
 
+   case TemplateName::DeducedTemplate:
+     // FIXME: We can't reach here.
+     llvm_unreachable("unimplemented");
   }
 
   return true;
@@ -1081,6 +1093,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(
             Context, cast<BTFTagAttributedType>(T1)->getWrappedType(),
             cast<BTFTagAttributedType>(T2)->getWrappedType()))
+      return false;
+    break;
+
+  case Type::HLSLAttributedResource:
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getWrappedType(),
+            cast<HLSLAttributedResourceType>(T2)->getWrappedType()))
+      return false;
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
+            cast<HLSLAttributedResourceType>(T2)->getContainedType()))
+      return false;
+    if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
+        cast<HLSLAttributedResourceType>(T2)->getAttrs())
       return false;
     break;
 
@@ -1997,7 +2023,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     }
     return false;
   }
-
+  if (!Context.IgnoreTemplateParmDepth && D1->getDepth() != D2->getDepth())
+    return false;
+  if (D1->getIndex() != D2->getIndex())
+    return false;
   // Check types.
   if (!IsStructurallyEquivalent(Context, D1->getType(), D2->getType())) {
     if (Context.Complain) {

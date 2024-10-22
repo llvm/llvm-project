@@ -18,7 +18,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; NO-ATOMIC-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (32,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_1@PLT
+; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_1
 ; NO-ATOMIC-NEXT:    sub.b %d2, %d0
 ; NO-ATOMIC-NEXT:    seq %d0
 ; NO-ATOMIC-NEXT:    movem.l (16,%sp), %d2 ; 8-byte Folded Reload
@@ -55,7 +55,7 @@ define i16 @cmpxchg_i16_release_monotonic(i16 %cmp, i16 %new, ptr %mem) nounwind
 ; NO-ATOMIC-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_2@PLT
+; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_2
 ; NO-ATOMIC-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -78,7 +78,7 @@ define i32 @cmpxchg_i32_release_acquire(i32 %cmp, i32 %new, ptr %mem) nounwind {
 ; NO-ATOMIC-NEXT:    move.l (20,%sp), (8,%sp)
 ; NO-ATOMIC-NEXT:    move.l (16,%sp), (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_4@PLT
+; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_4
 ; NO-ATOMIC-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -107,7 +107,7 @@ define i64 @cmpxchg_i64_seqcst_seqcst(i64 %cmp, i64 %new, ptr %mem) nounwind {
 ; NO-ATOMIC-NEXT:    move.l (52,%sp), (12,%sp)
 ; NO-ATOMIC-NEXT:    move.l (48,%sp), (8,%sp)
 ; NO-ATOMIC-NEXT:    move.l (56,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_compare_exchange_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_compare_exchange_8
 ; NO-ATOMIC-NEXT:    move.l (28,%sp), %d1
 ; NO-ATOMIC-NEXT:    move.l (24,%sp), %d0
 ; NO-ATOMIC-NEXT:    adda.l #36, %sp
@@ -125,7 +125,7 @@ define i64 @cmpxchg_i64_seqcst_seqcst(i64 %cmp, i64 %new, ptr %mem) nounwind {
 ; ATOMIC-NEXT:    move.l (52,%sp), (12,%sp)
 ; ATOMIC-NEXT:    move.l (48,%sp), (8,%sp)
 ; ATOMIC-NEXT:    move.l (56,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_compare_exchange_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_compare_exchange_8
 ; ATOMIC-NEXT:    move.l (28,%sp), %d1
 ; ATOMIC-NEXT:    move.l (24,%sp), %d0
 ; ATOMIC-NEXT:    adda.l #36, %sp

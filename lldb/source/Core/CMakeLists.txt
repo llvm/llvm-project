@@ -11,9 +11,6 @@ set(LLDB_LIBEDIT_LIBS)
 
 if (LLDB_ENABLE_CURSES)
   list(APPEND LLDB_CURSES_LIBS ${PANEL_LIBRARIES} ${CURSES_LIBRARIES})
-  if(LLVM_ENABLE_TERMINFO)
-    list(APPEND LLDB_CURSES_LIBS ${Terminfo_LIBRARIES})
-  endif()
   if (LLVM_BUILD_STATIC)
     list(APPEND LLDB_CURSES_LIBS gpm)
   endif()
@@ -23,6 +20,7 @@ endif()
 add_lldb_library(lldbCore
   Address.cpp
   AddressRange.cpp
+  AddressRangeListImpl.cpp
   AddressResolver.cpp
   AddressResolverFileLine.cpp
   Communication.cpp

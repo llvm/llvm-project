@@ -14,6 +14,7 @@
 
 // RUN: %clang -### --target=x86_64-linux-gnu -flto -fstack-size-section %s 2>&1 | FileCheck %s --check-prefix=LTO
 // RUN: %clang -### --target=x86_64-linux-gnu -flto -fstack-size-section -fno-stack-size-section %s 2>&1 | FileCheck %s --check-prefix=LTO-NO
+// RUN: %clang -### --target=x86_64-sie-ps5 -fstack-size-section %s 2>&1 | FileCheck %s --check-prefix=LTO
 
 // LTO: "-plugin-opt=-stack-size-section"
 // LTO-NO-NOT: "-plugin-opt=-stack-size-section"

@@ -158,6 +158,7 @@ public:
       Stream *s, ExecutionContextScope *exe_scope, const Address &so_addr,
       bool show_fullpaths, bool show_module, bool show_inlined_frames,
       bool show_function_arguments, bool show_function_name,
+      bool show_function_display_name = false,
       std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   /// Get the address range contained within a symbol context.
@@ -200,8 +201,8 @@ public:
   bool GetAddressRange(uint32_t scope, uint32_t range_idx,
                        bool use_inline_block_range, AddressRange &range) const;
 
-  bool GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range,
-                                        Status &error);
+  llvm::Error GetAddressRangeFromHereToEndLine(uint32_t end_line,
+                                               AddressRange &range);
 
   /// Find the best global data symbol visible from this context.
   ///

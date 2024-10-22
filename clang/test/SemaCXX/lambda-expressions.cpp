@@ -609,6 +609,15 @@ namespace PR25627_dont_odr_use_local_consts {
   }
 }
 
+namespace PR94764 {
+  struct X {
+    int x;
+    void foo() {
+      [x](){}; // expected-error{{class member 'x' cannot appear in capture list as it is not a variable}}
+    }
+  };
+}
+
 namespace ConversionOperatorDoesNotHaveDeducedReturnType {
   auto x = [](int){};
   auto y = [](auto &v) -> void { v.n = 0; }; // cxx03-cxx11-error {{'auto' not allowed in lambda parameter}} cxx03-cxx11-note {{candidate function not viable}} cxx03-cxx11-note {{conversion candidate}}

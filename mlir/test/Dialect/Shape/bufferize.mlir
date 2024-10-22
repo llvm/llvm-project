@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -shape-bufferize <%s | FileCheck %s
+// RUN: mlir-opt -split-input-file --one-shot-bufferize="dialect-filter=shape,bufferization copy-before-write unknown-type-conversion=identity-layout-map allow-unknown-ops" <%s | FileCheck %s
 
 // -----
 

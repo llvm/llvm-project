@@ -21,11 +21,11 @@ entry:
 ; CHECK-ASM: 	add	x10, x10, :lo12:B
 ; CHECK-ASM: 	strb	wzr, [x10, x8]
 ; CHECK-ASM: 	cmp	x9, #10
-; CHECK-ASM: 	b.hi	.LBB0_5
+; CHECK-ASM: 	b.hi	.LBB0_6
 ; CHECK-ASM: // %bb.3:
 ; CHECK-ASM: 	mov	w8, #10                         // =0xa
 ; CHECK-ASM: 	sub	x8, x8, x9
-; CHECK-ASM: 	cbz	x8, .LBB0_5
+; CHECK-ASM: 	cbz	x8, .LBB0_6
 ; CHECK-ASM: // %bb.4:
 ; CHECK-ASM: 	adrp	x8, B2
 ; CHECK-ASM: 	add	x8, x8, :lo12:B2
@@ -33,9 +33,11 @@ entry:
 ; CHECK-ASM: 	add	sp, sp, #16
 ; CHECK-ASM: 	.cfi_def_cfa_offset 0
 ; CHECK-ASM: 	ret
-; CHECK-ASM: .LBB0_5:                                // %trap3
-; CHECK-ASM: 	.cfi_restore_state
-; CHECK-ASM: 	brk	#0x1
+; CHECK-ASM: .LBB0_5:                                // %trap
+; CHECK-ASM: .cfi_restore_state
+; CHECK-ASM: brk     #0x1
+; CHECK-ASM: .LBB0_6:                                // %trap3
+; CHECK-ASM: brk     #0x1
   %i.addr = alloca i32, align 4
   %k.addr = alloca i32, align 4
   store i32 %i, ptr %i.addr, align 4

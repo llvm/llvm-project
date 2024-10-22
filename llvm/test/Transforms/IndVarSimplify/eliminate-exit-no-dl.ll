@@ -14,7 +14,7 @@ define void @foo() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr getelementptr inbounds ([0 x i8], ptr @global, i64 0, i64 1), align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr getelementptr inbounds (i8, ptr @global, i64 1), align 1
 ; CHECK-NEXT:    br i1 false, label [[BB7:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP6]] to i64

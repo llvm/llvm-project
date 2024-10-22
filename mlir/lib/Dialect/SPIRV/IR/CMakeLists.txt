@@ -9,7 +9,6 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   CooperativeMatrixOps.cpp
   GroupOps.cpp
   IntegerDotProductOps.cpp
-  JointMatrixOps.cpp
   MemoryOps.cpp
   SPIRVAttributes.cpp
   SPIRVCanonicalization.cpp

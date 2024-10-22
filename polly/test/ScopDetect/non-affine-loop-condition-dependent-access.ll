@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                                                          -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                                           -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine                                   -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                                                          '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                                           '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine                                   '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine -polly-process-unprofitable=false '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
 ;
 ; Here we have a non-affine loop but also a non-affine access which should
 ; be rejected as long as -polly-allow-nonaffine isn't given.

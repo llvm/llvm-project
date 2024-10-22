@@ -73,7 +73,7 @@ static bool isInteresting(const SCEV *S, const Instruction *I, const Loop *L,
   // An add is interesting if exactly one of its operands is interesting.
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     bool AnyInterestingYet = false;
-    for (const auto *Op : Add->operands())
+    for (const SCEV *Op : Add->operands())
       if (isInteresting(Op, I, L, SE, LI)) {
         if (AnyInterestingYet)
           return false;
@@ -134,7 +134,7 @@ static bool IVUseShouldUsePostIncValue(Instruction *User, Value *Operand,
 /// add its users to the IVUsesByStride set and return true.  Otherwise, return
 /// false.
 bool IVUsers::AddUsersIfInteresting(Instruction *I) {
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
 
   // Add this IV user to the Processed set before returning false to ensure that
   // all IV users are members of the set. See IVUsers::isIVUserOrOperand.
@@ -346,7 +346,7 @@ static const SCEVAddRecExpr *findAddRecForLoop(const SCEV *S, const Loop *L) {
   }
 
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
-    for (const auto *Op : Add->operands())
+    for (const SCEV *Op : Add->operands())
       if (const SCEVAddRecExpr *AR = findAddRecForLoop(Op, L))
         return AR;
     return nullptr;

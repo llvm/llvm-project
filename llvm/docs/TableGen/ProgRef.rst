@@ -174,7 +174,7 @@ TableGen has two kinds of string literals:
 
 .. productionlist::
    TokString: '"' (non-'"' characters and escapes) '"'
-   TokCode: "[{" (shortest text not containing "}]") "}]"
+   TokCode: "[{" (text not containing "}]") "}]"
 
 A :token:`TokCode` is nothing more than a multi-line string literal
 delimited by ``[{`` and ``}]``. It can break across lines and the
@@ -223,12 +223,12 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !div         !empty       !eq          !exists      !filter
                : !find        !foldl       !foreach     !ge          !getdagarg
                : !getdagname  !getdagop    !gt          !head        !if
-               : !interleave  !isa         !le          !listconcat  !listremove
-               : !listsplat   !logtwo      !lt          !mul         !ne
-               : !not         !or          !range       !repr        !setdagarg
-               : !setdagname  !setdagop    !shl         !size        !sra
-               : !srl         !strconcat   !sub         !subst       !substr
-               : !tail        !tolower     !toupper     !xor
+               : !interleave  !isa         !le          !listconcat  !listflatten
+               : !listremove  !listsplat   !logtwo      !lt          !mul
+               : !ne          !not         !or          !range       !repr
+               : !setdagarg   !setdagname  !setdagop    !shl         !size
+               : !sra         !srl         !strconcat   !sub         !subst
+               : !substr      !tail        !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1832,6 +1832,12 @@ and non-0 as true.
     This operator concatenates the list arguments *list1*, *list2*, etc., and
     produces the resulting list. The lists must have the same element type.
 
+``!listflatten(``\ *list*\ ``)``
+    This operator flattens a list of lists *list* and produces a list with all
+    elements of the constituent lists concatenated. If *list* is of type
+    ``list<list<X>>`` the resulting list is of type ``list<X>``. If *list*'s
+    element type is not a list, the result is *list* itself.
+
 ``!listremove(``\ *list1*\ ``,`` *list2*\ ``)``
     This operator returns a copy of *list1* removing all elements that also occur in
     *list2*. The lists must have the same element type.
@@ -1868,7 +1874,7 @@ and non-0 as true.
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
 
-``!range([``\ *start*\ ``,]`` *end*\ ``[, ``\ *step*\ ``])``
+``!range([``\ *start*\ ``,]`` *end*\ ``[,``\ *step*\ ``])``
     This operator produces half-open range sequence ``[start : end : step)`` as
     ``list<int>``. *start* is ``0`` and *step* is ``1`` by default. *step* can
     be negative and cannot be 0. If *start* ``<`` *end* and *step* is negative,

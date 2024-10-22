@@ -19,9 +19,44 @@ TWEAK_TEST(DefineOutline);
 
 TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   FileName = "Test.cpp";
-  // Not available unless in a header file.
+  // Not available for free function unless in a header file.
   EXPECT_UNAVAILABLE(R"cpp(
     [[void [[f^o^o]]() [[{
+      return;
+    }]]]])cpp");
+
+  // Available in soure file.
+  EXPECT_AVAILABLE(R"cpp(
+    struct Foo {
+      void f^oo() {}
+    };
+  )cpp");
+
+  // Available within named namespace in source file.
+  EXPECT_AVAILABLE(R"cpp(
+    namespace N {
+      struct Foo {
+        void f^oo() {}
+      };
+    } // namespace N
+  )cpp");
+
+  // Available within anonymous namespace in source file.
+  EXPECT_AVAILABLE(R"cpp(
+    namespace {
+      struct Foo {
+        void f^oo() {}
+      };
+    } // namespace
+  )cpp");
+
+  // Not available for out-of-line method.
+  EXPECT_UNAVAILABLE(R"cpp(
+    class Bar {
+      void baz();
+    };
+
+    [[void [[Bar::[[b^a^z]]]]() [[{
       return;
     }]]]])cpp");
 
@@ -70,8 +105,8 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
       F^oo(const Foo&) = delete;
     };)cpp");
 
-  // Not available within templated classes, as it is hard to spell class name
-  // out-of-line in such cases.
+  // Not available within templated classes with unnamed parameters, as it is
+  // hard to spell class name out-of-line in such cases.
   EXPECT_UNAVAILABLE(R"cpp(
     template <typename> struct Foo { void fo^o(){} };
     )cpp");
@@ -100,7 +135,7 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
     };
   )cpp");
 
-  // Not available on definitions within unnamed namespaces
+  // Not available on definitions in header file within unnamed namespaces
   EXPECT_UNAVAILABLE(R"cpp(
     namespace {
       struct Foo {
@@ -119,7 +154,6 @@ TEST_F(DefineOutlineTest, FailsWithoutSource) {
 }
 
 TEST_F(DefineOutlineTest, ApplyTest) {
-  llvm::StringMap<std::string> EditedFiles;
   ExtraFiles["Test.cpp"] = "";
   FileName = "Test.hpp";
 
@@ -194,17 +228,18 @@ TEST_F(DefineOutlineTest, ApplyTest) {
       // Ctor initializer with attribute.
       {
           R"cpp(
-              class Foo {
-                F^oo(int z) __attribute__((weak)) : bar(2){}
+              template <typename T> class Foo {
+                F^oo(T z) __attribute__((weak)) : bar(2){}
                 int bar;
               };)cpp",
           R"cpp(
-              class Foo {
-                Foo(int z) __attribute__((weak)) ;
+              template <typename T> class Foo {
+                Foo(T z) __attribute__((weak)) ;
                 int bar;
-              };)cpp",
-          "Foo::Foo(int z) __attribute__((weak)) : bar(2){}\n",
-      },
+              };template <typename T>
+Foo<T>::Foo(T z) __attribute__((weak)) : bar(2){}
+)cpp",
+          ""},
       // Virt specifiers.
       {
           R"cpp(
@@ -334,7 +369,31 @@ TEST_F(DefineOutlineTest, ApplyTest) {
             };)cpp",
           " void A::foo(int) {}\n",
       },
-      // Destrctors
+      // Complex class template
+      {
+          R"cpp(
+            template <typename T, typename ...U> struct O1 {
+              template <class V, int A> struct O2 {
+                enum E { E1, E2 };
+                struct I {
+                  E f^oo(T, U..., V, E) { return E1; }
+                };
+              };
+            };)cpp",
+          R"cpp(
+            template <typename T, typename ...U> struct O1 {
+              template <class V, int A> struct O2 {
+                enum E { E1, E2 };
+                struct I {
+                  E foo(T, U..., V, E) ;
+                };
+              };
+            };template <typename T, typename ...U>
+template <class V, int A>
+typename O1<T, U...>::template O2<V, A>::E O1<T, U...>::template O2<V, A>::I::foo(T, U..., V, E) { return E1; }
+)cpp",
+          ""},
+      // Destructors
       {
           "class A { ~A^(){} };",
           "class A { ~A(); };",
@@ -343,9 +402,48 @@ TEST_F(DefineOutlineTest, ApplyTest) {
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);
+    llvm::StringMap<std::string> EditedFiles;
     EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
-    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
-                                 testPath("Test.cpp"), Case.ExpectedSource)));
+    if (Case.ExpectedSource.empty()) {
+      EXPECT_TRUE(EditedFiles.empty());
+    } else {
+      EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                   testPath("Test.cpp"), Case.ExpectedSource)));
+    }
+  }
+}
+
+TEST_F(DefineOutlineTest, InCppFile) {
+  FileName = "Test.cpp";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {
+          R"cpp(
+            namespace foo {
+            namespace {
+            struct Foo { void ba^r() {} };
+            struct Bar { void foo(); };
+            void Bar::foo() {}
+            }
+            }
+        )cpp",
+          R"cpp(
+            namespace foo {
+            namespace {
+            struct Foo { void bar() ; };void Foo::bar() {} 
+            struct Bar { void foo(); };
+            void Bar::foo() {}
+            }
+            }
+        )cpp"},
+  };
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    EXPECT_EQ(apply(Case.Test, nullptr), Case.ExpectedSource);
   }
 }
 

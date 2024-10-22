@@ -215,9 +215,9 @@ func.func @func_with_block_args_location(%arg0 : i32) {
 
 // INLINE-LOC-LABEL: func @func_with_block_args_location_callee1
 // INLINE-LOC: cf.br
-// INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc("foo")
+// INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc(callsite("foo" at "bar"))
 func.func @func_with_block_args_location_callee1(%arg0 : i32) {
-  call @func_with_block_args_location(%arg0) : (i32) -> ()
+  call @func_with_block_args_location(%arg0) : (i32) -> () loc("bar")
   return
 }
 

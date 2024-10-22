@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s \
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 \
 ; RUN: | FileCheck %s -check-prefix=DETECT
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; DETECT: Valid Region for Scop: bb124 => bb176
 ;

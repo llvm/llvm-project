@@ -9,24 +9,6 @@ set(ORC_COMMON_SOURCES
   dlfcn_wrapper.cpp
   )
 
-# ORC runtime library implementation files for all ORC architectures.s
-set(ALL_ORC_SOURCES
-  ${ORC_COMMON_SOURCES}
-  coff_platform.cpp
-  coff_platform.per_jd.cpp
-  elfnix_platform.cpp
-  macho_platform.cpp
-  )
-
-# Implementation files for all ORC architectures.
-set(ALL_ORC_ASM_SOURCES
-  macho_tlv.x86-64.S
-  macho_tlv.arm64.S
-  elfnix_tls.x86-64.S
-  elfnix_tls.aarch64.S
-  elfnix_tls.ppc64.S
-  )
-
 # Common implementation headers will go here.
 set(ORC_COMMON_IMPL_HEADERS
   adt.h
@@ -40,24 +22,6 @@ set(ORC_COMMON_IMPL_HEADERS
   stl_extras.h
   wrapper_function_utils.h
   )
-
-# Implementation headers for all ORC architectures.
-set(ALL_ORC_IMPL_HEADERS
-  ${ORC_COMMON_IMPL_HEADERS}
-  macho_platform.h
-  coff_platform.h
-  elfnix_platform.h
-  )
-
-# Create list of all source files for
-# consumption by tests.
-set(ORC_ALL_SOURCE_FILES
-  ${ALL_ORC_SOURCES}
-  ${ALL_ORC_ASM_SOURCES}
-  ${ALL_ORC_IMPL_HEADERS}
-  )
-
-list(REMOVE_DUPLICATES ORC_ALL_SOURCE_FILES)
 
 # Now put it all together...
 include_directories(..)

@@ -183,4 +183,21 @@ void tfoo7() {
 }
 
 
+// PRINT-LABEL: void foo8(
+// DUMP-LABEL:  FunctionDecl {{.*}} foo8
+void foo8(int a) {
+  // PRINT:     #pragma omp tile sizes(a)
+  // DUMP:      OMPTileDirective
+  // DUMP-NEXT:   OMPSizesClause
+  // DUMP-NEXT:     ImplicitCastExpr
+  // DUMP-NEXT:       DeclRefExpr {{.*}} 'a'
+  #pragma omp tile sizes(a)
+  // PRINT-NEXT: for (int i = 7; i < 19; i += 3)
+  // DUMP-NEXT: ForStmt
+  for (int i = 7; i < 19; i += 3)
+    // PRINT: body(i);
+    // DUMP:  CallExpr
+    body(i);
+}
+
 #endif

@@ -431,7 +431,7 @@ MutableOperandRange::MutableOperandRange(
     Operation *owner, unsigned start, unsigned length,
     ArrayRef<OperandSegment> operandSegments)
     : owner(owner), start(start), length(length),
-      operandSegments(operandSegments.begin(), operandSegments.end()) {
+      operandSegments(operandSegments) {
   assert((start + length) <= owner->getNumOperands() && "invalid range");
 }
 MutableOperandRange::MutableOperandRange(Operation *owner)

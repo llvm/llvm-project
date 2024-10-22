@@ -40,29 +40,29 @@ int main(int, char **) {
   {
     // cannot deduce Key from nothing
     std::set s;
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'set'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}set'}}
   }
   {
     // cannot deduce Key from just (Compare)
     std::set s(std::less<int>{});
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'set'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}set'}}
   }
   {
     // cannot deduce Key from just (Compare, Allocator)
     std::set s(std::less<int>{}, std::allocator<int>{});
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'set'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}set'}}
   }
   {
     // cannot deduce Key from just (Allocator)
     std::set s(std::allocator<int>{});
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'set'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}set'}}
   }
   {
     // since we have parens, not braces, this deliberately does not find the
     // initializer_list constructor
     NotAnAllocator a;
     std::set s(a);
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'set'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}set'}}
   }
 
   return 0;

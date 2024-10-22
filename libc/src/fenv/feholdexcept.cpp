@@ -10,8 +10,9 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, feholdexcept, (fenv_t * envp)) {
   if (fputil::get_env(envp) != 0)
@@ -21,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, feholdexcept, (fenv_t * envp)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -225,3 +225,14 @@ void bad_custom_stream() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: do not use 'std::endl' with streams; use '\n' instead [performance-avoid-endl]
   // CHECK-FIXES: logger << '\n';
 }
+
+namespace gh107859 {
+
+#define ENDL std::endl;
+
+void bad_macro() {
+  std::cout << ENDL;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: do not use 'std::endl' with streams; use '\n' instead [performance-avoid-endl]
+}
+
+} // namespace gh107859

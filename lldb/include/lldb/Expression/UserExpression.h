@@ -206,7 +206,7 @@ public:
 
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.
-  ResultType DesiredResultType() override { return m_desired_type; }
+  ResultType DesiredResultType() const override { return m_desired_type; }
 
   /// Return true if validation code should be inserted into the expression.
   bool NeedsValidation() override { return true; }

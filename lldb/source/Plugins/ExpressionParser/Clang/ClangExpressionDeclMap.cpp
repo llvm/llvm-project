@@ -228,8 +228,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     std::string msg = llvm::formatv("redefinition of persistent variable '{0}'",
                                     name).str();
     m_parser_vars->m_diagnostics->AddDiagnostic(
-        msg, DiagnosticSeverity::eDiagnosticSeverityError,
-        DiagnosticOrigin::eDiagnosticOriginLLDB);
+        msg, lldb::eSeverityError, DiagnosticOrigin::eDiagnosticOriginLLDB);
     return false;
   }
 
@@ -935,7 +934,7 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
         QualType(interface_type, 0).getAsOpaquePtr(),
         function_decl_ctx.GetTypeSystem()->weak_from_this());
 
-    LLDB_LOG(log, "  FEVD[{0}] Adding type for $__lldb_objc_class: {1}",
+    LLDB_LOG(log, "  FEVD Adding type for $__lldb_objc_class: {0}",
              ClangUtil::ToString(interface_type));
 
     AddOneType(context, class_user_type);
@@ -975,7 +974,7 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
   if (!self_clang_type)
     return;
 
-  LLDB_LOG(log, "  FEVD[{0}] Adding type for $__lldb_objc_class: {1}",
+  LLDB_LOG(log, "  FEVD Adding type for $__lldb_objc_class: {0}",
            ClangUtil::ToString(self_type->GetFullCompilerType()));
 
   TypeFromUser class_user_type(self_clang_type);

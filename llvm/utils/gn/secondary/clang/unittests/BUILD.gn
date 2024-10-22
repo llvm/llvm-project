@@ -3,7 +3,7 @@ import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 group("unittests") {
   deps = [
     "AST:ASTTests",
-    "AST/Interp:InterpTests",
+    "AST/ByteCode:InterpTests",
     "ASTMatchers:ASTMatchersTests",
     "ASTMatchers/Dynamic:DynamicASTMatchersTests",
     "Basic:BasicTests",
@@ -15,9 +15,7 @@ group("unittests") {
     "Index:IndexTests",
     "InstallAPI:InstallAPITests",
     "Interpreter:ClangReplInterpreterTests",
-    "Introspection:IntrospectionTests",
     "Lex:LexTests",
-    "Rename:ClangRenameTests",
     "Rewrite:RewriteTests",
     "Sema:SemaTests",
     "Serialization:SerializationTests",

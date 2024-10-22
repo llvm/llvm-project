@@ -20,6 +20,22 @@ class SparseTensor_Attr<string name,
     : AttrDef<SparseTensor_Dialect, name, traits>;
 
 //===----------------------------------------------------------------------===//
+// A simple bitset attribute wrapped around a single int64_t to encode a set of
+// sparse tensor levels.
+//===----------------------------------------------------------------------===//
+
+def I64BitSetAttr : TypedAttrBase<I64, "IntegerAttr",
+      And<[CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+           CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getType().isInteger(64)">]>,
+      "LevelSet attribute"> {
+  let returnType = [{::mlir::sparse_tensor::I64BitSet}];
+  let convertFromStorage = [{::mlir::sparse_tensor::I64BitSet($_self.getValue().getZExtValue())}];
+}
+
+def I64BitSetArrayAttr :
+    TypedArrayAttrBase<I64BitSetAttr, "I64BitSet array attribute">;
+
+//===----------------------------------------------------------------------===//
 // These attributes are just like `IndexAttr` except that they clarify whether
 // the index refers to a dimension (an axis of the semantic tensor) or a level
 // (an axis of the actual storage format).
@@ -502,8 +518,23 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     //
     // Helper function to translate between level/dimension space.
     //
+
     SmallVector<int64_t> translateShape(::mlir::ArrayRef<int64_t> srcShape, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
     ValueRange translateCrds(::mlir::OpBuilder &builder, ::mlir::Location loc, ::mlir::ValueRange crds, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
+
+    //
+    // COO methods.
+    //
+
+    /// Returns the starting level of this sparse tensor type for a
+    /// trailing COO region that spans **at least** two levels. If
+    /// no such COO region is found, then returns the level-rank.
+    ///
+    /// DEPRECATED: use getCOOSegment instead;
+    Level getAoSCOOStart() const;
+
+    /// Returns a list of COO segments in the sparse tensor types.
+    SmallVector<COOSegment> getCOOSegments() const;
 
     //
     // Printing methods.
@@ -555,10 +586,10 @@ def IsSparseTensorSlicePred
           "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
 
 class SparseTensorOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
+  : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
 class SparseTensorSliceOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
+  : RankedTensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
 
 class ScalarLikeOf<list<Type> allowedTypes>
   : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>], "scalar like">;

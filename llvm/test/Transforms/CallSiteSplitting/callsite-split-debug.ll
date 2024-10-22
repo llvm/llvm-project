@@ -63,23 +63,23 @@ attributes #0 = { nounwind readnone speculatable }
 
 ; CHECK-LABEL: @foo
 ; CHECK-LABEL: bb1.split:
-; CHECK-DEBUG: call void @llvm.dbg.value(metadata i16 0, metadata ![[DBG_1:[0-9]+]], {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.value(metadata i16 2, metadata ![[DBG_1]], {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.value(metadata !DIArgList(i16 0, i16 2), {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.value(metadata !DIArgList(i16 2, i16 2), {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.assign(metadata i16 0, metadata ![[DBG_2:[0-9]+]], {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.assign(metadata i16 2, metadata ![[DBG_2]], {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.assign(metadata i16 0, metadata ![[DBG_2]], metadata !DIExpression(), metadata ![[ID_1:[0-9]+]], metadata ptr %a, {{.*}}
+; CHECK-DEBUG: #dbg_value(i16 0, ![[DBG_1:[0-9]+]], {{.*}}
+; CHECK-DEBUG: #dbg_value(i16 2, ![[DBG_1]], {{.*}}
+; CHECK-DEBUG: #dbg_value(!DIArgList(i16 0, i16 2), {{.*}}
+; CHECK-DEBUG: #dbg_value(!DIArgList(i16 2, i16 2), {{.*}}
+; CHECK-DEBUG: #dbg_assign(i16 0, ![[DBG_2:[0-9]+]], {{.*}}
+; CHECK-DEBUG: #dbg_assign(i16 2, ![[DBG_2]], {{.*}}
+; CHECK-DEBUG: #dbg_assign(i16 0, ![[DBG_2]], !DIExpression(), ![[ID_1:[0-9]+]], ptr %a, {{.*}}
 ; CHECK: [[TMP1:%[0-9]+]] = call i16 @bar(i16 0, i16 5)
 
 ; CHECK-LABEL: bb2.split:
-; CHECK-DEBUG: call void @llvm.dbg.value(metadata i16 1, metadata ![[DBG_1]], {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.value(metadata i16 3, metadata ![[DBG_1]], {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.value(metadata !DIArgList(i16 1, i16 3), {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.value(metadata !DIArgList(i16 3, i16 3), {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.assign(metadata i16 1, metadata ![[DBG_2]], {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.assign(metadata i16 3, metadata ![[DBG_2]], {{.*}}
-; CHECK-DEBUG: call void @llvm.dbg.assign(metadata i16 1, metadata ![[DBG_2]], metadata !DIExpression(), metadata ![[ID_1:[0-9]+]], metadata ptr %a, {{.*}}
+; CHECK-DEBUG: #dbg_value(i16 1, ![[DBG_1]], {{.*}}
+; CHECK-DEBUG: #dbg_value(i16 3, ![[DBG_1]], {{.*}}
+; CHECK-DEBUG: #dbg_value(!DIArgList(i16 1, i16 3), {{.*}}
+; CHECK-DEBUG: #dbg_value(!DIArgList(i16 3, i16 3), {{.*}}
+; CHECK-DEBUG: #dbg_assign(i16 1, ![[DBG_2]], {{.*}}
+; CHECK-DEBUG: #dbg_assign(i16 3, ![[DBG_2]], {{.*}}
+; CHECK-DEBUG: #dbg_assign(i16 1, ![[DBG_2]], !DIExpression(), ![[ID_1:[0-9]+]], ptr %a, {{.*}}
 ; CHECK: [[TMP2:%[0-9]+]] = call i16 @bar(i16 1, i16 5)
 
 ; CHECK-LABEL: CallsiteBB

@@ -49,7 +49,7 @@ public:
   void BuildFunctionAddressRangeTable(DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 
-  bool Extract(const DWARFDataExtractor &data, const DWARFUnit *cu,
+  bool Extract(const DWARFDataExtractor &data, const DWARFUnit &cu,
                lldb::offset_t *offset_ptr);
 
   using Recurse = DWARFBaseDIE::Recurse;
@@ -60,44 +60,45 @@ public:
     return attrs;
   }
 
-  dw_offset_t
-  GetAttributeValue(const DWARFUnit *cu, const dw_attr_t attr,
-                    DWARFFormValue &formValue,
-                    dw_offset_t *end_attr_offset_ptr = nullptr,
-                    bool check_specification_or_abstract_origin = false) const;
+  dw_offset_t GetAttributeValue(const DWARFUnit *cu, const dw_attr_t attr,
+                                DWARFFormValue &formValue,
+                                dw_offset_t *end_attr_offset_ptr = nullptr,
+                                bool check_elaborating_dies = false) const;
 
-  const char *GetAttributeValueAsString(
-      const DWARFUnit *cu, const dw_attr_t attr, const char *fail_value,
-      bool check_specification_or_abstract_origin = false) const;
+  const char *
+  GetAttributeValueAsString(const DWARFUnit *cu, const dw_attr_t attr,
+                            const char *fail_value,
+                            bool check_elaborating_dies = false) const;
 
-  uint64_t GetAttributeValueAsUnsigned(
-      const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
-      bool check_specification_or_abstract_origin = false) const;
+  uint64_t
+  GetAttributeValueAsUnsigned(const DWARFUnit *cu, const dw_attr_t attr,
+                              uint64_t fail_value,
+                              bool check_elaborating_dies = false) const;
 
   std::optional<uint64_t> GetAttributeValueAsOptionalUnsigned(
       const DWARFUnit *cu, const dw_attr_t attr,
-      bool check_specification_or_abstract_origin = false) const;
+      bool check_elaborating_dies = false) const;
 
-  DWARFDIE GetAttributeValueAsReference(
-      const DWARFUnit *cu, const dw_attr_t attr,
-      bool check_specification_or_abstract_origin = false) const;
+  DWARFDIE
+  GetAttributeValueAsReference(const DWARFUnit *cu, const dw_attr_t attr,
+                               bool check_elaborating_dies = false) const;
 
-  uint64_t GetAttributeValueAsAddress(
-      const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
-      bool check_specification_or_abstract_origin = false) const;
+  uint64_t
+  GetAttributeValueAsAddress(const DWARFUnit *cu, const dw_attr_t attr,
+                             uint64_t fail_value,
+                             bool check_elaborating_dies = false) const;
 
-  dw_addr_t
-  GetAttributeHighPC(const DWARFUnit *cu, dw_addr_t lo_pc, uint64_t fail_value,
-                     bool check_specification_or_abstract_origin = false) const;
+  dw_addr_t GetAttributeHighPC(const DWARFUnit *cu, dw_addr_t lo_pc,
+                               uint64_t fail_value,
+                               bool check_elaborating_dies = false) const;
 
-  bool GetAttributeAddressRange(
-      const DWARFUnit *cu, dw_addr_t &lo_pc, dw_addr_t &hi_pc,
-      uint64_t fail_value,
-      bool check_specification_or_abstract_origin = false) const;
+  bool GetAttributeAddressRange(const DWARFUnit *cu, dw_addr_t &lo_pc,
+                                dw_addr_t &hi_pc, uint64_t fail_value,
+                                bool check_elaborating_dies = false) const;
 
-  DWARFRangeList GetAttributeAddressRanges(
-      DWARFUnit *cu, bool check_hi_lo_pc,
-      bool check_specification_or_abstract_origin = false) const;
+  DWARFRangeList
+  GetAttributeAddressRanges(DWARFUnit *cu, bool check_hi_lo_pc,
+                            bool check_elaborating_dies = false) const;
 
   const char *GetName(const DWARFUnit *cu) const;
 
@@ -157,12 +158,6 @@ public:
     return HasChildren() ? this + 1 : nullptr;
   }
 
-  DWARFDeclContext GetDWARFDeclContext(DWARFUnit *cu) const;
-
-  DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu) const;
-  DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu,
-                                   const DWARFAttributes &attributes) const;
-
   void SetSiblingIndex(uint32_t idx) { m_sibling_idx = idx; }
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
@@ -172,9 +167,6 @@ public:
   bool IsGlobalOrStaticScopeVariable() const;
 
 protected:
-  static DWARFDeclContext
-  GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die, DWARFUnit *cu);
-
   // Up to 2TB offset within the .debug_info/.debug_types
   dw_offset_t m_offset : DW_DIE_OFFSET_MAX_BITSIZE;
   // How many to subtract from "this" to get the parent. If zero this die has no

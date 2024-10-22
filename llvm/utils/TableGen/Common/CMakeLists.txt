@@ -10,13 +10,12 @@ set(LLVM_LINK_COMPONENTS
   TableGen
   )
 
-add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
+add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLVM_DYLIB
   GlobalISel/CodeExpander.cpp
   GlobalISel/CombinerUtils.cpp
   GlobalISel/CXXPredicates.cpp
   GlobalISel/GlobalISelMatchTable.cpp
   GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp
-  GlobalISel/MatchDataInfo.cpp
   GlobalISel/PatternParser.cpp
   GlobalISel/Patterns.cpp
 
@@ -34,6 +33,7 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   PredicateExpander.cpp
   SubtargetFeatureInfo.cpp
   Types.cpp
+  Utils.cpp
   VarLenCodeEmitterGen.cpp
 
   LINK_LIBS
@@ -41,8 +41,8 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
 
   DEPENDS
   vt_gen
+  intrinsics_gen
   )
-set_target_properties(LLVMTableGenCommon PROPERTIES FOLDER "Tablegenning")
 
 # Users may include its headers as "Common/*.h"
 target_include_directories(LLVMTableGenCommon

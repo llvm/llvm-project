@@ -48,10 +48,10 @@ TEST(Chrono, TimePointFormat) {
   std::string S;
   raw_string_ostream OS(S);
   OS << T;
-  EXPECT_EQ("2006-01-02 15:04:05.123456789", OS.str());
+  EXPECT_EQ("2006-01-02 15:04:05.123456789", S);
   S.clear();
   OS << T2;
-  EXPECT_EQ("2006-01-02 15:04:05.023456789", OS.str());
+  EXPECT_EQ("2006-01-02 15:04:05.023456789", S);
 
   // formatv default style matches operator<<.
   EXPECT_EQ("2006-01-02 15:04:05.123456789", formatv("{0}", T).str());

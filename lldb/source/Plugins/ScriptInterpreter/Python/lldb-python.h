@@ -13,7 +13,7 @@
 // This declaration works around a clang module build failure.
 // It should be deleted ASAP.
 #include "llvm/Support/Error.h"
-static llvm::Expected<bool> *g_fcxx_modules_workaround;
+static llvm::Expected<bool> *g_fcxx_modules_workaround [[maybe_unused]];
 // END
 
 #include "lldb/Host/Config.h"

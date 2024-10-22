@@ -38,8 +38,8 @@
 ; CHECK:  %foo.0. = load volatile i32, ptr %foo, align 4, !dbg !16
 ; CHECK:  %cmp = icmp eq i32 %foo.0., 4, !dbg !16
 ; CHECK:  %frombool = zext i1 %cmp to i8, !dbg !16
-; CHECK:  call void @llvm.dbg.value(metadata i8 %frombool, metadata !13, metadata !DIExpression()), !dbg !16
-; CHECK:  call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !DIExpression()), !dbg !17
+; CHECK:  #dbg_value(i8 %frombool, !13, !DIExpression(), !16
+; CHECK:  #dbg_value(i32 0, !15, !DIExpression(), !17
 ; CHECK:  %. = select i1 %cmp, i32 8, i32 4, !dbg ![[MERGEDLOC:[0-9]+]]
 ; CHECK:  ![[MERGEDLOC]] = !DILocation(line: 0, scope: !7)
 

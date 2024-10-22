@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 %s -S -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 %s -o - -emit-llvm | FileCheck %s
 
 // PR10304: destructors should not call destructors for variant members.
 

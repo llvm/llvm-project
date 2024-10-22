@@ -1,5 +1,5 @@
-; RUN: not llc -march=bpfel < %s 2>&1 | FileCheck %s
-; RUN: not llc -march=bpfeb < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=bpfel -mcpu=v1 < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=bpfeb -mcpu=v1 < %s 2>&1 | FileCheck %s
 
 ; This file is generated with the source command and source
 ; $ clang -target bpf -O2 -g -S -emit-llvm t.c
@@ -22,7 +22,7 @@ entry:
   call void @llvm.dbg.value(metadata ptr %ptr, metadata !13, metadata !DIExpression()), !dbg !15
   %0 = atomicrmw add ptr %ptr, i32 4 seq_cst, !dbg !16
   %1 = atomicrmw add ptr %ptr, i32 6 seq_cst, !dbg !17
-; CHECK: line 4: Invalid usage of the XADD return value
+; CHECK: in function test i32 (ptr): Invalid usage of the XADD return value
   call void @llvm.dbg.value(metadata i32 %1, metadata !14, metadata !DIExpression()), !dbg !18
   ret i32 %1, !dbg !19
 }

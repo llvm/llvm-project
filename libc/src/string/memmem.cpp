@@ -8,9 +8,10 @@
 
 #include "src/string/memmem.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memmem.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memmem,
                    (const void *haystack, size_t haystack_len,
@@ -21,4 +22,4 @@ LLVM_LIBC_FUNCTION(void *, memmem,
   return inline_memmem(haystack, haystack_len, needle, needle_len, COMP);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -46,6 +46,11 @@
 #define __opencl_c_ext_fp32_global_atomic_min_max 1
 #define __opencl_c_ext_fp32_local_atomic_min_max 1
 #define __opencl_c_ext_image_raw10_raw12 1
+#define __opencl_c_ext_image_unorm_int_2_101010 1
+#define cl_khr_kernel_clock 1
+#define __opencl_c_kernel_clock_scope_device 1
+#define __opencl_c_kernel_clock_scope_work_group 1
+#define __opencl_c_kernel_clock_scope_sub_group 1
 
 #endif // defined(__SPIR__) || defined(__SPIRV__)
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -482,6 +487,9 @@ typedef enum memory_order
 #define CLK_UNSIGNED_INT_RAW10_EXT 0x10E3
 #define CLK_UNSIGNED_INT_RAW12_EXT 0x10E4
 #endif // __opencl_c_ext_image_raw10_raw12
+#ifdef __opencl_c_ext_image_unorm_int_2_101010
+#define CLK_UNORM_INT_2_101010_EXT 0x10E5
+#endif // __opencl_c_ext_image_unorm_int_2_101010
 
 // Channel order, numbering must be aligned with cl_channel_order in cl.h
 //

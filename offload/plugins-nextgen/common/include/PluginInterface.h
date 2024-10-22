@@ -19,6 +19,8 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "ExclusiveAccess.h"
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
@@ -54,6 +56,7 @@ namespace plugin {
 struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
+struct RecordReplayTy;
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
@@ -229,7 +232,7 @@ public:
 
   /// Get the image size.
   size_t getSize() const {
-    return getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
+    return utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
   }
 
   /// Get a memory buffer reference to the whole image.
@@ -264,17 +267,11 @@ struct GenericKernelTy {
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
                            uint64_t NumBlocks, KernelArgsTy &KernelArgs,
-                           void *Args,
+                           KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
   const char *getName() const { return Name; }
-
-  /// Return true if this kernel is a constructor or destructor.
-  bool isCtorOrDtor() const {
-    // TODO: This is not a great solution and should be revisited.
-    return StringRef(Name).ends_with("tor");
-  }
 
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
@@ -331,11 +328,12 @@ protected:
 
 private:
   /// Prepare the arguments before launching the kernel.
-  void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
-                    llvm::SmallVectorImpl<void *> &Args,
-                    llvm::SmallVectorImpl<void *> &Ptrs,
-                    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
+  KernelLaunchParamsTy
+  prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
+              ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
+              llvm::SmallVectorImpl<void *> &Args,
+              llvm::SmallVectorImpl<void *> &Ptrs,
+              KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
@@ -383,6 +381,73 @@ protected:
 
   /// If the kernel is a bare kernel.
   bool IsBareKernel = false;
+};
+
+/// Information about an allocation, when it has been allocated, and when/if it
+/// has been deallocated, for error reporting purposes.
+struct AllocationTraceInfoTy {
+
+  /// The stack trace of the allocation itself.
+  std::string AllocationTrace;
+
+  /// The stack trace of the deallocation, or empty.
+  std::string DeallocationTrace;
+
+  /// The allocated device pointer.
+  void *DevicePtr = nullptr;
+
+  /// The corresponding host pointer (can be null).
+  void *HostPtr = nullptr;
+
+  /// The size of the allocation.
+  uint64_t Size = 0;
+
+  /// The kind of the allocation.
+  TargetAllocTy Kind = TargetAllocTy::TARGET_ALLOC_DEFAULT;
+
+  /// Information about the last allocation at this address, if any.
+  AllocationTraceInfoTy *LastAllocationInfo = nullptr;
+
+  /// Lock to keep accesses race free.
+  std::mutex Lock;
+};
+
+/// Information about an allocation, when it has been allocated, and when/if it
+/// has been deallocated, for error reporting purposes.
+struct KernelTraceInfoTy {
+
+  /// The launched kernel.
+  GenericKernelTy *Kernel;
+
+  /// The stack trace of the launch itself.
+  std::string LaunchTrace;
+
+  /// The async info the kernel was launched in.
+  __tgt_async_info *AsyncInfo;
+};
+
+struct KernelTraceInfoRecordTy {
+  KernelTraceInfoRecordTy() { KTIs.fill({}); }
+
+  /// Return the (maximal) record size.
+  auto size() const { return KTIs.size(); }
+
+  /// Create a new kernel trace info and add it into the record.
+  void emplace(GenericKernelTy *Kernel, const std::string &&StackTrace,
+               __tgt_async_info *AsyncInfo) {
+    KTIs[Idx] = {Kernel, std::move(StackTrace), AsyncInfo};
+    Idx = (Idx + 1) % size();
+  }
+
+  /// Return the \p I'th last kernel trace info.
+  auto getKernelTraceInfo(int32_t I) const {
+    // Note that kernel trace infos "grow forward", so lookup is backwards.
+    return KTIs[(Idx - I - 1 + size()) % size()];
+  }
+
+private:
+  std::array<KernelTraceInfoTy, 8> KTIs;
+  unsigned Idx = 0;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
@@ -474,7 +539,7 @@ class PinnedAllocationMapTy {
     --It;
 
     // The buffer is not contained in the pinned allocation.
-    if (advanceVoidPtr(It->HstPtr, It->Size) > HstPtr)
+    if (utils::advancePtr(It->HstPtr, It->Size) > HstPtr)
       return &(*It);
 
     // None found.
@@ -501,15 +566,15 @@ class PinnedAllocationMapTy {
 
   /// Indicate whether the first range A fully contains the second range B.
   static bool contains(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrB >= PtrA && EndB <= EndA);
   }
 
   /// Indicate whether the first range A intersects with the second range B.
   static bool intersects(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrA < EndB && PtrB < EndA);
   }
 
@@ -591,8 +656,8 @@ public:
     if (!Entry)
       return nullptr;
 
-    return advanceVoidPtr(Entry->DevAccessiblePtr,
-                          getPtrDiff(HstPtr, Entry->HstPtr));
+    return utils::advancePtr(Entry->DevAccessiblePtr,
+                             utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
   /// Check whether a buffer belongs to a registered host pinned allocation.
@@ -829,6 +894,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return OMPX_MinThreadsForLowTripCount;
   }
 
+  /// Whether or not to reuse blocks for high trip count loops.
+  /// @see OMPX_ReuseBlocksForHighTripCount
+  bool getReuseBlocksForHighTripCount() {
+    return OMPX_ReuseBlocksForHighTripCount;
+  }
+
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
@@ -862,6 +933,59 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
+
+  /// Map to record when allocations have been performed, and when they have
+  /// been deallocated, both for error reporting purposes.
+  ProtectedObj<DenseMap<void *, AllocationTraceInfoTy *>> AllocationTraces;
+
+  /// Return the allocation trace info for a device pointer, that is the
+  /// allocation into which this device pointer points to (or pointed into).
+  AllocationTraceInfoTy *getAllocationTraceInfoForAddr(void *DevicePtr) {
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    for (auto &It : *AllocationTraceMap) {
+      if (It.first <= DevicePtr &&
+          utils::advancePtr(It.first, It.second->Size) > DevicePtr)
+        return It.second;
+    }
+    return nullptr;
+  }
+
+  /// Return the allocation trace info for a device pointer, that is the
+  /// allocation into which this device pointer points to (or pointed into).
+  AllocationTraceInfoTy *
+  getClosestAllocationTraceInfoForAddr(void *DevicePtr, uintptr_t &Distance) {
+    Distance = 0;
+    if (auto *ATI = getAllocationTraceInfoForAddr(DevicePtr)) {
+      return ATI;
+    }
+
+    AllocationTraceInfoTy *ATI = nullptr;
+    uintptr_t DevicePtrI = uintptr_t(DevicePtr);
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    for (auto &It : *AllocationTraceMap) {
+      uintptr_t Begin = uintptr_t(It.second->DevicePtr);
+      uintptr_t End = Begin + It.second->Size - 1;
+      uintptr_t ItDistance = std::min(Begin - DevicePtrI, DevicePtrI - End);
+      if (ATI && ItDistance > Distance)
+        continue;
+      ATI = It.second;
+      Distance = ItDistance;
+    }
+    return ATI;
+  }
+
+  /// Map to record kernel have been launchedl, for error reporting purposes.
+  ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
+
+  /// Environment variable to determine if stack traces for kernel launches are
+  /// tracked.
+  UInt32Envar OMPX_TrackNumKernelLaunches =
+      UInt32Envar("OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES", 0);
+
+  /// Environment variable to determine if stack traces for allocations and
+  /// deallocations are tracked.
+  BoolEnvar OMPX_TrackAllocationTraces =
+      BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
@@ -903,6 +1027,9 @@ private:
   /// the outer (block/team) parallelism.
   UInt32Envar OMPX_MinThreadsForLowTripCount =
       UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
+
+  BoolEnvar OMPX_ReuseBlocksForHighTripCount =
+      BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
@@ -964,8 +1091,8 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA),
-        RPCServer(nullptr) {}
+      : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr),
+        RecordReplay(nullptr) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -998,17 +1125,20 @@ struct GenericPluginTy {
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
 
-  /// Get the plugin-specific device identifier offset.
-  int32_t getDeviceIdStartIndex() const { return DeviceIdStartIndex; }
-
-  /// Set the plugin-specific device identifier offset.
-  void setDeviceIdStartIndex(int32_t Offset) { DeviceIdStartIndex = Offset; }
+  /// Get the plugin-specific device identifier.
+  int32_t getUserId(int32_t DeviceId) const {
+    assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
+    return UserDeviceIds.at(DeviceId);
+  }
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
 
   /// Get the target triple of this plugin.
   virtual Triple::ArchType getTripleArch() const = 0;
+
+  /// Get the constant name identifier for this plugin.
+  virtual const char *getName() const = 0;
 
   /// Allocate a structure using the internal allocator.
   template <typename Ty> Ty *allocate() {
@@ -1031,11 +1161,11 @@ struct GenericPluginTy {
     return *RPCServer;
   }
 
-  /// Get the OpenMP requires flags set for this plugin.
-  int64_t getRequiresFlags() const { return RequiresFlags; }
-
-  /// Set the OpenMP requires flags for this plugin.
-  void setRequiresFlag(int64_t Flags) { RequiresFlags = Flags; }
+  /// Get a reference to the record and replay interface for the plugin.
+  RecordReplayTy &getRecordReplay() {
+    assert(RecordReplay && "RR interface not initialized");
+    return *RecordReplay;
+  }
 
   /// Initialize a device within the plugin.
   Error initDevice(int32_t DeviceId);
@@ -1054,10 +1184,15 @@ struct GenericPluginTy {
   /// given target. Returns true if the \p Image is compatible with the plugin.
   Expected<bool> checkELFImage(StringRef Image) const;
 
+  /// Return true if the \p Image can be compiled to run on the platform's
+  /// target architecture.
+  Expected<bool> checkBitcodeImage(StringRef Image) const;
+
   /// Indicate if an image is compatible with the plugin devices. Notice that
   /// this function may be called before actually initializing the devices. So
   /// we could not move this function into GenericDeviceTy.
-  virtual Expected<bool> isELFCompatible(StringRef Image) const = 0;
+  virtual Expected<bool> isELFCompatible(uint32_t DeviceID,
+                                         StringRef Image) const = 0;
 
 protected:
   /// Indicate whether a device id is valid.
@@ -1068,17 +1203,24 @@ protected:
 public:
   // TODO: This plugin interface needs to be cleaned up.
 
-  /// Returns non-zero if the provided \p Image can be executed by the runtime.
-  int32_t is_valid_binary(__tgt_device_image *Image);
+  /// Returns non-zero if the plugin runtime has been initialized.
+  int32_t is_initialized() const;
+
+  /// Returns non-zero if the \p Image is compatible with the plugin. This
+  /// function does not require the plugin to be initialized before use.
+  int32_t is_plugin_compatible(__tgt_device_image *Image);
+
+  /// Returns non-zero if the \p Image is compatible with the device.
+  int32_t is_device_compatible(int32_t DeviceId, __tgt_device_image *Image);
+
+  /// Returns non-zero if the plugin device has been initialized.
+  int32_t is_device_initialized(int32_t DeviceId) const;
 
   /// Initialize the device inside of the plugin.
   int32_t init_device(int32_t DeviceId);
 
   /// Return the number of devices this plugin can support.
   int32_t number_of_devices();
-
-  /// Initializes the OpenMP register requires information.
-  int64_t init_requires(int64_t RequiresFlags);
 
   /// Returns non-zero if the data can be exchanged between the two devices.
   int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
@@ -1178,7 +1320,7 @@ public:
                            const char **ErrStr);
 
   /// Sets the offset into the devices for use by OMPT.
-  int32_t set_device_offset(int32_t DeviceIdOffset);
+  int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
 
   /// Returns if the plugin can support auotmatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
@@ -1192,22 +1334,20 @@ public:
                        void **KernelPtr);
 
 private:
+  /// Indicates if the platform runtime has been fully initialized.
+  bool Initialized = false;
+
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
 
-  /// Index offset, which when added to a DeviceId, will yield a unique
-  /// user-observable device identifier. This is especially important when
-  /// DeviceIds of multiple plugins / RTLs need to be distinguishable.
-  int32_t DeviceIdStartIndex = 0;
+  /// Map of plugin device identifiers to the user device identifier.
+  llvm::DenseMap<int32_t, int32_t> UserDeviceIds;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given
   /// by its device id. A position with nullptr means that the corresponding
   /// device was not initialized yet.
   llvm::SmallVector<GenericDeviceTy *> Devices;
-
-  /// OpenMP requires flags.
-  int64_t RequiresFlags;
 
   /// Pointer to the global handler for this plugin.
   GenericGlobalHandlerTy *GlobalHandler;
@@ -1220,13 +1360,16 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RPCServerTy *RPCServer;
+
+  /// The interface between the plugin and the GPU for host services.
+  RecordReplayTy *RecordReplay;
 };
 
 namespace Plugin {
 /// Create a success error. This is the same as calling Error::success(), but
 /// it is recommended to use this one for consistency with Plugin::error() and
 /// Plugin::check().
-static Error success() { return Error::success(); }
+static inline Error success() { return Error::success(); }
 
 /// Create a string error.
 template <typename... ArgsTy>
@@ -1245,95 +1388,6 @@ static Error error(const char *ErrFmt, ArgsTy... Args) {
 template <typename... ArgsTy>
 static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
 } // namespace Plugin
-
-/// Class for simplifying the getter operation of the plugin. Anywhere on the
-/// code, the current plugin can be retrieved by Plugin::get(). The class also
-/// declares functions to create plugin-specific object instances. The check(),
-/// createPlugin(), createDevice() and createGlobalHandler() functions should be
-/// defined by each plugin implementation.
-class PluginTy {
-  // Reference to the plugin instance.
-  static GenericPluginTy *SpecificPlugin;
-
-  PluginTy() {
-    if (auto Err = init())
-      REPORT("Failed to initialize plugin: %s\n",
-             toString(std::move(Err)).data());
-  }
-
-  ~PluginTy() {
-    if (auto Err = deinit())
-      REPORT("Failed to deinitialize plugin: %s\n",
-             toString(std::move(Err)).data());
-  }
-
-  PluginTy(const PluginTy &) = delete;
-  void operator=(const PluginTy &) = delete;
-
-  /// Create and intialize the plugin instance.
-  static Error init() {
-    assert(!SpecificPlugin && "Plugin already created");
-
-    // Create the specific plugin.
-    SpecificPlugin = createPlugin();
-    assert(SpecificPlugin && "Plugin was not created");
-
-    // Initialize the plugin.
-    return SpecificPlugin->init();
-  }
-
-  // Deinitialize and destroy the plugin instance.
-  static Error deinit() {
-    assert(SpecificPlugin && "Plugin no longer valid");
-
-    for (int32_t DevNo = 0, NumDev = SpecificPlugin->getNumDevices();
-         DevNo < NumDev; ++DevNo)
-      if (auto Err = SpecificPlugin->deinitDevice(DevNo))
-        return Err;
-
-    // Deinitialize the plugin.
-    if (auto Err = SpecificPlugin->deinit())
-      return Err;
-
-    // Delete the plugin instance.
-    delete SpecificPlugin;
-
-    // Invalidate the plugin reference.
-    SpecificPlugin = nullptr;
-
-    return Plugin::success();
-  }
-
-public:
-  /// Initialize the plugin if needed. The plugin could have been initialized by
-  /// a previous call to Plugin::get().
-  static Error initIfNeeded() {
-    // Trigger the initialization if needed.
-    get();
-
-    return Error::success();
-  }
-
-  /// Get a reference (or create if it was not created) to the plugin instance.
-  static GenericPluginTy &get() {
-    // This static variable will initialize the underlying plugin instance in
-    // case there was no previous explicit initialization. The initialization is
-    // thread safe.
-    static PluginTy Plugin;
-
-    assert(SpecificPlugin && "Plugin is not active");
-    return *SpecificPlugin;
-  }
-
-  /// Get a reference to the plugin with a specific plugin-specific type.
-  template <typename Ty> static Ty &get() { return static_cast<Ty &>(get()); }
-
-  /// Indicate whether the plugin is active.
-  static bool isActive() { return SpecificPlugin != nullptr; }
-
-  /// Create a plugin instance.
-  static GenericPluginTy *createPlugin();
-};
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class
 /// acts as a reference to a device resource, such as a stream, and requires

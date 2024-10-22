@@ -991,7 +991,7 @@ end subroutine test19f
 ! CHECK:         %[[VAL_24:.*]] = fir.array_load %[[VAL_5]](%[[VAL_22]]) {{\[}}%[[VAL_23]]] : (!fir.ref<!fir.array<140x!fir.char<2,13>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<140x!fir.char<2,13>>
 ! CHECK:         %[[VAL_25:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i32) -> i64
-! CHECK:         %[[char_temp:.*]] = fir.alloca !fir.char<4,?>(%16 : i64) {bindc_name = ".chrtmp"}
+! CHECK:         %[[char_temp:.*]] = fir.alloca !fir.char<4,?>(%{{[0-9]+}} : i64) {bindc_name = ".chrtmp"}
 ! CHECK:         %[[VAL_27:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_28:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_29:.*]] = arith.subi %[[VAL_13]], %[[VAL_27]] : index

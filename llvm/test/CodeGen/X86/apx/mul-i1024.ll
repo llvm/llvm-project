@@ -1041,41 +1041,41 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    pushq %r13
 ; EGPR-NDD-NEXT:    pushq %r12
 ; EGPR-NDD-NEXT:    pushq %rbx
-; EGPR-NDD-NEXT:    subq $104, %rsp
+; EGPR-NDD-NEXT:    subq $96, %rsp
 ; EGPR-NDD-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    movq %rsi, %r15
 ; EGPR-NDD-NEXT:    movq %rdi, %r20
-; EGPR-NDD-NEXT:    movq (%rdi), %r16
-; EGPR-NDD-NEXT:    movq 8(%rdi), %r14
+; EGPR-NDD-NEXT:    movq (%rdi), %r17
+; EGPR-NDD-NEXT:    movq 8(%rdi), %r11
 ; EGPR-NDD-NEXT:    movq 24(%rdi), %r9
 ; EGPR-NDD-NEXT:    movq 16(%rdi), %r10
 ; EGPR-NDD-NEXT:    movq 40(%rdi), %rdi
-; EGPR-NDD-NEXT:    movq 32(%r20), %r11
-; EGPR-NDD-NEXT:    movq 56(%r20), %r17
-; EGPR-NDD-NEXT:    movq 48(%r20), %r15
-; EGPR-NDD-NEXT:    movq 24(%rsi), %r18
+; EGPR-NDD-NEXT:    movq 32(%r20), %r16
+; EGPR-NDD-NEXT:    movq 56(%r20), %r18
+; EGPR-NDD-NEXT:    movq 48(%r20), %r23
+; EGPR-NDD-NEXT:    movq 24(%rsi), %r14
 ; EGPR-NDD-NEXT:    movq 16(%rsi), %r24
 ; EGPR-NDD-NEXT:    movq (%rsi), %r22
 ; EGPR-NDD-NEXT:    movq 8(%rsi), %r21
-; EGPR-NDD-NEXT:    movq %rsi, %r23
-; EGPR-NDD-NEXT:    movq %r15, %rax
+; EGPR-NDD-NEXT:    movq %r23, %rax
 ; EGPR-NDD-NEXT:    mulq %r22
 ; EGPR-NDD-NEXT:    movq %rdx, %r25
 ; EGPR-NDD-NEXT:    movq %rax, %r19
-; EGPR-NDD-NEXT:    movq %r17, %rax
+; EGPR-NDD-NEXT:    movq %r18, %rax
 ; EGPR-NDD-NEXT:    mulq %r22
-; EGPR-NDD-NEXT:    addq %r25, %rax, %rcx
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %rsi
-; EGPR-NDD-NEXT:    movq %r15, %rax
+; EGPR-NDD-NEXT:    addq %rax, %r25
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rcx
+; EGPR-NDD-NEXT:    movq %r23, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    addq %rcx, %rax, %r8
-; EGPR-NDD-NEXT:    adcq %rdx, %rsi, %rcx
+; EGPR-NDD-NEXT:    addq %r25, %rax, %rsi
+; EGPR-NDD-NEXT:    adcq %rdx, %rcx
 ; EGPR-NDD-NEXT:    setb %al
-; EGPR-NDD-NEXT:    movzbl %al, %esi
-; EGPR-NDD-NEXT:    movq %r17, %rax
+; EGPR-NDD-NEXT:    movzbl %al, %r8d
+; EGPR-NDD-NEXT:    movq %r18, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
 ; EGPR-NDD-NEXT:    addq %rcx, %rax, %r27
-; EGPR-NDD-NEXT:    adcq %rdx, %rsi
-; EGPR-NDD-NEXT:    movq %r11, %rax
+; EGPR-NDD-NEXT:    adcq %rdx, %r8
+; EGPR-NDD-NEXT:    movq %r16, %rax
 ; EGPR-NDD-NEXT:    mulq %r22
 ; EGPR-NDD-NEXT:    movq %rdx, %r26
 ; EGPR-NDD-NEXT:    movq %rax, %r25
@@ -1083,7 +1083,7 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    mulq %r22
 ; EGPR-NDD-NEXT:    addq %r26, %rax, %rcx
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r26
-; EGPR-NDD-NEXT:    movq %r11, %rax
+; EGPR-NDD-NEXT:    movq %r16, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
 ; EGPR-NDD-NEXT:    addq %rax, %rcx
 ; EGPR-NDD-NEXT:    adcq %rdx, %r26
@@ -1094,58 +1094,59 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    addq %r26, %rax
 ; EGPR-NDD-NEXT:    adcq %r28, %rdx
 ; EGPR-NDD-NEXT:    addq %rax, %r19, %r28
-; EGPR-NDD-NEXT:    adcq %rdx, %r8
+; EGPR-NDD-NEXT:    adcq %rdx, %rsi, %r29
 ; EGPR-NDD-NEXT:    adcq $0, %r27
-; EGPR-NDD-NEXT:    adcq $0, %rsi, %r29
-; EGPR-NDD-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    movq %r11, %rax
+; EGPR-NDD-NEXT:    adcq $0, %r8
+; EGPR-NDD-NEXT:    movq %r16, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    movq %r16, %rax
 ; EGPR-NDD-NEXT:    mulq %r24
 ; EGPR-NDD-NEXT:    movq %rdx, %r19
 ; EGPR-NDD-NEXT:    movq %rax, %r26
 ; EGPR-NDD-NEXT:    movq %rdi, %rax
 ; EGPR-NDD-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    mulq %r24
-; EGPR-NDD-NEXT:    addq %r19, %rax, %rsi
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r19
-; EGPR-NDD-NEXT:    movq %r11, %rax
-; EGPR-NDD-NEXT:    mulq %r18
-; EGPR-NDD-NEXT:    addq %rsi, %rax, %r30
-; EGPR-NDD-NEXT:    adcq %rdx, %r19, %rsi
+; EGPR-NDD-NEXT:    addq %rax, %r19
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rsi
+; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    mulq %r14
+; EGPR-NDD-NEXT:    addq %rax, %r19
+; EGPR-NDD-NEXT:    adcq %rdx, %rsi
 ; EGPR-NDD-NEXT:    setb %al
-; EGPR-NDD-NEXT:    movzbl %al, %r19d
+; EGPR-NDD-NEXT:    movzbl %al, %r30d
 ; EGPR-NDD-NEXT:    movq %rdi, %rax
-; EGPR-NDD-NEXT:    mulq %r18
+; EGPR-NDD-NEXT:    mulq %r14
 ; EGPR-NDD-NEXT:    addq %rsi, %rax
-; EGPR-NDD-NEXT:    adcq %r19, %rdx
+; EGPR-NDD-NEXT:    adcq %r30, %rdx
 ; EGPR-NDD-NEXT:    addq %r28, %r26, %rsi
-; EGPR-NDD-NEXT:    adcq %r8, %r30, %r28
+; EGPR-NDD-NEXT:    adcq %r29, %r19, %r28
 ; EGPR-NDD-NEXT:    adcq $0, %rax
 ; EGPR-NDD-NEXT:    adcq $0, %rdx
-; EGPR-NDD-NEXT:    addq %rax, %r27, %r8
-; EGPR-NDD-NEXT:    adcq %rdx, %r29, %r27
+; EGPR-NDD-NEXT:    addq %rax, %r27
+; EGPR-NDD-NEXT:    adcq %rdx, %r8
 ; EGPR-NDD-NEXT:    setb %al
 ; EGPR-NDD-NEXT:    movzbl %al, %r31d
-; EGPR-NDD-NEXT:    movq %r15, %rax
+; EGPR-NDD-NEXT:    movq %r23, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    movq %r23, %rax
 ; EGPR-NDD-NEXT:    mulq %r24
 ; EGPR-NDD-NEXT:    movq %rdx, %r19
 ; EGPR-NDD-NEXT:    movq %rax, %r26
-; EGPR-NDD-NEXT:    movq %r17, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    movq %r17, %rax
+; EGPR-NDD-NEXT:    movq %r18, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    movq %r18, %rax
 ; EGPR-NDD-NEXT:    mulq %r24
 ; EGPR-NDD-NEXT:    addq %rax, %r19
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r29
-; EGPR-NDD-NEXT:    movq %r15, %rax
-; EGPR-NDD-NEXT:    mulq %r18
+; EGPR-NDD-NEXT:    movq %r23, %rax
+; EGPR-NDD-NEXT:    mulq %r14
 ; EGPR-NDD-NEXT:    addq %rax, %r19
 ; EGPR-NDD-NEXT:    adcq %rdx, %r29
 ; EGPR-NDD-NEXT:    setb %al
 ; EGPR-NDD-NEXT:    movzbl %al, %r30d
-; EGPR-NDD-NEXT:    movq %r17, %rax
-; EGPR-NDD-NEXT:    mulq %r18
+; EGPR-NDD-NEXT:    movq %r18, %rax
+; EGPR-NDD-NEXT:    mulq %r14
 ; EGPR-NDD-NEXT:    addq %r29, %rax
 ; EGPR-NDD-NEXT:    adcq %r30, %rdx
-; EGPR-NDD-NEXT:    addq %r8, %r26, %r29
-; EGPR-NDD-NEXT:    adcq %r27, %r19, %r30
+; EGPR-NDD-NEXT:    addq %r27, %r26, %r29
+; EGPR-NDD-NEXT:    adcq %r8, %r19, %r30
 ; EGPR-NDD-NEXT:    adcq %rax, %r31
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %rdi
 ; EGPR-NDD-NEXT:    movq %r10, %rax
@@ -1154,69 +1155,69 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    movq %rax, %r26
 ; EGPR-NDD-NEXT:    movq %r9, %rax
 ; EGPR-NDD-NEXT:    mulq %r22
-; EGPR-NDD-NEXT:    addq %r19, %rax, %r8
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r19
+; EGPR-NDD-NEXT:    addq %rax, %r19
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r8
 ; EGPR-NDD-NEXT:    movq %r10, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    addq %rax, %r8
-; EGPR-NDD-NEXT:    adcq %rdx, %r19
+; EGPR-NDD-NEXT:    addq %rax, %r19
+; EGPR-NDD-NEXT:    adcq %rdx, %r8
 ; EGPR-NDD-NEXT:    setb %al
 ; EGPR-NDD-NEXT:    movzbl %al, %r27d
 ; EGPR-NDD-NEXT:    movq %r9, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    addq %rax, %r19
+; EGPR-NDD-NEXT:    addq %rax, %r8
 ; EGPR-NDD-NEXT:    adcq %r27, %rdx, %rbx
-; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    movq %r17, %rax
 ; EGPR-NDD-NEXT:    mulq %r22
 ; EGPR-NDD-NEXT:    movq %rdx, %r27
 ; EGPR-NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    movq %r11, %rax
 ; EGPR-NDD-NEXT:    mulq %r22
 ; EGPR-NDD-NEXT:    addq %rax, %r27
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r12
-; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    movq %r17, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
 ; EGPR-NDD-NEXT:    addq %r27, %rax
 ; EGPR-NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %rdx, %r12, %r27
-; EGPR-NDD-NEXT:    setb %bpl
-; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    adcq %rdx, %r12
+; EGPR-NDD-NEXT:    setb %r27b
+; EGPR-NDD-NEXT:    movq %r11, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    addq %r27, %rax
-; EGPR-NDD-NEXT:    movzbl %bpl, %r27d
+; EGPR-NDD-NEXT:    addq %r12, %rax
+; EGPR-NDD-NEXT:    movzbl %r27b, %r27d
 ; EGPR-NDD-NEXT:    adcq %r27, %rdx
 ; EGPR-NDD-NEXT:    addq %rax, %r26, %r12
-; EGPR-NDD-NEXT:    adcq %rdx, %r8
-; EGPR-NDD-NEXT:    adcq $0, %r19
+; EGPR-NDD-NEXT:    adcq %rdx, %r19
+; EGPR-NDD-NEXT:    adcq $0, %r8
 ; EGPR-NDD-NEXT:    adcq $0, %rbx
-; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    movq %r17, %rax
 ; EGPR-NDD-NEXT:    mulq %r24
 ; EGPR-NDD-NEXT:    movq %rdx, %r26
 ; EGPR-NDD-NEXT:    movq %rax, %r27
-; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    movq %r11, %rax
 ; EGPR-NDD-NEXT:    mulq %r24
 ; EGPR-NDD-NEXT:    addq %rax, %r26
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r13
-; EGPR-NDD-NEXT:    movq %r16, %rax
-; EGPR-NDD-NEXT:    mulq %r18
+; EGPR-NDD-NEXT:    movq %r17, %rax
+; EGPR-NDD-NEXT:    mulq %r14
 ; EGPR-NDD-NEXT:    addq %rax, %r26
 ; EGPR-NDD-NEXT:    adcq %rdx, %r13
 ; EGPR-NDD-NEXT:    setb %bpl
-; EGPR-NDD-NEXT:    movq %r14, %rax
-; EGPR-NDD-NEXT:    mulq %r18
+; EGPR-NDD-NEXT:    movq %r11, %rax
+; EGPR-NDD-NEXT:    mulq %r14
 ; EGPR-NDD-NEXT:    addq %r13, %rax
 ; EGPR-NDD-NEXT:    movzbl %bpl, %r13d
 ; EGPR-NDD-NEXT:    adcq %r13, %rdx
-; EGPR-NDD-NEXT:    addq %r12, %r27, %r11
-; EGPR-NDD-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %r26, %r8
-; EGPR-NDD-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    addq %r12, %r27
+; EGPR-NDD-NEXT:    movq %r27, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq %r26, %r19
+; EGPR-NDD-NEXT:    movq %r19, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    adcq $0, %rax
 ; EGPR-NDD-NEXT:    adcq $0, %rdx
-; EGPR-NDD-NEXT:    addq %rax, %r19, %r8
-; EGPR-NDD-NEXT:    adcq %rdx, %rbx, %r19
-; EGPR-NDD-NEXT:    setb %bl
-; EGPR-NDD-NEXT:    movq %r10, %r17
+; EGPR-NDD-NEXT:    addq %rax, %r8
+; EGPR-NDD-NEXT:    adcq %rdx, %rbx
+; EGPR-NDD-NEXT:    setb %r19b
+; EGPR-NDD-NEXT:    movq %r10, %r16
 ; EGPR-NDD-NEXT:    movq %r10, %rax
 ; EGPR-NDD-NEXT:    mulq %r24
 ; EGPR-NDD-NEXT:    movq %rdx, %r26
@@ -1226,32 +1227,31 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    addq %rax, %r26
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r12
 ; EGPR-NDD-NEXT:    movq %r10, %rax
-; EGPR-NDD-NEXT:    movq %r18, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    mulq %r18
+; EGPR-NDD-NEXT:    mulq %r14
 ; EGPR-NDD-NEXT:    addq %rax, %r26
 ; EGPR-NDD-NEXT:    adcq %rdx, %r12
 ; EGPR-NDD-NEXT:    setb %bpl
 ; EGPR-NDD-NEXT:    movq %r9, %rax
-; EGPR-NDD-NEXT:    mulq %r18
+; EGPR-NDD-NEXT:    mulq %r14
 ; EGPR-NDD-NEXT:    addq %r12, %rax
 ; EGPR-NDD-NEXT:    movzbl %bpl, %r12d
 ; EGPR-NDD-NEXT:    adcq %r12, %rdx
 ; EGPR-NDD-NEXT:    addq %r27, %r8
-; EGPR-NDD-NEXT:    adcq %r26, %r19
-; EGPR-NDD-NEXT:    movzbl %bl, %r26d
-; EGPR-NDD-NEXT:    adcq %r26, %rax
+; EGPR-NDD-NEXT:    adcq %r26, %rbx
+; EGPR-NDD-NEXT:    movzbl %r19b, %r19d
+; EGPR-NDD-NEXT:    adcq %r19, %rax
 ; EGPR-NDD-NEXT:    adcq $0, %rdx
 ; EGPR-NDD-NEXT:    addq %r8, %r25, %r12
-; EGPR-NDD-NEXT:    movq 32(%r23), %r26
-; EGPR-NDD-NEXT:    adcq %r19, %rcx, %r13
+; EGPR-NDD-NEXT:    movq 32(%r15), %r26
+; EGPR-NDD-NEXT:    adcq %rbx, %rcx, %r13
 ; EGPR-NDD-NEXT:    adcq %rax, %rsi, %rbp
 ; EGPR-NDD-NEXT:    adcq %rdx, %r28, %rbx
-; EGPR-NDD-NEXT:    adcq $0, %r29, %rax
-; EGPR-NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq $0, %r29
+; EGPR-NDD-NEXT:    movq %r29, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    adcq $0, %r30
 ; EGPR-NDD-NEXT:    adcq $0, %r31
-; EGPR-NDD-NEXT:    adcq $0, %rdi, %rax
-; EGPR-NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq $0, %rdi
+; EGPR-NDD-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    movq %r10, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    movq %rdx, %r25
@@ -1259,341 +1259,333 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    movq %r9, %r19
 ; EGPR-NDD-NEXT:    movq %r9, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
-; EGPR-NDD-NEXT:    addq %r25, %rax, %rcx
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r8
-; EGPR-NDD-NEXT:    movq 40(%r23), %r18
-; EGPR-NDD-NEXT:    movq %r23, %r11
+; EGPR-NDD-NEXT:    addq %rax, %r25
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rcx
+; EGPR-NDD-NEXT:    movq 40(%r15), %r18
 ; EGPR-NDD-NEXT:    movq %r10, %rax
 ; EGPR-NDD-NEXT:    mulq %r18
-; EGPR-NDD-NEXT:    addq %rcx, %rax, %rdi
-; EGPR-NDD-NEXT:    adcq %rdx, %r8
-; EGPR-NDD-NEXT:    setb %r25b
+; EGPR-NDD-NEXT:    addq %r25, %rax, %r29
+; EGPR-NDD-NEXT:    adcq %rdx, %rcx
+; EGPR-NDD-NEXT:    setb %r8b
 ; EGPR-NDD-NEXT:    movq %r9, %rax
 ; EGPR-NDD-NEXT:    mulq %r18
-; EGPR-NDD-NEXT:    addq %r8, %rax, %r29
-; EGPR-NDD-NEXT:    movzbl %r25b, %eax
+; EGPR-NDD-NEXT:    addq %rcx, %rax, %rdi
+; EGPR-NDD-NEXT:    movzbl %r8b, %eax
 ; EGPR-NDD-NEXT:    adcq %rax, %rdx, %rsi
-; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    movq %r17, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    movq %rdx, %r28
 ; EGPR-NDD-NEXT:    movq %rax, %r25
-; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    movq %r11, %r10
+; EGPR-NDD-NEXT:    movq %r11, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    addq %r28, %rax, %r8
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r28
-; EGPR-NDD-NEXT:    movq %r16, %rax
-; EGPR-NDD-NEXT:    movq %r16, %r10
+; EGPR-NDD-NEXT:    movq %r17, %rax
 ; EGPR-NDD-NEXT:    mulq %r18
 ; EGPR-NDD-NEXT:    addq %r8, %rax, %r23
 ; EGPR-NDD-NEXT:    adcq %rdx, %r28
 ; EGPR-NDD-NEXT:    setb %cl
-; EGPR-NDD-NEXT:    movq %r14, %rax
-; EGPR-NDD-NEXT:    movq %r14, %r16
+; EGPR-NDD-NEXT:    movq %r11, %rax
 ; EGPR-NDD-NEXT:    mulq %r18
 ; EGPR-NDD-NEXT:    addq %r28, %rax
 ; EGPR-NDD-NEXT:    movzbl %cl, %ecx
 ; EGPR-NDD-NEXT:    adcq %rdx, %rcx
 ; EGPR-NDD-NEXT:    addq %rax, %r27
-; EGPR-NDD-NEXT:    adcq %rcx, %rdi
-; EGPR-NDD-NEXT:    adcq $0, %r29, %r8
+; EGPR-NDD-NEXT:    adcq %rcx, %r29, %r8
+; EGPR-NDD-NEXT:    adcq $0, %rdi
 ; EGPR-NDD-NEXT:    adcq $0, %rsi, %r9
-; EGPR-NDD-NEXT:    movq %r11, %r14
-; EGPR-NDD-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    movq 48(%r11), %r11
-; EGPR-NDD-NEXT:    movq %r10, %rsi
-; EGPR-NDD-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    movq %r10, %rax
-; EGPR-NDD-NEXT:    mulq %r11
-; EGPR-NDD-NEXT:    movq %rdx, %r28
-; EGPR-NDD-NEXT:    movq %rax, %r29
-; EGPR-NDD-NEXT:    movq %r16, %rax
-; EGPR-NDD-NEXT:    movq %r16, %r10
-; EGPR-NDD-NEXT:    movq %r16, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    mulq %r11
-; EGPR-NDD-NEXT:    addq %rax, %r28
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %rcx
-; EGPR-NDD-NEXT:    movq 56(%r14), %r16
-; EGPR-NDD-NEXT:    movq %rsi, %rax
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %rax, %r28
-; EGPR-NDD-NEXT:    adcq %rdx, %rcx
-; EGPR-NDD-NEXT:    setb %sil
-; EGPR-NDD-NEXT:    movq %r10, %rax
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %rcx, %rax
-; EGPR-NDD-NEXT:    movzbl %sil, %ecx
-; EGPR-NDD-NEXT:    adcq %rdx, %rcx
-; EGPR-NDD-NEXT:    addq %r27, %r29, %r10
-; EGPR-NDD-NEXT:    adcq %r28, %rdi
-; EGPR-NDD-NEXT:    adcq $0, %rax
-; EGPR-NDD-NEXT:    adcq $0, %rcx
-; EGPR-NDD-NEXT:    addq %rax, %r8
-; EGPR-NDD-NEXT:    adcq %rcx, %r9, %rsi
-; EGPR-NDD-NEXT:    setb %r9b
+; EGPR-NDD-NEXT:    movq 48(%r15), %r11
+; EGPR-NDD-NEXT:    movq %r17, %rsi
 ; EGPR-NDD-NEXT:    movq %r17, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    movq %r17, %rax
 ; EGPR-NDD-NEXT:    mulq %r11
 ; EGPR-NDD-NEXT:    movq %rdx, %r28
 ; EGPR-NDD-NEXT:    movq %rax, %r29
+; EGPR-NDD-NEXT:    movq %r10, %rax
+; EGPR-NDD-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    mulq %r11
+; EGPR-NDD-NEXT:    addq %rax, %r28
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rcx
+; EGPR-NDD-NEXT:    movq 56(%r15), %r17
+; EGPR-NDD-NEXT:    movq %rsi, %rax
+; EGPR-NDD-NEXT:    mulq %r17
+; EGPR-NDD-NEXT:    addq %rax, %r28
+; EGPR-NDD-NEXT:    adcq %rdx, %rcx
+; EGPR-NDD-NEXT:    setb %sil
+; EGPR-NDD-NEXT:    movq %r10, %rax
+; EGPR-NDD-NEXT:    mulq %r17
+; EGPR-NDD-NEXT:    addq %rcx, %rax
+; EGPR-NDD-NEXT:    movzbl %sil, %ecx
+; EGPR-NDD-NEXT:    adcq %rdx, %rcx
+; EGPR-NDD-NEXT:    addq %r29, %r27
+; EGPR-NDD-NEXT:    adcq %r8, %r28, %r10
+; EGPR-NDD-NEXT:    adcq $0, %rax
+; EGPR-NDD-NEXT:    adcq $0, %rcx
+; EGPR-NDD-NEXT:    addq %rax, %rdi
+; EGPR-NDD-NEXT:    adcq %rcx, %r9, %r8
+; EGPR-NDD-NEXT:    setb %sil
+; EGPR-NDD-NEXT:    movq %r16, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    mulq %r11
+; EGPR-NDD-NEXT:    movq %rdx, %r28
+; EGPR-NDD-NEXT:    movq %rax, %r29
+; EGPR-NDD-NEXT:    movq %r19, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    movq %r19, %rax
 ; EGPR-NDD-NEXT:    mulq %r11
-; EGPR-NDD-NEXT:    addq %r28, %rax, %r27
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r28
-; EGPR-NDD-NEXT:    movq %r17, %rax
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %rax, %r27
-; EGPR-NDD-NEXT:    adcq %rdx, %r28
+; EGPR-NDD-NEXT:    addq %rax, %r28
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r9
+; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    mulq %r17
+; EGPR-NDD-NEXT:    addq %rax, %r28
+; EGPR-NDD-NEXT:    adcq %rdx, %r9
 ; EGPR-NDD-NEXT:    setb %cl
 ; EGPR-NDD-NEXT:    movq %r19, %rax
-; EGPR-NDD-NEXT:    movq %r19, %r17
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %r28, %rax
+; EGPR-NDD-NEXT:    mulq %r17
+; EGPR-NDD-NEXT:    addq %r9, %rax
 ; EGPR-NDD-NEXT:    movzbl %cl, %ecx
 ; EGPR-NDD-NEXT:    adcq %rdx, %rcx
-; EGPR-NDD-NEXT:    addq %r8, %r29, %rdx
-; EGPR-NDD-NEXT:    adcq %r27, %rsi
-; EGPR-NDD-NEXT:    movzbl %r9b, %r8d
-; EGPR-NDD-NEXT:    adcq %r8, %rax
+; EGPR-NDD-NEXT:    addq %r29, %rdi
+; EGPR-NDD-NEXT:    adcq %r28, %r8
+; EGPR-NDD-NEXT:    movzbl %sil, %edx
+; EGPR-NDD-NEXT:    adcq %rdx, %rax
 ; EGPR-NDD-NEXT:    adcq $0, %rcx
-; EGPR-NDD-NEXT:    addq %r12, %r25, %r8
-; EGPR-NDD-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %r13, %r23, %r8
-; EGPR-NDD-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %rbp, %r10, %r8
-; EGPR-NDD-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %rbx, %rdi
-; EGPR-NDD-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq $0, %rdx
-; EGPR-NDD-NEXT:    adcq $0, %rsi
+; EGPR-NDD-NEXT:    addq %r12, %r25
+; EGPR-NDD-NEXT:    movq %r25, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq %r13, %r23, %r19
+; EGPR-NDD-NEXT:    movq %r19, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq %rbp, %r27
+; EGPR-NDD-NEXT:    movq %r27, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq %rbx, %r10
+; EGPR-NDD-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq $0, %rdi
+; EGPR-NDD-NEXT:    adcq $0, %r8
 ; EGPR-NDD-NEXT:    adcq $0, %rax
-; EGPR-NDD-NEXT:    adcq $0, %rcx, %rdi
-; EGPR-NDD-NEXT:    addq %rdx, {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq %rsi, %r30, %r19
-; EGPR-NDD-NEXT:    adcq %rax, %r31, %r30
-; EGPR-NDD-NEXT:    adcq %rdi, {{[-0-9]+}}(%r{{[sb]}}p), %r31 # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    setb %bpl
-; EGPR-NDD-NEXT:    movq %r15, %rax
+; EGPR-NDD-NEXT:    adcq $0, %rcx
+; EGPR-NDD-NEXT:    addq %rdi, {{[-0-9]+}}(%r{{[sb]}}p), %r19 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq %r8, %r30
+; EGPR-NDD-NEXT:    adcq %rax, %r31
+; EGPR-NDD-NEXT:    adcq %rcx, {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    setb %r8b
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %r13, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    movq %rdx, %r25
 ; EGPR-NDD-NEXT:    movq %rax, %r28
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r9, %rax
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %r10, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
-; EGPR-NDD-NEXT:    addq %r25, %rax, %rsi
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %rdi
-; EGPR-NDD-NEXT:    movq %r15, %rax
-; EGPR-NDD-NEXT:    movq %r15, %r13
+; EGPR-NDD-NEXT:    addq %rax, %r25
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rsi
+; EGPR-NDD-NEXT:    movq %r13, %rax
+; EGPR-NDD-NEXT:    mulq %r18
+; EGPR-NDD-NEXT:    addq %r25, %rax, %rdi
+; EGPR-NDD-NEXT:    adcq %rdx, %rsi
+; EGPR-NDD-NEXT:    setb %r9b
+; EGPR-NDD-NEXT:    movq %r10, %rax
+; EGPR-NDD-NEXT:    movq %r10, %r16
 ; EGPR-NDD-NEXT:    mulq %r18
 ; EGPR-NDD-NEXT:    addq %rax, %rsi
-; EGPR-NDD-NEXT:    adcq %rdx, %rdi
-; EGPR-NDD-NEXT:    setb %r8b
-; EGPR-NDD-NEXT:    movq %r9, %rax
-; EGPR-NDD-NEXT:    movq %r9, %r23
-; EGPR-NDD-NEXT:    mulq %r18
-; EGPR-NDD-NEXT:    addq %rax, %rdi
-; EGPR-NDD-NEXT:    movzbl %r8b, %eax
-; EGPR-NDD-NEXT:    adcq %rax, %rdx, %r8
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    movzbl %r9b, %eax
+; EGPR-NDD-NEXT:    adcq %rax, %rdx, %r9
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r23 # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %r23, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    movq %rdx, %r29
 ; EGPR-NDD-NEXT:    movq %rax, %r25
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r15 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r15, %rax
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %r12, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
-; EGPR-NDD-NEXT:    addq %r29, %rax, %r9
+; EGPR-NDD-NEXT:    addq %rax, %r29
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r10
-; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    movq %r23, %rax
 ; EGPR-NDD-NEXT:    mulq %r18
-; EGPR-NDD-NEXT:    addq %r9, %rax, %rbx
-; EGPR-NDD-NEXT:    adcq %rdx, %r10, %r9
-; EGPR-NDD-NEXT:    setb %r10b
-; EGPR-NDD-NEXT:    movq %r15, %rax
+; EGPR-NDD-NEXT:    addq %r29, %rax, %rbx
+; EGPR-NDD-NEXT:    adcq %rdx, %r10
+; EGPR-NDD-NEXT:    setb %r27b
+; EGPR-NDD-NEXT:    movq %r12, %rax
 ; EGPR-NDD-NEXT:    mulq %r18
-; EGPR-NDD-NEXT:    addq %r9, %rax
-; EGPR-NDD-NEXT:    movzbl %r10b, %r9d
-; EGPR-NDD-NEXT:    adcq %r9, %rdx
-; EGPR-NDD-NEXT:    addq %rax, %r28, %r9
-; EGPR-NDD-NEXT:    adcq %rdx, %rsi
-; EGPR-NDD-NEXT:    adcq $0, %rdi
-; EGPR-NDD-NEXT:    adcq $0, %r8
-; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    addq %r10, %rax
+; EGPR-NDD-NEXT:    movzbl %r27b, %r10d
+; EGPR-NDD-NEXT:    adcq %r10, %rdx
+; EGPR-NDD-NEXT:    addq %rax, %r28, %r10
+; EGPR-NDD-NEXT:    adcq %rdx, %rdi
+; EGPR-NDD-NEXT:    adcq $0, %rsi
+; EGPR-NDD-NEXT:    adcq $0, %r9
+; EGPR-NDD-NEXT:    movq %r23, %rax
 ; EGPR-NDD-NEXT:    mulq %r11
 ; EGPR-NDD-NEXT:    movq %rdx, %r28
 ; EGPR-NDD-NEXT:    movq %rax, %r29
-; EGPR-NDD-NEXT:    movq %r15, %rax
+; EGPR-NDD-NEXT:    movq %r12, %rax
 ; EGPR-NDD-NEXT:    mulq %r11
-; EGPR-NDD-NEXT:    addq %r28, %rax, %r10
+; EGPR-NDD-NEXT:    addq %rax, %r28
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r27
-; EGPR-NDD-NEXT:    movq %r14, %rax
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %rax, %r10
+; EGPR-NDD-NEXT:    movq %r23, %rax
+; EGPR-NDD-NEXT:    mulq %r17
+; EGPR-NDD-NEXT:    addq %rax, %r28
 ; EGPR-NDD-NEXT:    adcq %rdx, %r27
-; EGPR-NDD-NEXT:    setb %r28b
-; EGPR-NDD-NEXT:    movq %r15, %rax
-; EGPR-NDD-NEXT:    mulq %r16
+; EGPR-NDD-NEXT:    setb %bpl
+; EGPR-NDD-NEXT:    movq %r12, %rax
+; EGPR-NDD-NEXT:    mulq %r17
 ; EGPR-NDD-NEXT:    addq %r27, %rax
-; EGPR-NDD-NEXT:    movzbl %r28b, %r27d
+; EGPR-NDD-NEXT:    movzbl %bpl, %r27d
 ; EGPR-NDD-NEXT:    adcq %r27, %rdx
-; EGPR-NDD-NEXT:    addq %r29, %r9
-; EGPR-NDD-NEXT:    adcq %r10, %rsi
+; EGPR-NDD-NEXT:    addq %r29, %r10
+; EGPR-NDD-NEXT:    adcq %r28, %rdi
 ; EGPR-NDD-NEXT:    adcq $0, %rax
 ; EGPR-NDD-NEXT:    adcq $0, %rdx
-; EGPR-NDD-NEXT:    addq %rax, %rdi
-; EGPR-NDD-NEXT:    adcq %rdx, %r8
-; EGPR-NDD-NEXT:    setb %r10b
+; EGPR-NDD-NEXT:    addq %rax, %rsi
+; EGPR-NDD-NEXT:    adcq %rdx, %r9
+; EGPR-NDD-NEXT:    setb %r27b
 ; EGPR-NDD-NEXT:    movq %r13, %rax
 ; EGPR-NDD-NEXT:    mulq %r11
 ; EGPR-NDD-NEXT:    movq %rdx, %r28
 ; EGPR-NDD-NEXT:    movq %rax, %r29
-; EGPR-NDD-NEXT:    movq %r23, %r14
-; EGPR-NDD-NEXT:    movq %r23, %rax
+; EGPR-NDD-NEXT:    movq %r16, %rax
 ; EGPR-NDD-NEXT:    mulq %r11
-; EGPR-NDD-NEXT:    addq %r28, %rax, %r27
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r28
+; EGPR-NDD-NEXT:    addq %rax, %r28
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r12
 ; EGPR-NDD-NEXT:    movq %r13, %rax
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %rax, %r27
-; EGPR-NDD-NEXT:    adcq %rdx, %r28
-; EGPR-NDD-NEXT:    setb %r15b
-; EGPR-NDD-NEXT:    movq %r23, %rax
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %r28, %rax
-; EGPR-NDD-NEXT:    movzbl %r15b, %r28d
-; EGPR-NDD-NEXT:    adcq %r28, %rdx
-; EGPR-NDD-NEXT:    addq %r29, %rdi
-; EGPR-NDD-NEXT:    adcq %r27, %r8
-; EGPR-NDD-NEXT:    movzbl %r10b, %r10d
-; EGPR-NDD-NEXT:    adcq %r10, %rax
+; EGPR-NDD-NEXT:    mulq %r17
+; EGPR-NDD-NEXT:    addq %rax, %r28
+; EGPR-NDD-NEXT:    adcq %rdx, %r12
+; EGPR-NDD-NEXT:    setb %bpl
+; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    mulq %r17
+; EGPR-NDD-NEXT:    addq %r12, %rax
+; EGPR-NDD-NEXT:    movzbl %bpl, %r12d
+; EGPR-NDD-NEXT:    adcq %r12, %rdx
+; EGPR-NDD-NEXT:    addq %r29, %rsi
+; EGPR-NDD-NEXT:    adcq %r28, %r9
+; EGPR-NDD-NEXT:    movzbl %r27b, %r27d
+; EGPR-NDD-NEXT:    adcq %r27, %rax
 ; EGPR-NDD-NEXT:    adcq $0, %rdx
-; EGPR-NDD-NEXT:    addq %r25, %rcx
-; EGPR-NDD-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %r19, %rbx, %rcx
-; EGPR-NDD-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %r30, %r9, %rcx
-; EGPR-NDD-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %r31, %rsi, %rcx
-; EGPR-NDD-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    movzbl %bpl, %ecx
+; EGPR-NDD-NEXT:    addq %r25, %r19
+; EGPR-NDD-NEXT:    movq %r19, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq %rbx, %r30
+; EGPR-NDD-NEXT:    movq %r30, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq %r31, %r10
+; EGPR-NDD-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    adcq %rdi, %rcx
 ; EGPR-NDD-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq $0, %r8, %rcx
+; EGPR-NDD-NEXT:    movzbl %r8b, %ecx
+; EGPR-NDD-NEXT:    adcq %rsi, %rcx
 ; EGPR-NDD-NEXT:    movq %rcx, (%rsp) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq $0, %r9
+; EGPR-NDD-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    adcq $0, %rax
 ; EGPR-NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %rax
-; EGPR-NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq $0, %rdx
+; EGPR-NDD-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    movq 64(%r20), %r28
 ; EGPR-NDD-NEXT:    movq %r24, %rax
 ; EGPR-NDD-NEXT:    mulq %r28
 ; EGPR-NDD-NEXT:    movq %rdx, %r25
 ; EGPR-NDD-NEXT:    movq %rax, %r30
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r23 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r23, %rax
+; EGPR-NDD-NEXT:    movq %r14, %rax
 ; EGPR-NDD-NEXT:    mulq %r28
-; EGPR-NDD-NEXT:    addq %r25, %rax, %rcx
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %rsi
+; EGPR-NDD-NEXT:    addq %rax, %r25
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rcx
 ; EGPR-NDD-NEXT:    movq 72(%r20), %r29
 ; EGPR-NDD-NEXT:    movq %r24, %rax
 ; EGPR-NDD-NEXT:    mulq %r29
-; EGPR-NDD-NEXT:    addq %rax, %rcx
-; EGPR-NDD-NEXT:    adcq %rdx, %rsi
-; EGPR-NDD-NEXT:    setb %dil
-; EGPR-NDD-NEXT:    movq %r23, %rax
+; EGPR-NDD-NEXT:    addq %rax, %r25
+; EGPR-NDD-NEXT:    adcq %rdx, %rcx
+; EGPR-NDD-NEXT:    setb %sil
+; EGPR-NDD-NEXT:    movq %r14, %rax
 ; EGPR-NDD-NEXT:    mulq %r29
-; EGPR-NDD-NEXT:    addq %rax, %rsi
-; EGPR-NDD-NEXT:    movzbl %dil, %eax
-; EGPR-NDD-NEXT:    adcq %rax, %rdx, %rdi
+; EGPR-NDD-NEXT:    addq %rax, %rcx
+; EGPR-NDD-NEXT:    movzbl %sil, %eax
+; EGPR-NDD-NEXT:    adcq %rax, %rdx, %rsi
 ; EGPR-NDD-NEXT:    movq %r22, %rax
 ; EGPR-NDD-NEXT:    mulq %r28
 ; EGPR-NDD-NEXT:    movq %rdx, %r31
 ; EGPR-NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; EGPR-NDD-NEXT:    movq %r21, %rax
 ; EGPR-NDD-NEXT:    mulq %r28
-; EGPR-NDD-NEXT:    addq %r31, %rax, %r8
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r9
+; EGPR-NDD-NEXT:    addq %rax, %r31
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rdi
 ; EGPR-NDD-NEXT:    movq %r22, %rax
 ; EGPR-NDD-NEXT:    mulq %r29
-; EGPR-NDD-NEXT:    addq %r8, %rax
+; EGPR-NDD-NEXT:    addq %r31, %rax
 ; EGPR-NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %rdx, %r9, %r8
-; EGPR-NDD-NEXT:    setb %r9b
+; EGPR-NDD-NEXT:    adcq %rdx, %rdi
+; EGPR-NDD-NEXT:    setb %r8b
 ; EGPR-NDD-NEXT:    movq %r21, %rax
 ; EGPR-NDD-NEXT:    mulq %r29
-; EGPR-NDD-NEXT:    addq %r8, %rax
-; EGPR-NDD-NEXT:    movzbl %r9b, %r8d
-; EGPR-NDD-NEXT:    adcq %r8, %rdx
-; EGPR-NDD-NEXT:    addq %rax, %r30, %r8
-; EGPR-NDD-NEXT:    adcq %rdx, %rcx
+; EGPR-NDD-NEXT:    addq %rdi, %rax
+; EGPR-NDD-NEXT:    movzbl %r8b, %edi
+; EGPR-NDD-NEXT:    adcq %rdi, %rdx
+; EGPR-NDD-NEXT:    addq %rax, %r30, %rdi
+; EGPR-NDD-NEXT:    adcq %rdx, %r25
+; EGPR-NDD-NEXT:    adcq $0, %rcx
 ; EGPR-NDD-NEXT:    adcq $0, %rsi
-; EGPR-NDD-NEXT:    adcq $0, %rdi
-; EGPR-NDD-NEXT:    movq 80(%r20), %rbx
+; EGPR-NDD-NEXT:    movq 80(%r20), %r8
 ; EGPR-NDD-NEXT:    movq %r22, %rax
-; EGPR-NDD-NEXT:    mulq %rbx
+; EGPR-NDD-NEXT:    mulq %r8
 ; EGPR-NDD-NEXT:    movq %rdx, %r30
 ; EGPR-NDD-NEXT:    movq %rax, %r31
 ; EGPR-NDD-NEXT:    movq %r21, %rax
-; EGPR-NDD-NEXT:    mulq %rbx
-; EGPR-NDD-NEXT:    addq %r30, %rax, %r9
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r10
-; EGPR-NDD-NEXT:    movq 88(%r20), %r15
-; EGPR-NDD-NEXT:    movq %r22, %rax
-; EGPR-NDD-NEXT:    mulq %r15
-; EGPR-NDD-NEXT:    addq %rax, %r9
-; EGPR-NDD-NEXT:    adcq %rdx, %r10
-; EGPR-NDD-NEXT:    setb %r19b
-; EGPR-NDD-NEXT:    movq %r21, %rax
-; EGPR-NDD-NEXT:    mulq %r15
-; EGPR-NDD-NEXT:    addq %r10, %rax
-; EGPR-NDD-NEXT:    movzbl %r19b, %r10d
-; EGPR-NDD-NEXT:    adcq %r10, %rdx
-; EGPR-NDD-NEXT:    addq %r31, %r8
-; EGPR-NDD-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq %r9, %rcx
-; EGPR-NDD-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; EGPR-NDD-NEXT:    adcq $0, %rax
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %rcx
-; EGPR-NDD-NEXT:    addq %rax, %rsi
-; EGPR-NDD-NEXT:    adcq %rdi, %rcx
-; EGPR-NDD-NEXT:    setb %dil
-; EGPR-NDD-NEXT:    movq %r24, %rax
-; EGPR-NDD-NEXT:    mulq %rbx
-; EGPR-NDD-NEXT:    movq %rdx, %r30
-; EGPR-NDD-NEXT:    movq %rax, %r31
-; EGPR-NDD-NEXT:    movq %r23, %rax
-; EGPR-NDD-NEXT:    mulq %rbx
-; EGPR-NDD-NEXT:    addq %r30, %rax, %r8
+; EGPR-NDD-NEXT:    mulq %r8
+; EGPR-NDD-NEXT:    addq %rax, %r30
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %r9
-; EGPR-NDD-NEXT:    movq %r24, %rax
-; EGPR-NDD-NEXT:    mulq %r15
-; EGPR-NDD-NEXT:    addq %rax, %r8
+; EGPR-NDD-NEXT:    movq 88(%r20), %rbx
+; EGPR-NDD-NEXT:    movq %r22, %rax
+; EGPR-NDD-NEXT:    mulq %rbx
+; EGPR-NDD-NEXT:    addq %rax, %r30
 ; EGPR-NDD-NEXT:    adcq %rdx, %r9
 ; EGPR-NDD-NEXT:    setb %r10b
-; EGPR-NDD-NEXT:    movq %r23, %rax
-; EGPR-NDD-NEXT:    mulq %r15
+; EGPR-NDD-NEXT:    movq %r21, %rax
+; EGPR-NDD-NEXT:    mulq %rbx
 ; EGPR-NDD-NEXT:    addq %r9, %rax
 ; EGPR-NDD-NEXT:    movzbl %r10b, %r9d
 ; EGPR-NDD-NEXT:    adcq %r9, %rdx
-; EGPR-NDD-NEXT:    addq %rsi, %r31, %r25
-; EGPR-NDD-NEXT:    adcq %rcx, %r8, %r19
-; EGPR-NDD-NEXT:    movzbl %dil, %ecx
-; EGPR-NDD-NEXT:    adcq %rcx, %rax, %r31
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r12
-; EGPR-NDD-NEXT:    imulq %r15, %r26, %rcx
-; EGPR-NDD-NEXT:    movq %r26, %rax
-; EGPR-NDD-NEXT:    mulq %rbx
-; EGPR-NDD-NEXT:    movq %rax, %r30
-; EGPR-NDD-NEXT:    addq %rcx, %rdx, %rax
-; EGPR-NDD-NEXT:    imulq %rbx, %r18, %rcx
+; EGPR-NDD-NEXT:    addq %r31, %rdi
+; EGPR-NDD-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; EGPR-NDD-NEXT:    adcq %r25, %r30, %rbp
+; EGPR-NDD-NEXT:    adcq $0, %rax
+; EGPR-NDD-NEXT:    adcq $0, %rdx
 ; EGPR-NDD-NEXT:    addq %rax, %rcx
-; EGPR-NDD-NEXT:    imulq %r29, %r11, %rsi
+; EGPR-NDD-NEXT:    adcq %rdx, %rsi
+; EGPR-NDD-NEXT:    setb %dil
+; EGPR-NDD-NEXT:    movq %r24, %rax
+; EGPR-NDD-NEXT:    mulq %r8
+; EGPR-NDD-NEXT:    movq %rdx, %r30
+; EGPR-NDD-NEXT:    movq %rax, %r31
+; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    mulq %r8
+; EGPR-NDD-NEXT:    addq %rax, %r30
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r9
+; EGPR-NDD-NEXT:    movq %r24, %rax
+; EGPR-NDD-NEXT:    mulq %rbx
+; EGPR-NDD-NEXT:    addq %rax, %r30
+; EGPR-NDD-NEXT:    adcq %rdx, %r9
+; EGPR-NDD-NEXT:    setb %r10b
+; EGPR-NDD-NEXT:    movq %r14, %rax
+; EGPR-NDD-NEXT:    mulq %rbx
+; EGPR-NDD-NEXT:    addq %r9, %rax
+; EGPR-NDD-NEXT:    movzbl %r10b, %r9d
+; EGPR-NDD-NEXT:    adcq %r9, %rdx
+; EGPR-NDD-NEXT:    addq %rcx, %r31, %r25
+; EGPR-NDD-NEXT:    adcq %rsi, %r30, %r12
+; EGPR-NDD-NEXT:    movzbl %dil, %r19d
+; EGPR-NDD-NEXT:    adcq %rax, %r19
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r31
+; EGPR-NDD-NEXT:    imulq %r26, %rbx
+; EGPR-NDD-NEXT:    movq %r26, %rax
+; EGPR-NDD-NEXT:    mulq %r8
+; EGPR-NDD-NEXT:    movq %rax, %r30
+; EGPR-NDD-NEXT:    addq %rbx, %rdx
+; EGPR-NDD-NEXT:    imulq %r18, %r8
+; EGPR-NDD-NEXT:    addq %rdx, %r8
+; EGPR-NDD-NEXT:    imulq %r29, %r11, %rcx
 ; EGPR-NDD-NEXT:    movq %r11, %rax
 ; EGPR-NDD-NEXT:    mulq %r28
-; EGPR-NDD-NEXT:    addq %rsi, %rdx
-; EGPR-NDD-NEXT:    imulq %r28, %r16, %rsi
-; EGPR-NDD-NEXT:    addq %rsi, %rdx
+; EGPR-NDD-NEXT:    addq %rdx, %rcx
+; EGPR-NDD-NEXT:    imulq %r28, %r17, %r16
+; EGPR-NDD-NEXT:    addq %r16, %rcx
 ; EGPR-NDD-NEXT:    addq %r30, %rax, %rsi
-; EGPR-NDD-NEXT:    adcq %rcx, %rdx, %rdi
+; EGPR-NDD-NEXT:    adcq %rcx, %r8
 ; EGPR-NDD-NEXT:    movq %r28, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    movq %rdx, %r30
@@ -1601,215 +1593,215 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    movq %r29, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    addq %r30, %rax, %rcx
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r8
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rdi
 ; EGPR-NDD-NEXT:    movq %r28, %rax
 ; EGPR-NDD-NEXT:    mulq %r18
 ; EGPR-NDD-NEXT:    addq %rax, %rcx
-; EGPR-NDD-NEXT:    adcq %rdx, %r8
+; EGPR-NDD-NEXT:    adcq %rdx, %rdi
 ; EGPR-NDD-NEXT:    setb %r9b
 ; EGPR-NDD-NEXT:    movq %r29, %rax
 ; EGPR-NDD-NEXT:    mulq %r18
-; EGPR-NDD-NEXT:    addq %r8, %rax
-; EGPR-NDD-NEXT:    movzbl %r9b, %r8d
-; EGPR-NDD-NEXT:    adcq %r8, %rdx
+; EGPR-NDD-NEXT:    addq %rdi, %rax
+; EGPR-NDD-NEXT:    movzbl %r9b, %edi
+; EGPR-NDD-NEXT:    adcq %rdi, %rdx
 ; EGPR-NDD-NEXT:    addq %rax, %rsi
-; EGPR-NDD-NEXT:    adcq %rdi, %rdx, %r29
+; EGPR-NDD-NEXT:    adcq %rdx, %r8
 ; EGPR-NDD-NEXT:    movq 112(%r20), %rdi
 ; EGPR-NDD-NEXT:    movq %r22, %rax
 ; EGPR-NDD-NEXT:    mulq %rdi
 ; EGPR-NDD-NEXT:    movq %rax, %r26
-; EGPR-NDD-NEXT:    imulq %rdi, %r21, %rax
-; EGPR-NDD-NEXT:    addq %rdx, %rax
-; EGPR-NDD-NEXT:    imulq 120(%r20), %r22, %rdx
-; EGPR-NDD-NEXT:    addq %rdx, %rax, %r8
+; EGPR-NDD-NEXT:    imulq %r21, %rdi
+; EGPR-NDD-NEXT:    addq %rdi, %rdx
+; EGPR-NDD-NEXT:    imulq 120(%r20), %r22, %rax
+; EGPR-NDD-NEXT:    addq %rax, %rdx, %r9
 ; EGPR-NDD-NEXT:    movq 96(%r20), %r28
 ; EGPR-NDD-NEXT:    movq 104(%r20), %rdi
-; EGPR-NDD-NEXT:    imulq %rdi, %r24, %r9
+; EGPR-NDD-NEXT:    imulq %rdi, %r24, %r10
 ; EGPR-NDD-NEXT:    movq %r24, %rax
 ; EGPR-NDD-NEXT:    mulq %r28
-; EGPR-NDD-NEXT:    addq %r9, %rdx
-; EGPR-NDD-NEXT:    imulq %r28, %r23, %r9
-; EGPR-NDD-NEXT:    addq %r9, %rdx
-; EGPR-NDD-NEXT:    addq %r26, %rax, %r9
-; EGPR-NDD-NEXT:    adcq %rdx, %r8
+; EGPR-NDD-NEXT:    addq %r10, %rdx
+; EGPR-NDD-NEXT:    imulq %r28, %r14, %r23
+; EGPR-NDD-NEXT:    addq %r23, %rdx
+; EGPR-NDD-NEXT:    addq %rax, %r26
+; EGPR-NDD-NEXT:    adcq %rdx, %r9
 ; EGPR-NDD-NEXT:    movq %r28, %rax
 ; EGPR-NDD-NEXT:    mulq %r22
 ; EGPR-NDD-NEXT:    movq %rdx, %r23
 ; EGPR-NDD-NEXT:    movq %rax, %r24
 ; EGPR-NDD-NEXT:    movq %rdi, %rax
 ; EGPR-NDD-NEXT:    mulq %r22
-; EGPR-NDD-NEXT:    addq %r23, %rax, %r10
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r11
+; EGPR-NDD-NEXT:    addq %rax, %r23
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r10
 ; EGPR-NDD-NEXT:    movq %r28, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    addq %rax, %r10
-; EGPR-NDD-NEXT:    adcq %rdx, %r11
-; EGPR-NDD-NEXT:    setb %r16b
+; EGPR-NDD-NEXT:    addq %rax, %r23
+; EGPR-NDD-NEXT:    adcq %rdx, %r10
+; EGPR-NDD-NEXT:    setb %r11b
 ; EGPR-NDD-NEXT:    movq %rdi, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    addq %r11, %rax
-; EGPR-NDD-NEXT:    movzbl %r16b, %edi
+; EGPR-NDD-NEXT:    addq %r10, %rax
+; EGPR-NDD-NEXT:    movzbl %r11b, %edi
 ; EGPR-NDD-NEXT:    adcq %rdi, %rdx
-; EGPR-NDD-NEXT:    addq %r9, %rax
-; EGPR-NDD-NEXT:    adcq %r8, %rdx
-; EGPR-NDD-NEXT:    addq %r27, %r24, %rdi
-; EGPR-NDD-NEXT:    adcq %r10, %rcx
+; EGPR-NDD-NEXT:    addq %r26, %rax
+; EGPR-NDD-NEXT:    adcq %r9, %rdx
+; EGPR-NDD-NEXT:    addq %r27, %r24
+; EGPR-NDD-NEXT:    adcq %r23, %rcx
 ; EGPR-NDD-NEXT:    adcq %rsi, %rax
-; EGPR-NDD-NEXT:    adcq %r29, %rdx
-; EGPR-NDD-NEXT:    addq %rdi, %r25, %r15
-; EGPR-NDD-NEXT:    adcq %rcx, %r19, %rbx
-; EGPR-NDD-NEXT:    adcq %rax, %r31, %rbp
-; EGPR-NDD-NEXT:    adcq %rdx, %r12, %r30
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r18 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq 80(%r18), %r22
+; EGPR-NDD-NEXT:    adcq %r8, %rdx
+; EGPR-NDD-NEXT:    addq %r24, %r25, %rbx
+; EGPR-NDD-NEXT:    adcq %rcx, %r12
+; EGPR-NDD-NEXT:    adcq %rax, %r19, %r13
+; EGPR-NDD-NEXT:    adcq %rdx, %r31, %r30
+; EGPR-NDD-NEXT:    movq 80(%r15), %r22
+; EGPR-NDD-NEXT:    movq %r22, %rax
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
+; EGPR-NDD-NEXT:    mulq %r16
+; EGPR-NDD-NEXT:    movq %rax, %r26
+; EGPR-NDD-NEXT:    movq %rdx, %rdi
+; EGPR-NDD-NEXT:    movq 88(%r15), %r20
+; EGPR-NDD-NEXT:    movq %r20, %rax
+; EGPR-NDD-NEXT:    mulq %r16
+; EGPR-NDD-NEXT:    addq %rax, %rdi
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %rcx
 ; EGPR-NDD-NEXT:    movq %r22, %rax
 ; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r21 # 8-byte Reload
 ; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    movq %rax, %r26
-; EGPR-NDD-NEXT:    movq %rdx, %rdi
-; EGPR-NDD-NEXT:    movq 88(%r18), %r20
+; EGPR-NDD-NEXT:    addq %rax, %rdi
+; EGPR-NDD-NEXT:    adcq %rdx, %rcx
+; EGPR-NDD-NEXT:    setb %sil
 ; EGPR-NDD-NEXT:    movq %r20, %rax
 ; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    addq %rdi, %rax, %rcx
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %rsi
-; EGPR-NDD-NEXT:    movq %r22, %rax
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
-; EGPR-NDD-NEXT:    mulq %r12
 ; EGPR-NDD-NEXT:    addq %rax, %rcx
-; EGPR-NDD-NEXT:    adcq %rdx, %rsi
-; EGPR-NDD-NEXT:    setb %dil
-; EGPR-NDD-NEXT:    movq %r20, %rax
-; EGPR-NDD-NEXT:    mulq %r12
-; EGPR-NDD-NEXT:    addq %rax, %rsi
-; EGPR-NDD-NEXT:    movzbl %dil, %eax
-; EGPR-NDD-NEXT:    adcq %rax, %rdx, %rdi
-; EGPR-NDD-NEXT:    movq 64(%r18), %r24
+; EGPR-NDD-NEXT:    movzbl %sil, %eax
+; EGPR-NDD-NEXT:    adcq %rax, %rdx, %rsi
+; EGPR-NDD-NEXT:    movq 64(%r15), %r24
 ; EGPR-NDD-NEXT:    movq %r24, %rax
-; EGPR-NDD-NEXT:    mulq %r21
+; EGPR-NDD-NEXT:    mulq %r16
 ; EGPR-NDD-NEXT:    movq %rax, %r29
 ; EGPR-NDD-NEXT:    movq %rdx, %r27
-; EGPR-NDD-NEXT:    movq 72(%r18), %r23
+; EGPR-NDD-NEXT:    movq 72(%r15), %r23
 ; EGPR-NDD-NEXT:    movq %r23, %rax
-; EGPR-NDD-NEXT:    mulq %r21
-; EGPR-NDD-NEXT:    addq %r27, %rax, %r8
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r9
+; EGPR-NDD-NEXT:    mulq %r16
+; EGPR-NDD-NEXT:    addq %rax, %r27
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r8
 ; EGPR-NDD-NEXT:    movq %r24, %rax
-; EGPR-NDD-NEXT:    mulq %r12
-; EGPR-NDD-NEXT:    addq %r8, %rax, %r31
-; EGPR-NDD-NEXT:    adcq %rdx, %r9, %r8
+; EGPR-NDD-NEXT:    mulq %r21
+; EGPR-NDD-NEXT:    addq %r27, %rax, %r31
+; EGPR-NDD-NEXT:    adcq %rdx, %r8
 ; EGPR-NDD-NEXT:    setb %r9b
 ; EGPR-NDD-NEXT:    movq %r23, %rax
-; EGPR-NDD-NEXT:    mulq %r12
+; EGPR-NDD-NEXT:    mulq %r21
 ; EGPR-NDD-NEXT:    addq %r8, %rax
 ; EGPR-NDD-NEXT:    movzbl %r9b, %r8d
 ; EGPR-NDD-NEXT:    adcq %r8, %rdx
-; EGPR-NDD-NEXT:    addq %rax, %r26, %r8
-; EGPR-NDD-NEXT:    adcq %rdx, %rcx
+; EGPR-NDD-NEXT:    addq %rax, %r26, %r28
+; EGPR-NDD-NEXT:    adcq %rdx, %rdi
+; EGPR-NDD-NEXT:    adcq $0, %rcx
 ; EGPR-NDD-NEXT:    adcq $0, %rsi
-; EGPR-NDD-NEXT:    adcq $0, %rdi
 ; EGPR-NDD-NEXT:    movq %r24, %rax
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    mulq %r16
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
+; EGPR-NDD-NEXT:    mulq %r10
 ; EGPR-NDD-NEXT:    movq %rdx, %r26
 ; EGPR-NDD-NEXT:    movq %rax, %r27
 ; EGPR-NDD-NEXT:    movq %r23, %rax
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %r26, %rax, %r9
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r10
+; EGPR-NDD-NEXT:    mulq %r10
+; EGPR-NDD-NEXT:    addq %rax, %r26
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r8
 ; EGPR-NDD-NEXT:    movq %r24, %rax
-; EGPR-NDD-NEXT:    mulq %r17
-; EGPR-NDD-NEXT:    addq %rax, %r9
-; EGPR-NDD-NEXT:    adcq %rdx, %r10
-; EGPR-NDD-NEXT:    setb %r11b
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
+; EGPR-NDD-NEXT:    mulq %r11
+; EGPR-NDD-NEXT:    addq %r26, %rax, %r25
+; EGPR-NDD-NEXT:    adcq %rdx, %r8
+; EGPR-NDD-NEXT:    setb %r9b
 ; EGPR-NDD-NEXT:    movq %r23, %rax
-; EGPR-NDD-NEXT:    mulq %r17
-; EGPR-NDD-NEXT:    addq %r10, %rax
-; EGPR-NDD-NEXT:    movzbl %r11b, %r10d
-; EGPR-NDD-NEXT:    adcq %r10, %rdx
-; EGPR-NDD-NEXT:    addq %r8, %r27, %r28
-; EGPR-NDD-NEXT:    adcq %rcx, %r9, %r25
+; EGPR-NDD-NEXT:    mulq %r11
+; EGPR-NDD-NEXT:    addq %r8, %rax
+; EGPR-NDD-NEXT:    movzbl %r9b, %r8d
+; EGPR-NDD-NEXT:    adcq %r8, %rdx
+; EGPR-NDD-NEXT:    addq %r27, %r28
+; EGPR-NDD-NEXT:    adcq %rdi, %r25
 ; EGPR-NDD-NEXT:    adcq $0, %rax
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %rcx
-; EGPR-NDD-NEXT:    addq %rax, %rsi
-; EGPR-NDD-NEXT:    adcq %rdi, %rcx
+; EGPR-NDD-NEXT:    adcq $0, %rdx
+; EGPR-NDD-NEXT:    addq %rax, %rcx
+; EGPR-NDD-NEXT:    adcq %rdx, %rsi
 ; EGPR-NDD-NEXT:    setb %dil
 ; EGPR-NDD-NEXT:    movq %r22, %rax
-; EGPR-NDD-NEXT:    mulq %r16
+; EGPR-NDD-NEXT:    mulq %r10
 ; EGPR-NDD-NEXT:    movq %rdx, %r26
 ; EGPR-NDD-NEXT:    movq %rax, %r27
 ; EGPR-NDD-NEXT:    movq %r20, %rax
-; EGPR-NDD-NEXT:    mulq %r16
-; EGPR-NDD-NEXT:    addq %r26, %rax, %r8
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r9
+; EGPR-NDD-NEXT:    mulq %r10
+; EGPR-NDD-NEXT:    addq %rax, %r26
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r8
 ; EGPR-NDD-NEXT:    movq %r22, %rax
-; EGPR-NDD-NEXT:    mulq %r17
-; EGPR-NDD-NEXT:    addq %rax, %r8
-; EGPR-NDD-NEXT:    adcq %rdx, %r9
-; EGPR-NDD-NEXT:    setb %r10b
+; EGPR-NDD-NEXT:    mulq %r11
+; EGPR-NDD-NEXT:    addq %r26, %rax, %r19
+; EGPR-NDD-NEXT:    adcq %rdx, %r8
+; EGPR-NDD-NEXT:    setb %r9b
 ; EGPR-NDD-NEXT:    movq %r20, %rax
-; EGPR-NDD-NEXT:    mulq %r17
-; EGPR-NDD-NEXT:    addq %r9, %rax
-; EGPR-NDD-NEXT:    movzbl %r10b, %r9d
-; EGPR-NDD-NEXT:    adcq %r9, %rdx
-; EGPR-NDD-NEXT:    addq %rsi, %r27
-; EGPR-NDD-NEXT:    adcq %rcx, %r8, %r19
+; EGPR-NDD-NEXT:    mulq %r11
+; EGPR-NDD-NEXT:    addq %r8, %rax
+; EGPR-NDD-NEXT:    movzbl %r9b, %r8d
+; EGPR-NDD-NEXT:    adcq %r8, %rdx
+; EGPR-NDD-NEXT:    addq %rcx, %r27
+; EGPR-NDD-NEXT:    adcq %rsi, %r19
 ; EGPR-NDD-NEXT:    movzbl %dil, %ecx
 ; EGPR-NDD-NEXT:    adcq %rax, %rcx
 ; EGPR-NDD-NEXT:    adcq $0, %rdx, %rdi
-; EGPR-NDD-NEXT:    movq %r18, %r9
-; EGPR-NDD-NEXT:    movq 96(%r18), %r26
-; EGPR-NDD-NEXT:    imulq %r17, %r26, %rsi
+; EGPR-NDD-NEXT:    movq 96(%r15), %r26
+; EGPR-NDD-NEXT:    imulq %r11, %r26, %rsi
 ; EGPR-NDD-NEXT:    movq %r26, %rax
-; EGPR-NDD-NEXT:    mulq %r16
+; EGPR-NDD-NEXT:    mulq %r10
 ; EGPR-NDD-NEXT:    movq %rax, %r18
-; EGPR-NDD-NEXT:    addq %rsi, %rdx, %rax
-; EGPR-NDD-NEXT:    movq 104(%r9), %r8
-; EGPR-NDD-NEXT:    imulq %r16, %r8, %rdx
-; EGPR-NDD-NEXT:    addq %rdx, %rax, %rsi
-; EGPR-NDD-NEXT:    movq 112(%r9), %rax
-; EGPR-NDD-NEXT:    movq %r9, %r11
-; EGPR-NDD-NEXT:    imulq %r12, %rax, %r9
-; EGPR-NDD-NEXT:    mulq %r21
+; EGPR-NDD-NEXT:    addq %rsi, %rdx
+; EGPR-NDD-NEXT:    movq 104(%r15), %r8
+; EGPR-NDD-NEXT:    imulq %r10, %r8, %rax
+; EGPR-NDD-NEXT:    addq %rax, %rdx, %rsi
+; EGPR-NDD-NEXT:    movq 112(%r15), %rax
+; EGPR-NDD-NEXT:    imulq %r21, %rax, %r9
+; EGPR-NDD-NEXT:    mulq %r16
 ; EGPR-NDD-NEXT:    addq %r9, %rdx
-; EGPR-NDD-NEXT:    imulq 120(%r11), %r21, %r9
+; EGPR-NDD-NEXT:    imulq 120(%r15), %r16, %r9
 ; EGPR-NDD-NEXT:    addq %r9, %rdx
-; EGPR-NDD-NEXT:    addq %r18, %rax, %r9
-; EGPR-NDD-NEXT:    adcq %rsi, %rdx, %r16
-; EGPR-NDD-NEXT:    movq %r21, %rax
+; EGPR-NDD-NEXT:    addq %r18, %rax, %r10
+; EGPR-NDD-NEXT:    adcq %rsi, %rdx, %r9
+; EGPR-NDD-NEXT:    movq %r16, %rax
+; EGPR-NDD-NEXT:    movq %r16, %r18
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    movq %rdx, %r17
 ; EGPR-NDD-NEXT:    movq %rax, %rsi
-; EGPR-NDD-NEXT:    movq %r12, %rax
+; EGPR-NDD-NEXT:    movq %r21, %rax
 ; EGPR-NDD-NEXT:    mulq %r26
-; EGPR-NDD-NEXT:    addq %r17, %rax, %r10
-; EGPR-NDD-NEXT:    adcq $0, %rdx, %r17
+; EGPR-NDD-NEXT:    addq %r17, %rax, %r11
+; EGPR-NDD-NEXT:    adcq $0, %rdx, %r16
+; EGPR-NDD-NEXT:    movq %r18, %rax
+; EGPR-NDD-NEXT:    mulq %r8
+; EGPR-NDD-NEXT:    addq %rax, %r11
+; EGPR-NDD-NEXT:    adcq %rdx, %r16
+; EGPR-NDD-NEXT:    setb %r17b
 ; EGPR-NDD-NEXT:    movq %r21, %rax
 ; EGPR-NDD-NEXT:    mulq %r8
-; EGPR-NDD-NEXT:    addq %r10, %rax, %r11
-; EGPR-NDD-NEXT:    adcq %rdx, %r17, %r10
-; EGPR-NDD-NEXT:    setb %r17b
-; EGPR-NDD-NEXT:    movq %r12, %rax
-; EGPR-NDD-NEXT:    mulq %r8
-; EGPR-NDD-NEXT:    addq %r10, %rax
+; EGPR-NDD-NEXT:    addq %r16, %rax
 ; EGPR-NDD-NEXT:    movzbl %r17b, %r8d
 ; EGPR-NDD-NEXT:    adcq %r8, %rdx
-; EGPR-NDD-NEXT:    addq %r9, %rax, %r10
-; EGPR-NDD-NEXT:    adcq %r16, %rdx, %r17
-; EGPR-NDD-NEXT:    imulq %r14, %r24, %r8
+; EGPR-NDD-NEXT:    addq %rax, %r10
+; EGPR-NDD-NEXT:    adcq %r9, %rdx, %r17
+; EGPR-NDD-NEXT:    imulq {{[-0-9]+}}(%r{{[sb]}}p), %r24, %r8 # 8-byte Folded Reload
 ; EGPR-NDD-NEXT:    movq %r24, %rax
-; EGPR-NDD-NEXT:    mulq %r13
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
+; EGPR-NDD-NEXT:    mulq %r16
 ; EGPR-NDD-NEXT:    movq %rax, %r9
-; EGPR-NDD-NEXT:    addq %r8, %rdx, %rax
-; EGPR-NDD-NEXT:    imulq %r13, %r23, %rdx
-; EGPR-NDD-NEXT:    addq %rdx, %rax, %r8
+; EGPR-NDD-NEXT:    addq %r8, %rdx
+; EGPR-NDD-NEXT:    imulq %r16, %r23, %rax
+; EGPR-NDD-NEXT:    addq %rax, %rdx, %r8
 ; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r21 # 8-byte Reload
 ; EGPR-NDD-NEXT:    imulq %r21, %r22, %r16
 ; EGPR-NDD-NEXT:    movq %r22, %rax
 ; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r26 # 8-byte Reload
 ; EGPR-NDD-NEXT:    mulq %r26
 ; EGPR-NDD-NEXT:    addq %r16, %rdx
-; EGPR-NDD-NEXT:    imulq %r26, %r20, %r16
-; EGPR-NDD-NEXT:    addq %r16, %rdx
+; EGPR-NDD-NEXT:    imulq %r26, %r20
+; EGPR-NDD-NEXT:    addq %r20, %rdx
 ; EGPR-NDD-NEXT:    addq %r9, %rax, %r16
 ; EGPR-NDD-NEXT:    adcq %r8, %rdx, %r18
 ; EGPR-NDD-NEXT:    movq %r26, %rax
@@ -1840,49 +1832,49 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    addq %r27, %rsi
 ; EGPR-NDD-NEXT:    adcq %r19, %r8
 ; EGPR-NDD-NEXT:    adcq %rcx, %rax
-; EGPR-NDD-NEXT:    adcq %rdx, %rdi, %rcx
-; EGPR-NDD-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r29, %rdx # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq {{[-0-9]+}}(%r{{[sb]}}p), %r31, %rdi # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq {{[-0-9]+}}(%r{{[sb]}}p), %r28, %r9 # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq {{[-0-9]+}}(%r{{[sb]}}p), %r25, %r10 # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq %r15, %rsi
-; EGPR-NDD-NEXT:    adcq %rbx, %r8
-; EGPR-NDD-NEXT:    adcq %rbp, %rax
-; EGPR-NDD-NEXT:    adcq %r30, %rcx
-; EGPR-NDD-NEXT:    addq %rdx, {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq %rdi, {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq %r9, {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq %r10, {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq %rsi, {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq %r8, (%rsp), %r8 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq %rdi, %rdx
+; EGPR-NDD-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r29 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq {{[-0-9]+}}(%r{{[sb]}}p), %r31 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq {{[-0-9]+}}(%r{{[sb]}}p), %r28 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq %rbp, %r25
+; EGPR-NDD-NEXT:    adcq %rbx, %rsi
+; EGPR-NDD-NEXT:    adcq %r12, %r8
+; EGPR-NDD-NEXT:    adcq %r13, %rax
+; EGPR-NDD-NEXT:    adcq %r30, %rdx
+; EGPR-NDD-NEXT:    addq %r29, {{[-0-9]+}}(%r{{[sb]}}p), %r29 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq %r31, {{[-0-9]+}}(%r{{[sb]}}p), %r31 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq %r28, {{[-0-9]+}}(%r{{[sb]}}p), %r28 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq %r25, {{[-0-9]+}}(%r{{[sb]}}p), %r25 # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq %rsi, (%rsp), %rsi # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    adcq %r8, {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Folded Reload
 ; EGPR-NDD-NEXT:    adcq %rax, {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    adcq %rcx, {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r16, (%r11)
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r16, 8(%r11)
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r16, 16(%r11)
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r16, 24(%r11)
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r16, 32(%r11)
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r16, 40(%r11)
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r16, 48(%r11)
-; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r16 # 8-byte Reload
-; EGPR-NDD-NEXT:    movq %r16, 56(%r11)
-; EGPR-NDD-NEXT:    movq %rdx, 64(%r11)
-; EGPR-NDD-NEXT:    movq %rdi, 72(%r11)
-; EGPR-NDD-NEXT:    movq %r9, 80(%r11)
-; EGPR-NDD-NEXT:    movq %r10, 88(%r11)
-; EGPR-NDD-NEXT:    movq %rsi, 96(%r11)
-; EGPR-NDD-NEXT:    movq %r8, 104(%r11)
-; EGPR-NDD-NEXT:    movq %rax, 112(%r11)
-; EGPR-NDD-NEXT:    movq %rcx, 120(%r11)
-; EGPR-NDD-NEXT:    addq $104, %rsp
+; EGPR-NDD-NEXT:    adcq %rdx, {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Folded Reload
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %rdi, (%rcx)
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %rdi, 8(%rcx)
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %rdi, 16(%rcx)
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %rdi, 24(%rcx)
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %rdi, 32(%rcx)
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %rdi, 40(%rcx)
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %rdi, 48(%rcx)
+; EGPR-NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; EGPR-NDD-NEXT:    movq %rdi, 56(%rcx)
+; EGPR-NDD-NEXT:    movq %r29, 64(%rcx)
+; EGPR-NDD-NEXT:    movq %r31, 72(%rcx)
+; EGPR-NDD-NEXT:    movq %r28, 80(%rcx)
+; EGPR-NDD-NEXT:    movq %r25, 88(%rcx)
+; EGPR-NDD-NEXT:    movq %rsi, 96(%rcx)
+; EGPR-NDD-NEXT:    movq %r8, 104(%rcx)
+; EGPR-NDD-NEXT:    movq %rax, 112(%rcx)
+; EGPR-NDD-NEXT:    movq %rdx, 120(%rcx)
+; EGPR-NDD-NEXT:    addq $96, %rsp
 ; EGPR-NDD-NEXT:    popq %rbx
 ; EGPR-NDD-NEXT:    popq %r12
 ; EGPR-NDD-NEXT:    popq %r13

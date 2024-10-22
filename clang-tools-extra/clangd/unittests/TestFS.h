@@ -67,7 +67,7 @@ public:
 
   std::vector<std::string> ExtraClangFlags;
 
-private:
+protected:
   StringRef Directory;
   StringRef RelPathPrefix;
 };

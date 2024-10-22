@@ -1,5 +1,5 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-ztso -riscv-no-aliases 2>&1 | FileCheck %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-ztso -riscv-no-aliases 2>&1 | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+ztso -riscv-no-aliases 2>&1 | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+ztso -riscv-no-aliases 2>&1 | FileCheck %s
 
 # Note: Ztso doesn't add or remove any instructions, so this is basically
 # just checking that a) we accepted the attribute name, and b) codegen did

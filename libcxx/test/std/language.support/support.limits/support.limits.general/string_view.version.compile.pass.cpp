@@ -23,6 +23,7 @@
     __cpp_lib_string_contains             202011L [C++23]
     __cpp_lib_string_view                 201606L [C++17]
                                           201803L [C++20]
+                                          202403L [C++26]
 */
 
 #include <string_view>
@@ -252,8 +253,8 @@
 # ifndef __cpp_lib_string_view
 #   error "__cpp_lib_string_view should be defined in c++26"
 # endif
-# if __cpp_lib_string_view != 201803L
-#   error "__cpp_lib_string_view should have the value 201803L in c++26"
+# if __cpp_lib_string_view != 202403L
+#   error "__cpp_lib_string_view should have the value 202403L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

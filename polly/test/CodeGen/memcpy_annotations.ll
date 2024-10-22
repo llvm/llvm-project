@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; Verify that @llvm.memcpy does not get a !alias.scope annotation.
 ; @llvm.memcpy takes two pointers, it is ambiguous to which the

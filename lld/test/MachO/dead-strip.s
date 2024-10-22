@@ -35,7 +35,7 @@
 # EXEC-DAG:   g {{.*}} __mh_execute_header
 # EXECDATA-LABEL: Indirect symbols
 # EXECDATA-NEXT:  name
-# EXECDATA-NEXT:  _ref_com
+# EXECDATA-NEXT:  LOCAL
 # EXECDATA-LABEL: Contents of (__DATA,__ref_section) section
 # EXECDATA-NEXT:   04 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
 # EXECDATA-LABEL: Exports trie:
@@ -266,12 +266,12 @@
 # UNWIND-NEXT:   g F __TEXT,__text _main
 # UNWIND-NEXT:   g F __TEXT,__text __mh_execute_header
 # UNWIND-NEXT:   *UND* dyld_stub_binder
-# UNWIND-NEXT:   *UND* ___cxa_allocate_exception
-# UNWIND-NEXT:   *UND* ___cxa_end_catch
 # UNWIND-NEXT:   *UND* __ZTIi
+# UNWIND-NEXT:   *UND* ___cxa_allocate_exception
+# UNWIND-NEXT:   *UND* ___cxa_begin_catch
+# UNWIND-NEXT:   *UND* ___cxa_end_catch
 # UNWIND-NEXT:   *UND* ___cxa_throw
 # UNWIND-NEXT:   *UND* ___gxx_personality_v0
-# UNWIND-NEXT:   *UND* ___cxa_begin_catch
 # UNWIND-NOT:    GCC_except_table0
 
 ## If a dead stripped function has a strong ref to a dylib symbol but
@@ -328,6 +328,17 @@
 # LIT-NEXT: __TEXT:__cstring:bar
 # LIT-NEXT: Contents of (__TEXT,__literals) section
 # LIT-NEXT: ef be ad de {{$}}
+
+## Ensure that addrsig metadata does not keep unreferenced functions alive.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/addrsig.s -o %t/addrsig.o
+# RUN: %lld -lSystem -dead_strip --icf=safe %t/addrsig.o -o %t/addrsig
+# RUN: llvm-objdump --syms %t/addrsig | \
+# RUN:     FileCheck --check-prefix=ADDSIG --implicit-check-not _addrsig %s
+# ADDSIG-LABEL: SYMBOL TABLE:
+# ADDSIG-NEXT:   g F __TEXT,__text _main
+# ADDSIG-NEXT:   g F __TEXT,__text __mh_execute_header
+# ADDSIG-NEXT:   *UND* dyld_stub_binder
 
 ## Duplicate symbols that will be dead stripped later should not fail when using
 ## the --dead-stripped-duplicates flag
@@ -988,3 +999,16 @@ _more_data:
 _main:
   callq _ref_undef_fun
 .subsections_via_symbols
+
+#--- addrsig.s
+.globl _main, _addrsig
+_main:
+  retq
+
+_addrsig:
+  retq
+
+.subsections_via_symbols
+
+.addrsig
+.addrsig_sym _addrsig

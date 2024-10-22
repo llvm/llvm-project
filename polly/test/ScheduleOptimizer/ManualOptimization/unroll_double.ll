@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadNPMPolly '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --match-full-lines
 ;
 ; Apply two loop transformations. First partial, then full unrolling.
 ;

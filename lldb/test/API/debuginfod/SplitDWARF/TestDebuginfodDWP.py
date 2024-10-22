@@ -25,12 +25,7 @@ class DebugInfodDWPTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
-    def setUp(self):
-        TestBase.setUp(self)
-        # Don't run these tests if we don't have Debuginfod support
-        if "Debuginfod" not in configuration.enabled_plugins:
-            self.skipTest("The Debuginfod SymbolLocator plugin is not enabled")
-
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_normal_stripped(self):
         """
         Validate behavior with a stripped binary, no symbols or symbol locator.
@@ -38,6 +33,7 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out"])
         self.try_breakpoint(False)
 
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_normal_stripped_split_with_dwp(self):
         """
         Validate behavior with symbols, but no symbol locator.
@@ -45,6 +41,7 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out", "a.out.debug", "a.out.dwp"])
         self.try_breakpoint(True)
 
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_normal_stripped_only_dwp(self):
         """
         Validate behavior *with* dwp symbols only, but missing other symbols,
@@ -54,6 +51,8 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out", "a.out.dwp"])
         self.try_breakpoint(False)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_debuginfod_dwp_from_service(self):
         """
         Test behavior with the unstripped binary, and DWP from the service.
@@ -61,6 +60,8 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out.debug"], "a.out.dwp")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_debuginfod_both_symfiles_from_service(self):
         """
         Test behavior with a stripped binary, with the unstripped binary and
@@ -69,6 +70,8 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out"], "a.out.dwp", "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_debuginfod_both_okd_symfiles_from_service(self):
         """
         Test behavior with both the only-keep-debug symbols and the dwp symbols
@@ -183,10 +186,11 @@ class DebugInfodDWPTests(TestBase):
 
     def getUUID(self, filename):
         try:
-            target = self.dbg.CreateTarget(self.getBuildArtifact(filename))
-            module = target.GetModuleAtIndex(0)
+            spec = lldb.SBModuleSpec()
+            spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact(filename)))
+            module = lldb.SBModule(spec)
             uuid = module.GetUUIDString().replace("-", "").lower()
-            self.dbg.DeleteTarget(target)
-            return uuid if len(uuid) == 40 else None
+            # Don't want lldb's fake 32 bit CRC's for this one
+            return uuid if len(uuid) > 8 else None
         except:
             return None

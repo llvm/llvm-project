@@ -144,7 +144,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
@@ -194,14 +194,13 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     IRB.SetInsertPoint(TrapBB);
 
     Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
-    auto *F = Intrinsic::getDeclaration(Fn->getParent(), IntrID);
 
     CallInst *TrapCall;
     if (DebugTrapBB) {
-      TrapCall =
-          IRB.CreateCall(F, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
+      TrapCall = IRB.CreateIntrinsic(
+          IntrID, {}, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
     } else {
-      TrapCall = IRB.CreateCall(F, {});
+      TrapCall = IRB.CreateIntrinsic(IntrID, {}, {});
     }
 
     TrapCall->setDoesNotReturn();

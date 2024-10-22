@@ -11,8 +11,8 @@
 
 #include "utils/gpu/server/llvmlibc_rpc_server.h"
 
-#include "llvm-libc-types/rpc_opcodes_t.h"
 #include "include/llvm-libc-types/test_rpc_opcodes_t.h"
+#include "llvm-libc-types/rpc_opcodes_t.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -53,8 +53,9 @@ struct end_args_t {
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.
 /// Returns the final value of the `main` function on the device.
-int load(int argc, char **argv, char **evnp, void *image, size_t size,
-         const LaunchParameters &params);
+int load(int argc, const char **argv, const char **evnp, void *image,
+         size_t size, const LaunchParameters &params,
+         bool print_resource_usage);
 
 /// Return \p V aligned "upwards" according to \p Align.
 template <typename V, typename A> inline V align_up(V val, A align) {
@@ -63,7 +64,7 @@ template <typename V, typename A> inline V align_up(V val, A align) {
 
 /// Copy the system's argument vector to GPU memory allocated using \p alloc.
 template <typename Allocator>
-void *copy_argument_vector(int argc, char **argv, Allocator alloc) {
+void *copy_argument_vector(int argc, const char **argv, Allocator alloc) {
   size_t argv_size = sizeof(char *) * (argc + 1);
   size_t str_size = 0;
   for (int i = 0; i < argc; ++i)
@@ -84,28 +85,31 @@ void *copy_argument_vector(int argc, char **argv, Allocator alloc) {
   }
 
   // Ensure the vector is null terminated.
-  reinterpret_cast<void **>(dev_argv)[argv_size] = nullptr;
+  reinterpret_cast<void **>(dev_argv)[argc] = nullptr;
   return dev_argv;
 }
 
 /// Copy the system's environment to GPU memory allocated using \p alloc.
 template <typename Allocator>
-void *copy_environment(char **envp, Allocator alloc) {
+void *copy_environment(const char **envp, Allocator alloc) {
   int envc = 0;
-  for (char **env = envp; *env != 0; ++env)
+  for (const char **env = envp; *env != 0; ++env)
     ++envc;
 
   return copy_argument_vector(envc, envp, alloc);
 }
 
-inline void handle_error(const char *msg) {
-  fprintf(stderr, "%s\n", msg);
+inline void handle_error_impl(const char *file, int32_t line, const char *msg) {
+  fprintf(stderr, "%s:%d:0: Error: %s\n", file, line, msg);
   exit(EXIT_FAILURE);
 }
 
-inline void handle_error(rpc_status_t) {
-  handle_error("Failure in the RPC server\n");
+inline void handle_error_impl(const char *file, int32_t line,
+                              rpc_status_t err) {
+  fprintf(stderr, "%s:%d:0: Error: %d\n", file, line, err);
+  exit(EXIT_FAILURE);
 }
+#define handle_error(X) handle_error_impl(__FILE__, __LINE__, X)
 
 template <uint32_t lane_size>
 inline void register_rpc_callbacks(rpc_device_t device) {

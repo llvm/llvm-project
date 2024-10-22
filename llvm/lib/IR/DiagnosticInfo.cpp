@@ -375,6 +375,10 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
   DP << Str;
 }
 
+void DiagnosticInfoInstrumentation::print(DiagnosticPrinter &DP) const {
+  DP << Msg;
+}
+
 void DiagnosticInfoISelFallback::print(DiagnosticPrinter &DP) const {
   DP << "Instruction selection used fallback path for " << getFunction();
 }
@@ -403,7 +407,7 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
                                     ? Args.end()
                                     : Args.begin() + FirstExtraArgIndex))
     OS << Arg.Val;
-  return OS.str();
+  return Str;
 }
 
 DiagnosticInfoMisExpect::DiagnosticInfoMisExpect(const Instruction *Inst,
@@ -432,7 +436,7 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
     auto Sev = i == 0 ? DS_Error : DS_Warning;
 
     if (F->hasFnAttribute(AttrName)) {
-      unsigned LocCookie = 0;
+      uint64_t LocCookie = 0;
       auto A = F->getFnAttribute(AttrName);
       if (MDNode *MD = CI.getMetadata("srcloc"))
         LocCookie =

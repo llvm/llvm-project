@@ -14,12 +14,11 @@ define i32 @f2(i32 %a) {
 	ret i32 %b
 }
 
-; CHECK: Module Hash: {{([a-z0-9]{14,})}}
-; CHECK-NEXT: Function f1 Hash: [[F1H:([a-z0-9]{14,})]]
+; CHECK: Module Hash: {{([a-f0-9]{16,})}}
+; CHECK-NEXT: Function f1 Hash: [[F1H:([a-f0-9]{16,})]]
 ; CHECK-NEXT: Function f2 Hash: [[F1H]]
 
-; DETAILED-HASH: Module Hash: {{([a-z0-9]{14,})}}
-; DETAILED-HASH-NEXT: Function f1 Hash: [[DF1H:([a-z0-9]{14,})]]
+; DETAILED-HASH: Module Hash: {{([a-f0-9]{16,})}}
+; DETAILED-HASH-NEXT: Function f1 Hash: [[DF1H:([a-f0-9]{16,})]]
 ; DETAILED-HASH-NOT: [[DF1H]]
-; DETAILED-HASH-NEXT: Function f2 Hash: {{([a-z0-9]{14,})}}
-
+; DETAILED-HASH-NEXT: Function f2 Hash: {{([a-f0-9]{16,})}}

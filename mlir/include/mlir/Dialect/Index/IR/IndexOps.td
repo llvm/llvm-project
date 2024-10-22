@@ -25,7 +25,7 @@ include "mlir/IR/OpBase.td"
 /// Base class for Index dialect operations.
 class IndexOp<string mnemonic, list<Trait> traits = []>
     : Op<IndexDialect, mnemonic,
-      [DeclareOpInterfaceMethods<InferIntRangeInterface>] # traits>;
+      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>] # traits>;
 
 //===----------------------------------------------------------------------===//
 // IndexBinaryOp

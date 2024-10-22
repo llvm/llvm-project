@@ -112,6 +112,23 @@ private:
   static char ID;
 };
 
+/// A T-style log handler that multiplexes messages to two log handlers.
+class TeeLogHandler : public LogHandler {
+public:
+  TeeLogHandler(std::shared_ptr<LogHandler> first_log_handler,
+                std::shared_ptr<LogHandler> second_log_handler);
+
+  void Emit(llvm::StringRef message) override;
+
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
+
+private:
+  std::shared_ptr<LogHandler> m_first_log_handler;
+  std::shared_ptr<LogHandler> m_second_log_handler;
+  static char ID;
+};
+
 class Log final {
 public:
   /// The underlying type of all log channel enums. Declare them as:
@@ -255,6 +272,12 @@ public:
   void VAFormatf(llvm::StringRef file, llvm::StringRef function,
                  const char *format, va_list args);
 
+  void Enable(const std::shared_ptr<LogHandler> &handler_sp,
+              std::optional<MaskType> flags = std::nullopt,
+              uint32_t options = 0);
+
+  void Disable(std::optional<MaskType> flags = std::nullopt);
+
 private:
   Channel &m_channel;
 
@@ -279,11 +302,6 @@ private:
     llvm::sys::ScopedReader lock(m_mutex);
     return m_handler;
   }
-
-  void Enable(const std::shared_ptr<LogHandler> &handler_sp, uint32_t options,
-              MaskType flags);
-
-  void Disable(MaskType flags);
 
   bool Dump(llvm::raw_ostream &stream);
 

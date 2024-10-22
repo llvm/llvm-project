@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -ast-print %s -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -ast-print %s -std=c++11 | FileCheck %s
 
 // Make sure that for template value arguments that are unscoped enumerators,
 // no qualified enum information is included in their name, as their visibility

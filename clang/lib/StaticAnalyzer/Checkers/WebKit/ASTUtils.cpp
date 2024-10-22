@@ -12,12 +12,14 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include <optional>
 
 namespace clang {
 
-std::pair<const Expr *, bool>
-tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
+bool tryToFindPtrOrigin(
+    const Expr *E, bool StopAtFirstRefCountedObj,
+    std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
       E = tempExpr->getSubExpr();
@@ -27,12 +29,35 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
       E = tempExpr->getSubExpr();
       continue;
     }
+    if (auto *tempExpr = dyn_cast<CXXTemporaryObjectExpr>(E)) {
+      if (auto *C = tempExpr->getConstructor()) {
+        if (auto *Class = C->getParent(); Class && isRefCounted(Class))
+          return callback(E, true);
+        break;
+      }
+    }
+    if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+      if (auto *RF = POE->getResultExpr()) {
+        E = RF;
+        continue;
+      }
+    }
+    if (auto *tempExpr = dyn_cast<ParenExpr>(E)) {
+      E = tempExpr->getSubExpr();
+      continue;
+    }
+    if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
+      return tryToFindPtrOrigin(Expr->getTrueExpr(), StopAtFirstRefCountedObj,
+                                callback) &&
+             tryToFindPtrOrigin(Expr->getFalseExpr(), StopAtFirstRefCountedObj,
+                                callback);
+    }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
         if (auto *ConversionFunc =
                 dyn_cast_or_null<FunctionDecl>(cast->getConversionFunction())) {
           if (isCtorOfRefCounted(ConversionFunc))
-            return {E, true};
+            return callback(E, true);
         }
       }
       // FIXME: This can give false "origin" that would lead to false negatives
@@ -47,7 +72,7 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
           if (IsGetterOfRefCt && *IsGetterOfRefCt) {
             E = memberCall->getImplicitObjectArgument();
             if (StopAtFirstRefCountedObj) {
-              return {E, true};
+              return callback(E, true);
             }
             continue;
           }
@@ -64,22 +89,33 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
       if (auto *callee = call->getDirectCallee()) {
         if (isCtorOfRefCounted(callee)) {
           if (StopAtFirstRefCountedObj)
-            return {E, true};
+            return callback(E, true);
 
           E = call->getArg(0);
           continue;
         }
 
-        if (isReturnValueRefCounted(callee))
-          return {E, true};
+        if (isRefType(callee->getReturnType()))
+          return callback(E, true);
 
         if (isSingleton(callee))
-          return {E, true};
+          return callback(E, true);
+
+        if (callee->isInStdNamespace() && safeGetName(callee) == "forward") {
+          E = call->getArg(0);
+          continue;
+        }
 
         if (isPtrConversion(callee)) {
           E = call->getArg(0);
           continue;
         }
+      }
+    }
+    if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
+      if (auto *Method = ObjCMsgExpr->getMethodDecl()) {
+        if (isRefType(Method->getReturnType()))
+          return callback(E, true);
       }
     }
     if (auto *unaryOp = dyn_cast<UnaryOperator>(E)) {
@@ -91,7 +127,7 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
     break;
   }
   // Some other expression.
-  return {E, false};
+  return callback(E, false);
 }
 
 bool isASafeCallArg(const Expr *E) {

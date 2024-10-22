@@ -361,6 +361,10 @@ public:
 };
 
 class ItaniumVTableContext : public VTableContextBase {
+public:
+  typedef llvm::DenseMap<const CXXMethodDecl *, const CXXMethodDecl *>
+      OriginalMethodMapTy;
+
 private:
 
   /// Contains the index (relative to the vtable address point)
@@ -383,6 +387,10 @@ private:
   typedef llvm::DenseMap<ClassPairTy, CharUnits>
     VirtualBaseClassOffsetOffsetsMapTy;
   VirtualBaseClassOffsetOffsetsMapTy VirtualBaseClassOffsetOffsets;
+
+  /// Map from a virtual method to the nearest method in the primary base class
+  /// chain that it overrides.
+  OriginalMethodMapTy OriginalMethodMap;
 
   void computeVTableRelatedInformation(const CXXRecordDecl *RD) override;
 
@@ -424,6 +432,27 @@ public:
   /// Base must be a virtual base class or an unambiguous base.
   CharUnits getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
                                        const CXXRecordDecl *VBase);
+
+  /// Return the method that added the v-table slot that will be used to call
+  /// the given method.
+  ///
+  /// In the Itanium ABI, where overrides always cause methods to be added to
+  /// the primary v-table if they're not already there, this will be the first
+  /// declaration in the primary base class chain for which the return type
+  /// adjustment is trivial.
+  GlobalDecl findOriginalMethod(GlobalDecl GD);
+
+  const CXXMethodDecl *findOriginalMethodInMap(const CXXMethodDecl *MD) const;
+
+  void setOriginalMethod(const CXXMethodDecl *Key, const CXXMethodDecl *Val) {
+    OriginalMethodMap[Key] = Val;
+  }
+
+  /// This method is reserved for the implementation and shouldn't be used
+  /// directly.
+  const OriginalMethodMapTy &getOriginalMethodMap() {
+    return OriginalMethodMap;
+  }
 
   static bool classof(const VTableContextBase *VT) {
     return !VT->isMicrosoft();

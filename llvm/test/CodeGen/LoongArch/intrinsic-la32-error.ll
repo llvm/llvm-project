@@ -1,4 +1,4 @@
-; RUN: not llc --mtriple=loongarch32 < %s 2>&1 | FileCheck %s
+; RUN: not llc --mtriple=loongarch32 -mattr=+d < %s 2>&1 | FileCheck %s
 
 declare void @llvm.loongarch.cacop.w(i32, i32, i32)
 declare i32 @llvm.loongarch.crc.w.b.w(i32, i32)

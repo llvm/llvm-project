@@ -63,7 +63,7 @@ for.end:
 
 ; CHECK-LABEL: @geppre
 ; CHECK-LABEL: middle.block:
-; CHECK: %ind.escape = getelementptr i8, ptr %ptr, i64 496
+; CHECK: %ind.escape = getelementptr i8, ptr %ind.end, i64 -16
 ; CHECK-LABEL: for.end:
 ; CHECK: %[[RET:.*]] = phi ptr [ {{.*}}, %for.body ], [ %ind.escape, %middle.block ]
 ; CHECK: ret ptr %[[RET]]
@@ -85,9 +85,7 @@ for.end:
 
 ; CHECK-LABEL: @both
 ; CHECK-LABEL: middle.block:
-; CHECK: %[[END:.*]] = sub i64 %n.vec, 1
-; CHECK: %[[END_OFFSET:.*]] = mul i64 %[[END]], 4
-; CHECK: %ind.escape = getelementptr i8, ptr %base, i64 %[[END_OFFSET]]
+; CHECK: %ind.escape = getelementptr i8, ptr %ind.end1, i64 -4
 ; CHECK-LABEL: for.end:
 ; CHECK: %[[RET:.*]] = phi ptr [ %inc.lag1, %for.body ], [ %ind.escape, %middle.block ]
 ; CHECK: ret ptr %[[RET]]
@@ -142,7 +140,7 @@ for.end:
 ; CHECK:   %[[N_VEC:.+]] = sub i32 %[[T5]], %[[N_MOD_VF]]
 ; CHECK: middle.block
 ; CHECK:   %[[CMP:.+]] = icmp eq i32 %[[T5]], %[[N_VEC]]
-; CHECK:   %ind.escape = add i32 %[[T15]],
+; CHECK:   %ind.escape = sub i32 %ind.end8, -8
 ; CHECK:   br i1 %[[CMP]], label %BB3, label %scalar.ph
 define void @PR30742() {
 BB0:
@@ -202,7 +200,6 @@ exit:
 
 
 ; %iv.2 is dead in the vector loop and only used outside the loop.
-; FIXME: Scalar steps for iv.2 are not removed at the moment.
 define i32 @iv_2_dead_in_loop_only_used_outside(ptr %ptr) {
 ; CHECK-LABEL: @iv_2_dead_in_loop_only_used_outside
 ; CHECK-LABEL: vector.body:
@@ -210,7 +207,7 @@ define i32 @iv_2_dead_in_loop_only_used_outside(ptr %ptr) {
 ; VEC-NEXT:     [[VEC_IND:%.+]] = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ [[VEC_IND_NEXT:%.+]], %vector.body ]
 ; CHECK:        [[IV_0:%.+]] = add i64 [[INDEX]], 0
 ; VEC-NOT:      add i64 [[INDEX]], 1
-; CHECK:        [[IV_2_0:%.+]] = add i32 %offset.idx, 0
+; CHECK-NOT:    add i32 %offset.idx, 0
 ; CHECK-LABEL: scalar.ph:
 ; CHECK-NEXT:    {{.+}} = phi i64 [ 1002, %middle.block ], [ 0, %entry ]
 ; CHECK-NEXT:    {{.+}} = phi i32 [ 2004, %middle.block ], [ 0, %entry ]

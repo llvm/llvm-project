@@ -48,7 +48,7 @@ static SmallVector<Value> makeCanonicalAffineApplies(OpBuilder &b, Location loc,
   auto dims = map.getNumDims();
   for (auto e : map.getResults()) {
     auto exprMap = AffineMap::get(dims, map.getNumSymbols(), e);
-    SmallVector<Value> operands(vals.begin(), vals.end());
+    SmallVector<Value> operands(vals);
     affine::canonicalizeMapAndOperands(&exprMap, &operands);
     res.push_back(b.create<affine::AffineApplyOp>(loc, exprMap, operands));
   }
@@ -133,7 +133,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   SmallVector<Value> indexedValues;
   indexedValues.reserve(linalgOp->getNumOperands());
 
-  auto allIvsPlusDims = SmallVector<Value>(allIvs.begin(), allIvs.end());
+  auto allIvsPlusDims = SmallVector<Value>(allIvs);
 
   // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
@@ -184,8 +184,7 @@ static void replaceIndexOpsByInductionVariables(RewriterBase &rewriter,
   for (Operation *loopOp : loopOps) {
     llvm::TypeSwitch<Operation *>(loopOp)
         .Case([&](scf::ParallelOp parallelOp) {
-          allIvs.append(parallelOp.getInductionVars().begin(),
-                        parallelOp.getInductionVars().end());
+          allIvs.append(parallelOp.getInductionVars());
         })
         .Case([&](scf::ForOp forOp) {
           allIvs.push_back(forOp.getInductionVar());

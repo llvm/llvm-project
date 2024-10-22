@@ -259,6 +259,27 @@ bool XcodeSDK::SupportsSwift() const {
   }
 }
 
+bool XcodeSDK::SDKSupportsBuiltinModules(const llvm::Triple &target_triple,
+                                         llvm::VersionTuple sdk_version) {
+  using namespace llvm;
+
+  switch (target_triple.getOS()) {
+  case Triple::OSType::MacOSX:
+    return sdk_version >= VersionTuple(15U);
+  case Triple::OSType::IOS:
+    return sdk_version >= VersionTuple(18U);
+  case Triple::OSType::TvOS:
+    return sdk_version >= VersionTuple(18U);
+  case Triple::OSType::WatchOS:
+    return sdk_version >= VersionTuple(11U);
+  case Triple::OSType::XROS:
+    return sdk_version >= VersionTuple(2U);
+  default:
+    // New SDKs support builtin modules from the start.
+    return true;
+  }
+}
+
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
   ConstString last_path_component = sdk_path.GetFilename();

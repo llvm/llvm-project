@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // Check -Xoffload-linker -mllvm=* options are passed
 // to device lld linker only.
 // -mllvm options are passed to clang and device lld linker.

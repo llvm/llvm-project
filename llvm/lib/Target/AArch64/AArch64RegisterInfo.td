@@ -147,6 +147,9 @@ def VG : AArch64Reg<0, "vg">, DwarfRegNum<[46]>;
 // Floating-point control register
 def FPCR : AArch64Reg<0, "fpcr">;
 
+// Floating-point Mode Register
+def FPMR : AArch64Reg<0, "fpmr">;
+
 // Floating-point status register.
 def FPSR : AArch64Reg<0, "fpsr">;
 
@@ -160,25 +163,30 @@ def GPR64common : RegisterClass<"AArch64", [i64], 64,
                                 (add (sequence "X%u", 0, 28), FP, LR)> {
   let AltOrders = [(rotl GPR64common, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64commonRegClassID, 0, 31>";
 }
 // GPR register classes which exclude SP/WSP.
 def GPR32 : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WZR)> {
   let AltOrders = [(rotl GPR32, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR32RegClassID, 0, 32>";
 }
 def GPR64 : RegisterClass<"AArch64", [i64], 64, (add GPR64common, XZR)> {
   let AltOrders = [(rotl GPR64, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>";
 }
 
 // GPR register classes which include SP/WSP.
 def GPR32sp : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WSP)> {
   let AltOrders = [(rotl GPR32sp, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR32spRegClassID, 0, 32>";
 }
 def GPR64sp : RegisterClass<"AArch64", [i64], 64, (add GPR64common, SP)> {
   let AltOrders = [(rotl GPR64sp, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64spRegClassID,0, 32>";
 }
 
 def GPR32sponly : RegisterClass<"AArch64", [i32], 32, (add WSP)>;
@@ -234,7 +242,10 @@ def tcGPRnotx16 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16)>;
 // Register set that excludes registers that are reserved for procedure calls.
 // This is used for pseudo-instructions that are actually implemented using a
 // procedure call.
-def GPR64noip : RegisterClass<"AArch64", [i64], 64, (sub GPR64, X16, X17, LR)>;
+def GPR64noip : RegisterClass<"AArch64", [i64], 64, (sub GPR64, X16, X17, LR)> {
+  let AltOrders = [(rotl GPR64noip, 8)];
+  let AltOrderSelect = [{ return 1; }];
+}
 
 // GPR register classes for post increment amount of vector load/store that
 // has alternate printing when Rm=31 and prints a constant immediate value
@@ -443,18 +454,24 @@ def Q31   : AArch64Reg<31, "q31", [D31], ["v31", ""]>, DwarfRegAlias<B31>;
 
 def FPR8  : RegisterClass<"AArch64", [i8], 8, (sequence "B%u", 0, 31)> {
   let Size = 8;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR8RegClassID, 0, 32>";
 }
 def FPR16 : RegisterClass<"AArch64", [f16, bf16, i16], 16, (sequence "H%u", 0, 31)> {
   let Size = 16;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR16RegClassID, 0, 32>";
 }
 
 def FPR16_lo : RegisterClass<"AArch64", [f16], 16, (trunc FPR16, 16)> {
   let Size = 16;
 }
-def FPR32 : RegisterClass<"AArch64", [f32, i32], 32,(sequence "S%u", 0, 31)>;
+def FPR32 : RegisterClass<"AArch64", [f32, i32], 32,(sequence "S%u", 0, 31)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR32RegClassID, 0, 32>";
+}
 def FPR64 : RegisterClass<"AArch64", [f64, i64, v2f32, v1f64, v8i8, v4i16, v2i32,
                                       v1i64, v4f16, v4bf16],
-                                     64, (sequence "D%u", 0, 31)>;
+                                     64, (sequence "D%u", 0, 31)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR64RegClassID, 0, 32>";
+}
 def FPR64_lo : RegisterClass<"AArch64",
                              [v8i8, v4i16, v2i32, v1i64, v4f16, v4bf16, v2f32,
                               v1f64],
@@ -466,21 +483,27 @@ def FPR64_lo : RegisterClass<"AArch64",
 def FPR128 : RegisterClass<"AArch64",
                            [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, f128,
                             v8f16, v8bf16],
-                           128, (sequence "Q%u", 0, 31)>;
+                           128, (sequence "Q%u", 0, 31)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 32>";
+}
 
 // The lower 16 vector registers.  Some instructions can only take registers
 // in this range.
 def FPR128_lo : RegisterClass<"AArch64",
                               [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16,
                                v8bf16],
-                              128, (trunc FPR128, 16)>;
+                              128, (trunc FPR128, 16)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 16>";
+}
 
 // The lower 8 vector registers.  Some instructions can only take registers
 // in this range.
 def FPR128_0to7 : RegisterClass<"AArch64",
                                 [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16,
                                  v8bf16],
-                                128, (trunc FPR128, 8)>;
+                                128, (trunc FPR128, 8)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 8>";
+}
 
 // Pairs, triples, and quads of 64-bit vector registers.
 def DSeqPairs : RegisterTuples<[dsub0, dsub1], [(rotl FPR64, 0), (rotl FPR64, 1)]>;
@@ -492,12 +515,15 @@ def DSeqQuads : RegisterTuples<[dsub0, dsub1, dsub2, dsub3],
                                 (rotl FPR64, 2), (rotl FPR64, 3)]>;
 def DD   : RegisterClass<"AArch64", [untyped], 64, (add DSeqPairs)> {
   let Size = 128;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::DDRegClassID, 0, 32>";
 }
 def DDD  : RegisterClass<"AArch64", [untyped], 64, (add DSeqTriples)> {
   let Size = 192;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::DDDRegClassID, 0, 32>";
 }
 def DDDD : RegisterClass<"AArch64", [untyped], 64, (add DSeqQuads)> {
   let Size = 256;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::DDDDRegClassID, 0, 32>";
 }
 
 // Pairs, triples, and quads of 128-bit vector registers.
@@ -510,12 +536,15 @@ def QSeqQuads : RegisterTuples<[qsub0, qsub1, qsub2, qsub3],
                                 (rotl FPR128, 2), (rotl FPR128, 3)]>;
 def QQ   : RegisterClass<"AArch64", [untyped], 128, (add QSeqPairs)> {
   let Size = 256;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::QQRegClassID, 0, 32>";
 }
 def QQQ  : RegisterClass<"AArch64", [untyped], 128, (add QSeqTriples)> {
   let Size = 384;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::QQQRegClassID, 0, 32>";
 }
 def QQQQ : RegisterClass<"AArch64", [untyped], 128, (add QSeqQuads)> {
   let Size = 512;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::QQQQRegClassID, 0, 32>";
 }
 
 
@@ -894,16 +923,23 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 //******************************************************************************
 
 // SVE predicate register classes.
-class PPRClass<int firstreg, int lastreg> : RegisterClass<
-                                  "AArch64",
+class PPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                   [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
-                                  (sequence "P%u", firstreg, lastreg)> {
+                                  (sequence "P%u", firstreg, lastreg, step)> {
   let Size = 16;
 }
 
-def PPR    : PPRClass<0, 15>;
-def PPR_3b : PPRClass<0, 7>; // Restricted 3 bit SVE predicate register class.
-def PPR_p8to15 : PPRClass<8, 15>;
+def PPR    : PPRClass<0, 15> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 0, 16>";
+}
+def PPR_3b : PPRClass<0, 7> { // Restricted 3 bit SVE predicate register class.
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 0, 8>";
+}
+def PPR_p8to15 : PPRClass<8, 15> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PNRRegClassID, 8, 8>";
+}
+
+def PPRMul2 : PPRClass<0, 14, 2>;
 
 class PPRAsmOperand <string name, string RegClass, int Width>: AsmOperandClass {
   let Name = "SVE" # name # "Reg";
@@ -938,7 +974,9 @@ class PNRClass<int firstreg, int lastreg> : RegisterClass<
   let Size = 16;
 }
 
-def PNR        : PNRClass<0, 15>;
+def PNR        : PNRClass<0, 15> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PNRRegClassID, 0, 16>";
+}
 def PNR_3b     : PNRClass<0, 7>;
 def PNR_p8to15 : PNRClass<8, 15>;
 
@@ -979,7 +1017,7 @@ class PNRP8to15RegOp<string Suffix, AsmOperandClass C, int Width, RegisterClass 
     : SVERegOp<Suffix, C, ElementSizeNone, RC> {
   let PrintMethod   = "printPredicateAsCounter<" # Width # ">";
   let EncoderMethod = "EncodePNR_p8to15";
-  let DecoderMethod = "DecodePNR_p8to15RegisterClass";
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PNRRegClassID, 8, 8>";
 }
 
 def PNRAny_p8to15 : PNRP8to15RegOp<"",  PNRAsmAny_p8to15,  0,  PNR_p8to15>;
@@ -1010,7 +1048,9 @@ class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandCla
   let ParserMethod = "tryParseSVEPredicateOrPredicateAsCounterVector";
 }
 
-def PPRorPNR         : PPRorPNRClass;
+def PPRorPNR         : PPRorPNRClass {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRorPNRRegClassID, 0, 16>";
+}
 def PPRorPNRAsmOp8   : PPRorPNRAsmOperand<"PPRorPNRB", "PPRorPNR", 8>;
 def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny", "PPRorPNR", 0>;
 def PPRorPNRAny      : PPRRegOp<"", PPRorPNRAsmOpAny, ElementSizeNone, PPRorPNR>;
@@ -1021,6 +1061,7 @@ def PSeqPairs : RegisterTuples<[psub0, psub1], [(rotl PPR, 0), (rotl PPR, 1)]>;
 
 def PPR2 : RegisterClass<"AArch64", [untyped], 16, (add PSeqPairs)> {
   let Size = 32;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPR2RegClassID, 0, 16>";
 }
 
 class PPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
@@ -1058,10 +1099,11 @@ class PPRVectorListMul<int ElementWidth, int NumRegs> : PPRVectorList<ElementWid
   let DiagnosticType = "Invalid" # Name;
   let PredicateMethod =
       "isTypedVectorListMultiple<RegKind::SVEPredicateVector, " # NumRegs # ", 0, "
-                                                                # ElementWidth # ">";
+                                                                # ElementWidth #
+                                                                ", AArch64::PPRMul2RegClassID>";
 }
 
-let EncoderMethod = "EncodeRegAsMultipleOf<2>",
+let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
     DecoderMethod = "DecodePPR2Mul2RegisterClass" in {
   def PP_b_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'b'>"> {
     let ParserMatchClass = PPRVectorListMul<8, 2>;
@@ -1084,19 +1126,30 @@ let EncoderMethod = "EncodeRegAsMultipleOf<2>",
 //******************************************************************************
 
 // SVE vector register classes
-class ZPRClass<int lastreg> : RegisterClass<"AArch64",
+class ZPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                             [nxv16i8, nxv8i16, nxv4i32, nxv2i64,
                                              nxv2f16, nxv4f16, nxv8f16,
                                              nxv2bf16, nxv4bf16, nxv8bf16,
                                              nxv2f32, nxv4f32,
                                              nxv2f64],
-                                            128, (sequence "Z%u", 0, lastreg)> {
+                                            128, (sequence "Z%u", firstreg, lastreg, step)> {
   let Size = 128;
 }
 
-def ZPR    : ZPRClass<31>;
-def ZPR_4b : ZPRClass<15>; // Restricted 4 bit SVE vector register class.
-def ZPR_3b : ZPRClass<7>;  // Restricted 3 bit SVE vector register class.
+def ZPRMul2    : ZPRClass<0,  30, 2>;
+def ZPRMul4    : ZPRClass<0,  28, 4>;
+def ZPRMul2_Lo : ZPRClass<0,  14, 2>;
+def ZPRMul2_Hi : ZPRClass<16, 30, 2>;
+
+def ZPR    : ZPRClass<0, 31> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 32>";
+}
+def ZPR_4b : ZPRClass<0, 15> { // Restricted 4 bit SVE vector register class.
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 16>";
+}
+def ZPR_3b : ZPRClass<0, 7> {  // Restricted 3 bit SVE vector register class.
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 8>";
+}
 
 class ZPRAsmOperand<string name, int Width, string RegClassSuffix = "">
     : AsmOperandClass {
@@ -1142,6 +1195,30 @@ def ZPR4b16 : ZPRRegOp<"h", ZPRAsmOp4b16, ElementSizeH, ZPR_4b>;
 def ZPR4b32 : ZPRRegOp<"s", ZPRAsmOp4b32, ElementSizeS, ZPR_4b>;
 def ZPR4b64 : ZPRRegOp<"d", ZPRAsmOp4b64, ElementSizeD, ZPR_4b>;
 
+class ZPRMul2_MinToMaxRegOp<string Suffix, AsmOperandClass C, int  Min, int Max, ElementSizeEnum  Width, RegisterClass RC>
+    : ZPRRegOp<Suffix, C, Width, RC> {
+  let EncoderMethod = "EncodeRegMul_MinMax<2," # Min # ", " # Max # ">";
+  let DecoderMethod = "DecodeZPRMul2_MinMax<" # Min # ", " # Max # ">";
+}
+
+def ZPRMul2AsmOp8_Lo  : ZPRAsmOperand<"VectorB_Lo",  8, "Mul2_Lo">;
+def ZPRMul2AsmOp8_Hi  : ZPRAsmOperand<"VectorB_Hi",  8, "Mul2_Hi">;
+def ZPRMul2AsmOp16_Lo : ZPRAsmOperand<"VectorH_Lo", 16, "Mul2_Lo">;
+def ZPRMul2AsmOp16_Hi : ZPRAsmOperand<"VectorH_Hi", 16, "Mul2_Hi">;
+def ZPRMul2AsmOp32_Lo : ZPRAsmOperand<"VectorS_Lo", 32, "Mul2_Lo">;
+def ZPRMul2AsmOp32_Hi : ZPRAsmOperand<"VectorS_Hi", 32, "Mul2_Hi">;
+def ZPRMul2AsmOp64_Lo : ZPRAsmOperand<"VectorD_Lo", 64, "Mul2_Lo">;
+def ZPRMul2AsmOp64_Hi : ZPRAsmOperand<"VectorD_Hi", 64, "Mul2_Hi">;
+
+def ZPR8Mul2_Lo  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Lo,   0, 14, ElementSizeB, ZPRMul2_Lo>;
+def ZPR8Mul2_Hi  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Hi,  16, 30, ElementSizeB, ZPRMul2_Hi>;
+def ZPR16Mul2_Lo : ZPRMul2_MinToMaxRegOp<"h", ZPRMul2AsmOp16_Lo,  0, 14, ElementSizeH, ZPRMul2_Lo>;
+def ZPR16Mul2_Hi : ZPRMul2_MinToMaxRegOp<"h", ZPRMul2AsmOp16_Hi, 16, 30, ElementSizeH, ZPRMul2_Hi>;
+def ZPR32Mul2_Lo : ZPRMul2_MinToMaxRegOp<"s", ZPRMul2AsmOp32_Lo,  0, 14, ElementSizeS, ZPRMul2_Lo>;
+def ZPR32Mul2_Hi : ZPRMul2_MinToMaxRegOp<"s", ZPRMul2AsmOp32_Hi, 16, 30, ElementSizeS, ZPRMul2_Hi>;
+def ZPR64Mul2_Lo : ZPRMul2_MinToMaxRegOp<"d", ZPRMul2AsmOp64_Lo,  0, 14, ElementSizeD, ZPRMul2_Lo>;
+def ZPR64Mul2_Hi : ZPRMul2_MinToMaxRegOp<"d", ZPRMul2AsmOp64_Hi, 16, 30, ElementSizeD, ZPRMul2_Hi>;
+
 class FPRasZPR<int Width> : AsmOperandClass{
   let Name = "FPR" # Width # "asZPR";
   let PredicateMethod = "isFPRasZPR<AArch64::FPR" # Width # "RegClassID>";
@@ -1173,12 +1250,15 @@ def ZSeqQuads   : RegisterTuples<[zsub0, zsub1, zsub2, zsub3], [(rotl ZPR, 0), (
 
 def ZPR2   : RegisterClass<"AArch64", [untyped], 128, (add ZSeqPairs)>  {
   let Size = 256;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR2RegClassID, 0, 32>";
 }
 def ZPR3  : RegisterClass<"AArch64", [untyped], 128, (add ZSeqTriples)> {
   let Size = 384;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR3RegClassID, 0, 32>";
 }
 def ZPR4 : RegisterClass<"AArch64", [untyped], 128, (add ZSeqQuads)> {
   let Size = 512;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR4RegClassID, 0, 32>";
 }
 
 class ZPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
@@ -1278,63 +1358,116 @@ def ZPR4Mul4 : RegisterClass<"AArch64", [untyped], 128, (add (decimate ZSeqQuads
   let Size = 512;
 }
 
-class ZPRVectorListMul<int ElementWidth, int NumRegs> : ZPRVectorList<ElementWidth, NumRegs> {
-  let Name = "SVEVectorListMul" # NumRegs # "x" # ElementWidth;
+class ZPRVectorListMul<int ElementWidth, int NumRegs, string RegClassSuffix = "">
+  : ZPRVectorList<ElementWidth, NumRegs> {
+  let Name = "SVEVectorList" # NumRegs # "x" # ElementWidth # RegClassSuffix;
   let DiagnosticType = "Invalid" # Name;
   let PredicateMethod =
-      "isTypedVectorListMultiple<RegKind::SVEDataVector, " # NumRegs # ", 0, "
-                                                           # ElementWidth # ">";
+      "isTypedVectorListMultiple<RegKind::SVEDataVector, "
+                                 # NumRegs # ", 0, "
+                                 # ElementWidth #  ", "
+                                 # "AArch64::ZPR" # RegClassSuffix # "RegClassID" # ">";
 }
 
-let EncoderMethod = "EncodeRegAsMultipleOf<2>",
-    DecoderMethod = "DecodeZPR2Mul2RegisterClass" in {
+let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 30>",
+    DecoderMethod = "DecodeZPR2Mul2RegisterClass<0, 30>" in {
   def ZZ_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,0>"> {
-    let ParserMatchClass = ZPRVectorListMul<0, 2>;
+    let ParserMatchClass = ZPRVectorListMul<0, 2, "Mul2">;
   }
 
   def ZZ_b_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = ZPRVectorListMul<8, 2>;
+    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2">;
   }
 
   def ZZ_h_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = ZPRVectorListMul<16, 2>;
+    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2">;
   }
 
   def ZZ_s_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = ZPRVectorListMul<32, 2>;
+    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2">;
   }
 
   def ZZ_d_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = ZPRVectorListMul<64, 2>;
+    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2">;
   }
 
   def ZZ_q_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'q'>"> {
-    let ParserMatchClass = ZPRVectorListMul<128, 2>;
+    let ParserMatchClass = ZPRVectorListMul<128, 2, "Mul2">;
   }
 } // end let EncoderMethod/DecoderMethod
 
-let EncoderMethod = "EncodeRegAsMultipleOf<4>",
+let EncoderMethod = "EncodeRegMul_MinMax<4, 0, 28>",
     DecoderMethod = "DecodeZPR4Mul4RegisterClass" in {
   def ZZZZ_b_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = ZPRVectorListMul<8, 4>;
+    let ParserMatchClass = ZPRVectorListMul<8, 4, "Mul4">;
   }
 
   def ZZZZ_h_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = ZPRVectorListMul<16, 4>;
+    let ParserMatchClass = ZPRVectorListMul<16, 4, "Mul4">;
   }
 
   def ZZZZ_s_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = ZPRVectorListMul<32, 4>;
+    let ParserMatchClass = ZPRVectorListMul<32, 4, "Mul4">;
   }
 
   def ZZZZ_d_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = ZPRVectorListMul<64, 4>;
+    let ParserMatchClass = ZPRVectorListMul<64, 4, "Mul4">;
   }
 
   def ZZZZ_q_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'q'>"> {
-    let ParserMatchClass = ZPRVectorListMul<128, 4>;
+    let ParserMatchClass = ZPRVectorListMul<128, 4, "Mul4">;
   }
 } // end let EncoderMethod/DecoderMethod
+
+// Pairs of consecutive ZPR, starting with an even register, split into
+// Lo=0-14 and Hi=16-30.
+def ZPR2Mul2_Lo : RegisterClass<"AArch64", [untyped], 128,
+                                (trunc (decimate ZSeqPairs, 2), 8)>  {
+  let Size = 256;
+}
+
+def ZPR2Mul2_Hi : RegisterClass<"AArch64", [untyped], 128,
+                                (trunc (rotr (decimate ZSeqPairs, 2), 8), 8)>  {
+  let Size = 256;
+}
+
+let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
+    DecoderMethod = "DecodeZPR2Mul2RegisterClass<0, 16>" in {
+  def ZZ_b_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'b'>"> {
+    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2_Lo">;
+  }
+
+  def ZZ_h_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'h'>"> {
+    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2_Lo">;
+  }
+
+  def ZZ_s_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'s'>"> {
+    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2_Lo">;
+  }
+
+  def ZZ_d_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'d'>"> {
+    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2_Lo">;
+  }
+}
+
+let EncoderMethod = "EncodeRegMul_MinMax<2, 16, 30>",
+    DecoderMethod = "DecodeZPR2Mul2RegisterClass<16, 31>" in {
+  def ZZ_b_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'b'>"> {
+    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2_Hi">;
+  }
+
+  def ZZ_h_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'h'>"> {
+    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2_Hi">;
+  }
+
+  def ZZ_s_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'s'>"> {
+    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2_Hi">;
+  }
+
+  def ZZ_d_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'d'>"> {
+    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2_Hi">;
+  }
+ } // end let EncoderMethod/DecoderMethod
 
 // SME2 strided multi-vector operands
 
@@ -1376,10 +1509,12 @@ def ZStridedQuadsHi : RegisterTuples<[zsub0, zsub1, zsub2, zsub3], [
 def ZPR2Strided : RegisterClass<"AArch64", [untyped], 128,
                                 (add ZStridedPairsLo, ZStridedPairsHi)>  {
   let Size = 256;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR2StridedRegClassID, 0, 16>";
 }
 def ZPR4Strided : RegisterClass<"AArch64", [untyped], 128,
                                 (add ZStridedQuadsLo, ZStridedQuadsHi)>  {
   let Size = 512;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR4StridedRegClassID, 0, 8>";
 }
 
 def ZPR2StridedOrContiguous : RegisterClass<"AArch64", [untyped], 128,
@@ -1398,7 +1533,7 @@ class ZPRVectorListStrided<int ElementWidth, int NumRegs, int Stride>
 }
 
 let EncoderMethod = "EncodeZPR2StridedRegisterClass",
-    DecoderMethod = "DecodeZPR2StridedRegisterClass" in {
+    DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR2StridedRegClassID, 0, 16>" in {
   def ZZ_b_strided
       : RegisterOperand<ZPR2Strided, "printTypedVectorList<0, 'b'>"> {
     let ParserMatchClass = ZPRVectorListStrided<8, 2, 8>;
@@ -1436,7 +1571,7 @@ def ZPR4StridedOrContiguous : RegisterClass<"AArch64", [untyped], 128,
 }
 
 let EncoderMethod = "EncodeZPR4StridedRegisterClass",
-    DecoderMethod = "DecodeZPR4StridedRegisterClass" in {
+    DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR4StridedRegClassID, 0, 16>" in {
   def ZZZZ_b_strided
       : RegisterOperand<ZPR4Strided, "printTypedVectorList<0,'b'>"> {
     let ParserMatchClass = ZPRVectorListStrided<8, 4, 4>;
@@ -1771,9 +1906,11 @@ def MatrixTileList : MatrixTileListOperand<>;
 
 def MatrixIndexGPR32_8_11 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 8, 11)> {
    let DiagnosticType = "InvalidMatrixIndexGPR32_8_11";
+   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::MatrixIndexGPR32_8_11RegClassID, 0, 4>";
 }
 def MatrixIndexGPR32_12_15 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 12, 15)> {
   let DiagnosticType = "InvalidMatrixIndexGPR32_12_15";
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::MatrixIndexGPR32_12_15RegClassID, 0, 4>";
 }
 def MatrixIndexGPR32Op8_11 : RegisterOperand<MatrixIndexGPR32_8_11> {
   let EncoderMethod = "encodeMatrixIndexGPR32<AArch64::W8>";

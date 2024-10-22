@@ -268,7 +268,8 @@ void PlatformTSDDtor(void *tsd) { AsanThread::TSDDtor(tsd); }
 // ---------------------- Various stuff ---------------- {{{
 uptr FindDynamicShadowStart() {
   return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 void AsanCheckDynamicRTPrereqs() {}

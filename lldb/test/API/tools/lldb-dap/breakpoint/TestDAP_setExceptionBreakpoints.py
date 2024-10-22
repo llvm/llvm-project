@@ -12,7 +12,6 @@ import lldbdap_testcase
 
 class TestDAP_setExceptionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_functionality(self):
         """Tests setting and clearing exception breakpoints.
         This packet is a bit tricky on the debug adaptor side since there

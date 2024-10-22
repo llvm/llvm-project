@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.module(func.func(canonicalize))' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.module(func.func(canonicalize{region-simplify=aggressive}))' | FileCheck %s
 
 // Test case: Simple case of deleting a dead pure op.
 
@@ -137,10 +137,10 @@ func.func @f(%arg0: f32) {
 // Test case: Test the mechanics of deleting multiple block arguments.
 
 // CHECK:      func @f(%arg0: tensor<1xf32>, %arg1: tensor<2xf32>, %arg2: tensor<3xf32>, %arg3: tensor<4xf32>, %arg4: tensor<5xf32>)
-// CHECK-NEXT:   "test.br"(%arg1, %arg3)[^bb1] : (tensor<2xf32>, tensor<4xf32>)
-// CHECK-NEXT: ^bb1([[VAL0:%.+]]: tensor<2xf32>, [[VAL1:%.+]]: tensor<4xf32>):
-// CHECK-NEXT:   "foo.print"([[VAL0]])
-// CHECK-NEXT:   "foo.print"([[VAL1]])
+// CHECK-NEXT:   "test.br"()[^bb1]
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   "foo.print"(%arg1)
+// CHECK-NEXT:   "foo.print"(%arg3)
 // CHECK-NEXT:   return
 
 

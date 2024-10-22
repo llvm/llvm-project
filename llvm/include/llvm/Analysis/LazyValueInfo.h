@@ -14,18 +14,19 @@
 #ifndef LLVM_ANALYSIS_LAZYVALUEINFO_H
 #define LLVM_ANALYSIS_LAZYVALUEINFO_H
 
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
   class AssumptionCache;
+  class BasicBlock;
   class Constant;
-  class ConstantRange;
   class DataLayout;
   class DominatorTree;
   class Instruction;
-  class TargetLibraryInfo;
   class Value;
+  class Use;
   class LazyValueInfoImpl;
   /// This pass computes, caches, and vends lazy value constraint information.
   class LazyValueInfo {
@@ -57,32 +58,29 @@ namespace llvm {
       return *this;
     }
 
-    /// This is used to return true/false/dunno results.
-    enum Tristate { Unknown = -1, False = 0, True = 1 };
-
     // Public query interface.
 
     /// Determine whether the specified value comparison with a constant is
     /// known to be true or false on the specified CFG edge. Pred is a CmpInst
     /// predicate.
-    Tristate getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
-                                BasicBlock *FromBB, BasicBlock *ToBB,
-                                Instruction *CxtI = nullptr);
+    Constant *getPredicateOnEdge(CmpInst::Predicate Pred, Value *V, Constant *C,
+                                 BasicBlock *FromBB, BasicBlock *ToBB,
+                                 Instruction *CxtI = nullptr);
 
     /// Determine whether the specified value comparison with a constant is
     /// known to be true or false at the specified instruction. \p Pred is a
     /// CmpInst predicate. If \p UseBlockValue is true, the block value is also
     /// taken into account.
-    Tristate getPredicateAt(unsigned Pred, Value *V, Constant *C,
-                            Instruction *CxtI, bool UseBlockValue);
+    Constant *getPredicateAt(CmpInst::Predicate Pred, Value *V, Constant *C,
+                             Instruction *CxtI, bool UseBlockValue);
 
     /// Determine whether the specified value comparison is known to be true
     /// or false at the specified instruction. While this takes two Value's,
     /// it still requires that one of them is a constant.
     /// \p Pred is a CmpInst predicate.
     /// If \p UseBlockValue is true, the block value is also taken into account.
-    Tristate getPredicateAt(unsigned Pred, Value *LHS, Value *RHS,
-                            Instruction *CxtI, bool UseBlockValue);
+    Constant *getPredicateAt(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                             Instruction *CxtI, bool UseBlockValue);
 
     /// Determine whether the specified value is known to be a constant at the
     /// specified instruction. Return null if not.

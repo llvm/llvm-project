@@ -34,8 +34,8 @@ namespace __asan {
 // -------------------- User-specified callbacks ----------------- {{{1
 static void (*error_report_callback)(const char*);
 using ErrorMessageBuffer = InternalMmapVectorNoCtor<char, true>;
-static ALIGNED(
-    alignof(ErrorMessageBuffer)) char error_message_buffer_placeholder
+alignas(
+    alignof(ErrorMessageBuffer)) static char error_message_buffer_placeholder
     [sizeof(ErrorMessageBuffer)];
 static ErrorMessageBuffer *error_message_buffer = nullptr;
 static Mutex error_message_buf_mutex;
@@ -364,6 +364,16 @@ void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
       GetCurrentTidOrInvalid(), stack, storage_beg, storage_end,
       old_container_beg, old_container_end, new_container_beg,
       new_container_end);
+  in_report.ReportError(error);
+}
+
+void ReportBadParamsToCopyContiguousContainerAnnotations(
+    uptr old_storage_beg, uptr old_storage_end, uptr new_storage_beg,
+    uptr new_storage_end, BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report;
+  ErrorBadParamsToCopyContiguousContainerAnnotations error(
+      GetCurrentTidOrInvalid(), stack, old_storage_beg, old_storage_end,
+      new_storage_beg, new_storage_end);
   in_report.ReportError(error);
 }
 

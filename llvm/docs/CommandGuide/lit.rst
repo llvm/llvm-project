@@ -151,6 +151,10 @@ EXECUTION OPTIONS
  feature that can be used to conditionally disable (or expect failure in)
  certain tests.
 
+.. option:: --skip-test-time-recording
+
+ Disable tracking the wall time individual tests take to execute.
+
 .. option:: --time-tests
 
  Track the wall time individual tests take to execute and includes the results
@@ -531,7 +535,7 @@ TestRunner.py:
  %{fs-tmp-root}          root component of file system paths pointing to the test's temporary directory
  %{fs-sep}               file system path separator
  %t                      temporary file name unique to the test
- %basename_t             The last path component of %t but without the ``.tmp`` extension
+ %basename_t             The last path component of %t but without the ``.tmp`` extension (deprecated, use ``%{t:stem}`` instead)
  %T                      parent directory of %t (not unique, deprecated, do not use)
  %%                      %
  %/s                     %s but ``\`` is replaced by ``/``
@@ -539,6 +543,8 @@ TestRunner.py:
  %/p                     %p but ``\`` is replaced by ``/``
  %/t                     %t but ``\`` is replaced by ``/``
  %/T                     %T but ``\`` is replaced by ``/``
+ %{s:basename}           The last path component of %s
+ %{t:stem}               The last path component of %t but without the ``.tmp`` extension (alias for %basename_t)
  %{s:real}               %s after expanding all symbolic links and substitute drives
  %{S:real}               %S after expanding all symbolic links and substitute drives
  %{p:real}               %p after expanding all symbolic links and substitute drives
@@ -624,6 +630,23 @@ B, C, and D, and a log message for the failing test C:
   Test 'C' failed as a result of exit code 1.
   ********************
   PASS: D (4 of 4)
+
+DEFAULT FEATURES
+~~~~~~~~~~~~~~~~~
+
+For convenience :program:`lit` automatically adds **available_features** for
+some common use cases.
+
+:program:`lit` adds a feature based on the operating system being built on, for
+example: `system-darwin`, `system-linux`, etc. :program:`lit` also
+automatically adds a feature based on the current architecture, for example
+`target-x86_64`, `target-aarch64`, etc.
+
+When building with sanitizers enabled, :program:`lit` automatically adds the
+short name of the sanitizer, for example: `asan`, `tsan`, etc.
+
+To see the full list of features that can be added, see
+*llvm/utils/lit/lit/llvm/config.py*.
 
 LIT EXAMPLE TESTS
 ~~~~~~~~~~~~~~~~~

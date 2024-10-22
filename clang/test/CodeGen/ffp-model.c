@@ -1,6 +1,10 @@
 // REQUIRES: x86-registered-target
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 // RUN: %clang -S -emit-llvm -fenable-matrix -ffp-model=fast %s -o - \
 // RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-FAST
+
+// RUN: %clang -S -emit-llvm -fenable-matrix -ffp-model=aggressive %s -o - \
+// RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-AGGRESSIVE
 
 // RUN: %clang -S -emit-llvm -fenable-matrix -ffp-model=precise %s -o - \
 // RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-PRECISE
@@ -19,9 +23,13 @@ float mymuladd(float x, float y, float z) {
   // CHECK: define{{.*}} float @mymuladd
   return x * y + z;
 
-  // CHECK-FAST: fmul fast float
+  // CHECK-AGGRESSIVE: fmul fast float
+  // CHECK-AGGRESSIVE: load float, ptr
+  // CHECK-AGGRESSIVE: fadd fast float
+
+  // CHECK-FAST: fmul reassoc nsz arcp contract afn float
   // CHECK-FAST: load float, ptr
-  // CHECK-FAST: fadd fast float
+  // CHECK-FAST: fadd reassoc nsz arcp contract afn float
 
   // CHECK-PRECISE: load float, ptr
   // CHECK-PRECISE: load float, ptr
@@ -53,9 +61,13 @@ void my_vec_muladd(v2f x, float y, v2f z, v2f *res) {
   // CHECK: define{{.*}}@my_vec_muladd
   *res = x * y + z;
 
-  // CHECK-FAST: fmul fast <2 x float>
+  // CHECK-AGGRESSIVE: fmul fast <2 x float>
+  // CHECK-AGGRESSIVE: load <2 x float>, ptr
+  // CHECK-AGGRESSIVE: fadd fast <2 x float>
+
+  // CHECK-FAST: fmul reassoc nsz arcp contract afn <2 x float>
   // CHECK-FAST: load <2 x float>, ptr
-  // CHECK-FAST: fadd fast <2 x float>
+  // CHECK-FAST: fadd reassoc nsz arcp contract afn <2 x float>
 
   // CHECK-PRECISE: load <2 x float>, ptr
   // CHECK-PRECISE: load float, ptr
@@ -87,9 +99,13 @@ void my_m21_muladd(m21f x, float y, m21f z, m21f *res) {
   // CHECK: define{{.*}}@my_m21_muladd
   *res = x * y + z;
 
-  // CHECK-FAST: fmul fast <2 x float>
+  // CHECK-AGGRESSIVE: fmul fast <2 x float>
+  // CHECK-AGGRESSIVE: load <2 x float>, ptr
+  // CHECK-AGGRESSIVE: fadd fast <2 x float>
+
+  // CHECK-FAST: fmul reassoc nsz arcp contract afn <2 x float>
   // CHECK-FAST: load <2 x float>, ptr
-  // CHECK-FAST: fadd fast <2 x float>
+  // CHECK-FAST: fadd reassoc nsz arcp contract afn <2 x float>
 
   // CHECK-PRECISE: load <2 x float>, ptr
   // CHECK-PRECISE: load float, ptr
@@ -121,9 +137,13 @@ void my_m22_muladd(m22f x, float y, m22f z, m22f *res) {
   // CHECK: define{{.*}}@my_m22_muladd
   *res = x * y + z;
 
-  // CHECK-FAST: fmul fast <4 x float>
+  // CHECK-AGGRESSIVE: fmul fast <4 x float>
+  // CHECK-AGGRESSIVE: load <4 x float>, ptr
+  // CHECK-AGGRESSIVE: fadd fast <4 x float>
+
+  // CHECK-FAST: fmul reassoc nsz arcp contract afn <4 x float>
   // CHECK-FAST: load <4 x float>, ptr
-  // CHECK-FAST: fadd fast <4 x float>
+  // CHECK-FAST: fadd reassoc nsz arcp contract afn <4 x float>
 
   // CHECK-PRECISE: load <4 x float>, ptr
   // CHECK-PRECISE: load float, ptr

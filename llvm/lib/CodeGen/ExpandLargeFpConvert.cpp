@@ -356,7 +356,7 @@ static void expandIToFP(Instruction *IToFP) {
   Entry->getTerminator()->eraseFromParent();
 
   Function *CTLZ =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz, IntTy);
+      Intrinsic::getOrInsertDeclaration(F->getParent(), Intrinsic::ctlz, IntTy);
   ConstantInt *True = Builder.getTrue();
 
   // entry:
@@ -611,7 +611,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
       if (I.getOperand(0)->getType()->isScalableTy())
         continue;
 
-      auto *IntTy = dyn_cast<IntegerType>(I.getType()->getScalarType());
+      auto *IntTy = cast<IntegerType>(I.getType()->getScalarType());
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
@@ -629,7 +629,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
         continue;
 
       auto *IntTy =
-          dyn_cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
+          cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 

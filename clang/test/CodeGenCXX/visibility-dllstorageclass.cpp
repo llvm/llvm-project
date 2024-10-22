@@ -7,7 +7,7 @@
 // RUN:     -fvisibility=hidden \
 // RUN:     -fapply-global-visibility-to-externs \
 // RUN:     -fvisibility-from-dllstorageclass \
-// RUN:     -x c++ %s -S -emit-llvm -o - | \
+// RUN:     -x c++ %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=DEFAULTS
 
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -fdeclspec \
@@ -18,7 +18,7 @@
 // RUN:     -fvisibility-nodllstorageclass=protected \
 // RUN:     -fvisibility-externs-dllimport=hidden \
 // RUN:     -fvisibility-externs-nodllstorageclass=protected \
-// RUN:     -x c++  %s -S -emit-llvm -o - | \
+// RUN:     -x c++  %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=EXPLICIT
 
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -fdeclspec \
@@ -29,7 +29,7 @@
 // RUN:     -fvisibility-nodllstorageclass=default \
 // RUN:     -fvisibility-externs-dllimport=default \
 // RUN:     -fvisibility-externs-nodllstorageclass=default \
-// RUN:     -x c++  %s -S -emit-llvm -o - | \
+// RUN:     -x c++  %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=ALL_DEFAULT
 
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -fdeclspec \
@@ -40,7 +40,7 @@
 // RUN:     -fvisibility-nodllstorageclass=keep \
 // RUN:     -fvisibility-externs-dllimport=keep \
 // RUN:     -fvisibility-externs-nodllstorageclass=keep \
-// RUN:     -x c++  %s -S -emit-llvm -o - | \
+// RUN:     -x c++  %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=ALL_KEEP
 
 // Local

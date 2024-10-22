@@ -36,13 +36,6 @@ void f() {
         typedef std::allocator<char>::rebind<int>::other Rebind;        // expected-warning {{'rebind<int>' is deprecated}}
     }
     {
-        typedef std::allocator<char const>::pointer Pointer;                  // expected-warning {{'pointer' is deprecated}}
-        typedef std::allocator<char const>::const_pointer ConstPointer;       // expected-warning {{'const_pointer' is deprecated}}
-        typedef std::allocator<char const>::reference Reference;              // expected-warning {{'reference' is deprecated}}
-        typedef std::allocator<char const>::const_reference ConstReference;   // expected-warning {{'const_reference' is deprecated}}
-        typedef std::allocator<char const>::rebind<int>::other Rebind;        // expected-warning {{'rebind<int>' is deprecated}}
-    }
-    {
         typedef std::allocator<void>::pointer Pointer;                  // expected-warning {{'pointer' is deprecated}}
         typedef std::allocator<void>::const_pointer ConstPointer;       // expected-warning {{'const_pointer' is deprecated}}
         // reference and const_reference are not provided by std::allocator<void>

@@ -1,10 +1,5 @@
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
-assert(!use_goma || goma_dir != "",
-       "set `goma_dir` to the output of `goma_ctl goma_dir` in your args.gn")
-assert(!use_goma || compiler_wrapper == "",
-       "`use_goma` and `compiler_wrapper` are mutually exclusive")
-
 unix_copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
 
 template("unix_toolchain") {
@@ -23,11 +18,8 @@ template("unix_toolchain") {
       cxx = rebase_path(clang_base_path, root_build_dir) + "/bin/clang++"
     }
 
-    ld = cxx  # Don't use goma wrapper for linking.
-    if (use_goma) {
-      cc = "$goma_dir/gomacc $cc"
-      cxx = "$goma_dir/gomacc $cxx"
-    } else if (compiler_wrapper != "") {
+    ld = cxx  # Don't use compiler wrapper for linking.
+    if (compiler_wrapper != "") {
       cc = "$compiler_wrapper $cc"
       cxx = "$compiler_wrapper $cxx"
     }
@@ -195,7 +187,7 @@ template("stage2_unix_toolchain") {
       forward_variables_from(invoker.toolchain_args, "*")
 
       clang_base_path = root_build_dir
-      use_goma = false
+      llvm_enable_zstd = false
     }
 
     deps = [
@@ -214,6 +206,13 @@ stage2_unix_toolchain("stage2_unix") {
   toolchain_args = {
     current_os = host_os
     current_cpu = host_cpu
+  }
+}
+
+stage2_unix_toolchain("stage2_unix_x86") {
+  toolchain_args = {
+    current_os = host_os
+    current_cpu = "x86"
   }
 }
 
@@ -301,9 +300,7 @@ template("win_toolchain") {
       }
     }
 
-    if (use_goma) {
-      cl = "$goma_dir/gomacc $cl"
-    } else if (compiler_wrapper != "") {
+    if (compiler_wrapper != "") {
       cl = "$compiler_wrapper $cl"
     }
 
@@ -425,7 +422,6 @@ win_toolchain("stage2_win_x64") {
       sysroot = win_sysroot
     }
     clang_base_path = root_build_dir
-    use_goma = false
   }
   deps = [
     "//:clang($host_toolchain)",
@@ -442,7 +438,6 @@ win_toolchain("stage2_win_x86") {
       sysroot = win_sysroot
     }
     clang_base_path = root_build_dir
-    use_goma = false
   }
   deps = [
     "//:clang($host_toolchain)",

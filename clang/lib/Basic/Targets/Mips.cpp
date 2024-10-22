@@ -273,6 +273,34 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     Diags.Report(diag::err_mips_fp64_req) << "-mfp64";
     return false;
   }
+  // FPXX requires mips2+
+  if (FPMode == FPXX && CPU == "mips1") {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfpxx" << CPU;
+    return false;
+  }
+  // -mmsa with -msoft-float makes nonsense
+  if (FloatABI == SoftFloat && HasMSA) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-msoft-float"
+                                                   << "-mmsa";
+    return false;
+  }
+  // Option -mmsa permitted on Mips32 iff revision 2 or higher is present
+  if (HasMSA && (CPU == "mips1" || CPU == "mips2" || getISARev() < 2) &&
+      ABI == "o32") {
+    Diags.Report(diag::err_mips_fp64_req) << "-mmsa";
+    return false;
+  }
+  // MSA requires FP64
+  if (FPMode == FPXX && HasMSA) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfpxx"
+                                                   << "-mmsa";
+    return false;
+  }
+  if (FPMode == FP32 && HasMSA) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfp32"
+                                                   << "-mmsa";
+    return false;
+  }
 
   return true;
 }

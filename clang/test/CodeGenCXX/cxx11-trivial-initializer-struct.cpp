@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -std=c++11 -S -emit-llvm -o %t-c++11.ll %s -triple x86_64-apple-darwin10
+// RUN: %clang_cc1 -std=c++11 -emit-llvm -o %t-c++11.ll %s -triple x86_64-apple-darwin10
 // RUN: FileCheck %s < %t-c++11.ll
-// RUN: %clang_cc1 -std=c++17 -S -emit-llvm -o %t-c++17.ll %s -triple x86_64-apple-darwin10
+// RUN: %clang_cc1 -std=c++17 -emit-llvm -o %t-c++17.ll %s -triple x86_64-apple-darwin10
 // RUN: FileCheck %s < %t-c++17.ll
-// RUN: %clang_cc1  -std=c++98 -S -emit-llvm -o %t.ll %s -triple x86_64-apple-darwin10
-// RUN: %clang_cc1  -std=c++03 -S -emit-llvm -o %t-c++03.ll %s -triple x86_64-apple-darwin10
+// RUN: %clang_cc1  -std=c++98 -emit-llvm -o %t.ll %s -triple x86_64-apple-darwin10
+// RUN: %clang_cc1  -std=c++03 -emit-llvm -o %t-c++03.ll %s -triple x86_64-apple-darwin10
 // RUN: diff %t-c++11.ll  %t-c++17.ll
 // RUN: diff %t.ll  %t-c++03.ll
 

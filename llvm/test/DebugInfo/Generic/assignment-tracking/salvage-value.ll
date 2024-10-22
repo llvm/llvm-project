@@ -12,28 +12,28 @@ entry:
   %add = add nsw i32 %x, 1, !dbg !22
   call void @llvm.dbg.assign(metadata i32 %add, metadata !14, metadata !DIExpression(), metadata !28, metadata ptr %p, metadata !DIExpression()), !dbg !16
 ;; %add is salvaged.
-; CHECK: call void @llvm.dbg.assign(metadata i32 %x,{{.+}}metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value),{{.+}}, metadata ptr %p, metadata !DIExpression())
+; CHECK: #dbg_assign(i32 %x,{{.+}}!DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value),{{.+}}, ptr %p, !DIExpression(),
 
  %add1 = add nsw i32 %x, %y, !dbg !29
  call void @llvm.dbg.assign(metadata i32 %add1, metadata !32, metadata !DIExpression(), metadata !31, metadata ptr %p, metadata !DIExpression()), !dbg !16
 ;; %add1 is salvaged using a variadic expression.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata !DIArgList(i32 %x, i32 %y), metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), metadata ![[#]], metadata ptr %p, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(!DIArgList(i32 %x, i32 %y), ![[#]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), ![[#]], ptr %p, !DIExpression(),
 
   %arrayidx0 = getelementptr inbounds i32, ptr %p, i32 0
   call void @llvm.dbg.assign(metadata i32 %x, metadata !14, metadata !DIExpression(), metadata !17, metadata ptr %arrayidx0, metadata !DIExpression()), !dbg !16
 ;; %arrayidx0 is salvaged (zero offset, so the gep is just replaced with %p).
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %x,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr %p, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i32 %x,{{.+}}, !DIExpression(),{{.+}}, ptr %p, !DIExpression(),
 
   %arrayidx1 = getelementptr inbounds i32, ptr %p, i32 1
   call void @llvm.dbg.assign(metadata i32 %x, metadata !33, metadata !DIExpression(), metadata !18, metadata ptr %arrayidx1, metadata !DIExpression()), !dbg !16
 ;; %arrayidx1 is salvaged.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %x,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr %p, metadata !DIExpression(DW_OP_plus_uconst, 4))
+; CHECK-NEXT: #dbg_assign(i32 %x,{{.+}}, !DIExpression(),{{.+}}, ptr %p, !DIExpression(DW_OP_plus_uconst, 4),
 
   %arrayidx2 = getelementptr inbounds i32, ptr %p, i32 %x
   call void @llvm.dbg.assign(metadata i32 %x, metadata !34, metadata !DIExpression(), metadata !19, metadata ptr %arrayidx2, metadata !DIExpression()), !dbg !16
 ;; Variadic DIExpressions for dbg.assign address component is not supported -
-;; set undef.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %x,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr undef, metadata !DIExpression())
+;; set poison.
+; CHECK-NEXT: #dbg_assign(i32 %x,{{.+}}, !DIExpression(),{{.+}}, ptr poison, !DIExpression(),
 
   ret void
 }

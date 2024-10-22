@@ -1,5 +1,5 @@
-# This reproduces a bug with shrink wrapping when trying to split critical
-# edges originating at the same basic block.
+## This reproduces a bug with shrink wrapping when trying to split critical
+## edges originating at the same basic block.
 
 # REQUIRES: system-linux
 

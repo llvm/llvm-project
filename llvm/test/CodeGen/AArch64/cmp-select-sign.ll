@@ -241,25 +241,228 @@ define <4 x i32> @not_sign_4xi32_3(<4 x i32> %a) {
 define <4 x i65> @sign_4xi65(<4 x i65> %a) {
 ; CHECK-LABEL: sign_4xi65:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sbfx x8, x1, #0, #1
-; CHECK-NEXT:    sbfx x9, x5, #0, #1
-; CHECK-NEXT:    sbfx x10, x3, #0, #1
-; CHECK-NEXT:    lsr x1, x8, #63
-; CHECK-NEXT:    orr x8, x8, #0x1
-; CHECK-NEXT:    lsr x3, x10, #63
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    sbfx x8, x7, #0, #1
-; CHECK-NEXT:    lsr x5, x9, #63
-; CHECK-NEXT:    orr x2, x10, #0x1
-; CHECK-NEXT:    orr x4, x9, #0x1
-; CHECK-NEXT:    lsr x7, x8, #63
-; CHECK-NEXT:    orr x6, x8, #0x1
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    sbfx x8, x5, #0, #1
+; CHECK-NEXT:    sbfx x9, x3, #0, #1
+; CHECK-NEXT:    sbfx x10, x1, #0, #1
+; CHECK-NEXT:    sbfx x11, x7, #0, #1
+; CHECK-NEXT:    lsr x1, x10, #63
+; CHECK-NEXT:    lsr x3, x9, #63
+; CHECK-NEXT:    lsr x5, x8, #63
+; CHECK-NEXT:    lsr x7, x11, #63
+; CHECK-NEXT:    orr x0, x10, #0x1
+; CHECK-NEXT:    orr x2, x9, #0x1
+; CHECK-NEXT:    orr x4, x8, #0x1
+; CHECK-NEXT:    orr x6, x11, #0x1
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i65> %a, <i65 -1, i65 -1, i65 -1, i65 -1>
   %res = select <4 x i1> %c, <4 x i65> <i65 1, i65 1, i65 1, i65 1>, <4 x i65 > <i65 -1, i65 -1, i65 -1, i65 -1>
   ret <4 x i65> %res
 }
 
+define i32 @or_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, #0x1
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
+  %3 = or i32 %x, 1
+  %4 = sub i32 0, %3
+  %5 = icmp sgt i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg_ugt(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_ugt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, #0x1
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %3 = or i32 %x, 1
+  %4 = sub i32 0, %3
+  %5 = icmp ugt i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+; Negative test
+
+define i32 @or_neg_no_smin(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_no_smin:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %4 = sub i32 0, %x
+  %5 = icmp sgt i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+; Negative test
+
+define i32 @or_neg_ult_no_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_ult_no_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %4 = sub i32 0, %x
+  %5 = icmp ult i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg_no_smin_but_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_no_smin_but_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic w8, w0, w0, asr #31
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
+  %3 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %4 = sub i32 0, %3
+  %5 = icmp sgt i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg_slt_zero_but_no_smin(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_slt_zero_but_no_smin:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    cmp w0, #9
+; CHECK-NEXT:    csel w8, w0, w8, lo
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    ret
+  %3 = call i32 @llvm.umin.i32(i32 %x, i32 9)
+  %4 = sub i32 0, %3
+  %5 = icmp ugt i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg2(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, #0x1
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, le
+; CHECK-NEXT:    ret
+  %3 = or i32 %x, 1
+  %4 = sub i32 0, %3
+  %5 = icmp sge i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg3(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, #0x1
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %3 = or i32 %x, 1
+  %4 = sub i32 0, %3
+  %5 = icmp slt i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg4(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, #0x1
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    ret
+  %3 = or i32 %x, 1
+  %4 = sub i32 0, %3
+  %5 = icmp sle i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg_ult(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_ult:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, #0x1
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %3 = or i32 %x, 1
+  %4 = sub i32 0, %3
+  %5 = icmp ugt i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg_no_smin2(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_no_smin2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    ret
+  %4 = sub i32 0, %x
+  %5 = icmp sge i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+; Negative test
+
+define i32 @or_neg_ult_no_zero2(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_ult_no_zero2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %4 = sub i32 0, %x
+  %5 = icmp ult i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg_no_smin_but_zero2(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_no_smin_but_zero2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic w8, w0, w0, asr #31
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    ret
+  %3 = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %4 = sub i32 0, %3
+  %5 = icmp sle i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+define i32 @or_neg_slt_zero_but_no_smin2(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg_slt_zero_but_no_smin2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    cmp w0, #9
+; CHECK-NEXT:    csel w8, w0, w8, lo
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    cset w0, hs
+; CHECK-NEXT:    ret
+  %3 = call i32 @llvm.umin.i32(i32 %x, i32 9)
+  %4 = sub i32 0, %3
+  %5 = icmp uge i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+declare i32 @llvm.smax.i32(i32, i32)
+declare i32 @llvm.umax.i32(i32, i32)
 declare void @use_4xi1(<4 x i1>)

@@ -11,59 +11,68 @@
 define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX9-LABEL: indirect_call_known_no_special_inputs:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
-; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; GFX9-NEXT:    s_add_u32 s0, s0, s7
+; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
+; GFX9-NEXT:    s_add_u32 s0, s0, s15
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
-; GFX9-NEXT:    s_mov_b64 s[4:5], 0
-; GFX9-NEXT:    s_load_dword s7, s[4:5], 0x0
-; GFX9-NEXT:    s_getpc_b64 s[4:5]
-; GFX9-NEXT:    s_add_u32 s4, s4, wobble@gotpcrel32@lo+4
-; GFX9-NEXT:    s_addc_u32 s5, s5, wobble@gotpcrel32@hi+12
-; GFX9-NEXT:    s_getpc_b64 s[8:9]
-; GFX9-NEXT:    s_add_u32 s8, s8, snork@gotpcrel32@lo+4
-; GFX9-NEXT:    s_addc_u32 s9, s9, snork@gotpcrel32@hi+12
-; GFX9-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x0
-; GFX9-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x0
+; GFX9-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX9-NEXT:    s_mov_b64 s[8:9], 0
+; GFX9-NEXT:    s_load_dword s15, s[8:9], 0x0
+; GFX9-NEXT:    s_getpc_b64 s[8:9]
+; GFX9-NEXT:    s_add_u32 s8, s8, wobble@gotpcrel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s9, s9, wobble@gotpcrel32@hi+12
+; GFX9-NEXT:    s_getpc_b64 s[16:17]
+; GFX9-NEXT:    s_add_u32 s16, s16, snork@gotpcrel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s17, s17, snork@gotpcrel32@hi+12
+; GFX9-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[20:21], s[8:9], 0x0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s4, 1, s7
-; GFX9-NEXT:    s_cmp_eq_u32 s4, 1
-; GFX9-NEXT:    v_mov_b32_e32 v31, v0
-; GFX9-NEXT:    s_cselect_b32 s5, s13, s11
-; GFX9-NEXT:    s_cselect_b32 s4, s12, s10
-; GFX9-NEXT:    s_mov_b32 s12, s6
+; GFX9-NEXT:    s_and_b32 s8, 1, s15
+; GFX9-NEXT:    s_cmp_eq_u32 s8, 1
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX9-NEXT:    s_cselect_b32 s17, s21, s19
+; GFX9-NEXT:    s_cselect_b32 s16, s20, s18
+; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GFX9-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_mov_b32 s32, 0
-; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: indirect_call_known_no_special_inputs:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_getpc_b64 s[2:3]
-; GFX12-NEXT:    s_sext_i32_i16 s3, s3
-; GFX12-NEXT:    s_add_co_u32 s2, s2, snork@gotpcrel32@lo+8
-; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, snork@gotpcrel32@hi+16
-; GFX12-NEXT:    s_mov_b64 s[0:1], 0
-; GFX12-NEXT:    s_getpc_b64 s[4:5]
-; GFX12-NEXT:    s_sext_i32_i16 s5, s5
-; GFX12-NEXT:    s_add_co_u32 s4, s4, wobble@gotpcrel32@lo+8
-; GFX12-NEXT:    s_add_co_ci_u32 s5, s5, wobble@gotpcrel32@hi+16
-; GFX12-NEXT:    s_load_u8 s6, s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
-; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX12-NEXT:    s_getpc_b64 s[6:7]
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s7, s7
+; GFX12-NEXT:    s_add_co_u32 s6, s6, snork@gotpcrel32@lo+12
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_add_co_ci_u32 s7, s7, snork@gotpcrel32@hi+24
+; GFX12-NEXT:    s_mov_b64 s[10:11], s[4:5]
+; GFX12-NEXT:    s_mov_b64 s[4:5], 0
+; GFX12-NEXT:    s_getpc_b64 s[8:9]
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s9, s9
+; GFX12-NEXT:    s_add_co_u32 s8, s8, wobble@gotpcrel32@lo+12
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, wobble@gotpcrel32@hi+24
+; GFX12-NEXT:    s_load_u8 s12, s[4:5], 0x0
+; GFX12-NEXT:    s_load_b64 s[4:5], s[6:7], 0x0
+; GFX12-NEXT:    s_load_b64 s[6:7], s[8:9], 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 0
 ; GFX12-NEXT:    v_mov_b32_e32 v31, v0
-; GFX12-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX12-NEXT:    s_mov_b32 s32, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_and_b32 s4, 1, s6
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_cmp_eq_u32 s4, 1
-; GFX12-NEXT:    s_cselect_b32 s1, s3, s1
-; GFX12-NEXT:    s_cselect_b32 s0, s2, s0
-; GFX12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX12-NEXT:    s_and_b32 s8, 1, s12
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_cmp_eq_u32 s8, 1
+; GFX12-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; GFX12-NEXT:    s_cselect_b32 s7, s7, s5
+; GFX12-NEXT:    s_cselect_b32 s6, s6, s4
+; GFX12-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GFX12-NEXT:    s_endpgm
 
 bb:

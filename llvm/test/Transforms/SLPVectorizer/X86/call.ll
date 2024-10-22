@@ -6,6 +6,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 declare double @sin(double) nounwind willreturn
 declare double @cos(double) nounwind willreturn
+declare double @tan(double) nounwind willreturn
 declare double @pow(double, double) nounwind willreturn
 declare double @exp2(double) nounwind willreturn
 declare double @sqrt(double) nounwind willreturn
@@ -45,6 +46,24 @@ define void @cos_libm(ptr %a, ptr %b) {
   store double %cos1, ptr %b, align 8
   %idx2 = getelementptr inbounds double, ptr %b, i64 1
   store double %cos2, ptr %idx2, align 8
+  ret void
+}
+
+define void @tan_libm(ptr %a, ptr %b) {
+; CHECK-LABEL: @tan_libm(
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.tan.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, ptr %a, align 8
+  %idx1 = getelementptr inbounds double, ptr %a, i64 1
+  %a1 = load double, ptr %idx1, align 8
+  %tan1 = tail call double @tan(double %a0) nounwind readnone
+  %tan2 = tail call double @tan(double %a1) nounwind readnone
+  store double %tan1, ptr %b, align 8
+  %idx2 = getelementptr inbounds double, ptr %b, i64 1
+  store double %tan2, ptr %idx2, align 8
   ret void
 }
 

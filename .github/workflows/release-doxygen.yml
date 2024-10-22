@@ -25,6 +25,10 @@ on:
         description: 'Upload documentation'
         required: false
         type: boolean
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
 
 jobs:
   release-doxygen:
@@ -39,7 +43,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Python env
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -56,12 +60,13 @@ jobs:
           pip3 install --user -r ./llvm/docs/requirements.txt
 
       - name: Build Doxygen
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-sphinx
 
       - name: Upload Doxygen
         if: env.upload
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
         run: |
-          ./llvm/utils/release/github-upload-release.py --token "$GITHUB_TOKEN" --release "${{ inputs.release-version }}" --user "${{ github.actor }}" upload --files ./*doxygen*.tar.xz
+          ./llvm/utils/release/github-upload-release.py --token "$GITHUB_TOKEN" --release "${{ inputs.release-version }}" --user "${{ github.actor }}" --user-token "$USER_TOKEN" upload --files ./*doxygen*.tar.xz

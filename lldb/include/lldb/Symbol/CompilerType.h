@@ -279,6 +279,8 @@ public:
 
   ConstString GetDisplayTypeName() const;
 
+  ConstString GetMangledTypeName() const;
+
   uint32_t
   GetTypeInfo(CompilerType *pointee_or_element_compiler_type = nullptr) const;
 
@@ -436,7 +438,7 @@ public:
                                    uint32_t *bitfield_bit_size_ptr = nullptr,
                                    bool *is_bitfield_ptr = nullptr) const;
 
-  CompilerType GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,
       std::string &child_name, uint32_t &child_byte_size,

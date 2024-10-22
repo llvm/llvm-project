@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -S -mtocdata -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,ALLTOC
-// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -S -mtocdata=n,_ZN11MyNamespace10myVariableE,_ZL1s,_ZZ4testvE7counter -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,TOCLIST
-// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -S -mtocdata -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,ALLTOC
-// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -S -mtocdata=n,_ZN11MyNamespace10myVariableE,_ZL1s,_ZZ4testvE7counter -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,TOCLIST
+// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -mtocdata -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,ALLTOC
+// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -mtocdata=n,_ZN11MyNamespace10myVariableE,_ZL1s,_ZZ4testvE7counter -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,TOCLIST
+// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -mtocdata -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,ALLTOC
+// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -mtocdata=n,_ZN11MyNamespace10myVariableE,_ZL1s,_ZZ4testvE7counter -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,TOCLIST
 
 extern int n;
 static int s = 100;

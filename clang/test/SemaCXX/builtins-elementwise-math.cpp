@@ -76,6 +76,22 @@ void test_builtin_elementwise_min_fp() {
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, a))>::value);
 }
 
+void test_builtin_elementwise_maximum() {
+  const float a = 2.0f;
+  float b = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(a, a))>::value);
+}
+
+void test_builtin_elementwise_minimum() {
+  const float a = 2.0f;
+  float b = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(a, a))>::value);
+}
+
 void test_builtin_elementwise_ceil() {
   const float a = 42.0;
   float b = 42.3;
@@ -83,11 +99,25 @@ void test_builtin_elementwise_ceil() {
   static_assert(!is_const<decltype(__builtin_elementwise_ceil(b))>::value);
 }
 
+void test_builtin_elementwise_acos() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_acos(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_acos(b))>::value);
+}
+
 void test_builtin_elementwise_cos() {
   const float a = 42.0;
   float b = 42.3;
   static_assert(!is_const<decltype(__builtin_elementwise_cos(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_cos(b))>::value);
+}
+
+void test_builtin_elementwise_cosh() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_cosh(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_cosh(b))>::value);
 }
 
 void test_builtin_elementwise_exp() {
@@ -104,11 +134,53 @@ void test_builtin_elementwise_exp2() {
   static_assert(!is_const<decltype(__builtin_elementwise_exp2(b))>::value);
 }
 
+void test_builtin_elementwise_asin() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_asin(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_asin(b))>::value);
+}
+
 void test_builtin_elementwise_sin() {
   const float a = 42.0;
   float b = 42.3;
   static_assert(!is_const<decltype(__builtin_elementwise_sin(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_sin(b))>::value);
+}
+
+void test_builtin_elementwise_sinh() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_sinh(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_sinh(b))>::value);
+}
+
+void test_builtin_elementwise_atan() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_atan(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_atan(b))>::value);
+}
+
+void test_builtin_elementwise_atan2() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_atan2(a, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_atan2(b, b))>::value);
+}
+
+void test_builtin_elementwise_tan() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_tan(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_tan(b))>::value);
+}
+
+void test_builtin_elementwise_tanh() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_tanh(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_tanh(b))>::value);
 }
 
 void test_builtin_elementwise_sqrt() {
@@ -206,6 +278,14 @@ void test_builtin_elementwise_fma() {
   static_assert(!is_const<decltype(__builtin_elementwise_fma(c, c, c))>::value);
 }
 
+void test_builtin_elementwise_fmod() {
+  const double a = 2;
+  double b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(a, a))>::value);
+}
+
 void test_builtin_elementwise_pow() {
   const double a = 2;
   double b = 1;
@@ -220,3 +300,11 @@ void test_builtin_elementwise_bitreverse() {
   static_assert(!is_const<decltype(__builtin_elementwise_bitreverse(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_bitreverse(b))>::value);  
 }
+
+void test_builtin_elementwise_popcount() {
+  const int a = 2;
+  int b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_popcount(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_popcount(b))>::value);  
+}
+

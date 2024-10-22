@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test watchpoint modify command to set condition on a watchpoint.
 """
 

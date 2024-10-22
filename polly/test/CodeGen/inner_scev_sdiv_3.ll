@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 ;
 ; This test case has a inner SCEV sdiv that will escape the SCoP. Just check we
 ; do not crash and generate valid code.

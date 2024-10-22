@@ -260,7 +260,88 @@ TEST(RegisterFlagsTest, AsTable) {
             max_many_columns.AsTable(23));
 }
 
-TEST(RegisterFieldsTest, ToXML) {
+TEST(RegisterFlagsTest, DumpEnums) {
+  ASSERT_EQ(RegisterFlags("", 8, {RegisterFlags::Field{"A", 0}}).DumpEnums(80),
+            "");
+
+  FieldEnum basic_enum("test", {{0, "an_enumerator"}});
+  ASSERT_EQ(RegisterFlags("", 8, {RegisterFlags::Field{"A", 0, 0, &basic_enum}})
+                .DumpEnums(80),
+            "A: 0 = an_enumerator");
+
+  // If width is smaller than the enumerator name, print it anyway.
+  ASSERT_EQ(RegisterFlags("", 8, {RegisterFlags::Field{"A", 0, 0, &basic_enum}})
+                .DumpEnums(5),
+            "A: 0 = an_enumerator");
+
+  // Mutliple values can go on the same line, up to the width.
+  FieldEnum more_enum("long_enum",
+                      {{0, "an_enumerator"},
+                       {1, "another_enumerator"},
+                       {2, "a_very_very_long_enumerator_has_its_own_line"},
+                       {3, "small"},
+                       {4, "small2"}});
+  ASSERT_EQ(RegisterFlags("", 8, {RegisterFlags::Field{"A", 0, 2, &more_enum}})
+                // Width is chosen to be exactly enough to allow 0 and 1
+                // enumerators on the first line.
+                .DumpEnums(45),
+            "A: 0 = an_enumerator, 1 = another_enumerator,\n"
+            "   2 = a_very_very_long_enumerator_has_its_own_line,\n"
+            "   3 = small, 4 = small2");
+
+  // If they all exceed width, one per line.
+  FieldEnum another_enum("another_enum", {{0, "an_enumerator"},
+                                          {1, "another_enumerator"},
+                                          {2, "a_longer_enumerator"}});
+  ASSERT_EQ(
+      RegisterFlags("", 8, {RegisterFlags::Field{"A", 0, 1, &another_enum}})
+          .DumpEnums(5),
+      "A: 0 = an_enumerator,\n"
+      "   1 = another_enumerator,\n"
+      "   2 = a_longer_enumerator");
+
+  // If the name is already > the width, put one value per line.
+  FieldEnum short_enum("short_enum", {{0, "a"}, {1, "b"}, {2, "c"}});
+  ASSERT_EQ(RegisterFlags("", 8,
+                          {RegisterFlags::Field{"AReallyLongFieldName", 0, 1,
+                                                &short_enum}})
+                .DumpEnums(10),
+            "AReallyLongFieldName: 0 = a,\n"
+            "                      1 = b,\n"
+            "                      2 = c");
+
+  // Fields are separated by a blank line. Indentation of lines split by width
+  // is set by the size of the fields name (as opposed to some max of all field
+  // names).
+  FieldEnum enum_1("enum_1", {{0, "an_enumerator"}, {1, "another_enumerator"}});
+  FieldEnum enum_2("enum_2",
+                   {{0, "Cdef_enumerator_1"}, {1, "Cdef_enumerator_2"}});
+  ASSERT_EQ(RegisterFlags("", 8,
+                          {RegisterFlags::Field{"Ab", 1, 1, &enum_1},
+                           RegisterFlags::Field{"Cdef", 0, 0, &enum_2}})
+                .DumpEnums(10),
+            "Ab: 0 = an_enumerator,\n"
+            "    1 = another_enumerator\n"
+            "\n"
+            "Cdef: 0 = Cdef_enumerator_1,\n"
+            "      1 = Cdef_enumerator_2");
+
+  // Having fields without enumerators shouldn't produce any extra newlines.
+  ASSERT_EQ(RegisterFlags("", 8,
+                          {
+                              RegisterFlags::Field{"A", 4, 4},
+                              RegisterFlags::Field{"B", 3, 3, &enum_1},
+                              RegisterFlags::Field{"C", 2, 2},
+                              RegisterFlags::Field{"D", 1, 1, &enum_1},
+                              RegisterFlags::Field{"E", 0, 0},
+                          })
+                .DumpEnums(80),
+            "B: 0 = an_enumerator, 1 = another_enumerator\n"
+            "\n"
+            "D: 0 = an_enumerator, 1 = another_enumerator");
+}
+
+TEST(RegisterFieldsTest, FlagsToXML) {
   StreamString strm;
 
   // RegisterFlags requires that some fields be given, so no testing of empty
@@ -307,4 +388,96 @@ TEST(RegisterFieldsTest, ToXML) {
             "  <field name=\"D&quot;\" start=\"1\" end=\"1\"/>\n"
             "  <field name=\"E&amp;\" start=\"0\" end=\"0\"/>\n"
             "</flags>\n");
+
+  // Should include enumerators as the "type".
+  strm.Clear();
+  FieldEnum enum_single("enum_single", {{0, "a"}});
+  RegisterFlags("Enumerators", 8,
+                {RegisterFlags::Field("NoEnumerators", 4),
+                 RegisterFlags::Field("OneEnumerator", 3, 3, &enum_single)})
+      .ToXML(strm);
+  ASSERT_EQ(strm.GetString(),
+            "<flags id=\"Enumerators\" size=\"8\">\n"
+            "  <field name=\"NoEnumerators\" start=\"4\" end=\"4\"/>\n"
+            "  <field name=\"OneEnumerator\" start=\"3\" end=\"3\" "
+            "type=\"enum_single\"/>\n"
+            "</flags>\n");
+}
+
+TEST(RegisterFlagsTest, EnumeratorToXML) {
+  StreamString strm;
+
+  FieldEnum::Enumerator(1234, "test").ToXML(strm);
+  ASSERT_EQ(strm.GetString(), "<evalue name=\"test\" value=\"1234\"/>");
+
+  // Special XML chars in names must be escaped.
+  std::array special_names = {
+      std::make_pair(FieldEnum::Enumerator(0, "A<"),
+                     "<evalue name=\"A&lt;\" value=\"0\"/>"),
+      std::make_pair(FieldEnum::Enumerator(1, "B>"),
+                     "<evalue name=\"B&gt;\" value=\"1\"/>"),
+      std::make_pair(FieldEnum::Enumerator(2, "C'"),
+                     "<evalue name=\"C&apos;\" value=\"2\"/>"),
+      std::make_pair(FieldEnum::Enumerator(3, "D\""),
+                     "<evalue name=\"D&quot;\" value=\"3\"/>"),
+      std::make_pair(FieldEnum::Enumerator(4, "E&"),
+                     "<evalue name=\"E&amp;\" value=\"4\"/>"),
+  };
+
+  for (const auto &[enumerator, expected] : special_names) {
+    strm.Clear();
+    enumerator.ToXML(strm);
+    ASSERT_EQ(strm.GetString(), expected);
+  }
+}
+
+TEST(RegisterFlagsTest, EnumToXML) {
+  StreamString strm;
+
+  FieldEnum("empty_enum", {}).ToXML(strm, 4);
+  ASSERT_EQ(strm.GetString(), "<enum id=\"empty_enum\" size=\"4\"/>\n");
+
+  strm.Clear();
+  FieldEnum("single_enumerator", {FieldEnum::Enumerator(0, "zero")})
+      .ToXML(strm, 5);
+  ASSERT_EQ(strm.GetString(), "<enum id=\"single_enumerator\" size=\"5\">\n"
+                              "  <evalue name=\"zero\" value=\"0\"/>\n"
+                              "</enum>\n");
+
+  strm.Clear();
+  FieldEnum("multiple_enumerator",
+            {FieldEnum::Enumerator(0, "zero"), FieldEnum::Enumerator(1, "one")})
+      .ToXML(strm, 8);
+  ASSERT_EQ(strm.GetString(), "<enum id=\"multiple_enumerator\" size=\"8\">\n"
+                              "  <evalue name=\"zero\" value=\"0\"/>\n"
+                              "  <evalue name=\"one\" value=\"1\"/>\n"
+                              "</enum>\n");
+}
+
+TEST(RegisterFlagsTest, EnumsToXML) {
+  // This method should output all the enums used by the register flag set,
+  // only once.
+
+  StreamString strm;
+  FieldEnum enum_a("enum_a", {FieldEnum::Enumerator(0, "zero")});
+  FieldEnum enum_b("enum_b", {FieldEnum::Enumerator(1, "one")});
+  FieldEnum enum_c("enum_c", {FieldEnum::Enumerator(2, "two")});
+  llvm::StringSet<> seen;
+  // Pretend that enum_c was already emitted for a different flag set.
+  seen.insert("enum_c");
+
+  RegisterFlags("Test", 4,
+                {
+                    RegisterFlags::Field("f1", 31, 31, &enum_a),
+                    RegisterFlags::Field("f2", 30, 30, &enum_a),
+                    RegisterFlags::Field("f3", 29, 29, &enum_b),
+                    RegisterFlags::Field("f4", 27, 28, &enum_c),
+                })
+      .EnumsToXML(strm, seen);
+  ASSERT_EQ(strm.GetString(), "<enum id=\"enum_a\" size=\"4\">\n"
+                              "  <evalue name=\"zero\" value=\"0\"/>\n"
+                              "</enum>\n"
+                              "<enum id=\"enum_b\" size=\"4\">\n"
+                              "  <evalue name=\"one\" value=\"1\"/>\n"
+                              "</enum>\n");
 }

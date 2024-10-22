@@ -324,6 +324,7 @@ private:
   static bool StatisticsEnabled;
 
 protected:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
@@ -670,8 +671,24 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
+  /// Whether this declaration comes from the same module unit being compiled.
+  bool isInCurrentModuleUnit() const;
+
+  /// Whether the definition of the declaration should be emitted in external
+  /// sources.
+  bool shouldEmitInExternalSource() const;
+
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
+
+  /// Whether this declaration comes from global module.
+  bool isFromGlobalModule() const;
+
+  /// Whether this declaration comes from a named module.
+  bool isInNamedModule() const;
+
+  /// Whether this declaration comes from a header unit.
+  bool isFromHeaderUnit() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -701,10 +718,7 @@ public:
 
   /// Set the owning module ID.  This may only be called for
   /// deserialized Decls.
-  void setOwningModuleID(unsigned ID) {
-    assert(isFromASTFile() && "Only works on a deserialized declaration");
-    *((unsigned*)this - 2) = ID;
-  }
+  void setOwningModuleID(unsigned ID);
 
 public:
   /// Determine the availability of the given declaration.
@@ -777,19 +791,11 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  GlobalDeclID getGlobalID() const {
-    if (isFromASTFile())
-      return (*((const GlobalDeclID *)this - 1));
-    return GlobalDeclID();
-  }
+  GlobalDeclID getGlobalID() const;
 
   /// Retrieve the global ID of the module that owns this particular
   /// declaration.
-  unsigned getOwningModuleID() const {
-    if (isFromASTFile())
-      return *((const unsigned*)this - 2);
-    return 0;
-  }
+  unsigned getOwningModuleID() const;
 
 private:
   Module *getOwningModuleSlow() const;
@@ -836,10 +842,7 @@ public:
 
   /// Get the module that owns this declaration for linkage purposes.
   /// There only ever is such a standard C++ module.
-  ///
-  /// \param IgnoreLinkage Ignore the linkage of the entity; assume that
-  /// all declarations in a global module fragment are unowned.
-  Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
+  Module *getOwningModuleForLinkage() const;
 
   /// Determine whether this declaration is definitely visible to name lookup,
   /// independent of whether the owning module is visible.
@@ -1498,6 +1501,27 @@ class DeclContext {
   /// Number of bits in DeclContextBitfields.
   enum { NumDeclContextBits = 13 };
 
+  /// Stores the bits used by NamespaceDecl.
+  /// If modified NumNamespaceDeclBits and the accessor
+  /// methods in NamespaceDecl should be updated appropriately.
+  class NamespaceDeclBitfields {
+    friend class NamespaceDecl;
+    /// For the bits in DeclContextBitfields
+    LLVM_PREFERRED_TYPE(DeclContextBitfields)
+    uint64_t : NumDeclContextBits;
+
+    /// True if this is an inline namespace.
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t IsInline : 1;
+
+    /// True if this is a nested-namespace-definition.
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t IsNested : 1;
+  };
+
+  /// Number of inherited and non-inherited bits in NamespaceDeclBitfields.
+  enum { NumNamespaceDeclBits = NumDeclContextBits + 2 };
+
   /// Stores the bits used by TagDecl.
   /// If modified NumTagDeclBits and the accessor
   /// methods in TagDecl should be updated appropriately.
@@ -1996,6 +2020,7 @@ protected:
   /// 8 bytes with static_asserts in the ctor of DeclContext.
   union {
     DeclContextBitfields DeclContextBits;
+    NamespaceDeclBitfields NamespaceDeclBits;
     TagDeclBitfields TagDeclBits;
     EnumDeclBitfields EnumDeclBits;
     RecordDeclBitfields RecordDeclBits;
@@ -2009,6 +2034,8 @@ protected:
 
     static_assert(sizeof(DeclContextBitfields) <= 8,
                   "DeclContextBitfields is larger than 8 bytes!");
+    static_assert(sizeof(NamespaceDeclBitfields) <= 8,
+                  "NamespaceDeclBitfields is larger than 8 bytes!");
     static_assert(sizeof(TagDeclBitfields) <= 8,
                   "TagDeclBitfields is larger than 8 bytes!");
     static_assert(sizeof(EnumDeclBitfields) <= 8,
@@ -2146,6 +2173,10 @@ public:
   bool isRecord() const {
     return getDeclKind() >= Decl::firstRecord &&
            getDeclKind() <= Decl::lastRecord;
+  }
+
+  bool isRequiresExprBody() const {
+    return getDeclKind() == Decl::RequiresExprBody;
   }
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }

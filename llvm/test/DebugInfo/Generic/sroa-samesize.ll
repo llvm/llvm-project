@@ -35,7 +35,7 @@ entry:
   call void @llvm.dbg.declare(metadata ptr %agg.tmp.ensured, metadata !11, metadata !DIExpression()), !dbg !24
   %call.i.i = call i32 @"\01?x4@@YAHXZ"(), !dbg !46, !noalias !47
   store i32 0, ptr %agg.tmp.ensured, align 4, !dbg !50, !tbaa !57, !alias.scope !47
-  ; CHECK: call void @llvm.dbg.value(metadata i32 0, metadata ![[A:.*]], metadata !DIExpression())
+  ; CHECK: #dbg_value(i32 0, ![[A:.*]], !DIExpression(),
   ; CHECK: ![[A]] = !DILocalVariable(name: "a",
   ret void, !dbg !62
 }

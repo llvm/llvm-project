@@ -9,22 +9,47 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipUnlessPlatform(["linux"] + lldbplatformutil.getDarwinOSTriples())
 class ModuleLoadedNotifysTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     # At least DynamicLoaderDarwin and DynamicLoaderPOSIXDYLD should batch up
     # notifications about newly added/removed libraries.  Other DynamicLoaders may
     # not be written this way.
-    @skipUnlessPlatform(["linux"] + lldbplatformutil.getDarwinOSTriples())
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
         self.line = line_number("main.cpp", "// breakpoint")
 
+    def setup_test(self, solibs):
+        if lldb.remote_platform:
+            path = lldb.remote_platform.GetWorkingDirectory()
+            for f in solibs:
+                lldbutil.install_to_target(self, self.getBuildArtifact(f))
+        else:
+            path = self.getBuildDir()
+            if self.dylibPath in os.environ:
+                sep = self.platformContext.shlib_path_separator
+                path = os.environ[self.dylibPath] + sep + path
+        self.runCmd(
+            "settings append target.env-vars '{}={}'".format(self.dylibPath, path)
+        )
+        self.default_path = path
+
     def test_launch_notifications(self):
         """Test that lldb broadcasts newly loaded libraries in batches."""
+
+        expected_solibs = [
+            "lib_a." + self.platformContext.shlib_extension,
+            "lib_b." + self.platformContext.shlib_extension,
+            "lib_c." + self.platformContext.shlib_extension,
+            "lib_d." + self.platformContext.shlib_extension,
+        ]
+
         self.build()
+        self.setup_test(expected_solibs)
+
         exe = self.getBuildArtifact("a.out")
         self.dbg.SetAsync(False)
 
@@ -70,6 +95,8 @@ class ModuleLoadedNotifysTestCase(TestBase):
         total_modules_added_events = 0
         total_modules_removed_events = 0
         already_loaded_modules = []
+        max_solibs_per_event = 0
+        max_solib_chunk_per_event = []
         while listener.GetNextEvent(event):
             if lldb.SBTarget.EventIsTargetEvent(event):
                 if event.GetType() == lldb.SBTarget.eBroadcastBitModulesLoaded:
@@ -91,11 +118,16 @@ class ModuleLoadedNotifysTestCase(TestBase):
                                 "{} is already loaded".format(module),
                             )
                         already_loaded_modules.append(module)
-                        if self.TraceOn():
-                            added_files.append(module.GetFileSpec().GetFilename())
+                        added_files.append(module.GetFileSpec().GetFilename())
                     if self.TraceOn():
                         # print all of the binaries that have been added
                         print("Loaded files: %s" % (", ".join(added_files)))
+
+                    # We will check the latest biggest chunk of loaded solibs.
+                    # We expect all of our solibs in the last chunk of loaded modules.
+                    if solib_count >= max_solibs_per_event:
+                        max_solib_chunk_per_event = added_files.copy()
+                        max_solibs_per_event = solib_count
 
                 if event.GetType() == lldb.SBTarget.eBroadcastBitModulesUnloaded:
                     solib_count = lldb.SBTarget.GetNumModulesFromEvent(event)
@@ -115,9 +147,7 @@ class ModuleLoadedNotifysTestCase(TestBase):
         # binaries in batches.  Check that we got back more than 1 solib per event.
         # In practice on Darwin today, we get back two events for a do-nothing c
         # program: a.out and dyld, and then all the rest of the system libraries.
-        # On Linux we get events for ld.so, [vdso], the binary and then all libraries.
-
-        avg_solibs_added_per_event = round(
-            float(total_solibs_added) / float(total_modules_added_events)
-        )
-        self.assertGreater(avg_solibs_added_per_event, 1)
+        # On Linux we get events for ld.so, [vdso], the binary and then all libraries,
+        # but the different configurations could load a different number of .so modules
+        # per event.
+        self.assertLessEqual(set(expected_solibs), set(max_solib_chunk_per_event))

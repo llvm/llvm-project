@@ -61,11 +61,11 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root: !transform.any_op {transform.consume}) {
     // 1. Tile parallel dims
     %1 = transform.structured.match ops{["linalg.depthwise_conv_2d_nhwc_hwc"]} in %root : (!transform.any_op) -> !transform.any_op
-    %tiled_linalg_op_0, %loops_1:4 = transform.structured.tile_using_for %1[1, 1, 4, [4], 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">)
+    %tiled_linalg_op_0, %loops_1:4 = transform.structured.tile_using_for %1 tile_sizes [1, 1, 4, [4], 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">)
 
     // 2. Tile reduction dims
     %2 = transform.structured.match ops{["linalg.depthwise_conv_2d_nhwc_hwc"]} in %loops_1#3 : (!transform.op<"scf.for">) -> !transform.any_op
-    %tiled_linalg_op_1, %loops_2:2 = transform.structured.tile_using_for %2[0, 0, 0, 0, 1, 1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %tiled_linalg_op_1, %loops_2:2 = transform.structured.tile_using_for %2 tile_sizes [0, 0, 0, 0, 1, 1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // 3. Decompose 2D conv into 2 x 1D conv
     %3 = transform.structured.match ops{["linalg.depthwise_conv_2d_nhwc_hwc"]} in %loops_1#3 : (!transform.op<"scf.for">) -> !transform.any_op

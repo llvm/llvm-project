@@ -75,18 +75,18 @@ def assertzext_lt_i32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 // Instructions specific format
 //===----------------------------------------------------------------------===//
 let usesCustomInserter = 1 in {
-  def ATOMIC_LOAD_ADD_I64  : Atomic2Ops<atomic_load_add_64, GPR64>;
-  def ATOMIC_LOAD_SUB_I64  : Atomic2Ops<atomic_load_sub_64, GPR64>;
-  def ATOMIC_LOAD_AND_I64  : Atomic2Ops<atomic_load_and_64, GPR64>;
-  def ATOMIC_LOAD_OR_I64   : Atomic2Ops<atomic_load_or_64, GPR64>;
-  def ATOMIC_LOAD_XOR_I64  : Atomic2Ops<atomic_load_xor_64, GPR64>;
-  def ATOMIC_LOAD_NAND_I64 : Atomic2Ops<atomic_load_nand_64, GPR64>;
-  def ATOMIC_SWAP_I64      : Atomic2Ops<atomic_swap_64, GPR64>;
-  def ATOMIC_CMP_SWAP_I64  : AtomicCmpSwap<atomic_cmp_swap_64, GPR64>;
-  def ATOMIC_LOAD_MIN_I64  : Atomic2Ops<atomic_load_min_64, GPR64>;
-  def ATOMIC_LOAD_MAX_I64  : Atomic2Ops<atomic_load_max_64, GPR64>;
-  def ATOMIC_LOAD_UMIN_I64 : Atomic2Ops<atomic_load_umin_64, GPR64>;
-  def ATOMIC_LOAD_UMAX_I64 : Atomic2Ops<atomic_load_umax_64, GPR64>;
+  def ATOMIC_LOAD_ADD_I64  : Atomic2Ops<atomic_load_add_i64, GPR64>;
+  def ATOMIC_LOAD_SUB_I64  : Atomic2Ops<atomic_load_sub_i64, GPR64>;
+  def ATOMIC_LOAD_AND_I64  : Atomic2Ops<atomic_load_and_i64, GPR64>;
+  def ATOMIC_LOAD_OR_I64   : Atomic2Ops<atomic_load_or_i64, GPR64>;
+  def ATOMIC_LOAD_XOR_I64  : Atomic2Ops<atomic_load_xor_i64, GPR64>;
+  def ATOMIC_LOAD_NAND_I64 : Atomic2Ops<atomic_load_nand_i64, GPR64>;
+  def ATOMIC_SWAP_I64      : Atomic2Ops<atomic_swap_i64, GPR64>;
+  def ATOMIC_CMP_SWAP_I64  : AtomicCmpSwap<atomic_cmp_swap_i64, GPR64>;
+  def ATOMIC_LOAD_MIN_I64  : Atomic2Ops<atomic_load_min_i64, GPR64>;
+  def ATOMIC_LOAD_MAX_I64  : Atomic2Ops<atomic_load_max_i64, GPR64>;
+  def ATOMIC_LOAD_UMIN_I64 : Atomic2Ops<atomic_load_umin_i64, GPR64>;
+  def ATOMIC_LOAD_UMAX_I64 : Atomic2Ops<atomic_load_umax_i64, GPR64>;
 }
 
 def ATOMIC_LOAD_ADD_I64_POSTRA  : Atomic2OpsPostRA<GPR64>;
@@ -830,6 +830,12 @@ def : MipsPat<(sra GPR64:$rt, (i32 (trunc GPR64:$rs))),
 def : MipsPat<(rotr GPR64:$rt, (i32 (trunc GPR64:$rs))),
               (DROTRV GPR64:$rt, (EXTRACT_SUBREG GPR64:$rs, sub_32))>,
               ISA_MIPS3, GPR_64;
+def : MipsPat<(and (srl (i32 (trunc GPR64:$src)), immZExt5:$imm5), immZExt16:$value),
+              (ANDi (EXTRACT_SUBREG (DSRL GPR64:$src, immZExt5:$imm5), sub_32), immZExt16:$value)>,
+              ISA_MIPS3, GPR_64;
+def : MipsPat<(MipsExt (i32 (trunc GPR64:$src)), immZExt5:$pos, immZExt5:$size),
+              (EXTRACT_SUBREG (DEXT GPR64:$src, immZExt5:$pos, immZExt5:$size), sub_32)>,
+              ISA_MIPS3, GPR_64;
 
 // 32-to-64-bit extension
 def : MipsPat<(i64 (anyext GPR32:$src)),
@@ -837,7 +843,7 @@ def : MipsPat<(i64 (anyext GPR32:$src)),
       ISA_MIPS3, GPR_64;
 def : MipsPat<(i64 (zext GPR32:$src)), (DSRL (DSLL64_32 GPR32:$src), 32)>,
       ISA_MIPS3, GPR_64;
-def : MipsPat<(i64 (sext GPR32:$src)), (SLL64_32 GPR32:$src)>, ISA_MIPS3,
+def : MipsPat<(i64 (sext_like GPR32:$src)), (SLL64_32 GPR32:$src)>, ISA_MIPS3,
       GPR_64;
 
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -905,40 +911,40 @@ def : MipsPat<(atomic_store_64 GPR64:$v, addr:$a), (SD GPR64:$v, addr:$a)>,
 
 // Patterns used for matching away redundant sign extensions.
 // MIPS32 arithmetic instructions sign extend their result implicitly.
-def : MipsPat<(i64 (sext (i32 (add GPR32:$src, immSExt16:$imm16)))),
+def : MipsPat<(i64 (sext_like (i32 (add GPR32:$src, immSExt16:$imm16)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (ADDiu GPR32:$src, immSExt16:$imm16), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (add GPR32:$src, GPR32:$src2)))),
+def : MipsPat<(i64 (sext_like (i32 (add GPR32:$src, GPR32:$src2)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (ADDu GPR32:$src, GPR32:$src2), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (sub GPR32:$src, GPR32:$src2)))),
+def : MipsPat<(i64 (sext_like (i32 (sub GPR32:$src, GPR32:$src2)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (SUBu GPR32:$src, GPR32:$src2), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (mul GPR32:$src, GPR32:$src2)))),
+def : MipsPat<(i64 (sext_like (i32 (mul GPR32:$src, GPR32:$src2)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (MUL GPR32:$src, GPR32:$src2), sub_32)>, ISA_MIPS32_NOT_32R6_64R6;
-def : MipsPat<(i64 (sext (i32 (MipsMFHI ACC64:$src)))),
+def : MipsPat<(i64 (sext_like (i32 (MipsMFHI ACC64:$src)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (PseudoMFHI ACC64:$src), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (MipsMFLO ACC64:$src)))),
+def : MipsPat<(i64 (sext_like (i32 (MipsMFLO ACC64:$src)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (PseudoMFLO ACC64:$src), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (shl GPR32:$src, immZExt5:$imm5)))),
+def : MipsPat<(i64 (sext_like (i32 (shl GPR32:$src, immZExt5:$imm5)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (SLL GPR32:$src, immZExt5:$imm5), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (shl GPR32:$src, GPR32:$src2)))),
+def : MipsPat<(i64 (sext_like (i32 (shl GPR32:$src, GPR32:$src2)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (SLLV GPR32:$src, GPR32:$src2), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (srl GPR32:$src, immZExt5:$imm5)))),
+def : MipsPat<(i64 (sext_like (i32 (srl GPR32:$src, immZExt5:$imm5)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (SRL GPR32:$src, immZExt5:$imm5), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (srl GPR32:$src, GPR32:$src2)))),
+def : MipsPat<(i64 (sext_like (i32 (srl GPR32:$src, GPR32:$src2)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (SRLV GPR32:$src, GPR32:$src2), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (sra GPR32:$src, immZExt5:$imm5)))),
+def : MipsPat<(i64 (sext_like (i32 (sra GPR32:$src, immZExt5:$imm5)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (SRA GPR32:$src, immZExt5:$imm5), sub_32)>;
-def : MipsPat<(i64 (sext (i32 (sra GPR32:$src, GPR32:$src2)))),
+def : MipsPat<(i64 (sext_like (i32 (sra GPR32:$src, GPR32:$src2)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (SRAV GPR32:$src, GPR32:$src2), sub_32)>;
 

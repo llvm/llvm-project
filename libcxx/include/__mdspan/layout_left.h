@@ -21,6 +21,7 @@
 #include <__config>
 #include <__fwd/mdspan.h>
 #include <__mdspan/extents.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -67,7 +68,7 @@ private:
     return true;
   }
 
-  static_assert((extents_type::rank_dynamic() > 0) || __required_span_size_is_representable(extents_type()),
+  static_assert(extents_type::rank_dynamic() > 0 || __required_span_size_is_representable(extents_type()),
                 "layout_left::mapping product of static extents must be representable as index_type.");
 
 public:

@@ -20,44 +20,31 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 using namespace llvm;
 
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         InstListType::iterator InsertBefore)
-    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+InsertPosition::InsertPosition(Instruction *InsertBefore)
+    : InsertAt(InsertBefore ? InsertBefore->getIterator()
+                            : InstListType::iterator()) {}
+InsertPosition::InsertPosition(BasicBlock *InsertAtEnd)
+    : InsertAt(InsertAtEnd ? InsertAtEnd->end() : InstListType::iterator()) {}
 
+Instruction::Instruction(Type *ty, unsigned it, AllocInfo AllocInfo,
+                         InsertPosition InsertBefore)
+    : User(ty, Value::InstructionVal + it, AllocInfo) {
   // When called with an iterator, there must be a block to insert into.
-  BasicBlock *BB = InsertBefore->getParent();
-  assert(BB && "Instruction to insert before is not in a basic block!");
-  insertInto(BB, InsertBefore);
-}
-
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         Instruction *InsertBefore)
-  : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
-
-  // If requested, insert this instruction into a basic block...
-  if (InsertBefore) {
-    BasicBlock *BB = InsertBefore->getParent();
+  if (InstListType::iterator InsertIt = InsertBefore; InsertIt.isValid()) {
+    BasicBlock *BB = InsertIt.getNodeParent();
     assert(BB && "Instruction to insert before is not in a basic block!");
-    insertInto(BB, InsertBefore->getIterator());
+    insertInto(BB, InsertBefore);
   }
 }
 
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         BasicBlock *InsertAtEnd)
-    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
-
-  // If requested, append this instruction into the basic block.
-  if (InsertAtEnd)
-    insertInto(InsertAtEnd, InsertAtEnd->end());
-}
-
 Instruction::~Instruction() {
-  assert(!Parent && "Instruction still linked in the program!");
+  assert(!getParent() && "Instruction still linked in the program!");
 
   // Replace any extant metadata uses of this instruction with undef to
   // preserve debug info accuracy. Some alternatives include:
@@ -76,16 +63,16 @@ Instruction::~Instruction() {
   setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
 
-void Instruction::setParent(BasicBlock *P) {
-  Parent = P;
-}
-
 const Module *Instruction::getModule() const {
   return getParent()->getModule();
 }
 
 const Function *Instruction::getFunction() const {
   return getParent()->getParent();
+}
+
+const DataLayout &Instruction::getDataLayout() const {
+  return getModule()->getDataLayout();
 }
 
 void Instruction::removeFromParent() {
@@ -96,7 +83,7 @@ void Instruction::removeFromParent() {
 }
 
 void Instruction::handleMarkerRemoval() {
-  if (!Parent->IsNewDbgInfoFormat || !DebugMarker)
+  if (!getParent()->IsNewDbgInfoFormat || !DebugMarker)
     return;
 
   DebugMarker->removeMarker();
@@ -329,11 +316,12 @@ void Instruction::dropOneDbgRecord(DbgRecord *DVR) {
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {
-  assert(Parent && Other->Parent &&
+  assert(getParent() && Other->getParent() &&
          "instructions without BB parents have no order");
-  assert(Parent == Other->Parent && "cross-BB instruction order comparison");
-  if (!Parent->isInstrOrderValid())
-    Parent->renumberInstructions();
+  assert(getParent() == Other->getParent() &&
+         "cross-BB instruction order comparison");
+  if (!getParent()->isInstrOrderValid())
+    const_cast<BasicBlock *>(getParent())->renumberInstructions();
   return Order < Other->Order;
 }
 
@@ -441,7 +429,7 @@ void Instruction::dropPoisonGeneratingFlags() {
     break;
 
   case Instruction::GetElementPtr:
-    cast<GetElementPtrInst>(this)->setIsInBounds(false);
+    cast<GetElementPtrInst>(this)->setNoWrapFlags(GEPNoWrapFlags::none());
     break;
 
   case Instruction::UIToFP:
@@ -452,6 +440,10 @@ void Instruction::dropPoisonGeneratingFlags() {
   case Instruction::Trunc:
     cast<TruncInst>(this)->setHasNoUnsignedWrap(false);
     cast<TruncInst>(this)->setHasNoSignedWrap(false);
+    break;
+
+  case Instruction::ICmp:
+    cast<ICmpInst>(this)->setSameSign(false);
     break;
   }
 
@@ -660,11 +652,16 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() || DestGEP->isInBounds());
+      DestGEP->setNoWrapFlags(SrcGEP->getNoWrapFlags() |
+                              DestGEP->getNoWrapFlags());
 
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))
       setNonNeg(NNI->hasNonNeg());
+
+  if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
+    if (auto *DestICmp = dyn_cast<ICmpInst>(this))
+      DestICmp->setSameSign(SrcICmp->hasSameSign());
 }
 
 void Instruction::andIRFlags(const Value *V) {
@@ -700,11 +697,16 @@ void Instruction::andIRFlags(const Value *V) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() && DestGEP->isInBounds());
+      DestGEP->setNoWrapFlags(SrcGEP->getNoWrapFlags() &
+                              DestGEP->getNoWrapFlags());
 
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))
       setNonNeg(hasNonNeg() && NNI->hasNonNeg());
+
+  if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
+    if (auto *DestICmp = dyn_cast<ICmpInst>(this))
+      DestICmp->setSameSign(DestICmp->hasSameSign() && SrcICmp->hasSameSign());
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
@@ -795,10 +797,20 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
 /// This must be kept in sync with FunctionComparator::cmpOperations in
 /// lib/Transforms/IPO/MergeFunctions.cpp.
 bool Instruction::hasSameSpecialState(const Instruction *I2,
-                                      bool IgnoreAlignment) const {
+                                      bool IgnoreAlignment,
+                                      bool IntersectAttrs) const {
   auto I1 = this;
   assert(I1->getOpcode() == I2->getOpcode() &&
          "Can not compare special state of different instructions");
+
+  auto CheckAttrsSame = [IntersectAttrs](const CallBase *CB0,
+                                         const CallBase *CB1) {
+    return IntersectAttrs
+               ? CB0->getAttributes()
+                     .intersectWith(CB0->getContext(), CB1->getAttributes())
+                     .has_value()
+               : CB0->getAttributes() == CB1->getAttributes();
+  };
 
   if (const AllocaInst *AI = dyn_cast<AllocaInst>(I1))
     return AI->getAllocatedType() == cast<AllocaInst>(I2)->getAllocatedType() &&
@@ -821,15 +833,15 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const CallInst *CI = dyn_cast<CallInst>(I1))
     return CI->isTailCall() == cast<CallInst>(I2)->isTailCall() &&
            CI->getCallingConv() == cast<CallInst>(I2)->getCallingConv() &&
-           CI->getAttributes() == cast<CallInst>(I2)->getAttributes() &&
+           CheckAttrsSame(CI, cast<CallInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallInst>(I2));
   if (const InvokeInst *CI = dyn_cast<InvokeInst>(I1))
     return CI->getCallingConv() == cast<InvokeInst>(I2)->getCallingConv() &&
-           CI->getAttributes() == cast<InvokeInst>(I2)->getAttributes() &&
+           CheckAttrsSame(CI, cast<InvokeInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<InvokeInst>(I2));
   if (const CallBrInst *CI = dyn_cast<CallBrInst>(I1))
     return CI->getCallingConv() == cast<CallBrInst>(I2)->getCallingConv() &&
-           CI->getAttributes() == cast<CallBrInst>(I2)->getAttributes() &&
+           CheckAttrsSame(CI, cast<CallBrInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallBrInst>(I2));
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(I1))
     return IVI->getIndices() == cast<InsertValueInst>(I2)->getIndices();
@@ -867,15 +879,16 @@ bool Instruction::isIdenticalTo(const Instruction *I) const {
          SubclassOptionalData == I->SubclassOptionalData;
 }
 
-bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
+bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
+                                           bool IntersectAttrs) const {
   if (getOpcode() != I->getOpcode() ||
-      getNumOperands() != I->getNumOperands() ||
-      getType() != I->getType())
+      getNumOperands() != I->getNumOperands() || getType() != I->getType())
     return false;
 
   // If both instructions have no operands, they are identical.
   if (getNumOperands() == 0 && I->getNumOperands() == 0)
-    return this->hasSameSpecialState(I);
+    return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,
+                                     IntersectAttrs);
 
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.
@@ -889,7 +902,8 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
                       otherPHI->block_begin());
   }
 
-  return this->hasSameSpecialState(I);
+  return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,
+                                   IntersectAttrs);
 }
 
 // Keep this in sync with FunctionComparator::cmpOperations in
@@ -897,7 +911,8 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
 bool Instruction::isSameOperationAs(const Instruction *I,
                                     unsigned flags) const {
   bool IgnoreAlignment = flags & CompareIgnoringAlignment;
-  bool UseScalarTypes  = flags & CompareUsingScalarTypes;
+  bool UseScalarTypes = flags & CompareUsingScalarTypes;
+  bool IntersectAttrs = flags & CompareUsingIntersectedAttrs;
 
   if (getOpcode() != I->getOpcode() ||
       getNumOperands() != I->getNumOperands() ||
@@ -915,7 +930,7 @@ bool Instruction::isSameOperationAs(const Instruction *I,
         getOperand(i)->getType() != I->getOperand(i)->getType())
       return false;
 
-  return this->hasSameSpecialState(I, IgnoreAlignment);
+  return this->hasSameSpecialState(I, IgnoreAlignment, IntersectAttrs);
 }
 
 bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
@@ -1181,7 +1196,10 @@ Instruction::getNextNonDebugInstruction(bool SkipPseudoOp) const {
 const Instruction *
 Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
   for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
+    if (!isa<DbgInfoIntrinsic>(I) &&
+        !(SkipPseudoOp && isa<PseudoProbeInst>(I)) &&
+        !(isa<IntrinsicInst>(I) &&
+          cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fake_use))
       return I;
   return nullptr;
 }
@@ -1266,12 +1284,23 @@ Instruction *Instruction::cloneImpl() const {
 
 void Instruction::swapProfMetadata() {
   MDNode *ProfileData = getBranchWeightMDNode(*this);
-  if (!ProfileData || ProfileData->getNumOperands() != 3)
+  if (!ProfileData)
+    return;
+  unsigned FirstIdx = getBranchWeightOffset(ProfileData);
+  if (ProfileData->getNumOperands() != 2 + FirstIdx)
     return;
 
-  // The first operand is the name. Fetch them backwards and build a new one.
-  Metadata *Ops[] = {ProfileData->getOperand(0), ProfileData->getOperand(2),
-                     ProfileData->getOperand(1)};
+  unsigned SecondIdx = FirstIdx + 1;
+  SmallVector<Metadata *, 4> Ops;
+  // If there are more weights past the second, we can't swap them
+  if (ProfileData->getNumOperands() > SecondIdx + 1)
+    return;
+  for (unsigned Idx = 0; Idx < FirstIdx; ++Idx) {
+    Ops.push_back(ProfileData->getOperand(Idx));
+  }
+  // Switch the order of the weights
+  Ops.push_back(ProfileData->getOperand(SecondIdx));
+  Ops.push_back(ProfileData->getOperand(FirstIdx));
   setMetadata(LLVMContext::MD_prof,
               MDNode::get(ProfileData->getContext(), Ops));
 }

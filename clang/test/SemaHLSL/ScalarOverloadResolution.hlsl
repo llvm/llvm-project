@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -Wconversion -verify -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -Wconversion -verify -o - -DERROR=1 %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -ast-dump %s | FileCheck %s
 
 // This test verifies floating point type implicit conversion ranks for overload
@@ -19,8 +19,8 @@ void HalfFloatDouble(half H);
 // CHECK: FunctionDecl {{.*}} used HalfFloatDouble 'void (float)'
 // CHECK: FunctionDecl {{.*}} used HalfFloatDouble 'void (half)'
 
-void FloatDouble(double D);
-void FloatDouble(float F);
+void FloatDouble(double D); // expected-note{{candidate function}}
+void FloatDouble(float F); // expected-note{{candidate function}}
 
 // CHECK: FunctionDecl {{.*}} used FloatDouble 'void (double)'
 // CHECK: FunctionDecl {{.*}} used FloatDouble 'void (float)'
@@ -31,8 +31,8 @@ void HalfDouble(half H);
 // CHECK: FunctionDecl {{.*}} used HalfDouble 'void (double)'
 // CHECK: FunctionDecl {{.*}} used HalfDouble 'void (half)'
 
-void HalfFloat(float F);
-void HalfFloat(half H);
+void HalfFloat(float F); // expected-note{{candidate function}}
+void HalfFloat(half H); // expected-note{{candidate function}}
 
 // CHECK: FunctionDecl {{.*}} used HalfFloat 'void (float)'
 // CHECK: FunctionDecl {{.*}} used HalfFloat 'void (half)'
@@ -73,8 +73,8 @@ void Case1(half H, float F, double D) {
 }
 
 // Case 2: A function declared with double and float overlaods.
-//   (a) When called with half, it will resolve to float because float is lower
-//   ranked than double.
+//   (a) When called with half, it will fail to resolve because it cannot
+//   disambiguate the promotions.
 //   (b) When called with float it will resolve to float because float is an
 //   exact match.
 //   (c) When called with double it will resolve to double because it is an
@@ -82,10 +82,9 @@ void Case1(half H, float F, double D) {
 
 // CHECK-LABEL: FunctionDecl {{.*}} Case2 'void (half, float, double)'
 void Case2(half H, float F, double D) {
-  // CHECK: CallExpr {{.*}} 'void'
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float)' <FunctionToPointerDecay>
-  // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float)' lvalue Function {{.*}} 'FloatDouble' 'void (float)'
-  FloatDouble(H);
+  #if ERROR
+  FloatDouble(H); // expected-error{{call to 'FloatDouble' is ambiguous}}
+  #endif
 
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float)' <FunctionToPointerDecay>
@@ -144,10 +143,9 @@ void Case4(half H, float F, double D) {
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float)' lvalue Function {{.*}} 'HalfFloat' 'void (float)'
   HalfFloat(F);
 
-  // CHECK: CallExpr {{.*}} 'void'
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float)' <FunctionToPointerDecay>
-  // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float)' lvalue Function {{.*}} 'HalfFloat' 'void (float)'
-  HalfFloat(D); // expected-warning{{implicit conversion loses floating-point precision: 'double' to 'float'}}
+  #if ERROR
+  HalfFloat(D); // expected-error{{call to 'HalfFloat' is ambiguous}}
+  #endif
 }
 
 // Case 5: A function declared with only a double overload.

@@ -21,13 +21,13 @@
 #include "rpc_util.h"
 #include "src/__support/CPP/algorithm.h" // max
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/GPU/utils.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
 /// A fixed size channel used to communicate between the RPC client and server.
@@ -265,22 +265,9 @@ template <bool Invert> struct Process {
 };
 
 /// Invokes a function accross every active buffer across the total lane size.
-static LIBC_INLINE void invoke_rpc(cpp::function<void(Buffer *)> fn,
-                                   uint32_t lane_size, uint64_t lane_mask,
-                                   Buffer *slot) {
-  if constexpr (is_process_gpu()) {
-    fn(&slot[gpu::get_lane_id()]);
-  } else {
-    for (uint32_t i = 0; i < lane_size; i += gpu::get_lane_size())
-      if (lane_mask & (1ul << i))
-        fn(&slot[i]);
-  }
-}
-
-/// Alternate version that also provides the index of the current lane.
-static LIBC_INLINE void invoke_rpc(cpp::function<void(Buffer *, uint32_t)> fn,
-                                   uint32_t lane_size, uint64_t lane_mask,
-                                   Buffer *slot) {
+template <typename F>
+LIBC_INLINE static void invoke_rpc(F &&fn, uint32_t lane_size,
+                                   uint64_t lane_mask, Buffer *slot) {
   if constexpr (is_process_gpu()) {
     fn(&slot[gpu::get_lane_id()], gpu::get_lane_id());
   } else {
@@ -443,7 +430,7 @@ template <bool T>
 template <typename W>
 LIBC_INLINE void Port<T>::recv_and_send(W work) {
   recv(work);
-  send([](Buffer *) { /* no-op */ });
+  send([](Buffer *, uint32_t) { /* no-op */ });
 }
 
 /// Helper routine to simplify the interface when sending from the GPU using
@@ -597,6 +584,6 @@ LIBC_INLINE Server::Port Server::open(uint32_t lane_size) {
 }
 
 } // namespace rpc
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif

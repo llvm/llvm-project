@@ -14,7 +14,7 @@
 
 // printed because of verbosity=1
 // CHECK: SHADOW_SCALE: [[SCALE:[0-9]+]]
-// CHECK: SHADOW_OFFSET: [[OFFSET:0x[0-9a-f]+]]
+// CHECK: SHADOW_OFFSET: 0x{{0*}}[[OFFSET:[0-9a-f]+]]
 
 int main() {
   size_t scale, offset;
@@ -24,7 +24,7 @@ int main() {
   fprintf(stderr, "offset: 0x" PTR "\n", (void*)offset);
 
   // CHECK: scale: [[SCALE]]
-  // CHECK: offset: [[OFFSET]]
+  // CHECK: offset: 0x{{0*}}[[OFFSET]]
 
   return 0;
 }

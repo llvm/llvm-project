@@ -35,8 +35,7 @@
     ret i32 %call
 
   ; CHECK-LABEL: test1
-  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 6
-  ; CHECK:         tail call signext i32 @calleeStr
+  ; CHECK:         %call = tail call signext i32 @calleeStr(ptr noundef nonnull getelementptr inbounds ({ [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 6))
   }
 
   define dso_local signext i32 @test2() local_unnamed_addr #0 {
@@ -49,7 +48,7 @@
     ret i32 %call
 
   ; CHECK-LABEL: test2
-  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 2
+  ; CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) %A, ptr noundef nonnull align 4 dereferenceable(24) getelementptr inbounds ({ [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 2), i64 24, i1 false)
   ; CHECK:         call signext i32 @calleeInt
   }
 
@@ -62,7 +61,7 @@
     call void @llvm.lifetime.end.p0(i64 28, ptr nonnull %A) #0
     ret i32 %call
   ; CHECK-LABEL: test3
-  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 4
+  ; CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(28) %A, ptr noundef nonnull align 4 dereferenceable(28) getelementptr inbounds ({ [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 4), i64 28, i1 false)
   ; CHECK:         call signext i32 @calleeFloat
   }
 
@@ -75,7 +74,7 @@
     call void @llvm.lifetime.end.p0(i64 56, ptr nonnull %A) #0
     ret i32 %call
   ; CHECK-LABEL: test4
-  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 0
+  ; CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(56) %A, ptr noundef nonnull align 8 dereferenceable(56) @__ModuleStringPool, i64 56, i1 false)
   ; CHECK:         call signext i32 @calleeDouble
   }
 
@@ -102,11 +101,10 @@
     call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %B) #0
     ret i32 %add7
   ; CHECK-LABEL: test5
-  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 3
-  ; CHECK:         %1 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 5
-  ; CHECK:         %2 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 1
-  ; CHECK:         %3 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 7
-  ; CHECK:         call signext i32 @calleeStr
+  ; CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) %B, ptr noundef nonnull align 4 dereferenceable(24) getelementptr inbounds ({ [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 3), i64 24, i1 false)
+  ; CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(28) %C, ptr noundef nonnull align 4 dereferenceable(28) getelementptr inbounds ({ [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 5), i64 28, i1 false)
+  ; CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(56) %D, ptr noundef nonnull align 8 dereferenceable(56) getelementptr inbounds ({ [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 1), i64 56, i1 false)
+  ; CHECK:         call signext i32 @calleeStr(ptr noundef nonnull getelementptr inbounds ({ [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 7))
   ; CHECK:         call signext i32 @calleeInt
   ; CHECK:         call signext i32 @calleeFloat
   ; CHECK:         call signext i32 @calleeDouble

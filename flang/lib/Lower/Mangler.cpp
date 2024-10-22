@@ -110,7 +110,7 @@ std::string Fortran::lower::mangle::mangleName(
     return fir::NameUniquer::doVariable(modules, procs, blockId, symbolName);
   };
 
-  return std::visit(
+  return Fortran::common::visit(
       Fortran::common::visitors{
           [&](const Fortran::semantics::MainProgramDetails &) {
             return fir::NameUniquer::doProgramEntry().str();
@@ -164,6 +164,16 @@ std::string Fortran::lower::mangle::mangleName(
           [&](const Fortran::semantics::ProcBindingDetails &procBinding) {
             return mangleName(procBinding.symbol(), scopeBlockIdMap,
                               keepExternalInScope, underscoring);
+          },
+          [&](const Fortran::semantics::GenericDetails &generic)
+              -> std::string {
+            if (generic.specific())
+              return mangleName(*generic.specific(), scopeBlockIdMap,
+                                keepExternalInScope, underscoring);
+            else
+              llvm::report_fatal_error(
+                  "attempt to mangle a generic name but "
+                  "it has no specific procedure of the same name");
           },
           [&](const Fortran::semantics::DerivedTypeDetails &) -> std::string {
             // Derived type mangling must use mangleName(DerivedTypeSpec) so

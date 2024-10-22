@@ -7,7 +7,7 @@
 ;; change. This has a significant positive impact on peak memory and compiler
 ;; run time.
 
-; CHECK: @llvm.dbg.assign(metadata i32 1
+; CHECK: #dbg_assign(i32 1
 
 define dso_local void @_Z3funv() local_unnamed_addr !dbg !7 {
 entry:

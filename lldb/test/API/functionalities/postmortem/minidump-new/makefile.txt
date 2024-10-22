@@ -19,6 +19,7 @@
 # to generate a Minidump when the binary crashes/requests such.
 #
 CC=g++
+CC_TYPE=gcc
 FLAGS=-g --std=c++11
 INCLUDE=-I$HOME/breakpad/src/src/
 LINK=-L. -lbreakpad -lpthread -nostdlib -lc -lstdc++ -lgcc_s -fno-exceptions

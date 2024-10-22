@@ -552,6 +552,7 @@ namespace std {
 template <typename T>
 class initializer_list {
  public:
+  const T *a, *b;
   initializer_list() noexcept;
 };
 
@@ -1336,15 +1337,18 @@ protected:
             [](ASTContext &Ctx, Environment &Env) {
               return UncheckedOptionalAccessModel(Ctx, Env);
             })
-            .withPostVisitCFG(
-                [&Diagnostics,
-                 Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
-                    ASTContext &Ctx, const CFGElement &Elt,
-                    const TransferStateForDiagnostics<NoopLattice>
-                        &State) mutable {
-                  auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
-                  llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
-                })
+            .withDiagnosisCallbacks(
+                {/*Before=*/[&Diagnostics,
+                             Diagnoser =
+                                 UncheckedOptionalAccessDiagnoser(Options)](
+                                ASTContext &Ctx, const CFGElement &Elt,
+                                const TransferStateForDiagnostics<
+                                    UncheckedOptionalAccessLattice>
+                                    &State) mutable {
+                   auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
+                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
+                 },
+                 /*After=*/nullptr})
             .withASTBuildArgs(
                 {"-fsyntax-only", CxxMode, "-Wno-undefined-inline"})
             .withASTBuildVirtualMappedFiles(
@@ -2163,6 +2167,26 @@ TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
   )");
 }
 
+TEST_P(UncheckedOptionalAccessTest, OptionalFieldModified) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      $ns::$optional<std::string> opt;
+      void clear();  // assume this may modify the opt field's state
+    };
+
+    void target(Foo& foo) {
+      if (foo.opt) {
+        foo.opt.value();
+        foo.clear();
+        foo.opt.value();  // [[unsafe]]
+      }
+    }
+  )");
+}
+
 TEST_P(UncheckedOptionalAccessTest, StdSwap) {
   ExpectDiagnosticsFor(
       R"(
@@ -2870,6 +2894,40 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueStruct) {
   )");
 }
 
+// FIXME: A case that we should handle but currently don't.
+// When there is a field of type reference to non-optional, we may
+// stop recursively creating storage locations.
+// E.g., the field `second` below in `pair` should eventually lead to
+// the optional `x` in `A`.
+TEST_P(UncheckedOptionalAccessTest, NestedOptionalThroughNonOptionalRefField) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct pair {
+      int first;
+      const A &second;
+    };
+
+    struct B {
+      $ns::$optional<pair>& nonConstGetRef();
+    };
+
+    void target(B b) {
+      const auto& maybe_pair = b.nonConstGetRef();
+      if (!maybe_pair.has_value())
+        return;
+
+      if(!maybe_pair->second.x.has_value())
+        return;
+      maybe_pair->second.x.value();  // [[unsafe]]
+    }
+  )");
+}
+
 TEST_P(UncheckedOptionalAccessTest, OptionalValueInitialization) {
   ExpectDiagnosticsFor(
       R"(
@@ -3510,6 +3568,180 @@ TEST_P(UncheckedOptionalAccessTest, ClassDerivedFromOptionalValueConstructor) {
       *opt;
     }
   )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessor) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      $ns::$optional<int> x;
+    };
+
+    void target(A& a) {
+      if (a.get().has_value()) {
+        a.get().value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorWithModInBetween) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      void clear();
+      $ns::$optional<int> x;
+    };
+
+    void target(A& a) {
+      if (a.get().has_value()) {
+        a.clear();
+        a.get().value();  // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorWithModReturningOptional) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      $ns::$optional<int> take();
+      $ns::$optional<int> x;
+    };
+
+    void target(A& a) {
+      if (a.get().has_value()) {
+        $ns::$optional<int> other = a.take();
+        a.get().value();  // [[unsafe]]
+        if (other.has_value()) {
+          other.value();
+        }
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorDifferentObjects) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      $ns::$optional<int> x;
+    };
+
+    void target(A& a1, A& a2) {
+      if (a1.get().has_value()) {
+        a2.get().value();  // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorLoop) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      $ns::$optional<int> x;
+    };
+
+    void target(A& a, int N) {
+      for (int i = 0; i < N; ++i) {
+        if (a.get().has_value()) {
+          a.get().value();
+        }
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstByValueAccessor) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> get() const { return x; }
+      $ns::$optional<int> x;
+    };
+
+    void target(A& a) {
+      if (a.get().has_value()) {
+        a.get().value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstByValueAccessorWithModInBetween) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> get() const { return x; }
+      void clear();
+      $ns::$optional<int> x;
+    };
+
+    void target(A& a) {
+      if (a.get().has_value()) {
+        a.clear();
+        a.get().value();  // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      bool isFoo() const { return f; }
+      bool f;
+    };
+
+    void target(A& a) {
+      std::optional<int> opt;
+      if (a.isFoo()) {
+        opt = 1;
+      }
+      if (a.isFoo()) {
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorWithModInBetween) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      bool isFoo() const { return f; }
+      void clear();
+      bool f;
+    };
+
+    void target(A& a) {
+      std::optional<int> opt;
+      if (a.isFoo()) {
+        opt = 1;
+      }
+      a.clear();
+      if (a.isFoo()) {
+        opt.value();  // [[unsafe]]
+      }
+    }
+  )cc");
 }
 
 // FIXME: Add support for:

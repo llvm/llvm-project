@@ -18,8 +18,9 @@
 
 enum {a, b};
 void different(void) {
-  if (sizeof(enum {b, a}) != sizeof(int))
+  if (sizeof(enum {b, a}) != sizeof(int)) {
     _Static_assert(a == 1, "");
+  }
   /* In C89, the 'b' found here would have been from the enum declaration in
    * the controlling expression of the selection statement, not from the global
    * declaration. In C99 and later, that enumeration is scoped to the 'if'

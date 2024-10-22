@@ -8,12 +8,12 @@
 @g = internal global %T zeroinitializer
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global [[T:%.*]] zeroinitializer
+; CHECK: @g = internal unnamed_addr global %T zeroinitializer
 ;.
 define void @test1() {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([[T:%.*]], ptr @g, i64 0, i32 1), align 4
-; CHECK-NEXT:    store i32 2, ptr getelementptr inbounds ([[T]], ptr @g, i64 0, i32 2), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr ([[T:%.*]], ptr @g, i64 0, i32 1), align 4
+; CHECK-NEXT:    store i32 2, ptr getelementptr ([[T]], ptr @g, i64 0, i32 2), align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr getelementptr (%T, ptr @g, i64 0, i32 1)
@@ -23,7 +23,7 @@ define void @test1() {
 
 define i32 @load1() {
 ; CHECK-LABEL: @load1(
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr getelementptr inbounds ([[T:%.*]], ptr @g, i64 0, i32 1), align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr getelementptr ([[T:%.*]], ptr @g, i64 0, i32 1), align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %v = load i32, ptr getelementptr (%T, ptr @g, i64 0, i32 1)
@@ -32,7 +32,7 @@ define i32 @load1() {
 
 define i64 @load2() {
 ; CHECK-LABEL: @load2(
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr getelementptr inbounds ([[T:%.*]], ptr @g, i64 0, i32 2), align 4
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr getelementptr ([[T:%.*]], ptr @g, i64 0, i32 2), align 4
 ; CHECK-NEXT:    ret i64 [[V]]
 ;
   %v = load i64, ptr getelementptr (%T, ptr @g, i64 0, i32 2)

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
+; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
 ; RUN:    -polly-precise-inbounds -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
@@ -18,7 +18,7 @@
 ;
 
 
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
+; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
 ; RUN:    -polly-precise-inbounds -disable-output < %s 2>&1 -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 ; YAML: --- !Analysis

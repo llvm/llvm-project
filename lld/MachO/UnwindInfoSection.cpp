@@ -298,19 +298,31 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       assert(!isCoalescedWeak(referentIsec));
       // Personality functions can be referenced via section relocations
       // if they live in the same object file. Create placeholder synthetic
-      // symbols for them in the GOT.
+      // symbols for them in the GOT. If the corresponding symbol is already
+      // in the GOT, use that to avoid creating a duplicate entry. All GOT
+      // entries needed by non-unwind sections will have already been added
+      // by this point.
       Symbol *&s = personalityTable[{referentIsec, r.addend}];
       if (s == nullptr) {
-        // This runs after dead stripping, so the noDeadStrip argument does not
-        // matter.
-        s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
-                          r.addend, /*size=*/0, /*isWeakDef=*/false,
-                          /*isExternal=*/false, /*isPrivateExtern=*/false,
-                          /*includeInSymtab=*/true,
-                          /*isReferencedDynamically=*/false,
-                          /*noDeadStrip=*/false);
-        s->used = true;
-        in.got->addEntry(s);
+        Defined *const *gotEntry =
+            llvm::find_if(referentIsec->symbols, [&](Defined const *d) {
+              return d->value == static_cast<uint64_t>(r.addend) &&
+                     d->isInGot();
+            });
+        if (gotEntry != referentIsec->symbols.end()) {
+          s = *gotEntry;
+        } else {
+          // This runs after dead stripping, so the noDeadStrip argument does
+          // not matter.
+          s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
+                            r.addend, /*size=*/0, /*isWeakDef=*/false,
+                            /*isExternal=*/false, /*isPrivateExtern=*/false,
+                            /*includeInSymtab=*/true,
+                            /*isReferencedDynamically=*/false,
+                            /*noDeadStrip=*/false);
+          s->used = true;
+          in.got->addEntry(s);
+        }
       }
       r.referent = s;
       r.addend = 0;

@@ -170,10 +170,6 @@ class FrameAnalysis {
                      std::unique_ptr<StackPointerTracking>>
       SPTMap;
 
-  /// A vector that stores ids of the allocators that are used in SPT
-  /// computation
-  std::vector<MCPlusBuilder::AllocatorIdTy> SPTAllocatorsId;
-
 public:
   explicit FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG);
 

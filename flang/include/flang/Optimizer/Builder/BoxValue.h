@@ -127,8 +127,7 @@ public:
   AbstractArrayBox() = default;
   AbstractArrayBox(llvm::ArrayRef<mlir::Value> extents,
                    llvm::ArrayRef<mlir::Value> lbounds)
-      : extents{extents.begin(), extents.end()}, lbounds{lbounds.begin(),
-                                                         lbounds.end()} {}
+      : extents{extents}, lbounds{lbounds} {}
 
   // Every array has extents that describe its shape.
   const llvm::SmallVectorImpl<mlir::Value> &getExtents() const {
@@ -296,7 +295,7 @@ public:
            llvm::ArrayRef<mlir::Value> explicitParams,
            llvm::ArrayRef<mlir::Value> explicitExtents = {})
       : AbstractIrBox{addr, lbounds, explicitExtents},
-        explicitParams{explicitParams.begin(), explicitParams.end()} {
+        explicitParams{explicitParams} {
     assert(verify());
   }
   // TODO: check contiguous attribute of addr
@@ -433,7 +432,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ExtendedValue &);
 /// substituted.
 ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 
-/// Is the extended value `exv` an array?
+/// Is the extended value `exv` an array? Note that this returns true for
+/// assumed-ranks that could actually be scalars at runtime.
 bool isArray(const ExtendedValue &exv);
 
 /// Get the type parameters for `exv`.
@@ -525,6 +525,15 @@ public:
                    return box.getSourceBox() ? true : false;
                  },
                  [](const auto &box) -> bool { return false; });
+  }
+
+  bool hasAssumedRank() const {
+    return match(
+        [](const fir::BoxValue &box) -> bool { return box.hasAssumedRank(); },
+        [](const fir::MutableBoxValue &box) -> bool {
+          return box.hasAssumedRank();
+        },
+        [](const auto &box) -> bool { return false; });
   }
 
   /// LLVM style debugging of extended values

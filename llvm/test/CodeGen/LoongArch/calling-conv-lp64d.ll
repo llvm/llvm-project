@@ -28,9 +28,9 @@ define i64 @caller_float_in_fpr() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    movgr2fr.w $fa0, $zero
 ; CHECK-NEXT:    movgr2fr.d $fa1, $zero
+; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    bl %plt(callee_float_in_fpr)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -64,26 +64,19 @@ define i64 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    fld.d $fa1, $a0, 0
+; CHECK-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI3_0)
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI3_1)
-; CHECK-NEXT:    fld.d $fa2, $a0, 0
+; CHECK-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI3_1)
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI3_2)
-; CHECK-NEXT:    fld.d $fa3, $a0, 0
+; CHECK-NEXT:    fld.d $fa3, $a0, %pc_lo12(.LCPI3_2)
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI3_3)
-; CHECK-NEXT:    fld.d $fa4, $a0, 0
+; CHECK-NEXT:    fld.d $fa4, $a0, %pc_lo12(.LCPI3_3)
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI3_4)
-; CHECK-NEXT:    fld.d $fa5, $a0, 0
+; CHECK-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI3_4)
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI3_5)
-; CHECK-NEXT:    fld.d $fa6, $a0, 0
+; CHECK-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI3_5)
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI3_6)
-; CHECK-NEXT:    fld.d $fa7, $a0, 0
+; CHECK-NEXT:    fld.d $fa7, $a0, %pc_lo12(.LCPI3_6)
 ; CHECK-NEXT:    addi.d $a0, $zero, 1
 ; CHECK-NEXT:    movgr2fr.d $fa0, $a0
 ; CHECK-NEXT:    ffint.d.l $fa0, $fa0

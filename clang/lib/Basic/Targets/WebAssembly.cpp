@@ -49,7 +49,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("bulk-memory", HasBulkMemory)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
-      .Case("half-precision", HasHalfPrecision)
+      .Case("fp16", HasFP16)
       .Case("multimemory", HasMultiMemory)
       .Case("multivalue", HasMultivalue)
       .Case("mutable-globals", HasMutableGlobals)
@@ -84,8 +84,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_extended_const__");
   if (HasMultiMemory)
     Builder.defineMacro("__wasm_multimemory__");
-  if (HasHalfPrecision)
-    Builder.defineMacro("__wasm_half_precision__");
+  if (HasFP16)
+    Builder.defineMacro("__wasm_fp16__");
   if (HasMultivalue)
     Builder.defineMacro("__wasm_multivalue__");
   if (HasMutableGlobals)
@@ -153,18 +153,20 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   auto addGenericFeatures = [&]() {
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
+    Features["reference-types"] = true;
     Features["sign-ext"] = true;
   };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
     Features["bulk-memory"] = true;
-    Features["half-precision"] = true;
+    Features["exception-handling"] = true;
+    Features["extended-const"] = true;
+    Features["fp16"] = true;
     Features["multimemory"] = true;
     Features["nontrapping-fptoint"] = true;
-    Features["reference-types"] = true;
     Features["tail-call"] = true;
-    setSIMDLevel(Features, SIMD128, true);
+    setSIMDLevel(Features, RelaxedSIMD, true);
   };
   if (CPU == "generic") {
     addGenericFeatures();
@@ -210,13 +212,13 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasExtendedConst = false;
       continue;
     }
-    if (Feature == "+half-precision") {
+    if (Feature == "+fp16") {
       SIMDLevel = std::max(SIMDLevel, SIMD128);
-      HasHalfPrecision = true;
+      HasFP16 = true;
       continue;
     }
-    if (Feature == "-half-precision") {
-      HasHalfPrecision = false;
+    if (Feature == "-fp16") {
+      HasFP16 = false;
       continue;
     }
     if (Feature == "+multimemory") {

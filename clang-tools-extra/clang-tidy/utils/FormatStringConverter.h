@@ -32,9 +32,16 @@ class FormatStringConverter
 public:
   using ConversionSpecifier = clang::analyze_format_string::ConversionSpecifier;
   using PrintfSpecifier = analyze_printf::PrintfSpecifier;
+
+  struct Configuration {
+    bool StrictMode = false;
+    bool AllowTrailingNewlineRemoval = false;
+  };
+
   FormatStringConverter(ASTContext *Context, const CallExpr *Call,
-                        unsigned FormatArgOffset, bool StrictMode,
-                        const LangOptions &LO);
+                        unsigned FormatArgOffset, Configuration Config,
+                        const LangOptions &LO, SourceManager &SM,
+                        Preprocessor &PP);
 
   bool canApply() const { return ConversionNotPossibleReason.empty(); }
   const std::string &conversionNotPossibleReason() const {
@@ -45,6 +52,7 @@ public:
 
 private:
   ASTContext *Context;
+  const Configuration Config;
   const bool CastMismatchedIntegerTypes;
   const Expr *const *Args;
   const unsigned NumArgs;
@@ -103,6 +111,10 @@ private:
 
   void appendFormatText(StringRef Text);
   void finalizeFormatText();
+  static std::optional<StringRef>
+  formatStringContainsUnreplaceableMacro(const CallExpr *CallExpr,
+                                         const StringLiteral *FormatExpr,
+                                         SourceManager &SM, Preprocessor &PP);
   bool conversionNotPossible(std::string Reason) {
     ConversionNotPossibleReason = std::move(Reason);
     return false;

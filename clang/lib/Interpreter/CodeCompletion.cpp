@@ -368,8 +368,7 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
   llvm::SmallVector<const llvm::MemoryBuffer *, 1> tb = {};
   InterpCI->getFrontendOpts().Inputs[0] = FrontendInputFile(
       CodeCompletionFileName, Language::CXX, InputKind::Source);
-  auto Act = std::unique_ptr<IncrementalSyntaxOnlyAction>(
-      new IncrementalSyntaxOnlyAction(ParentCI));
+  auto Act = std::make_unique<IncrementalSyntaxOnlyAction>(ParentCI);
   std::unique_ptr<llvm::MemoryBuffer> MB =
       llvm::MemoryBuffer::getMemBufferCopy(Content, CodeCompletionFileName);
   llvm::SmallVector<ASTUnit::RemappedFile, 4> RemappedFiles;

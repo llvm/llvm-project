@@ -94,7 +94,6 @@ void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
 void SetAlternateSignalStack() {}
 void UnsetAlternateSignalStack() {}
-void InitTlsSize() {}
 
 bool SignalContext::IsStackOverflow() const { return false; }
 void SignalContext::DumpAllRegisters(void *context) { UNIMPLEMENTED(); }
@@ -443,6 +442,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
     _zx_handle_close(vmo);
   }
   return status == ZX_OK;
+}
+
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
 }
 
 // FIXME implement on this platform.

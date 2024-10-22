@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly \
-; RUN: -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly \
+; RUN: -passes=polly-codegen -S < %s | FileCheck %s
 
 ; CHECK: polly.start
 ;    int /* pure */ g()

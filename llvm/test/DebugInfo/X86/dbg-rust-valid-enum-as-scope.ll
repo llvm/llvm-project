@@ -3,6 +3,7 @@
 ; CHECK:   DW_AT_language	(DW_LANG_Rust)
 ; CHECK:   DW_TAG_namespace
 ; CHECK:     DW_TAG_enumeration_type
+; CHECK:     DW_AT_type (0x{{[0-9A-Fa-f]+}} "u8")
 ; CHECK:     DW_AT_name	("E")
 ; CHECK:       DW_TAG_enumerator
 ; CHECK:       DW_TAG_enumerator
@@ -12,6 +13,8 @@
 ; CHECK:         NULL
 ; CHECK:       NULL
 ; CHECK:     NULL
+; CHECK:   DW_TAG_base_type
+; CHECK:     DW_AT_name ("u8")
 ; CHECK:   DW_TAG_pointer_type
 ; CHECK:   NULL
 

@@ -4,6 +4,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_python//python:defs.bzl", "py_binary")
 load("//mlir:tblgen.bzl", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
@@ -31,6 +32,7 @@ exports_files([
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     "utils/lit/lit.py",
+    "utils/lldbDataFormatters.py",
 ])
 
 # It may be tempting to add compiler flags here, but that should be avoided.
@@ -164,6 +166,11 @@ td_library(
     includes = ["include"],
 )
 
+llvm_config_target_defines = [
+    "LLVM_HAS_{}_TARGET=1".format(t)
+    for t in llvm_targets
+]
+
 cc_library(
     name = "config",
     hdrs = [
@@ -171,7 +178,7 @@ cc_library(
         "include/llvm/Config/llvm-config.h",
     ],
     copts = llvm_copts,
-    defines = llvm_config_defines,
+    defines = llvm_config_defines + llvm_config_target_defines,
     includes = ["include"],
     textual_hdrs = [
         "include/llvm/Config/AsmParsers.def",
@@ -287,6 +294,7 @@ cc_library(
     linkopts = select({
         "@platforms//os:windows": [
             "ws2_32.lib",
+            "ntdll.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
@@ -636,8 +644,8 @@ cc_binary(
 cc_binary(
     name = "llvm-min-tblgen",
     srcs = [
-        "utils/TableGen/Attributes.cpp",
         "utils/TableGen/ARMTargetDefEmitter.cpp",
+        "utils/TableGen/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.h",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
@@ -721,6 +729,7 @@ cc_binary(
         ":TargetParser",
         ":config",
         ":llvm-tblgen-headers",
+        ":vt_gen",
     ],
 )
 
@@ -948,6 +957,9 @@ cc_library(
     ) + [
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
+        "include/llvm/Analysis/SimplifyQuery.h",
+        "include/llvm/Analysis/ValueTracking.h",
+        "include/llvm/Analysis/WithCache.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     textual_hdrs = glob(["include/llvm/IR/*.def"]),
@@ -1125,6 +1137,8 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BitstreamReader",
+        ":BitstreamWriter",
         ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -1145,6 +1159,7 @@ cc_library(
     hdrs = glob(["include/llvm/ProfileData/Coverage/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -1287,8 +1302,9 @@ cc_library(
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
-        "include/llvm/TargetParser/ARMTargetParserDef.inc",
+        "include/llvm/TargetParser/AArch64CPUFeatures.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
+        "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
@@ -1347,11 +1363,9 @@ gentbl(
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/InstCombineTables.td",
     td_srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/IR/Intrinsics*.td",
+        "lib/Target/AMDGPU/*.td",
     ]) + [
-        "lib/Target/AMDGPU/InstCombineTables.td",
-        "include/llvm/TableGen/SearchableTable.td",
+        ":common_target_td_sources",
     ],
 )
 
@@ -1399,7 +1413,7 @@ cc_library(
         "lib/Transforms/Instrumentation/*.inc",
     ]),
     hdrs = glob(["include/llvm/Transforms/Instrumentation/*.h"]) + [
-        "include/llvm/Transforms/Instrumentation.h",
+        "include/llvm/Transforms/Utils/Instrumentation.h",
     ],
     copts = llvm_copts,
     deps = [
@@ -1409,6 +1423,7 @@ cc_library(
         ":Demangle",
         ":MC",
         ":ProfileData",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -1432,6 +1447,21 @@ cc_library(
         ":Target",
         ":TransformUtils",
         ":config",
+    ],
+)
+
+cc_library(
+    name = "SandboxIR",
+    srcs = glob([
+        "lib/SandboxIR/*.cpp",
+    ]),
+    hdrs = glob(["include/llvm/SandboxIR/*.h"]),
+    copts = llvm_copts,
+    textual_hdrs = ["include/llvm/SandboxIR/Values.def"],
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":Support",
     ],
 )
 
@@ -1461,16 +1491,21 @@ cc_library(
 cc_library(
     name = "Vectorize",
     srcs = glob([
-        "lib/Transforms/Vectorize/*.cpp",
-        "lib/Transforms/Vectorize/*.h",
+        "lib/Transforms/Vectorize/**/*.cpp",
+        "lib/Transforms/Vectorize/**/*.h",
     ]),
     hdrs = glob([
-        "include/llvm/Transforms/Vectorize/*.h",
+        "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
+    textual_hdrs = [
+        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/PassRegistry.def",
+    ],
     deps = [
         ":Analysis",
         ":Core",
+        ":SandboxIR",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -1569,6 +1604,18 @@ gentbl(
 )
 
 cc_library(
+    name = "FrontendAtomic",
+    hdrs = glob([
+        "include/llvm/Frontend/Atomic/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+        ":ir_headers",
+    ],
+)
+
+cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
@@ -1587,6 +1634,8 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":Core",
+        ":Demangle",
+        ":FrontendAtomic",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -1751,6 +1800,7 @@ cc_library(
         ":TransformUtils",
         ":Vectorize",
         ":config",
+        ":ir_headers",
     ],
 )
 
@@ -1842,6 +1892,25 @@ cc_library(
 )
 
 cc_library(
+    name = "CGData",
+    srcs = glob(["lib/CGData/**/*.cpp"]),
+    hdrs = glob([
+        "include/llvm/CGData/**/*.h",
+        "include/llvm/CGData/**/*.inc",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BitReader",
+        ":BitWriter",
+        ":Core",
+        ":Object",
+        ":ObjectYAML",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
     name = "CodeGen",
     srcs = glob(
         [
@@ -1870,6 +1939,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":CFGuard",
+        ":CGData",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -1879,6 +1949,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":MCParser",
+        ":ObjCARC",
         ":Object",
         ":ProfileData",
         ":Remarks",
@@ -2228,7 +2299,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
             ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
-            ("-gen-x86-compress-evex-tables", "lib/Target/X86/X86GenCompressEVEXTables.inc"),
+            ("-gen-x86-instr-mapping", "lib/Target/X86/X86GenInstrMapping.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
             ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
         ],
@@ -2421,6 +2492,7 @@ gentbl(
         strip_include_prefix = "lib/Target/" + target["name"],
         deps = [
             ":BinaryFormat",
+            ":CodeGen",
             ":CodeGenTypes",
             ":Core",
             ":DebugInfoCodeView",
@@ -2672,6 +2744,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":BitWriter",
+        ":CGData",
         ":CodeGen",
         ":CodeGenTypes",
         ":Core",
@@ -3456,6 +3529,39 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "CGDataOptsTableGen",
+    strip_include_prefix = "tools/llvm-cgdata",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-cgdata/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-cgdata/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_library(
+    name = "llvm-cgdata-lib",
+    srcs = glob(["tools/llvm-cgdata/*.cpp"]),
+    copts = llvm_copts,
+    deps = [
+        ":CGData",
+        ":CGDataOptsTableGen",
+        ":CodeGen",
+        ":Core",
+        ":Object",
+        ":Option",
+        ":Support",
+    ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-cgdata",
+    stamp = 0,
+    deps = [":llvm-cgdata-lib"],
+)
+
 cc_binary(
     name = "llvm-cfi-verify",
     srcs = glob([
@@ -3605,20 +3711,39 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "llvm-debuginfod-find",
+gentbl(
+    name = "DebugInfodFindOptsTableGen",
+    strip_include_prefix = "tools/llvm-debuginfod-find",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-debuginfod-find/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-debuginfod-find/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_library(
+    name = "llvm-debuginfod-find-lib",
     srcs = glob([
         "tools/llvm-debuginfod-find/*.cpp",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":BitReader",
         ":Core",
+        ":DebugInfodFindOptsTableGen",
         ":Debuginfod",
+        ":Option",
         ":Support",
         ":Symbolize",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-debuginfod-find",
+    stamp = 0,
+    deps = [":llvm-debuginfod-find-lib"],
 )
 
 cc_binary(
@@ -4049,7 +4174,7 @@ cc_binary(
 
 cc_binary(
     name = "llvm-mca",
-    srcs =[
+    srcs = [
         "tools/llvm-mca/llvm-mca.cpp",
     ],
     copts = llvm_copts,
@@ -4144,6 +4269,7 @@ cc_library(
         ":Option",
         ":Support",
         ":WindowsManifest",
+        ":config",
     ],
 )
 
@@ -4416,6 +4542,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Core",
+        ":Debuginfod",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -4585,6 +4712,7 @@ cc_binary(
         ":Target",
         ":TargetParser",
         ":TransformUtils",
+        ":config",
     ],
 )
 

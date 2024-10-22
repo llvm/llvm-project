@@ -73,15 +73,12 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
           continue;
 
         const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Instr, 0);
-        if (VeneerDestinations.find(TargetSymbol) == VeneerDestinations.end())
+        auto It = VeneerDestinations.find(TargetSymbol);
+        if (It == VeneerDestinations.end())
           continue;
 
         VeneerCallers++;
-        if (!BC.MIB->replaceBranchTarget(
-                Instr, VeneerDestinations[TargetSymbol], BC.Ctx.get())) {
-          return createFatalBOLTError(
-              "BOLT-ERROR: updating veneer call destination failed\n");
-        }
+        BC.MIB->replaceBranchTarget(Instr, It->second, BC.Ctx.get());
       }
     }
   }

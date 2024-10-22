@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-tautological-pointer-compare -fblocks -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-tautological-pointer-compare -fblocks -std=c++11 -verify %s -fexperimental-new-constant-interpreter
 
 void foo() {
   int a;

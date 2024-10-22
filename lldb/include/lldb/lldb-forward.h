@@ -19,6 +19,8 @@ class ASTResultSynthesizer;
 class ASTStructExtractor;
 class Address;
 class AddressRange;
+class AddressRanges;
+class AddressRangeList;
 class AddressResolver;
 class ArchSpec;
 class Architecture;
@@ -173,6 +175,7 @@ class Queue;
 class QueueImpl;
 class QueueItem;
 class REPL;
+class RealpathPrefixes;
 class RecognizedStackFrame;
 class RegisterCheckpoint;
 class RegisterContext;
@@ -180,13 +183,16 @@ class RegisterTypeBuilder;
 class RegisterValue;
 class RegularExpression;
 class RichManglingContext;
+class SaveCoreOptions;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
 class ScriptedMetadata;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
+class ScriptedStopHookInterface;
 class ScriptedThreadInterface;
+class ScriptedThreadPlanInterface;
 class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
@@ -202,6 +208,7 @@ class StackFrameRecognizer;
 class StackFrameRecognizerManager;
 class StackID;
 class Status;
+class SaveCoreOptions;
 class StopInfo;
 class Stoppoint;
 class StoppointCallbackContext;
@@ -308,6 +315,7 @@ template <unsigned N> class StreamBuffer;
 namespace lldb {
 
 typedef std::shared_ptr<lldb_private::ABI> ABISP;
+typedef std::unique_ptr<lldb_private::AddressRange> AddressRangeUP;
 typedef std::shared_ptr<lldb_private::Baton> BatonSP;
 typedef std::shared_ptr<lldb_private::Block> BlockSP;
 typedef std::shared_ptr<lldb_private::Breakpoint> BreakpointSP;
@@ -401,8 +409,12 @@ typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
     ScriptedPlatformInterfaceUP;
 typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
+typedef std::shared_ptr<lldb_private::ScriptedStopHookInterface>
+    ScriptedStopHookInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
+    ScriptedThreadPlanInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;

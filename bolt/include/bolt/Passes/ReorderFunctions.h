@@ -9,7 +9,7 @@
 #ifndef BOLT_PASSES_REORDER_FUNCTIONS_H
 #define BOLT_PASSES_REORDER_FUNCTIONS_H
 
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/BinaryPasses.h"
 
 namespace llvm {

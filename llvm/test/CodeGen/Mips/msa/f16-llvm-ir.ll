@@ -2466,13 +2466,14 @@ define void @fminnum(float %b) {
 ; MIPSR6-O32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPSR6-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPSR6-O32-NEXT:    addu $1, $2, $25
+; MIPSR6-O32-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-O32-NEXT:    lw $1, %got(g)($1)
 ; MIPSR6-O32-NEXT:    lh $2, 0($1)
-; MIPSR6-O32-NEXT:    fill.h $w0, $2
-; MIPSR6-O32-NEXT:    fexupr.w $w0, $w0
-; MIPSR6-O32-NEXT:    copy_s.w $2, $w0[0]
-; MIPSR6-O32-NEXT:    mtc1 $2, $f0
-; MIPSR6-O32-NEXT:    min.s $f0, $f0, $f12
+; MIPSR6-O32-NEXT:    fill.h $w1, $2
+; MIPSR6-O32-NEXT:    fexupr.w $w1, $w1
+; MIPSR6-O32-NEXT:    copy_s.w $2, $w1[0]
+; MIPSR6-O32-NEXT:    mtc1 $2, $f1
+; MIPSR6-O32-NEXT:    min.s $f0, $f1, $f0
 ; MIPSR6-O32-NEXT:    mfc1 $2, $f0
 ; MIPSR6-O32-NEXT:    fill.w $w0, $2
 ; MIPSR6-O32-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2485,13 +2486,14 @@ define void @fminnum(float %b) {
 ; MIPSR6-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
 ; MIPSR6-N32-NEXT:    addu $1, $1, $25
 ; MIPSR6-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(fminnum)))
+; MIPSR6-N32-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-N32-NEXT:    lw $1, %got_disp(g)($1)
 ; MIPSR6-N32-NEXT:    lh $2, 0($1)
-; MIPSR6-N32-NEXT:    fill.h $w0, $2
-; MIPSR6-N32-NEXT:    fexupr.w $w0, $w0
-; MIPSR6-N32-NEXT:    copy_s.w $2, $w0[0]
-; MIPSR6-N32-NEXT:    mtc1 $2, $f0
-; MIPSR6-N32-NEXT:    min.s $f0, $f0, $f12
+; MIPSR6-N32-NEXT:    fill.h $w1, $2
+; MIPSR6-N32-NEXT:    fexupr.w $w1, $w1
+; MIPSR6-N32-NEXT:    copy_s.w $2, $w1[0]
+; MIPSR6-N32-NEXT:    mtc1 $2, $f1
+; MIPSR6-N32-NEXT:    min.s $f0, $f1, $f0
 ; MIPSR6-N32-NEXT:    mfc1 $2, $f0
 ; MIPSR6-N32-NEXT:    fill.w $w0, $2
 ; MIPSR6-N32-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2504,20 +2506,20 @@ define void @fminnum(float %b) {
 ; MIPSR6-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
 ; MIPSR6-N64-NEXT:    daddu $1, $1, $25
 ; MIPSR6-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(fminnum)))
+; MIPSR6-N64-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-N64-NEXT:    ld $1, %got_disp(g)($1)
 ; MIPSR6-N64-NEXT:    lh $2, 0($1)
-; MIPSR6-N64-NEXT:    fill.h $w0, $2
-; MIPSR6-N64-NEXT:    fexupr.w $w0, $w0
-; MIPSR6-N64-NEXT:    copy_s.w $2, $w0[0]
-; MIPSR6-N64-NEXT:    mtc1 $2, $f0
-; MIPSR6-N64-NEXT:    min.s $f0, $f0, $f12
+; MIPSR6-N64-NEXT:    fill.h $w1, $2
+; MIPSR6-N64-NEXT:    fexupr.w $w1, $w1
+; MIPSR6-N64-NEXT:    copy_s.w $2, $w1[0]
+; MIPSR6-N64-NEXT:    mtc1 $2, $f1
+; MIPSR6-N64-NEXT:    min.s $f0, $f1, $f0
 ; MIPSR6-N64-NEXT:    mfc1 $2, $f0
 ; MIPSR6-N64-NEXT:    fill.w $w0, $2
 ; MIPSR6-N64-NEXT:    fexdo.h $w0, $w0, $w0
 ; MIPSR6-N64-NEXT:    copy_u.h $2, $w0[0]
 ; MIPSR6-N64-NEXT:    jr $ra
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
-;
 entry:
   %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
@@ -2632,17 +2634,18 @@ define void @fmaxnum(float %b) {
 ; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, 32
 ;
 ; MIPSR6-O32-LABEL: fmaxnum:
-; MIPSR6-O32:       # %bb.0:
+; MIPSR6-O32:       # %bb.0: # %entry
 ; MIPSR6-O32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPSR6-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPSR6-O32-NEXT:    addu $1, $2, $25
+; MIPSR6-O32-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-O32-NEXT:    lw $1, %got(g)($1)
 ; MIPSR6-O32-NEXT:    lh $2, 0($1)
-; MIPSR6-O32-NEXT:    fill.h $w0, $2
-; MIPSR6-O32-NEXT:    fexupr.w $w0, $w0
-; MIPSR6-O32-NEXT:    copy_s.w $2, $w0[0]
-; MIPSR6-O32-NEXT:    mtc1 $2, $f0
-; MIPSR6-O32-NEXT:    max.s $f0, $f0, $f12
+; MIPSR6-O32-NEXT:    fill.h $w1, $2
+; MIPSR6-O32-NEXT:    fexupr.w $w1, $w1
+; MIPSR6-O32-NEXT:    copy_s.w $2, $w1[0]
+; MIPSR6-O32-NEXT:    mtc1 $2, $f1
+; MIPSR6-O32-NEXT:    max.s $f0, $f1, $f0
 ; MIPSR6-O32-NEXT:    mfc1 $2, $f0
 ; MIPSR6-O32-NEXT:    fill.w $w0, $2
 ; MIPSR6-O32-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2651,17 +2654,18 @@ define void @fmaxnum(float %b) {
 ; MIPSR6-O32-NEXT:    sh $2, 0($1)
 ;
 ; MIPSR6-N32-LABEL: fmaxnum:
-; MIPSR6-N32:       # %bb.0:
+; MIPSR6-N32:       # %bb.0: # %entry
 ; MIPSR6-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
 ; MIPSR6-N32-NEXT:    addu $1, $1, $25
 ; MIPSR6-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(fmaxnum)))
+; MIPSR6-N32-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-N32-NEXT:    lw $1, %got_disp(g)($1)
 ; MIPSR6-N32-NEXT:    lh $2, 0($1)
-; MIPSR6-N32-NEXT:    fill.h $w0, $2
-; MIPSR6-N32-NEXT:    fexupr.w $w0, $w0
-; MIPSR6-N32-NEXT:    copy_s.w $2, $w0[0]
-; MIPSR6-N32-NEXT:    mtc1 $2, $f0
-; MIPSR6-N32-NEXT:    max.s $f0, $f0, $f12
+; MIPSR6-N32-NEXT:    fill.h $w1, $2
+; MIPSR6-N32-NEXT:    fexupr.w $w1, $w1
+; MIPSR6-N32-NEXT:    copy_s.w $2, $w1[0]
+; MIPSR6-N32-NEXT:    mtc1 $2, $f1
+; MIPSR6-N32-NEXT:    max.s $f0, $f1, $f0
 ; MIPSR6-N32-NEXT:    mfc1 $2, $f0
 ; MIPSR6-N32-NEXT:    fill.w $w0, $2
 ; MIPSR6-N32-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2670,17 +2674,18 @@ define void @fmaxnum(float %b) {
 ; MIPSR6-N32-NEXT:    sh $2, 0($1)
 ;
 ; MIPSR6-N64-LABEL: fmaxnum:
-; MIPSR6-N64:       # %bb.0:
+; MIPSR6-N64:       # %bb.0: # %entry
 ; MIPSR6-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
 ; MIPSR6-N64-NEXT:    daddu $1, $1, $25
 ; MIPSR6-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(fmaxnum)))
+; MIPSR6-N64-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-N64-NEXT:    ld $1, %got_disp(g)($1)
 ; MIPSR6-N64-NEXT:    lh $2, 0($1)
-; MIPSR6-N64-NEXT:    fill.h $w0, $2
-; MIPSR6-N64-NEXT:    fexupr.w $w0, $w0
-; MIPSR6-N64-NEXT:    copy_s.w $2, $w0[0]
-; MIPSR6-N64-NEXT:    mtc1 $2, $f0
-; MIPSR6-N64-NEXT:    max.s $f0, $f0, $f12
+; MIPSR6-N64-NEXT:    fill.h $w1, $2
+; MIPSR6-N64-NEXT:    fexupr.w $w1, $w1
+; MIPSR6-N64-NEXT:    copy_s.w $2, $w1[0]
+; MIPSR6-N64-NEXT:    mtc1 $2, $f1
+; MIPSR6-N64-NEXT:    max.s $f0, $f1, $f0
 ; MIPSR6-N64-NEXT:    mfc1 $2, $f0
 ; MIPSR6-N64-NEXT:    fill.w $w0, $2
 ; MIPSR6-N64-NEXT:    fexdo.h $w0, $w0, $w0

@@ -61,4 +61,4 @@ class TestReadMemCString(TestBase):
             invalid_memory_str_addr, 2048, err
         )
         self.assertTrue(err.Fail())
-        self.assertTrue(invalid_memory_string == "" or invalid_memory_string == None)
+        self.assertTrue(invalid_memory_string == "" or invalid_memory_string is None)

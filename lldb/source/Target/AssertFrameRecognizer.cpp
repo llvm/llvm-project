@@ -2,6 +2,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolLocation.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrameList.h"
 #include "lldb/Target/Target.h"
@@ -13,18 +14,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
-
-/// Stores a function module spec, symbol name and possibly an alternate symbol
-/// name.
-struct SymbolLocation {
-  FileSpec module_spec;
-  std::vector<ConstString> symbols;
-
-  // The symbols are regular expressions. In such case all symbols are matched
-  // with their trailing @VER symbol version stripped.
-  bool symbols_are_regex = false;
-};
-
 /// Fetches the abort frame location depending on the current platform.
 ///
 /// \param[in] os
@@ -100,6 +89,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
     target.GetFrameRecognizerManager().AddRecognizer(
         std::make_shared<AssertFrameRecognizer>(),
         location.module_spec.GetFilename(), location.symbols,
+        Mangled::ePreferDemangled,
         /*first_instruction_only*/ false);
     return;
   }
@@ -123,6 +113,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
       std::make_shared<AssertFrameRecognizer>(),
       std::make_shared<RegularExpression>(std::move(module_re)),
       std::make_shared<RegularExpression>(std::move(symbol_re)),
+      Mangled::ePreferDemangled,
       /*first_instruction_only*/ false);
 }
 

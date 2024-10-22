@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly                        -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=AFFINE
-; RUN: opt %loadPolly -polly-allow-nonaffine -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly                        '-passes=print<polly-function-scops>' -disable-output < %s | FileCheck %s --check-prefix=AFFINE
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine '-passes=print<polly-function-scops>' -disable-output < %s | FileCheck %s --check-prefix=NONAFFINE
 
 ; The SCoP contains a loop with multiple exit blocks (BBs after leaving
 ; the loop). The current implementation of deriving their domain derives

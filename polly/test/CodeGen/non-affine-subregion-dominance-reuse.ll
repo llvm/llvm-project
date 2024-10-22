@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S -verify-dom-info \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S -verify-dom-info \
 ; RUN:     < %s | FileCheck %s
 ;
 ; Check that we do not reuse the B[i-1] GEP created in block S again in

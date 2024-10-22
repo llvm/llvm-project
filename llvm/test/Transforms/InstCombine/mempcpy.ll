@@ -55,7 +55,7 @@ define ptr @memcpy_big_const_n(ptr %d, ptr nocapture readonly %s) {
 
 define i32 @PR48810() {
 ; CHECK-LABEL: @PR48810(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 undef, ptr align 4294967296 null, i64 undef, i1 false)
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret i32 undef
 ;
   %r = call dereferenceable(1) ptr @mempcpy(ptr undef, ptr null, i64 undef)

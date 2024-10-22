@@ -2,10 +2,7 @@
 // RUN: %libomptarget-compileoptxx-and-run-generic
 
 // FIXME: This is a bug in host offload, this should run fine.
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// REQUIRES: gpu
 
 // This test validates that the OpenMP target reductions to find a maximum work
 // as indended for a few common data types.

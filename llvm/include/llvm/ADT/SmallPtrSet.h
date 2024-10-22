@@ -16,9 +16,10 @@
 #define LLVM_ADT_SMALLPTRSET_H
 
 #include "llvm/ADT/EpochTracker.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -92,6 +93,7 @@ public:
 
   [[nodiscard]] bool empty() const { return size() == 0; }
   size_type size() const { return NumNonEmpty - NumTombstones; }
+  size_type capacity() const { return CurArraySize; }
 
   void clear() {
     incrementEpoch();
@@ -106,6 +108,27 @@ public:
 
     NumNonEmpty = 0;
     NumTombstones = 0;
+  }
+
+  void reserve(size_type NumEntries) {
+    incrementEpoch();
+    // Do nothing if we're given zero as a reservation size.
+    if (NumEntries == 0)
+      return;
+    // No need to expand if we're small and NumEntries will fit in the space.
+    if (isSmall() && NumEntries <= CurArraySize)
+      return;
+    // insert_imp_big will reallocate if stores is more than 75% full, on the
+    // /final/ insertion.
+    if (!isSmall() && ((NumEntries - 1) * 4) < (CurArraySize * 3))
+      return;
+    // We must Grow -- find the size where we'd be 75% full, then round up to
+    // the next power of two.
+    size_type NewSize = NumEntries + (NumEntries / 3);
+    NewSize = 1 << (Log2_32_Ceil(NewSize) + 1);
+    // Like insert_imp_big, always allocate at least 128 elements.
+    NewSize = std::max(128u, NewSize);
+    Grow(NewSize);
   }
 
 protected:
@@ -127,22 +150,11 @@ protected:
   std::pair<const void *const *, bool> insert_imp(const void *Ptr) {
     if (isSmall()) {
       // Check to see if it is already in the set.
-      const void **LastTombstone = nullptr;
       for (const void **APtr = SmallArray, **E = SmallArray + NumNonEmpty;
            APtr != E; ++APtr) {
         const void *Value = *APtr;
         if (Value == Ptr)
           return std::make_pair(APtr, false);
-        if (Value == getTombstoneMarker())
-          LastTombstone = APtr;
-      }
-
-      // Did we find any tombstone marker?
-      if (LastTombstone != nullptr) {
-        *LastTombstone = Ptr;
-        --NumTombstones;
-        incrementEpoch();
-        return std::make_pair(LastTombstone, true);
       }
 
       // Nope, there isn't.  If we stay small, just 'pushback' now.
@@ -161,14 +173,27 @@ protected:
   /// that the derived class can check that the right type of pointer is passed
   /// in.
   bool erase_imp(const void * Ptr) {
-    const void *const *P = find_imp(Ptr);
-    if (P == EndPointer())
+    if (isSmall()) {
+      for (const void **APtr = SmallArray, **E = SmallArray + NumNonEmpty;
+           APtr != E; ++APtr) {
+        if (*APtr == Ptr) {
+          *APtr = SmallArray[--NumNonEmpty];
+          incrementEpoch();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    auto *Bucket = doFind(Ptr);
+    if (!Bucket)
       return false;
 
-    const void **Loc = const_cast<const void **>(P);
-    assert(*Loc == Ptr && "broken find!");
-    *Loc = getTombstoneMarker();
+    *const_cast<const void **>(Bucket) = getTombstoneMarker();
     NumTombstones++;
+    // Treat this consistently from an API perspective, even if we don't
+    // actually invalidate iterators here.
+    incrementEpoch();
     return true;
   }
 
@@ -186,17 +211,17 @@ protected:
     }
 
     // Big set case.
-    auto *Bucket = FindBucketFor(Ptr);
-    if (*Bucket == Ptr)
+    if (auto *Bucket = doFind(Ptr))
       return Bucket;
     return EndPointer();
   }
 
-private:
   bool isSmall() const { return CurArray == SmallArray; }
 
+private:
   std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
+  const void *const *doFind(const void *Ptr) const;
   const void * const *FindBucketFor(const void *Ptr) const;
   void shrink_and_clear();
 
@@ -351,11 +376,61 @@ public:
     return insert(Ptr).first;
   }
 
-  /// erase - If the set contains the specified pointer, remove it and return
-  /// true, otherwise return false.
+  /// Remove pointer from the set.
+  ///
+  /// Returns whether the pointer was in the set. Invalidates iterators if
+  /// true is returned. To remove elements while iterating over the set, use
+  /// remove_if() instead.
   bool erase(PtrType Ptr) {
     return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
   }
+
+  /// Remove elements that match the given predicate.
+  ///
+  /// This method is a safe replacement for the following pattern, which is not
+  /// valid, because the erase() calls would invalidate the iterator:
+  ///
+  ///     for (PtrType *Ptr : Set)
+  ///       if (Pred(P))
+  ///         Set.erase(P);
+  ///
+  /// Returns whether anything was removed. It is safe to read the set inside
+  /// the predicate function. However, the predicate must not modify the set
+  /// itself, only indicate a removal by returning true.
+  template <typename UnaryPredicate>
+  bool remove_if(UnaryPredicate P) {
+    bool Removed = false;
+    if (isSmall()) {
+      const void **APtr = SmallArray, **E = SmallArray + NumNonEmpty;
+      while (APtr != E) {
+        PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(*APtr));
+        if (P(Ptr)) {
+          *APtr = *--E;
+          --NumNonEmpty;
+          incrementEpoch();
+          Removed = true;
+        } else {
+          ++APtr;
+        }
+      }
+      return Removed;
+    }
+
+    for (const void **APtr = CurArray, **E = EndPointer(); APtr != E; ++APtr) {
+      const void *Value = *APtr;
+      if (Value == getTombstoneMarker() || Value == getEmptyMarker())
+        continue;
+      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Value));
+      if (P(Ptr)) {
+        *APtr = getTombstoneMarker();
+        ++NumTombstones;
+        incrementEpoch();
+        Removed = true;
+      }
+    }
+    return Removed;
+  }
+
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
   size_type count(ConstPtrType Ptr) const {
     return find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)) != EndPointer();

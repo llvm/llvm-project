@@ -197,7 +197,7 @@ void MachineFrameInfo::computeMaxCallFrameSize(
     for (MachineInstr &MI : MBB) {
       unsigned Opcode = MI.getOpcode();
       if (Opcode == FrameSetupOpcode || Opcode == FrameDestroyOpcode) {
-        unsigned Size = TII.getFrameSize(MI);
+        uint64_t Size = TII.getFrameSize(MI);
         MaxCallFrameSize = std::max(MaxCallFrameSize, Size);
         if (FrameSDOps != nullptr)
           FrameSDOps->push_back(&MI);

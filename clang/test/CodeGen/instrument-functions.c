@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -S -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions -disable-llvm-passes | FileCheck %s
-// RUN: %clang_cc1 -S -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-function-entry-bare -disable-llvm-passes | FileCheck -check-prefix=BARE %s
+// RUN: %clang_cc1 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-function-entry-bare -disable-llvm-passes | FileCheck -check-prefix=BARE %s
 
 int test1(int x) {
 // CHECK: @test1(i32 {{.*}}%x) #[[ATTR1:[0-9]+]]

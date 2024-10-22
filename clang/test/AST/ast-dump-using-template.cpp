@@ -20,17 +20,23 @@ template<typename T>
 using A = S<T>;
 // CHECK:      TypeAliasDecl
 // CHECK-NEXT: `-ElaboratedType {{.*}} 'S<T>' sugar dependent
-// CHECK-NEXT:   `-TemplateSpecializationType {{.*}} 'S<T>' dependent using S
+// CHECK-NEXT:   `-TemplateSpecializationType {{.*}} 'S<T>' dependent
+// CHECK-NEXT:     |-name: 'S':'ns::S' qualified
+// CHECk-NEXT:     | |-UsingShadowDecl {{.+}} ClassTemplate {{.+}} 'S'
 
 // TemplateName in TemplateArgument.
 template <template <typename> class T> class X {};
 using B = X<S>;
 // CHECK:      TypeAliasDecl
-// CHECK-NEXT: `-ElaboratedType {{.*}} 'X<ns::S>' sugar
-// CHECK-NEXT:   `-TemplateSpecializationType {{.*}} 'X<ns::S>' sugar X
-// CHECK-NEXT:     |-TemplateArgument using template S
-// CHECK-NEXT:       `-RecordType {{.*}} 'X<ns::S>'
-// CHECK-NEXT:         `-ClassTemplateSpecialization {{.*}} 'X'
+// CHECK-NEXT: `-ElaboratedType {{.*}} 'X<S>' sugar
+// CHECK-NEXT:   `-TemplateSpecializationType {{.*}} 'X<S>' sugar
+// CHECK-NEXT:     |-name: 'X' qualified
+// CHECK-NEXT:     | `-ClassTemplateDecl {{.+}} X
+// CHECK-NEXT:     |-TemplateArgument template 'S':'ns::S' qualified
+// CHECK-NEXT:     | |-UsingShadowDecl {{.*}} implicit ClassTemplate {{.*}} 'S'
+// CHECK-NEXT:     | `-target: ClassTemplateDecl {{.*}} S
+// CHECK-NEXT:     `-RecordType {{.*}} 'X<ns::S>'
+// CHECK-NEXT:       `-ClassTemplateSpecialization {{.*}} 'X'
 
 // TemplateName in DeducedTemplateSpecializationType.
 S DeducedTemplateSpecializationT(123);
@@ -38,11 +44,15 @@ using C = decltype(DeducedTemplateSpecializationT);
 // CHECK:      DecltypeType {{.*}}
 // CHECK-NEXT:  |-DeclRefExpr {{.*}}
 // CHECK-NEXT:  `-ElaboratedType {{.*}} 'S<int>' sugar
-// CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'ns::S<int>' sugar using
+// CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'ns::S<int>' sugar
+// CHECK-NEXT:      |-name: 'S':'ns::S' qualified
+// CHECK-NEXT:      | |-UsingShadowDecl {{.+}} 'S'
 
 S2 DeducedTemplateSpecializationT2(123);
 using D = decltype(DeducedTemplateSpecializationT2);
 // CHECK:      DecltypeType {{.*}}
 // CHECK-NEXT:  |-DeclRefExpr {{.*}}
 // CHECK-NEXT:  `-ElaboratedType {{.*}} 'S2<int>' sugar
-// CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'S2<int>' sugar using
+// CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'S2<int>' sugar
+// CHECK-NEXT:      |-name: 'S2':'ns::S2' qualified
+//CHECk-NEXT:       | |-UsingShadowDecl {{.+}} ClassTemplate {{.+}} 'S2'

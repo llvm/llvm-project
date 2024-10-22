@@ -87,11 +87,11 @@ catch:
 ; CHECK: catch.dispatch:
 ; CHECK-NEXT: phi ptr
 ; CHECK-NEXT: catchswitch
-; CHECK-NOT: llvm.dbg.value
+; CHECK-NOT: #dbg_value
 
 ; CHECK: catch:
 ; CHECK-NEXT: catchpad
-; CHECK-NEXT: call void @llvm.dbg.value
+; CHECK-NEXT: #dbg_value
 }
 
 !llvm.dbg.cu = !{!0}

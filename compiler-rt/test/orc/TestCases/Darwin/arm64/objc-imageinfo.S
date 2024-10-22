@@ -27,9 +27,6 @@
 
 // Check error conditions.
 
-// RUN: not %llvm_jitlink %t/main.o %t/objc_old.o %t/objc_new.o 2>&1 | FileCheck %s -check-prefix=CATEGORY
-// CATEGORY: ObjC category class property support in {{.*}} does not match first registered flags
-
 // RUN: not %llvm_jitlink %t/main.o %t/swift_4.o %t/swift_5.o 2>&1 | FileCheck %s -check-prefix=SWIFT_ABI
 // SWIFT_ABI: Swift ABI version in {{.*}} does not match first registered flags
 
@@ -46,6 +43,14 @@
 // Add multiple swift to objc.
 // RUN: %llvm_jitlink -debug-only=orc %t/main.o %t/swift_59.o %t/swift_5.o %t/objc_new.o 2>&1 | FileCheck %s -check-prefix=SWIFT_MIX3
 // SWIFT_MIX3: MachOPlatform: Merging __objc_imageinfo flags for main {{.*}} -> 0x5000740
+
+// Disable categories.
+// RUN: %llvm_jitlink -debug-only=orc %t/main.o %t/objc_old.o %t/objc_new.o 2>&1 | FileCheck %s -check-prefix=SWIFT_MIX4
+// SWIFT_MIX4: MachOPlatform: Merging __objc_imageinfo flags for main {{.*}} -> 0x0000
+
+// Disable signed class_ro.
+// RUN: %llvm_jitlink -debug-only=orc %t/main.o %t/objc_new.o %t/objc_new_signed_ro.o 2>&1 | FileCheck %s -check-prefix=SWIFT_MIX5
+// SWIFT_MIX5: MachOPlatform: Merging __objc_imageinfo flags for main {{.*}} -> 0x0040
 
 //--- main.S
 .section  __TEXT,__text,regular,pure_instructions
@@ -75,6 +80,17 @@ _objc2:
 L_OBJC_IMAGE_INFO:
   .long 0
   .long 64
+
+//--- objc_new_signed_ro.S
+.section  __TEXT,__text,regular,pure_instructions
+.globl _objc3
+_objc3:
+  ret
+
+  .section  __DATA,__objc_imageinfo,regular,no_dead_strip
+L_OBJC_IMAGE_INFO:
+  .long 0
+  .long 80
 
 //--- swift_4.S
 .section  __TEXT,__text,regular,pure_instructions

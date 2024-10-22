@@ -11,15 +11,16 @@
 
 #include "src/__support/CPP/span.h"
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 using MemoryView = LIBC_NAMESPACE::cpp::span<const char>;
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #if !LIBC_TEST_HAS_MATCHERS()
 
@@ -41,7 +42,8 @@ using MemoryView = LIBC_NAMESPACE::cpp::span<const char>;
 
 #else // LIBC_TEST_HAS_MATCHERS()
 
-namespace LIBC_NAMESPACE::testing {
+namespace LIBC_NAMESPACE_DECL {
+namespace testing {
 
 class MemoryMatcher : public Matcher<MemoryView> {
   MemoryView expected;
@@ -57,7 +59,8 @@ public:
   void explainError() override;
 };
 
-} // namespace LIBC_NAMESPACE::testing
+} // namespace testing
+} // namespace LIBC_NAMESPACE_DECL
 
 #define EXPECT_MEM_EQ(expected, actual)                                        \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::MemoryMatcher(expected))

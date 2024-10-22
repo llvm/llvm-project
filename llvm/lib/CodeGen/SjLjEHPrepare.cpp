@@ -199,7 +199,7 @@ SjLjEHPrepareImpl::setupFunctionContext(Function &F,
   // Create an alloca for the incoming jump buffer ptr and the new jump buffer
   // that needs to be restored on all exits from the function. This is an alloca
   // because the value needs to be added to the global context list.
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   const Align Alignment = DL.getPrefTypeAlign(FunctionContextTy);
   FuncCtx = new AllocaInst(FunctionContextTy, DL.getAllocaAddrSpace(), nullptr,
                            Alignment, "fn_context", EntryBB->begin());
@@ -508,17 +508,19 @@ bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
 
   PointerType *AllocaPtrTy = M.getDataLayout().getAllocaPtrType(M.getContext());
 
-  FrameAddrFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::frameaddress, {AllocaPtrTy});
-  StackAddrFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::stacksave, {AllocaPtrTy});
-  StackRestoreFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::stackrestore, {AllocaPtrTy});
+  FrameAddrFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::frameaddress,
+                                                  {AllocaPtrTy});
+  StackAddrFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::stacksave,
+                                                  {AllocaPtrTy});
+  StackRestoreFn = Intrinsic::getOrInsertDeclaration(
+      &M, Intrinsic::stackrestore, {AllocaPtrTy});
   BuiltinSetupDispatchFn =
-    Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_setup_dispatch);
-  LSDAAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_lsda);
-  CallSiteFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_callsite);
-  FuncCtxFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_functioncontext);
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::eh_sjlj_setup_dispatch);
+  LSDAAddrFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::eh_sjlj_lsda);
+  CallSiteFn =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::eh_sjlj_callsite);
+  FuncCtxFn =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::eh_sjlj_functioncontext);
 
   bool Res = setupEntryBlockAndCallSites(F);
   return Res;

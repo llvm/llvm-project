@@ -440,11 +440,15 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
   %16 = atomicrmw uinc_wrap ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw udec_wrap %[[PTR1]], %[[VAL1]] acquire
   %17 = atomicrmw udec_wrap ptr %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw usub_cond %[[PTR1]], %[[VAL1]] acquire
+  %18 = atomicrmw usub_cond ptr %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw usub_sat %[[PTR1]], %[[VAL1]] acquire
+  %19 = atomicrmw usub_sat ptr %ptr1, i32 %val1 acquire
 
   ; CHECK:  llvm.atomicrmw volatile
   ; CHECK-SAME:  syncscope("singlethread")
   ; CHECK-SAME:  {alignment = 8 : i64}
-  %18 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
+  %20 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
   ret void
 }
 
@@ -523,6 +527,64 @@ declare void @varargs(...)
 define void @varargs_call(i32 %0) {
   ; CHECK:  llvm.call @varargs(%[[ARG1]]) vararg(!llvm.func<void (...)>) : (i32) -> ()
   call void (...) @varargs(i32 %0)
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_convergent
+define void @call_convergent() {
+; CHECK: llvm.call @f() {convergent}
+  call void @f() convergent
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_no_unwind
+define void @call_no_unwind() {
+; CHECK: llvm.call @f() {no_unwind}
+  call void @f() nounwind
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_will_return
+define void @call_will_return() {
+; CHECK: llvm.call @f() {will_return}
+  call void @f() willreturn
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_memory_effects
+define void @call_memory_effects() {
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+  call void @f() memory(none)
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = read>}
+  call void @f() memory(none, argmem: write, inaccessiblemem: read)
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = write>}
+  call void @f() memory(write, argmem: none)
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = read>}
+  call void @f() memory(readwrite, inaccessiblemem: read)
+; CHECK: llvm.call @f()
+; CHECK-NOT: #llvm.memory_effects
+; CHECK-SAME: : () -> ()
+  call void @f() memory(readwrite)
   ret void
 }
 

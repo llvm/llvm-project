@@ -36,8 +36,27 @@
 ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global_int : !llvm.ptr
 ; CHECK-DAG:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
-; CHECK-DAG   llvm.return %[[GEP]] : !llvm.ptr
+; CHECK-DAG:  llvm.return %[[GEP]] : !llvm.ptr
 @global_gep_const_expr = internal constant ptr getelementptr (i32, ptr @global_int, i32 2)
+
+; // -----
+
+; Verifies that converting a reference to a global does not convert the global
+; a second time.
+
+; CHECK-LABEL: llvm.mlir.global external constant @reference
+; CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @simple
+; CHECK-NEXT: llvm.return %[[ADDR]]
+@reference = constant ptr @simple
+
+@simple = global { ptr } { ptr null }
+
+; // -----
+
+; CHECK-LABEL: llvm.mlir.global external @recursive
+; CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @recursive
+; CHECK: llvm.return %[[ADDR]]
+@recursive = global ptr @recursive
 
 ; // -----
 
@@ -255,8 +274,8 @@ define void @bar() {
 ; CHECK-DAG: #[[GVAR1:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "bar", linkageName = "bar", file = #[[FILE]], line = 8, type = #[[TYPE]], isLocalToUnit = true>
 ; CHECK-DAG: #[[EXPR0:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR0]], expr = <[DW_OP_LLVM_fragment(0, 16)]>>
 ; CHECK-DAG: #[[EXPR1:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR1]], expr = <[DW_OP_constu(3), DW_OP_plus]>>
-; CHECK-DAG: llvm.mlir.global external @foo() {addr_space = 0 : i32, alignment = 8 : i64, dbg_expr = #[[EXPR0]]} : i32
-; CHECK-DAG: llvm.mlir.global external @bar() {addr_space = 0 : i32, alignment = 8 : i64, dbg_expr = #[[EXPR1]]} : i32
+; CHECK-DAG: llvm.mlir.global external @foo() {addr_space = 0 : i32, alignment = 8 : i64, dbg_exprs = [#[[EXPR0]]]} : i32
+; CHECK-DAG: llvm.mlir.global external @bar() {addr_space = 0 : i32, alignment = 8 : i64, dbg_exprs = [#[[EXPR1]]]} : i32
 
 @foo = external global i32, align 8, !dbg !5
 @bar = external global i32, align 8, !dbg !7
@@ -280,7 +299,24 @@ define void @bar() {
 ; CHECK-DAG: #[[GLOBAL_VAR:.*]] = #llvm.di_global_variable<file = #[[FILE]], line = 268, type = #[[COMPOSITE_TYPE]], isLocalToUnit = true, isDefined = true>
 ; CHECK-DAG: #[[GLOBAL_VAR_EXPR:.*]] = #llvm.di_global_variable_expression<var = #[[GLOBAL_VAR]], expr = <>>
 
-; CHECK-DAG: llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_expr = #[[GLOBAL_VAR_EXPR]]}
+; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global_0("0\00")
+; We skip over @mlir.llvm.nameless_global.1 and 2 because they exist
+; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global_3("1\00")
+;
+; CHECK:  llvm.mlir.global internal constant @zero() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global_0 : !llvm.ptr
+; CHECK:  llvm.mlir.global internal constant @one() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global_3 : !llvm.ptr
+
+; CHECK: llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_exprs = [#[[GLOBAL_VAR_EXPR]]]}
+
+@0 = private unnamed_addr constant [2 x i8] c"0\00"
+@1 = private unnamed_addr constant [2 x i8] c"1\00"
+@zero = internal constant ptr @0
+@one = internal constant ptr @1
+
+@"mlir.llvm.nameless_global_1" = external constant [10 x i8], !dbg !0
+declare void @"mlir.llvm.nameless_global_2"()
 
 @.str.1 = external constant [10 x i8], !dbg !0
 
@@ -294,3 +330,14 @@ define void @bar() {
 !5 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
 !6 = !{}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
+
+; // -----
+
+; Verify that unnamed globals can also be referenced before they are defined.
+
+; CHECK:  llvm.mlir.global internal constant @reference()
+; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global_0 : !llvm.ptr
+@reference = internal constant ptr @0
+
+; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global_0("0\00")
+@0 = private unnamed_addr constant [2 x i8] c"0\00"

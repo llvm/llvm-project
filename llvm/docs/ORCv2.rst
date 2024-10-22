@@ -780,7 +780,7 @@ constructs a new ThreadSafeContext value from a std::unique_ptr<LLVMContext>:
     // separate context.
     for (const auto &IRPath : IRPaths) {
       auto Ctx = std::make_unique<LLVMContext>();
-      auto M = std::make_unique<LLVMContext>("M", *Ctx);
+      auto M = std::make_unique<Module>("M", *Ctx);
       CompileLayer.add(MainJD, ThreadSafeModule(std::move(M), std::move(Ctx)));
     }
 

@@ -333,7 +333,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
   }
 
   if (!have_location_for_pc) {
-    UnwindPlan::Row::RegisterLocation lr_location;
+    UnwindPlan::Row::AbstractRegisterLocation lr_location;
     if (row->GetRegisterInfo(dwarf_lr, lr_location))
       row->SetRegisterInfo(dwarf_pc, lr_location);
     else

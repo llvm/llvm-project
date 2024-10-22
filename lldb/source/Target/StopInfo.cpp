@@ -1125,6 +1125,29 @@ private:
   std::optional<int> m_code;
 };
 
+// StopInfoInterrupt
+
+class StopInfoInterrupt : public StopInfo {
+public:
+  StopInfoInterrupt(Thread &thread, int signo, const char *description)
+      : StopInfo(thread, signo) {
+    SetDescription(description);
+  }
+
+  ~StopInfoInterrupt() override = default;
+
+  StopReason GetStopReason() const override {
+    return lldb::eStopReasonInterrupt;
+  }
+
+  const char *GetDescription() override {
+    if (m_description.empty()) {
+      m_description = "async interrupt";
+    }
+    return m_description.c_str();
+  }
+};
+
 // StopInfoTrace
 
 class StopInfoTrace : public StopInfo {
@@ -1388,6 +1411,11 @@ StopInfoSP StopInfo::CreateStopReasonWithSignal(Thread &thread, int signo,
                                                 std::optional<int> code) {
   thread.GetProcess()->GetUnixSignals()->IncrementSignalHitCount(signo);
   return StopInfoSP(new StopInfoUnixSignal(thread, signo, description, code));
+}
+
+StopInfoSP StopInfo::CreateStopReasonWithInterrupt(Thread &thread, int signo,
+                                                   const char *description) {
+  return StopInfoSP(new StopInfoInterrupt(thread, signo, description));
 }
 
 StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {

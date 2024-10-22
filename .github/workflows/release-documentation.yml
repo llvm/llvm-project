@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Python env
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -72,17 +72,20 @@ jobs:
           ref: main
           fetch-depth: 0
           path: www-releases
+          persist-credentials: false
 
       - name: Upload Release Notes
         if: env.upload
         env:
-          WWW_RELEASES_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
         run: |
-          mkdir -p ../www-releases/${{ inputs.release-version }}
-          mv ./docs-build/html-export/* ../www-releases/${{ inputs.release-version }}
-          cd ../www-releases
+          mkdir -p www-releases/${{ inputs.release-version }}
+          mv ./docs-build/html-export/* www-releases/${{ inputs.release-version }}
+          cd www-releases
+          git checkout -b ${{ inputs.release-version }}
           git add ${{ inputs.release-version }}
           git config user.email "llvmbot@llvm.org"
           git config user.name "llvmbot"
           git commit -a -m "Add ${{ inputs.release-version }} documentation"
-          git push "https://$WWW_RELEASES_TOKEN@github.com/${{ github.repository_owner }}/www-releases" main:main
+          git push --force  "https://$GH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
+          gh pr create -f -B main -H ${{ inputs.release-version }} -R llvmbot/www-releases

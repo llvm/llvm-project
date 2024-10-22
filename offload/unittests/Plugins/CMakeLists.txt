@@ -3,7 +3,7 @@ set(PLUGINS_TEST_SOURCES NextgenPluginsTest.cpp)
 set(PLUGINS_TEST_INCLUDE ${LIBOMPTARGET_INCLUDE_DIR})
 
 foreach(PLUGIN IN LISTS LIBOMPTARGET_TESTED_PLUGINS)
-  libomptarget_say("Building plugin unit tests for ${PLUGIN}")
+  message(STATUS "Building plugin unit tests for ${PLUGIN}")
   add_libompt_unittest("${PLUGIN}.unittests" ${PLUGINS_TEST_SOURCES})
   add_dependencies("${PLUGIN}.unittests" ${PLUGINS_TEST_COMMON} ${PLUGIN})
   target_link_libraries("${PLUGIN}.unittests" PRIVATE ${PLUGINS_TEST_COMMON} ${PLUGIN})

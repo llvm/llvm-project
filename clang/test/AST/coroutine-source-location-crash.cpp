@@ -1,6 +1,6 @@
 // Test without serialization:
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 \
-// RUN:    -fsyntax-only -ast-dump | FileCheck %s
+// RUN:    -ast-dump | FileCheck %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -std=c++20 -emit-pch -o %t %s

@@ -56,6 +56,10 @@ public:
 
   virtual bool NeedToDoInitialImageFetch() = 0;
 
+  std::optional<lldb_private::Address> GetStartAddress() override;
+
+  static void CreateSettings(lldb_private::Debugger &debugger);
+
 protected:
   void PrivateInitialize(lldb_private::Process *process);
 
@@ -172,7 +176,7 @@ protected:
 
   bool UnloadModuleSections(lldb_private::Module *module, ImageInfo &info);
 
-  lldb::ModuleSP FindTargetModuleForImageInfo(ImageInfo &image_info,
+  lldb::ModuleSP FindTargetModuleForImageInfo(const ImageInfo &image_info,
                                               bool can_create,
                                               bool *did_create_ptr);
 
@@ -199,20 +203,29 @@ protected:
       lldb_private::StructuredData::ObjectSP image_details,
       ImageInfo::collection &image_infos);
 
-  // If image_infos contains / may contain dyld or executable image, call this
-  // method
-  // to keep our internal record keeping of the special binaries up-to-date.
-  void
-  UpdateSpecialBinariesFromNewImageInfos(ImageInfo::collection &image_infos);
+  // Finds/loads modules for a given `image_infos` and returns pairs
+  // (ImageInfo, ModuleSP).
+  // Prefer using this method rather than calling `FindTargetModuleForImageInfo`
+  // directly as this method may load the modules in parallel.
+  std::vector<std::pair<ImageInfo, lldb::ModuleSP>>
+  PreloadModulesFromImageInfos(const ImageInfo::collection &image_infos);
+
+  // If `images` contains / may contain dyld or executable image, call this
+  // method to keep our internal record keeping of the special binaries
+  // up-to-date.
+  void UpdateSpecialBinariesFromPreloadedModules(
+      std::vector<std::pair<ImageInfo, lldb::ModuleSP>> &images);
 
   // if image_info is a dyld binary, call this method
-  void UpdateDYLDImageInfoFromNewImageInfo(ImageInfo &image_info);
+  bool UpdateDYLDImageInfoFromNewImageInfo(ImageInfo &image_info);
 
   // If image_infos contains / may contain executable image, call this method
   // to keep our internal record keeping of the special dyld binary up-to-date.
   void AddExecutableModuleIfInImageInfos(ImageInfo::collection &image_infos);
 
   bool AddModulesUsingImageInfos(ImageInfo::collection &image_infos);
+  bool AddModulesUsingPreloadedModules(
+      std::vector<std::pair<ImageInfo, lldb::ModuleSP>> &images);
 
   // Whether we should use the new dyld SPI to get shared library information,
   // or read

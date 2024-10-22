@@ -72,127 +72,127 @@ bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
 }
 
 namespace {
-  struct SimpleCaptureTracker : public CaptureTracker {
-    explicit SimpleCaptureTracker(bool ReturnCaptures)
-        : ReturnCaptures(ReturnCaptures) {}
+struct SimpleCaptureTracker : public CaptureTracker {
+  explicit SimpleCaptureTracker(bool ReturnCaptures)
+      : ReturnCaptures(ReturnCaptures) {}
 
-    void tooManyUses() override {
-      LLVM_DEBUG(dbgs() << "Captured due to too many uses\n");
-      Captured = true;
-    }
+  void tooManyUses() override {
+    LLVM_DEBUG(dbgs() << "Captured due to too many uses\n");
+    Captured = true;
+  }
 
-    bool captured(const Use *U) override {
-      if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
-        return false;
-
-      LLVM_DEBUG(dbgs() << "Captured by: " << *U->getUser() << "\n");
-
-      Captured = true;
-      return true;
-    }
-
-    bool ReturnCaptures;
-
-    bool Captured = false;
-  };
-
-  /// Only find pointer captures which happen before the given instruction. Uses
-  /// the dominator tree to determine whether one instruction is before another.
-  /// Only support the case where the Value is defined in the same basic block
-  /// as the given instruction and the use.
-  struct CapturesBefore : public CaptureTracker {
-
-    CapturesBefore(bool ReturnCaptures, const Instruction *I,
-                   const DominatorTree *DT, bool IncludeI, const LoopInfo *LI)
-        : BeforeHere(I), DT(DT), ReturnCaptures(ReturnCaptures),
-          IncludeI(IncludeI), LI(LI) {}
-
-    void tooManyUses() override { Captured = true; }
-
-    bool isSafeToPrune(Instruction *I) {
-      if (BeforeHere == I)
-        return !IncludeI;
-
-      // We explore this usage only if the usage can reach "BeforeHere".
-      // If use is not reachable from entry, there is no need to explore.
-      if (!DT->isReachableFromEntry(I->getParent()))
-        return true;
-
-      // Check whether there is a path from I to BeforeHere.
-      return !isPotentiallyReachable(I, BeforeHere, nullptr, DT, LI);
-    }
-
-    bool captured(const Use *U) override {
-      Instruction *I = cast<Instruction>(U->getUser());
-      if (isa<ReturnInst>(I) && !ReturnCaptures)
-        return false;
-
-      // Check isSafeToPrune() here rather than in shouldExplore() to avoid
-      // an expensive reachability query for every instruction we look at.
-      // Instead we only do one for actual capturing candidates.
-      if (isSafeToPrune(I))
-        return false;
-
-      Captured = true;
-      return true;
-    }
-
-    const Instruction *BeforeHere;
-    const DominatorTree *DT;
-
-    bool ReturnCaptures;
-    bool IncludeI;
-
-    bool Captured = false;
-
-    const LoopInfo *LI;
-  };
-
-  /// Find the 'earliest' instruction before which the pointer is known not to
-  /// be captured. Here an instruction A is considered earlier than instruction
-  /// B, if A dominates B. If 2 escapes do not dominate each other, the
-  /// terminator of the common dominator is chosen. If not all uses cannot be
-  /// analyzed, the earliest escape is set to the first instruction in the
-  /// function entry block.
-  // NOTE: Users have to make sure instructions compared against the earliest
-  // escape are not in a cycle.
-  struct EarliestCaptures : public CaptureTracker {
-
-    EarliestCaptures(bool ReturnCaptures, Function &F, const DominatorTree &DT)
-        : DT(DT), ReturnCaptures(ReturnCaptures), F(F) {}
-
-    void tooManyUses() override {
-      Captured = true;
-      EarliestCapture = &*F.getEntryBlock().begin();
-    }
-
-    bool captured(const Use *U) override {
-      Instruction *I = cast<Instruction>(U->getUser());
-      if (isa<ReturnInst>(I) && !ReturnCaptures)
-        return false;
-
-      if (!EarliestCapture)
-        EarliestCapture = I;
-      else
-        EarliestCapture = DT.findNearestCommonDominator(EarliestCapture, I);
-      Captured = true;
-
-      // Return false to continue analysis; we need to see all potential
-      // captures.
+  bool captured(const Use *U) override {
+    if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
       return false;
-    }
 
-    Instruction *EarliestCapture = nullptr;
+    LLVM_DEBUG(dbgs() << "Captured by: " << *U->getUser() << "\n");
 
-    const DominatorTree &DT;
+    Captured = true;
+    return true;
+  }
 
-    bool ReturnCaptures;
+  bool ReturnCaptures;
 
-    bool Captured = false;
+  bool Captured = false;
+};
 
-    Function &F;
-  };
-}
+/// Only find pointer captures which happen before the given instruction. Uses
+/// the dominator tree to determine whether one instruction is before another.
+/// Only support the case where the Value is defined in the same basic block
+/// as the given instruction and the use.
+struct CapturesBefore : public CaptureTracker {
+
+  CapturesBefore(bool ReturnCaptures, const Instruction *I,
+                 const DominatorTree *DT, bool IncludeI, const LoopInfo *LI)
+      : BeforeHere(I), DT(DT), ReturnCaptures(ReturnCaptures),
+        IncludeI(IncludeI), LI(LI) {}
+
+  void tooManyUses() override { Captured = true; }
+
+  bool isSafeToPrune(Instruction *I) {
+    if (BeforeHere == I)
+      return !IncludeI;
+
+    // We explore this usage only if the usage can reach "BeforeHere".
+    // If use is not reachable from entry, there is no need to explore.
+    if (!DT->isReachableFromEntry(I->getParent()))
+      return true;
+
+    // Check whether there is a path from I to BeforeHere.
+    return !isPotentiallyReachable(I, BeforeHere, nullptr, DT, LI);
+  }
+
+  bool captured(const Use *U) override {
+    Instruction *I = cast<Instruction>(U->getUser());
+    if (isa<ReturnInst>(I) && !ReturnCaptures)
+      return false;
+
+    // Check isSafeToPrune() here rather than in shouldExplore() to avoid
+    // an expensive reachability query for every instruction we look at.
+    // Instead we only do one for actual capturing candidates.
+    if (isSafeToPrune(I))
+      return false;
+
+    Captured = true;
+    return true;
+  }
+
+  const Instruction *BeforeHere;
+  const DominatorTree *DT;
+
+  bool ReturnCaptures;
+  bool IncludeI;
+
+  bool Captured = false;
+
+  const LoopInfo *LI;
+};
+
+/// Find the 'earliest' instruction before which the pointer is known not to
+/// be captured. Here an instruction A is considered earlier than instruction
+/// B, if A dominates B. If 2 escapes do not dominate each other, the
+/// terminator of the common dominator is chosen. If not all uses cannot be
+/// analyzed, the earliest escape is set to the first instruction in the
+/// function entry block.
+// NOTE: Users have to make sure instructions compared against the earliest
+// escape are not in a cycle.
+struct EarliestCaptures : public CaptureTracker {
+
+  EarliestCaptures(bool ReturnCaptures, Function &F, const DominatorTree &DT)
+      : DT(DT), ReturnCaptures(ReturnCaptures), F(F) {}
+
+  void tooManyUses() override {
+    Captured = true;
+    EarliestCapture = &*F.getEntryBlock().begin();
+  }
+
+  bool captured(const Use *U) override {
+    Instruction *I = cast<Instruction>(U->getUser());
+    if (isa<ReturnInst>(I) && !ReturnCaptures)
+      return false;
+
+    if (!EarliestCapture)
+      EarliestCapture = I;
+    else
+      EarliestCapture = DT.findNearestCommonDominator(EarliestCapture, I);
+    Captured = true;
+
+    // Return false to continue analysis; we need to see all potential
+    // captures.
+    return false;
+  }
+
+  Instruction *EarliestCapture = nullptr;
+
+  const DominatorTree &DT;
+
+  bool ReturnCaptures;
+
+  bool Captured = false;
+
+  Function &F;
+};
+} // namespace
 
 /// PointerMayBeCaptured - Return true if this pointer value may be captured
 /// by the enclosing function (which is required to exist).  This routine can
@@ -388,7 +388,7 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
         // Comparing a dereferenceable_or_null pointer against null cannot
         // lead to pointer escapes, because if it is not null it must be a
         // valid (in-bounds) pointer.
-        const DataLayout &DL = I->getModule()->getDataLayout();
+        const DataLayout &DL = I->getDataLayout();
         if (IsDereferenceableOrNull && IsDereferenceableOrNull(O, DL))
           return UseCaptureKind::NO_CAPTURE;
       }

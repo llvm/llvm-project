@@ -52,6 +52,7 @@ module third { header "third.h" }
 // CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
 // CHECK-NEXT:         "[[PREFIX]]/second/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first"
 // CHECK-NEXT:     }
 // CHECK:        ]

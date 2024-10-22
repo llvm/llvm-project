@@ -327,8 +327,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   UnrollCostEstimator OuterUCE(L, TTI, EphValues, UP.BEInsns);
 
   if (!InnerUCE.canUnroll() || !OuterUCE.canUnroll()) {
-    LLVM_DEBUG(dbgs() << "  Not unrolling loop which contains instructions"
-                      << " which cannot be duplicated or have invalid cost.\n");
+    LLVM_DEBUG(dbgs() << "  Loop not considered unrollable\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -341,7 +340,10 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     LLVM_DEBUG(dbgs() << "  Not unrolling loop with inlinable calls.\n");
     return LoopUnrollResult::Unmodified;
   }
-  if (InnerUCE.Convergent || OuterUCE.Convergent) {
+  // FIXME: The call to canUnroll() allows some controlled convergent
+  // operations, but we block them here for future changes.
+  if (InnerUCE.Convergence != ConvergenceKind::None ||
+      OuterUCE.Convergence != ConvergenceKind::None) {
     LLVM_DEBUG(
         dbgs() << "  Not unrolling loop with convergent instructions.\n");
     return LoopUnrollResult::Unmodified;

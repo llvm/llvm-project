@@ -130,7 +130,7 @@ public:
 } // namespace
 
 void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<BufferizeToTensorOp, BufferizeToMemrefOp>(typeConverter,
                                                          patterns.getContext());
 }
@@ -224,8 +224,10 @@ struct OneShotBufferizePass
         };
       }
       opt.printConflicts = printConflicts;
+      opt.bufferAlignment = bufferAlignment;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
+      opt.checkParallelRegions = checkParallelRegions;
       opt.noAnalysisFuncFilter = noAnalysisFuncFilter;
 
       // Configure type converter.
@@ -319,29 +321,6 @@ private:
   std::optional<OneShotBufferizationOptions> options;
 };
 } // namespace
-
-namespace {
-struct BufferizationBufferizePass
-    : public bufferization::impl::BufferizationBufferizeBase<
-          BufferizationBufferizePass> {
-  void runOnOperation() override {
-    BufferizationOptions options = getPartialBufferizationOptions();
-    options.opFilter.allowDialect<BufferizationDialect>();
-
-    if (failed(bufferizeOp(getOperation(), options)))
-      signalPassFailure();
-  }
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<bufferization::BufferizationDialect, memref::MemRefDialect>();
-  }
-};
-} // namespace
-
-std::unique_ptr<Pass> mlir::bufferization::createBufferizationBufferizePass() {
-  return std::make_unique<BufferizationBufferizePass>();
-}
 
 std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass() {
   return std::make_unique<OneShotBufferizePass>();

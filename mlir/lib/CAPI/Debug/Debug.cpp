@@ -16,3 +16,21 @@
 void mlirEnableGlobalDebug(bool enable) { llvm::DebugFlag = enable; }
 
 bool mlirIsGlobalDebugEnabled() { return llvm::DebugFlag; }
+
+void mlirSetGlobalDebugType(const char *type) {
+  // Depending on the NDEBUG flag, this name can be either a function or a macro
+  // that expands to something that isn't a funciton call, so we cannot
+  // explicitly prefix it with `llvm::` or declare `using` it.
+  using namespace llvm;
+  setCurrentDebugType(type);
+}
+
+void mlirSetGlobalDebugTypes(const char **types, intptr_t n) {
+  using namespace llvm;
+  setCurrentDebugTypes(types, n);
+}
+
+bool mlirIsCurrentDebugType(const char *type) {
+  using namespace llvm;
+  return isCurrentDebugType(type);
+}

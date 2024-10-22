@@ -104,6 +104,8 @@ public:
 
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
 
+  llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
+
 private:
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   /// The file system to be used during the scan.

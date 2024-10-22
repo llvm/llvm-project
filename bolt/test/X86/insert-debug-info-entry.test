@@ -7,7 +7,7 @@
 ; RUN: llvm-dwarfdump --debug-info foo.exe | FileCheck -check-prefix=PRE-BOLT %s
 ; RUN: llvm-dwarfdump --debug-info foo.exe.bolt | FileCheck %s
 
-; This tests checks that DW_AT_GNU_ranges_base is added at the end of the CU.
+;; This tests checks that DW_AT_GNU_ranges_base is added at the end of the CU.
 
 ; PRE-BOLT: DW_AT_GNU_addr_base
 ; PRE-BOLT-NOT: DW_AT_GNU_ranges_base

@@ -10,15 +10,19 @@
 
 #include <array>
 #include <limits>
+#include <sstream>
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 
+#include "Utility/RISCV_DWARF_Registers.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #define DEFINE_REG_NAME(reg_num) ConstString(#reg_num).GetCString()
@@ -119,6 +123,10 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
 } // namespace dwarf
 } // namespace
 
+// Number of argument registers (the base integer calling convention
+// provides 8 argument registers, a0-a7)
+static constexpr size_t g_regs_for_args_count = 8U;
+
 const RegisterInfo *ABISysV_riscv::GetRegisterInfoArray(uint32_t &count) {
   count = dwarf::g_register_infos.size();
   return dwarf::g_register_infos.data();
@@ -163,11 +171,81 @@ TotalArgsSizeInWords(bool is_rv64,
   return total_size;
 }
 
+static bool UpdateRegister(RegisterContext *reg_ctx,
+                           const lldb::RegisterKind reg_kind,
+                           const uint32_t reg_num, const addr_t value) {
+  Log *log = GetLog(LLDBLog::Expressions);
+
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(reg_kind, reg_num);
+
+  LLDB_LOG(log, "Writing {0}: 0x{1:x}", reg_info->name,
+           static_cast<uint64_t>(value));
+  if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value)) {
+    LLDB_LOG(log, "Writing {0}: failed", reg_info->name);
+    return false;
+  }
+  return true;
+}
+
+static void LogInitInfo(Log &log, const Thread &thread, addr_t sp,
+                        addr_t func_addr, addr_t return_addr,
+                        const llvm::ArrayRef<addr_t> args) {
+  std::stringstream ss;
+  ss << "ABISysV_riscv::PrepareTrivialCall"
+     << " (tid = 0x" << std::hex << thread.GetID() << ", sp = 0x" << sp
+     << ", func_addr = 0x" << func_addr << ", return_addr = 0x" << return_addr;
+
+  for (auto [idx, arg] : enumerate(args))
+    ss << ", arg" << std::dec << idx << " = 0x" << std::hex << arg;
+  ss << ")";
+  log.PutString(ss.str());
+}
+
 bool ABISysV_riscv::PrepareTrivialCall(Thread &thread, addr_t sp,
                                        addr_t func_addr, addr_t return_addr,
                                        llvm::ArrayRef<addr_t> args) const {
-  // TODO: Implement
-  return false;
+  Log *log = GetLog(LLDBLog::Expressions);
+  if (log)
+    LogInitInfo(*log, thread, sp, func_addr, return_addr, args);
+
+  const auto reg_ctx_sp = thread.GetRegisterContext();
+  if (!reg_ctx_sp) {
+    LLDB_LOG(log, "Failed to get RegisterContext");
+    return false;
+  }
+
+  if (args.size() > g_regs_for_args_count) {
+    LLDB_LOG(log, "Function has {0} arguments, but only {1} are allowed!",
+             args.size(), g_regs_for_args_count);
+    return false;
+  }
+
+  // Write arguments to registers
+  for (auto [idx, arg] : enumerate(args)) {
+    const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfo(
+        eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + idx);
+    LLDB_LOG(log, "About to write arg{0} (0x{1:x}) into {2}", idx, arg,
+             reg_info->name);
+
+    if (!reg_ctx_sp->WriteRegisterFromUnsigned(reg_info, arg)) {
+      LLDB_LOG(log, "Failed to write arg{0} (0x{1:x}) into {2}", idx, arg,
+               reg_info->name);
+      return false;
+    }
+  }
+
+  if (!UpdateRegister(reg_ctx_sp.get(), eRegisterKindGeneric,
+                      LLDB_REGNUM_GENERIC_PC, func_addr))
+    return false;
+  if (!UpdateRegister(reg_ctx_sp.get(), eRegisterKindGeneric,
+                      LLDB_REGNUM_GENERIC_SP, sp))
+    return false;
+  if (!UpdateRegister(reg_ctx_sp.get(), eRegisterKindGeneric,
+                      LLDB_REGNUM_GENERIC_RA, return_addr))
+    return false;
+
+  LLDB_LOG(log, "ABISysV_riscv::{0}() success", __FUNCTION__);
+  return true;
 }
 
 bool ABISysV_riscv::PrepareTrivialCall(
@@ -221,14 +299,14 @@ bool ABISysV_riscv::PrepareTrivialCall(
   assert(prototype.getFunctionNumParams() == args.size());
 
   const size_t num_args = args.size();
-  const size_t regs_for_args_count = 8U;
   const size_t num_args_in_regs =
-      num_args > regs_for_args_count ?  regs_for_args_count : num_args;
+      num_args > g_regs_for_args_count ? g_regs_for_args_count : num_args;
 
   // Number of arguments passed on stack.
   size_t args_size = TotalArgsSizeInWords(m_is_rv64, args);
-  auto on_stack =
-      args_size <= regs_for_args_count ? 0 : args_size - regs_for_args_count;
+  auto on_stack = args_size <= g_regs_for_args_count
+                      ? 0
+                      : args_size - g_regs_for_args_count;
   auto offset = on_stack * word_size;
 
   uint8_t reg_value[8];
@@ -259,7 +337,7 @@ bool ABISysV_riscv::PrepareTrivialCall(
       ++reg_index;
     }
 
-    if (reg_index < regs_for_args_count || size == 0)
+    if (reg_index < g_regs_for_args_count || size == 0)
       continue;
 
     // Remaining arguments are passed on the stack.
@@ -290,13 +368,13 @@ Status ABISysV_riscv::SetReturnValueObject(StackFrameSP &frame_sp,
                                            ValueObjectSP &new_value_sp) {
   Status result;
   if (!new_value_sp) {
-    result.SetErrorString("Empty value object for return value.");
+    result = Status::FromErrorString("Empty value object for return value.");
     return result;
   }
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
   if (!compiler_type) {
-    result.SetErrorString("Null clang type for return value.");
+    result = Status::FromErrorString("Null clang type for return value.");
     return result;
   }
 
@@ -305,7 +383,8 @@ Status ABISysV_riscv::SetReturnValueObject(StackFrameSP &frame_sp,
   bool is_signed = false;
   if (!compiler_type.IsIntegerOrEnumerationType(is_signed) &&
       !compiler_type.IsPointerType()) {
-    result.SetErrorString("We don't support returning other types at present");
+    result = Status::FromErrorString(
+        "We don't support returning other types at present");
     return result;
   }
 
@@ -313,7 +392,7 @@ Status ABISysV_riscv::SetReturnValueObject(StackFrameSP &frame_sp,
   size_t num_bytes = new_value_sp->GetData(data, result);
 
   if (result.Fail()) {
-    result.SetErrorStringWithFormat(
+    result = Status::FromErrorStringWithFormat(
         "Couldn't convert return value to raw data: %s", result.AsCString());
     return result;
   }
@@ -326,8 +405,8 @@ Status ABISysV_riscv::SetReturnValueObject(StackFrameSP &frame_sp,
     auto reg_info =
         reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
     if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
-      result.SetErrorStringWithFormat("Couldn't write value to register %s",
-                                      reg_info->name);
+      result = Status::FromErrorStringWithFormat(
+          "Couldn't write value to register %s", reg_info->name);
       return result;
     }
 
@@ -343,14 +422,14 @@ Status ABISysV_riscv::SetReturnValueObject(StackFrameSP &frame_sp,
     reg_info =
         reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
     if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
-      result.SetErrorStringWithFormat("Couldn't write value to register %s",
-                                      reg_info->name);
+      result = Status::FromErrorStringWithFormat(
+          "Couldn't write value to register %s", reg_info->name);
     }
 
     return result;
   }
 
-  result.SetErrorString(
+  result = Status::FromErrorString(
       "We don't support returning large integer values at present.");
   return result;
 }
@@ -643,9 +722,9 @@ bool ABISysV_riscv::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-  uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
-  uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
-  uint32_t ra_reg_num = LLDB_REGNUM_GENERIC_RA;
+  uint32_t pc_reg_num = riscv_dwarf::dwarf_gpr_pc;
+  uint32_t sp_reg_num = riscv_dwarf::dwarf_gpr_sp;
+  uint32_t ra_reg_num = riscv_dwarf::dwarf_gpr_ra;
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 

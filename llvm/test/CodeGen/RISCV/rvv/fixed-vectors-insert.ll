@@ -47,7 +47,6 @@ define <32 x i32> @insertelt_v32i32_0(<32 x i32> %a, i32 %y) {
   ret <32 x i32> %b
 }
 
-; FIXME: Should only require an m2 slideup
 define <32 x i32> @insertelt_v32i32_4(<32 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v32i32_4:
 ; CHECK:       # %bb.0:
@@ -196,8 +195,8 @@ define <4 x i64> @insertelt_v4i64(<4 x i64> %a, i64 %y) {
 define void @insertelt_v4i64_store(ptr %x, i64 %y) {
 ; RV32-LABEL: insertelt_v4i64_store:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sw a2, 28(a0)
 ; RV32-NEXT:    sw a1, 24(a0)
+; RV32-NEXT:    sw a2, 28(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_v4i64_store:
@@ -254,8 +253,8 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 define void @insertelt_v3i64_store(ptr %x, i64 %y) {
 ; RV32-LABEL: insertelt_v3i64_store:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sw a2, 20(a0)
 ; RV32-NEXT:    sw a1, 16(a0)
+; RV32-NEXT:    sw a2, 20(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_v3i64_store:
@@ -383,8 +382,8 @@ define void @insertelt_v8i64_0_store(ptr %x) {
 ; RV32-LABEL: insertelt_v8i64_0_store:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a1, -1
-; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_v8i64_0_store:
@@ -429,8 +428,8 @@ define void @insertelt_v8i64_store(ptr %x, i32 %idx) {
 ; RV32-NEXT:    slli a1, a1, 3
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    li a1, -1
-; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_v8i64_store:
@@ -461,9 +460,9 @@ define <8 x i64> @insertelt_c6_v8i64_0(<8 x i64> %a, ptr %x) {
 define void @insertelt_c6_v8i64_0_store(ptr %x) {
 ; RV32-LABEL: insertelt_c6_v8i64_0_store:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    li a1, 6
 ; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_c6_v8i64_0_store:
@@ -507,9 +506,9 @@ define void @insertelt_c6_v8i64_store(ptr %x, i32 %idx) {
 ; RV32-NEXT:    andi a1, a1, 7
 ; RV32-NEXT:    slli a1, a1, 3
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    li a1, 6
 ; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_c6_v8i64_store:
@@ -533,11 +532,11 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    li a2, 6
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a2
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v12, (a1)
+; CHECK-NEXT:    li a1, 6
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret

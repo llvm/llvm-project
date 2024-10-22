@@ -27,56 +27,39 @@ define ghccc void @foo() nounwind {
 ; LA64-LABEL: foo:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(d4)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(d4)
-; LA64-NEXT:    fld.d $fs7, $a0, 0
+; LA64-NEXT:    fld.d $fs7, $a0, %pc_lo12(d4)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(d3)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(d3)
-; LA64-NEXT:    fld.d $fs6, $a0, 0
+; LA64-NEXT:    fld.d $fs6, $a0, %pc_lo12(d3)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(d2)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(d2)
-; LA64-NEXT:    fld.d $fs5, $a0, 0
+; LA64-NEXT:    fld.d $fs5, $a0, %pc_lo12(d2)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(d1)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(d1)
-; LA64-NEXT:    fld.d $fs4, $a0, 0
+; LA64-NEXT:    fld.d $fs4, $a0, %pc_lo12(d1)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(f4)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(f4)
-; LA64-NEXT:    fld.s $fs3, $a0, 0
+; LA64-NEXT:    fld.s $fs3, $a0, %pc_lo12(f4)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(f3)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(f3)
-; LA64-NEXT:    fld.s $fs2, $a0, 0
+; LA64-NEXT:    fld.s $fs2, $a0, %pc_lo12(f3)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(f2)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(f2)
-; LA64-NEXT:    fld.s $fs1, $a0, 0
+; LA64-NEXT:    fld.s $fs1, $a0, %pc_lo12(f2)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(f1)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(f1)
-; LA64-NEXT:    fld.s $fs0, $a0, 0
+; LA64-NEXT:    fld.s $fs0, $a0, %pc_lo12(f1)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(splim)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(splim)
-; LA64-NEXT:    ld.d $s8, $a0, 0
+; LA64-NEXT:    ld.d $s8, $a0, %pc_lo12(splim)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(r5)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(r5)
-; LA64-NEXT:    ld.d $s7, $a0, 0
+; LA64-NEXT:    ld.d $s7, $a0, %pc_lo12(r5)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(r4)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(r4)
-; LA64-NEXT:    ld.d $s6, $a0, 0
+; LA64-NEXT:    ld.d $s6, $a0, %pc_lo12(r4)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(r3)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(r3)
-; LA64-NEXT:    ld.d $s5, $a0, 0
+; LA64-NEXT:    ld.d $s5, $a0, %pc_lo12(r3)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(r2)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(r2)
-; LA64-NEXT:    ld.d $s4, $a0, 0
+; LA64-NEXT:    ld.d $s4, $a0, %pc_lo12(r2)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(r1)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(r1)
-; LA64-NEXT:    ld.d $s3, $a0, 0
+; LA64-NEXT:    ld.d $s3, $a0, %pc_lo12(r1)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(hp)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(hp)
-; LA64-NEXT:    ld.d $s2, $a0, 0
+; LA64-NEXT:    ld.d $s2, $a0, %pc_lo12(hp)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(sp)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(sp)
-; LA64-NEXT:    ld.d $s1, $a0, 0
+; LA64-NEXT:    ld.d $s1, $a0, %pc_lo12(sp)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(base)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(base)
-; LA64-NEXT:    ld.d $s0, $a0, 0
+; LA64-NEXT:    ld.d $s0, $a0, %pc_lo12(base)
 ; LA64-NEXT:    b %plt(bar)
 
 entry:

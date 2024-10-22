@@ -550,7 +550,7 @@ void RegisterFile::collectWrites(
     sort(Writes, [](const WriteRef &Lhs, const WriteRef &Rhs) {
       return Lhs.getWriteState() < Rhs.getWriteState();
     });
-    auto It = std::unique(Writes.begin(), Writes.end());
+    auto It = llvm::unique(Writes);
     Writes.resize(std::distance(Writes.begin(), It));
   }
 

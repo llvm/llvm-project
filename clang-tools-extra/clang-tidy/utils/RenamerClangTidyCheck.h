@@ -115,14 +115,8 @@ public:
   void expandMacro(const Token &MacroNameTok, const MacroInfo *MI,
                    const SourceManager &SourceMgr);
 
-  void addUsage(const RenamerClangTidyCheck::NamingCheckId &Decl,
-                SourceRange Range, const SourceManager &SourceMgr);
-
-  /// Convenience method when the usage to be added is a NamedDecl.
   void addUsage(const NamedDecl *Decl, SourceRange Range,
                 const SourceManager &SourceMgr);
-
-  void checkNamedDecl(const NamedDecl *Decl, const SourceManager &SourceMgr);
 
 protected:
   /// Overridden by derived classes, returns information about if and how a Decl
@@ -158,6 +152,14 @@ protected:
                                const NamingCheckFailure &Failure) const = 0;
 
 private:
+  // Manage additions to the Failure/usage map
+  //
+  // return the result of NamingCheckFailures::try_emplace() if the usage was
+  // accepted.
+  std::pair<NamingCheckFailureMap::iterator, bool>
+  addUsage(const RenamerClangTidyCheck::NamingCheckId &FailureId,
+           SourceRange UsageRange, const SourceManager &SourceMgr);
+
   NamingCheckFailureMap NamingCheckFailures;
   const bool AggressiveDependentMemberLookup;
 };

@@ -13,9 +13,6 @@
 // behavior under test.
 // ADDITIONAL_COMPILE_FLAGS: -Wno-exceptions
 
-// The fix for PR17222 made it in the dylib for macOS 10.10
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.9
-
 #include <cassert>
 #include <stdint.h>
 

@@ -309,6 +309,23 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIM_CheckNumOperandsGE:
+    case GIM_CheckNumOperandsLE: {
+      uint64_t InsnID = readULEB();
+      uint64_t Expected = readULEB();
+      const bool IsLE = (MatcherOpcode == GIM_CheckNumOperandsLE);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckNumOperands"
+                             << (IsLE ? "LE" : "GE") << "(MIs[" << InsnID
+                             << "], Expected=" << Expected << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      const unsigned NumOps = State.MIs[InsnID]->getNumOperands();
+      if (IsLE ? (NumOps > Expected) : (NumOps < Expected)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
     case GIM_CheckNumOperands: {
       uint64_t InsnID = readULEB();
       uint64_t Expected = readULEB();
@@ -468,7 +485,24 @@ bool GIMatchTableExecutor::executeMatchTable(
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
+      break;
+    }
+    case GIM_CheckHasOneUse: {
+      uint64_t InsnID = readULEB();
 
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckHasOneUse(MIs["
+                             << InsnID << "]\n");
+
+      const MachineInstr *MI = State.MIs[InsnID];
+      assert(MI && "Used insn before defined");
+      assert(MI->getNumDefs() > 0 && "No defs");
+      const Register Res = MI->getOperand(0).getReg();
+
+      if (!MRI.hasOneNonDBGUse(Res)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
       break;
     }
     case GIM_CheckAtomicOrdering: {
@@ -652,17 +686,17 @@ bool GIMatchTableExecutor::executeMatchTable(
       MachineMemOperand *MMO =
           *(State.MIs[InsnID]->memoperands_begin() + MMOIdx);
 
-      unsigned Size = MRI.getType(MO.getReg()).getSizeInBits();
+      const TypeSize Size = MRI.getType(MO.getReg()).getSizeInBits();
       if (MatcherOpcode == GIM_CheckMemorySizeEqualToLLT &&
-          MMO->getSizeInBits().getValue() != Size) {
+          MMO->getSizeInBits() != Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeLessThanLLT &&
-                 MMO->getSizeInBits().getValue() >= Size) {
+                 TypeSize::isKnownGE(MMO->getSizeInBits().getValue(), Size)) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeGreaterThanLLT &&
-                 MMO->getSizeInBits().getValue() <= Size)
+                 TypeSize::isKnownLE(MMO->getSizeInBits().getValue(), Size))
         if (handleReject() == RejectAndGiveUp)
           return false;
 
@@ -1064,6 +1098,22 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIR_CopyRemaining: {
+      uint64_t NewInsnID = readULEB();
+      uint64_t OldInsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
+      MachineInstr &OldMI = *State.MIs[OldInsnID];
+      MachineInstrBuilder &NewMI = OutMIs[NewInsnID];
+      for (const auto &Op : drop_begin(OldMI.operands(), OpIdx))
+        NewMI.add(Op);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_CopyRemaining(OutMIs["
+                             << NewInsnID << "], MIs[" << OldInsnID
+                             << "], /*start=*/" << OpIdx << ")\n");
+      break;
+    }
+
     case GIR_CopyOrAddZeroReg: {
       uint64_t NewInsnID = readULEB();
       uint64_t OldInsnID = readULEB();
@@ -1335,13 +1385,19 @@ bool GIMatchTableExecutor::executeMatchTable(
           -1); // Not a source operand of the old instruction.
       break;
     }
-    case GIR_CustomAction: {
+    case GIR_DoneWithCustomAction: {
       uint16_t FnID = readU16();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": GIR_CustomAction(FnID=" << FnID
-                             << ")\n");
+                      dbgs() << CurrentIdx << ": GIR_DoneWithCustomAction(FnID="
+                             << FnID << ")\n");
       assert(FnID > GICXXCustomAction_Invalid && "Expected a valid FnID");
-      runCustomAction(FnID, State, OutMIs);
+      if (runCustomAction(FnID, State, OutMIs)) {
+        propagateFlags();
+        return true;
+      }
+
+      if (handleReject() == RejectAndGiveUp)
+        return false;
       break;
     }
     case GIR_CustomOperandRenderer: {

@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
 
@@ -30,7 +31,7 @@
 // generated with Sollya using the following command:
 //   fpminimax(log(1 + x)/x, 7, [|D...|], [-2^-6; 2^-6]);
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace internal {
 
@@ -153,4 +154,4 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

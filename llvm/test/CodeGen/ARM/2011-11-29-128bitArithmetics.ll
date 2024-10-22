@@ -56,6 +56,37 @@ L.entry:
 
 declare <4 x float> @llvm.cos.v4f32(<4 x float>) nounwind readonly
 
+define void @test_tan(ptr %X) nounwind {
+
+; CHECK-LABEL: test_tan:
+
+; CHECK:      movw  [[reg0:r[0-9]+]], :lower16:{{.*}}
+; CHECK:      movt  [[reg0]], :upper16:{{.*}}
+; CHECK:      vld1.64
+
+; CHECK:      {{v?mov(.32)?}}  r0,
+; CHECK:      bl  {{.*}}tanf
+
+; CHECK:      {{v?mov(.32)?}}  r0,
+; CHECK:      bl  {{.*}}tanf
+
+; CHECK:      {{v?mov(.32)?}}  r0,
+; CHECK:      bl  {{.*}}tanf
+
+; CHECK:      {{v?mov(.32)?}}  r0,
+; CHECK:      bl  {{.*}}tanf
+
+; CHECK:      vst1.64
+
+L.entry:
+  %0 = load <4 x float>, ptr @A, align 16
+  %1 = call <4 x float> @llvm.tan.v4f32(<4 x float> %0)
+  store <4 x float> %1, ptr %X, align 16
+  ret void
+}
+
+declare <4 x float> @llvm.tan.v4f32(<4 x float>) nounwind readonly
+
 define void @test_exp(ptr %X) nounwind {
 
 ; CHECK-LABEL: test_exp:

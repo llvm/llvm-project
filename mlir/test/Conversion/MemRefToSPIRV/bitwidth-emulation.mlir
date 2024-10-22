@@ -196,8 +196,8 @@ func.func @load_i4(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>, %i:
 
 // CHECK-LABEL: @store_i4
 func.func @store_i4(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>, %value: i4, %i: index) {
-  // CHECK: %[[VAL:.+]] = builtin.unrealized_conversion_cast %{{.+}} : i4 to i32
-  // CHECK: %[[INDEX:.+]] = builtin.unrealized_conversion_cast %{{.+}} : index to i32
+  // CHECK-DAG: %[[VAL:.+]] = builtin.unrealized_conversion_cast %{{.+}} : i4 to i32
+  // CHECK-DAG: %[[INDEX:.+]] = builtin.unrealized_conversion_cast %{{.+}} : index to i32
   // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
   // CHECK: %[[EIGHT:.+]] = spirv.Constant 8 : i32
   // CHECK: %[[FOUR:.+]] = spirv.Constant 4 : i32

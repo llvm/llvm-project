@@ -76,8 +76,8 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
-    memprof::CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(
-        CSIdToCallStack, Callback);
+    CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(CSIdToCallStack,
+                                                             Callback);
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
     GuidRecord = {
@@ -137,7 +137,7 @@ class RawMemProfReader final : public MemProfReader {
 public:
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
-  virtual ~RawMemProfReader() override = default;
+  virtual ~RawMemProfReader() override;
 
   // Prints the contents of the profile in YAML format.
   void printYAML(raw_ostream &OS);
@@ -161,7 +161,7 @@ public:
   // Returns a list of build ids recorded in the segment information.
   static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
 
-  virtual Error
+  Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback) override;
 
@@ -205,8 +205,14 @@ private:
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
 
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+  readMemInfoBlocks(const char *Ptr);
+
   // The profiled binary.
   object::OwningBinary<object::Binary> Binary;
+  // Version of raw memprof binary currently being read. Defaults to most up
+  // to date version.
+  uint64_t MemprofRawVersion = MEMPROF_RAW_VERSION;
   // The preferred load address of the executable segment.
   uint64_t PreferredTextSegmentAddress = 0;
   // The base address of the text segment in the process during profiling.

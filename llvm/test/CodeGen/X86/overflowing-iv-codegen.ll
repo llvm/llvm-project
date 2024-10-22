@@ -6,7 +6,7 @@ define i32 @test_01(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_01:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -48,7 +48,7 @@ define i32 @test_02(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -90,7 +90,7 @@ define i32 @test_02_nopoison(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_02_nopoison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -134,7 +134,7 @@ define i32 @test_03(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -176,7 +176,7 @@ define i32 @test_03_nopoison(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_03_nopoison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi

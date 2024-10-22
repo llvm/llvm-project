@@ -24,6 +24,8 @@
 #include "BPFInstrInfo.h"
 #include "BPFTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -319,6 +321,7 @@ private:
   bool in16BitRange(int Num);
   bool eliminateRedundantMov();
   bool adjustBranch();
+  bool insertMissingCallerSavedSpills();
 
 public:
 
@@ -333,6 +336,7 @@ public:
     Changed = eliminateRedundantMov();
     if (SupportGotol)
       Changed = adjustBranch() || Changed;
+    Changed |= insertMissingCallerSavedSpills();
     return Changed;
   }
 };
@@ -593,6 +597,88 @@ bool BPFMIPreEmitPeephole::adjustBranch() {
     }
   }
 
+  return Changed;
+}
+
+static const unsigned CallerSavedRegs[] = {BPF::R0, BPF::R1, BPF::R2,
+                                           BPF::R3, BPF::R4, BPF::R5};
+
+struct BPFFastCall {
+  MachineInstr *MI;
+  unsigned LiveCallerSavedRegs;
+};
+
+static void collectBPFFastCalls(const TargetRegisterInfo *TRI,
+                                LivePhysRegs &LiveRegs, MachineBasicBlock &BB,
+                                SmallVectorImpl<BPFFastCall> &Calls) {
+  LiveRegs.init(*TRI);
+  LiveRegs.addLiveOuts(BB);
+  Calls.clear();
+  for (MachineInstr &MI : llvm::reverse(BB)) {
+    if (MI.isCall()) {
+      unsigned LiveCallerSavedRegs = 0;
+      for (MCRegister R : CallerSavedRegs) {
+        bool DoSpillFill = false;
+        for (MCPhysReg SR : TRI->subregs(R))
+          DoSpillFill |= !MI.definesRegister(SR, TRI) && LiveRegs.contains(SR);
+        if (!DoSpillFill)
+          continue;
+        LiveCallerSavedRegs |= 1 << R;
+      }
+      if (LiveCallerSavedRegs)
+        Calls.push_back({&MI, LiveCallerSavedRegs});
+    }
+    LiveRegs.stepBackward(MI);
+  }
+}
+
+static int64_t computeMinFixedObjOffset(MachineFrameInfo &MFI,
+                                        unsigned SlotSize) {
+  int64_t MinFixedObjOffset = 0;
+  // Same logic as in X86FrameLowering::adjustFrameForMsvcCxxEh()
+  for (int I = MFI.getObjectIndexBegin(); I < MFI.getObjectIndexEnd(); ++I) {
+    if (MFI.isDeadObjectIndex(I))
+      continue;
+    MinFixedObjOffset = std::min(MinFixedObjOffset, MFI.getObjectOffset(I));
+  }
+  MinFixedObjOffset -=
+      (SlotSize + MinFixedObjOffset % SlotSize) & (SlotSize - 1);
+  return MinFixedObjOffset;
+}
+
+bool BPFMIPreEmitPeephole::insertMissingCallerSavedSpills() {
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  SmallVector<BPFFastCall, 8> Calls;
+  LivePhysRegs LiveRegs;
+  const unsigned SlotSize = 8;
+  int64_t MinFixedObjOffset = computeMinFixedObjOffset(MFI, SlotSize);
+  bool Changed = false;
+  for (MachineBasicBlock &BB : *MF) {
+    collectBPFFastCalls(TRI, LiveRegs, BB, Calls);
+    Changed |= !Calls.empty();
+    for (BPFFastCall &Call : Calls) {
+      int64_t CurOffset = MinFixedObjOffset;
+      for (MCRegister Reg : CallerSavedRegs) {
+        if (((1 << Reg) & Call.LiveCallerSavedRegs) == 0)
+          continue;
+        // Allocate stack object
+        CurOffset -= SlotSize;
+        MFI.CreateFixedSpillStackObject(SlotSize, CurOffset);
+        // Generate spill
+        BuildMI(BB, Call.MI->getIterator(), Call.MI->getDebugLoc(),
+                TII->get(BPF::STD))
+            .addReg(Reg, RegState::Kill)
+            .addReg(BPF::R10)
+            .addImm(CurOffset);
+        // Generate fill
+        BuildMI(BB, ++Call.MI->getIterator(), Call.MI->getDebugLoc(),
+                TII->get(BPF::LDD))
+            .addReg(Reg, RegState::Define)
+            .addReg(BPF::R10)
+            .addImm(CurOffset);
+      }
+    }
+  }
   return Changed;
 }
 

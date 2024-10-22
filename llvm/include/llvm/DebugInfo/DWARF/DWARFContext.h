@@ -264,6 +264,9 @@ public:
   DWARFCompileUnit *getDWOCompileUnitForHash(uint64_t Hash);
   DWARFTypeUnit *getTypeUnitForHash(uint16_t Version, uint64_t Hash, bool IsDWO);
 
+  /// Return the DWARF unit that includes an offset (relative to .debug_info).
+  DWARFUnit *getUnitForOffset(uint64_t Offset);
+
   /// Return the compile unit that includes an offset (relative to .debug_info).
   DWARFCompileUnit *getCompileUnitForOffset(uint64_t Offset);
 
@@ -422,7 +425,7 @@ public:
     for (unsigned Size : DWARFContext::getSupportedAddressSizes())
       Stream << LS << Size;
     Stream << ')';
-    return make_error<StringError>(Stream.str(), EC);
+    return make_error<StringError>(Buffer, EC);
   }
 
   std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);

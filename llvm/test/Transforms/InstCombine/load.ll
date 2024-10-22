@@ -56,6 +56,18 @@ define i32 @test5(i1 %C) {
   ret i32 %Z
 }
 
+; FIXME: Constants should be allowed for this optimization.
+define i32 @test5_asan(i1 %C) sanitize_address {
+; CHECK-LABEL: @test5_asan(
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C:%.*]], ptr @X, ptr @X2
+; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr [[Y]], align 4
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %Y = select i1 %C, ptr @X, ptr @X2		; <ptr> [#uses=1]
+  %Z = load i32, ptr %Y		; <i32> [#uses=1]
+  ret i32 %Z
+}
+
 define i32 @load_gep_null_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_inbounds(
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1

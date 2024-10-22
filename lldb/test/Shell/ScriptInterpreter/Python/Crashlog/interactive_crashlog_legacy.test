@@ -1,4 +1,4 @@
-# REQUIRES: python, native && target-aarch64 && system-darwin
+# REQUIRES: python, native && system-darwin
 
 # RUN: mkdir -p %t.dir
 # RUN: yaml2obj %S/Inputs/interactive_crashlog/multithread-test.yaml > %t.dir/multithread-test

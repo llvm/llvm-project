@@ -22,12 +22,7 @@ class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
-    def setUp(self):
-        TestBase.setUp(self)
-        # Don't run these tests if we don't have Debuginfod support
-        if "Debuginfod" not in configuration.enabled_plugins:
-            self.skipTest("The Debuginfod SymbolLocator plugin is not enabled")
-
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_no_symbols(self):
         """
         Validate behavior with no symbols or symbol locator.
@@ -36,6 +31,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"])
         self.try_breakpoint(False)
 
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_default(self):
         """
         Validate behavior with symbols, but no symbol locator.
@@ -44,6 +40,8 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out", "a.out.debug"])
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_symbols(self):
         """
         Test behavior with the full binary available from Debuginfod as
@@ -52,6 +50,8 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"], "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_executable(self):
         """
         Test behavior with the full binary available from Debuginfod as
@@ -60,6 +60,8 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"], None, "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_okd_symbols(self):
         """
         Test behavior with the 'only-keep-debug' symbols available from Debuginfod.
@@ -174,10 +176,11 @@ class DebugInfodTests(TestBase):
 
     def getUUID(self, filename):
         try:
-            target = self.dbg.CreateTarget(self.getBuildArtifact(filename))
-            module = target.GetModuleAtIndex(0)
+            spec = lldb.SBModuleSpec()
+            spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact(filename)))
+            module = lldb.SBModule(spec)
             uuid = module.GetUUIDString().replace("-", "").lower()
-            self.dbg.DeleteTarget(target)
-            return uuid if len(uuid) == 40 else None
+            # Don't want lldb's fake 32 bit CRC's for this one
+            return uuid if len(uuid) > 8 else None
         except:
             return None

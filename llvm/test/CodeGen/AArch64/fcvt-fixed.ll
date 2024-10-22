@@ -412,10 +412,10 @@ define half @scvtf_f16_i32_7(i32 %int) {
 ; CHECK-NO16-LABEL: scvtf_f16_i32_7:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    scvtf s1, w0
-; CHECK-NO16-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    movi v0.2s, #60, lsl #24
 ; CHECK-NO16-NEXT:    fcvt h1, s1
 ; CHECK-NO16-NEXT:    fcvt s1, h1
-; CHECK-NO16-NEXT:    fdiv s0, s1, s0
+; CHECK-NO16-NEXT:    fmul s0, s1, s0
 ; CHECK-NO16-NEXT:    fcvt h0, s0
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -432,10 +432,10 @@ define half @scvtf_f16_i32_15(i32 %int) {
 ; CHECK-NO16-LABEL: scvtf_f16_i32_15:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    scvtf s1, w0
-; CHECK-NO16-NEXT:    movi v0.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    movi v0.2s, #56, lsl #24
 ; CHECK-NO16-NEXT:    fcvt h1, s1
 ; CHECK-NO16-NEXT:    fcvt s1, h1
-; CHECK-NO16-NEXT:    fdiv s0, s1, s0
+; CHECK-NO16-NEXT:    fmul s0, s1, s0
 ; CHECK-NO16-NEXT:    fcvt h0, s0
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -452,10 +452,10 @@ define half @scvtf_f16_i64_7(i64 %long) {
 ; CHECK-NO16-LABEL: scvtf_f16_i64_7:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    scvtf s1, x0
-; CHECK-NO16-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    movi v0.2s, #60, lsl #24
 ; CHECK-NO16-NEXT:    fcvt h1, s1
 ; CHECK-NO16-NEXT:    fcvt s1, h1
-; CHECK-NO16-NEXT:    fdiv s0, s1, s0
+; CHECK-NO16-NEXT:    fmul s0, s1, s0
 ; CHECK-NO16-NEXT:    fcvt h0, s0
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -472,10 +472,10 @@ define half @scvtf_f16_i64_15(i64 %long) {
 ; CHECK-NO16-LABEL: scvtf_f16_i64_15:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    scvtf s1, x0
-; CHECK-NO16-NEXT:    movi v0.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    movi v0.2s, #56, lsl #24
 ; CHECK-NO16-NEXT:    fcvt h1, s1
 ; CHECK-NO16-NEXT:    fcvt s1, h1
-; CHECK-NO16-NEXT:    fdiv s0, s1, s0
+; CHECK-NO16-NEXT:    fmul s0, s1, s0
 ; CHECK-NO16-NEXT:    fcvt h0, s0
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -574,10 +574,10 @@ define half @ucvtf_f16_i32_7(i32 %int) {
 ; CHECK-NO16-LABEL: ucvtf_f16_i32_7:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    ucvtf s1, w0
-; CHECK-NO16-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    movi v0.2s, #60, lsl #24
 ; CHECK-NO16-NEXT:    fcvt h1, s1
 ; CHECK-NO16-NEXT:    fcvt s1, h1
-; CHECK-NO16-NEXT:    fdiv s0, s1, s0
+; CHECK-NO16-NEXT:    fmul s0, s1, s0
 ; CHECK-NO16-NEXT:    fcvt h0, s0
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -594,10 +594,10 @@ define half @ucvtf_f16_i32_15(i32 %int) {
 ; CHECK-NO16-LABEL: ucvtf_f16_i32_15:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    ucvtf s1, w0
-; CHECK-NO16-NEXT:    movi v0.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    movi v0.2s, #56, lsl #24
 ; CHECK-NO16-NEXT:    fcvt h1, s1
 ; CHECK-NO16-NEXT:    fcvt s1, h1
-; CHECK-NO16-NEXT:    fdiv s0, s1, s0
+; CHECK-NO16-NEXT:    fmul s0, s1, s0
 ; CHECK-NO16-NEXT:    fcvt h0, s0
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -614,10 +614,10 @@ define half @ucvtf_f16_i64_7(i64 %long) {
 ; CHECK-NO16-LABEL: ucvtf_f16_i64_7:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    ucvtf s1, x0
-; CHECK-NO16-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    movi v0.2s, #60, lsl #24
 ; CHECK-NO16-NEXT:    fcvt h1, s1
 ; CHECK-NO16-NEXT:    fcvt s1, h1
-; CHECK-NO16-NEXT:    fdiv s0, s1, s0
+; CHECK-NO16-NEXT:    fmul s0, s1, s0
 ; CHECK-NO16-NEXT:    fcvt h0, s0
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -634,10 +634,10 @@ define half @ucvtf_f16_i64_15(i64 %long) {
 ; CHECK-NO16-LABEL: ucvtf_f16_i64_15:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    ucvtf s1, x0
-; CHECK-NO16-NEXT:    movi v0.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    movi v0.2s, #56, lsl #24
 ; CHECK-NO16-NEXT:    fcvt h1, s1
 ; CHECK-NO16-NEXT:    fcvt s1, h1
-; CHECK-NO16-NEXT:    fdiv s0, s1, s0
+; CHECK-NO16-NEXT:    fmul s0, s1, s0
 ; CHECK-NO16-NEXT:    fcvt h0, s0
 ; CHECK-NO16-NEXT:    ret
 ;

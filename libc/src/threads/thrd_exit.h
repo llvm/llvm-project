@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_THREADS_THRD_EXIT_H
 #define LLVM_LIBC_SRC_THREADS_THRD_EXIT_H
 
+#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 void thrd_exit(int retval);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_THREADS_THRD_EXIT_H

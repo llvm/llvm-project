@@ -14,9 +14,9 @@ subroutine sub1(x, a)
 end 
 
 ! CHECK-LABEL: func.func @_QPsub1
-! CHECK: %[[A:.*]]:2 = hlfir.declare %arg1 {uniq_name = "_QFsub1Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[I:.*]]:2 = hlfir.declare %2 {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[I:.*]]:2 = hlfir.declare %6 {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %arg1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFsub1Ea"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[I:.*]]:2 = hlfir.declare %{{[0-9]+}} {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[I:.*]]:2 = hlfir.declare %{{[0-9]+}} {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[EXIT_COND:.*]] = acc.loop
 ! CHECK: ^bb{{.*}}:
 ! CHECK: ^bb{{.*}}:

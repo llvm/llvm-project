@@ -23,8 +23,3 @@ CFGLoopInfo::CFGLoopInfo(
     const llvm::DominatorTreeBase<mlir::Block, false> &domTree) {
   analyze(domTree);
 }
-
-raw_ostream &mlir::operator<<(raw_ostream &os, mlir::Block &block) {
-  block.print(os);
-  return os;
-}

@@ -127,6 +127,15 @@ void check__break() {
 // CHECK-MSVC: call void @llvm.aarch64.break(i32 0)
 // CHECK-LINUX: error: call to undeclared function '__break'
 
+void check__hlt() {
+  __hlt(0);
+  __hlt(1, 2, 3, 4, 5);
+  int x = __hlt(0);
+}
+
+// CHECK-MSVC: call void @llvm.aarch64.hlt(i32 0)
+// CHECK-LINUX: error: call to undeclared function '__hlt'
+
 unsigned __int64 check__getReg(void) {
   unsigned volatile __int64 reg;
   reg = __getReg(18);

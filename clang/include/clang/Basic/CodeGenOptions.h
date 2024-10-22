@@ -13,6 +13,8 @@
 #ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 #define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 
+#include "clang/Basic/CFProtectionOptions.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/XRayInstr.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -106,18 +108,13 @@ public:
 
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
-  // {"labels", "all", "list=<file>", "none"}.
+  // {"all", "list=<file>", "none"}.
   //
-  // "labels":      Only generate basic block symbols (labels) for all basic
-  //                blocks, do not generate unique sections for basic blocks.
-  //                Use the machine basic block id in the symbol name to
-  //                associate profile info from virtual address to machine
-  //                basic block.
   // "all" :        Generate basic block sections for all basic blocks.
   // "list=<file>": Generate basic block sections for a subset of basic blocks.
   //                The functions and the machine basic block ids are specified
   //                in the file.
-  // "none":        Disable sections/labels for basic blocks.
+  // "none":        Disable sections for basic blocks.
   std::string BBSections;
 
   // If set, override the default value of MCAsmInfo::BinutilsVersion. If
@@ -127,15 +124,18 @@ public:
   std::string BinutilsVersion;
 
   enum class FramePointerKind {
-    None,        // Omit all frame pointers.
-    NonLeaf,     // Keep non-leaf frame pointers.
-    All,         // Keep all frame pointers.
+    None,     // Omit all frame pointers.
+    Reserved, // Maintain valid frame pointer chain.
+    NonLeaf,  // Keep non-leaf frame pointers.
+    All,      // Keep all frame pointers.
   };
 
   static StringRef getFramePointerKindName(FramePointerKind Kind) {
     switch (Kind) {
     case FramePointerKind::None:
       return "none";
+    case FramePointerKind::Reserved:
+      return "reserved";
     case FramePointerKind::NonLeaf:
       return "non-leaf";
     case FramePointerKind::All:
@@ -387,6 +387,9 @@ public:
   std::vector<std::string> NoBuiltinFuncs;
 
   std::vector<std::string> Reciprocals;
+
+  /// Configuration for pointer-signing.
+  PointerAuthOptions PointerAuth;
 
   /// The preferred width for auto-vectorization transforms. This is intended to
   /// override default transforms based on the width of the architected vector

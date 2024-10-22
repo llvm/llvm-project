@@ -17,7 +17,8 @@ land.lhs.true:                                    ; preds = %entry
   br i1 undef, label %return, label %if.end4
 
 if.end:                                           ; preds = %entry
-  br i1 icmp ne (ptr @_ZN11__sanitizer19real_pthread_createEPvS0_PFS0_S0_ES0_, ptr null), label %if.end4, label %return
+  %cmp = icmp ne ptr @_ZN11__sanitizer19real_pthread_createEPvS0_PFS0_S0_ES0_, null
+  br i1 %cmp, label %if.end4, label %return
 
 if.end4:                                          ; preds = %if.end, %land.lhs.true
   %call5 = tail call ptr @_ZN11__sanitizer21internal_start_threadEPFvPvES0_(ptr nonnull @_ZN11__sanitizer16BackgroundThreadEPv, ptr null) #7
