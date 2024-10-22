@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wswitch-default %s
 
-// XFAIL: *
-
 int f1(int a) {
   switch (a) {                // expected-warning {{'switch' missing 'default' label}}
     case 1: a++; break;
@@ -52,4 +50,3 @@ int t2(Index i)
 int main() {
   return t1(1);       // expected-note {{in instantiation of function template specialization 't1<int>' requested here}}
 }
-

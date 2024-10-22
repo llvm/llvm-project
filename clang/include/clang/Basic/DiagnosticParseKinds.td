@@ -902,7 +902,6 @@ def err_requires_expr_in_simple_requirement : Error<
   "requires expression in requirement body; did "
   "you intend to place it in a nested requirement? (add another 'requires' "
   "before the expression)">;
-
 def missing_template_arg_list_after_template_kw : Extension<
   "a template argument list is expected after a name prefixed by the template "
   "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,

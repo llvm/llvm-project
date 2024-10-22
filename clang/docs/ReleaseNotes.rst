@@ -260,6 +260,9 @@ Resolutions to C++ Defect Reports
 - Reject explicit object parameters with type ``void`` (``this void``).
   (`CWG2915: Explicit object parameters of type void <https://cplusplus.github.io/CWG/issues/2915.html>`_).
 
+- Clang now requires a template argument list after a template keyword.
+  (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
+
 - Clang now allows trailing requires clause on explicit deduction guides.
   (`CWG2707: Deduction guides cannot have a trailing requires-clause <https://cplusplus.github.io/CWG/issues/2707.html>`_).
 
@@ -388,6 +391,9 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+
+- Clang's ``-Wswitch-default`` flag now diagnoses whenever a ``switch`` statement
+  does not have a ``default`` label.
 
 - Some template related diagnostics have been improved.
 
