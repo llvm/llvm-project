@@ -1,0 +1,23 @@
+// This test checks that got-related relocations are properly handled by BOLT.
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
+# RUN:   %s -o %t.o
+# RUN: %clang %cflags -fPIC -pie %t.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --print-disasm --print-only=_start | \
+# RUN:   FileCheck %s
+
+# CHECK: adrp x1, __BOLT_got_zero{{.*}}
+# CHECK-NEXT: ldr x1, [x1, :lo12:__BOLT_got_zero+{{.*}}]
+# CHECK-NEXT: adrp x1, "_GLOBAL_OFFSET_TABLE_/1"
+# CHECK-NEXT: ldr x1, [x1, #0x{{[[:xdigit:]]+}}]
+
+.text
+.balign 4
+.global _start
+.type _start, %function
+_start:
+  adrp x1, #:got:symbol
+  ldr x1, [x1, #:got_lo12:symbol]
+  adrp x1, _GLOBAL_OFFSET_TABLE_
+  ldr x1, [x1, #:gotpage_lo15:symbol]
+.size _start, .-_start
