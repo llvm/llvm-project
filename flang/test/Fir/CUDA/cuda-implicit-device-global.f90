@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --cuf-implicit-device-global %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-device-global %s | FileCheck %s
 
 // Test that global used in device function are flagged with the correct
 // attribute.
