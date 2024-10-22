@@ -13,46 +13,6 @@
 
 namespace llvm {
 
-/// Common bits for \a raw_ostream_proxy_adaptor<>, split out to dedup in
-/// template instantions.
-class raw_ostream_proxy_adaptor_base {
-protected:
-  raw_ostream_proxy_adaptor_base(const raw_ostream_proxy_adaptor_base &) =
-      delete;
-
-  explicit raw_ostream_proxy_adaptor_base(raw_ostream &OS)
-      : OS(&OS), PreferredBufferSize(OS.GetBufferSize()) {
-    // Drop OS's buffer to make this->flush() forward. This proxy will add a
-    // buffer in its place.
-    OS.SetUnbuffered();
-  }
-
-  ~raw_ostream_proxy_adaptor_base() {
-    assert(!OS && "Derived objects should call resetProxiedOS()");
-  }
-
-  /// Stop proxying the stream, taking the derived object by reference as \p
-  /// ThisProxyOS.  Updates \p ThisProxyOS to stop buffering before setting \a
-  /// OS to \c nullptr, ensuring that future writes crash immediately.
-  void resetProxiedOS(raw_ostream &ThisProxyOS) {
-    ThisProxyOS.SetUnbuffered();
-    OS = nullptr;
-  }
-
-  bool hasProxiedOS() const { return OS; }
-  raw_ostream &getProxiedOS() const {
-    assert(OS && "raw_ostream_proxy_adaptor use after reset");
-    return *OS;
-  }
-  size_t getPreferredBufferSize() const { return PreferredBufferSize; }
-
-private:
-  raw_ostream *OS;
-
-  /// Caches the value of OS->GetBufferSize() at construction time.
-  size_t PreferredBufferSize;
-};
-
 /// Adaptor to create a stream class that proxies another \a raw_ostream.
 ///
 /// Use \a raw_ostream_proxy_adaptor<> directly to implement an abstract
