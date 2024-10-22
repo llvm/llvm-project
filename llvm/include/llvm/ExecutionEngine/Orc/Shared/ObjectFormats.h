@@ -78,4 +78,4 @@ bool isCOFFInitializerSection(StringRef Name);
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_MEMORYFLAGS_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_OBJECTFORMATS_H
