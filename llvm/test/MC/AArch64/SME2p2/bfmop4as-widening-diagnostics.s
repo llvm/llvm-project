@@ -110,12 +110,6 @@ bfmop4a za0.s, {z0.h-z1.h}, {z10.h-z11.h}
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors in the range z16-z30, where the first vector is a multiple of 2 and with matching element types
 
 
-
-
-
-
-
-
 // BFMOP4S
 
 // Single vectors
