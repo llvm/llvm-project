@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___RANGES_TO_H
 #define _LIBCPP___RANGES_TO_H
 
-#include <__algorithm/ranges_for_each.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/derived_from.h>
