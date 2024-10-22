@@ -864,7 +864,7 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
 // value profiling call for the value profile candidate call.
 static void
 populateEHOperandBundle(VPCandidateInfo &Cand,
-                        DenseMap<BasicBlock *, ColorVector> &BlockColors,
+                        BlockColorMapT &BlockColors,
                         SmallVectorImpl<OperandBundleDef> &OpBundles) {
   auto *OrigCall = dyn_cast<CallBase>(Cand.AnnotatedInst);
   if (!OrigCall)
@@ -1006,7 +1006,7 @@ void FunctionInstrumenter::instrument() {
   // Windows exception handling attached to them. However, if value profiling is
   // inserted for one of these calls, then a funclet value will need to be set
   // on the instrumentation call based on the funclet coloring.
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  BlockColorMapT BlockColors;
   if (F.hasPersonalityFn() &&
       isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     BlockColors = colorEHFunclets(F);
