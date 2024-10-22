@@ -5552,7 +5552,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &LRT = AM.getResult<LastRunTrackingAnalysis>(F);
   // No changes since last InstCombine pass, exit early.
-  if (LRT.shouldSkip(&ID, Options))
+  if (LRT.shouldSkip(&ID))
     return PreservedAnalyses::all();
 
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
@@ -5572,13 +5572,13 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
                                        BFI, BPI, PSI, Options)) {
     // No changes, all analyses are preserved.
-    LRT.update(&ID, /*Changed=*/false, Options);
+    LRT.update(&ID, /*Changed=*/false);
     return PreservedAnalyses::all();
   }
 
   // Mark all the analyses that instcombine updates as preserved.
   PreservedAnalyses PA;
-  LRT.update(&ID, /*Changed=*/true, Options);
+  LRT.update(&ID, /*Changed=*/true);
   PA.preserve<LastRunTrackingAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
