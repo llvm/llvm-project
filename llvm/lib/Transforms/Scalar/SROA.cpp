@@ -3531,8 +3531,19 @@ private:
       return true;
     }
 
-    if (II.isLaunderOrStripInvariantGroup())
+    if (II.isLaunderOrStripInvariantGroup()) {
+      Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
+      Value *New = nullptr;
+      if (II.getIntrinsicID() == Intrinsic::launder_invariant_group)
+        New = IRB.CreateLaunderInvariantGroup(AdjustedPtr);
+      else if (II.getIntrinsicID() == Intrinsic::strip_invariant_group)
+        New = IRB.CreateStripInvariantGroup(AdjustedPtr);
+
+      New->takeName(&II);
+      II.replaceAllUsesWith(New);
+      LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
       return true;
+    }
 
     assert(II.getArgOperand(1) == OldPtr);
     // Lifetime intrinsics are only promotable if they cover the whole alloca.
