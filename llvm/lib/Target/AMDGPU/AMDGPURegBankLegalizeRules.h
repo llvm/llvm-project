@@ -42,14 +42,47 @@ enum UniformityLLTOpPredicateID {
 
   // pointers
   P1,
+  P3,
+  P4,
+  P5,
+
+  UniP1,
+  UniP3,
+  UniP4,
+  UniP5,
 
   DivP1,
+  DivP3,
+  DivP4,
+  DivP5,
 
   // vectors
   V2S16,
   V2S32,
   V3S32,
   V4S32,
+
+  // B types
+  B32,
+  B64,
+  B96,
+  B128,
+  B256,
+  B512,
+
+  UniB32,
+  UniB64,
+  UniB96,
+  UniB128,
+  UniB256,
+  UniB512,
+
+  DivB32,
+  DivB64,
+  DivB96,
+  DivB128,
+  DivB256,
+  DivB512,
 };
 
 // How to apply register bank on register operand.
@@ -67,18 +100,43 @@ enum RegBankLLTMapingApplyID {
   Sgpr16,
   Sgpr32,
   Sgpr64,
+  SgprP1,
+  SgprP3,
+  SgprP4,
+  SgprP5,
   SgprV4S32,
+  SgprB32,
+  SgprB64,
+  SgprB96,
+  SgprB128,
+  SgprB256,
+  SgprB512,
 
   // vgpr scalars, pointers, vectors and B-types
   Vgpr32,
   Vgpr64,
   VgprP1,
+  VgprP3,
+  VgprP4,
+  VgprP5,
+  VgprB32,
+  VgprB64,
+  VgprB96,
+  VgprB128,
+  VgprB256,
+  VgprB512,
   VgprV4S32,
 
   // Dst only modifiers: read-any-lane and truncs
   UniInVcc,
   UniInVgprS32,
   UniInVgprV4S32,
+  UniInVgprB32,
+  UniInVgprB64,
+  UniInVgprB96,
+  UniInVgprB128,
+  UniInVgprB256,
+  UniInVgprB512,
 
   Sgpr32Trunc,
 
@@ -100,12 +158,15 @@ enum LoweringMethodID {
   SplitTo32,
   Ext32To64,
   UniCstExt,
+  SplitLoad,
+  WidenLoad,
 };
 
 enum FastRulesTypes {
   NoFastRules,
-  Standard, // S16, S32, S64, V2S16
-  Vector,   // S32, V2S32, V3S32, V4S32
+  Standard,  // S16, S32, S64, V2S16
+  StandardB, // B32, B64, B96, B128
+  Vector,    // S32, V2S32, V3S32, V4S32
 };
 
 struct RegBankLLTMapping {
