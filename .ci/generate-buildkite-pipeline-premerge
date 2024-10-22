@@ -316,5 +316,10 @@ if [[ "${windows_projects}" != "" ]]; then
   commands:
   - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
   - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'
+  - wait: ~
+    continue_on_failure: true
+  - plugins:
+      - junit-annotate#v2.5.0:
+          artifacts: build/test-results*.xml
 EOF
 fi
