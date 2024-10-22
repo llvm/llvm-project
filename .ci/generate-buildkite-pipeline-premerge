@@ -287,7 +287,7 @@ if [[ "${linux_projects}" != "" ]]; then
     CXX: 'clang++'
   commands:
   - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"'
-- label: ':windows: Report Linux x64 Test Results'
+- label: ':linux: Report Linux x64 Test Results'
   plugins:
     - junit-annotate#v2.5.0:
         artifacts: build/test-results-linux*.xml
