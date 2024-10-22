@@ -579,8 +579,14 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
     // These checks are either enabled by the CString out-of-bounds checker
     // explicitly or implicitly by the Malloc checker.
     // In the latter case we only do modeling but do not emit warning.
-    if (!Filter.CheckCStringOutOfBounds)
-      return nullptr;
+    // FIXME: We detected a fatal error here, we should stop analysis even if we
+    // chose not to emit a report here. However, as long as our out-of-bounds
+    // checker is in alpha, lets just pretend nothing happened.
+    if (!Filter.CheckCStringOutOfBounds) {
+      //C.addSink();
+      //return nullptr;
+      return state;
+    }
 
     // Emit a bug report.
     ErrorMessage Message =
@@ -613,10 +619,6 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
   State = checkNonNull(C, State, Buffer, BufVal);
   if (!State)
     return nullptr;
-
-  // If out-of-bounds checking is turned off, skip the rest.
-  if (!Filter.CheckCStringOutOfBounds)
-    return State;
 
   SVal BufStart =
       svalBuilder.evalCast(BufVal, PtrTy, Buffer.Expression->getType());
@@ -665,8 +667,6 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
                                              SizeArgExpr Size, AnyArgExpr First,
                                              AnyArgExpr Second,
                                              CharKind CK) const {
-  if (!Filter.CheckCStringBufferOverlap)
-    return state;
 
   // Do a simple check for overlap: if the two arguments are from the same
   // buffer, see if the end of the first is greater than the start of the second
@@ -702,9 +702,17 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
       state->assume(svalBuilder.evalEQ(state, *firstLoc, *secondLoc));
 
   if (stateTrue && !stateFalse) {
-    // If the values are known to be equal, that's automatically an overlap.
-    emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
-    return nullptr;
+    if (Filter.CheckCStringBufferOverlap) {
+      // If the values are known to be equal, that's automatically an overlap.
+      emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
+      return nullptr;
+    }
+    // FIXME: We detected a fatal error here, we should stop analysis even if we
+    // chose not to emit a report here. However, as long as our overlap checker
+    // is in alpha, lets just pretend nothing happened.
+    //C.addSink();
+    //return nullptr;
+    return state;
   }
 
   // assume the two expressions are not equal.
@@ -768,9 +776,17 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
   std::tie(stateTrue, stateFalse) = state->assume(*OverlapTest);
 
   if (stateTrue && !stateFalse) {
-    // Overlap!
-    emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
-    return nullptr;
+    if (Filter.CheckCStringBufferOverlap) {
+      // Overlap!
+      emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
+      return nullptr;
+    }
+    // FIXME: We detected a fatal error here, we should stop analysis even if we
+    // chose not to emit a report here. However, as long as our overlap checker
+    // is in alpha, lets just pretend nothing happened.
+    //C.addSink();
+    //return nullptr;
+    return state;
   }
 
   // assume the two expressions don't overlap.
@@ -780,6 +796,8 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
 
 void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
                                   const Stmt *First, const Stmt *Second) const {
+  assert(Filter.CheckCStringBufferOverlap &&
+         "Can't emit from a checker that is not enabled!");
   ExplodedNode *N = C.generateErrorNode(state);
   if (!N)
     return;
@@ -799,6 +817,8 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
 
 void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
                                     const Stmt *S, StringRef WarningMsg) const {
+  assert(Filter.CheckCStringNullArg &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     if (!BT_Null) {
       // FIXME: This call uses the string constant 'categories::UnixAPI' as the
@@ -820,6 +840,8 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                                               ProgramStateRef State,
                                               const Expr *E,
                                               StringRef Msg) const {
+  assert(Filter.CheckCStringUninitializedRead &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     if (!BT_UninitRead)
       BT_UninitRead.reset(new BugType(Filter.CheckNameCStringUninitializedRead,
@@ -838,8 +860,15 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
 void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
                                         ProgramStateRef State, const Stmt *S,
                                         StringRef WarningMsg) const {
+  // FIXME: This is absurd. If a checker is disabled, we just emit the bug
+  // under another name?
+  assert((Filter.CheckCStringOutOfBounds || Filter.CheckCStringNullArg)  &&
+         "Can't emit from a checker that is not enabled!");
+
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     if (!BT_Bounds)
+      // FIXME: This is absurd. If a checker is disabled, we just emit the bug
+      // under another name?
       BT_Bounds.reset(new BugType(Filter.CheckCStringOutOfBounds
                                       ? Filter.CheckNameCStringOutOfBounds
                                       : Filter.CheckNameCStringNullArg,
@@ -858,6 +887,9 @@ void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
 void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
                                        const Stmt *S,
                                        StringRef WarningMsg) const {
+  assert(Filter.CheckCStringNotNullTerm &&
+         "Can't emit from a checker that is not enabled!");
+
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
     if (!BT_NotCString) {
       // FIXME: This call uses the string constant 'categories::UnixAPI' as the
@@ -876,6 +908,8 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
 
 void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
                                              ProgramStateRef State) const {
+  assert(Filter.CheckCStringOutOfBounds &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     if (!BT_AdditionOverflow) {
       // FIXME: This call uses the word "API" as the description of the bug;
@@ -902,10 +936,6 @@ ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
                                                      ProgramStateRef state,
                                                      NonLoc left,
                                                      NonLoc right) const {
-  // If out-of-bounds checking is turned off, skip the rest.
-  if (!Filter.CheckCStringOutOfBounds)
-    return state;
-
   // If a previous check has failed, propagate the failure.
   if (!state)
     return nullptr;
@@ -941,8 +971,15 @@ ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
 
     if (stateOverflow && !stateOkay) {
       // We have an overflow. Emit a bug report.
-      emitAdditionOverflowBug(C, stateOverflow);
-      return nullptr;
+      if (Filter.CheckCStringOutOfBounds)
+        emitAdditionOverflowBug(C, stateOverflow);
+
+      // FIXME: We detected a fatal error here, we should stop analysis even if we
+      // chose not to emit a report here. However, as long as our overlap checker
+      // is in alpha, lets just pretend nothing happened.
+      //C.addSink();
+      //return nullptr;
+      return state;
     }
 
     // From now on, assume an overflow didn't occur.
