@@ -3868,10 +3868,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
             int64_t shape = std::get<0>(it);
             if (Attribute attr =
                     llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
-              if (IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr)) {
-                int64_t staticTileSize = intAttr.getValue().getSExtValue();
-                return shape == staticTileSize;
-              }
+              IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
+              int64_t staticTileSize = intAttr.getValue().getSExtValue();
+              return shape == staticTileSize;
             }
             return ShapedType::isDynamic(shape);
           })) {
