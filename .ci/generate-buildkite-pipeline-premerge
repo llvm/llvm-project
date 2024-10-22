@@ -293,6 +293,7 @@ if [[ "${linux_projects}" != "" ]]; then
         context: "linux-test-results"
   depends_on: "test Linux"
   allow_dependency_failure: true
+  agents: ${LINUX_AGENTS}
 EOF
 fi
 
@@ -325,6 +326,7 @@ if [[ "${windows_projects}" != "" ]]; then
         context: "windows-test-results"
   depends_on: "test Windows"
   allow_dependency_failure: true
+  agents: ${LINUX_AGENTS}
 EOF
 fi
 
