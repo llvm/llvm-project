@@ -38,6 +38,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -738,6 +739,9 @@ struct VPCostContext {
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
+
+  /// Returns the OperandInfo for \p V, if it is a live-in.
+  TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -1843,6 +1847,10 @@ struct VPWidenSelectRecipe : public VPSingleDefRecipe {
 
   /// Produce a widened version of the select instruction.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenSelectRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
