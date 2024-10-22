@@ -7307,12 +7307,30 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     const auto &ChainOps = RdxDesc.getReductionOpChain(RedPhi, OrigLoop);
     SetVector<Instruction *> ChainOpsAndOperands(ChainOps.begin(),
                                                  ChainOps.end());
+    auto IsZExtOrSExt = [](const unsigned Opcode) -> bool {
+      return Opcode == Instruction::ZExt || Opcode == Instruction::SExt;
+    };
     // Also include the operands of instructions in the chain, as the cost-model
     // may mark extends as free.
+    //
+    // For ARM, some of the instruction can folded into the reducion
+    // instruction. So we need to mark all folded instructions free.
+    // For example: We can fold reduce(mul(ext(A), ext(B))) into one
+    // instruction.
     for (auto *ChainOp : ChainOps) {
       for (Value *Op : ChainOp->operands()) {
-        if (auto *I = dyn_cast<Instruction>(Op))
+        if (auto *I = dyn_cast<Instruction>(Op)) {
           ChainOpsAndOperands.insert(I);
+          if (I->getOpcode() == Instruction::Mul) {
+            auto *Ext0 = dyn_cast<Instruction>(I->getOperand(0));
+            auto *Ext1 = dyn_cast<Instruction>(I->getOperand(1));
+            if (Ext0 && IsZExtOrSExt(Ext0->getOpcode()) && Ext1 &&
+                Ext0->getOpcode() == Ext1->getOpcode()) {
+              ChainOpsAndOperands.insert(Ext0);
+              ChainOpsAndOperands.insert(Ext1);
+            }
+          }
+        }
       }
     }
 
