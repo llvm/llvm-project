@@ -13,6 +13,7 @@
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -33,7 +34,7 @@
 namespace llvm {
 
 namespace {
-typedef std::map<std::string, std::vector<unsigned> > key_val_pair_t;
+typedef std::map<std::string, std::vector<unsigned>> key_val_pair_t;
 typedef std::map<const GlobalValue *, key_val_pair_t> global_val_annot_t;
 
 struct AnnotationCache {
