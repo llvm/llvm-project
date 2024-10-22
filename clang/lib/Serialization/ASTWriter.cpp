@@ -4906,7 +4906,9 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
 
   WritingAST = false;
 
-  if (WritingModule)
+  if (WritingModule && SemaRef.PP.getHeaderSearchInfo()
+                           .getHeaderSearchOpts()
+                           .ModulesValidateOncePerBuildSession)
     updateModuleTimestamp(OutputFile);
 
   if (ShouldCacheASTInMemory) {
