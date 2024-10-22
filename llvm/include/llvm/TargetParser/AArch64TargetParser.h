@@ -74,7 +74,7 @@ struct FMVInfo {
   unsigned Priority;             // FMV priority.
   FMVInfo(StringRef Name, CPUFeatures Bit, std::optional<ArchExtKind> ID,
           unsigned Priority)
-      : Name(Name), Bit(Bit), ID(ID), Priority(Priority){};
+      : Name(Name), Bit(Bit), ID(ID), Priority(Priority) {};
 };
 
 const std::vector<FMVInfo> &getFMVInfo();
