@@ -1984,6 +1984,10 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
   }
 };
 
+/// Fold/sink a producer `tensor.cast` with a consumer `tensor.expand_shape` by
+/// matching constant output_shape operands of the expand. This makes the
+/// `tensor.expand_shape` more static and creates a consumer cast that can be
+/// propagated further.
 struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
   using OpRewritePattern<ExpandShapeOp>::OpRewritePattern;
 
