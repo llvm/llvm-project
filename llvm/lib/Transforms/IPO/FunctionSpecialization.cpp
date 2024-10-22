@@ -194,7 +194,7 @@ Cost InstCostVisitor::getCodeSizeSavingsForArg(Argument *A, Constant *C) {
 /// have visited and found to be constant.
 Cost InstCostVisitor::getLatencySavingsForKnownConstants() {
   auto &BFI = GetBFI(*F);
-  Cost Latency = 0;
+  Cost TotalLatency = 0;
 
   for (auto Pair : KnownConstants) {
     Instruction *I = dyn_cast<Instruction>(Pair.first);
@@ -203,11 +203,17 @@ Cost InstCostVisitor::getLatencySavingsForKnownConstants() {
 
     uint64_t Weight = BFI.getBlockFreq(I->getParent()).getFrequency() /
                       BFI.getEntryFreq().getFrequency();
-    Latency +=
+
+    Cost Latency =
         Weight * TTI.getInstructionCost(I, TargetTransformInfo::TCK_Latency);
+
+    LLVM_DEBUG(dbgs() << "FnSpecialization:     {Latency = " << Latency
+                      << "} for instruction " << *I << "\n");
+
+    TotalLatency += Latency;
   }
 
-  return Latency;
+  return TotalLatency;
 }
 
 Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
