@@ -3379,6 +3379,18 @@ def err_callback_callee_is_variadic : Error<
   "'callback' attribute callee may not be variadic">;
 def err_callback_implicit_this_not_available : Error<
   "'callback' argument at position %0 references unavailable implicit 'this'">;
+
+def err_capture_by_attribute_multiple : Error<
+  "multiple 'lifetime_capture' attributes specified">;
+def err_capture_by_attribute_no_entity : Error<
+  "'lifetime_capture_by' attribute specifies no capturing entity">;
+def err_capture_by_implicit_this_not_available : Error<
+  "'lifetime_capture_by' argument references unavailable implicit 'this'">;
+def err_capture_by_attribute_argument_unknown : Error<
+  "'lifetime_capture_by' attribute argument %0 is not a known function parameter"
+  ". Must be a function parameter of one of 'this', 'global' or 'unknown'">;
+def err_capture_by_references_itself : Error<"'lifetime_capture_by' argument references itself">;
+
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
 def err_attribute_invalid_size : Error<
@@ -10191,6 +10203,9 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing the pointer %0 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
+def warn_dangling_reference_captured : Warning<
+   "object captured by '%0' will be destroyed at the end of the full-expression">,
+   InGroup<DanglingCapture>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.

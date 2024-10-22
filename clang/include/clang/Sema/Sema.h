@@ -1757,8 +1757,15 @@ public:
   /// Add [[clang:::lifetimebound]] attr for std:: functions and methods.
   void inferLifetimeBoundAttribute(FunctionDecl *FD);
 
+  /// Add [[clang:::lifetime_capture(this)]] to std:: methods.
+  void inferLifetimeCaptureByAttribute(FunctionDecl *FD);
+
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
+
+  LifetimeCaptureByAttr *ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
+                                                    StringRef ParamName);
+  void LazyProcessLifetimeCaptureByParams(FunctionDecl *FD);
 
   /// Add _Nullable attributes for std:: types.
   void inferNullableClassAttribute(CXXRecordDecl *CRD);
@@ -2314,6 +2321,9 @@ public:
   /// \param FPOnly restricts the arguments to floating-point types.
   bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
+
+  void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
+                              const Expr *ThisArg, ArrayRef<const Expr *> Args);
 
   /// Handles the checks for format strings, non-POD arguments to vararg
   /// functions, NULL arguments passed to non-NULL parameters, diagnose_if

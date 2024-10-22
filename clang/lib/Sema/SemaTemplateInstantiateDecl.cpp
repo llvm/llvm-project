@@ -4961,7 +4961,6 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                          bool AtEndOfTU) {
   if (Function->isInvalidDecl() || isa<CXXDeductionGuideDecl>(Function))
     return;
-
   // Never instantiate an explicit specialization except if it is a class scope
   // explicit specialization.
   TemplateSpecializationKind TSK =
