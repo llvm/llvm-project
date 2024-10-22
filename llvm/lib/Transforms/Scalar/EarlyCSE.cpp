@@ -31,6 +31,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -1605,6 +1606,22 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         if (InVal.IsLoad)
           if (auto *I = dyn_cast<Instruction>(Op))
             combineMetadataForCSE(I, &Inst, false);
+
+        // If the load has align and noundef metadata, preserve it via an
+        // alignment assumption. Note that this doesn't use salavageKnowledge,
+        // as we need to create the assumption for the value we replaced the
+        // load with.
+        if (Inst.hasMetadata(LLVMContext::MD_noundef)) {
+          if (auto *AlignMD = Inst.getMetadata(LLVMContext::MD_align)) {
+            auto *A = mdconst::extract<ConstantInt>(AlignMD->getOperand(0));
+            if (Op->getPointerAlignment(SQ.DL).value() % A->getZExtValue() !=
+                0) {
+              IRBuilder B(&Inst);
+              B.CreateAlignmentAssumption(SQ.DL, Op, A);
+            }
+          }
+        }
+
         if (!Inst.use_empty())
           Inst.replaceAllUsesWith(Op);
         salvageKnowledge(&Inst, &AC);
