@@ -71,7 +71,6 @@ define amdgpu_kernel void @s_insertelement_v2bf16_0(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_pack_ll_b32_b16 s2, 0x40a0, s2
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %vec = load <2 x bfloat>, ptr addrspace(4) %vec.ptr
   %vecins = insertelement <2 x bfloat> %vec, bfloat 5.000000e+00, i32 0
@@ -142,7 +141,6 @@ define amdgpu_kernel void @s_insertelement_v2bf16_1(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %vec = load <2 x bfloat>, ptr addrspace(4) %vec.ptr
   %vecins = insertelement <2 x bfloat> %vec, bfloat 5.000000e+00, i32 1
@@ -224,7 +222,6 @@ define amdgpu_kernel void @v_insertelement_v2bf16_0(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_bfi_b32 v1, 0xffff, s2, v1
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -306,7 +303,6 @@ define amdgpu_kernel void @v_insertelement_v2bf16_0_inlineimm(ptr addrspace(1) %
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_bfi_b32 v1, 0xffff, 53, v1
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -392,7 +388,6 @@ define amdgpu_kernel void @v_insertelement_v2bf16_1(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_perm_b32 v1, s2, v1, 0x5040100
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -474,7 +469,6 @@ define amdgpu_kernel void @v_insertelement_v2bf16_1_inlineimm(ptr addrspace(1) %
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_perm_b32 v1, 35, v1, 0x5040100
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -591,7 +585,6 @@ define amdgpu_kernel void @v_insertelement_v2bf16_dynamic_vgpr(ptr addrspace(1) 
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_bfi_b32 v1, v1, 0x12341234, v2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -684,7 +677,6 @@ define amdgpu_kernel void @v_insertelement_v4bf16_0(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_bfi_b32 v0, 0xffff, s0, v0
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -775,7 +767,6 @@ define amdgpu_kernel void @v_insertelement_v4bf16_1(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_perm_b32 v0, s0, v0, 0x5040100
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -868,7 +859,6 @@ define amdgpu_kernel void @v_insertelement_v4bf16_2(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_bfi_b32 v1, 0xffff, s0, v1
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -959,7 +949,6 @@ define amdgpu_kernel void @v_insertelement_v4bf16_3(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_perm_b32 v1, s0, v1, 0x5040100
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1077,7 +1066,6 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX1210-NEXT:    v_bfi_b32 v1, s1, s2, v1
 ; GFX1210-NEXT:    v_bfi_b32 v0, s0, s2, v0
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[4:5] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1169,7 +1157,6 @@ define amdgpu_kernel void @v_insertelement_v8bf16_3(ptr addrspace(1) %out, ptr a
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    v_perm_b32 v1, s0, v1, 0x5040100
 ; GFX1210-NEXT:    global_store_b128 v4, v[0:3], s[4:5] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1431,7 +1418,6 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1210-NEXT:    v_perm_b32 v0, v8, v0, 0x5040100
 ; GFX1210-NEXT:    global_store_b128 v4, v[0:3], s[4:5] scale_offset
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1546,7 +1532,6 @@ define amdgpu_kernel void @v_insertelement_v16bf16_3(ptr addrspace(1) %out, ptr 
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v8, v[4:7], s[4:5] offset:16
 ; GFX1210-NEXT:    global_store_b128 v8, v[0:3], s[4:5]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -2010,7 +1995,6 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v8, v[4:7], s[4:5] offset:16
 ; GFX1210-NEXT:    global_store_b128 v8, v[0:3], s[4:5]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64

@@ -7,7 +7,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f32_8x4(<4 x float> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f32 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i4.f32.scatter2(<4 x float> %acc_in, i32 4, i1 1)
@@ -23,7 +22,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f32_4x4(<4 x float> %acc_in, ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f32 v0, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.f32(<4 x float> %acc_in, i32 2, i1 1)
@@ -36,7 +34,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f32_4x2(<4 x float> %acc_in, ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f32 v0, v[0:3] clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.f32(<4 x float> %acc_in, i32 0, i1 1)
@@ -50,7 +47,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f16_8x4(<8 x half> %acc_in, ptr add
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i4.f16.scatter2(<8 x half> %acc_in, i32 4, i1 1)
@@ -66,7 +62,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f16_4x4(<8 x half> %acc_in, ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f16 v0, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.f16.v8f16(<8 x half> %acc_in, i32 2, i1 1)
@@ -79,7 +74,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f16_4x2(<4 x half> %acc_in, ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.f16.v4f16(<4 x half> %acc_in, i32 0, i1 1)
@@ -93,7 +87,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_bf16_8x4(<8 x bfloat> %acc_in, ptr 
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_bf16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i4.bf16.scatter2(<8 x bfloat> %acc_in, i32 4, i1 1)
@@ -109,7 +102,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_bf16_4x4(<8 x bfloat> %acc_in, ptr 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_bf16 v0, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.bf16.v8bf16(<8 x bfloat> %acc_in, i32 2, i1 1)
@@ -122,7 +114,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_bf16_4x2(<4 x bfloat> %acc_in, ptr 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_bf16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.bf16.v4bf16(<4 x bfloat> %acc_in, i32 0, i1 1)
@@ -136,7 +127,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f32_8x4(<4 x float> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f32 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u4.f32.scatter2(<4 x float> %acc_in, i32 4, i1 1)
@@ -152,7 +142,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f32_4x4(<4 x float> %acc_in, ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f32 v0, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.f32(<4 x float> %acc_in, i32 2, i1 1)
@@ -165,7 +154,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f32_4x2(<4 x float> %acc_in, ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f32 v0, v[0:3] clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.f32(<4 x float> %acc_in, i32 0, i1 1)
@@ -179,7 +167,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f16_8x4(<8 x half> %acc_in, ptr add
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u4.f16.scatter2(<8 x half> %acc_in, i32 4, i1 1)
@@ -195,7 +182,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f16_4x4(<8 x half> %acc_in, ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f16 v0, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.f16.v8f16(<8 x half> %acc_in, i32 2, i1 1)
@@ -208,7 +194,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f16_4x2(<4 x half> %acc_in, ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.f16.v4f16(<4 x half> %acc_in, i32 0, i1 1)
@@ -222,7 +207,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_bf16_8x4(<8 x bfloat> %acc_in, ptr 
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_bf16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u4.bf16.scatter2(<8 x bfloat> %acc_in, i32 4, i1 1)
@@ -238,7 +222,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_bf16_4x4(<8 x bfloat> %acc_in, ptr 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_bf16 v0, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.bf16.v8bf16(<8 x bfloat> %acc_in, i32 2, i1 1)
@@ -251,7 +234,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_bf16_4x2(<4 x bfloat> %acc_in, ptr 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_bf16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.bf16.v4bf16(<4 x bfloat> %acc_in, i32 0, i1 1)
@@ -265,7 +247,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f32_8x4(<4 x float> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f32 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i8.f32.scatter2(<4 x float> %acc_in, i32 4, i1 1)
@@ -282,7 +263,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f32_4x4(<4 x float> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f32 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i8.f32.scatter2(<4 x float> %acc_in, i32 2, i1 1)
@@ -298,7 +278,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f32_4x2(<4 x float> %acc_in, ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f32 v0, v[0:3] clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i8.f32(<4 x float> %acc_in, i32 0, i1 1)
@@ -312,7 +291,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f16_8x4(<8 x half> %acc_in, ptr add
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i8.f16.scatter2(<8 x half> %acc_in, i32 4, i1 1)
@@ -329,7 +307,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f16_4x4(<8 x half> %acc_in, ptr add
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i8.f16.scatter2(<8 x half> %acc_in, i32 2, i1 1)
@@ -345,7 +322,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f16_4x2(<4 x half> %acc_in, ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i8.f16(<4 x half> %acc_in, i32 0, i1 1)
@@ -359,7 +335,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_bf16_8x4(<8 x bfloat> %acc_in, ptr 
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i8.bf16.scatter2(<8 x bfloat> %acc_in, i32 4, i1 1)
@@ -376,7 +351,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_bf16_4x4(<8 x bfloat> %acc_in, ptr 
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i8.bf16.scatter2(<8 x bfloat> %acc_in, i32 2, i1 1)
@@ -392,7 +366,6 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_bf16_4x2(<4 x bfloat> %acc_in, ptr 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i8.bf16(<4 x bfloat> %acc_in, i32 0, i1 1)
@@ -406,7 +379,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f32_8x4(<4 x float> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f32 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u8.f32.scatter2(<4 x float> %acc_in, i32 4, i1 1)
@@ -423,7 +395,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f32_4x4(<4 x float> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f32 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u8.f32.scatter2(<4 x float> %acc_in, i32 2, i1 1)
@@ -439,7 +410,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f32_4x2(<4 x float> %acc_in, ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f32 v0, v[0:3] clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u8.f32(<4 x float> %acc_in, i32 0, i1 1)
@@ -453,7 +423,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f16_8x4(<8 x half> %acc_in, ptr add
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u8.f16.scatter2(<8 x half> %acc_in, i32 4, i1 1)
@@ -470,7 +439,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f16_4x4(<8 x half> %acc_in, ptr add
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u8.f16.scatter2(<8 x half> %acc_in, i32 2, i1 1)
@@ -486,7 +454,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f16_4x2(<4 x half> %acc_in, ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u8.f16(<4 x half> %acc_in, i32 0, i1 1)
@@ -500,7 +467,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_bf16_8x4(<8 x bfloat> %acc_in, ptr 
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u8.bf16.scatter2(<8 x bfloat> %acc_in, i32 4, i1 1)
@@ -517,7 +483,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_bf16_4x4(<8 x bfloat> %acc_in, ptr 
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u8.bf16.scatter2(<8 x bfloat> %acc_in, i32 2, i1 1)
@@ -533,7 +498,6 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_bf16_4x2(<4 x bfloat> %acc_in, ptr 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u8.bf16(<4 x bfloat> %acc_in, i32 0, i1 1)
@@ -547,7 +511,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f32_8x4(<4 x float> %acc_in, ptr a
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f32 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.fp8.f32.scatter2(<4 x float> %acc_in, i32 4, i1 1)
@@ -564,7 +527,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f32_4x4(<4 x float> %acc_in, ptr a
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f32 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.fp8.f32.scatter2(<4 x float> %acc_in, i32 2, i1 1)
@@ -580,7 +542,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f32_4x2(<4 x float> %acc_in, ptr a
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f32 v0, v[0:3] clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.fp8.f32(<4 x float> %acc_in, i32 0, i1 1)
@@ -594,7 +555,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f16_8x4(<8 x half> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.fp8.f16.scatter2(<8 x half> %acc_in, i32 4, i1 1)
@@ -611,7 +571,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f16_4x4(<8 x half> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.fp8.f16.scatter2(<8 x half> %acc_in, i32 2, i1 1)
@@ -627,7 +586,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f16_4x2(<4 x half> %acc_in, ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.fp8.f16(<4 x half> %acc_in, i32 0, i1 1)
@@ -641,7 +599,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_bf16_8x4(<8 x bfloat> %acc_in, ptr
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.fp8.bf16.scatter2(<8 x bfloat> %acc_in, i32 4, i1 1)
@@ -658,7 +615,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_bf16_4x4(<8 x bfloat> %acc_in, ptr
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.fp8.bf16.scatter2(<8 x bfloat> %acc_in, i32 2, i1 1)
@@ -674,7 +630,6 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_bf16_4x2(<4 x bfloat> %acc_in, ptr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.fp8.bf16(<4 x bfloat> %acc_in, i32 0, i1 1)
@@ -688,7 +643,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f32_8x4(<4 x float> %acc_in, ptr a
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f32 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.bf8.f32.scatter2(<4 x float> %acc_in, i32 4, i1 1)
@@ -705,7 +659,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f32_4x4(<4 x float> %acc_in, ptr a
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f32 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.bf8.f32.scatter2(<4 x float> %acc_in, i32 2, i1 1)
@@ -721,7 +674,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f32_4x2(<4 x float> %acc_in, ptr a
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f32 v0, v[0:3] clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.bf8.f32(<4 x float> %acc_in, i32 0, i1 1)
@@ -735,7 +687,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f16_8x4(<8 x half> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.bf8.f16.scatter2(<8 x half> %acc_in, i32 4, i1 1)
@@ -752,7 +703,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f16_4x4(<8 x half> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.bf8.f16.scatter2(<8 x half> %acc_in, i32 2, i1 1)
@@ -768,7 +718,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f16_4x2(<4 x half> %acc_in, ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.bf8.f16(<4 x half> %acc_in, i32 0, i1 1)
@@ -782,7 +731,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_bf16_8x4(<8 x bfloat> %acc_in, ptr
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 v0, v1, v[0:3] aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.bf8.bf16.scatter2(<8 x bfloat> %acc_in, i32 4, i1 1)
@@ -799,7 +747,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_bf16_4x4(<8 x bfloat> %acc_in, ptr
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 v0, v1, v[0:3] aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.bf8.bf16.scatter2(<8 x bfloat> %acc_in, i32 2, i1 1)
@@ -815,7 +762,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_bf16_4x2(<4 x bfloat> %acc_in, ptr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 v0, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.bf8.bf16(<4 x bfloat> %acc_in, i32 0, i1 1)
@@ -831,7 +777,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f32_8x4(<4 x float> %acc_in, ptr a
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f32.scatter4(<4 x float> %acc_in, i32 4, i1 1)
@@ -854,7 +799,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f32_4x4(<4 x float> %acc_in, ptr a
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f32.scatter4(<4 x float> %acc_in, i32 2, i1 1)
@@ -875,7 +819,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f32_4x2(<4 x float> %acc_in, ptr a
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_f32 v0, v1, v[0:3] clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f32.scatter2(<4 x float> %acc_in, i32 0, i1 1)
@@ -894,7 +837,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_8x4(<8 x half> %acc_in, ptr ad
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter4(<8 x half> %acc_in, i32 4, i1 1)
@@ -917,7 +859,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_4x4(<8 x half> %acc_in, ptr ad
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter4(<8 x half> %acc_in, i32 2, i1 1)
@@ -938,7 +879,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_4x2(<4 x half> %acc_in, ptr ad
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v0, v1, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter2(<4 x half> %acc_in, i32 0, i1 1)
@@ -957,7 +897,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_8x4(<8 x bfloat> %acc_in, ptr
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter4(<8 x bfloat> %acc_in, i32 4, i1 1)
@@ -980,7 +919,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_4x4(<8 x bfloat> %acc_in, ptr
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter4(<8 x bfloat> %acc_in, i32 2, i1 1)
@@ -1001,7 +939,6 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_4x2(<4 x bfloat> %acc_in, ptr
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v0, v1, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter2(<4 x bfloat> %acc_in, i32 0, i1 1)
@@ -1020,7 +957,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f32_8x4(<4 x float> %acc_in, ptr 
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f32.scatter4(<4 x float> %acc_in, i32 4, i1 1)
@@ -1043,7 +979,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f32_4x4(<4 x float> %acc_in, ptr 
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f32.scatter4(<4 x float> %acc_in, i32 2, i1 1)
@@ -1064,7 +999,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f32_4x2(<4 x float> %acc_in, ptr 
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_f32 v0, v1, v[0:3] clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f32.scatter2(<4 x float> %acc_in, i32 0, i1 1)
@@ -1083,7 +1017,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_8x4(<8 x half> %acc_in, ptr a
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter4(<8 x half> %acc_in, i32 4, i1 1)
@@ -1106,7 +1039,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_4x4(<8 x half> %acc_in, ptr a
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter4(<8 x half> %acc_in, i32 2, i1 1)
@@ -1127,7 +1059,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_4x2(<4 x half> %acc_in, ptr a
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v0, v1, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter2(<4 x half> %acc_in, i32 0, i1 1)
@@ -1146,7 +1077,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_8x4(<8 x bfloat> %acc_in, pt
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter4(<8 x bfloat> %acc_in, i32 4, i1 1)
@@ -1169,7 +1099,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_4x4(<8 x bfloat> %acc_in, pt
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter4(<8 x bfloat> %acc_in, i32 2, i1 1)
@@ -1190,7 +1119,6 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_4x2(<4 x bfloat> %acc_in, pt
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v0, v1, v[0:1] clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter2(<4 x bfloat> %acc_in, i32 0, i1 1)

@@ -6,7 +6,6 @@ define amdgpu_ps void @test_bpermute_b32(i32 %src0, i32 %src1, ptr addrspace(1) 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_bpermute_b32 v0, v0, v1
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 %src0, i32 %src1)
@@ -20,7 +19,6 @@ define amdgpu_ps void @test_permute_pair_gensgpr_b32_inreg(i32 %src0, i64 inreg 
 ; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX13-NEXT:    v_permute_pair_gensgpr_b32 v0, v0, s[0:1]
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.permute.pair.gensgpr.b32(i32 %src0, i64 %src1)
@@ -38,7 +36,6 @@ define amdgpu_ps void @test_permute_pair_gensgpr_b32(i32 %src0, i64 %src1, ptr a
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_permute_pair_gensgpr_b32 v0, v0, s[0:1]
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.permute.pair.gensgpr.b32(i32 %src0, i64 %src1)
@@ -52,7 +49,6 @@ define amdgpu_ps void @test_permute_pair_bcast_b32(i32 %src0, ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX13-NEXT:    v_permute_pair_bcast_b32 v0, v0 aux_data:2
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.permute.pair.bcast.b32(i32 %src0, i32 2)
@@ -65,7 +61,6 @@ define amdgpu_ps void @test_permute_pair_2src_rotate_group_b32(i32 %src0, i32 %s
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_permute_pair_2src_rotate_group_b32 v0, v0, v1 aux_data:2
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.permute.pair.2src.rotate.group.b32(i32 %src0, i32 %src1, i32 2)

@@ -430,7 +430,6 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-SDAG-NEXT:    global_store_b32 v[10:11], v2, off
 ; GCN-SDAG-NEXT:    global_store_b64 v[12:13], v[0:1], off
 ; GCN-SDAG-NEXT:    global_store_d16_hi_b16 v4, v2, s[0:1]
-; GCN-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-SDAG-NEXT:    s_endpgm
 ;
 ; GCN-GISEL-LABEL: test_v7i16_load_store_kernel:
@@ -465,7 +464,6 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-GISEL-NEXT:    global_store_d16_hi_b16 v[18:19], v2, off
 ; GCN-GISEL-NEXT:    global_store_b16 v[20:21], v3, off
 ; GCN-GISEL-NEXT:    global_store_d16_hi_b16 v4, v2, s[0:1]
-; GCN-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep1 = getelementptr inbounds <7 x i16>, ptr addrspace(1) %ptr1, i32 %tid

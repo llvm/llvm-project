@@ -27,7 +27,6 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-NEXT:    v_ashr_pk_i8_i32 v0, s4, s5, v0
 ; GFX1210-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %insert.0 = insertelement <2 x i32> poison, i32 %src0, i64 0
   %build_vector = insertelement <2 x i32> %insert.0, i32 %src1, i64 1
@@ -69,7 +68,6 @@ define amdgpu_kernel void @v_ashr_pk_u8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1210-NEXT:    v_ashr_pk_u8_i32 v0, s4, s5, v0
 ; GFX1210-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %insert.0 = insertelement <2 x i32> poison, i32 %src0, i64 0
   %build_vector = insertelement <2 x i32> %insert.0, i32 %src1, i64 1

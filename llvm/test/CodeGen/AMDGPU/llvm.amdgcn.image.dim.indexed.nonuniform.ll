@@ -556,7 +556,6 @@ define amdgpu_ps void @store_1d(i32 %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX13-NEXT:    image_store v[6:9], v5, v0 dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -569,7 +568,6 @@ define amdgpu_ps void @store_2d(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 %t) {
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store v[8:11], [v5, v6], v0 dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %rsrc, i32 0, i32 0)
@@ -582,7 +580,6 @@ define amdgpu_ps void @store_3d(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store v[8:11], [v5, v6, v7], v0 dmask:0xf dim:SQ_RSRC_IMG_3D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.3d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %r, i32 %rsrc, i32 0, i32 0)
@@ -595,7 +592,6 @@ define amdgpu_ps void @store_cube(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 %t,
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store v[8:11], [v5, v6, v7], v0 dmask:0xf dim:SQ_RSRC_IMG_CUBE
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.cube.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -608,7 +604,6 @@ define amdgpu_ps void @store_1darray(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store v[8:11], [v5, v6], v0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -621,7 +616,6 @@ define amdgpu_ps void @store_2darray(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store v[8:11], [v5, v6, v7], v0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.2darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -634,7 +628,6 @@ define amdgpu_ps void @store_2dmsaa(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 %
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store v[8:11], [v5, v6, v7], v0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.2dmsaa.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %fragid, i32 %rsrc, i32 0, i32 0)
@@ -647,7 +640,6 @@ define amdgpu_ps void @store_2darraymsaa(i32 %rsrc, <4 x float> %vdata, i32 %s, 
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v4 :: v_dual_mov_b32 v12, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v2 :: v_dual_mov_b32 v10, v1
 ; GFX13-NEXT:    image_store v[10:13], [v5, v6, v7, v8], v0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.2darraymsaa.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, i32 %rsrc, i32 0, i32 0)
@@ -660,7 +652,6 @@ define amdgpu_ps void @store_mip_1d(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 %
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store_mip v[8:11], [v5, v6], v0 dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -673,7 +664,6 @@ define amdgpu_ps void @store_mip_2d(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 %
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store_mip v[8:11], [v5, v6, v7], v0 dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.2d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -686,7 +676,6 @@ define amdgpu_ps void @store_mip_3d(i32 %rsrc, <4 x float> %vdata, i32 %s, i32 %
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v4 :: v_dual_mov_b32 v12, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v2 :: v_dual_mov_b32 v10, v1
 ; GFX13-NEXT:    image_store_mip v[10:13], [v5, v6, v7, v8], v0 dmask:0xf dim:SQ_RSRC_IMG_3D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.3d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %r, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -699,7 +688,6 @@ define amdgpu_ps void @store_mip_cube(i32 %rsrc, <4 x float> %vdata, i32 %s, i32
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v4 :: v_dual_mov_b32 v12, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v2 :: v_dual_mov_b32 v10, v1
 ; GFX13-NEXT:    image_store_mip v[10:13], [v5, v6, v7, v8], v0 dmask:0xf dim:SQ_RSRC_IMG_CUBE
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.cube.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -712,7 +700,6 @@ define amdgpu_ps void @store_mip_1darray(i32 %rsrc, <4 x float> %vdata, i32 %s, 
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    image_store_mip v[8:11], [v5, v6, v7], v0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.1darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -725,7 +712,6 @@ define amdgpu_ps void @store_mip_2darray(i32 %rsrc, <4 x float> %vdata, i32 %s, 
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v4 :: v_dual_mov_b32 v12, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v2 :: v_dual_mov_b32 v10, v1
 ; GFX13-NEXT:    image_store_mip v[10:13], [v5, v6, v7, v8], v0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.2darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -846,7 +832,6 @@ define amdgpu_ps void @store_1d_V1(i32 %rsrc, float %vdata, i32 %s) {
 ; GFX13-LABEL: store_1d_V1:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_store v1, v2, v0 dmask:0x2 dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.f32.i32(float %vdata, i32 2, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -858,7 +843,6 @@ define amdgpu_ps void @store_1d_V2(i32 %rsrc, <2 x float> %vdata, i32 %s) {
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
 ; GFX13-NEXT:    image_store v[4:5], v3, v0 dmask:0xc dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v2f32.i32(<2 x float> %vdata, i32 12, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -904,7 +888,6 @@ define amdgpu_ps void @store_1d_glc(i32 %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX13-NEXT:    image_store v[6:9], v5, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_NT
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 1)
@@ -917,7 +900,6 @@ define amdgpu_ps void @store_1d_slc(i32 %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX13-NEXT:    image_store v[6:9], v5, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_HT
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 2)
@@ -930,7 +912,6 @@ define amdgpu_ps void @store_1d_glc_slc(i32 %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX13-NEXT:    image_store v[6:9], v5, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_RT_WB
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 3)
@@ -988,7 +969,6 @@ define amdgpu_ps void @image_store_wait(i32 %arg, i32 %arg1, i32 %arg2, <4 x flo
 ; GFX13-NEXT:    image_load v[8:11], v7, v1 dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    image_store v[8:11], v7, v2 dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %arg3, i32 15, i32 %arg4, i32 %arg, i32 0, i32 0)

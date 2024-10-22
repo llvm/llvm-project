@@ -41,7 +41,6 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 bb:
   %cmp = icmp eq i32 %cnd, 0
@@ -83,7 +82,6 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 bb0:
   %cmp = icmp eq i32 %cnd, 0
@@ -130,7 +128,6 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 bb0:
   %cmp = fcmp oeq float %cnd, 0.0
@@ -181,7 +178,6 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -269,7 +265,6 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 ; GCN-NEXT:  .LBB5_4: ; %bb3
 ; GCN-NEXT:    ;;#ASMSTART
@@ -434,7 +429,6 @@ define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GCN-NEXT:    s_sleep 5
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -605,7 +599,6 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
 ; GCN-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 bb:
   %tmp = icmp slt i32 %arg2, 9

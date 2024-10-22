@@ -14,7 +14,6 @@ define amdgpu_cs void @test_wavegroup_id(ptr addrspace(1) %out) {
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %val = call i32 @llvm.amdgcn.wavegroup.id()
   store i32 %val, ptr addrspace(1) %out

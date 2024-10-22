@@ -15,7 +15,6 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-UNKNOWN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-UNKNOWN-NEXT:    global_store_b32 v0, v1, s[0:1]
-; CHECK-UNKNOWN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-UNKNOWN-NEXT:    s_endpgm
 ;
 ; CHECK-MESA3D-LABEL: test_workgroup_max_flat_id:
@@ -94,7 +93,6 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-MESA3D-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-MESA3D-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-MESA3D-NEXT:    global_store_b32 v0, v1, s[0:1]
-; CHECK-MESA3D-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-MESA3D-NEXT:    s_endpgm
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_flat_id:
@@ -105,7 +103,6 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-G-UNKNOWN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; CHECK-G-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-G-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[0:1]
-; CHECK-G-UNKNOWN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-G-UNKNOWN-NEXT:    s_endpgm
 ;
 ; CHECK-G-MESA3D-LABEL: test_workgroup_max_flat_id:
@@ -184,7 +181,6 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-G-MESA3D-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; CHECK-G-MESA3D-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-G-MESA3D-NEXT:    global_store_b32 v1, v0, s[0:1]
-; CHECK-G-MESA3D-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-G-MESA3D-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
   store i32 %id, ptr addrspace(1) %out
