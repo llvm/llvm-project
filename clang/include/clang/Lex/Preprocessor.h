@@ -32,6 +32,7 @@
 #include "clang/Lex/PPEmbedParameters.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -3059,5 +3060,9 @@ struct EmbedAnnotationData {
 using PragmaHandlerRegistry = llvm::Registry<PragmaHandler>;
 
 } // namespace clang
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI Registry<clang::PragmaHandler>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_LEX_PREPROCESSOR_H
