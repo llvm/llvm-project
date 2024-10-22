@@ -319,8 +319,8 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
     if (DWARFUnit *SpecUnit = U->getUnitVector().getUnitForOffset(*Offset))
       Result = SpecUnit->getDIEForOffset(*Offset);
   } else if (std::optional<uint64_t> Sig = V.getAsSignatureReference()) {
-    if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
-            U->getVersion(), *Sig, U->isDWOUnit()))
+    if (DWARFTypeUnit *TU =
+            U->getContext().getTypeUnitForHash(*Sig, U->isDWOUnit()))
       Result = TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
   }
   return Result;
@@ -329,8 +329,8 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
 DWARFDie DWARFDie::resolveTypeUnitReference() const {
   if (auto Attr = find(DW_AT_signature)) {
     if (std::optional<uint64_t> Sig = Attr->getAsReferenceUVal()) {
-      if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
-              U->getVersion(), *Sig, U->isDWOUnit()))
+      if (DWARFTypeUnit *TU =
+              U->getContext().getTypeUnitForHash(*Sig, U->isDWOUnit()))
         return TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
     }
   }

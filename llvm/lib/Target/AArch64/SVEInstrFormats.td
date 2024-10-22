@@ -2174,6 +2174,11 @@ multiclass sve_fp_2op_p_zds_bfloat<bits<4> opc, string asm, string Ps,
   def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
 }
 
+class  sve_fp_2op_p_zds_bfscale<bits<4> opc, string asm,  DestructiveInstTypeEnum flags>
+: sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>{
+  let DestructiveInstType = flags;
+}
+
 multiclass sve_fp_2op_p_zds_zeroing_hsd<SDPatternOperator op> {
   def _H_ZERO : PredTwoOpPseudo<NAME # _H, ZPR16, FalseLanesZero>;
   def _S_ZERO : PredTwoOpPseudo<NAME # _S, ZPR32, FalseLanesZero>;

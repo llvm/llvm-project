@@ -19,3 +19,7 @@ rax1 z0.d, z0.d, z0.d
 .arch armv9-a+sve2-bitperm
 bgrp z21.s, z10.s, z21.s
 // CHECK: bgrp z21.s, z10.s, z21.s
+
+.arch armv9-a+sve-bfscale
+bfscale z0.h, p0/m, z0.h, z0.h
+// CHECK: bfscale z0.h, p0/m, z0.h, z0.h
