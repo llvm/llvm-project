@@ -234,7 +234,7 @@ addr_t Section::GetLoadBaseAddress(Target *target) const {
       load_base_addr += GetOffset();
   }
   if (load_base_addr == LLDB_INVALID_ADDRESS) {
-    load_base_addr = target->GetSectionLoadList().GetSectionLoadAddress(
+    load_base_addr = target->GetSectionLoadAddress(
         const_cast<Section *>(this)->shared_from_this());
   }
   return load_base_addr;
@@ -638,7 +638,7 @@ bool SectionList::ContainsSection(user_id_t sect_id) const {
 void SectionList::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
                        bool show_header, uint32_t depth) const {
   bool target_has_loaded_sections =
-      target && !target->GetSectionLoadList().IsEmpty();
+      target && !target->SectionLoadListIsEmpty();
   if (show_header && !m_sections.empty()) {
     s.indent(indent);
     s << llvm::formatv(

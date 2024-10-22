@@ -263,8 +263,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
           const Architecture *arch = GetTarget().GetArchitecturePlugin();
           if (arch) {
             Address curr_sec_addr;
-            GetTarget().GetSectionLoadList().ResolveLoadAddress(curr_addr,
-                                                                curr_sec_addr);
+            GetTarget().ResolveLoadAddress(curr_addr, curr_sec_addr);
             bytes_to_skip = arch->GetBytesToSkip(*sc.symbol, curr_sec_addr);
           }
         }
