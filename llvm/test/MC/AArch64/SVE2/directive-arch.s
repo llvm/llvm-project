@@ -19,3 +19,15 @@ rax1 z0.d, z0.d, z0.d
 .arch armv9-a+sve2-bitperm
 bgrp z21.s, z10.s, z21.s
 // CHECK: bgrp z21.s, z10.s, z21.s
+
+.arch armv9-a+sve2+f8f16mm
+fmmla   z23.h, z13.b, z8.b
+// CHECK: fmmla   z23.h, z13.b, z8.b
+
+.arch armv9-a+sve2+f8f32mm
+fmmla   z23.s, z13.b, z8.b
+// CHECK: fmmla   z23.s, z13.b, z8.b
+
+.arch armv9-a+sve-f16f32mm
+fmmla   z23.s, z13.h, z8.h
+// CHECK: fmmla   z23.s, z13.h, z8.h
