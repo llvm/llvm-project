@@ -587,9 +587,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-  OptionalFileEntryRef ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M);
-
-  if (ModuleMap) {
+  if (auto ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M)) {
     SmallString<128> Path = ModuleMap->getNameAsRequested();
     ModMapInfo.canonicalizeModuleMapPath(Path);
     MD.ClangModuleMapFile = std::string(Path);
@@ -601,15 +599,13 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        // __inferred_module.map is the result of the way in which an implicit
-        // module build handles inferred modules. It adds an overlay VFS with
-        // this file in the proper directory and relies on the rest of Clang to
-        // handle it like normal. With explicitly built modules we don't need
-        // to play VFS tricks, so replace it with the correct module map.
-        if (StringRef(IFI.Filename).ends_with("__inferred_module.map")) {
-          MDC.addFileDep(MD, ModuleMap->getName());
+        // The __inferred_module.map file is an insignificant implementation
+        // detail of implicitly-built modules. The PCM will also report the
+        // actual on-disk module map file that allowed inferring the module,
+        // which is what we need for building the module explicitly
+        // Let's ignore this file.
+        if (StringRef(IFI.Filename).ends_with("__inferred_module.map"))
           return;
-        }
         MDC.addFileDep(MD, IFI.Filename);
       });
 
