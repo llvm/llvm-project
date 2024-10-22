@@ -90,6 +90,35 @@ public:
 
     LLVMOrcDisposeLLJIT(J);
     TargetSupported = true;
+
+    // Create test functions in text format, with the proper extension
+    // attributes.
+    if (SumExample.empty()) {
+      std::string I32RetExt = "";
+      std::string I32ArgExt = "";
+      if (StringRef(TargetTriple).starts_with("s390x-ibm-linux"))
+        I32RetExt = I32ArgExt = "signext ";
+
+      std::ostringstream OS;
+      OS << "define " << I32RetExt << " i32 "
+         << R"(@sum()" << "i32 " << I32ArgExt << "%x, i32 " << I32ArgExt << "%y)"
+         << R"( {
+          entry:
+          %r = add nsw i32 %x, %y
+          ret i32 %r
+          }
+        )";
+      SumExample = OS.str();
+
+      OS << R"(
+          !llvm.module.flags = !{!0}
+          !llvm.dbg.cu = !{!1}
+          !0 = !{i32 2, !"Debug Info Version", i32 3}
+          !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, emissionKind: FullDebug)
+          !2 = !DIFile(filename: "sum.c", directory: "/tmp")
+        )";
+      SumDebugExample = OS.str();
+    }
   }
 
   void SetUp() override {
@@ -199,37 +228,17 @@ protected:
 
   static std::string TargetTriple;
   static bool TargetSupported;
+
+  static std::string SumExample;
+  static std::string SumDebugExample;
+
 };
 
 std::string OrcCAPITestBase::TargetTriple;
 bool OrcCAPITestBase::TargetSupported = false;
 
-namespace {
-
-constexpr StringRef SumExample =
-    R"(
-    define i32 @sum(i32 %x, i32 %y) {
-    entry:
-      %r = add nsw i32 %x, %y
-      ret i32 %r
-    }
-  )";
-
-constexpr StringRef SumDebugExample =
-    R"(
-    define i32 @sum(i32 %x, i32 %y) {
-    entry:
-      %r = add nsw i32 %x, %y
-      ret i32 %r
-    }
-    !llvm.module.flags = !{!0}
-    !llvm.dbg.cu = !{!1}
-    !0 = !{i32 2, !"Debug Info Version", i32 3}
-    !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, emissionKind: FullDebug)
-    !2 = !DIFile(filename: "sum.c", directory: "/tmp")
-  )";
-
-} // end anonymous namespace.
+std::string OrcCAPITestBase::SumExample;
+std::string OrcCAPITestBase::SumDebugExample;
 
 // Consumes the given error ref and returns the string error message.
 static std::string toString(LLVMErrorRef E) {
