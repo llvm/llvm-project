@@ -825,14 +825,13 @@ static bool hasComputableBounds(PredicatedScalarEvolution &PSE, Value *Ptr,
 
 /// Check whether a pointer address cannot wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE,
-                     const DenseMap<Value *, const SCEV *> &Strides, Value *Ptr, Type *AccessTy,
-                     Loop *L) {
+                     const DenseMap<Value *, const SCEV *> &Strides, Value *Ptr,
+                     Type *AccessTy, Loop *L, bool Assume) {
   const SCEV *PtrScev = PSE.getSCEV(Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, L))
     return true;
 
-  int64_t Stride = getPtrStride(PSE, AccessTy, Ptr, L, Strides).value_or(0);
-  return Stride == 1 ||
+  return getPtrStride(PSE, AccessTy, Ptr, L, Strides, Assume).has_value() ||
          PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
 }
 
@@ -1079,12 +1078,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       if (TranslatedPtrs.size() > 1)
         return false;
 
-      if (!isNoWrap(PSE, StridesMap, Ptr, AccessTy, TheLoop)) {
-        const SCEV *Expr = PSE.getSCEV(Ptr);
-        if (!Assume || !isa<SCEVAddRecExpr>(Expr))
-          return false;
-        PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
-      }
+      if (!isNoWrap(PSE, StridesMap, Ptr, AccessTy, TheLoop, Assume))
+        return false;
     }
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
