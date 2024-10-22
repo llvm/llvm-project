@@ -133,6 +133,7 @@ cxx_sources = [
   "include/apple_availability.h",
   "include/atomic_support.h",
   "include/config_elast.h",
+  "include/from_chars_floating_point.h",
   "include/refstring.h",
   "include/ryu/common.h",
   "include/ryu/d2fixed.h",

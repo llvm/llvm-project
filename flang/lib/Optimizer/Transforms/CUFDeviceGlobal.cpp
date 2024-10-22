@@ -1,4 +1,4 @@
-//===-- CufOpConversion.cpp -----------------------------------------------===//
+//===-- CUFOpConversion.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace fir {
-#define GEN_PASS_DEF_CUFIMPLICITDEVICEGLOBAL
+#define GEN_PASS_DEF_CUFDEVICEGLOBAL
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
@@ -45,8 +45,7 @@ static void prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
   }
 }
 
-class CufImplicitDeviceGlobal
-    : public fir::impl::CufImplicitDeviceGlobalBase<CufImplicitDeviceGlobal> {
+class CUFDeviceGlobal : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {
 public:
   void runOnOperation() override {
     mlir::Operation *op = getOperation();
