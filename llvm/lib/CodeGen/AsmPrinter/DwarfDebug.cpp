@@ -2064,7 +2064,8 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   bool PrevInstInSameSection =
       (!PrevInstBB ||
        PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
-  if (DL == PrevInstLoc && PrevInstInSameSection) {
+  bool ForceIsStmt = ForceIsStmtInstrs.contains(MI);
+  if (DL == PrevInstLoc && PrevInstInSameSection && !ForceIsStmt) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
@@ -2121,7 +2122,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   // If the line changed, we call that a new statement; unless we went to
   // line 0 and came back, in which case it is not a new statement.
   unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
-  if (DL.getLine() && DL.getLine() != OldLine)
+  if (DL.getLine() && (DL.getLine() != OldLine || ForceIsStmt))
     Flags |= DWARF2_FLAG_IS_STMT;
 
   const MDNode *Scope = DL.getScope();
@@ -2229,6 +2230,112 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   // Record beginning of function.
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
+
+  // For each MBB we try to determine whether and what source line is *always*
+  // the last stepped-on line before entering MBB. Such a line exists if every
+  // predecessor has an instruction with source line N, which is the last valid
+  // source line to be seen before entering MBB, and if N is the same for all
+  // predecessors. If this is true, and the first instruction with a valid
+  // source line in MBB also has source line N, then that instruction should
+  // *not* use is_stmt. Otherwise, the first instruction with a valid source
+  // line in MBB should always use is_stmt, since we may step to it from a
+  // different line.
+  ForceIsStmtInstrs.clear();
+
+  // First, collect the last stepped line for each MBB.
+  SmallDenseMap<std::pair<const MachineBasicBlock *, const MachineBasicBlock *>,
+                unsigned>
+      MBBExitLines;
+  const auto *TII = MF->getSubtarget().getInstrInfo();
+
+  // We only need to examine MBBs that could have is_stmt set by this logic.
+  // We use const_cast even though we won't actually modify MF, because some
+  // methods we need take a non-const MBB.
+  SetVector<MachineBasicBlock *> PredMBBsToExamine;
+  SmallDenseMap<MachineBasicBlock *, MachineInstr *> PotentialIsStmtMBBInstrs;
+  for (auto &MBB : *const_cast<MachineFunction *>(MF)) {
+    if (MBB.empty() || MBB.pred_empty())
+      continue;
+    for (auto &MI : MBB) {
+      if (MI.getDebugLoc() && MI.getDebugLoc()->getLine()) {
+        for (auto *Pred : MBB.predecessors())
+          PredMBBsToExamine.insert(Pred);
+        PotentialIsStmtMBBInstrs.insert({&MBB, &MI});
+        break;
+      }
+    }
+  }
+
+  // For each predecessor MBB, we examine the last DebugLoc seen before each
+  // branch or logical fallthrough. We're generous with applying is_stmt: if
+  // there's an edge that TargetInstrInfo::analyzeBranch can't understand, we
+  // assume that all successor MBBs use the last DebugLoc seen.
+  for (auto *MBB : PredMBBsToExamine) {
+    auto CheckMBBEdge = [&](MachineBasicBlock *Succ, unsigned OutgoingLine) {
+      auto MBBInstrIt = PotentialIsStmtMBBInstrs.find(Succ);
+      if (MBBInstrIt == PotentialIsStmtMBBInstrs.end())
+        return;
+      MachineInstr *MI = MBBInstrIt->second;
+      if (MI->getDebugLoc()->getLine() == OutgoingLine)
+        return;
+      PotentialIsStmtMBBInstrs.erase(MBBInstrIt);
+      ForceIsStmtInstrs.insert(MI);
+    };
+    // If this block is empty, it technically has a fall through but we should
+    // assume it is irrelevant for the purposes of calculating is_stmt.
+    if (MBB->empty())
+      continue;
+    // If we can't determine what DLs this branch's successors use, just treat
+    // all the successors as coming from the last DebugLoc.
+    SmallVector<MachineBasicBlock *, 2> SuccessorBBs;
+    auto MIIt = MBB->rbegin();
+    {
+      MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+      SmallVector<MachineOperand, 4> Cond;
+      bool AnalyzeFailed = TII->analyzeBranch(*MBB, TBB, FBB, Cond);
+      // For a conditional branch followed by unconditional branch where the
+      // unconditional branch has a DebugLoc, that loc is the outgoing loc to
+      // the the false destination only; otherwise, both destinations share an
+      // outgoing loc.
+      if (!AnalyzeFailed && !Cond.empty() && FBB != nullptr &&
+          MBB->back().getDebugLoc() && MBB->back().getDebugLoc()->getLine()) {
+        unsigned FBBLine = MBB->back().getDebugLoc()->getLine();
+        assert(MIIt->isBranch() && "Bad result from analyzeBranch?");
+        CheckMBBEdge(FBB, FBBLine);
+        ++MIIt;
+        SuccessorBBs.push_back(TBB);
+      } else {
+        // For all other cases, all successors share the last outgoing DebugLoc.
+        SuccessorBBs.assign(MBB->succ_begin(), MBB->succ_end());
+      }
+    }
+
+    // If we don't find an outgoing loc, this block will start with a line 0.
+    // It is possible that we have a block that has no DebugLoc, but acts as a
+    // simple passthrough between two blocks that end and start with the same
+    // line, e.g.:
+    //   bb.1:
+    //     JMP %bb.2, debug-location !10
+    //   bb.2:
+    //     JMP %bb.3
+    //   bb.3:
+    //     $r1 = ADD $r2, $r3, debug-location !10
+    // If these blocks were merged into a single block, we would not attach
+    // is_stmt to the ADD, but with this logic that only checks the immediate
+    // predecessor, we will; we make this tradeoff because doing a full dataflow
+    // analysis would be expensive, and these situations are probably not common
+    // enough for this to be worthwhile.
+    unsigned LastLine = 0;
+    while (MIIt != MBB->rend()) {
+      if (auto DL = MIIt->getDebugLoc(); DL && DL->getLine()) {
+        LastLine = DL->getLine();
+        break;
+      }
+      ++MIIt;
+    }
+    for (auto *Succ : SuccessorBBs)
+      CheckMBBEdge(Succ, LastLine);
+  }
 }
 
 unsigned
