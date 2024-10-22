@@ -330,8 +330,8 @@ struct StatusOr {
 };
 
 void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
-  foo1 = Foo(); // expected-warning {{object backing the foo1 will be destroyed at the end}}
+  foo1 = Foo(); // expected-warning {{object backing foo1 will be destroyed at the end}}
   // This warning is triggered by the lifetimebound annotation, regardless of whether the class type is annotated with GSL.
-  foo2 = NonAnnotatedFoo(); // expected-warning {{object backing the foo2 will be destroyed at the end}}
+  foo2 = NonAnnotatedFoo(); // expected-warning {{object backing foo2 will be destroyed at the end}}
 }
 } // namespace GH106372
