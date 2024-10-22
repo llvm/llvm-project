@@ -23,7 +23,7 @@ struct _LIBCPP_TEMPLATE_VIS has_virtual_destructor : public integral_constant<bo
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool has_virtual_destructor_v = __has_virtual_destructor(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool has_virtual_destructor_v = __has_virtual_destructor(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

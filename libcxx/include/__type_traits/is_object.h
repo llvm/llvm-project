@@ -23,7 +23,7 @@ struct _LIBCPP_TEMPLATE_VIS is_object : _BoolConstant<__is_object(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_object_v = __is_object(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_object_v = __is_object(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

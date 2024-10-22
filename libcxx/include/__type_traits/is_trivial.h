@@ -23,7 +23,7 @@ struct _LIBCPP_TEMPLATE_VIS is_trivial : public integral_constant<bool, __is_tri
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_trivial_v = __is_trivial(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_trivial_v = __is_trivial(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

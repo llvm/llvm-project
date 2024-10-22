@@ -23,7 +23,7 @@ struct _LIBCPP_TEMPLATE_VIS is_base_of : public integral_constant<bool, __is_bas
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Bp, class _Dp>
-inline constexpr bool is_base_of_v = __is_base_of(_Bp, _Dp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_base_of_v = __is_base_of(_Bp, _Dp);
 #endif
 
 #if _LIBCPP_STD_VER >= 26
@@ -33,7 +33,7 @@ template <class _Base, class _Derived>
 struct _LIBCPP_TEMPLATE_VIS is_virtual_base_of : public bool_constant<__builtin_is_virtual_base_of(_Base, _Derived)> {};
 
 template <class _Base, class _Derived>
-inline constexpr bool is_virtual_base_of_v = __builtin_is_virtual_base_of(_Base, _Derived);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_virtual_base_of_v = __builtin_is_virtual_base_of(_Base, _Derived);
 
 #  endif
 #endif

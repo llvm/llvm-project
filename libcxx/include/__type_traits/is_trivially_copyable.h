@@ -24,7 +24,7 @@ struct _LIBCPP_TEMPLATE_VIS is_trivially_copyable : public integral_constant<boo
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_trivially_copyable_v = __is_trivially_copyable(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_trivially_copyable_v = __is_trivially_copyable(_Tp);
 #endif
 
 #if _LIBCPP_STD_VER >= 20

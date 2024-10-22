@@ -26,7 +26,7 @@ struct _LIBCPP_TEMPLATE_VIS is_arithmetic
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_arithmetic_v = is_arithmetic<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_arithmetic_v = is_arithmetic<_Tp>::value;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

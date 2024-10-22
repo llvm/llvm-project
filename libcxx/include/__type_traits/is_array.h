@@ -27,7 +27,7 @@ struct _LIBCPP_TEMPLATE_VIS is_array : _BoolConstant<__is_array(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_array_v = __is_array(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_array_v = __is_array(_Tp);
 #  endif
 
 #else

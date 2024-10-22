@@ -26,7 +26,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp, class... _Args>
-inline constexpr bool is_nothrow_constructible_v = is_nothrow_constructible<_Tp, _Args...>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_constructible_v = is_nothrow_constructible<_Tp, _Args...>::value;
 #endif
 
 template <class _Tp>
@@ -35,7 +35,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_constructible
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_nothrow_copy_constructible_v = is_nothrow_copy_constructible<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_copy_constructible_v = is_nothrow_copy_constructible<_Tp>::value;
 #endif
 
 template <class _Tp>
@@ -44,7 +44,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_move_constructible
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_nothrow_move_constructible_v = is_nothrow_move_constructible<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_move_constructible_v = is_nothrow_move_constructible<_Tp>::value;
 #endif
 
 template <class _Tp>
@@ -53,7 +53,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_default_constructible
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_nothrow_default_constructible_v = __is_nothrow_constructible(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_default_constructible_v = __is_nothrow_constructible(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

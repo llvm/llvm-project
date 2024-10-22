@@ -38,7 +38,7 @@ struct _LIBCPP_TEMPLATE_VIS rank<_Tp[_Np]> : public integral_constant<size_t, ra
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr size_t rank_v = rank<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr size_t rank_v = rank<_Tp>::value;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
