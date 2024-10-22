@@ -902,7 +902,7 @@ struct AAAMDMaxNumWorkgroups
 
       const auto *CallerInfo = A.getAAFor<AAAMDMaxNumWorkgroups>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-      if (!CallerInfo)
+      if (!CallerInfo || !CallerInfo->isValidState())
         return false;
 
       Change |=
