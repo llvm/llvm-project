@@ -399,7 +399,7 @@ private:
   Expected<BuildMIAction &> createAndImportInstructionRenderer(
       RuleMatcher &M, InstructionMatcher &InsnMatcher,
       const TreePatternNode &Src, const TreePatternNode &Dst,
-      ArrayRef<const Record *> DstPhysDefs);
+      const ArrayRef<const Record *> DstPhysDefs);
   Expected<action_iterator> createAndImportSubInstructionRenderer(
       action_iterator InsertPt, RuleMatcher &M, const TreePatternNode &Dst,
       const TreePatternNode &Src, unsigned TempReg);
@@ -2024,7 +2024,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
   auto &DstI = Target.getInstruction(DstOp);
   StringRef DstIName = DstI.TheDef->getName();
-  const auto &DstPhysDefs = P.getDstRegs();
+  ArrayRef<const Record *> DstPhysDefs = P.getDstRegs();
   unsigned DstNumVirtDefs = DstI.Operands.NumDefs,
            DstNumDefs = DstNumVirtDefs + DstPhysDefs.size(),
            SrcNumDefs = Src.getExtTypes().size();
