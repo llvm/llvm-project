@@ -250,15 +250,16 @@ public:
   void applyCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
 
   /// Check if an instruction whose operations can be represented
-  /// by a vector mask can be replaced by a concat_vectors.
+  /// by a mapping from one index to another in a vector can be replaced
+  /// by another operations.
   /// \p Ops will contain the operands to produce the flattened
-  /// concat_vectors.
+  /// operation.
   /// \p Mask is an array to numbers that represent the order that
   /// the elements of \p SrcRegs will be put into \p DstReg.
-  bool matchVectorMaskSequence(MachineInstr &MI, SmallVectorImpl<Register> &Ops,
-                               const Register DstReg,
-                               const std::pair<Register, Register> SrcRegs,
-                               ArrayRef<int> Mask);
+  bool analysePatternVectorMask(MachineInstr &MI, SmallVectorImpl<Register> &Ops,
+                                const Register DstReg,
+                                const std::pair<Register, Register> SrcRegs,
+                                ArrayRef<int> Mask);
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.

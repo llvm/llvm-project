@@ -473,7 +473,7 @@ bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) {
   return false;
 }
 
-bool CombinerHelper::matchVectorMaskSequence(
+bool CombinerHelper::analysePatternVectorMask(
     MachineInstr &MI, SmallVectorImpl<Register> &Ops, const Register DstReg,
     const std::pair<Register, Register> SrcRegs, ArrayRef<int> Mask) {
   const LLT DstTy = MRI.getType(DstReg);
@@ -554,7 +554,7 @@ bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
   if (DstNumElts < 2 * SrcNumElts && DstNumElts != 1)
     return false;
 
-  return matchVectorMaskSequence(
+  return analysePatternVectorMask(
       MI, Ops, MI.getOperand(0).getReg(),
       std::make_pair(MI.getOperand(1).getReg(), MI.getOperand(2).getReg()),
       MI.getOperand(3).getShuffleMask());
