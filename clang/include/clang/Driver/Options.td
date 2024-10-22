@@ -8102,7 +8102,7 @@ def fnative_half_type: Flag<["-"], "fnative-half-type">,
 def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and-returns">,
   HelpText<"Use the native __fp16 type for arguments and returns (and skip ABI-specific lowering)">,
   MarshallingInfoFlag<LangOpts<"NativeHalfArgsAndReturns">>,
-  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath, hlsl.KeyPath]>;
+  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">,
   Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall">,
