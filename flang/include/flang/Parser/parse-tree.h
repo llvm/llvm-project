@@ -3478,7 +3478,7 @@ struct OmpMapClause {
       std::optional<std::list<OmpIteratorModifier>>, // unique
       std::optional<std::list<Type>>, // unique
       OmpObjectList,
-      bool> // were the modifiers comma-separated
+      bool> // were the modifiers comma-separated?
       t;
 };
 
