@@ -2148,7 +2148,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   if (!Style.isCSharp())
     return false;
   // See if it's a property accessor.
-  if (FormatTok->Previous->isNot(tok::identifier))
+  if (!FormatTok->Previous || FormatTok->Previous->isNot(tok::identifier))
     return false;
 
   // See if we are inside a property accessor.
@@ -2504,6 +2504,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       // Assume there are no blocks inside a braced init list apart
       // from the ones we explicitly parse out (like lambdas).
       FormatTok->setBlockKind(BK_BracedInit);
+      if (!IsAngleBracket) {
+        auto *Prev = FormatTok->Previous;
+        if (Prev && Prev->is(tok::greater))
+          Prev->setFinalizedType(TT_TemplateCloser);
+      }
       nextToken();
       parseBracedList();
       break;
@@ -3479,10 +3484,10 @@ bool UnwrappedLineParser::parseRequires() {
   case tok::r_paren:
   case tok::kw_noexcept:
   case tok::kw_const:
+  case tok::amp:
     // This is a requires clause.
     parseRequiresClause(RequiresToken);
     return true;
-  case tok::amp:
   case tok::ampamp: {
     // This can be either:
     // if (... && requires (T t) ...)

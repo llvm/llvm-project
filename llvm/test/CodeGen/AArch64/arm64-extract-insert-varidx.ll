@@ -29,21 +29,23 @@ define <4 x i8> @test_varidx_extract_v8s8(<8 x i8> %x, i32 %idx) {
 ; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GISEL-NEXT:    mov w9, w0
 ; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GISEL-NEXT:    mov b1, v0.b[1]
 ; CHECK-GISEL-NEXT:    add x8, sp, #8
-; CHECK-GISEL-NEXT:    str d0, [sp, #8]
 ; CHECK-GISEL-NEXT:    and x9, x9, #0x7
-; CHECK-GISEL-NEXT:    mov b2, v0.b[1]
-; CHECK-GISEL-NEXT:    mov b3, v0.b[2]
+; CHECK-GISEL-NEXT:    str d0, [sp, #8]
+; CHECK-GISEL-NEXT:    mov b2, v0.b[2]
 ; CHECK-GISEL-NEXT:    lsl x10, x9, #1
 ; CHECK-GISEL-NEXT:    mov b0, v0.b[3]
 ; CHECK-GISEL-NEXT:    sub x9, x10, x9
-; CHECK-GISEL-NEXT:    ldr b1, [x8, x9]
-; CHECK-GISEL-NEXT:    mov v1.b[0], v1.b[0]
-; CHECK-GISEL-NEXT:    mov v1.b[1], v2.b[0]
-; CHECK-GISEL-NEXT:    mov v1.b[2], v3.b[0]
-; CHECK-GISEL-NEXT:    mov v1.b[3], v0.b[0]
-; CHECK-GISEL-NEXT:    ushll v0.8h, v1.8b, #0
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GISEL-NEXT:    ldrb w8, [x8, x9]
+; CHECK-GISEL-NEXT:    fmov w9, s1
+; CHECK-GISEL-NEXT:    fmov s1, w8
+; CHECK-GISEL-NEXT:    fmov w8, s2
+; CHECK-GISEL-NEXT:    mov v1.h[1], w9
+; CHECK-GISEL-NEXT:    mov v1.h[2], w8
+; CHECK-GISEL-NEXT:    fmov w8, s0
+; CHECK-GISEL-NEXT:    mov v1.h[3], w8
+; CHECK-GISEL-NEXT:    fmov d0, d1
 ; CHECK-GISEL-NEXT:    add sp, sp, #16
 ; CHECK-GISEL-NEXT:    ret
   %tmp = extractelement <8 x i8> %x, i32 %idx
@@ -179,13 +181,15 @@ define <2 x i16> @test_varidx_extract_v4s16(<4 x i16> %x, i32 %idx) {
 ; CHECK-GISEL-NEXT:    sub sp, sp, #16
 ; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GISEL-NEXT:    mov w9, w0
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GISEL-NEXT:    add x8, sp, #8
-; CHECK-GISEL-NEXT:    str d0, [sp, #8]
+; CHECK-GISEL-NEXT:    mov w8, #2 // =0x2
+; CHECK-GISEL-NEXT:    add x10, sp, #8
 ; CHECK-GISEL-NEXT:    and x9, x9, #0x3
-; CHECK-GISEL-NEXT:    ldr h1, [x8, x9, lsl #1]
-; CHECK-GISEL-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GISEL-NEXT:    ushll v0.4s, v1.4h, #0
+; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GISEL-NEXT:    str d0, [sp, #8]
+; CHECK-GISEL-NEXT:    madd x8, x9, x8, x10
+; CHECK-GISEL-NEXT:    umov w9, v0.h[1]
+; CHECK-GISEL-NEXT:    ld1 { v0.h }[0], [x8]
+; CHECK-GISEL-NEXT:    mov v0.s[1], w9
 ; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GISEL-NEXT:    add sp, sp, #16
 ; CHECK-GISEL-NEXT:    ret

@@ -81,9 +81,11 @@ are welcome:
 expected to work, with functionality improving rapidly. ARM and AArch64 support
 is more experimental, with more known issues than the others.
 
-RISC-V support is in active development, refer to the
-`tracking issue <https://github.com/llvm/llvm-project/issues/55383>`_
-for the current status.
+Support for the following architectures is in active development. For their
+current state, follow the links to their respective issues:
+
+* `RISC-V <https://github.com/llvm/llvm-project/issues/55383>`_
+* `LoongArch <https://github.com/llvm/llvm-project/issues/112693>`_
 
 Get Involved
 ------------
@@ -132,6 +134,7 @@ interesting areas to contribute to lldb.
    use/intel_pt
    use/ondemand
    use/aarch64-linux
+   use/symbolfilejson
    use/troubleshooting
    use/links
    Man Page <man/lldb>

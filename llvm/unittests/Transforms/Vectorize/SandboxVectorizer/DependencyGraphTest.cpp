@@ -249,6 +249,23 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_TRUE(N0->memPreds().empty());
   EXPECT_THAT(N1->memPreds(), testing::ElementsAre(N0));
   EXPECT_TRUE(N2->preds(DAG).empty());
+
+  // Check UnscheduledSuccs.
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u); // N1
+  EXPECT_EQ(N1->getNumUnscheduledSuccs(), 0u);
+  EXPECT_EQ(N2->getNumUnscheduledSuccs(), 0u);
+
+  // Check decrUnscheduledSuccs.
+  N0->decrUnscheduledSuccs();
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 0u);
+#ifndef NDEBUG
+  EXPECT_DEATH(N0->decrUnscheduledSuccs(), ".*Counting.*");
+#endif // NDEBUG
+
+  // Check scheduled(), setScheduled().
+  EXPECT_FALSE(N0->scheduled());
+  N0->setScheduled(true);
+  EXPECT_TRUE(N0->scheduled());
 }
 
 TEST_F(DependencyGraphTest, Preds) {
@@ -286,6 +303,14 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_THAT(StN->preds(DAG),
               testing::UnorderedElementsAre(CallN, CallN, AddN2));
   EXPECT_THAT(RetN->preds(DAG), testing::ElementsAre(AddN2));
+
+  // Check UnscheduledSuccs.
+  EXPECT_EQ(AddN0->getNumUnscheduledSuccs(), 1u); // AddN2
+  EXPECT_EQ(AddN1->getNumUnscheduledSuccs(), 2u); // AddN2, CallN
+  EXPECT_EQ(AddN2->getNumUnscheduledSuccs(), 2u); // StN, RetN
+  EXPECT_EQ(CallN->getNumUnscheduledSuccs(), 2u); // StN, StN
+  EXPECT_EQ(StN->getNumUnscheduledSuccs(), 0u);
+  EXPECT_EQ(RetN->getNumUnscheduledSuccs(), 0u);
 }
 
 TEST_F(DependencyGraphTest, MemDGNode_getPrevNode_getNextNode) {
@@ -711,6 +736,8 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
     EXPECT_EQ(DAG.getInterval().top(), S3);
     EXPECT_EQ(DAG.getInterval().bottom(), S3);
     [[maybe_unused]] auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    // Check UnscheduledSuccs.
+    EXPECT_EQ(S3N->getNumUnscheduledSuccs(), 0u);
   }
   {
     // Scenario 2: Extend below
@@ -722,6 +749,10 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
     EXPECT_TRUE(S4N->hasMemPred(S3N));
     EXPECT_TRUE(S5N->hasMemPred(S4N));
     EXPECT_TRUE(S5N->hasMemPred(S3N));
+    // Check UnscheduledSuccs.
+    EXPECT_EQ(S3N->getNumUnscheduledSuccs(), 2u); // S4N, S5N
+    EXPECT_EQ(S4N->getNumUnscheduledSuccs(), 1u); // S5N
+    EXPECT_EQ(S5N->getNumUnscheduledSuccs(), 0u);
   }
   {
     // Scenario 3: Extend above
@@ -746,5 +777,24 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
     EXPECT_TRUE(S5N->hasMemPred(S3N));
     EXPECT_TRUE(S5N->hasMemPred(S2N));
     EXPECT_TRUE(S5N->hasMemPred(S1N));
+
+    // Check UnscheduledSuccs.
+    EXPECT_EQ(S1N->getNumUnscheduledSuccs(), 4u); // S2N, S3N, S4N, S5N
+    EXPECT_EQ(S2N->getNumUnscheduledSuccs(), 3u); // S3N, S4N, S5N
+    EXPECT_EQ(S3N->getNumUnscheduledSuccs(), 2u); // S4N, S5N
+    EXPECT_EQ(S4N->getNumUnscheduledSuccs(), 1u); // S5N
+    EXPECT_EQ(S5N->getNumUnscheduledSuccs(), 0u);
+  }
+
+  {
+    // Check UnscheduledSuccs when a node is scheduled
+    sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+    DAG.extend({S2, S2});
+    auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+    S2N->setScheduled(true);
+
+    DAG.extend({S1, S1});
+    auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+    EXPECT_EQ(S1N->getNumUnscheduledSuccs(), 0u); // S1 is scheduled
   }
 }

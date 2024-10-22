@@ -1,0 +1,37 @@
+--- !minidump
+Streams:
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Processor Level: 6
+    Processor Revision: 15876
+    Number of Processors: 40
+    Platform ID:     Linux
+    CSD Version:     'Linux 3.13.0-91-generic'
+    CPU:
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            ThreadList
+    Threads:
+      - Thread Id:       0x31F222
+        Context:         00000000000000
+        Stack:
+          Start of Memory Range: 0x7FFFFFFFD660
+          Content:         ''
+  - Type:            Exception
+    Thread ID:       0x31F222
+    Exception Record:
+      Exception Code:  0x2
+      Exception Flags: 0x4C4C4442
+      Exception Address: 0x555555556671
+      Number of Parameters: 1
+      Parameter 0:     0x696F706B61657262
+      Parameter 1:     0x312E3120746E
+      Parameter 2:     0x1
+      Parameter 3:     0x8000000000000000
+      Parameter 4:     0x200000002
+      Parameter 5:     0x8000000000000002
+      Parameter 7:     0x555555556671
+      Parameter 8:     0x1
+    Thread Context:  ''
+...

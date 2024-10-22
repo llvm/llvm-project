@@ -315,7 +315,7 @@ void SymbolTable::loadMinGWSymbols() {
             warn("Resolving " + origName + " by linking to " + newName);
           else
             log("Resolving " + origName + " by linking to " + newName);
-          undef->weakAlias = l;
+          undef->setWeakAlias(l);
           continue;
         }
       }
@@ -424,13 +424,11 @@ static void reportProblemSymbols(
       if (!sym)
         continue;
       if (undefs.count(sym)) {
-        auto it = firstDiag.find(sym);
-        if (it == firstDiag.end()) {
-          firstDiag[sym] = undefDiags.size();
+        auto [it, inserted] = firstDiag.try_emplace(sym, undefDiags.size());
+        if (inserted)
           undefDiags.push_back({sym, {{file, symIndex}}});
-        } else {
+        else
           undefDiags[it->second].files.push_back({file, symIndex});
-        }
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))

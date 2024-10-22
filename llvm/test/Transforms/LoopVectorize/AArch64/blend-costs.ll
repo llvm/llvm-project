@@ -422,6 +422,35 @@ exit:
 }
 
 define void @test_blend_feeding_replicated_store_3(ptr noalias %src.1, ptr noalias %src.2, ptr noalias %dst, i32 %x, i64 %N, i1 %c.2) {
+; CHECK-LABEL: define void @test_blend_feeding_replicated_store_3(
+; CHECK-SAME: ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[DST:%.*]], i32 [[X:%.*]], i64 [[N:%.*]], i1 [[C_2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[SRC_1]], align 1
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[L_1]] to i32
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X]], [[EXT]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL]], 255
+; CHECK-NEXT:    [[L_2:%.*]] = load i8, ptr [[SRC_2]], align 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[L_2]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label %[[THEN:.*]], label %[[ELSE_1:.*]]
+; CHECK:       [[ELSE_1]]:
+; CHECK-NEXT:    br i1 [[C_2]], label %[[LOOP_LATCH]], label %[[ELSE_2:.*]]
+; CHECK:       [[ELSE_2]]:
+; CHECK-NEXT:    [[TRUNC_DIV:%.*]] = trunc i32 [[DIV]] to i8
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 0, %[[LOOP_HEADER]] ], [ [[TRUNC_DIV]], %[[ELSE_2]] ]
+; CHECK-NEXT:    store i8 [[P]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %loop.header
 

@@ -47,6 +47,7 @@ struct PoisonFlags {
   unsigned Exact : 1;
   unsigned Disjoint : 1;
   unsigned NNeg : 1;
+  unsigned SameSign : 1;
   GEPNoWrapFlags GEPNW;
 
   PoisonFlags(const Instruction *I);
@@ -124,6 +125,11 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// only difference is that phi's are only reused if they are already in
   /// "expanded" form.
   bool LSRMode;
+
+  /// When true, rewrite any divisors of UDiv expressions that may be 0 to
+  /// umax(Divisor, 1) to avoid introducing UB. If the divisor may be poison,
+  /// freeze it first.
+  bool SafeUDivMode = false;
 
   typedef IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> BuilderType;
   BuilderType Builder;

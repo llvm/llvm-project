@@ -37,8 +37,6 @@ public:
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
-
   bool hasBP(const MachineFunction &MF) const;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
@@ -82,6 +80,8 @@ public:
 
 protected:
   const RISCVSubtarget &STI;
+
+  bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;

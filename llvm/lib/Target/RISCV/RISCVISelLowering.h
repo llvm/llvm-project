@@ -34,6 +34,7 @@ enum NodeType : unsigned {
   SRET_GLUE,
   MRET_GLUE,
   CALL,
+  TAIL,
   /// Select with condition operator - This selects between a true value and
   /// a false value (ops #3 and #4) based on the boolean result of comparing
   /// the lhs and rhs (ops #0 and #1) of a conditional expression with the
@@ -44,7 +45,6 @@ enum NodeType : unsigned {
   BR_CC,
   BuildPairF64,
   SplitF64,
-  TAIL,
 
   // Add the Lo 12 bits from an address. Selected to ADDI.
   ADD_LO,
@@ -991,6 +991,9 @@ private:
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
