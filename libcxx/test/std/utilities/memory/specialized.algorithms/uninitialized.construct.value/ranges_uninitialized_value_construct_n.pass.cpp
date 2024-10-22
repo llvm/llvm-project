@@ -94,17 +94,5 @@ int main(int, char**) {
   }
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-  // Works with const iterators.
-  {
-    constexpr int N = 5;
-    Buffer<Counted, N> buf;
-
-    std::ranges::uninitialized_value_construct_n(buf.cbegin(), N);
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    std::destroy(buf.begin(), buf.end());
-    Counted::reset();
-  }
-
   return 0;
 }

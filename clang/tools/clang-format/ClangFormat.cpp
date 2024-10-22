@@ -351,9 +351,6 @@ static void outputReplacementsXML(const Replacements &Replaces) {
 static bool
 emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
                         const std::unique_ptr<llvm::MemoryBuffer> &Code) {
-  if (Replaces.empty())
-    return false;
-
   unsigned Errors = 0;
   if (WarnFormat && !NoWarnFormat) {
     SourceMgr Mgr;
@@ -490,9 +487,11 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replacements Replaces = sortIncludes(*FormatStyle, Code->getBuffer(), Ranges,
                                        AssumedFileName, &CursorPosition);
 
+  const bool IsJson = FormatStyle->isJson();
+
   // To format JSON insert a variable to trick the code into thinking its
   // JavaScript.
-  if (FormatStyle->isJson() && !FormatStyle->DisableFormat) {
+  if (IsJson && !FormatStyle->DisableFormat) {
     auto Err = Replaces.add(tooling::Replacement(
         tooling::Replacement(AssumedFileName, 0, 0, "x = ")));
     if (Err)
@@ -510,9 +509,11 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replacements FormatChanges =
       reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
-  if (OutputXML || DryRun) {
-    if (DryRun)
-      return emitReplacementWarnings(Replaces, AssumedFileName, Code);
+  if (DryRun) {
+    return Replaces.size() > (IsJson ? 1 : 0) &&
+           emitReplacementWarnings(Replaces, AssumedFileName, Code);
+  }
+  if (OutputXML) {
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -703,7 +704,7 @@ int main(int argc, const char **argv) {
       FileNames.push_back(Line);
       LineNo++;
     }
-    errs() << "Clang-formating " << LineNo << " files\n";
+    errs() << "Clang-formatting " << LineNo << " files\n";
   }
 
   if (FileNames.empty())

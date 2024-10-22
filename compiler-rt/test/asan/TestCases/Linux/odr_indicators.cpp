@@ -1,8 +1,8 @@
 // RUN: %clangxx_asan -fno-sanitize-address-use-odr-indicator -fPIC %s -o %t
-// RUN: %env_asan_opts=report_globals=1:verbosity=3 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,INDICATOR0
+// RUN: %env_asan_opts=report_globals=2 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,INDICATOR0
 
 // RUN: %clangxx_asan -fsanitize-address-use-odr-indicator -fPIC %s -o %t
-// RUN: %env_asan_opts=report_globals=1:verbosity=3 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,INDICATOR1
+// RUN: %env_asan_opts=report_globals=2 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,INDICATOR1
 
 #include <stdio.h>
 

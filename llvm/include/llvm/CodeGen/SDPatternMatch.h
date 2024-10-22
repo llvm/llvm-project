@@ -542,6 +542,81 @@ struct BinaryOpc_match {
   }
 };
 
+template <typename LHS_P, typename RHS_P, typename Pred_t,
+          bool Commutable = false, bool ExcludeChain = false>
+struct MaxMin_match {
+  using PredType = Pred_t;
+  LHS_P LHS;
+  RHS_P RHS;
+
+  MaxMin_match(const LHS_P &L, const RHS_P &R) : LHS(L), RHS(R) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT)) ||
+        sd_context_match(N, Ctx, m_Opc(ISD::VSELECT))) {
+      EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
+      assert(EO_SELECT.Size == 3);
+      SDValue Cond = N->getOperand(EO_SELECT.FirstIndex);
+      SDValue TrueValue = N->getOperand(EO_SELECT.FirstIndex + 1);
+      SDValue FalseValue = N->getOperand(EO_SELECT.FirstIndex + 2);
+
+      if (sd_context_match(Cond, Ctx, m_Opc(ISD::SETCC))) {
+        EffectiveOperands<ExcludeChain> EO_SETCC(Cond, Ctx);
+        assert(EO_SETCC.Size == 3);
+        SDValue L = Cond->getOperand(EO_SETCC.FirstIndex);
+        SDValue R = Cond->getOperand(EO_SETCC.FirstIndex + 1);
+        auto *CondNode =
+            cast<CondCodeSDNode>(Cond->getOperand(EO_SETCC.FirstIndex + 2));
+
+        if ((TrueValue != L || FalseValue != R) &&
+            (TrueValue != R || FalseValue != L)) {
+          return false;
+        }
+
+        ISD::CondCode Cond =
+            TrueValue == L ? CondNode->get()
+                           : getSetCCInverse(CondNode->get(), L.getValueType());
+        if (!Pred_t::match(Cond)) {
+          return false;
+        }
+        return (LHS.match(Ctx, L) && RHS.match(Ctx, R)) ||
+               (Commutable && LHS.match(Ctx, R) && RHS.match(Ctx, L));
+      }
+    }
+
+    return false;
+  }
+};
+
+// Helper class for identifying signed max predicates.
+struct smax_pred_ty {
+  static bool match(ISD::CondCode Cond) {
+    return Cond == ISD::CondCode::SETGT || Cond == ISD::CondCode::SETGE;
+  }
+};
+
+// Helper class for identifying unsigned max predicates.
+struct umax_pred_ty {
+  static bool match(ISD::CondCode Cond) {
+    return Cond == ISD::CondCode::SETUGT || Cond == ISD::CondCode::SETUGE;
+  }
+};
+
+// Helper class for identifying signed min predicates.
+struct smin_pred_ty {
+  static bool match(ISD::CondCode Cond) {
+    return Cond == ISD::CondCode::SETLT || Cond == ISD::CondCode::SETLE;
+  }
+};
+
+// Helper class for identifying unsigned min predicates.
+struct umin_pred_ty {
+  static bool match(ISD::CondCode Cond) {
+    return Cond == ISD::CondCode::SETULT || Cond == ISD::CondCode::SETULE;
+  }
+};
+
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_BinOp(unsigned Opc, const LHS &L,
                                          const RHS &R) {
@@ -614,8 +689,20 @@ inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_SMinLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R),
+                 MaxMin_match<LHS, RHS, smin_pred_ty, true>(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_SMax(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::SMAX, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_SMaxLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::SMAX, L, R),
+                 MaxMin_match<LHS, RHS, smax_pred_ty, true>(L, R));
 }
 
 template <typename LHS, typename RHS>
@@ -624,8 +711,20 @@ inline BinaryOpc_match<LHS, RHS, true> m_UMin(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_UMinLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::UMIN, L, R),
+                 MaxMin_match<LHS, RHS, umin_pred_ty, true>(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_UMax(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::UMAX, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_UMaxLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::UMAX, L, R),
+                 MaxMin_match<LHS, RHS, umax_pred_ty, true>(L, R));
 }
 
 template <typename LHS, typename RHS>
@@ -658,6 +757,16 @@ inline BinaryOpc_match<LHS, RHS> m_Sra(const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Srl(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_Rotl(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(ISD::ROTL, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(ISD::ROTR, L, R);
 }
 
 template <typename LHS, typename RHS>
@@ -721,6 +830,11 @@ template <typename Opnd>
 inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
                                                    const Opnd &Op) {
   return UnaryOpc_match<Opnd, true>(Opc, Op);
+}
+
+template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_BSwap(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BSWAP, Op);
 }
 
 template <typename Opnd>
@@ -791,6 +905,18 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToUI(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToSI(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::FP_TO_SINT, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctpop(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTPOP, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctlz(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTLZ, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTTZ, Op);
 }
 
 // === Constants ===

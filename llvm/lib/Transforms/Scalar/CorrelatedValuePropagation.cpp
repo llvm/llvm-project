@@ -1207,6 +1207,11 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
                     const SimplifyQuery &SQ) {
   bool FnChanged = false;
+  std::optional<ConstantRange> RetRange;
+  if (F.hasExactDefinition() && F.getReturnType()->isIntOrIntVectorTy())
+    RetRange =
+        ConstantRange::getEmpty(F.getReturnType()->getScalarSizeInBits());
+
   // Visiting in a pre-order depth-first traversal causes us to simplify early
   // blocks before querying later blocks (which require us to analyze early
   // blocks).  Eagerly simplifying shallow blocks means there is strictly less
@@ -1277,6 +1282,11 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       // constant folding the return values of callees.
       auto *RetVal = RI->getReturnValue();
       if (!RetVal) break; // handle "ret void"
+      if (RetRange && !RetRange->isFullSet())
+        RetRange =
+            RetRange->unionWith(LVI->getConstantRange(RetVal, RI,
+                                                      /*UndefAllowed=*/false));
+
       if (isa<Constant>(RetVal)) break; // nothing to do
       if (auto *C = getConstantAt(RetVal, RI, LVI)) {
         ++NumReturns;
@@ -1289,6 +1299,18 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
     FnChanged |= BBChanged;
   }
 
+  // Infer range attribute on return value.
+  if (RetRange && !RetRange->isFullSet()) {
+    Attribute RangeAttr = F.getRetAttribute(Attribute::Range);
+    if (RangeAttr.isValid())
+      RetRange = RetRange->intersectWith(RangeAttr.getRange());
+    // Don't add attribute for constant integer returns to reduce noise. These
+    // are propagated across functions by IPSCCP.
+    if (!RetRange->isEmptySet() && !RetRange->isSingleElement()) {
+      F.addRangeRetAttr(*RetRange);
+      FnChanged = true;
+    }
+  }
   return FnChanged;
 }
 

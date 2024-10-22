@@ -53,7 +53,6 @@
 ! CHECK:                 %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_18]], %[[VAL_19]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_21]] to %[[VAL_14]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 
 ! CHECK-LABEL:   func.func @_QPreduction_max_real(
@@ -84,7 +83,6 @@
 ! CHECK:                 %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_18]], %[[VAL_19]] : f32
 ! CHECK:                 hlfir.assign %[[VAL_21]] to %[[VAL_14]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_30:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
@@ -108,10 +106,8 @@
 ! CHECK:                   %[[VAL_46:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_45]])  : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:                   %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.ref<f32>
 ! CHECK:                   hlfir.assign %[[VAL_47]] to %[[VAL_37]]#0 : f32, !fir.ref<f32>
-! CHECK:                 } else {
 ! CHECK:                 }
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 
 

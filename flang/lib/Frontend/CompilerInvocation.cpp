@@ -40,6 +40,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <optional>
@@ -65,8 +66,8 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
                                 bool defaultColor = true) {
   // Color diagnostics default to auto ("on" if terminal supports) in the
-  // compiler driver `flang-new` but default to off in the frontend driver
-  // `flang-new -fc1`, needing an explicit OPT_fdiagnostics_color.
+  // compiler driver `flang` but default to off in the frontend driver
+  // `flang -fc1`, needing an explicit OPT_fdiagnostics_color.
   // Support both clang's -f[no-]color-diagnostics and gcc's
   // -f[no-]diagnostics-colors[=never|always|auto].
   enum {
@@ -348,6 +349,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
+  // -record-command-line option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_record_command_line)) {
+    opts.RecordCommandLine = a->getValue();
+  }
+
   // -mlink-builtin-bitcode
   for (auto *a :
        args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
@@ -438,8 +445,19 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   for (const llvm::opt::Arg *currentArg :
        args.filtered(clang::driver::options::OPT_target_feature))
     opts.featuresAsWritten.emplace_back(currentArg->getValue());
-}
 
+  if (args.hasArg(clang::driver::options::OPT_fdisable_real_10))
+    opts.disabledRealKinds.push_back(10);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_real_3))
+    opts.disabledRealKinds.push_back(3);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_2))
+    opts.disabledIntegerKinds.push_back(2);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
+    opts.disabledIntegerKinds.push_back(16);
+}
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
   if (opts.programAction == DebugDumpParsingLog)
@@ -808,6 +826,8 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
             : PPMacrosFlag::Exclude;
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
+  opts.preprocessIncludeLines =
+      args.hasArg(clang::driver::options::OPT_fpreprocess_include_lines);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
   opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
 }
@@ -819,14 +839,20 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
 
   // -J/module-dir option
-  auto moduleDirList =
+  std::vector<std::string> moduleDirList =
       args.getAllArgValues(clang::driver::options::OPT_module_dir);
-  // User can only specify -J/-module-dir once
+  // User can only specify one -J/-module-dir directory, but may repeat
+  // -J/-module-dir as long as the directory is the same each time.
   // https://gcc.gnu.org/onlinedocs/gfortran/Directory-Options.html
+  std::sort(moduleDirList.begin(), moduleDirList.end());
+  moduleDirList.erase(std::unique(moduleDirList.begin(), moduleDirList.end()),
+                      moduleDirList.end());
   if (moduleDirList.size() > 1) {
     const unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                              "Only one '-module-dir/-J' option allowed");
+                              "Only one '-module-dir/-J' directory allowed. "
+                              "'-module-dir/-J' may be given multiple times "
+                              "but the directory must be the same each time.");
     diags.Report(diagID);
   }
   if (moduleDirList.size() == 1)
@@ -880,7 +906,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
-  // Default to off for `flang-new -fc1`.
+  // Default to off for `flang -fc1`.
   res.getFrontendOpts().showColors =
       parseShowColorsArgs(args, /*defaultDiagColor=*/false);
 
@@ -968,7 +994,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// generated.
 static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  if (!args.hasArg(clang::driver::options::OPT_fopenmp))
+  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
+                                        clang::driver::options::OPT_fno_openmp);
+  if (!arg || arg->getOption().matches(clang::driver::options::OPT_fno_openmp))
     return true;
 
   unsigned numErrorsBefore = diags.getNumErrors();
@@ -1087,6 +1115,24 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   return diags.getNumErrors() == numErrorsBefore;
 }
 
+/// Parses signed integer overflow options and populates the
+/// CompilerInvocation accordingly.
+/// Returns false if new errors are generated.
+///
+/// \param [out] invoc Stores the processed arguments
+/// \param [in] args The compiler invocation arguments to parse
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
+                                     llvm::opt::ArgList &args,
+                                     clang::DiagnosticsEngine &diags) {
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
+
+  if (args.getLastArg(clang::driver::options::OPT_fwrapv))
+    opts.setSignedOverflowBehavior(Fortran::common::LangOptions::SOB_Defined);
+
+  return true;
+}
+
 /// Parses all floating point related arguments and populates the
 /// CompilerInvocation accordingly.
 /// Returns false if new errors are generated.
@@ -1097,17 +1143,17 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 static bool parseFloatingPointArgs(CompilerInvocation &invoc,
                                    llvm::opt::ArgList &args,
                                    clang::DiagnosticsEngine &diags) {
-  LangOptions &opts = invoc.getLangOpts();
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_ffp_contract)) {
     const llvm::StringRef val = a->getValue();
-    enum LangOptions::FPModeKind fpContractMode;
+    enum Fortran::common::LangOptions::FPModeKind fpContractMode;
 
     if (val == "off")
-      fpContractMode = LangOptions::FPM_Off;
+      fpContractMode = Fortran::common::LangOptions::FPM_Off;
     else if (val == "fast")
-      fpContractMode = LangOptions::FPM_Fast;
+      fpContractMode = Fortran::common::LangOptions::FPM_Fast;
     else {
       diags.Report(clang::diag::err_drv_unsupported_option_argument)
           << a->getSpelling() << val;
@@ -1148,7 +1194,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.ReciprocalMath = true;
     opts.ApproxFunc = true;
     opts.NoSignedZeros = true;
-    opts.setFPContractMode(LangOptions::FPM_Fast);
+    opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
 
   return true;
@@ -1181,7 +1227,7 @@ static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
     return false;
   }
 
-  LangOptions &opts = invoc.getLangOpts();
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
   if (vscaleMin) {
     llvm::StringRef argValue = llvm::StringRef(vscaleMin->getValue());
     unsigned vscaleMinVal;
@@ -1225,6 +1271,18 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
   invoc.getCodeGenOpts().DependentLibs =
       args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
   return true;
+}
+
+static bool parseLangOptionsArgs(CompilerInvocation &invoc,
+                                 llvm::opt::ArgList &args,
+                                 clang::DiagnosticsEngine &diags) {
+  bool success = true;
+
+  success &= parseIntegerOverflowArgs(invoc, args, diags);
+  success &= parseFloatingPointArgs(invoc, args, diags);
+  success &= parseVScaleArgs(invoc, args, diags);
+
+  return success;
 }
 
 bool CompilerInvocation::createFromArgs(
@@ -1335,9 +1393,7 @@ bool CompilerInvocation::createFromArgs(
   invoc.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
-  success &= parseFloatingPointArgs(invoc, args, diags);
-
-  success &= parseVScaleArgs(invoc, args, diags);
+  success &= parseLangOptionsArgs(invoc, args, diags);
 
   success &= parseLinkerOptionsArgs(invoc, args, diags);
 
@@ -1466,6 +1522,10 @@ void CompilerInvocation::setFortranOpts() {
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
 
+  // -E
+  fortranOptions.prescanAndReformat =
+      frontendOptions.programAction == PrintPreprocessedInput;
+
   fortranOptions.features = frontendOptions.features;
   fortranOptions.encoding = frontendOptions.encoding;
 
@@ -1518,7 +1578,8 @@ CompilerInvocation::getSemanticsCtx(
   auto &fortranOptions = getFortranOpts();
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
-      getDefaultKinds(), fortranOptions.features, allCookedSources);
+      getDefaultKinds(), fortranOptions.features, getLangOpts(),
+      allCookedSources);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
@@ -1529,8 +1590,8 @@ CompilerInvocation::getSemanticsCtx(
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
-      semanticsContext->targetCharacteristics(), targetMachine, compilerVersion,
-      allCompilerInvocOpts);
+      semanticsContext->targetCharacteristics(), targetMachine, getTargetOpts(),
+      compilerVersion, allCompilerInvocOpts);
   return semanticsContext;
 }
 
@@ -1543,14 +1604,16 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
 
-  const LangOptions &langOptions = getLangOpts();
+  const Fortran::common::LangOptions &langOptions = getLangOpts();
+  loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
+                                    Fortran::common::LangOptions::SOB_Defined);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,
   //       so that we can just copy it into LoweringOptions.
   mathOpts
       .setFPContractEnabled(langOptions.getFPContractMode() ==
-                            LangOptions::FPM_Fast)
+                            Fortran::common::LangOptions::FPM_Fast)
       .setNoHonorInfs(langOptions.NoHonorInfs)
       .setNoHonorNaNs(langOptions.NoHonorNaNs)
       .setApproxFunc(langOptions.ApproxFunc)

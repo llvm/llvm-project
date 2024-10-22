@@ -472,7 +472,7 @@ def IRDL_BaseOp : IRDL_ConstraintOp<"base",
       }
 
       irdl.type @complex_wrapper {
-        %0 = irdl.base @complex
+        %0 = irdl.base @cmath::@complex
         irdl.parameters(%0)
       }
     }
@@ -588,7 +588,7 @@ def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
 
     The above program defines a type `complex` inside the dialect `cmath` that
     can have a single type parameter that can be either `i32`, `i64`, `f32` or
-    `f32`.
+    `f64`.
   }];
 
   let arguments = (ins Variadic<IRDL_AttributeType>:$args);

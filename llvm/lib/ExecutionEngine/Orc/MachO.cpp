@@ -8,15 +8,18 @@
 
 #include "llvm/ExecutionEngine/Orc/MachO.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Support/FileSystem.h"
 
 #define DEBUG_TYPE "orc"
 
 namespace llvm {
 namespace orc {
 
-static std::string objDesc(MemoryBuffer &Obj, const Triple &TT,
+static std::string objDesc(const MemoryBufferRef &Obj, const Triple &TT,
                            bool ObjIsSlice) {
   std::string Desc;
   if (ObjIsSlice)
@@ -26,11 +29,10 @@ static std::string objDesc(MemoryBuffer &Obj, const Triple &TT,
 }
 
 template <typename HeaderType>
-static Expected<std::unique_ptr<MemoryBuffer>>
-checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj,
-                            bool SwapEndianness, const Triple &TT,
-                            bool ObjIsSlice) {
-  StringRef Data = Obj->getBuffer();
+static Error checkMachORelocatableObject(MemoryBufferRef Obj,
+                                         bool SwapEndianness, const Triple &TT,
+                                         bool ObjIsSlice) {
+  StringRef Data = Obj.getBuffer();
 
   HeaderType Hdr;
   memcpy(&Hdr, Data.data(), sizeof(HeaderType));
@@ -39,28 +41,27 @@ checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj,
     swapStruct(Hdr);
 
   if (Hdr.filetype != MachO::MH_OBJECT)
-    return make_error<StringError>(objDesc(*Obj, TT, ObjIsSlice) +
+    return make_error<StringError>(objDesc(Obj, TT, ObjIsSlice) +
                                        " is not a MachO relocatable object",
                                    inconvertibleErrorCode());
 
   auto ObjArch = object::MachOObjectFile::getArch(Hdr.cputype, Hdr.cpusubtype);
   if (ObjArch != TT.getArch())
     return make_error<StringError>(
-        objDesc(*Obj, TT, ObjIsSlice) + Triple::getArchTypeName(ObjArch) +
+        objDesc(Obj, TT, ObjIsSlice) + Triple::getArchTypeName(ObjArch) +
             ", cannot be loaded into " + TT.str() + " process",
         inconvertibleErrorCode());
 
-  return std::move(Obj);
+  return Error::success();
 }
 
-Expected<std::unique_ptr<MemoryBuffer>>
-checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
-                            bool ObjIsSlice) {
-  StringRef Data = Obj->getBuffer();
+Error checkMachORelocatableObject(MemoryBufferRef Obj, const Triple &TT,
+                                  bool ObjIsSlice) {
+  StringRef Data = Obj.getBuffer();
 
   if (Data.size() < 4)
     return make_error<StringError>(
-        objDesc(*Obj, TT, ObjIsSlice) +
+        objDesc(Obj, TT, ObjIsSlice) +
             " is not a valid MachO relocatable object file (truncated header)",
         inconvertibleErrorCode());
 
@@ -78,28 +79,57 @@ checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
         std::move(Obj), Magic == MachO::MH_CIGAM_64, TT, ObjIsSlice);
   default:
     return make_error<StringError>(
-        objDesc(*Obj, TT, ObjIsSlice) +
+        objDesc(Obj, TT, ObjIsSlice) +
             " is not a valid MachO relocatable object (bad magic value)",
         inconvertibleErrorCode());
   }
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
-loadMachORelocatableObject(StringRef Path, const Triple &TT) {
+checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
+                            bool ObjIsSlice) {
+  if (auto Err =
+          checkMachORelocatableObject(Obj->getMemBufferRef(), TT, ObjIsSlice))
+    return std::move(Err);
+  return std::move(Obj);
+}
+
+Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
+loadMachORelocatableObject(StringRef Path, const Triple &TT, LoadArchives LA,
+                           std::optional<StringRef> IdentifierOverride) {
   assert((TT.getObjectFormat() == Triple::UnknownObjectFormat ||
           TT.getObjectFormat() == Triple::MachO) &&
          "TT must specify MachO or Unknown object format");
 
-  auto Buf = MemoryBuffer::getFile(Path);
+  if (!IdentifierOverride)
+    IdentifierOverride = Path;
+
+  Expected<sys::fs::file_t> FDOrErr =
+      sys::fs::openNativeFileForRead(Path, sys::fs::OF_None);
+  if (!FDOrErr)
+    return createFileError(Path, FDOrErr.takeError());
+  sys::fs::file_t FD = *FDOrErr;
+  auto CloseFile = make_scope_exit([&]() { sys::fs::closeFile(FD); });
+
+  auto Buf =
+      MemoryBuffer::getOpenFile(FD, *IdentifierOverride, /*FileSize=*/-1);
   if (!Buf)
-    return createFileError(Path, Buf.getError());
+    return make_error<StringError>(
+        StringRef("Could not load MachO object at path ") + Path,
+        Buf.getError());
 
   switch (identify_magic((*Buf)->getBuffer())) {
-  case file_magic::macho_object:
-    return checkMachORelocatableObject(std::move(*Buf), TT, false);
+  case file_magic::macho_object: {
+    auto CheckedObj = checkMachORelocatableObject(std::move(*Buf), TT, false);
+    if (!CheckedObj)
+      return CheckedObj.takeError();
+    return std::make_pair(std::move(*CheckedObj),
+                          LinkableFileKind::RelocatableObject);
+  }
   case file_magic::macho_universal_binary:
-    return loadMachORelocatableObjectFromUniversalBinary(Path, std::move(*Buf),
-                                                         TT);
+    return loadLinkableSliceFromMachOUniversalBinary(FD, std::move(*Buf), TT,
+                                                     LoadArchives::Never, Path,
+                                                     *IdentifierOverride);
   default:
     return make_error<StringError>(
         Path + " does not contain a relocatable object file compatible with " +
@@ -108,9 +138,12 @@ loadMachORelocatableObject(StringRef Path, const Triple &TT) {
   }
 }
 
-Expected<std::unique_ptr<MemoryBuffer>>
-loadMachORelocatableObjectFromUniversalBinary(
-    StringRef UBPath, std::unique_ptr<MemoryBuffer> UBBuf, const Triple &TT) {
+Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
+loadLinkableSliceFromMachOUniversalBinary(sys::fs::file_t FD,
+                                          std::unique_ptr<MemoryBuffer> UBBuf,
+                                          const Triple &TT, LoadArchives LA,
+                                          StringRef UBPath,
+                                          StringRef Identifier) {
 
   auto UniversalBin =
       object::MachOUniversalBinary::create(UBBuf->getMemBufferRef());
@@ -121,12 +154,48 @@ loadMachORelocatableObjectFromUniversalBinary(
   if (!SliceRange)
     return SliceRange.takeError();
 
-  auto ObjBuf = errorOrToExpected(MemoryBuffer::getFileSlice(
-      UBPath, SliceRange->second, SliceRange->first, false));
-  if (!ObjBuf)
-    return createFileError(UBPath, ObjBuf.takeError());
+  auto Buf = MemoryBuffer::getOpenFileSlice(FD, Identifier, SliceRange->second,
+                                            SliceRange->first);
+  if (!Buf)
+    return make_error<StringError>(
+        "Could not load " + TT.getArchName() +
+            " slice of MachO universal binary at path " + UBPath,
+        Buf.getError());
 
-  return checkMachORelocatableObject(std::move(*ObjBuf), TT, true);
+  switch (identify_magic((*Buf)->getBuffer())) {
+  case file_magic::archive:
+    if (LA != LoadArchives::Never)
+      return std::make_pair(std::move(*Buf), LinkableFileKind::Archive);
+    break;
+  case file_magic::macho_object: {
+    if (LA != LoadArchives::Required) {
+      auto CheckedObj = checkMachORelocatableObject(std::move(*Buf), TT, true);
+      if (!CheckedObj)
+        return CheckedObj.takeError();
+      return std::make_pair(std::move(*CheckedObj),
+                            LinkableFileKind::RelocatableObject);
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  auto FT = [&] {
+    switch (LA) {
+    case LoadArchives::Never:
+      return "a mach-o relocatable object file";
+    case LoadArchives::Allowed:
+      return "a mach-o relocatable object file or archive";
+    case LoadArchives::Required:
+      return "an archive";
+    }
+    llvm_unreachable("Unknown LoadArchives enum");
+  };
+
+  return make_error<StringError>(TT.getArchName() + " slice of " + UBPath +
+                                     " does not contain " + FT(),
+                                 inconvertibleErrorCode());
 }
 
 Expected<std::pair<size_t, size_t>>
@@ -158,6 +227,40 @@ getMachOSliceRangeForTriple(MemoryBufferRef UBBuf, const Triple &TT) {
     return UB.takeError();
 
   return getMachOSliceRangeForTriple(**UB, TT);
+}
+
+Error ForceLoadMachOArchiveMembers::operator()(MemoryBufferRef MemberBuf) {
+  if (!ObjCOnly)
+    return L.add(JD, MemoryBuffer::getMemBuffer(MemberBuf));
+
+  // We need to check whether this archive member contains any Objective-C
+  // or Swift metadata.
+
+  auto Obj = object::ObjectFile::createObjectFile(MemberBuf);
+  if (!Obj) {
+    // We silently ignore invalid files.
+    consumeError(Obj.takeError());
+    return Error::success();
+  }
+
+  if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(&**Obj)) {
+    // Load the object if any recognized special section is present.
+    for (auto Sec : MachOObj->sections()) {
+      auto SegName =
+          MachOObj->getSectionFinalSegmentName(Sec.getRawDataRefImpl());
+      if (auto SecName = Sec.getName()) {
+        if (*SecName == "__objc_classlist" || *SecName == "__objc_protolist" ||
+            *SecName == "__objc_clsrolist" || *SecName == "__objc_catlist" ||
+            *SecName == "__objc_catlist2" || *SecName == "__objc_nlcatlist" ||
+            (SegName == "__TEXT" && (*SecName).starts_with("__swift") &&
+             *SecName != "__swift_modhash"))
+          return L.add(JD, MemoryBuffer::getMemBuffer(MemberBuf));
+      } else
+        return SecName.takeError();
+    }
+  }
+
+  return Error::success();
 }
 
 } // End namespace orc.

@@ -86,7 +86,7 @@ SBError SBWatchpoint::GetError() {
   SBError sb_error;
   lldb::WatchpointSP watchpoint_sp(GetSP());
   if (watchpoint_sp) {
-    sb_error.SetError(watchpoint_sp->GetError());
+    sb_error.SetError(watchpoint_sp->GetError().Clone());
   }
   return sb_error;
 }

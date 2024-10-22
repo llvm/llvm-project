@@ -40,6 +40,7 @@ add_lld_library(lldMachO
   BinaryFormat
   BitReader
   BitWriter
+  CGData
   Core
   DebugInfoDWARF
   Demangle

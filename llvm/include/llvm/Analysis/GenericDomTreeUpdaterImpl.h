@@ -107,8 +107,7 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
     // b. If the edge doesn't exist, we can then infer that {Delete, A, B}
     // actually happened but {Insert, A, B} was an invalid update which never
     // happened. DTU will submit {Delete, A, B} in this case.
-    if (!isSelfDominance(U) && Seen.count(Edge) == 0) {
-      Seen.insert(Edge);
+    if (!isSelfDominance(U) && Seen.insert(Edge).second) {
       // If the update doesn't appear in the CFG, it means that
       // either the change isn't made or relevant operations
       // result in a no-op.

@@ -628,6 +628,12 @@ defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBar
 defm : DemangledNativeBuiltin<"work_group_barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"__spirv_ControlBarrier", OpenCL_std, Barrier, 3, 3, OpControlBarrier>;
 
+// cl_intel_split_work_group_barrier
+defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ControlBarrierArriveINTEL", OpenCL_std, Barrier, 3, 3, OpControlBarrierArriveINTEL>;
+defm : DemangledNativeBuiltin<"intel_work_group_barrier_wait", OpenCL_std, Barrier, 1, 2, OpControlBarrierWaitINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ControlBarrierWaitINTEL", OpenCL_std, Barrier, 3, 3, OpControlBarrierWaitINTEL>;
+
 // Kernel enqueue builtin records:
 defm : DemangledNativeBuiltin<"__enqueue_kernel_basic", OpenCL_std, Enqueue, 5, 5, OpEnqueueKernel>;
 defm : DemangledNativeBuiltin<"__enqueue_kernel_basic_events", OpenCL_std, Enqueue, 8, 8, OpEnqueueKernel>;
@@ -1500,7 +1506,7 @@ foreach i = ["", "2", "3", "4", "8", "16"] in {
     defm : DemangledVectorLoadStoreBuiltin<"vload_half", 2, 2, 173>;
     defm : DemangledVectorLoadStoreBuiltin<"vstore_half", 3, 3, 175>;
   } else {
-    defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload_half", i), 3, 3, 174>;
+    defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload_half", i), 2, 2, 174>;
     defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstore_half", i), 3, 3, 177>;
   }
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload", i), 2, 2, 171>;

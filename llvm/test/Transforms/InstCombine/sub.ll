@@ -230,7 +230,7 @@ define i32 @test5(i32 %A, i32 %B, i32 %C) {
 define i32 @test6(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[B_NOT:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[D:%.*]] = and i32 [[B_NOT]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = and i32 [[A:%.*]], [[B_NOT]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %C = and i32 %A, %B
@@ -241,7 +241,7 @@ define i32 @test6(i32 %A, i32 %B) {
 define i32 @test6commuted(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test6commuted(
 ; CHECK-NEXT:    [[B_NOT:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[D:%.*]] = and i32 [[B_NOT]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = and i32 [[A:%.*]], [[B_NOT]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %C = and i32 %B, %A
@@ -686,7 +686,7 @@ define <2 x i32> @test27commutedvecmixed(<2 x i32> %x, <2 x i32> %y) {
 define i32 @test28(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test28(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Z:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %neg = sub i32 0, %z
@@ -698,7 +698,7 @@ define i32 @test28(i32 %x, i32 %y, i32 %z) {
 define i32 @test28commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test28commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Z:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %neg = sub i32 0, %z
@@ -893,7 +893,7 @@ define i32 @test45commuted(i32 %x, i32 %y) {
 define i32 @test46(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test46(
 ; CHECK-NEXT:    [[X_NOT:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X_NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[Y:%.*]], [[X_NOT]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %or = or i32 %x, %y
@@ -904,7 +904,7 @@ define i32 @test46(i32 %x, i32 %y) {
 define i32 @test46commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test46commuted(
 ; CHECK-NEXT:    [[X_NOT:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X_NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[Y:%.*]], [[X_NOT]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %or = or i32 %y, %x
@@ -1368,7 +1368,7 @@ define i32 @test71(i32 %A, i32 %B) {
 define <2 x i32> @test72(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test72(
 ; CHECK-NEXT:    [[B_NOT:%.*]] = xor <2 x i32> [[B:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[D:%.*]] = and <2 x i32> [[B_NOT]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i32> [[A:%.*]], [[B_NOT]]
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %C = or <2 x i32> %A, %B
@@ -1460,7 +1460,7 @@ define i8 @sub_add_sub_reassoc(i8 %w, i8 %x, i8 %y, i8 %z) {
 define <2 x i8> @sub_add_sub_reassoc_commute(<2 x i8> %w, <2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @sub_add_sub_reassoc_commute(
 ; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[Y:%.*]], <i8 42, i8 -42>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[D]], [[W:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[W:%.*]], [[D]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[S2:%.*]] = sub <2 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[S2]]
@@ -1478,7 +1478,7 @@ define i8 @sub_add_sub_reassoc_twice(i8 %v, i8 %w, i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sub_add_sub_reassoc_twice(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[W:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X:%.*]], [[V:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[S3:%.*]] = sub i8 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[S3]]
 ;
@@ -2044,7 +2044,7 @@ define i16 @urem_zext_noundef(i8 noundef %x, i8 %y) {
 define i8 @mul_sub_common_factor_commute1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_sub_common_factor_commute1(
 ; CHECK-NEXT:    [[X1:%.*]] = add i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X1]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], [[X1]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %m = mul nsw i8 %x, %y
@@ -2070,7 +2070,7 @@ define <2 x i8> @mul_sub_common_factor_commute2(<2 x i8> %x, <2 x i8> %y) {
 define i8 @mul_sub_common_factor_commute3(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_sub_common_factor_commute3(
 ; CHECK-NEXT:    [[M1:%.*]] = sub i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[M1]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], [[M1]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %m = mul nuw i8 %x, %y
@@ -2081,7 +2081,7 @@ define i8 @mul_sub_common_factor_commute3(i8 %x, i8 %y) {
 define i8 @mul_sub_common_factor_commute4(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_sub_common_factor_commute4(
 ; CHECK-NEXT:    [[M1:%.*]] = sub i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[M1]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], [[M1]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %m = mul nsw i8 %y, %x
@@ -2710,7 +2710,7 @@ if.else:
 
 define i64 @sub_infer_nuw_from_domcond_fold2(i32 range(i32 0, 2147483648) %x, i32 range(i32 0, 2147483648) %y) {
 ; CHECK-LABEL: @sub_infer_nuw_from_domcond_fold2(
-; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp samesign ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[Y]]
@@ -2734,7 +2734,7 @@ if.else:
 define i1 @sub_infer_nuw_from_domcond_fold3(i16 %xx, i32 range(i32 0, 12) %y) {
 ; CHECK-LABEL: @sub_infer_nuw_from_domcond_fold3(
 ; CHECK-NEXT:    [[X:%.*]] = zext i16 [[XX:%.*]] to i32
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
@@ -2796,4 +2796,72 @@ if.then:
 
 if.else:
   ret i32 0
+}
+
+define i32 @fold_sub_and_into_andn(i32 %x) {
+; CHECK-LABEL: @fold_sub_and_into_andn(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 63
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP0]], 63
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %sub = sub i32 63, %x
+  %and = and i32 %sub, 63
+  ret i32 %and
+}
+
+define i1 @fold_sub_and_into_andn_icmp(i32 %x) {
+; CHECK-LABEL: @fold_sub_and_into_andn_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 63
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub = sub i32 63, %x
+  %and = and i32 %sub, 63
+  %cmp = icmp eq i32 %and, 0
+  ret i1 %cmp
+}
+
+define i32 @fold_sub_and_into_andn_subset(i32 %x) {
+; CHECK-LABEL: @fold_sub_and_into_andn_subset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP0]], 31
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %sub = sub i32 63, %x
+  %and = and i32 %sub, 31
+  ret i32 %and
+}
+
+; Negative tests
+
+define i32 @fold_sub_and_into_andn_nonmask(i32 %x, i32 %y) {
+; CHECK-LABEL: @fold_sub_and_into_andn_nonmask(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 63
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %sub = sub i32 %y, %x
+  %and = and i32 %sub, 63
+  ret i32 %and
+}
+
+define i32 @fold_sub_and_into_andn_superset(i32 %x) {
+; CHECK-LABEL: @fold_sub_and_into_andn_superset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 63, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 127
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %sub = sub i32 63, %x
+  %and = and i32 %sub, 127
+  ret i32 %and
 }

@@ -30,6 +30,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
@@ -66,7 +67,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include <cerrno>
 #include <optional>
 
@@ -1061,7 +1061,7 @@ int runOrcJIT(const char *ProgName) {
   }
 
   if (PerModuleLazy)
-    J->setPartitionFunction(orc::CompileOnDemandLayer::compileWholeModule);
+    J->setPartitionFunction(orc::IRPartitionLayer::compileWholeModule);
 
   auto IRDump = createIRDebugDumper();
   J->getIRTransformLayer().setTransform(

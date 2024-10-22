@@ -213,7 +213,7 @@ define i1 @amounts_mismatch(i8 %x, i8 %y, i8 %z, i8 %w) {
 ; CHECK-LABEL: @amounts_mismatch(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[Z:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)

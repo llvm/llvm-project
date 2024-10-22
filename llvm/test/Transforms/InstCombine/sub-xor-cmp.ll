@@ -58,7 +58,7 @@ define i64 @sext_non_bool_xor_sub(i64 %a, i8 %b) {
 ; CHECK-LABEL: define i64 @sext_non_bool_xor_sub(
 ; CHECK-SAME: i64 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i64
-; CHECK-NEXT:    [[D:%.*]] = xor i64 [[C]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = xor i64 [[A]], [[C]]
 ; CHECK-NEXT:    [[R:%.*]] = sub i64 [[D]], [[C]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
@@ -72,7 +72,7 @@ define i64 @sext_non_bool_xor_sub_1(i64 %a, i8 %b) {
 ; CHECK-LABEL: define i64 @sext_non_bool_xor_sub_1(
 ; CHECK-SAME: i64 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i64
-; CHECK-NEXT:    [[D:%.*]] = xor i64 [[C]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = xor i64 [[A]], [[C]]
 ; CHECK-NEXT:    [[R:%.*]] = sub i64 [[D]], [[C]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
@@ -135,9 +135,9 @@ define i64 @xor_multi_uses(i64 %a, i1 %b, i64 %x) {
 ; CHECK-LABEL: define i64 @xor_multi_uses(
 ; CHECK-SAME: i64 [[A:%.*]], i1 [[B:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = sext i1 [[B]] to i64
-; CHECK-NEXT:    [[D:%.*]] = xor i64 [[C]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = xor i64 [[A]], [[C]]
 ; CHECK-NEXT:    [[E:%.*]] = sub i64 [[D]], [[C]]
-; CHECK-NEXT:    [[F:%.*]] = mul i64 [[D]], [[X]]
+; CHECK-NEXT:    [[F:%.*]] = mul i64 [[X]], [[D]]
 ; CHECK-NEXT:    [[R:%.*]] = add i64 [[F]], [[E]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;

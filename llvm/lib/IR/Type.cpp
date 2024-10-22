@@ -22,8 +22,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cassert>
 #include <utility>
 
@@ -108,6 +110,13 @@ Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
     Ty = Type::getPPC_FP128Ty(C);
   }
   return Ty;
+}
+
+bool Type::isRISCVVectorTupleTy() const {
+  if (!isTargetExtTy())
+    return false;
+
+  return cast<TargetExtType>(this)->getName() == "riscv.vector.tuple";
 }
 
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
@@ -340,7 +349,7 @@ FunctionType *FunctionType::get(Type *ReturnType,
 }
 
 FunctionType *FunctionType::get(Type *Result, bool isVarArg) {
-  return get(Result, std::nullopt, isVarArg);
+  return get(Result, {}, isVarArg);
 }
 
 bool FunctionType::isValidReturnType(Type *RetTy) {
@@ -421,13 +430,14 @@ bool StructType::containsScalableVectorType(
 }
 
 bool StructType::containsHomogeneousScalableVectorTypes() const {
-  Type *FirstTy = getNumElements() > 0 ? elements()[0] : nullptr;
-  if (!FirstTy || !isa<ScalableVectorType>(FirstTy))
+  if (getNumElements() <= 0 || !isa<ScalableVectorType>(elements().front()))
     return false;
-  for (Type *Ty : elements())
-    if (Ty != FirstTy)
-      return false;
-  return true;
+  return containsHomogeneousTypes();
+}
+
+bool StructType::containsHomogeneousTypes() const {
+  ArrayRef<Type *> ElementTys = elements();
+  return !ElementTys.empty() && all_equal(ElementTys);
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
@@ -506,7 +516,7 @@ StructType *StructType::create(LLVMContext &Context, StringRef Name) {
 }
 
 StructType *StructType::get(LLVMContext &Context, bool isPacked) {
-  return get(Context, std::nullopt, isPacked);
+  return get(Context, {}, isPacked);
 }
 
 StructType *StructType::create(LLVMContext &Context, ArrayRef<Type*> Elements,
@@ -784,6 +794,13 @@ TargetExtType::TargetExtType(LLVMContext &C, StringRef Name,
 TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
                                   ArrayRef<Type *> Types,
                                   ArrayRef<unsigned> Ints) {
+  return cantFail(getOrError(C, Name, Types, Ints));
+}
+
+Expected<TargetExtType *> TargetExtType::getOrError(LLVMContext &C,
+                                                    StringRef Name,
+                                                    ArrayRef<Type *> Types,
+                                                    ArrayRef<unsigned> Ints) {
   const TargetExtTypeKeyInfo::KeyTy Key(Name, Types, Ints);
   TargetExtType *TT;
   // Since we only want to allocate a fresh target type in case none is found
@@ -791,8 +808,8 @@ TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
   // one for inserting the newly allocated one), here we instead lookup based on
   // Key and update the reference to the target type in-place to a newly
   // allocated one if not found.
-  auto Insertion = C.pImpl->TargetExtTypes.insert_as(nullptr, Key);
-  if (Insertion.second) {
+  auto [Iter, Inserted] = C.pImpl->TargetExtTypes.insert_as(nullptr, Key);
+  if (Inserted) {
     // The target type was not found. Allocate one and update TargetExtTypes
     // in-place.
     TT = (TargetExtType *)C.pImpl->Alloc.Allocate(
@@ -800,12 +817,29 @@ TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
             sizeof(unsigned) * Ints.size(),
         alignof(TargetExtType));
     new (TT) TargetExtType(C, Name, Types, Ints);
-    *Insertion.first = TT;
-  } else {
-    // The target type was found. Just return it.
-    TT = *Insertion.first;
+    *Iter = TT;
+    return checkParams(TT);
   }
-  return TT;
+
+  // The target type was found. Just return it.
+  return *Iter;
+}
+
+Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
+  // Opaque types in the AArch64 name space.
+  if (TTy->Name == "aarch64.svcount" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 0))
+    return createStringError(
+        "target extension type aarch64.svcount should have no parameters");
+
+  // Opaque types in the RISC-V name space.
+  if (TTy->Name == "riscv.vector.tuple" &&
+      (TTy->getNumTypeParameters() != 1 || TTy->getNumIntParameters() != 1))
+    return createStringError(
+        "target extension type riscv.vector.tuple should have one "
+        "type parameter and one integer parameter");
+
+  return TTy;
 }
 
 namespace {
@@ -823,7 +857,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
   if (Name == "spirv.Image")
-    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,
@@ -834,6 +869,24 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
                           TargetExtType::HasZeroInit,
                           TargetExtType::CanBeLocal);
+
+  // RISC-V vector tuple type. The layout is represented as the type that needs
+  // the same number of vector registers(VREGS) as this tuple type, represented
+  // as <vscale x (RVVBitsPerBlock * VREGS / 8) x i8>.
+  if (Name == "riscv.vector.tuple") {
+    unsigned TotalNumElts =
+        std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
+                     ->getMinNumElements(),
+                 RISCV::RVVBitsPerBlock / 8) *
+        Ty->getIntParameter(0);
+    return TargetTypeInfo(
+        ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts),
+        TargetExtType::CanBeLocal);
+  }
+
+  // DirectX resources
+  if (Name.starts_with("dx."))
+    return TargetTypeInfo(PointerType::get(C, 0));
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

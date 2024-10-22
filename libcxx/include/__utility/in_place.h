@@ -10,6 +10,7 @@
 #define _LIBCPP___UTILITY_IN_PLACE_H
 
 #include <__config>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/remove_cvref.h>
 #include <cstddef>
 

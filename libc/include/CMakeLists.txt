@@ -45,6 +45,7 @@ add_header_macro(
   ctype.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.locale_t
 )
 
 add_header_macro(
@@ -146,6 +147,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  malloc
+  ../libc/newhdrgen/yaml/malloc.yaml
+  malloc.h.def
+  malloc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.malloc_macros
+)
+
+add_header_macro(
   math
   ../libc/newhdrgen/yaml/math.yaml
   math.h.def
@@ -189,6 +200,16 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.assert_macros
+)
+
+add_header_macro(
+  complex
+  ../libc/newhdrgen/yaml/complex.yaml
+  complex.h.def
+  complex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.complex_macros
 )
 
 add_header_macro(
@@ -346,6 +367,7 @@ add_header_macro(
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__atexithandler_t
+    .llvm-libc-types.locale_t
 )
 
 add_header_macro(
@@ -591,6 +613,8 @@ add_header_macro(
     .llvm-libc-macros.sys_socket_macros
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_un
 )
@@ -717,6 +741,18 @@ add_header_macro(
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
+)
+
+add_header_macro(
+  locale
+  ../libc/newhdrgen/yaml/locale.yaml
+  locale.h.def
+  locale.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.locale_macros
+    .llvm-libc-types.locale_t
+    .llvm-libc-types.struct_lconv
 )
 
 if(LIBC_TARGET_OS_IS_GPU)

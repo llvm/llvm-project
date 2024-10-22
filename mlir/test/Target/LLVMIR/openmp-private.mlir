@@ -35,7 +35,7 @@ llvm.func @parallel_op_1_private(%arg0: !llvm.ptr) {
 // CHECK: }
 
 llvm.func @parallel_op_2_privates(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-  omp.parallel private(@x.privatizer %arg0 -> %arg2 : !llvm.ptr, @y.privatizer %arg1 -> %arg3 : !llvm.ptr) {
+  omp.parallel private(@x.privatizer %arg0 -> %arg2, @y.privatizer %arg1 -> %arg3 : !llvm.ptr, !llvm.ptr) {
     %0 = llvm.load %arg2 : !llvm.ptr -> f32
     %1 = llvm.load %arg3 : !llvm.ptr -> i32
     omp.terminator
@@ -104,6 +104,9 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // CHECK: omp.par.entry:
 // CHECK:  %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // CHECK:  %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
+// CHECK:  br label %omp.private.latealloc
+
+// CHECK: omp.private.latealloc:
 // CHECK:   br label %[[PRIV_BB1:.*]]
 
 // Check contents of the first block in the `alloc` region.
@@ -151,8 +154,7 @@ omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
 // CHECK:         omp.par.region:
 // CHECK:           br label %[[PAR_REG_BEG:.*]]
 // CHECK:         [[PAR_REG_BEG]]:
-// CHECK:           %[[PRIVATIZER_GEP:.*]] = getelementptr double, ptr @_QQfoo, i64 111
-// CHECK:           call void @bar(ptr %[[PRIVATIZER_GEP]])
+// CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 111))
 // CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 222))
 llvm.func @lower_region_with_addressof() {
   %0 = llvm.mlir.constant(1 : i64) : i64
@@ -206,7 +208,7 @@ llvm.func @private_and_reduction_() attributes {fir.internal_name = "_QPprivate_
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
   %2 = llvm.alloca %0 x f32 {bindc_name = "to_priv"} : (i64) -> !llvm.ptr
-  omp.parallel reduction(byref @reducer.part %1 -> %arg0 : !llvm.ptr) private(@privatizer.part %2 -> %arg1 : !llvm.ptr) {
+  omp.parallel private(@privatizer.part %2 -> %arg1 : !llvm.ptr) reduction(byref @reducer.part %1 -> %arg0 : !llvm.ptr) {
     %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
     %4 = llvm.mlir.constant(8.000000e+00 : f32) : f32
     llvm.store %4, %arg1 : f32, !llvm.ptr
@@ -222,11 +224,13 @@ omp.private {type = private} @privatizer.part : !llvm.ptr alloc {
   omp.yield(%1 : !llvm.ptr)
 }
 
-omp.declare_reduction @reducer.part : !llvm.ptr init {
-^bb0(%arg0: !llvm.ptr):
+omp.declare_reduction @reducer.part : !llvm.ptr alloc {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
   omp.yield(%1 : !llvm.ptr)
+} init {
+^bb0(%mold: !llvm.ptr, %alloc: !llvm.ptr):
+  omp.yield(%alloc : !llvm.ptr)
 } combiner {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)

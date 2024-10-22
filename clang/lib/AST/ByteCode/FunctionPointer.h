@@ -11,25 +11,29 @@
 
 #include "Function.h"
 #include "Primitives.h"
-#include "clang/AST/APValue.h"
 
 namespace clang {
 class ASTContext;
+class APValue;
 namespace interp {
 
 class FunctionPointer final {
 private:
   const Function *Func;
+  uint64_t Offset;
   bool Valid;
 
 public:
   FunctionPointer() = default;
-  FunctionPointer(const Function *Func) : Func(Func), Valid(true) {}
+  FunctionPointer(const Function *Func, uint64_t Offset = 0)
+      : Func(Func), Offset(Offset), Valid(true) {}
 
   FunctionPointer(uintptr_t IntVal, const Descriptor *Desc = nullptr)
-      : Func(reinterpret_cast<const Function *>(IntVal)), Valid(false) {}
+      : Func(reinterpret_cast<const Function *>(IntVal)), Offset(0),
+        Valid(false) {}
 
   const Function *getFunction() const { return Func; }
+  uint64_t getOffset() const { return Offset; }
   bool isZero() const { return !Func; }
   bool isValid() const { return Valid; }
   bool isWeak() const {
@@ -39,33 +43,8 @@ public:
     return Func->getDecl()->isWeak();
   }
 
-  APValue toAPValue(const ASTContext &) const {
-    if (!Func)
-      return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {},
-                     /*OnePastTheEnd=*/false, /*IsNull=*/true);
-
-    if (!Valid)
-      return APValue(static_cast<Expr *>(nullptr),
-                     CharUnits::fromQuantity(getIntegerRepresentation()), {},
-                     /*OnePastTheEnd=*/false, /*IsNull=*/false);
-
-    if (Func->getDecl())
-      return APValue(Func->getDecl(), CharUnits::Zero(), {},
-                     /*OnePastTheEnd=*/false, /*IsNull=*/false);
-    return APValue(Func->getExpr(), CharUnits::Zero(), {},
-                   /*OnePastTheEnd=*/false, /*IsNull=*/false);
-  }
-
-  void print(llvm::raw_ostream &OS) const {
-    OS << "FnPtr(";
-    if (Func && Valid)
-      OS << Func->getName();
-    else if (Func)
-      OS << reinterpret_cast<uintptr_t>(Func);
-    else
-      OS << "nullptr";
-    OS << ")";
-  }
+  APValue toAPValue(const ASTContext &) const;
+  void print(llvm::raw_ostream &OS) const;
 
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     if (!Func)
@@ -79,7 +58,7 @@ public:
   }
 
   ComparisonCategoryResult compare(const FunctionPointer &RHS) const {
-    if (Func == RHS.Func)
+    if (Func == RHS.Func && Offset == RHS.Offset)
       return ComparisonCategoryResult::Equal;
     return ComparisonCategoryResult::Unordered;
   }

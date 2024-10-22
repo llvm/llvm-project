@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -I%S %s -triple amdgcn-amd-amdhsa -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s
-// RUN: %clang_cc1 -I%S %s -triple spirv64-unknown-unknown -fsycl-is-device -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
+// RUN: %clang_cc1 -I%S %s -triple spirv64-amd-amdhsa -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
 #include <typeinfo>
 
 namespace Test1 {
@@ -39,7 +39,7 @@ const std::type_info &A10_c_ti = typeid(char const[10]);
 // CHECK-LABEL: define{{.*}} ptr @_ZN5Test11fEv
 // CHECK-SAME:  personality ptr @__gxx_personality_v0
 // WITH-NONZERO-DEFAULT-AS-LABEL: define{{.*}} ptr addrspace(4) @_ZN5Test11fEv
-// WITH-NONZERO-DEFAULT-AS-SAME:  personality ptr @__gxx_personality_v0
+// WITH-NONZERO-DEFAULT-AS-SAME: personality ptr addrspace(4) @__gxx_personality_v0
 const char *f() {
   try {
     // CHECK: br i1

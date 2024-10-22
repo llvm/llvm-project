@@ -18,6 +18,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
 using namespace clang;
@@ -36,8 +37,12 @@ namespace {
 
     SmallVectorImpl<UnexpandedParameterPack> &Unexpanded;
 
-    bool InLambda = false;
+    bool InLambdaOrBlock = false;
     unsigned DepthLimit = (unsigned)-1;
+
+#ifndef NDEBUG
+    bool ContainsIntermediatePacks = false;
+#endif
 
     void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
       if (auto *VD = dyn_cast<VarDecl>(ND)) {
@@ -109,6 +114,11 @@ namespace {
           addUnexpanded(TTP);
       }
 
+#ifndef NDEBUG
+      ContainsIntermediatePacks |=
+          (bool)Template.getAsSubstTemplateTemplateParmPack();
+#endif
+
       return inherited::TraverseTemplateName(Template);
     }
 
@@ -136,7 +146,7 @@ namespace {
     /// do not contain unexpanded parameter packs.
     bool TraverseStmt(Stmt *S) {
       Expr *E = dyn_cast_or_null<Expr>(S);
-      if ((E && E->containsUnexpandedParameterPack()) || InLambda)
+      if ((E && E->containsUnexpandedParameterPack()) || InLambdaOrBlock)
         return inherited::TraverseStmt(S);
 
       return true;
@@ -145,7 +155,8 @@ namespace {
     /// Suppress traversal into types that do not contain
     /// unexpanded parameter packs.
     bool TraverseType(QualType T) {
-      if ((!T.isNull() && T->containsUnexpandedParameterPack()) || InLambda)
+      if ((!T.isNull() && T->containsUnexpandedParameterPack()) ||
+          InLambdaOrBlock)
         return inherited::TraverseType(T);
 
       return true;
@@ -156,7 +167,7 @@ namespace {
     bool TraverseTypeLoc(TypeLoc TL) {
       if ((!TL.getType().isNull() &&
            TL.getType()->containsUnexpandedParameterPack()) ||
-          InLambda)
+          InLambdaOrBlock)
         return inherited::TraverseTypeLoc(TL);
 
       return true;
@@ -258,17 +269,25 @@ namespace {
       if (!Lambda->containsUnexpandedParameterPack())
         return true;
 
-      bool WasInLambda = InLambda;
+      SaveAndRestore _(InLambdaOrBlock, true);
       unsigned OldDepthLimit = DepthLimit;
 
-      InLambda = true;
       if (auto *TPL = Lambda->getTemplateParameterList())
         DepthLimit = TPL->getDepth();
 
       inherited::TraverseLambdaExpr(Lambda);
 
-      InLambda = WasInLambda;
       DepthLimit = OldDepthLimit;
+      return true;
+    }
+
+    /// Analogously for blocks.
+    bool TraverseBlockExpr(BlockExpr *Block) {
+      if (!Block->containsUnexpandedParameterPack())
+        return true;
+
+      SaveAndRestore _(InLambdaOrBlock, true);
+      inherited::TraverseBlockExpr(Block);
       return true;
     }
 
@@ -280,6 +299,32 @@ namespace {
 
       return inherited::TraverseLambdaCapture(Lambda, C, Init);
     }
+
+#ifndef NDEBUG
+    bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) {
+      ContainsIntermediatePacks = true;
+      return true;
+    }
+
+    bool TraverseSubstNonTypeTemplateParmPackExpr(
+        SubstNonTypeTemplateParmPackExpr *) {
+      ContainsIntermediatePacks = true;
+      return true;
+    }
+
+    bool VisitSubstTemplateTypeParmPackType(SubstTemplateTypeParmPackType *) {
+      ContainsIntermediatePacks = true;
+      return true;
+    }
+
+    bool
+    VisitSubstTemplateTypeParmPackTypeLoc(SubstTemplateTypeParmPackTypeLoc) {
+      ContainsIntermediatePacks = true;
+      return true;
+    }
+
+    bool containsIntermediatePacks() const { return ContainsIntermediatePacks; }
+#endif
   };
 }
 
@@ -308,11 +353,11 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
 
   // If we are within a lambda expression and referencing a pack that is not
   // declared within the lambda itself, that lambda contains an unexpanded
-  // parameter pack, and we are done.
+  // parameter pack, and we are done. Analogously for blocks.
   // FIXME: Store 'Unexpanded' on the lambda so we don't need to recompute it
   // later.
-  SmallVector<UnexpandedParameterPack, 4> LambdaParamPackReferences;
-  if (auto *LSI = getEnclosingLambda()) {
+  SmallVector<UnexpandedParameterPack, 4> ParamPackReferences;
+  if (sema::CapturingScopeInfo *CSI = getEnclosingLambdaOrBlock()) {
     for (auto &Pack : Unexpanded) {
       auto DeclaresThisPack = [&](NamedDecl *LocalPack) {
         if (auto *TTPT = Pack.first.dyn_cast<const TemplateTypeParmType *>()) {
@@ -321,11 +366,11 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
         }
         return declaresSameEntity(Pack.first.get<NamedDecl *>(), LocalPack);
       };
-      if (llvm::any_of(LSI->LocalPacks, DeclaresThisPack))
-        LambdaParamPackReferences.push_back(Pack);
+      if (llvm::any_of(CSI->LocalPacks, DeclaresThisPack))
+        ParamPackReferences.push_back(Pack);
     }
 
-    if (LambdaParamPackReferences.empty()) {
+    if (ParamPackReferences.empty()) {
       // Construct in lambda only references packs declared outside the lambda.
       // That's OK for now, but the lambda itself is considered to contain an
       // unexpanded pack in this case, which will require expansion outside the
@@ -348,16 +393,16 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
         }
         // Coumpound-statements outside the lambda are OK for now; we'll check
         // for those when we finish handling the lambda.
-        if (Func == LSI)
+        if (Func == CSI)
           break;
       }
 
       if (!EnclosingStmtExpr) {
-        LSI->ContainsUnexpandedParameterPack = true;
+        CSI->ContainsUnexpandedParameterPack = true;
         return false;
       }
     } else {
-      Unexpanded = LambdaParamPackReferences;
+      Unexpanded = ParamPackReferences;
     }
   }
 
@@ -414,16 +459,20 @@ bool Sema::DiagnoseUnexpandedParameterPack(Expr *E,
   if (!E->containsUnexpandedParameterPack())
     return false;
 
-  // CollectUnexpandedParameterPacksVisitor does not expect to see a
-  // FunctionParmPackExpr, but diagnosing unexpected parameter packs may still
-  // see such an expression in a lambda body.
-  // We'll bail out early in this case to avoid triggering an assertion.
-  if (isa<FunctionParmPackExpr>(E) && getEnclosingLambda())
-    return false;
-
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-  CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseStmt(E);
-  assert(!Unexpanded.empty() && "Unable to find unexpanded parameter packs");
+  CollectUnexpandedParameterPacksVisitor Visitor(Unexpanded);
+  Visitor.TraverseStmt(E);
+#ifndef NDEBUG
+  // The expression might contain a type/subexpression that has been substituted
+  // but has the expansion held off, e.g. a FunctionParmPackExpr which a larger
+  // CXXFoldExpr would expand. It's only possible when expanding a lambda as a
+  // pattern of a fold expression, so don't fire on an empty result in that
+  // case.
+  bool LambdaReferencingOuterPacks =
+      getEnclosingLambdaOrBlock() && Visitor.containsIntermediatePacks();
+  assert((!Unexpanded.empty() || LambdaReferencingOuterPacks) &&
+         "Unable to find unexpanded parameter packs");
+#endif
   return DiagnoseUnexpandedParameterPacks(E->getBeginLoc(), UPPC, Unexpanded);
 }
 

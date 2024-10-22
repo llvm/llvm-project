@@ -32,10 +32,10 @@ static void BM_Basic(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK_TEMPLATE(BM_Basic, uint32_t);
-BENCHMARK_TEMPLATE(BM_Basic, int32_t);
-BENCHMARK_TEMPLATE(BM_Basic, uint64_t);
-BENCHMARK_TEMPLATE(BM_Basic, int64_t);
+BENCHMARK(BM_Basic<uint32_t>);
+BENCHMARK(BM_Basic<int32_t>);
+BENCHMARK(BM_Basic<uint64_t>);
+BENCHMARK(BM_Basic<int64_t>);
 
 // Ideally the low values of a 128-bit value are all dispatched to a 64-bit routine.
 template <class T>
@@ -49,11 +49,11 @@ static void BM_BasicLow(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK_TEMPLATE(BM_BasicLow, __uint128_t);
-BENCHMARK_TEMPLATE(BM_BasicLow, __int128_t);
+BENCHMARK(BM_BasicLow<__uint128_t>);
+BENCHMARK(BM_BasicLow<__int128_t>);
 
-BENCHMARK_TEMPLATE(BM_Basic, __uint128_t);
-BENCHMARK_TEMPLATE(BM_Basic, __int128_t);
+BENCHMARK(BM_Basic<__uint128_t>);
+BENCHMARK(BM_Basic<__int128_t>);
 
 // *** Localization ***
 enum class LocalizationE { False, True };

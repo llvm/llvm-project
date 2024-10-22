@@ -97,9 +97,7 @@ public:
   // Spawn a task, but does not wait for it to finish.
   // Tasks marked with \p Sequential will be executed
   // exactly in the order which they were spawned.
-  // Note: Sequential tasks may be executed on different
-  // threads, but strictly in sequential order.
-  void spawn(std::function<void()> f, bool Sequential = false);
+  void spawn(std::function<void()> f);
 
   void sync() const { L.sync(); }
 

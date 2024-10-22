@@ -549,4 +549,13 @@ def TestProduceInvalidIR
   }];
 }
 
+def TestInitializerExtensionOp
+  : Op<Transform_Dialect, "test_initializer_extension",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        NoMemoryEffect]> {
+  let arguments = (ins StrAttr:$type);
+  let assemblyFormat = "$type attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
