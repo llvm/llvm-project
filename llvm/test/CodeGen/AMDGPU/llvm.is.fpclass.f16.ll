@@ -86,8 +86,6 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s2, s4, 3
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; GFX11CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11CHECK-NEXT:    s_nop 0
-; GFX11CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
   %sext = sext i1 %result to i32

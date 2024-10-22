@@ -2938,8 +2938,8 @@ public:
   const SDValue &getScale()   const { return getOperand(5); }
 
   static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::MGATHER ||
-           N->getOpcode() == ISD::MSCATTER;
+    return N->getOpcode() == ISD::MGATHER || N->getOpcode() == ISD::MSCATTER ||
+           N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM;
   }
 };
 
@@ -2994,17 +2994,15 @@ public:
   }
 };
 
-class MaskedHistogramSDNode : public MemSDNode {
+class MaskedHistogramSDNode : public MaskedGatherScatterSDNode {
 public:
   friend class SelectionDAG;
 
   MaskedHistogramSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs,
                         EVT MemVT, MachineMemOperand *MMO,
                         ISD::MemIndexType IndexType)
-      : MemSDNode(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, Order, DL, VTs, MemVT,
-                  MMO) {
-    LSBaseSDNodeBits.AddressingMode = IndexType;
-  }
+      : MaskedGatherScatterSDNode(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, Order, DL,
+                                  VTs, MemVT, MMO, IndexType) {}
 
   ISD::MemIndexType getIndexType() const {
     return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);

@@ -5430,14 +5430,14 @@ defm SCVTF  : SIMDTwoVectorIntToFP<0, 0, 0b11101, "scvtf", any_sint_to_fp>;
 defm SHLL   : SIMDVectorLShiftLongBySizeBHS;
 defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
 defm SQNEG  : SIMDTwoVectorBHSD<1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
-defm SQXTN  : SIMDMixedTwoVector<0, 0b10100, "sqxtn", int_aarch64_neon_sqxtn>;
-defm SQXTUN : SIMDMixedTwoVector<1, 0b10010, "sqxtun", int_aarch64_neon_sqxtun>;
+defm SQXTN  : SIMDMixedTwoVector<0, 0b10100, "sqxtn", truncssat_s>;
+defm SQXTUN : SIMDMixedTwoVector<1, 0b10010, "sqxtun", truncssat_u>;
 defm SUQADD : SIMDTwoVectorBHSDTied<0, 0b00011, "suqadd",int_aarch64_neon_suqadd>;
 defm UADALP : SIMDLongTwoVectorTied<1, 0b00110, "uadalp",
        BinOpFrag<(add node:$LHS, (AArch64uaddlp node:$RHS))> >;
 defm UADDLP : SIMDLongTwoVector<1, 0b00010, "uaddlp", AArch64uaddlp>;
 defm UCVTF  : SIMDTwoVectorIntToFP<1, 0, 0b11101, "ucvtf", any_uint_to_fp>;
-defm UQXTN  : SIMDMixedTwoVector<1, 0b10100, "uqxtn", int_aarch64_neon_uqxtn>;
+defm UQXTN  : SIMDMixedTwoVector<1, 0b10100, "uqxtn", truncusat_u>;
 defm URECPE : SIMDTwoVectorS<0, 1, 0b11100, "urecpe", int_aarch64_neon_urecpe>;
 defm URSQRTE: SIMDTwoVectorS<1, 1, 0b11100, "ursqrte", int_aarch64_neon_ursqrte>;
 defm USQADD : SIMDTwoVectorBHSDTied<1, 0b00011, "usqadd",int_aarch64_neon_usqadd>;
@@ -5475,85 +5475,6 @@ multiclass SIMDVectorLShiftLongBySizeBHSPats<SDPatternOperator ext> {
 defm : SIMDVectorLShiftLongBySizeBHSPats<anyext>;
 defm : SIMDVectorLShiftLongBySizeBHSPats<zext>;
 defm : SIMDVectorLShiftLongBySizeBHSPats<sext>;
-
-// Constant vector values, used in the S/UQXTN patterns below.
-def VImmFF:   PatLeaf<(AArch64NvCast (v2i64 (AArch64movi_edit (i32 85))))>;
-def VImmFFFF: PatLeaf<(AArch64NvCast (v2i64 (AArch64movi_edit (i32 51))))>;
-def VImm7F:   PatLeaf<(AArch64movi_shift (i32 127), (i32 0))>;
-def VImm80:   PatLeaf<(AArch64mvni_shift (i32 127), (i32 0))>;
-def VImm7FFF: PatLeaf<(AArch64movi_msl (i32 127), (i32 264))>;
-def VImm8000: PatLeaf<(AArch64mvni_msl (i32 127), (i32 264))>;
-
-// trunc(umin(X, 255)) -> UQXTRN v8i8
-def : Pat<(v8i8 (truncusat_u (v8i16 V128:$Vn))),
-          (UQXTNv8i8 V128:$Vn)>;
-// trunc(umin(X, 65535)) -> UQXTRN v4i16
-def : Pat<(v4i16 (truncusat_u (v4i32 V128:$Vn))),
-          (UQXTNv4i16 V128:$Vn)>;
-// trunc(umin(X, 4294967295)) -> UQXTRN v2i32
-def : Pat<(v2i32 (truncusat_u (v2i64 V128:$Vn))),
-          (UQXTNv2i32 V128:$Vn)>;
-// trunc(smin(smax(X, -128), 128)) -> SQXTRN
-def : Pat<(v8i8 (truncssat_s (v8i16 V128:$Vn))),
-          (SQXTNv8i8 V128:$Vn)>;
-// trunc(smin(smax(X, -32768), 32767)) -> SQXTRN
-def : Pat<(v4i16 (truncssat_s (v4i32 V128:$Vn))),
-          (SQXTNv4i16 V128:$Vn)>;
-// trunc(smin(smax(X, -2147483648), 2147483647)) -> SQXTRN
-def : Pat<(v2i32 (truncssat_s (v2i64 V128:$Vn))),
-          (SQXTNv2i32 V128:$Vn)>;
-// trunc(umin(smax(X, 0), 255)) -> SQXTUN
-def : Pat<(v8i8 (truncssat_u (v8i16 V128:$Vn))),
-          (SQXTUNv8i8 V128:$Vn)>;
-// trunc(umin(smax(X, 0), 65535)) -> SQXTUN
-def : Pat<(v4i16 (truncssat_u (v4i32 V128:$Vn))),
-          (SQXTUNv4i16 V128:$Vn)>;
-// trunc(umin(smax(X, 0), 4294967295)) -> SQXTUN
-def : Pat<(v2i32 (truncssat_u (v2i64 V128:$Vn))),
-          (SQXTUNv2i32 V128:$Vn)>;
-
-// truncusat_u
-// concat_vectors(Vd, truncusat_u(Vn)) ~> UQXTRN(Vd, Vn)
-def : Pat<(v16i8 (concat_vectors
-                 (v8i8 V64:$Vd),
-                 (v8i8 (truncusat_u (v8i16 V128:$Vn))))),
-          (UQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v8i16 (concat_vectors
-                 (v4i16 V64:$Vd),
-                 (v4i16 (truncusat_u (v4i32 V128:$Vn))))),
-          (UQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v4i32 (concat_vectors
-                 (v2i32 V64:$Vd),
-                 (v2i32 (truncusat_u (v2i64 V128:$Vn))))),
-          (UQXTNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-
-// concat_vectors(Vd, truncssat_s(Vn)) ~> SQXTN2(Vd, Vn)
-def : Pat<(v16i8 (concat_vectors
-                 (v8i8 V64:$Vd),
-                 (v8i8 (truncssat_s (v8i16 V128:$Vn))))),
-          (SQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v8i16 (concat_vectors
-                 (v4i16 V64:$Vd),
-                 (v4i16 (truncssat_s (v4i32 V128:$Vn))))),
-          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v4i32 (concat_vectors
-                 (v2i32 V64:$Vd),
-                 (v2i32 (truncssat_s (v2i64 V128:$Vn))))),
-          (SQXTNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-
-// concat_vectors(Vd, truncssat_u(Vn)) ~> SQXTUN2(Vd, Vn)
-def : Pat<(v16i8 (concat_vectors
-                 (v8i8 V64:$Vd),
-                 (v8i8 (truncssat_u (v8i16 V128:$Vn))))),
-          (SQXTUNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v8i16 (concat_vectors
-                 (v4i16 V64:$Vd),
-                 (v4i16 (truncssat_u (v4i32 V128:$Vn))))),
-          (SQXTUNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v4i32 (concat_vectors
-                 (v2i32 V64:$Vd),
-                 (v2i32 (truncssat_u (v2i64 V128:$Vn))))),
-          (SQXTUNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
 
 // Select BSWAP vector instructions into REV instructions
 def : Pat<(v4i16 (bswap (v4i16 V64:$Rn))), 
@@ -8080,15 +8001,15 @@ def : Pat<(v1i64 (AArch64vsli (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn),
                                       (i32 vecshiftL64:$imm))),
           (SLId FPR64:$Rd, FPR64:$Rn, vecshiftL64:$imm)>;
 defm SQRSHRN : SIMDVectorRShiftNarrowBHS<0, 0b10011, "sqrshrn",
-                                         int_aarch64_neon_sqrshrn>;
+                  BinOpFrag<(truncssat_s (AArch64srshri node:$LHS, node:$RHS))>>;
 defm SQRSHRUN: SIMDVectorRShiftNarrowBHS<1, 0b10001, "sqrshrun",
-                                         int_aarch64_neon_sqrshrun>;
+                  BinOpFrag<(truncssat_u (AArch64srshri node:$LHS, node:$RHS))>>;
 defm SQSHLU : SIMDVectorLShiftBHSD<1, 0b01100, "sqshlu", AArch64sqshlui>;
 defm SQSHL  : SIMDVectorLShiftBHSD<0, 0b01110, "sqshl", AArch64sqshli>;
 defm SQSHRN  : SIMDVectorRShiftNarrowBHS<0, 0b10010, "sqshrn",
-                                         int_aarch64_neon_sqshrn>;
+                  BinOpFrag<(truncssat_s (AArch64vashr node:$LHS, node:$RHS))>>;
 defm SQSHRUN : SIMDVectorRShiftNarrowBHS<1, 0b10000, "sqshrun",
-                                         int_aarch64_neon_sqshrun>;
+                  BinOpFrag<(truncssat_u (AArch64vashr node:$LHS, node:$RHS))>>;
 defm SRI     : SIMDVectorRShiftBHSDTied<1, 0b01000, "sri", AArch64vsri>;
 def : Pat<(v1i64 (AArch64vsri (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn),
                                       (i32 vecshiftR64:$imm))),
@@ -8106,10 +8027,10 @@ defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
-                                         int_aarch64_neon_uqrshrn>;
+                  BinOpFrag<(truncusat_u (AArch64urshri node:$LHS, node:$RHS))>>;
 defm UQSHL   : SIMDVectorLShiftBHSD<1, 0b01110, "uqshl", AArch64uqshli>;
 defm UQSHRN  : SIMDVectorRShiftNarrowBHS<1, 0b10010, "uqshrn",
-                                         int_aarch64_neon_uqshrn>;
+                  BinOpFrag<(truncusat_u (AArch64vlshr node:$LHS, node:$RHS))>>;
 defm URSHR   : SIMDVectorRShiftBHSD<1, 0b00100, "urshr", AArch64urshri>;
 defm URSRA   : SIMDVectorRShiftBHSDTied<1, 0b00110, "ursra",
                 TriOpFrag<(add node:$LHS,
@@ -10377,6 +10298,78 @@ defm : PromoteBinaryv8f16Tov4f32<any_fadd, FADDv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
+
+//===-----------------------------------------------------===//
+// Atomic floating-point in-memory instructions (FEAT_LSFE)
+//===-----------------------------------------------------===//
+
+let Predicates = [HasLSFE] in {
+  // Floating-point Atomic Load
+  defm LDFADDA    : AtomicFPLoad<0b10, 0b000, "ldfadda">;
+  defm LDFADDAL   : AtomicFPLoad<0b11, 0b000, "ldfaddal">;
+  defm LDFADD     : AtomicFPLoad<0b00, 0b000, "ldfadd">;
+  defm LDFADDL    : AtomicFPLoad<0b01, 0b000, "ldfaddl">;
+  defm LDFMAXA    : AtomicFPLoad<0b10, 0b100, "ldfmaxa">;
+  defm LDFMAXAL   : AtomicFPLoad<0b11, 0b100, "ldfmaxal">;
+  defm LDFMAX     : AtomicFPLoad<0b00, 0b100, "ldfmax">;
+  defm LDFMAXL    : AtomicFPLoad<0b01, 0b100, "ldfmaxl">;
+  defm LDFMINA    : AtomicFPLoad<0b10, 0b101, "ldfmina">;
+  defm LDFMINAL   : AtomicFPLoad<0b11, 0b101, "ldfminal">;
+  defm LDFMIN     : AtomicFPLoad<0b00, 0b101, "ldfmin">;
+  defm LDFMINL    : AtomicFPLoad<0b01, 0b101, "ldfminl">;
+  defm LDFMAXNMA  : AtomicFPLoad<0b10, 0b110, "ldfmaxnma">;
+  defm LDFMAXNMAL : AtomicFPLoad<0b11, 0b110, "ldfmaxnmal">;
+  defm LDFMAXNM   : AtomicFPLoad<0b00, 0b110, "ldfmaxnm">;
+  defm LDFMAXNML  : AtomicFPLoad<0b01, 0b110, "ldfmaxnml">;
+  defm LDFMINNMA  : AtomicFPLoad<0b10, 0b111, "ldfminnma">;
+  defm LDFMINNMAL : AtomicFPLoad<0b11, 0b111, "ldfminnmal">;
+  defm LDFMINMN   : AtomicFPLoad<0b00, 0b111, "ldfminnm">;
+  defm LDFMINNML  : AtomicFPLoad<0b01, 0b111, "ldfminnml">;
+  // BFloat16
+  def LDBFADDA    : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b000, "ldbfadda">;
+  def LDBFADDAL   : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b000, "ldbfaddal">;
+  def LDBFADD     : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b000, "ldbfadd">;
+  def LDBFADDL    : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b000, "ldbfaddl">;
+  def LDBFMAXA    : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b100, "ldbfmaxa">;
+  def LDBFMAXAL   : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b100, "ldbfmaxal">;
+  def LDBFMAX     : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b100, "ldbfmax">;
+  def LDBFMAXL    : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b100, "ldbfmaxl">;
+  def LDBFMINA    : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b101, "ldbfmina">;
+  def LDBFMINAL   : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b101, "ldbfminal">;
+  def LDBFMIN     : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b101, "ldbfmin">;
+  def LDBFMINL    : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b101, "ldbfminl">;
+  def LDBFMAXNMA  : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b110, "ldbfmaxnma">;
+  def LDBFMAXNMAL : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b110, "ldbfmaxnmal">;
+  def LDBFMAXNM   : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b110, "ldbfmaxnm">;
+  def LDBFMAXNML  : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b110, "ldbfmaxnml">;
+  def LDBFMINNMA  : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b111, "ldbfminnma">;
+  def LDBFMINNMAL : BaseAtomicFPLoad<FPR16, 0b00, 0b11, 0b111, "ldbfminnmal">;
+  def LDBFMINNM   : BaseAtomicFPLoad<FPR16, 0b00, 0b00, 0b111, "ldbfminnm">;
+  def LDBFMINNML  : BaseAtomicFPLoad<FPR16, 0b00, 0b01, 0b111, "ldbfminnml">;
+
+  // Floating-point Atomic Store
+  defm STFADD    : AtomicFPStore<0b0, 0b000, "stfadd">;
+  defm STFADDL   : AtomicFPStore<0b1, 0b000, "stfaddl">;
+  defm STFMAX    : AtomicFPStore<0b0, 0b100, "stfmax">;
+  defm STFMAXL   : AtomicFPStore<0b1, 0b100, "stfmaxl">;
+  defm STFMIN    : AtomicFPStore<0b0, 0b101, "stfmin">;
+  defm STFMINL   : AtomicFPStore<0b1, 0b101, "stfminl">;
+  defm STFMAXNM  : AtomicFPStore<0b0, 0b110, "stfmaxnm">;
+  defm STFMAXNML : AtomicFPStore<0b1, 0b110, "stfmaxnml">;
+  defm STFMINNM  : AtomicFPStore<0b0, 0b111, "stfminnm">;
+  defm STFMINNML : AtomicFPStore<0b1, 0b111, "stfminnml">;
+  // BFloat16
+  def STBFADD    : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b000, "stbfadd">;
+  def STBFADDL   : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b000, "stbfaddl">;
+  def STBFMAX    : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b100, "stbfmax">;
+  def STBFMAXL   : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b100, "stbfmaxl">;
+  def STBFMIN    : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b101, "stbfmin">;
+  def STBFMINL   : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b101, "stbfminl">;
+  def STBFMAXNM  : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b110, "stbfmaxnm">;
+  def STBFMAXNML : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b110, "stbfmaxnml">;
+  def STBFMINNM  : BaseAtomicFPStore<FPR16, 0b00, 0b0, 0b111, "stbfminnm">;
+  def STBFMINNML : BaseAtomicFPStore<FPR16, 0b00, 0b1, 0b111, "stbfminnml">;
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
