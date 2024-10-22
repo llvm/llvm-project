@@ -496,3 +496,24 @@ struct Y {
 template void g<Y>();
 
 }
+
+namespace GH112677 {
+
+class ConstEval {
+ public:
+  consteval ConstEval(int); // expected-note {{declared here}}
+};
+
+struct B {
+    ConstEval val;
+    template <class Anything = int> constexpr
+    B(int arg) : val(arg) {} // expected-note {{undefined constructor 'ConstEval'}}
+};
+struct C : B {
+    using B::B; // expected-note {{in call to 'B<int>(0)'}}
+};
+
+C c(0); // expected-note{{in implicit initialization for inherited constructor of 'C'}}
+// expected-error@-1 {{call to immediate function 'GH112677::C::B' is not a constant expression}}
+
+}
