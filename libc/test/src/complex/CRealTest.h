@@ -37,7 +37,8 @@ public:
     EXPECT_FP_EQ(func(CFPT(neg_min_denormal + 781.134i)), neg_min_denormal);
     EXPECT_FP_EQ(func(CFPT(max_denormal + 1241.112i)), max_denormal);
     EXPECT_FP_EQ(func(CFPT(zero + 121.121i)), zero);
-    // EXPECT_FP_EQ(func(CFPT(neg_zero + 12341.1321i)), neg_zero);
+    EXPECT_FP_EQ(func(CFPT(neg_zero - zero * 1.0i)), neg_zero);
+    EXPECT_FP_EQ(func(CFPT(neg_zero + zero * 1.0i)), zero);
   }
 
   void testRoundedNumbers(CRealFunc func) {
