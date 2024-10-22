@@ -1,19 +1,17 @@
-// REQUIRES: lld
+// Itanium ABI:
+// RUN: %clang --target=x86_64-pc-linux -gdwarf -c -o %t_linux.o %s
+// RUN: %lldb -f %t_linux.o -b -o "target variable mp1 mp2 mp3 mp4 mp5 mp6 mp7 mp8 mp9" | FileCheck %s
+//
+// CHECK: (char SI2::*) mp9 = 0x0000000000000000
 
 // Microsoft ABI:
 // RUN: %clang_cl --target=x86_64-windows-msvc -c -gdwarf %s -o %t_win.obj
 // RUN: lld-link /out:%t_win.exe %t_win.obj /nodefaultlib /entry:main /debug
-// RUN: %lldb -f %t_win.exe -b -o "target variable mp1 mp2 mp3 mp4 mp5 mp6 mp7 mp8 mp9"
+// RUN: %lldb -f %t_win.exe -b -o "target variable mp1 mp2 mp3 mp4 mp5 mp6 mp7 mp8 mp9" | FileCheck --check-prefix=CHECK-MSVC %s
 //
 // DWARF has no representation of MSInheritanceAttr, so we cannot determine the size
 // of member-pointers yet. For the moment, make sure we don't crash on such variables.
-
-// Itanium ABI:
-// RUN: %clang --target=x86_64-pc-linux -gdwarf -c -o %t_linux.o %s
-// RUN: ld.lld %t_linux.o -o %t_linux
-// RUN: %lldb -f %t_linux -b -o "target variable mp1 mp2 mp3 mp4 mp5 mp6 mp7 mp8 mp9" | FileCheck %s
-//
-// CHECK: (char SI2::*) mp9 = 0x0000000000000000
+// CHECK-MSVC: error: Unable to determine byte size.
 
 class SI {
   double si;
