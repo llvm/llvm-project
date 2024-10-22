@@ -60,20 +60,6 @@ constexpr bool __container_appendable = requires(_Container& __c, _Ref&& __ref) 
       requires { __c.insert(__c.end(), std::forward<_Ref>(__ref)); });
 };
 
-template <class _Container>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __container_append(_Container& __c) {
-  return [&__c]<class _Ref>(_Ref&& __ref) {
-    if constexpr (requires { __c.emplace_back(declval<_Ref>()); })
-      __c.emplace_back(std::forward<_Ref>(__ref));
-    else if constexpr (requires { __c.push_back(declval<_Ref>()); })
-      __c.push_back(std::forward<_Ref>(__ref));
-    else if constexpr (requires { __c.emplace(__c.end(), declval<_Ref>()); })
-      __c.emplace(__c.end(), std::forward<_Ref>(__ref));
-    else if constexpr (requires { __c.insert(__c.end(), declval<_Ref>()); })
-      __c.insert(__c.end(), std::forward<_Ref>(__ref));
-  };
-}
-
 // Note: making this a concept allows short-circuiting the second condition.
 template <class _Container, class _Range>
 concept __try_non_recursive_conversion =
@@ -124,8 +110,19 @@ template <class _Container, input_range _Range, class... _Args>
         __result.reserve(static_cast<range_size_t<_Container>>(ranges::size(__range)));
       }
 
-      ranges::for_each(__range, ranges::__container_append(__result));
-
+      for (auto&& __ref : __range) {
+        using _Ref = decltype(__ref);
+        if constexpr (requires { __result.emplace_back(declval<_Ref>()); }) {
+          __result.emplace_back(std::forward<_Ref>(__ref));
+        } else if constexpr (requires { __result.push_back(declval<_Ref>()); }) {
+          __result.push_back(std::forward<_Ref>(__ref));
+        } else if constexpr (requires { __result.emplace(__result.end(), declval<_Ref>()); }) {
+          __result.emplace(__result.end(), std::forward<_Ref>(__ref));
+        } else {
+          static_assert(requires { __result.insert(__result.end(), declval<_Ref>()); });
+          __result.insert(__result.end(), std::forward<_Ref>(__ref));
+        }
+      }
       return __result;
 
     } else {
