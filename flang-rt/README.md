@@ -100,9 +100,14 @@ cmake -S <path-to-llvm-project>/runtimes                         \
   -GNinja                                                        \
   -DLLVM_BINARY_DIR=<path-to-llvm-builddir>                      \
   -DCMAKE_Fortran_COMPILER=<path-to-llvm-builddir>/bin/flang-new \
+  -DCMAKE_Fortran_COMPILER_WORKS=yes                             \
   -DLLVM_ENABLE_RUNTIMES=flang-rt                                \
   ...
 ```
+
+The `CMAKE_Fortran_COMPILER_WORKS` parameter must be set because otherwise CMake
+will test whether the Fortran compiler can compile and link programs which will
+obviously fail without a runtime library available yet.
 
 Building flang-rt for cross-compilation triple, the target triple can
 be selected using `LLVM_DEFAULT_TARGET_TRIPLE` AND `LLVM_RUNTIMES_TARGET`.

@@ -98,12 +98,18 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
     add_flangrt_library(FortranFloat128Math STATIC INSTALL_WITH_TOOLCHAIN
       ${sources})
    endif ()
+   target_include_directories(FortranFloat128Math PRIVATE
+     "${FLANGRT_SOURCE_DIR}/lib/flang_rt"
+     )
 elseif (HAVE_LDBL_MANT_DIG_113)
   # We can use 'long double' versions from libc.
   check_library_exists(m sinl "" FOUND_LIBM)
   if (FOUND_LIBM)
     target_compile_definitions(FortranFloat128MathILib INTERFACE
       HAS_LIBM
+      )
+    target_include_directories(FortranFloat128MathILib INTERFACE
+      "${FLANGRT_SOURCE_DIR}/lib/flang_rt"
       )
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
   else()
@@ -115,6 +121,9 @@ else()
   if (FOUND_LIBMF128)
     target_compile_definitions(FortranFloat128MathILib INTERFACE
       HAS_LIBMF128
+      )
+    target_include_directories(FortranFloat128MathILib INTERFACE
+      "${FLANGRT_SOURCE_DIR}/lib/flang_rt"
       )
     # Enable this, when math-entries.h and complex-math.h is ready.
     # target_sources(FortranFloat128MathILib INTERFACE ${sources})
