@@ -4233,9 +4233,6 @@ bool CombinerHelper::matchCombineExtractToShuffle(
 
   // This combine tries to find all the build vectors whose source elements
   // all originate from a G_EXTRACT_VECTOR_ELT from one or two donor vectors.
-  // One example where this may happen is for AI chips where there are a lot
-  // of matrix multiplications. Typically there vectors are disected and then
-  // rearranged into the right transformation.
   // E.g.
   //  %donor1(<2 x s32>) = COPY $d0
   //  %donor2(<2 x s32>) = COPY $d1
