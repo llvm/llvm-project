@@ -394,14 +394,11 @@ static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
 // 111
 static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
                              const MCDisassembler *Decoder) {
-  // RegNo <  4 => Reg is in Z20-Z23 (offset 20)
-  // RegNo >= 4 => Reg is in Z28-Z31 (offset 24)
-  unsigned Reg = (RegNo < 4) ? (RegNo + 20) : (RegNo + 24);
-  if (!(Reg >= 20 && Reg <= 23) && !(Reg >= 28 && Reg <= 31))
+  if (RegNo > 7)
     return Fail;
 
   unsigned Register =
-      AArch64MCRegisterClasses[AArch64::ZPRRegClassID].getRegister(Reg);
+      AArch64MCRegisterClasses[AArch64::ZPR_KRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }

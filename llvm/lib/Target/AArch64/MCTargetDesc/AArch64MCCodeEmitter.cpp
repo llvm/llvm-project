@@ -584,10 +584,14 @@ uint32_t AArch64MCCodeEmitter::EncodeZK(const MCInst &MI, unsigned OpIdx,
                                         const MCSubtargetInfo &STI) const {
   auto RegOpnd = MI.getOperand(OpIdx).getReg();
   unsigned RegVal = Ctx.getRegisterInfo()->getEncodingValue(RegOpnd);
-  // Z28 => RegVal = 28 (28 - 24 = 4) Z28 = 4
+
+  // ZZ8-Z31 => Reg is in 3..7 (offset 24)
   if (RegOpnd > AArch64::Z27)
     return (RegVal - 24);
-  // Z20 => RegVal = 20 (20 -20 = 0) Z20 = 0
+
+  assert((RegOpnd > AArch64::Z19 && RegOpnd < AArch64::Z24) &&
+         "Expected ZK in Z20..Z23 or Z28..Z31");
+  // Z20-Z23 => Reg is in 0..3 (offset 20)
   return (RegVal - 20);
 }
 
