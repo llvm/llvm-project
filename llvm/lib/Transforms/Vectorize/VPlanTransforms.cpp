@@ -1485,6 +1485,10 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
               })
               .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
                 VPValue *LHS, *RHS;
+                // Transform predicated reduction select
+                //   select(header_mask, LHS, RHS)
+                // into vector predication merge.
+                //   vp.merge(all-true, LHS, RHS, EVL)
                 if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
                                          m_VPValue(RHS))))
                   return nullptr;
