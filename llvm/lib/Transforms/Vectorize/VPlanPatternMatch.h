@@ -178,11 +178,6 @@ struct Recipe_match {
     static_assert(std::tuple_size<Ops_t>::value == 2 &&
                   "constructor can only be used for binary matcher");
   }
-  template <typename A_t, typename B_t, typename C_t>
-  Recipe_match(A_t A, B_t B, C_t C) : Ops({A, B, C}) {
-    static_assert(std::tuple_size<Ops_t>::value == 3 &&
-                  "constructor can only be used for ternary matcher");
-  }
 
   bool match(const VPValue *V) const {
     auto *DefR = V->getDefiningRecipe();
@@ -240,16 +235,6 @@ using AllBinaryRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
                        VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
 
-template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode,
-          bool Commutative, typename... RecipeTys>
-using TernaryRecipe_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>,
-                                         Opcode, Commutative, RecipeTys...>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
-using TernaryVPInstruction_match =
-    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, Opcode, /*Commutative*/ false,
-                        VPInstruction>;
-
 template <unsigned Opcode, typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Opcode>
 m_VPInstruction(const Op0_t &Op0) {
@@ -260,12 +245,6 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>
 m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
   return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
-}
-
-template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t>
-inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>
-m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t>
@@ -402,13 +381,6 @@ template <typename Op0_t, typename Op1_t>
 inline VPScalarIVSteps_match<Op0_t, Op1_t> m_ScalarIVSteps(const Op0_t &Op0,
                                                            const Op1_t &Op1) {
   return VPScalarIVSteps_match<Op0_t, Op1_t>(Op0, Op1);
-}
-
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Instruction::Select>
-m_Select(const Op0_t &Cond, const Op1_t &LHS, const Op2_t &RHS) {
-  return m_VPInstruction<Instruction::Select, Op0_t, Op1_t, Op2_t>(Cond, LHS,
-                                                                   RHS);
 }
 
 } // namespace VPlanPatternMatch
