@@ -360,7 +360,7 @@ void CompileUnit::ResolveSymbolContext(
           // it.
           Declaration found_decl = inline_info->GetCallSite();
           uint32_t sought_column = sought_decl.GetColumn();
-          if (found_decl.FileAndLineEqual(sought_decl) &&
+          if (found_decl.FileAndLineEqual(sought_decl, false) &&
               (sought_column == LLDB_INVALID_COLUMN_NUMBER ||
                sought_column == found_decl.GetColumn())) {
             // If we found a call site, it belongs not in this inlined block,

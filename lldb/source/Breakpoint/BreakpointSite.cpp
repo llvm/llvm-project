@@ -98,7 +98,7 @@ std::optional<uint32_t> BreakpointSite::GetSuggestedStackFrameIndex() {
       if (result)
         result = std::max(*loc_frame_index, *result);
       else
-        result = this_result;
+        result = loc_frame_index;
     }
   }
   return result;
