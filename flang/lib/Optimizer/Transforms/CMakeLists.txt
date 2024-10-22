@@ -10,8 +10,8 @@ add_flang_library(FIRTransforms
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
   CUFAddConstructor.cpp
-  CufImplicitDeviceGlobal.cpp
-  CufOpConversion.cpp
+  CUFDeviceGlobal.cpp
+  CUFOpConversion.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   MemoryUtils.cpp
