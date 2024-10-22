@@ -34,3 +34,10 @@ bfscale z31.h, p7/m, z20.h, z31.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must match destination register
 // CHECK-NEXT: bfscale z31.h, p7/m, z20.h, z31.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// ------------------------------------------------------------------------- //
+// Using zeroing predicate
+bfscale z0.h, p0/z, z0.h, z0.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: bfscale z0.h, p0/z, z0.h, z0.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
