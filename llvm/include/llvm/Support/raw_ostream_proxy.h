@@ -74,7 +74,7 @@ protected:
   /// For example, this can simplify logic when a subclass might have a longer
   /// lifetime than the stream it proxies.
   void resetProxiedOS() {
-    OS->SetUnbuffered();
+    this->SetUnbuffered();
     OS = nullptr;
   }
 
