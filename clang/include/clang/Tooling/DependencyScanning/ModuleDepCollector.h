@@ -122,7 +122,7 @@ struct ModuleDeps {
 
   /// A collection of absolute paths to files that this module directly depends
   /// on, not including transitive dependencies.
-  llvm::StringSet<> FileDeps;
+  std::vector<std::string> FileDeps;
 
   /// A collection of absolute paths to module map files that this module needs
   /// to know about. The ordering is significant.

@@ -779,23 +779,23 @@ static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
 void ModuleDepCollector::addFileDep(StringRef Path) {
   if (IsStdModuleP1689Format) {
     // Within P1689 format, we don't want all the paths to be absolute path
-    // since it may violate the tranditional make style dependencies info.
-    FileDeps.push_back(std::string(Path));
+    // since it may violate the traditional make style dependencies info.
+    FileDeps.emplace_back(Path);
     return;
   }
 
   llvm::SmallString<256> Storage;
   Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
-  FileDeps.push_back(std::string(Path));
+  FileDeps.emplace_back(Path);
 }
 
 void ModuleDepCollector::addFileDep(ModuleDeps &MD, StringRef Path) {
   if (IsStdModuleP1689Format) {
-    MD.FileDeps.insert(Path);
+    MD.FileDeps.emplace_back(Path);
     return;
   }
 
   llvm::SmallString<256> Storage;
   Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
-  MD.FileDeps.insert(Path);
+  MD.FileDeps.emplace_back(Path);
 }
