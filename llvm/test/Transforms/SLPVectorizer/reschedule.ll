@@ -8,19 +8,17 @@ declare void @use(double, double)
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  for.body602:
-; CHECK-NEXT:    [[MUL701:%.*]] = fmul double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[MUL703:%.*]] = fmul double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[I4:%.*]] = call double @llvm.fmuladd.f64(double [[MUL701]], double 0.000000e+00, double [[MUL703]])
+; CHECK-NEXT:    [[I4:%.*]] = call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    store double [[I4]], ptr null, align 8
 ; CHECK-NEXT:    [[I5:%.*]] = load double, ptr null, align 8
 ; CHECK-NEXT:    [[I6:%.*]] = load double, ptr null, align 8
 ; CHECK-NEXT:    [[MUL746:%.*]] = fmul double 0.000000e+00, [[I6]]
 ; CHECK-NEXT:    [[MUL747:%.*]] = fmul double 0.000000e+00, [[I5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[MUL746]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[MUL701]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double 0.000000e+00, i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer, <2 x double> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[MUL747]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[MUL703]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double 0.000000e+00, i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP5]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> [[TMP6]], <2 x double> zeroinitializer)

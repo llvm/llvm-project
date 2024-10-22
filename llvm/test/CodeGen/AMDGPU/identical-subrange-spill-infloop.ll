@@ -139,11 +139,14 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s38, v7, 2
 ; CHECK-NEXT:    v_readlane_b32 s39, v7, 3
 ; CHECK-NEXT:    v_readlane_b32 s40, v7, 4
-; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[44:51], s[20:23] dmask:0x1
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    image_sample_lz v2, v[1:2], s[44:51], s[20:23] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s41, v7, 5
 ; CHECK-NEXT:    v_readlane_b32 s42, v7, 6
 ; CHECK-NEXT:    v_readlane_b32 s43, v7, 7
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mul_f32_e32 v3, v0, v2
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:  .LBB0_2: ; %bb50
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_readlane_b32 s36, v7, 32
@@ -162,7 +165,6 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    image_sample_lz v1, v[1:2], s[12:19], s[20:23] dmask:0x1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_sub_f32_e32 v1, v1, v4
-; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v0
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_2

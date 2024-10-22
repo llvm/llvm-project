@@ -562,12 +562,13 @@ loop:
 define void @fmul_noassoc(float %c1, float %c2) {
 ; CHECK-LABEL: @fmul_noassoc(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fmul nsz float [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = fmul reassoc nsz float [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fmul reassoc nsz float [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = fmul nsz float [[STEP_ADD]], [[C2:%.*]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = fmul nsz float [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

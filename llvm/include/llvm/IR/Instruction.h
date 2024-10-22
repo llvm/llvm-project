@@ -696,8 +696,8 @@ public:
   ///
   bool isAssociative() const LLVM_READONLY;
   static bool isAssociative(unsigned Opcode) {
-    return Opcode == And || Opcode == Or || Opcode == Xor ||
-           Opcode == Add || Opcode == Mul;
+    return Opcode == And || Opcode == Or || Opcode == Xor || Opcode == Add ||
+           Opcode == Mul || Opcode == FMul;
   }
 
   /// Return true if the instruction is commutative:

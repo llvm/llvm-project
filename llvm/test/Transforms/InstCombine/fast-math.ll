@@ -17,8 +17,7 @@ define float @fold(float %a) {
 ; fixed FP mode.
 define float @notfold(float %a) {
 ; CHECK-LABEL: @notfold(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[A:%.*]], 0x3FF3333340000000
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul float [[MUL]], 0x4002666660000000
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul float [[A:%.*]], 0x4006147AE0000000
 ; CHECK-NEXT:    ret float [[MUL1]]
 ;
   %mul = fmul fast float %a, 0x3FF3333340000000
