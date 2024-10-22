@@ -286,6 +286,11 @@ if [[ "${linux_projects}" != "" ]]; then
     CXX: 'clang++'
   commands:
   - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"'
+  - wait: ~
+    continue_on_failure: true
+  - plugins:
+      - junit-annotate#v2.5.0:
+          artifacts: build/test-results*.xml
 EOF
 fi
 
