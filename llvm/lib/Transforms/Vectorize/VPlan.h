@@ -1603,6 +1603,10 @@ public:
   /// Produce widened copies of the cast.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenCastRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
