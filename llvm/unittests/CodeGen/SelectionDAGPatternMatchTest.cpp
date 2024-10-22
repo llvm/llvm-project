@@ -45,10 +45,9 @@ protected:
       GTEST_SKIP();
 
     TargetOptions Options;
-    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
-        T->createTargetMachine("riscv64", "", "+m,+f,+d,+v", Options,
-                               std::nullopt, std::nullopt,
-                               CodeGenOptLevel::Aggressive)));
+    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
+        "riscv64", "", "+m,+f,+d,+v", Options, std::nullopt, std::nullopt,
+        CodeGenOptLevel::Aggressive));
     if (!TM)
       GTEST_SKIP();
 
@@ -90,7 +89,7 @@ protected:
   }
 
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<Module> M;
   Function *F;
   GlobalVariable *G;

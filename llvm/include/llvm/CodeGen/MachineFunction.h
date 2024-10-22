@@ -54,7 +54,7 @@ class DILocation;
 class Function;
 class GISelChangeObserver;
 class GlobalValue;
-class LLVMTargetMachine;
+class TargetMachine;
 class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
@@ -256,7 +256,7 @@ struct LandingPadInfo {
 
 class LLVM_ABI MachineFunction {
   Function &F;
-  const LLVMTargetMachine &Target;
+  const TargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
 
@@ -634,7 +634,7 @@ public:
   /// for instructions that have a stack spill fused into them.
   const static unsigned int DebugOperandMemNumber;
 
-  MachineFunction(Function &F, const LLVMTargetMachine &Target,
+  MachineFunction(Function &F, const TargetMachine &Target,
                   const TargetSubtargetInfo &STI, MCContext &Ctx,
                   unsigned FunctionNum);
   MachineFunction(const MachineFunction &) = delete;
@@ -707,7 +707,7 @@ public:
   void assignBeginEndSections();
 
   /// getTarget - Return the target machine this machine code is compiled with
-  const LLVMTargetMachine &getTarget() const { return Target; }
+  const TargetMachine &getTarget() const { return Target; }
 
   /// getSubtarget - Return the subtarget for which this machine code is being
   /// compiled.
