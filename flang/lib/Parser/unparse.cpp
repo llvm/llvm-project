@@ -2386,6 +2386,9 @@ public:
     case llvm::omp::Directive::OMPD_parallel:
       Word("PARALLEL ");
       break;
+    case llvm::omp::Directive::OMPD_scope:
+      Word("SCOPE ");
+      break;
     case llvm::omp::Directive::OMPD_single:
       Word("SINGLE ");
       break;
