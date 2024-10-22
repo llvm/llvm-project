@@ -276,7 +276,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     ClHandleICmpExact("msan-handle-icmp-exact",
                       cl::desc("exact handling of relational integer ICmp"),
-                      cl::Hidden, cl::init(true));
+                      cl::Hidden, cl::init(false));
 
 static cl::opt<bool> ClHandleLifetimeIntrinsics(
     "msan-handle-lifetime-intrinsics",
