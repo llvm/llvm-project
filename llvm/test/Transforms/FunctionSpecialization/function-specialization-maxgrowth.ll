@@ -44,7 +44,7 @@ entry:
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[NOTSPEC0:%.*]] = call i32 @add0(i32 0, i32 [[N]])
 ; CHECK-NEXT:    [[NOTSPEC1:%.*]] = call i32 @add0(i32 1, i32 [[N]])
-; CHECK-NEXT:    [[SPEC:%.*]] = call i32 @add0(i32 1, i32 1)
+; CHECK-NEXT:    [[SPEC:%.*]] = call i32 @add0.specialized.1(i32 1, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -58,9 +58,9 @@ entry:
 ; CHECK-LABEL: define void @test_max_codesize_growth_exceeded(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SPEC0:%.*]] = call i32 @add1.specialized.1(i32 0, i32 0)
-; CHECK-NEXT:    [[SPEC1:%.*]] = call i32 @add1.specialized.2(i32 1, i32 1)
-; CHECK-NEXT:    [[SPEC2:%.*]] = call i32 @add1.specialized.3(i32 2, i32 2)
+; CHECK-NEXT:    [[SPEC0:%.*]] = call i32 @add1.specialized.2(i32 0, i32 0)
+; CHECK-NEXT:    [[SPEC1:%.*]] = call i32 @add1.specialized.3(i32 1, i32 1)
+; CHECK-NEXT:    [[SPEC2:%.*]] = call i32 @add1.specialized.4(i32 2, i32 2)
 ; CHECK-NEXT:    [[NOTSPEC:%.*]] = call i32 @add1(i32 3, i32 3)
 ; CHECK-NEXT:    ret void
 ;
@@ -72,7 +72,7 @@ entry:
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 ;
-; CHECK-LABEL: define internal i32 @add1.specialized.1(
+; CHECK-LABEL: define internal i32 @add0.specialized.1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    ret i32 poison
@@ -85,6 +85,12 @@ entry:
 ;
 ;
 ; CHECK-LABEL: define internal i32 @add1.specialized.3(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret i32 poison
+;
+;
+; CHECK-LABEL: define internal i32 @add1.specialized.4(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    ret i32 poison
