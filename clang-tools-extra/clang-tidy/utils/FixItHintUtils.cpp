@@ -75,12 +75,9 @@ static std::optional<FixItHint> fixIfNotDangerous(SourceLocation Loc,
 static std::string buildQualifier(Qualifiers::TQ Qualifier,
                                   bool WhitespaceBefore = false) {
   if (WhitespaceBefore)
-    return (llvm::Twine(' ') +
-            DeclSpec::getSpecifierName(static_cast<DeclSpec::TQ>(Qualifier)))
+    return (llvm::Twine(' ') + Qualifiers::fromCVRMask(Qualifier).getAsString())
         .str();
-  return (llvm::Twine(DeclSpec::getSpecifierName(
-              static_cast<DeclSpec::TQ>(Qualifier))) +
-          " ")
+  return (llvm::Twine(Qualifiers::fromCVRMask(Qualifier).getAsString()) + " ")
       .str();
 }
 
