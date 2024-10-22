@@ -3738,12 +3738,12 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   } else if (S.getLangOpts().CUDA) {
-    // If we're compiling CUDA/HIP code and targeting SPIR-V we need to make
+    // If we're compiling CUDA/HIP code and targeting HIPSPV we need to make
     // sure the kernels will be marked with the right calling convention so that
-    // they will be visible by the APIs that ingest SPIR-V.
+    // they will be visible by the APIs that ingest SPIR-V. We do not do this
+    // when targeting AMDGCNSPIRV, as it does not rely on OpenCL.
     llvm::Triple Triple = S.Context.getTargetInfo().getTriple();
-    if (Triple.getArch() == llvm::Triple::spirv32 ||
-        Triple.getArch() == llvm::Triple::spirv64) {
+    if (Triple.isSPIRV() && Triple.getVendor() != llvm::Triple::AMD) {
       for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
         if (AL.getKind() == ParsedAttr::AT_CUDAGlobal) {
           CC = CC_OpenCLKernel;
