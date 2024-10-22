@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
-#include "lldb/Core/ValueObjectDynamicValue.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
@@ -17,6 +16,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/ValueObject/ValueObjectDynamicValue.h"
 #include <optional>
 
 namespace lldb_private {

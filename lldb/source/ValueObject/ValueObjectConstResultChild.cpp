@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectConstResultChild.h"
+#include "lldb/ValueObject/ValueObjectConstResultChild.h"
 
 #include "lldb/lldb-private-enumerations.h"
 namespace lldb_private {

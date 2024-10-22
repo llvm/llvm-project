@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectChild.h"
+#include "lldb/ValueObject/ValueObjectChild.h"
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"

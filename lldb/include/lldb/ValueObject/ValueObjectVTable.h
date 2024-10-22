@@ -9,7 +9,7 @@
 #ifndef LLDB_CORE_VALUEOBJECTVTABLE_H
 #define LLDB_CORE_VALUEOBJECTVTABLE_H
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 

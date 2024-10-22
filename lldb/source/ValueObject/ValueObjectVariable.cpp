@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectVariable.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"

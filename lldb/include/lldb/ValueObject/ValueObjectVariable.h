@@ -9,7 +9,7 @@
 #ifndef LLDB_CORE_VALUEOBJECTVARIABLE_H
 #define LLDB_CORE_VALUEOBJECTVARIABLE_H
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"

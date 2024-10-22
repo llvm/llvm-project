@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectCast.h"
+#include "lldb/ValueObject/ValueObjectCast.h"
 
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 namespace lldb_private {

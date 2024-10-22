@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectVTable.h"
+#include "lldb/ValueObject/ValueObjectVTable.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectChild.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/ValueObject/ValueObjectChild.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"

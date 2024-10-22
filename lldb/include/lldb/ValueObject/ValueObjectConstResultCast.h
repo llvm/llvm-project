@@ -9,10 +9,10 @@
 #ifndef LLDB_CORE_VALUEOBJECTCONSTRESULTCAST_H
 #define LLDB_CORE_VALUEOBJECTCONSTRESULTCAST_H
 
-#include "lldb/Core/ValueObjectCast.h"
-#include "lldb/Core/ValueObjectConstResultImpl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObjectCast.h"
+#include "lldb/ValueObject/ValueObjectConstResultImpl.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"

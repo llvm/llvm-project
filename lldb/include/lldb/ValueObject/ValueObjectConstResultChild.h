@@ -9,10 +9,10 @@
 #ifndef LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
 #define LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
 
-#include "lldb/Core/ValueObjectChild.h"
-#include "lldb/Core/ValueObjectConstResultImpl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObjectChild.h"
+#include "lldb/ValueObject/ValueObjectConstResultImpl.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"

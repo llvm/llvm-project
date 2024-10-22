@@ -10,9 +10,9 @@
 #define LLDB_CORE_VALUEOBJECTMEMORY_H
 
 #include "lldb/Core/Address.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
