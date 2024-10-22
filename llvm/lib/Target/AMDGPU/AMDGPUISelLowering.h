@@ -193,6 +193,8 @@ public:
   bool isTruncateFree(EVT Src, EVT Dest) const override;
   bool isTruncateFree(Type *Src, Type *Dest) const override;
 
+  bool isProfitableToHoist(Instruction *I) const override;
+
   bool isZExtFree(Type *Src, Type *Dest) const override;
   bool isZExtFree(EVT Src, EVT Dest) const override;
 
@@ -228,6 +230,13 @@ public:
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override;
   bool isCheapToSpeculateCttz(Type *Ty) const override;
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
+
+  /// Return true if an FMA operation is faster than a pair of fmul and fadd
+  /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
+  /// returns true, otherwise fmuladd is expanded to fmul + fadd.
+  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                  EVT VT) const override;
+  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
 
   bool isSDNodeAlwaysUniform(const SDNode *N) const override;
 
