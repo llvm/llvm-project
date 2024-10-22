@@ -1702,17 +1702,17 @@ extern "C" __device__ double test_fma_rn(double x, double y, double z) {
 
 // DEFAULT-LABEL: @test_fmaxf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fmaxf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf nsz contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_fmaxf(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // APPROX-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_fmaxf(
@@ -1726,17 +1726,17 @@ extern "C" __device__ float test_fmaxf(float x, float y) {
 
 // DEFAULT-LABEL: @test_fmax(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fmax(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf nsz contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_fmax(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // APPROX-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_fmax(
@@ -1751,17 +1751,17 @@ extern "C" __device__ double test_fmax(double x, double y) {
 //
 // DEFAULT-LABEL: @test_fminf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fminf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf nsz contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_fminf(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // APPROX-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_fminf(
@@ -1775,17 +1775,17 @@ extern "C" __device__ float test_fminf(float x, float y) {
 
 // DEFAULT-LABEL: @test_fmin(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fmin(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf nsz contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_fmin(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // APPROX-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_fmin(
@@ -6740,17 +6740,17 @@ extern "C" __device__ double test__fma_rn(double x, double y, double z) {
 
 // DEFAULT-LABEL: @test_float_min(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_float_min(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf nsz contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_float_min(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // APPROX-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_float_min(
@@ -6764,17 +6764,17 @@ extern "C" __device__ float test_float_min(float x, float y) {
 
 // DEFAULT-LABEL: @test_float_max(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_float_max(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf nsz contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_float_max(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // APPROX-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_float_max(
@@ -6788,17 +6788,17 @@ extern "C" __device__ float test_float_max(float x, float y) {
 
 // DEFAULT-LABEL: @test_double_min(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_double_min(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf nsz contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_double_min(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // APPROX-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_double_min(
@@ -6812,17 +6812,17 @@ extern "C" __device__ double test_double_min(double x, double y) {
 
 // DEFAULT-LABEL: @test_double_max(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_double_max(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf nsz contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_double_max(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // APPROX-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_double_max(
