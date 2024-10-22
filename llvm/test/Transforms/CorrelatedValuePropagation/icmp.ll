@@ -1248,9 +1248,9 @@ define i1 @non_const_range_minmax(i8 %a, i8 %b) {
 
 define <2 x i1> @non_const_range_minmax_vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @non_const_range_minmax_vec(
-; CHECK-NEXT:    [[A2:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
-; CHECK-NEXT:    [[B2:%.*]] = call <2 x i8> @llvm.umax.v2i8(<2 x i8> [[B:%.*]], <2 x i8> <i8 11, i8 11>)
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    [[A2:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> splat (i8 10))
+; CHECK-NEXT:    [[B2:%.*]] = call <2 x i8> @llvm.umax.v2i8(<2 x i8> [[B:%.*]], <2 x i8> splat (i8 11))
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %a2 = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 10>)
   %b2 = call <2 x i8> @llvm.umax.v2i8(<2 x i8> %b, <2 x i8> <i8 11, i8 11>)

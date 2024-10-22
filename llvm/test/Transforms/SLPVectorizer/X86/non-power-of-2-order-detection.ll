@@ -23,7 +23,7 @@ define void @e(ptr %c, i64 %0) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <32 x i64> poison, i64 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <32 x i64> [[TMP13]], <32 x i64> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i64> [[TMP14]], [[TMP12]]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <32 x i64> [[TMP15]], <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <32 x i64> [[TMP15]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> [[TMP16]])
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[FOR_BODY:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

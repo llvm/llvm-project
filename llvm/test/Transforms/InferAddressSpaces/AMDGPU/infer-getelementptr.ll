@@ -48,7 +48,7 @@ define void @constexpr_gep_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 define amdgpu_kernel void @vector_gep(<4 x ptr addrspace(3)> %array) nounwind {
 ; CHECK-LABEL: @vector_gep(
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast <4 x ptr addrspace(3)> [[ARRAY:%.*]] to <4 x ptr>
-; CHECK-NEXT:    [[P:%.*]] = getelementptr [1024 x i32], <4 x ptr> [[CAST]], <4 x i16> zeroinitializer, <4 x i16> <i16 16, i16 16, i16 16, i16 16>
+; CHECK-NEXT:    [[P:%.*]] = getelementptr [1024 x i32], <4 x ptr> [[CAST]], <4 x i16> zeroinitializer, <4 x i16> splat (i16 16)
 ; CHECK-NEXT:    [[P0:%.*]] = extractelement <4 x ptr> [[P]], i32 0
 ; CHECK-NEXT:    [[P1:%.*]] = extractelement <4 x ptr> [[P]], i32 1
 ; CHECK-NEXT:    [[P2:%.*]] = extractelement <4 x ptr> [[P]], i32 2

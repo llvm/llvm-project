@@ -16,7 +16,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP2]], <2 x i32> [[TMP1]], i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 undef, i32 poison, i32 undef, i32 undef>, i32 [[ADD277]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr <4 x i32> [[TMP5]], <i32 6, i32 6, i32 6, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr <4 x i32> [[TMP5]], splat (i32 6)
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[ARRAYIDX372]], align 4
 ; CHECK-NEXT:    ret void
 ;

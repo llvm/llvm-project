@@ -314,146 +314,146 @@ define amdgpu_kernel void @fdiv_f16_f32ftzdaz() #1 {
 define amdgpu_kernel void @rcp_ieee() #0 {
 ; CIFASTF64-LABEL: 'rcp_ieee'
 ; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f16 = fdiv half 0xH3C00, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; CISLOWF64-LABEL: 'rcp_ieee'
 ; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f16 = fdiv half 0xH3C00, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIFASTF64-LABEL: 'rcp_ieee'
 ; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f16 = fdiv half 0xH3C00, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 648 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 648 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SISLOWF64-LABEL: 'rcp_ieee'
 ; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f16 = fdiv half 0xH3C00, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 82 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 123 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 164 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 984 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 82 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 123 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 164 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 984 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FP16-LABEL: 'rcp_ieee'
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = fdiv half 0xH3C00, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; CI-SIZE-LABEL: 'rcp_ieee'
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f16 = fdiv half 0xH3C00, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SI-SIZE-LABEL: 'rcp_ieee'
 ; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f16 = fdiv half 0xH3C00, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 600 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 600 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; FP16-SIZE-LABEL: 'rcp_ieee'
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = fdiv half 0xH3C00, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = fdiv half 1.0, undef
@@ -477,146 +477,146 @@ define amdgpu_kernel void @rcp_ieee() #0 {
 define amdgpu_kernel void @rcp_ftzdaz() #1 {
 ; CIFASTF64-LABEL: 'rcp_ftzdaz'
 ; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = fdiv half 0xH3C00, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; CISLOWF64-LABEL: 'rcp_ftzdaz'
 ; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = fdiv half 0xH3C00, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIFASTF64-LABEL: 'rcp_ftzdaz'
 ; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = fdiv half 0xH3C00, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 648 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 648 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SISLOWF64-LABEL: 'rcp_ftzdaz'
 ; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = fdiv half 0xH3C00, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 82 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 123 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 164 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 984 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 82 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 123 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 164 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 984 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FP16-LABEL: 'rcp_ftzdaz'
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = fdiv half 0xH3C00, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; CI-SIZE-LABEL: 'rcp_ftzdaz'
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = fdiv half 0xH3C00, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SI-SIZE-LABEL: 'rcp_ftzdaz'
 ; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = fdiv half 0xH3C00, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 600 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 600 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; FP16-SIZE-LABEL: 'rcp_ftzdaz'
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = fdiv half 0xH3C00, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = fdiv <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fdiv <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fdiv <5 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fdiv <2 x half> splat (half 0xH3C00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = fdiv <3 x half> splat (half 0xH3C00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fdiv <4 x half> splat (half 0xH3C00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fdiv <5 x half> splat (half 0xH3C00), undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = fdiv float 1.000000e+00, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = fdiv <5 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fdiv <2 x float> splat (float 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = fdiv <3 x float> splat (float 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fdiv <4 x float> splat (float 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = fdiv <5 x float> splat (float 1.000000e+00), undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %f64 = fdiv double 1.000000e+00, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v2f64 = fdiv <2 x double> <double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v3f64 = fdiv <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v4f64 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v5f64 = fdiv <5 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v2f64 = fdiv <2 x double> splat (double 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v3f64 = fdiv <3 x double> splat (double 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v4f64 = fdiv <4 x double> splat (double 1.000000e+00), undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v5f64 = fdiv <5 x double> splat (double 1.000000e+00), undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = fdiv half 1.0, undef

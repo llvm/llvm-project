@@ -99,7 +99,7 @@ define i1 @test5(ptr %x, ptr %y) {
 
 define <2 x i1> @test6(<2 x i32> %X, <2 x ptr> %P) nounwind {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x ptr> %P, <2 x i32> zeroinitializer, <2 x i32> <i32 1, i32 1>, <2 x i32> %X
@@ -111,7 +111,7 @@ define <2 x i1> @test6(<2 x i32> %X, <2 x ptr> %P) nounwind {
 ; Same as above, but indices scalarized.
 define <2 x i1> @test6b(<2 x i32> %X, <2 x ptr> %P) nounwind {
 ; CHECK-LABEL: @test6b(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x ptr> %P, i32 0, i32 1, <2 x i32> %X

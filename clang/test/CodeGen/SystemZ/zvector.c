@@ -124,31 +124,31 @@ void test_neg(void) {
 
 // CHECK-LABEL: define{{.*}} void @test_preinc() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
-// CHECK:   [[INC:%.*]] = add <16 x i8> [[TMP0]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[INC:%.*]] = add <16 x i8> [[TMP0]], splat (i8 1)
 // CHECK:   store volatile <16 x i8> [[INC]], ptr @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, ptr @uc2, align 8
-// CHECK:   [[INC1:%.*]] = add <16 x i8> [[TMP1]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[INC1:%.*]] = add <16 x i8> [[TMP1]], splat (i8 1)
 // CHECK:   store volatile <16 x i8> [[INC1]], ptr @uc2, align 8
 // CHECK:   [[TMP2:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
-// CHECK:   [[INC2:%.*]] = add <8 x i16> [[TMP2]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[INC2:%.*]] = add <8 x i16> [[TMP2]], splat (i16 1)
 // CHECK:   store volatile <8 x i16> [[INC2]], ptr @ss2, align 8
 // CHECK:   [[TMP3:%.*]] = load volatile <8 x i16>, ptr @us2, align 8
-// CHECK:   [[INC3:%.*]] = add <8 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[INC3:%.*]] = add <8 x i16> [[TMP3]], splat (i16 1)
 // CHECK:   store volatile <8 x i16> [[INC3]], ptr @us2, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
-// CHECK:   [[INC4:%.*]] = add <4 x i32> [[TMP4]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[INC4:%.*]] = add <4 x i32> [[TMP4]], splat (i32 1)
 // CHECK:   store volatile <4 x i32> [[INC4]], ptr @si2, align 8
 // CHECK:   [[TMP5:%.*]] = load volatile <4 x i32>, ptr @ui2, align 8
-// CHECK:   [[INC5:%.*]] = add <4 x i32> [[TMP5]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[INC5:%.*]] = add <4 x i32> [[TMP5]], splat (i32 1)
 // CHECK:   store volatile <4 x i32> [[INC5]], ptr @ui2, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
-// CHECK:   [[INC6:%.*]] = add <2 x i64> [[TMP6]], <i64 1, i64 1>
+// CHECK:   [[INC6:%.*]] = add <2 x i64> [[TMP6]], splat (i64 1)
 // CHECK:   store volatile <2 x i64> [[INC6]], ptr @sl2, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <2 x i64>, ptr @ul2, align 8
-// CHECK:   [[INC7:%.*]] = add <2 x i64> [[TMP7]], <i64 1, i64 1>
+// CHECK:   [[INC7:%.*]] = add <2 x i64> [[TMP7]], splat (i64 1)
 // CHECK:   store volatile <2 x i64> [[INC7]], ptr @ul2, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <2 x double>, ptr @fd2, align 8
-// CHECK:   [[INC8:%.*]] = fadd <2 x double> [[TMP8]], <double 1.000000e+00, double 1.000000e+00>
+// CHECK:   [[INC8:%.*]] = fadd <2 x double> [[TMP8]], splat (double 1.000000e+00)
 // CHECK:   store volatile <2 x double> [[INC8]], ptr @fd2, align 8
 // CHECK:   ret void
 void test_preinc(void) {
@@ -170,31 +170,31 @@ void test_preinc(void) {
 
 // CHECK-LABEL: define{{.*}} void @test_postinc() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
-// CHECK:   [[INC:%.*]] = add <16 x i8> [[TMP0]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[INC:%.*]] = add <16 x i8> [[TMP0]], splat (i8 1)
 // CHECK:   store volatile <16 x i8> [[INC]], ptr @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, ptr @uc2, align 8
-// CHECK:   [[INC1:%.*]] = add <16 x i8> [[TMP1]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[INC1:%.*]] = add <16 x i8> [[TMP1]], splat (i8 1)
 // CHECK:   store volatile <16 x i8> [[INC1]], ptr @uc2, align 8
 // CHECK:   [[TMP2:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
-// CHECK:   [[INC2:%.*]] = add <8 x i16> [[TMP2]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[INC2:%.*]] = add <8 x i16> [[TMP2]], splat (i16 1)
 // CHECK:   store volatile <8 x i16> [[INC2]], ptr @ss2, align 8
 // CHECK:   [[TMP3:%.*]] = load volatile <8 x i16>, ptr @us2, align 8
-// CHECK:   [[INC3:%.*]] = add <8 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[INC3:%.*]] = add <8 x i16> [[TMP3]], splat (i16 1)
 // CHECK:   store volatile <8 x i16> [[INC3]], ptr @us2, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
-// CHECK:   [[INC4:%.*]] = add <4 x i32> [[TMP4]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[INC4:%.*]] = add <4 x i32> [[TMP4]], splat (i32 1)
 // CHECK:   store volatile <4 x i32> [[INC4]], ptr @si2, align 8
 // CHECK:   [[TMP5:%.*]] = load volatile <4 x i32>, ptr @ui2, align 8
-// CHECK:   [[INC5:%.*]] = add <4 x i32> [[TMP5]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[INC5:%.*]] = add <4 x i32> [[TMP5]], splat (i32 1)
 // CHECK:   store volatile <4 x i32> [[INC5]], ptr @ui2, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
-// CHECK:   [[INC6:%.*]] = add <2 x i64> [[TMP6]], <i64 1, i64 1>
+// CHECK:   [[INC6:%.*]] = add <2 x i64> [[TMP6]], splat (i64 1)
 // CHECK:   store volatile <2 x i64> [[INC6]], ptr @sl2, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <2 x i64>, ptr @ul2, align 8
-// CHECK:   [[INC7:%.*]] = add <2 x i64> [[TMP7]], <i64 1, i64 1>
+// CHECK:   [[INC7:%.*]] = add <2 x i64> [[TMP7]], splat (i64 1)
 // CHECK:   store volatile <2 x i64> [[INC7]], ptr @ul2, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <2 x double>, ptr @fd2, align 8
-// CHECK:   [[INC8:%.*]] = fadd <2 x double> [[TMP8]], <double 1.000000e+00, double 1.000000e+00>
+// CHECK:   [[INC8:%.*]] = fadd <2 x double> [[TMP8]], splat (double 1.000000e+00)
 // CHECK:   store volatile <2 x double> [[INC8]], ptr @fd2, align 8
 // CHECK:   ret void
 void test_postinc(void) {
@@ -216,31 +216,31 @@ void test_postinc(void) {
 
 // CHECK-LABEL: define{{.*}} void @test_predec() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
-// CHECK:   [[DEC:%.*]] = add <16 x i8> [[TMP0]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[DEC:%.*]] = add <16 x i8> [[TMP0]], splat (i8 -1)
 // CHECK:   store volatile <16 x i8> [[DEC]], ptr @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, ptr @uc2, align 8
-// CHECK:   [[DEC1:%.*]] = add <16 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[DEC1:%.*]] = add <16 x i8> [[TMP1]], splat (i8 -1)
 // CHECK:   store volatile <16 x i8> [[DEC1]], ptr @uc2, align 8
 // CHECK:   [[TMP2:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
-// CHECK:   [[DEC2:%.*]] = add <8 x i16> [[TMP2]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[DEC2:%.*]] = add <8 x i16> [[TMP2]], splat (i16 -1)
 // CHECK:   store volatile <8 x i16> [[DEC2]], ptr @ss2, align 8
 // CHECK:   [[TMP3:%.*]] = load volatile <8 x i16>, ptr @us2, align 8
-// CHECK:   [[DEC3:%.*]] = add <8 x i16> [[TMP3]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[DEC3:%.*]] = add <8 x i16> [[TMP3]], splat (i16 -1)
 // CHECK:   store volatile <8 x i16> [[DEC3]], ptr @us2, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
-// CHECK:   [[DEC4:%.*]] = add <4 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[DEC4:%.*]] = add <4 x i32> [[TMP4]], splat (i32 -1)
 // CHECK:   store volatile <4 x i32> [[DEC4]], ptr @si2, align 8
 // CHECK:   [[TMP5:%.*]] = load volatile <4 x i32>, ptr @ui2, align 8
-// CHECK:   [[DEC5:%.*]] = add <4 x i32> [[TMP5]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[DEC5:%.*]] = add <4 x i32> [[TMP5]], splat (i32 -1)
 // CHECK:   store volatile <4 x i32> [[DEC5]], ptr @ui2, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
-// CHECK:   [[DEC6:%.*]] = add <2 x i64> [[TMP6]], <i64 -1, i64 -1>
+// CHECK:   [[DEC6:%.*]] = add <2 x i64> [[TMP6]], splat (i64 -1)
 // CHECK:   store volatile <2 x i64> [[DEC6]], ptr @sl2, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <2 x i64>, ptr @ul2, align 8
-// CHECK:   [[DEC7:%.*]] = add <2 x i64> [[TMP7]], <i64 -1, i64 -1>
+// CHECK:   [[DEC7:%.*]] = add <2 x i64> [[TMP7]], splat (i64 -1)
 // CHECK:   store volatile <2 x i64> [[DEC7]], ptr @ul2, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <2 x double>, ptr @fd2, align 8
-// CHECK:   [[DEC8:%.*]] = fadd <2 x double> [[TMP8]], <double -1.000000e+00, double -1.000000e+00>
+// CHECK:   [[DEC8:%.*]] = fadd <2 x double> [[TMP8]], splat (double -1.000000e+00)
 // CHECK:   store volatile <2 x double> [[DEC8]], ptr @fd2, align 8
 // CHECK:   ret void
 void test_predec(void) {
@@ -262,31 +262,31 @@ void test_predec(void) {
 
 // CHECK-LABEL: define{{.*}} void @test_postdec() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
-// CHECK:   [[DEC:%.*]] = add <16 x i8> [[TMP0]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[DEC:%.*]] = add <16 x i8> [[TMP0]], splat (i8 -1)
 // CHECK:   store volatile <16 x i8> [[DEC]], ptr @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, ptr @uc2, align 8
-// CHECK:   [[DEC1:%.*]] = add <16 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[DEC1:%.*]] = add <16 x i8> [[TMP1]], splat (i8 -1)
 // CHECK:   store volatile <16 x i8> [[DEC1]], ptr @uc2, align 8
 // CHECK:   [[TMP2:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
-// CHECK:   [[DEC2:%.*]] = add <8 x i16> [[TMP2]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[DEC2:%.*]] = add <8 x i16> [[TMP2]], splat (i16 -1)
 // CHECK:   store volatile <8 x i16> [[DEC2]], ptr @ss2, align 8
 // CHECK:   [[TMP3:%.*]] = load volatile <8 x i16>, ptr @us2, align 8
-// CHECK:   [[DEC3:%.*]] = add <8 x i16> [[TMP3]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[DEC3:%.*]] = add <8 x i16> [[TMP3]], splat (i16 -1)
 // CHECK:   store volatile <8 x i16> [[DEC3]], ptr @us2, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
-// CHECK:   [[DEC4:%.*]] = add <4 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[DEC4:%.*]] = add <4 x i32> [[TMP4]], splat (i32 -1)
 // CHECK:   store volatile <4 x i32> [[DEC4]], ptr @si2, align 8
 // CHECK:   [[TMP5:%.*]] = load volatile <4 x i32>, ptr @ui2, align 8
-// CHECK:   [[DEC5:%.*]] = add <4 x i32> [[TMP5]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[DEC5:%.*]] = add <4 x i32> [[TMP5]], splat (i32 -1)
 // CHECK:   store volatile <4 x i32> [[DEC5]], ptr @ui2, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
-// CHECK:   [[DEC6:%.*]] = add <2 x i64> [[TMP6]], <i64 -1, i64 -1>
+// CHECK:   [[DEC6:%.*]] = add <2 x i64> [[TMP6]], splat (i64 -1)
 // CHECK:   store volatile <2 x i64> [[DEC6]], ptr @sl2, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <2 x i64>, ptr @ul2, align 8
-// CHECK:   [[DEC7:%.*]] = add <2 x i64> [[TMP7]], <i64 -1, i64 -1>
+// CHECK:   [[DEC7:%.*]] = add <2 x i64> [[TMP7]], splat (i64 -1)
 // CHECK:   store volatile <2 x i64> [[DEC7]], ptr @ul2, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <2 x double>, ptr @fd2, align 8
-// CHECK:   [[DEC8:%.*]] = fadd <2 x double> [[TMP8]], <double -1.000000e+00, double -1.000000e+00>
+// CHECK:   [[DEC8:%.*]] = fadd <2 x double> [[TMP8]], splat (double -1.000000e+00)
 // CHECK:   store volatile <2 x double> [[DEC8]], ptr @fd2, align 8
 // CHECK:   ret void
 void test_postdec(void) {
@@ -1086,40 +1086,40 @@ void test_rem_assign(void) {
 
 // CHECK-LABEL: define{{.*}} void @test_not() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
-// CHECK:   [[NEG:%.*]] = xor <16 x i8> [[TMP0]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG:%.*]] = xor <16 x i8> [[TMP0]], splat (i8 -1)
 // CHECK:   store volatile <16 x i8> [[NEG]], ptr @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, ptr @uc2, align 8
-// CHECK:   [[NEG1:%.*]] = xor <16 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG1:%.*]] = xor <16 x i8> [[TMP1]], splat (i8 -1)
 // CHECK:   store volatile <16 x i8> [[NEG1]], ptr @uc, align 8
 // CHECK:   [[TMP2:%.*]] = load volatile <16 x i8>, ptr @bc2, align 8
-// CHECK:   [[NEG2:%.*]] = xor <16 x i8> [[TMP2]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG2:%.*]] = xor <16 x i8> [[TMP2]], splat (i8 -1)
 // CHECK:   store volatile <16 x i8> [[NEG2]], ptr @bc, align 8
 // CHECK:   [[TMP3:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
-// CHECK:   [[NEG3:%.*]] = xor <8 x i16> [[TMP3]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG3:%.*]] = xor <8 x i16> [[TMP3]], splat (i16 -1)
 // CHECK:   store volatile <8 x i16> [[NEG3]], ptr @ss, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile <8 x i16>, ptr @us2, align 8
-// CHECK:   [[NEG4:%.*]] = xor <8 x i16> [[TMP4]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG4:%.*]] = xor <8 x i16> [[TMP4]], splat (i16 -1)
 // CHECK:   store volatile <8 x i16> [[NEG4]], ptr @us, align 8
 // CHECK:   [[TMP5:%.*]] = load volatile <8 x i16>, ptr @bs2, align 8
-// CHECK:   [[NEG5:%.*]] = xor <8 x i16> [[TMP5]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG5:%.*]] = xor <8 x i16> [[TMP5]], splat (i16 -1)
 // CHECK:   store volatile <8 x i16> [[NEG5]], ptr @bs, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
-// CHECK:   [[NEG6:%.*]] = xor <4 x i32> [[TMP6]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG6:%.*]] = xor <4 x i32> [[TMP6]], splat (i32 -1)
 // CHECK:   store volatile <4 x i32> [[NEG6]], ptr @si, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <4 x i32>, ptr @ui2, align 8
-// CHECK:   [[NEG7:%.*]] = xor <4 x i32> [[TMP7]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG7:%.*]] = xor <4 x i32> [[TMP7]], splat (i32 -1)
 // CHECK:   store volatile <4 x i32> [[NEG7]], ptr @ui, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <4 x i32>, ptr @bi2, align 8
-// CHECK:   [[NEG8:%.*]] = xor <4 x i32> [[TMP8]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG8:%.*]] = xor <4 x i32> [[TMP8]], splat (i32 -1)
 // CHECK:   store volatile <4 x i32> [[NEG8]], ptr @bi, align 8
 // CHECK:   [[TMP9:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
-// CHECK:   [[NEG9:%.*]] = xor <2 x i64> [[TMP9]], <i64 -1, i64 -1>
+// CHECK:   [[NEG9:%.*]] = xor <2 x i64> [[TMP9]], splat (i64 -1)
 // CHECK:   store volatile <2 x i64> [[NEG9]], ptr @sl, align 8
 // CHECK:   [[TMP10:%.*]] = load volatile <2 x i64>, ptr @ul2, align 8
-// CHECK:   [[NEG10:%.*]] = xor <2 x i64> [[TMP10]], <i64 -1, i64 -1>
+// CHECK:   [[NEG10:%.*]] = xor <2 x i64> [[TMP10]], splat (i64 -1)
 // CHECK:   store volatile <2 x i64> [[NEG10]], ptr @ul, align 8
 // CHECK:   [[TMP11:%.*]] = load volatile <2 x i64>, ptr @bl2, align 8
-// CHECK:   [[NEG11:%.*]] = xor <2 x i64> [[TMP11]], <i64 -1, i64 -1>
+// CHECK:   [[NEG11:%.*]] = xor <2 x i64> [[TMP11]], splat (i64 -1)
 // CHECK:   store volatile <2 x i64> [[NEG11]], ptr @bl, align 8
 // CHECK:   ret void
 void test_not(void) {
@@ -1932,7 +1932,7 @@ void test_xor_assign(void) {
 // CHECK:   [[SHL2:%.*]] = shl <16 x i8> [[TMP4]], [[SH_PROM]]
 // CHECK:   store volatile <16 x i8> [[SHL2]], ptr @sc, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <16 x i8>, ptr @sc, align 8
-// CHECK:   [[SHL3:%.*]] = shl <16 x i8> [[TMP6]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
+// CHECK:   [[SHL3:%.*]] = shl <16 x i8> [[TMP6]], splat (i8 5)
 // CHECK:   store volatile <16 x i8> [[SHL3]], ptr @sc, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
@@ -1950,7 +1950,7 @@ void test_xor_assign(void) {
 // CHECK:   [[SHL9:%.*]] = shl <16 x i8> [[TMP11]], [[SH_PROM8]]
 // CHECK:   store volatile <16 x i8> [[SHL9]], ptr @uc, align 8
 // CHECK:   [[TMP13:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
-// CHECK:   [[SHL10:%.*]] = shl <16 x i8> [[TMP13]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
+// CHECK:   [[SHL10:%.*]] = shl <16 x i8> [[TMP13]], splat (i8 5)
 // CHECK:   store volatile <16 x i8> [[SHL10]], ptr @uc, align 8
 // CHECK:   [[TMP14:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
 // CHECK:   [[TMP15:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
@@ -1968,7 +1968,7 @@ void test_xor_assign(void) {
 // CHECK:   [[SHL16:%.*]] = shl <8 x i16> [[TMP18]], [[SH_PROM15]]
 // CHECK:   store volatile <8 x i16> [[SHL16]], ptr @ss, align 8
 // CHECK:   [[TMP20:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
-// CHECK:   [[SHL17:%.*]] = shl <8 x i16> [[TMP20]], <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+// CHECK:   [[SHL17:%.*]] = shl <8 x i16> [[TMP20]], splat (i16 5)
 // CHECK:   store volatile <8 x i16> [[SHL17]], ptr @ss, align 8
 // CHECK:   [[TMP21:%.*]] = load volatile <8 x i16>, ptr @us, align 8
 // CHECK:   [[TMP22:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
@@ -1986,7 +1986,7 @@ void test_xor_assign(void) {
 // CHECK:   [[SHL23:%.*]] = shl <8 x i16> [[TMP25]], [[SH_PROM22]]
 // CHECK:   store volatile <8 x i16> [[SHL23]], ptr @us, align 8
 // CHECK:   [[TMP27:%.*]] = load volatile <8 x i16>, ptr @us, align 8
-// CHECK:   [[SHL24:%.*]] = shl <8 x i16> [[TMP27]], <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+// CHECK:   [[SHL24:%.*]] = shl <8 x i16> [[TMP27]], splat (i16 5)
 // CHECK:   store volatile <8 x i16> [[SHL24]], ptr @us, align 8
 // CHECK:   [[TMP28:%.*]] = load volatile <4 x i32>, ptr @si, align 8
 // CHECK:   [[TMP29:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
@@ -2003,7 +2003,7 @@ void test_xor_assign(void) {
 // CHECK:   [[SHL29:%.*]] = shl <4 x i32> [[TMP32]], [[SPLAT_SPLAT28]]
 // CHECK:   store volatile <4 x i32> [[SHL29]], ptr @si, align 8
 // CHECK:   [[TMP34:%.*]] = load volatile <4 x i32>, ptr @si, align 8
-// CHECK:   [[SHL30:%.*]] = shl <4 x i32> [[TMP34]], <i32 5, i32 5, i32 5, i32 5>
+// CHECK:   [[SHL30:%.*]] = shl <4 x i32> [[TMP34]], splat (i32 5)
 // CHECK:   store volatile <4 x i32> [[SHL30]], ptr @si, align 8
 // CHECK:   [[TMP35:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
 // CHECK:   [[TMP36:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
@@ -2020,7 +2020,7 @@ void test_xor_assign(void) {
 // CHECK:   [[SHL35:%.*]] = shl <4 x i32> [[TMP39]], [[SPLAT_SPLAT34]]
 // CHECK:   store volatile <4 x i32> [[SHL35]], ptr @ui, align 8
 // CHECK:   [[TMP41:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
-// CHECK:   [[SHL36:%.*]] = shl <4 x i32> [[TMP41]], <i32 5, i32 5, i32 5, i32 5>
+// CHECK:   [[SHL36:%.*]] = shl <4 x i32> [[TMP41]], splat (i32 5)
 // CHECK:   store volatile <4 x i32> [[SHL36]], ptr @ui, align 8
 // CHECK:   [[TMP42:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
 // CHECK:   [[TMP43:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
@@ -2038,7 +2038,7 @@ void test_xor_assign(void) {
 // CHECK:   [[SHL42:%.*]] = shl <2 x i64> [[TMP46]], [[SH_PROM41]]
 // CHECK:   store volatile <2 x i64> [[SHL42]], ptr @sl, align 8
 // CHECK:   [[TMP48:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
-// CHECK:   [[SHL43:%.*]] = shl <2 x i64> [[TMP48]], <i64 5, i64 5>
+// CHECK:   [[SHL43:%.*]] = shl <2 x i64> [[TMP48]], splat (i64 5)
 // CHECK:   store volatile <2 x i64> [[SHL43]], ptr @sl, align 8
 // CHECK:   [[TMP49:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
 // CHECK:   [[TMP50:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
@@ -2056,7 +2056,7 @@ void test_xor_assign(void) {
 // CHECK:   [[SHL49:%.*]] = shl <2 x i64> [[TMP53]], [[SH_PROM48]]
 // CHECK:   store volatile <2 x i64> [[SHL49]], ptr @ul, align 8
 // CHECK:   [[TMP55:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
-// CHECK:   [[SHL50:%.*]] = shl <2 x i64> [[TMP55]], <i64 5, i64 5>
+// CHECK:   [[SHL50:%.*]] = shl <2 x i64> [[TMP55]], splat (i64 5)
 // CHECK:   store volatile <2 x i64> [[SHL50]], ptr @ul, align 8
 // CHECK:   ret void
 void test_sl(void) {
@@ -2115,7 +2115,7 @@ void test_sl(void) {
 // CHECK:   [[SHL2:%.*]] = shl <16 x i8> [[TMP5]], [[SH_PROM]]
 // CHECK:   store volatile <16 x i8> [[SHL2]], ptr @sc, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <16 x i8>, ptr @sc, align 8
-// CHECK:   [[SHL3:%.*]] = shl <16 x i8> [[TMP6]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
+// CHECK:   [[SHL3:%.*]] = shl <16 x i8> [[TMP6]], splat (i8 5)
 // CHECK:   store volatile <16 x i8> [[SHL3]], ptr @sc, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
@@ -2133,7 +2133,7 @@ void test_sl(void) {
 // CHECK:   [[SHL9:%.*]] = shl <16 x i8> [[TMP12]], [[SH_PROM8]]
 // CHECK:   store volatile <16 x i8> [[SHL9]], ptr @uc, align 8
 // CHECK:   [[TMP13:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
-// CHECK:   [[SHL10:%.*]] = shl <16 x i8> [[TMP13]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
+// CHECK:   [[SHL10:%.*]] = shl <16 x i8> [[TMP13]], splat (i8 5)
 // CHECK:   store volatile <16 x i8> [[SHL10]], ptr @uc, align 8
 // CHECK:   [[TMP14:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
 // CHECK:   [[TMP15:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
@@ -2151,7 +2151,7 @@ void test_sl(void) {
 // CHECK:   [[SHL16:%.*]] = shl <8 x i16> [[TMP19]], [[SH_PROM15]]
 // CHECK:   store volatile <8 x i16> [[SHL16]], ptr @ss, align 8
 // CHECK:   [[TMP20:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
-// CHECK:   [[SHL17:%.*]] = shl <8 x i16> [[TMP20]], <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+// CHECK:   [[SHL17:%.*]] = shl <8 x i16> [[TMP20]], splat (i16 5)
 // CHECK:   store volatile <8 x i16> [[SHL17]], ptr @ss, align 8
 // CHECK:   [[TMP21:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
 // CHECK:   [[TMP22:%.*]] = load volatile <8 x i16>, ptr @us, align 8
@@ -2169,7 +2169,7 @@ void test_sl(void) {
 // CHECK:   [[SHL23:%.*]] = shl <8 x i16> [[TMP26]], [[SH_PROM22]]
 // CHECK:   store volatile <8 x i16> [[SHL23]], ptr @us, align 8
 // CHECK:   [[TMP27:%.*]] = load volatile <8 x i16>, ptr @us, align 8
-// CHECK:   [[SHL24:%.*]] = shl <8 x i16> [[TMP27]], <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+// CHECK:   [[SHL24:%.*]] = shl <8 x i16> [[TMP27]], splat (i16 5)
 // CHECK:   store volatile <8 x i16> [[SHL24]], ptr @us, align 8
 // CHECK:   [[TMP28:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
 // CHECK:   [[TMP29:%.*]] = load volatile <4 x i32>, ptr @si, align 8
@@ -2186,7 +2186,7 @@ void test_sl(void) {
 // CHECK:   [[SHL29:%.*]] = shl <4 x i32> [[TMP33]], [[SPLAT_SPLAT28]]
 // CHECK:   store volatile <4 x i32> [[SHL29]], ptr @si, align 8
 // CHECK:   [[TMP34:%.*]] = load volatile <4 x i32>, ptr @si, align 8
-// CHECK:   [[SHL30:%.*]] = shl <4 x i32> [[TMP34]], <i32 5, i32 5, i32 5, i32 5>
+// CHECK:   [[SHL30:%.*]] = shl <4 x i32> [[TMP34]], splat (i32 5)
 // CHECK:   store volatile <4 x i32> [[SHL30]], ptr @si, align 8
 // CHECK:   [[TMP35:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
 // CHECK:   [[TMP36:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
@@ -2203,7 +2203,7 @@ void test_sl(void) {
 // CHECK:   [[SHL35:%.*]] = shl <4 x i32> [[TMP40]], [[SPLAT_SPLAT34]]
 // CHECK:   store volatile <4 x i32> [[SHL35]], ptr @ui, align 8
 // CHECK:   [[TMP41:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
-// CHECK:   [[SHL36:%.*]] = shl <4 x i32> [[TMP41]], <i32 5, i32 5, i32 5, i32 5>
+// CHECK:   [[SHL36:%.*]] = shl <4 x i32> [[TMP41]], splat (i32 5)
 // CHECK:   store volatile <4 x i32> [[SHL36]], ptr @ui, align 8
 // CHECK:   [[TMP42:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
 // CHECK:   [[TMP43:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
@@ -2221,7 +2221,7 @@ void test_sl(void) {
 // CHECK:   [[SHL42:%.*]] = shl <2 x i64> [[TMP47]], [[SH_PROM41]]
 // CHECK:   store volatile <2 x i64> [[SHL42]], ptr @sl, align 8
 // CHECK:   [[TMP48:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
-// CHECK:   [[SHL43:%.*]] = shl <2 x i64> [[TMP48]], <i64 5, i64 5>
+// CHECK:   [[SHL43:%.*]] = shl <2 x i64> [[TMP48]], splat (i64 5)
 // CHECK:   store volatile <2 x i64> [[SHL43]], ptr @sl, align 8
 // CHECK:   [[TMP49:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
 // CHECK:   [[TMP50:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
@@ -2239,7 +2239,7 @@ void test_sl(void) {
 // CHECK:   [[SHL49:%.*]] = shl <2 x i64> [[TMP54]], [[SH_PROM48]]
 // CHECK:   store volatile <2 x i64> [[SHL49]], ptr @ul, align 8
 // CHECK:   [[TMP55:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
-// CHECK:   [[SHL50:%.*]] = shl <2 x i64> [[TMP55]], <i64 5, i64 5>
+// CHECK:   [[SHL50:%.*]] = shl <2 x i64> [[TMP55]], splat (i64 5)
 // CHECK:   store volatile <2 x i64> [[SHL50]], ptr @ul, align 8
 // CHECK:   ret void
 void test_sl_assign(void) {
@@ -2298,7 +2298,7 @@ void test_sl_assign(void) {
 // CHECK:   [[SHR2:%.*]] = ashr <16 x i8> [[TMP4]], [[SH_PROM]]
 // CHECK:   store volatile <16 x i8> [[SHR2]], ptr @sc, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <16 x i8>, ptr @sc, align 8
-// CHECK:   [[SHR3:%.*]] = ashr <16 x i8> [[TMP6]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
+// CHECK:   [[SHR3:%.*]] = ashr <16 x i8> [[TMP6]], splat (i8 5)
 // CHECK:   store volatile <16 x i8> [[SHR3]], ptr @sc, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
@@ -2316,7 +2316,7 @@ void test_sl_assign(void) {
 // CHECK:   [[SHR9:%.*]] = lshr <16 x i8> [[TMP11]], [[SH_PROM8]]
 // CHECK:   store volatile <16 x i8> [[SHR9]], ptr @uc, align 8
 // CHECK:   [[TMP13:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
-// CHECK:   [[SHR10:%.*]] = lshr <16 x i8> [[TMP13]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
+// CHECK:   [[SHR10:%.*]] = lshr <16 x i8> [[TMP13]], splat (i8 5)
 // CHECK:   store volatile <16 x i8> [[SHR10]], ptr @uc, align 8
 // CHECK:   [[TMP14:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
 // CHECK:   [[TMP15:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
@@ -2334,7 +2334,7 @@ void test_sl_assign(void) {
 // CHECK:   [[SHR16:%.*]] = ashr <8 x i16> [[TMP18]], [[SH_PROM15]]
 // CHECK:   store volatile <8 x i16> [[SHR16]], ptr @ss, align 8
 // CHECK:   [[TMP20:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
-// CHECK:   [[SHR17:%.*]] = ashr <8 x i16> [[TMP20]], <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+// CHECK:   [[SHR17:%.*]] = ashr <8 x i16> [[TMP20]], splat (i16 5)
 // CHECK:   store volatile <8 x i16> [[SHR17]], ptr @ss, align 8
 // CHECK:   [[TMP21:%.*]] = load volatile <8 x i16>, ptr @us, align 8
 // CHECK:   [[TMP22:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
@@ -2352,7 +2352,7 @@ void test_sl_assign(void) {
 // CHECK:   [[SHR23:%.*]] = lshr <8 x i16> [[TMP25]], [[SH_PROM22]]
 // CHECK:   store volatile <8 x i16> [[SHR23]], ptr @us, align 8
 // CHECK:   [[TMP27:%.*]] = load volatile <8 x i16>, ptr @us, align 8
-// CHECK:   [[SHR24:%.*]] = lshr <8 x i16> [[TMP27]], <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+// CHECK:   [[SHR24:%.*]] = lshr <8 x i16> [[TMP27]], splat (i16 5)
 // CHECK:   store volatile <8 x i16> [[SHR24]], ptr @us, align 8
 // CHECK:   [[TMP28:%.*]] = load volatile <4 x i32>, ptr @si, align 8
 // CHECK:   [[TMP29:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
@@ -2369,7 +2369,7 @@ void test_sl_assign(void) {
 // CHECK:   [[SHR29:%.*]] = ashr <4 x i32> [[TMP32]], [[SPLAT_SPLAT28]]
 // CHECK:   store volatile <4 x i32> [[SHR29]], ptr @si, align 8
 // CHECK:   [[TMP34:%.*]] = load volatile <4 x i32>, ptr @si, align 8
-// CHECK:   [[SHR30:%.*]] = ashr <4 x i32> [[TMP34]], <i32 5, i32 5, i32 5, i32 5>
+// CHECK:   [[SHR30:%.*]] = ashr <4 x i32> [[TMP34]], splat (i32 5)
 // CHECK:   store volatile <4 x i32> [[SHR30]], ptr @si, align 8
 // CHECK:   [[TMP35:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
 // CHECK:   [[TMP36:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
@@ -2386,7 +2386,7 @@ void test_sl_assign(void) {
 // CHECK:   [[SHR35:%.*]] = lshr <4 x i32> [[TMP39]], [[SPLAT_SPLAT34]]
 // CHECK:   store volatile <4 x i32> [[SHR35]], ptr @ui, align 8
 // CHECK:   [[TMP41:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
-// CHECK:   [[SHR36:%.*]] = lshr <4 x i32> [[TMP41]], <i32 5, i32 5, i32 5, i32 5>
+// CHECK:   [[SHR36:%.*]] = lshr <4 x i32> [[TMP41]], splat (i32 5)
 // CHECK:   store volatile <4 x i32> [[SHR36]], ptr @ui, align 8
 // CHECK:   [[TMP42:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
 // CHECK:   [[TMP43:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
@@ -2404,7 +2404,7 @@ void test_sl_assign(void) {
 // CHECK:   [[SHR42:%.*]] = ashr <2 x i64> [[TMP46]], [[SH_PROM41]]
 // CHECK:   store volatile <2 x i64> [[SHR42]], ptr @sl, align 8
 // CHECK:   [[TMP48:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
-// CHECK:   [[SHR43:%.*]] = ashr <2 x i64> [[TMP48]], <i64 5, i64 5>
+// CHECK:   [[SHR43:%.*]] = ashr <2 x i64> [[TMP48]], splat (i64 5)
 // CHECK:   store volatile <2 x i64> [[SHR43]], ptr @sl, align 8
 // CHECK:   [[TMP49:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
 // CHECK:   [[TMP50:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
@@ -2422,7 +2422,7 @@ void test_sl_assign(void) {
 // CHECK:   [[SHR49:%.*]] = lshr <2 x i64> [[TMP53]], [[SH_PROM48]]
 // CHECK:   store volatile <2 x i64> [[SHR49]], ptr @ul, align 8
 // CHECK:   [[TMP55:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
-// CHECK:   [[SHR50:%.*]] = lshr <2 x i64> [[TMP55]], <i64 5, i64 5>
+// CHECK:   [[SHR50:%.*]] = lshr <2 x i64> [[TMP55]], splat (i64 5)
 // CHECK:   store volatile <2 x i64> [[SHR50]], ptr @ul, align 8
 // CHECK:   ret void
 void test_sr(void) {
@@ -2481,7 +2481,7 @@ void test_sr(void) {
 // CHECK:   [[SHR2:%.*]] = ashr <16 x i8> [[TMP5]], [[SH_PROM]]
 // CHECK:   store volatile <16 x i8> [[SHR2]], ptr @sc, align 8
 // CHECK:   [[TMP6:%.*]] = load volatile <16 x i8>, ptr @sc, align 8
-// CHECK:   [[SHR3:%.*]] = ashr <16 x i8> [[TMP6]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
+// CHECK:   [[SHR3:%.*]] = ashr <16 x i8> [[TMP6]], splat (i8 5)
 // CHECK:   store volatile <16 x i8> [[SHR3]], ptr @sc, align 8
 // CHECK:   [[TMP7:%.*]] = load volatile <16 x i8>, ptr @sc2, align 8
 // CHECK:   [[TMP8:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
@@ -2499,7 +2499,7 @@ void test_sr(void) {
 // CHECK:   [[SHR9:%.*]] = lshr <16 x i8> [[TMP12]], [[SH_PROM8]]
 // CHECK:   store volatile <16 x i8> [[SHR9]], ptr @uc, align 8
 // CHECK:   [[TMP13:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
-// CHECK:   [[SHR10:%.*]] = lshr <16 x i8> [[TMP13]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
+// CHECK:   [[SHR10:%.*]] = lshr <16 x i8> [[TMP13]], splat (i8 5)
 // CHECK:   store volatile <16 x i8> [[SHR10]], ptr @uc, align 8
 // CHECK:   [[TMP14:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
 // CHECK:   [[TMP15:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
@@ -2517,7 +2517,7 @@ void test_sr(void) {
 // CHECK:   [[SHR16:%.*]] = ashr <8 x i16> [[TMP19]], [[SH_PROM15]]
 // CHECK:   store volatile <8 x i16> [[SHR16]], ptr @ss, align 8
 // CHECK:   [[TMP20:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
-// CHECK:   [[SHR17:%.*]] = ashr <8 x i16> [[TMP20]], <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+// CHECK:   [[SHR17:%.*]] = ashr <8 x i16> [[TMP20]], splat (i16 5)
 // CHECK:   store volatile <8 x i16> [[SHR17]], ptr @ss, align 8
 // CHECK:   [[TMP21:%.*]] = load volatile <8 x i16>, ptr @ss2, align 8
 // CHECK:   [[TMP22:%.*]] = load volatile <8 x i16>, ptr @us, align 8
@@ -2535,7 +2535,7 @@ void test_sr(void) {
 // CHECK:   [[SHR23:%.*]] = lshr <8 x i16> [[TMP26]], [[SH_PROM22]]
 // CHECK:   store volatile <8 x i16> [[SHR23]], ptr @us, align 8
 // CHECK:   [[TMP27:%.*]] = load volatile <8 x i16>, ptr @us, align 8
-// CHECK:   [[SHR24:%.*]] = lshr <8 x i16> [[TMP27]], <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+// CHECK:   [[SHR24:%.*]] = lshr <8 x i16> [[TMP27]], splat (i16 5)
 // CHECK:   store volatile <8 x i16> [[SHR24]], ptr @us, align 8
 // CHECK:   [[TMP28:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
 // CHECK:   [[TMP29:%.*]] = load volatile <4 x i32>, ptr @si, align 8
@@ -2552,7 +2552,7 @@ void test_sr(void) {
 // CHECK:   [[SHR29:%.*]] = ashr <4 x i32> [[TMP33]], [[SPLAT_SPLAT28]]
 // CHECK:   store volatile <4 x i32> [[SHR29]], ptr @si, align 8
 // CHECK:   [[TMP34:%.*]] = load volatile <4 x i32>, ptr @si, align 8
-// CHECK:   [[SHR30:%.*]] = ashr <4 x i32> [[TMP34]], <i32 5, i32 5, i32 5, i32 5>
+// CHECK:   [[SHR30:%.*]] = ashr <4 x i32> [[TMP34]], splat (i32 5)
 // CHECK:   store volatile <4 x i32> [[SHR30]], ptr @si, align 8
 // CHECK:   [[TMP35:%.*]] = load volatile <4 x i32>, ptr @si2, align 8
 // CHECK:   [[TMP36:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
@@ -2569,7 +2569,7 @@ void test_sr(void) {
 // CHECK:   [[SHR35:%.*]] = lshr <4 x i32> [[TMP40]], [[SPLAT_SPLAT34]]
 // CHECK:   store volatile <4 x i32> [[SHR35]], ptr @ui, align 8
 // CHECK:   [[TMP41:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
-// CHECK:   [[SHR36:%.*]] = lshr <4 x i32> [[TMP41]], <i32 5, i32 5, i32 5, i32 5>
+// CHECK:   [[SHR36:%.*]] = lshr <4 x i32> [[TMP41]], splat (i32 5)
 // CHECK:   store volatile <4 x i32> [[SHR36]], ptr @ui, align 8
 // CHECK:   [[TMP42:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
 // CHECK:   [[TMP43:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
@@ -2587,7 +2587,7 @@ void test_sr(void) {
 // CHECK:   [[SHR42:%.*]] = ashr <2 x i64> [[TMP47]], [[SH_PROM41]]
 // CHECK:   store volatile <2 x i64> [[SHR42]], ptr @sl, align 8
 // CHECK:   [[TMP48:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
-// CHECK:   [[SHR43:%.*]] = ashr <2 x i64> [[TMP48]], <i64 5, i64 5>
+// CHECK:   [[SHR43:%.*]] = ashr <2 x i64> [[TMP48]], splat (i64 5)
 // CHECK:   store volatile <2 x i64> [[SHR43]], ptr @sl, align 8
 // CHECK:   [[TMP49:%.*]] = load volatile <2 x i64>, ptr @sl2, align 8
 // CHECK:   [[TMP50:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
@@ -2605,7 +2605,7 @@ void test_sr(void) {
 // CHECK:   [[SHR49:%.*]] = lshr <2 x i64> [[TMP54]], [[SH_PROM48]]
 // CHECK:   store volatile <2 x i64> [[SHR49]], ptr @ul, align 8
 // CHECK:   [[TMP55:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
-// CHECK:   [[SHR50:%.*]] = lshr <2 x i64> [[TMP55]], <i64 5, i64 5>
+// CHECK:   [[SHR50:%.*]] = lshr <2 x i64> [[TMP55]], splat (i64 5)
 // CHECK:   store volatile <2 x i64> [[SHR50]], ptr @ul, align 8
 // CHECK:   ret void
 void test_sr_assign(void) {

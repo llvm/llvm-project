@@ -75,10 +75,10 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    store i64 0, ptr [[TMP24]], align 8
 ; VEC-NEXT:    store i64 0, ptr [[TMP25]], align 8
 ; VEC-NEXT:    store i64 0, ptr [[TMP26]], align 8
-; VEC-NEXT:    [[TMP27:%.*]] = add <4 x i16> [[VEC_IND]], <i16 1, i16 1, i16 1, i16 1>
+; VEC-NEXT:    [[TMP27:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 1)
 ; VEC-NEXT:    [[TMP28]] = zext <4 x i16> [[TMP27]] to <4 x i64>
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VEC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], <i16 4, i16 4, i16 4, i16 4>
+; VEC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; VEC-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VEC:       middle.block:

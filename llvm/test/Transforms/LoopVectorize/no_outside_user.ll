@@ -15,8 +15,8 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 ; CHECK-LABEL: @test1(
 ; CHECK: %vec.ind = phi <2 x i32>
-; CHECK: [[CMP:%[a-zA-Z0-9.]+]] = icmp sgt <2 x i32> %vec.ind, <i32 10, i32 10>
-; CHECK: %predphi = select <2 x i1> [[CMP]], <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer
+; CHECK: [[CMP:%[a-zA-Z0-9.]+]] = icmp sgt <2 x i32> %vec.ind, splat (i32 10)
+; CHECK: %predphi = select <2 x i1> [[CMP]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
 
 ; CHECK-LABEL: middle.block:
 ; CHECK:          [[E1:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> %predphi, i32 1
@@ -51,8 +51,8 @@ f1.exit.loopexit:
 ; non-hdr phi depends on header phi.
 ; CHECK-LABEL: @test2(
 ; CHECK: %vec.ind = phi <2 x i32>
-; CHECK: [[CMP:%[a-zA-Z0-9.]+]] = icmp sgt <2 x i32> %vec.ind, <i32 10, i32 10>
-; CHECK: %predphi = select <2 x i1> [[CMP]], <2 x i32> <i32 1, i32 1>, <2 x i32> %vec.ind
+; CHECK: [[CMP:%[a-zA-Z0-9.]+]] = icmp sgt <2 x i32> %vec.ind, splat (i32 10)
+; CHECK: %predphi = select <2 x i1> [[CMP]], <2 x i32> splat (i32 1), <2 x i32> %vec.ind
 
 ; CHECK-LABEL: middle.block:
 ; CHECK:          [[E1:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> %predphi, i32 1
@@ -86,8 +86,8 @@ f1.exit.loopexit:
 ; more than 2 incoming values for tmp17 phi that is used outside loop.
 ; CHECK-LABEL: test3(
 ; CHECK-LABEL: vector.body:
-; CHECK:          %predphi = select <2 x i1> %{{.*}}, <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer
-; CHECK:          %predphi1 = select <2 x i1> %{{.*}}, <2 x i32> <i32 2, i32 2>, <2 x i32> %predphi
+; CHECK:          %predphi = select <2 x i1> %{{.*}}, <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
+; CHECK:          %predphi1 = select <2 x i1> %{{.*}}, <2 x i32> splat (i32 2), <2 x i32> %predphi
 
 ; CHECK-LABEL: middle.block:
 ; CHECK:          [[E1:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> %predphi1, i32 1
@@ -269,8 +269,8 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; CHECK-LABEL: @outside_user_non_phi(
 ; CHECK: %vec.ind = phi <2 x i32>
-; CHECK: [[CMP:%[a-zA-Z0-9.]+]] = icmp sgt <2 x i32> %vec.ind, <i32 10, i32 10>
-; CHECK: %predphi = select <2 x i1> [[CMP]], <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer
+; CHECK: [[CMP:%[a-zA-Z0-9.]+]] = icmp sgt <2 x i32> %vec.ind, splat (i32 10)
+; CHECK: %predphi = select <2 x i1> [[CMP]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
 ; CHECK: [[TRUNC:%[a-zA-Z0-9.]+]] = trunc <2 x i32> %predphi to <2 x i8>
 
 ; CHECK-LABEL: middle.block:
@@ -376,12 +376,12 @@ f1.exit.loopexit:
 ; CHECK-LABEL: non_uniform_live_out()
 ; CHECK-LABEL:   vector.body:
 ; CHECK:           %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
-; CHECK:           [[ADD:%[a-zA-Z0-9.]+]] = add <2 x i32> %vec.ind, <i32 7, i32 7>
+; CHECK:           [[ADD:%[a-zA-Z0-9.]+]] = add <2 x i32> %vec.ind, splat (i32 7)
 ; CHECK:           [[EE:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[ADD]], i32 0
 ; CHECK:           [[GEP:%[a-zA-Z0-9.]+]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[EE]]
 ; CHECK-NEXT:      [[GEP2:%[a-zA-Z0-9.]+]] = getelementptr inbounds i8, ptr [[GEP]], i32 0
 ; CHECK-NEXT:      %wide.load = load <2 x i8>, ptr [[GEP2]]
-; CHECK-NEXT:      [[ADD2:%[a-zA-Z0-9.]+]] = add <2 x i8> %wide.load, <i8 1, i8 1>
+; CHECK-NEXT:      [[ADD2:%[a-zA-Z0-9.]+]] = add <2 x i8> %wide.load, splat (i8 1)
 ; CHECK:           store <2 x i8> [[ADD2]], ptr
 
 ; CHECK-LABEL:  middle.block:

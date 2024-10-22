@@ -347,7 +347,7 @@ define i1 @load_after_memset_1_i1(ptr %a) {
 define <4 x i8> @load_after_memset_1_vec(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_1_vec(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
-; CHECK-NEXT:    ret <4 x i8> <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    ret <4 x i8> splat (i8 1)
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
   %v = load <4 x i8>, ptr %a

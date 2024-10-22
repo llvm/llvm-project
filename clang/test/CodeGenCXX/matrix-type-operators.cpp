@@ -407,7 +407,7 @@ void test_constexpr2(matrix_type<int, 5, 5> &m) {
   // NOOPT:         [[MAT:%.*]] = load <25 x i32>, ptr {{.*}}, align 4{{$}}
   // OPT:           [[MAT:%.*]] = load <25 x i32>, ptr {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[SUB:%.*]] = sub <25 x i32> [[IM]], [[MAT]]
-  // CHECK-NEXT:    [[SUB2:%.*]] = add <25 x i32> [[SUB]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  // CHECK-NEXT:    [[SUB2:%.*]] = add <25 x i32> [[SUB]], splat (i32 1)
   // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
   // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    store <25 x i32> [[SUB2]], ptr [[MAT_ADDR]], align 4

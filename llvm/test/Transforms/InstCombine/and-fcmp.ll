@@ -4644,7 +4644,7 @@ define i1 @clang_builtin_isnormal_inf_check(half %x) {
 define <2 x i1> @clang_builtin_isnormal_inf_check_vector(<2 x half> %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_vector(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
-; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq <2 x half> [[FABS_X]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq <2 x half> [[FABS_X]], splat (half 0xH7C00)
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %fabs.x = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)

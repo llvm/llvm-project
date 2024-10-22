@@ -78,9 +78,9 @@ define i32 @foo2(ptr noalias nocapture %B, ptr noalias nocapture %A, i32 %n, i32
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_019:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ [[TMP0]], [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 1.000000e+01, double 1.000000e+01>
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 4.000000e+00, double 4.000000e+00>
-; CHECK-NEXT:    [[TMP4]] = fadd <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], splat (double 1.000000e+01)
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], splat (double 4.000000e+00)
+; CHECK-NEXT:    [[TMP4]] = fadd <2 x double> [[TMP3]], splat (double 4.000000e+00)
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_019]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
@@ -236,7 +236,7 @@ define float @sort_phi_type(ptr nocapture readonly %A) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x float> [ <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>, [[ENTRY]] ], [ [[TMP2:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x float> [ splat (float 1.000000e+01), [[ENTRY]] ], [ [[TMP2:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP2]] = fmul <4 x float> [[TMP1]], <float 8.000000e+00, float 9.000000e+00, float 1.000000e+02, float 1.110000e+02>
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 4

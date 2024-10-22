@@ -1779,7 +1779,7 @@ define i1 @not_isfinite_or_zero_f16_daz(half %x) #1 {
 define <2 x i1> @not_isfinite_or_zero_v2f16_daz(<2 x half> %x) #1 {
 ; CHECK-LABEL: @not_isfinite_or_zero_v2f16_daz(
 ; CHECK-NEXT:    [[FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
-; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], splat (half 0xH7C00)
 ; CHECK-NEXT:    [[CMPZERO:%.*]] = fcmp oeq <2 x half> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[CLASS:%.*]] = or <2 x i1> [[CMPZERO]], [[CMPINF]]
 ; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
@@ -1810,7 +1810,7 @@ define i1 @not_isfinite_or_zero_f16_dynamic(half %x) #2 {
 define <2 x i1> @not_isfinite_or_zero_v2f16_dynamic(<2 x half> %x) #2 {
 ; CHECK-LABEL: @not_isfinite_or_zero_v2f16_dynamic(
 ; CHECK-NEXT:    [[FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
-; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], splat (half 0xH7C00)
 ; CHECK-NEXT:    [[CMPZERO:%.*]] = fcmp oeq <2 x half> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[CLASS:%.*]] = or <2 x i1> [[CMPZERO]], [[CMPINF]]
 ; CHECK-NEXT:    ret <2 x i1> [[CLASS]]

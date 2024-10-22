@@ -982,7 +982,7 @@ define <2 x i8> @fshr_zero_vec(<2 x i8> %shamt) {
 
 define <2 x i7> @fshl_ones_vec(<2 x i7> %shamt) {
 ; CHECK-LABEL: @fshl_ones_vec(
-; CHECK-NEXT:    ret <2 x i7> <i7 -1, i7 -1>
+; CHECK-NEXT:    ret <2 x i7> splat (i7 -1)
 ;
   %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> <i7 poison, i7 -1>, <2 x i7> <i7 -1, i7 poison>, <2 x i7> %shamt)
   ret <2 x i7> %r
@@ -1421,7 +1421,7 @@ define i32 @ctpop_pow2(i32 %x) {
 
 define <3 x i33> @ctpop_signbit(<3 x i33> %x) {
 ; CHECK-LABEL: @ctpop_signbit(
-; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], <i33 32, i33 32, i33 32>
+; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], splat (i33 32)
 ; CHECK-NEXT:    ret <3 x i33> [[B]]
 ;
   %b = lshr <3 x i33> %x, <i33 32, i33 32, i33 32>
@@ -1433,7 +1433,7 @@ define <3 x i33> @ctpop_signbit(<3 x i33> %x) {
 
 define <3 x i33> @ctpop_notsignbit(<3 x i33> %x) {
 ; CHECK-LABEL: @ctpop_notsignbit(
-; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], <i33 31, i33 31, i33 31>
+; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], splat (i33 31)
 ; CHECK-NEXT:    [[R:%.*]] = tail call <3 x i33> @llvm.ctpop.v3i33(<3 x i33> [[B]])
 ; CHECK-NEXT:    ret <3 x i33> [[R]]
 ;

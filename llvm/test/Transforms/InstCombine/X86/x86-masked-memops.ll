@@ -158,7 +158,7 @@ define <4 x i64> @mload_v4i64(ptr %f) {
 
 define <4 x i64> @mload_v4i64_cmp(ptr %f, <4 x i64> %src) {
 ; CHECK-LABEL: @mload_v4i64_cmp(
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp sgt <4 x i64> [[SRC:%.*]], <i64 -1, i64 -1, i64 -1, i64 -1>
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp sgt <4 x i64> [[SRC:%.*]], splat (i64 -1)
 ; CHECK-NEXT:    [[LD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr [[F:%.*]], i32 1, <4 x i1> [[ICMP]], <4 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <4 x i64> [[LD]]
 ;
@@ -270,7 +270,7 @@ define void @mstore_v4f64(ptr %f, <4 x double> %v) {
 
 define void @mstore_v4f64_cmp(ptr %f, <4 x i32> %src, <4 x double> %v) {
 ; CHECK-LABEL: @mstore_v4f64_cmp(
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp sgt <4 x i32> [[SRC:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp sgt <4 x i32> [[SRC:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[V:%.*]], ptr [[F:%.*]], i32 1, <4 x i1> [[ICMP]])
 ; CHECK-NEXT:    ret void
 ;

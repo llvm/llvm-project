@@ -3,7 +3,7 @@
 
 define <4 x i32> @test_v4i32_splatconst_pow2(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_splatconst_pow2(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[A0:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[A0:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = udiv <4 x i32> %a0, <i32 2, i32 2, i32 2, i32 2>
@@ -22,7 +22,7 @@ define <4 x i32> @test_v4i32_const_pow2(<4 x i32> %a0) {
 ; X udiv C, where C >= signbit
 define <4 x i32> @test_v4i32_negconstsplat(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_negconstsplat(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[A0:%.*]], <i32 -4, i32 -4, i32 -4, i32 -4>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[A0:%.*]], splat (i32 -4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -51,7 +51,7 @@ define <4 x i32> @test_v4i32_negconst_undef(<4 x i32> %a0) {
 ; X udiv (C1 << N), where C1 is "1<<C2"  -->  X >> (N+C2)
 define <4 x i32> @test_v4i32_shl_splatconst_pow2(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @test_v4i32_shl_splatconst_pow2(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A1:%.*]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A1:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[A0:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -74,7 +74,7 @@ define <4 x i32> @test_v4i32_shl_const_pow2(<4 x i32> %a0, <4 x i32> %a1) {
 ; X udiv (zext (C1 << N)), where C1 is "1<<C2"  -->  X >> (N+C2)
 define <4 x i32> @test_v4i32_zext_shl_splatconst_pow2(<4 x i32> %a0, <4 x i16> %a1) {
 ; CHECK-LABEL: @test_v4i32_zext_shl_splatconst_pow2(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[A1:%.*]], <i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[A1:%.*]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i32> [[A0:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]

@@ -86,7 +86,7 @@ __m64 test_mm_and_si64(__m64 a, __m64 b) {
 
 __m64 test_mm_andnot_si64(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_andnot_si64
-  // CHECK: [[TMP:%.*]] = xor <1 x i64> {{%.*}}, <i64 -1>
+  // CHECK: [[TMP:%.*]] = xor <1 x i64> {{%.*}}, splat (i64 -1)
   // CHECK: and <1 x i64> [[TMP]], {{%.*}}
   return _mm_andnot_si64(a, b);
 }
@@ -333,8 +333,8 @@ int test_mm_movemask_pi8(__m64 a) {
 
 __m64 test_mm_mul_su32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mul_su32
-  // CHECK: and <2 x i64> {{%.*}}, <i64 4294967295, i64 4294967295>
-  // CHECK: and <2 x i64> {{%.*}}, <i64 4294967295, i64 4294967295>
+  // CHECK: and <2 x i64> {{%.*}}, splat (i64 4294967295)
+  // CHECK: and <2 x i64> {{%.*}}, splat (i64 4294967295)
   // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_su32(a, b);
 }

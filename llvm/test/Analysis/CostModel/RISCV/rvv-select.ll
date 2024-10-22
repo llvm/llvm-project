@@ -393,7 +393,7 @@ define void @select() {
 
 define void @select_of_constants() {
 ; CHECK-LABEL: 'select_of_constants'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = select i1 undef, <2 x i64> <i64 128, i64 128>, <2 x i64> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = select i1 undef, <2 x i64> splat (i64 128), <2 x i64> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %2 = select i1 undef, <2 x i64> <i64 128, i64 127>, <2 x i64> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %3 = select i1 undef, <2 x i64> <i64 0, i64 1>, <2 x i64> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %4 = select i1 undef, <2 x i64> <i64 128, i64 533>, <2 x i64> <i64 0, i64 573>

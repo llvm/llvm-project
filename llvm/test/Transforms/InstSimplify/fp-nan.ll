@@ -103,7 +103,7 @@ define <vscale x 1 x double> @fmul_nan_op0_scalable_vec_1(<vscale x 1 x double> 
 
 define <2 x float> @fmul_nan_op1(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_nan_op1(
-; CHECK-NEXT:    ret <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
 ;
   %r = fmul <2 x float> %x, <float 0x7FF8000000000000, float 0x7FF8000000000000>
   ret <2 x float> %r
@@ -121,7 +121,7 @@ define <vscale x 1 x double> @fmul_nan_op1_scalable_vec(<vscale x 1 x double> %x
 
 define <2 x double> @fdiv_nan_op0(<2 x double> %x) {
 ; CHECK-LABEL: @fdiv_nan_op0(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFF800000000000F, double 0xFFF800000000000F>
+; CHECK-NEXT:    ret <2 x double> splat (double 0xFFF800000000000F)
 ;
   %r = fdiv <2 x double> <double 0xFFF800000000000F, double 0xFFF800000000000F>, %x
   ret <2 x double>  %r

@@ -11,7 +11,7 @@ define <8 x i16> @or-load-fixed-length-vector(ptr %p1) {
 ; CHECK-NEXT:    [[L2:%.*]] = load <8 x i8>, ptr [[P2]], align 1
 ; CHECK-NEXT:    [[E1:%.*]] = zext <8 x i8> [[L1]] to <8 x i16>
 ; CHECK-NEXT:    [[E2:%.*]] = zext <8 x i8> [[L2]] to <8 x i16>
-; CHECK-NEXT:    [[S2:%.*]] = shl <8 x i16> [[E2]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+; CHECK-NEXT:    [[S2:%.*]] = shl <8 x i16> [[E2]], splat (i16 8)
 ; CHECK-NEXT:    [[OR:%.*]] = or <8 x i16> [[E1]], [[S2]]
 ; CHECK-NEXT:    ret <8 x i16> [[OR]]
 ;

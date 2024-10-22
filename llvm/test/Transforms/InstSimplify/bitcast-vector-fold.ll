@@ -68,11 +68,8 @@ define <4 x i32> @test8(<1 x i64> %y) {
 }
 
 define <4 x i32> @test9(<1 x i64> %y) {
-; CONSTVEC-LABEL: @test9(
-; CONSTVEC-NEXT:    ret <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
-;
-; CONSTSPLAT-LABEL: @test9(
-; CONSTSPLAT-NEXT:    ret <4 x i32> splat (i32 -1)
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:    ret <4 x i32> splat (i32 -1)
 ;
   %c = bitcast <2 x i64> <i64 -1, i64 -1> to <4 x i32>
   ret <4 x i32> %c
@@ -80,7 +77,7 @@ define <4 x i32> @test9(<1 x i64> %y) {
 
 define <1 x i1> @test10() {
 ; CONSTVEC-LABEL: @test10(
-; CONSTVEC-NEXT:    [[RET:%.*]] = icmp eq <1 x i64> <i64 bitcast (<1 x double> <double 0xFFFFFFFFFFFFFFFF> to i64)>, zeroinitializer
+; CONSTVEC-NEXT:    [[RET:%.*]] = icmp eq <1 x i64> <i64 bitcast (<1 x double> splat (double 0xFFFFFFFFFFFFFFFF) to i64)>, zeroinitializer
 ; CONSTVEC-NEXT:    ret <1 x i1> [[RET]]
 ;
 ; CONSTSPLAT-LABEL: @test10(
@@ -93,11 +90,8 @@ define <1 x i1> @test10() {
 
 ; from MultiSource/Benchmarks/Bullet
 define <2 x float> @foo() {
-; CONSTVEC-LABEL: @foo(
-; CONSTVEC-NEXT:    ret <2 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>
-;
-; CONSTSPLAT-LABEL: @foo(
-; CONSTSPLAT-NEXT:    ret <2 x float> splat (float 0xFFFFFFFFE0000000)
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:    ret <2 x float> splat (float 0xFFFFFFFFE0000000)
 ;
   %cast = bitcast i64 -1 to <2 x float>
   ret <2 x float> %cast
@@ -105,22 +99,16 @@ define <2 x float> @foo() {
 
 
 define <2 x double> @foo2() {
-; CONSTVEC-LABEL: @foo2(
-; CONSTVEC-NEXT:    ret <2 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>
-;
-; CONSTSPLAT-LABEL: @foo2(
-; CONSTSPLAT-NEXT:    ret <2 x double> splat (double 0xFFFFFFFFFFFFFFFF)
+; CHECK-LABEL: @foo2(
+; CHECK-NEXT:    ret <2 x double> splat (double 0xFFFFFFFFFFFFFFFF)
 ;
   %cast = bitcast i128 -1 to <2 x double>
   ret <2 x double> %cast
 }
 
 define <1 x float> @foo3() {
-; CONSTVEC-LABEL: @foo3(
-; CONSTVEC-NEXT:    ret <1 x float> <float 0xFFFFFFFFE0000000>
-;
-; CONSTSPLAT-LABEL: @foo3(
-; CONSTSPLAT-NEXT:    ret <1 x float> splat (float 0xFFFFFFFFE0000000)
+; CHECK-LABEL: @foo3(
+; CHECK-NEXT:    ret <1 x float> splat (float 0xFFFFFFFFE0000000)
 ;
   %cast = bitcast i32 -1 to <1 x float>
   ret <1 x float> %cast
@@ -143,11 +131,8 @@ define double @foo5() {
 }
 
 define <2 x double> @foo6() {
-; CONSTVEC-LABEL: @foo6(
-; CONSTVEC-NEXT:    ret <2 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>
-;
-; CONSTSPLAT-LABEL: @foo6(
-; CONSTSPLAT-NEXT:    ret <2 x double> splat (double 0xFFFFFFFFFFFFFFFF)
+; CHECK-LABEL: @foo6(
+; CHECK-NEXT:    ret <2 x double> splat (double 0xFFFFFFFFFFFFFFFF)
 ;
   %cast = bitcast <4 x i32><i32 -1, i32 -1, i32 -1, i32 -1> to <2 x double>
   ret <2 x double> %cast
@@ -299,7 +284,7 @@ define <16 x i8> @bitcast_constexpr_16i8_8i16_u256uuu256uu() {
 
 define <1 x i32> @bitcast_constexpr_scalar_fp_to_vector_int() {
 ; CONSTVEC-LABEL: @bitcast_constexpr_scalar_fp_to_vector_int(
-; CONSTVEC-NEXT:    ret <1 x i32> <i32 1065353216>
+; CONSTVEC-NEXT:    ret <1 x i32> splat (i32 1065353216)
 ;
 ; CONSTSPLAT-LABEL: @bitcast_constexpr_scalar_fp_to_vector_int(
 ; CONSTSPLAT-NEXT:    ret <1 x i32> bitcast (<1 x float> splat (float 1.000000e+00) to <1 x i32>)

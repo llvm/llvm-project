@@ -21,7 +21,7 @@
 // CHECK-NEXT:    [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
 // CHECK-NEXT:    [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
 // CHECK-NEXT:    [[VBSL3_I:%.*]] = and <4 x i16> [[A]], [[VBSL1_I]]
-// CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i16> [[A]], <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i16> [[A]], splat (i16 -1)
 // CHECK-NEXT:    [[VBSL4_I:%.*]] = and <4 x i16> [[TMP3]], [[VBSL2_I]]
 // CHECK-NEXT:    [[VBSL5_I:%.*]] = or <4 x i16> [[VBSL3_I]], [[VBSL4_I]]
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[VBSL5_I]] to <4 x half>
@@ -40,7 +40,7 @@ float16x4_t test_vbsl_f16(uint16x4_t a, float16x4_t b, float16x4_t c) {
 // CHECK-NEXT:    [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
 // CHECK-NEXT:    [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x i16>
 // CHECK-NEXT:    [[VBSL3_I:%.*]] = and <8 x i16> [[A]], [[VBSL1_I]]
-// CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i16> [[A]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i16> [[A]], splat (i16 -1)
 // CHECK-NEXT:    [[VBSL4_I:%.*]] = and <8 x i16> [[TMP3]], [[VBSL2_I]]
 // CHECK-NEXT:    [[VBSL5_I:%.*]] = or <8 x i16> [[VBSL3_I]], [[VBSL4_I]]
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[VBSL5_I]] to <8 x half>

@@ -54,10 +54,10 @@ define void @loop(ptr %X, ptr %Y) {
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <2 x double> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp olt <2 x double> [[WIDE_LOAD8]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD]], <double 6.000000e+00, double 6.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD8]], <double 6.000000e+00, double 6.000000e+00>
-; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP5]], <2 x double> <double 6.000000e+00, double 6.000000e+00>, <2 x double> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP6]], <2 x double> <double 6.000000e+00, double 6.000000e+00>, <2 x double> [[WIDE_LOAD8]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD]], splat (double 6.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD8]], splat (double 6.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP5]], <2 x double> splat (double 6.000000e+00), <2 x double> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP6]], <2 x double> splat (double 6.000000e+00), <2 x double> [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP3]], <2 x double> zeroinitializer, <2 x double> [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP4]], <2 x double> zeroinitializer, <2 x double> [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDEX]]
@@ -152,8 +152,8 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope [[META4:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !alias.scope [[META4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 20, i32 20, i32 20, i32 20>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD7]], <i32 20, i32 20, i32 20, i32 20>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 20)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD7]], splat (i32 20)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP4]], align 4, !alias.scope [[META7:![0-9]+]]

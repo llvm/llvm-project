@@ -119,7 +119,7 @@ define i1 @t6_const_shl_lshr_ne(i32 %x, i32 %y, i32 %shamt0, i32 %shamt1) {
 
 define <2 x i1> @t7_const_lshr_shl_ne_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t7_const_lshr_shl_ne_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[T3]]
@@ -171,7 +171,7 @@ define <3 x i1> @t10_const_lshr_shl_ne_vec_poison1(<3 x i32> %x, <3 x i32> %y) {
 }
 define <3 x i1> @t11_const_lshr_shl_ne_vec_poison2(<3 x i32> %x, <3 x i32> %y) {
 ; CHECK-LABEL: @t11_const_lshr_shl_ne_vec_poison2(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i32> [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <3 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[T3]]

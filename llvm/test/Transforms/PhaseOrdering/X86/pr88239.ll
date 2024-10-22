@@ -15,7 +15,7 @@ define void @foo(ptr noalias noundef %0, ptr noalias noundef %1) optsize {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw i64 255, [[INDVARS_IV]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <8 x i32>, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP10]], align 4

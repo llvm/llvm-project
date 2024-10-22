@@ -119,8 +119,8 @@ define <2 x i32> @test3vec(i1 %which) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi <2 x i32> [ <i32 -877, i32 -877>, [[ENTRY:%.*]] ], [ <i32 113, i32 113>, [[DELAY]] ]
-; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 1000, i32 1000>, [[ENTRY]] ], [ <i32 10, i32 10>, [[DELAY]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi <2 x i32> [ splat (i32 -877), [[ENTRY:%.*]] ], [ splat (i32 113), [[DELAY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ splat (i32 1000), [[ENTRY]] ], [ splat (i32 10), [[DELAY]] ]
 ; CHECK-NEXT:    ret <2 x i32> [[PHIOFOPS]]
 ;
 
