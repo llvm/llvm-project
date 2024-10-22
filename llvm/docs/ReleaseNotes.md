@@ -42,6 +42,11 @@ point (e.g. maybe you would like to give an example of the
 functionality, or simply have a lot to talk about), see the comment below
 for adding a new subsection. -->
 
+* Added a new IRNormalizer pass which aims to transform LLVM modules into
+  a normal form by reordering and renaming instructions while preserving the
+  same semantics. The normalizer makes it easier to spot semantic differences
+  when diffing two modules which have undergone different passes.
+
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
@@ -130,6 +135,11 @@ Changes to the ARM Backend
   set to `-mframe-pointer=all`, meaning the frame pointer (FP) is now retained
   in leaf functions by default. To eliminate the frame pointer in leaf functions,
   you must explicitly use the `-momit-leaf-frame-pointer` option.
+
+* When using the `MOVT` or `MOVW` instructions, the Assembler will now check to
+  ensure that any addend that is used is within a 16-bit signed value range. If the
+  addend falls outside of this range, the LLVM backend will emit an error like so
+  `Relocation Not In Range`.
 
 Changes to the AVR Backend
 --------------------------

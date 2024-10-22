@@ -440,6 +440,7 @@ Bug Fixes in This Version
 - Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 - Fixed a crash when diagnosing format strings and encountering an empty
   delimited escape sequence (e.g., ``"\o{}"``). #GH102218
+- Fixed a crash using ``__array_rank`` on 64-bit targets. (#GH113044).
 - The warning emitted for an unsupported register variable type now points to
   the unsupported type instead of the ``register`` keyword (#GH109776).
 
@@ -508,7 +509,7 @@ Bug Fixes to C++ Support
 - Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
 - Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
-- A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
+- A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361), (#GH112352)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
   pack. (#GH63819), (#GH107560)
@@ -540,6 +541,9 @@ Bug Fixes to C++ Support
 - Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 - During the lookup for a base class name, non-type names are ignored. (#GH16855)
 - Fix a crash when recovering an invalid expression involving an explicit object member conversion operator. (#GH112559)
+- Clang incorrectly considered a class with an anonymous union member to not be
+  const-default-constructible even if a union member has a default member initializer.
+  (#GH95854).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

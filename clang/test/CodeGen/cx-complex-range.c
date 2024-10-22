@@ -1264,24 +1264,24 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // AVRFP32-SAME: float noundef [[A_COERCE0:%.*]], float noundef [[A_COERCE1:%.*]], float noundef [[B_COERCE0:%.*]], float noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP32-NEXT:  entry:
 // AVRFP32-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 1
-// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
-// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
+// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 1
+// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 1
 // AVRFP32-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP32-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
+// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 1
 // AVRFP32-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
+// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 1
 // AVRFP32-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 4
+// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 1
 // AVRFP32-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 4
+// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 1
 // AVRFP32-NEXT:    [[TMP4:%.*]] = call addrspace(1) float @llvm.fabs.f32(float [[B_REAL]])
 // AVRFP32-NEXT:    [[TMP5:%.*]] = call addrspace(1) float @llvm.fabs.f32(float [[B_IMAG]])
 // AVRFP32-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt float [[TMP4]], [[TMP5]]
@@ -1321,24 +1321,24 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // AVRFP64-LABEL: define dso_local void @divd(
 // AVRFP64-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 1 [[AGG_RESULT:%.*]], double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP64-NEXT:  entry:
-// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 8
-// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 8
+// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 1
+// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 1
 // AVRFP64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP64-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
+// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 1
 // AVRFP64-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
+// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 1
 // AVRFP64-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
+// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 1
 // AVRFP64-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
+// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 1
 // AVRFP64-NEXT:    [[TMP4:%.*]] = call addrspace(1) double @llvm.fabs.f64(double [[B_REAL]])
 // AVRFP64-NEXT:    [[TMP5:%.*]] = call addrspace(1) double @llvm.fabs.f64(double [[B_IMAG]])
 // AVRFP64-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt double [[TMP4]], [[TMP5]]
@@ -1862,24 +1862,24 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // AVRFP32-SAME: float noundef [[A_COERCE0:%.*]], float noundef [[A_COERCE1:%.*]], float noundef [[B_COERCE0:%.*]], float noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP32-NEXT:  entry:
 // AVRFP32-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 1
-// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
-// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
+// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 1
+// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 1
 // AVRFP32-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP32-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
+// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 1
 // AVRFP32-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
+// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 1
 // AVRFP32-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 4
+// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 1
 // AVRFP32-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 4
+// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 1
 // AVRFP32-NEXT:    [[MUL_AC:%.*]] = fmul float [[A_REAL]], [[B_REAL]]
 // AVRFP32-NEXT:    [[MUL_BD:%.*]] = fmul float [[A_IMAG]], [[B_IMAG]]
 // AVRFP32-NEXT:    [[MUL_AD:%.*]] = fmul float [[A_REAL]], [[B_IMAG]]
@@ -1896,24 +1896,24 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // AVRFP64-LABEL: define dso_local void @muld(
 // AVRFP64-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 1 [[AGG_RESULT:%.*]], double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP64-NEXT:  entry:
-// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 8
-// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 8
+// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 1
+// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 1
 // AVRFP64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP64-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
+// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 1
 // AVRFP64-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
+// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 1
 // AVRFP64-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
+// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 1
 // AVRFP64-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
+// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 1
 // AVRFP64-NEXT:    [[MUL_AC:%.*]] = fmul double [[A_REAL]], [[B_REAL]]
 // AVRFP64-NEXT:    [[MUL_BD:%.*]] = fmul double [[A_IMAG]], [[B_IMAG]]
 // AVRFP64-NEXT:    [[MUL_AD:%.*]] = fmul double [[A_REAL]], [[B_IMAG]]

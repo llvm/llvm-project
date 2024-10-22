@@ -1527,6 +1527,10 @@ public:
   getReductionPatternCost(Instruction *I, ElementCount VF, Type *VectorTy,
                           TTI::TargetCostKind CostKind) const;
 
+  /// Returns true if \p Op should be considered invariant and if it is
+  /// trivially hoistable.
+  bool shouldConsiderInvariant(Value *Op);
+
 private:
   unsigned NumPredStores = 0;
 
@@ -2791,14 +2795,14 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
         Escape = B.CreateSub(EndValue, Step);
       else if (EndValue->getType()->isPointerTy())
         Escape = B.CreatePtrAdd(EndValue, B.CreateNeg(Step));
-      else if (EndValue->getType()->isFloatingPointTy()) {
+      else {
+        assert(EndValue->getType()->isFloatingPointTy() &&
+               "Unexpected induction type");
         Escape = B.CreateBinOp(II.getInductionBinOp()->getOpcode() ==
                                        Instruction::FAdd
                                    ? Instruction::FSub
                                    : Instruction::FAdd,
                                EndValue, Step);
-      } else {
-        llvm_unreachable("all possible induction types must be handled");
       }
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
@@ -6382,6 +6386,17 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
   }
 }
 
+bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) {
+  if (!Legal->isInvariant(Op))
+    return false;
+  // Consider Op invariant, if it or its operands aren't predicated
+  // instruction in the loop. In that case, it is not trivially hoistable.
+  return !isa<Instruction>(Op) || !TheLoop->contains(cast<Instruction>(Op)) ||
+         (!isPredicatedInst(cast<Instruction>(Op)) &&
+          all_of(cast<Instruction>(Op)->operands(),
+                 [this](Value *Op) { return shouldConsiderInvariant(Op); }));
+}
+
 InstructionCost
 LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                                                ElementCount VF) {
@@ -6621,19 +6636,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
     }
     auto Op2Info = TTI.getOperandInfo(Op2);
-    std::function<bool(Value *)> IsInvariant =
-        [this, &IsInvariant](Value *Op) -> bool {
-      if (!Legal->isInvariant(Op))
-        return false;
-      // Consider Op2invariant, if it or its operands aren't predicated
-      // instruction in the loop. In that case, it is not trivially hoistable.
-      return !isa<Instruction>(Op) ||
-             !TheLoop->contains(cast<Instruction>(Op)) ||
-             (!isPredicatedInst(cast<Instruction>(Op)) &&
-              all_of(cast<Instruction>(Op)->operands(),
-                     [&IsInvariant](Value *Op) { return IsInvariant(Op); }));
-    };
-    if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue && IsInvariant(Op2))
+    if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
+        shouldConsiderInvariant(Op2))
       Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
     SmallVector<const Value *, 4> Operands(I->operand_values());
@@ -7303,12 +7307,30 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     const auto &ChainOps = RdxDesc.getReductionOpChain(RedPhi, OrigLoop);
     SetVector<Instruction *> ChainOpsAndOperands(ChainOps.begin(),
                                                  ChainOps.end());
+    auto IsZExtOrSExt = [](const unsigned Opcode) -> bool {
+      return Opcode == Instruction::ZExt || Opcode == Instruction::SExt;
+    };
     // Also include the operands of instructions in the chain, as the cost-model
     // may mark extends as free.
+    //
+    // For ARM, some of the instruction can folded into the reducion
+    // instruction. So we need to mark all folded instructions free.
+    // For example: We can fold reduce(mul(ext(A), ext(B))) into one
+    // instruction.
     for (auto *ChainOp : ChainOps) {
       for (Value *Op : ChainOp->operands()) {
-        if (auto *I = dyn_cast<Instruction>(Op))
+        if (auto *I = dyn_cast<Instruction>(Op)) {
           ChainOpsAndOperands.insert(I);
+          if (I->getOpcode() == Instruction::Mul) {
+            auto *Ext0 = dyn_cast<Instruction>(I->getOperand(0));
+            auto *Ext1 = dyn_cast<Instruction>(I->getOperand(1));
+            if (Ext0 && IsZExtOrSExt(Ext0->getOpcode()) && Ext1 &&
+                Ext0->getOpcode() == Ext1->getOpcode()) {
+              ChainOpsAndOperands.insert(Ext0);
+              ChainOpsAndOperands.insert(Ext1);
+            }
+          }
+        }
       }
     }
 
@@ -8866,11 +8888,8 @@ static void addLiveOutsForFirstOrderRecurrences(
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
   } else if (ExitUsersToFix.empty()) {
     ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
-  }
-  if (!ScalarPHVPBB) {
-    assert(ExitUsersToFix.empty() &&
-           "missed inserting extracts for exiting values");
-    return;
+  } else {
+    llvm_unreachable("unsupported CFG in VPlan");
   }
 
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
