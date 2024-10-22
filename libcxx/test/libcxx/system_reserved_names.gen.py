@@ -154,6 +154,10 @@ for header in public_headers:
 #define Xp SYSTEM_RESERVED_NAME
 #define Xs SYSTEM_RESERVED_NAME
 
+// These attribute-tokens are not reserved, so the user can macro-define them.
+#define lifetimebound SYSTEM_RESERVED_NAME
+#define noescape SYSTEM_RESERVED_NAME
+
 // The classic Windows min/max macros
 #define min SYSTEM_RESERVED_NAME
 #define max SYSTEM_RESERVED_NAME
