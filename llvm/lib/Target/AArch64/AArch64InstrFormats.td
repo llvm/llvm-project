@@ -388,46 +388,6 @@ def uimm16 : Operand<i16>, ImmLeaf<i16, [{return Imm >= 0 && Imm < 65536;}]>{
   let ParserMatchClass = AsmImmRange<0, 65535>;
 }
 
-def uimm6_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
-    let ParserMatchClass = UImm6Operand;
-}
-
-def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
-   let ParserMatchClass = UImm6Operand;
-}
-
-def UImm6Plus1Operand : AsmOperandClass {
-  let Name = "UImm6P1";
-  let DiagnosticType = "InvalidImm1_64";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "tryParseAdjImm0_63<-1>";
-  let PredicateMethod = "isImmInRange<0,63>";
-}
-
-def UImm6Minus1Operand : AsmOperandClass {
-  let Name = "UImm6M1";
-  let DiagnosticType = "InvalidImmM1_62";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "tryParseAdjImm0_63<1>";
-  let PredicateMethod = "isImmInRange<0,63>";
-}
-
-def uimm6p1_32b : Operand<i32> {
-  let ParserMatchClass = UImm6Plus1Operand;
-}
-
-def uimm6p1_64b : Operand<i64> {
-  let ParserMatchClass = UImm6Plus1Operand;
-}
-
-def uimm6m1_32b : Operand<i32> {
-  let ParserMatchClass = UImm6Minus1Operand;
-}
-
-def uimm6m1_64b : Operand<i64> {
-  let ParserMatchClass = UImm6Minus1Operand;
-}
-
 def SImm9Operand : SImmOperand<9>;
 def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let ParserMatchClass = SImm9Operand;
@@ -697,7 +657,6 @@ class PCRelLabel<int N> : BranchTarget<N> {
 def BranchTarget14Operand : BranchTarget<14>;
 def BranchTarget26Operand : BranchTarget<26>;
 def PCRelLabel19Operand   : PCRelLabel<19>;
-def PCRelLabel9Operand    : PCRelLabel<9>;
 
 def MovWSymbolG3AsmOperand : AsmOperandClass {
   let Name = "MovWSymbolG3";
@@ -2174,17 +2133,6 @@ def am_brcond : Operand<OtherVT> {
   let ParserMatchClass = PCRelLabel19Operand;
   let OperandType = "OPERAND_PCREL";
 }
-
-// Conditional branch target. 9-bit immediate. The low two bits of the target
-// offset are implied zero and so are not part of the immediate.
-def am_brcmpcond : Operand<OtherVT> {
-  let EncoderMethod = "getCondCompBranchTargetOpValue";
-  let DecoderMethod = "DecodePCRelLabel9";
-  let PrintMethod   = "printAlignedLabel";
-  let ParserMatchClass = PCRelLabel9Operand;
-  let OperandType = "OPERAND_PCREL";
-}
-
 
 class BranchCond<bit bit4, string mnemonic>
    : I<(outs), (ins ccode:$cond, am_brcond:$target),
@@ -12659,89 +12607,6 @@ class MulAccumCPA<bit isSub, string asm>
   let Inst{31} = 0b1;
 }
 
-
-//----------------------------------------------------------------------------
-// 2024 Armv9.6 Extensions
-//----------------------------------------------------------------------------
-
-//---
-// Compare-and-branch instructions.
-//---
-
-class BaseCmpBranchRegister<RegisterClass regtype, bit sf, bits<3> cc,
-                            bits<2>sz, string asm>
-    : I<(outs), (ins regtype:$Rt, regtype:$Rm, am_brcmpcond:$target),
-         asm, "\t$Rt, $Rm, $target", "",
-         []>,
-      Sched<[WriteBr]> {
-  let isBranch = 1;
-  let isTerminator = 1;
-
-  bits<5> Rm;
-  bits<5> Rt;
-  bits<9> target;
-  let Inst{31}    = sf;
-  let Inst{30-24} = 0b1110100;
-  let Inst{23-21} = cc;
-  let Inst{20-16} = Rm;
-  let Inst{15-14} = sz;
-  let Inst{13-5}  = target;
-  let Inst{4-0}   = Rt;
-}
-
-multiclass CmpBranchRegister<bits<3> cc, string asm> {
-  def Wrr : BaseCmpBranchRegister<GPR32, 0b0, cc, 0b00, asm>;
-  def Xrr : BaseCmpBranchRegister<GPR64, 0b1, cc, 0b00, asm>;
-}
-
-class BaseCmpBranchImmediate<RegisterClass regtype, bit sf, bits<3> cc,
-                             Operand imm_ty, string asm>
-    : I<(outs), (ins regtype:$Rt, imm_ty:$imm, am_brcmpcond:$target),
-         asm, "\t$Rt, $imm, $target", "",
-         []>,
-      Sched<[WriteBr]> {
-  let isBranch = 1;
-  let isTerminator = 1;
-
-  bits<5> Rt;
-  bits<6> imm;
-  bits<9> target;
-  let Inst{31}    = sf;
-  let Inst{30-24} = 0b1110101;
-  let Inst{23-21} = cc;
-  let Inst{20-15} = imm;
-  let Inst{14}    = 0b0;
-  let Inst{13-5}  = target;
-  let Inst{4-0}   = Rt;
-}
-
-multiclass CmpBranchImmediate<bits<3> cc, string imm_ty, string asm> {
-  def Wri : BaseCmpBranchImmediate<GPR32, 0b0, cc, !cast<Operand>(imm_ty # "_32b"), asm>;
-  def Xri : BaseCmpBranchImmediate<GPR64, 0b1, cc, !cast<Operand>(imm_ty # "_64b"), asm>;
-}
-
-multiclass CmpBranchImmediateAlias<string mnemonic, string insn, string imm_ty> {
- def : InstAlias<mnemonic # "\t$Rt, $imm, $target",
-                 (!cast<Instruction>(insn # "Wri") GPR32:$Rt,
-                  !cast<Operand>(imm_ty # "_32b"):$imm,
-                  am_brcmpcond:$target), 0>;
- def : InstAlias<mnemonic # "\t$Rt, $imm, $target",
-                 (!cast<Instruction>(insn # "Xri") GPR64:$Rt,
-                  !cast<Operand>(imm_ty # "_64b"):$imm,
-                  am_brcmpcond:$target), 0>;
-}
-
-multiclass CmpBranchWRegisterAlias<string mnemonic, string insn> {
-  def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
-                 (!cast<Instruction>(insn # "Wrr") GPR32:$Rm, GPR32:$Rt, am_brcmpcond:$target), 0>;
-}
-
-multiclass CmpBranchRegisterAlias<string mnemonic, string insn> {
-  defm : CmpBranchWRegisterAlias<mnemonic, insn>;
-
-  def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
-                 (!cast<Instruction>(insn # "Xrr") GPR64:$Rm, GPR64:$Rt, am_brcmpcond:$target), 0>;
-}
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product
