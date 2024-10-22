@@ -43,8 +43,7 @@ CompilerType ValueObjectCast::GetCompilerTypeImpl() { return m_cast_type; }
 
 llvm::Expected<uint32_t> ValueObjectCast::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  auto children_count = GetCompilerType().GetNumChildren(
-      true, &exe_ctx);
+  auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
   if (!children_count)
     return children_count;
   return *children_count <= max ? *children_count : max;

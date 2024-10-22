@@ -272,8 +272,6 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   return compiler_type;
 }
 
-
-
 DataExtractor &ValueObject::GetDataExtractor() {
   UpdateValueIfNeeded(false);
   return m_data;
@@ -584,8 +582,8 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
   // a valid summary string or function because the type is not complete and
   // no member variables or member functions will be available.
   if (GetCompilerType().IsForcefullyCompleted()) {
-      destination = "<incomplete type>";
-      return true;
+    destination = "<incomplete type>";
+    return true;
   }
 
   // ideally we would like to bail out if passing NULL, but if we do so we end
@@ -1731,8 +1729,7 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
   return false;
 }
 
-void ValueObject::AddSyntheticChild(ConstString key,
-                                    ValueObject *valobj) {
+void ValueObject::AddSyntheticChild(ConstString key, ValueObject *valobj) {
   m_synthetic_children[key] = valobj;
 }
 
@@ -2957,7 +2954,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 }
 
 ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
-    return ValueObjectCast::Create(*this, GetName(), compiler_type);
+  return ValueObjectCast::Create(*this, GetName(), compiler_type);
 }
 
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
@@ -2978,9 +2975,8 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   Status error;
   CompilerType my_type = GetCompilerType();
 
-  ExecutionContextScope *exe_scope
-      = ExecutionContext(GetExecutionContextRef())
-          .GetBestExecutionContextScope();
+  ExecutionContextScope *exe_scope =
+      ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope();
   if (compiler_type.GetByteSize(exe_scope) <=
           GetCompilerType().GetByteSize(exe_scope) ||
       m_value.GetValueType() == Value::ValueType::LoadAddress)
@@ -3771,8 +3767,6 @@ bool ValueObject::CanProvideValue() {
   CompilerType type = GetCompilerType();
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
-
-
 
 ValueObjectSP ValueObject::Persist() {
   if (!UpdateValueIfNeeded())

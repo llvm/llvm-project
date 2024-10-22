@@ -68,7 +68,7 @@ public:
 
 protected:
   bool UpdateValue() override;
-  
+
   void DoUpdateChildrenAddressType(ValueObject &valobj) override;
 
   CompilerType GetCompilerTypeImpl() override;

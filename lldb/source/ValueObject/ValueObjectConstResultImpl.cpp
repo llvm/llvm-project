@@ -36,8 +36,7 @@ using namespace lldb_private;
 ValueObjectConstResultImpl::ValueObjectConstResultImpl(
     ValueObject *valobj, lldb::addr_t live_address)
     : m_impl_backend(valobj), m_live_address(live_address),
-      m_live_address_type(eAddressTypeLoad),
-      m_address_of_backend() {}
+      m_live_address_type(eAddressTypeLoad), m_address_of_backend() {}
 
 lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference(Status &error) {
   if (m_impl_backend == nullptr)

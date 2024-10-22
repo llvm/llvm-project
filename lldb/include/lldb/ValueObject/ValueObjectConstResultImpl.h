@@ -22,7 +22,7 @@ class CompilerType;
 class DataExtractor;
 class Status;
 class ValueObject;
-}
+} // namespace lldb_private
 
 namespace lldb_private {
 

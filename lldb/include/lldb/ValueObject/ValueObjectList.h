@@ -51,6 +51,7 @@ public:
   const std::vector<lldb::ValueObjectSP> &GetObjects() const {
     return m_value_objects;
   }
+
 protected:
   typedef std::vector<lldb::ValueObjectSP> collection;
   // Classes that inherit from ValueObjectList can see and modify these

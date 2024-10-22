@@ -143,11 +143,9 @@ lldb::ValueType ValueObjectSynthetic::GetValueType() const {
 
 void ValueObjectSynthetic::CreateSynthFilter() {
   ValueObject *valobj_for_frontend = m_parent;
-  if (m_synth_sp->WantsDereference())
-  {
+  if (m_synth_sp->WantsDereference()) {
     CompilerType type = m_parent->GetCompilerType();
-    if (type.IsValid() && type.IsPointerOrReferenceType())
-    {
+    if (type.IsValid() && type.IsPointerOrReferenceType()) {
       Status error;
       lldb::ValueObjectSP deref_sp = m_parent->Dereference(error);
       if (error.Success())

@@ -27,8 +27,7 @@ class ValueObjectCast : public ValueObject {
 public:
   ~ValueObjectCast() override;
 
-  static lldb::ValueObjectSP Create(ValueObject &parent,
-                                    ConstString name,
+  static lldb::ValueObjectSP Create(ValueObject &parent, ConstString name,
                                     const CompilerType &cast_type);
 
   std::optional<uint64_t> GetByteSize() override;

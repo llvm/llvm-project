@@ -50,10 +50,11 @@ public:
          lldb::ByteOrder byte_order, uint32_t addr_size,
          lldb::addr_t address = LLDB_INVALID_ADDRESS);
 
-  static lldb::ValueObjectSP
-  Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-         ConstString name, lldb::addr_t address,
-         AddressType address_type, uint32_t addr_byte_size);
+  static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
+                                    const CompilerType &compiler_type,
+                                    ConstString name, lldb::addr_t address,
+                                    AddressType address_type,
+                                    uint32_t addr_byte_size);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     Value &value, ConstString name,

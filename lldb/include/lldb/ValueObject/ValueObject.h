@@ -1004,8 +1004,8 @@ protected:
   } m_flags;
 
   friend class ValueObjectChild;
-  friend class ExpressionVariable;     // For SetName
-  friend class Target;                 // For SetName
+  friend class ExpressionVariable; // For SetName
+  friend class Target;             // For SetName
   friend class ValueObjectConstResultImpl;
   friend class ValueObjectSynthetic; // For ClearUserVisibleData
 
@@ -1079,7 +1079,7 @@ protected:
   void SetPreferredDisplayLanguageIfNeeded(lldb::LanguageType);
 
 protected:
-  virtual void DoUpdateChildrenAddressType(ValueObject &valobj){};
+  virtual void DoUpdateChildrenAddressType(ValueObject &valobj) {};
 
 private:
   virtual CompilerType MaybeCalculateCompleteType();
