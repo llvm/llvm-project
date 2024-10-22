@@ -35,7 +35,7 @@ public:
   ConstantRangeList(ArrayRef<ConstantRange> RangesRef) {
     assert(isOrderedRanges(RangesRef));
     for (const ConstantRange &R : RangesRef) {
-      assert(R.getBitWidth() == getBitWidth());
+      assert(empty() || R.getBitWidth() == getBitWidth());
       Ranges.push_back(R);
     }
   }
@@ -60,7 +60,7 @@ public:
   bool empty() const { return Ranges.empty(); }
 
   /// Get the bit width of this ConstantRangeList.
-  uint32_t getBitWidth() const { return 64; }
+  uint32_t getBitWidth() const { return Ranges.front().getBitWidth(); }
 
   /// Return the number of ranges in this ConstantRangeList.
   size_t size() const { return Ranges.size(); }
