@@ -22,7 +22,7 @@ class BufferedNoPwriteSmallVectorStream : public raw_ostream {
 public:
   // Choose a strange buffer size to ensure it doesn't collide with the default
   // on \a raw_ostream.
-  constexpr static const size_t PreferredBufferSize = 63;
+  static constexpr size_t PreferredBufferSize = 63;
 
   size_t preferred_buffer_size() const override { return PreferredBufferSize; }
   uint64_t current_pos() const override { return Vector.size(); }
@@ -40,7 +40,7 @@ public:
   bool IsDisplayed = false;
 };
 
-constexpr const size_t BufferedNoPwriteSmallVectorStream::PreferredBufferSize;
+constexpr size_t BufferedNoPwriteSmallVectorStream::PreferredBufferSize;
 
 TEST(raw_ostream_proxyTest, write) {
   // Besides confirming that "write" works, this test confirms that the proxy
@@ -157,7 +157,7 @@ TEST(raw_ostream_proxyTest, resetProxiedOS) {
   EXPECT_EQ(0u, ProxyOS.GetBufferSize());
   EXPECT_FALSE(ProxyOS.hasProxiedOS());
 
-#if GTEST_HAS_DEATH_TEST
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
   EXPECT_DEATH(ProxyOS << "e", "use after reset");
   EXPECT_DEATH(ProxyOS.getProxiedOS(), "use after reset");
 #endif
