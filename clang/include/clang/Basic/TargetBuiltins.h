@@ -220,7 +220,7 @@ namespace clang {
       switch (getEltType()) {
       case Int8:
       case Poly8:
-        return 16;
+        return 8;
       case Int16:
       case Float16:
       case Poly16:
