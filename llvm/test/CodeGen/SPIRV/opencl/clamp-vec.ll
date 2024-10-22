@@ -1,7 +1,9 @@
-; RUN: llc  -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc  -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: %[[#op_ext:]] = OpExtInstImport "GLSL.std.450"
+; CHECK-DAG: %[[#op_ext:]] = OpExtInstImport "OpenCL.std"
 
 ; CHECK-DAG: %[[#float_64:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#float_32:]] = OpTypeFloat 32
@@ -25,7 +27,7 @@ entry:
   ; CHECK: %[[#vec4_i16_arg0:]] = OpFunctionParameter %[[#vec4_int_16]]
   ; CHECK: %[[#vec4_i16_arg1:]] = OpFunctionParameter %[[#vec4_int_16]]
   ; CHECK: %[[#vec4_i16_arg2:]] = OpFunctionParameter %[[#vec4_int_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_16]] %[[#op_ext]] SClamp %[[#vec4_i16_arg0]] %[[#vec4_i16_arg1]] %[[#vec4_i16_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_16]] %[[#op_ext]] s_clamp %[[#vec4_i16_arg0]] %[[#vec4_i16_arg1]] %[[#vec4_i16_arg2]]
   %0 = call <4 x i16> @llvm.spv.sclamp.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c)
   ret <4 x i16> %0
 }
@@ -36,7 +38,7 @@ entry:
   ; CHECK: %[[#vec4_i32_arg0:]] = OpFunctionParameter %[[#vec4_int_32]]
   ; CHECK: %[[#vec4_i32_arg1:]] = OpFunctionParameter %[[#vec4_int_32]]
   ; CHECK: %[[#vec4_i32_arg2:]] = OpFunctionParameter %[[#vec4_int_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_32]] %[[#op_ext]] SClamp %[[#vec4_i32_arg0]] %[[#vec4_i32_arg1]] %[[#vec4_i32_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_32]] %[[#op_ext]] s_clamp %[[#vec4_i32_arg0]] %[[#vec4_i32_arg1]] %[[#vec4_i32_arg2]]
   %0 = call <4 x i32> @llvm.spv.sclamp.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
   ret <4 x i32> %0
 }
@@ -47,7 +49,7 @@ entry:
   ; CHECK: %[[#vec4_i64_arg0:]] = OpFunctionParameter %[[#vec4_int_64]]
   ; CHECK: %[[#vec4_i64_arg1:]] = OpFunctionParameter %[[#vec4_int_64]]
   ; CHECK: %[[#vec4_i64_arg2:]] = OpFunctionParameter %[[#vec4_int_64]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_64]] %[[#op_ext]] SClamp %[[#vec4_i64_arg0]] %[[#vec4_i64_arg1]] %[[#vec4_i64_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_64]] %[[#op_ext]] s_clamp %[[#vec4_i64_arg0]] %[[#vec4_i64_arg1]] %[[#vec4_i64_arg2]]
   %0 = call <4 x i64> @llvm.spv.sclamp.v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c)
   ret <4 x i64> %0
 }
@@ -58,7 +60,7 @@ entry:
   ; CHECK: %[[#vec4_f16_arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
   ; CHECK: %[[#vec4_f16_arg1:]] = OpFunctionParameter %[[#vec4_float_16]]
   ; CHECK: %[[#vec4_f16_arg2:]] = OpFunctionParameter %[[#vec4_float_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_16]] %[[#op_ext]] FClamp %[[#vec4_f16_arg0]] %[[#vec4_f16_arg1]] %[[#vec4_f16_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_16]] %[[#op_ext]] fclamp %[[#vec4_f16_arg0]] %[[#vec4_f16_arg1]] %[[#vec4_f16_arg2]]
   %0 = call <4 x half> @llvm.spv.fclamp.v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
   ret <4 x half> %0
 }
@@ -69,7 +71,7 @@ entry:
   ; CHECK: %[[#vec4_f32_arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
   ; CHECK: %[[#vec4_f32_arg1:]] = OpFunctionParameter %[[#vec4_float_32]]
   ; CHECK: %[[#vec4_f32_arg2:]] = OpFunctionParameter %[[#vec4_float_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext]] FClamp %[[#vec4_f32_arg0]] %[[#vec4_f32_arg1]] %[[#vec4_f32_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext]] fclamp %[[#vec4_f32_arg0]] %[[#vec4_f32_arg1]] %[[#vec4_f32_arg2]]
   %0 = call <4 x float> @llvm.spv.fclamp.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c)
   ret <4 x float> %0
 }
@@ -80,7 +82,7 @@ entry:
   ; CHECK: %[[#vec4_f64_arg0:]] = OpFunctionParameter %[[#vec4_float_64]]
   ; CHECK: %[[#vec4_f64_arg1:]] = OpFunctionParameter %[[#vec4_float_64]]
   ; CHECK: %[[#vec4_f64_arg2:]] = OpFunctionParameter %[[#vec4_float_64]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_64]] %[[#op_ext]] FClamp %[[#vec4_f64_arg0]] %[[#vec4_f64_arg1]] %[[#vec4_f64_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_64]] %[[#op_ext]] fclamp %[[#vec4_f64_arg0]] %[[#vec4_f64_arg1]] %[[#vec4_f64_arg2]]
   %0 = call <4 x double> @llvm.spv.fclamp.v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c)
   ret <4 x double> %0
 }
@@ -91,7 +93,7 @@ entry:
   ; CHECK: %[[#vec4_i16_arg0:]] = OpFunctionParameter %[[#vec4_int_16]]
   ; CHECK: %[[#vec4_i16_arg1:]] = OpFunctionParameter %[[#vec4_int_16]]
   ; CHECK: %[[#vec4_i16_arg2:]] = OpFunctionParameter %[[#vec4_int_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_16]] %[[#op_ext]] UClamp %[[#vec4_i16_arg0]] %[[#vec4_i16_arg1]] %[[#vec4_i16_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_16]] %[[#op_ext]] u_clamp %[[#vec4_i16_arg0]] %[[#vec4_i16_arg1]] %[[#vec4_i16_arg2]]
   %0 = call <4 x i16> @llvm.spv.uclamp.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c)
   ret <4 x i16> %0
 }
@@ -102,7 +104,7 @@ entry:
   ; CHECK: %[[#vec4_i32_arg0:]] = OpFunctionParameter %[[#vec4_int_32]]
   ; CHECK: %[[#vec4_i32_arg1:]] = OpFunctionParameter %[[#vec4_int_32]]
   ; CHECK: %[[#vec4_i32_arg2:]] = OpFunctionParameter %[[#vec4_int_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_32]] %[[#op_ext]] UClamp %[[#vec4_i32_arg0]] %[[#vec4_i32_arg1]] %[[#vec4_i32_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_32]] %[[#op_ext]] u_clamp %[[#vec4_i32_arg0]] %[[#vec4_i32_arg1]] %[[#vec4_i32_arg2]]
   %0 = call <4 x i32> @llvm.spv.uclamp.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
   ret <4 x i32> %0
 }
@@ -113,7 +115,7 @@ entry:
   ; CHECK: %[[#vec4_i64_arg0:]] = OpFunctionParameter %[[#vec4_int_64]]
   ; CHECK: %[[#vec4_i64_arg1:]] = OpFunctionParameter %[[#vec4_int_64]]
   ; CHECK: %[[#vec4_i64_arg2:]] = OpFunctionParameter %[[#vec4_int_64]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_64]] %[[#op_ext]] UClamp %[[#vec4_i64_arg0]] %[[#vec4_i64_arg1]] %[[#vec4_i64_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_int_64]] %[[#op_ext]] u_clamp %[[#vec4_i64_arg0]] %[[#vec4_i64_arg1]] %[[#vec4_i64_arg2]]
   %0 = call <4 x i64> @llvm.spv.uclamp.v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c)
   ret <4 x i64> %0
 }

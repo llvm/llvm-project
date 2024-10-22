@@ -1,7 +1,9 @@
-; RUN: llc  -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc  -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: %[[#op_ext:]] = OpExtInstImport "GLSL.std.450"
+; CHECK-DAG: %[[#op_ext:]] = OpExtInstImport "OpenCL.std"
 
 ; CHECK-DAG: %[[#float_64:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#float_32:]] = OpTypeFloat 32
@@ -17,7 +19,7 @@ entry:
   ; CHECK: %[[#i16_arg0:]] = OpFunctionParameter %[[#int_16]]
   ; CHECK: %[[#i16_arg1:]] = OpFunctionParameter %[[#int_16]]
   ; CHECK: %[[#i16_arg2:]] = OpFunctionParameter %[[#int_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#int_16]] %[[#op_ext]] SClamp %[[#i16_arg0]] %[[#i16_arg1]] %[[#i16_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#int_16]] %[[#op_ext]] s_clamp %[[#i16_arg0]] %[[#i16_arg1]] %[[#i16_arg2]]
   %0 = call i16 @llvm.spv.sclamp.i16(i16 %a, i16 %b, i16 %c)
   ret i16 %0
 }
@@ -28,7 +30,7 @@ entry:
   ; CHECK: %[[#i32_arg0:]] = OpFunctionParameter %[[#int_32]]
   ; CHECK: %[[#i32_arg1:]] = OpFunctionParameter %[[#int_32]]
   ; CHECK: %[[#i32_arg2:]] = OpFunctionParameter %[[#int_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#int_32]] %[[#op_ext]] SClamp %[[#i32_arg0]] %[[#i32_arg1]] %[[#i32_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#int_32]] %[[#op_ext]] s_clamp %[[#i32_arg0]] %[[#i32_arg1]] %[[#i32_arg2]]
   %0 = call i32 @llvm.spv.sclamp.i32(i32 %a, i32 %b, i32 %c)
   ret i32 %0
 }
@@ -39,7 +41,7 @@ entry:
   ; CHECK: %[[#i64_arg0:]] = OpFunctionParameter %[[#int_64]]
   ; CHECK: %[[#i64_arg1:]] = OpFunctionParameter %[[#int_64]]
   ; CHECK: %[[#i64_arg2:]] = OpFunctionParameter %[[#int_64]]
-  ; CHECK: %[[#]] = OpExtInst %[[#int_64]] %[[#op_ext]] SClamp %[[#i64_arg0]] %[[#i64_arg1]] %[[#i64_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#int_64]] %[[#op_ext]] s_clamp %[[#i64_arg0]] %[[#i64_arg1]] %[[#i64_arg2]]
   %0 = call i64 @llvm.spv.sclamp.i64(i64 %a, i64 %b, i64 %c)
   ret i64 %0
 }
@@ -50,7 +52,7 @@ entry:
   ; CHECK: %[[#f16_arg0:]] = OpFunctionParameter %[[#float_16]]
   ; CHECK: %[[#f16_arg1:]] = OpFunctionParameter %[[#float_16]]
   ; CHECK: %[[#f16_arg2:]] = OpFunctionParameter %[[#float_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_16]] %[[#op_ext]] FClamp %[[#f16_arg0]] %[[#f16_arg1]] %[[#f16_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_16]] %[[#op_ext]] fclamp %[[#f16_arg0]] %[[#f16_arg1]] %[[#f16_arg2]]
   %0 = call half @llvm.spv.fclamp.f16(half %a, half %b, half %c)
   ret half %0
 }
@@ -61,7 +63,7 @@ entry:
   ; CHECK: %[[#f32_arg0:]] = OpFunctionParameter %[[#float_32]]
   ; CHECK: %[[#f32_arg1:]] = OpFunctionParameter %[[#float_32]]
   ; CHECK: %[[#f32_arg2:]] = OpFunctionParameter %[[#float_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext]] FClamp %[[#f32_arg0]] %[[#f32_arg1]] %[[#f32_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext]] fclamp %[[#f32_arg0]] %[[#f32_arg1]] %[[#f32_arg2]]
   %0 = call float @llvm.spv.fclamp.f32(float %a, float %b, float %c)
   ret float %0
 }
@@ -72,7 +74,7 @@ entry:
   ; CHECK: %[[#f64_arg0:]] = OpFunctionParameter %[[#float_64]]
   ; CHECK: %[[#f64_arg1:]] = OpFunctionParameter %[[#float_64]]
   ; CHECK: %[[#f64_arg2:]] = OpFunctionParameter %[[#float_64]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_64]] %[[#op_ext]] FClamp %[[#f64_arg0]] %[[#f64_arg1]] %[[#f64_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_64]] %[[#op_ext]] fclamp %[[#f64_arg0]] %[[#f64_arg1]] %[[#f64_arg2]]
   %0 = call double @llvm.spv.fclamp.f64(double %a, double %b, double %c)
   ret double %0
 }
@@ -83,7 +85,7 @@ entry:
   ; CHECK: %[[#i16_arg0:]] = OpFunctionParameter %[[#int_16]]
   ; CHECK: %[[#i16_arg1:]] = OpFunctionParameter %[[#int_16]]
   ; CHECK: %[[#i16_arg2:]] = OpFunctionParameter %[[#int_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#int_16]] %[[#op_ext]] UClamp %[[#i16_arg0]] %[[#i16_arg1]] %[[#i16_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#int_16]] %[[#op_ext]] u_clamp %[[#i16_arg0]] %[[#i16_arg1]] %[[#i16_arg2]]
   %0 = call i16 @llvm.spv.uclamp.i16(i16 %a, i16 %b, i16 %c)
   ret i16 %0
 }
@@ -94,7 +96,7 @@ entry:
   ; CHECK: %[[#i32_arg0:]] = OpFunctionParameter %[[#int_32]]
   ; CHECK: %[[#i32_arg1:]] = OpFunctionParameter %[[#int_32]]
   ; CHECK: %[[#i32_arg2:]] = OpFunctionParameter %[[#int_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#int_32]] %[[#op_ext]] UClamp %[[#i32_arg0]] %[[#i32_arg1]] %[[#i32_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#int_32]] %[[#op_ext]] u_clamp %[[#i32_arg0]] %[[#i32_arg1]] %[[#i32_arg2]]
   %0 = call i32 @llvm.spv.uclamp.i32(i32 %a, i32 %b, i32 %c)
   ret i32 %0
 }
@@ -105,7 +107,7 @@ entry:
   ; CHECK: %[[#i64_arg0:]] = OpFunctionParameter %[[#int_64]]
   ; CHECK: %[[#i64_arg1:]] = OpFunctionParameter %[[#int_64]]
   ; CHECK: %[[#i64_arg2:]] = OpFunctionParameter %[[#int_64]]
-  ; CHECK: %[[#]] = OpExtInst %[[#int_64]] %[[#op_ext]] UClamp %[[#i64_arg0]] %[[#i64_arg1]] %[[#i64_arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#int_64]] %[[#op_ext]] u_clamp %[[#i64_arg0]] %[[#i64_arg1]] %[[#i64_arg2]]
   %0 = call i64 @llvm.spv.uclamp.i64(i64 %a, i64 %b, i64 %c)
   ret i64 %0
 }
