@@ -9,7 +9,11 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 
+#include "AMDGPURegisterBankInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Register.h"
 #include <utility>
@@ -48,7 +52,36 @@ private:
   // This will not be needed when we turn off LCSSA for global-isel.
   void findLCSSAPhi(Register Reg);
 };
-}
-}
+
+void buildReadAnyLaneS1(MachineIRBuilder &B, MachineInstr &MI,
+                        const RegisterBankInfo &RBI);
+
+MachineInstrBuilder buildReadAnyLaneB32(MachineIRBuilder &B,
+                                        const DstOp &SgprDst,
+                                        const SrcOp &VgprSrc,
+                                        const RegisterBankInfo &RBI);
+
+MachineInstrBuilder buildReadAnyLaneSequenceOfB32(MachineIRBuilder &B,
+                                                  const DstOp &SgprDst,
+                                                  const SrcOp &VgprSrc,
+                                                  LLT B32Ty,
+                                                  const RegisterBankInfo &RBI);
+
+MachineInstrBuilder buildReadAnyLaneSequenceOfS64(MachineIRBuilder &B,
+                                                  const DstOp &SgprDst,
+                                                  const SrcOp &VgprSrc,
+                                                  const RegisterBankInfo &RBI);
+
+MachineInstrBuilder buildReadAnyLane(MachineIRBuilder &B, const DstOp &SgprDst,
+                                     const SrcOp &VgprSrc,
+                                     const RegisterBankInfo &RBI);
+
+// Create new vgpr destination register for MI then move it to current
+// MI's sgpr destination using one or more G_READANYLANE instructions.
+void buildReadAnyLaneDst(MachineIRBuilder &B, MachineInstr &MI,
+                         const RegisterBankInfo &RBI);
+
+} // namespace AMDGPU
+} // namespace llvm
 
 #endif
