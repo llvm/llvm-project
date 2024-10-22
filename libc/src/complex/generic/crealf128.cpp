@@ -16,8 +16,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, crealf128, (cfloat128 x)) {
-    float128 *xCmplxPtr = reinterpret_cast<float128 *>(&x);
-    return xCmplxPtr[0];
+  float128 *xCmplxPtr = reinterpret_cast<float128 *>(&x);
+  return xCmplxPtr[0];
 }
 
 } // namespace LIBC_NAMESPACE_DECL

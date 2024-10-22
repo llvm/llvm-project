@@ -14,8 +14,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, creal, (_Complex double x)) {
-    double *xCmplxPtr = reinterpret_cast<double *>(&x);
-    return xCmplxPtr[0];
+  double *xCmplxPtr = reinterpret_cast<double *>(&x);
+  return xCmplxPtr[0];
 }
 
 } // namespace LIBC_NAMESPACE_DECL
