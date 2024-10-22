@@ -3999,7 +3999,7 @@ std::optional<uint32_t> ObjectFileELF::GetNumSymbolsFromDynamicGnuHash() {
     }
   }
   if (num_symbols > 0)
-    return ++num_symbols; // First symbol is always all zeros
+    return num_symbols;
 
   return std::nullopt;
 }
