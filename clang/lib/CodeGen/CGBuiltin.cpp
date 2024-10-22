@@ -18809,10 +18809,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *OpMax = EmitScalarExpr(E->getArg(2));
 
     QualType Ty = E->getArg(0)->getType();
-    bool IsUnsigned = false;
     if (auto *VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
-    IsUnsigned = Ty->isUnsignedIntegerType();
+    bool IsUnsigned = Ty->isUnsignedIntegerType();
     switch (CGM.getTarget().getTriple().getArch()) {
     case llvm::Triple::dxil: {
       return Builder.CreateIntrinsic(
