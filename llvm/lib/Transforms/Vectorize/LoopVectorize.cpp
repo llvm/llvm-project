@@ -5544,6 +5544,20 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
 InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   InstructionCost Cost;
 
+  // If with the given VF loop gets fully unrolled, ignore the costs of
+  // comparison and induction instructions, as they'll get simplified away
+  SmallPtrSet<const Value *, 16> ValuesToIgnoreForVF;
+  auto TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
+  auto *Cmp = TheLoop->getLatchCmpInst();
+  if (Cmp && TC == VF.getKnownMinValue()) {
+    ValuesToIgnoreForVF.insert(Cmp);
+    for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
+      Instruction *IVInc = cast<Instruction>(
+          IV->getIncomingValueForBlock(TheLoop->getLoopLatch()));
+      ValuesToIgnoreForVF.insert(IVInc);
+    }
+  }
+
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     InstructionCost BlockCost;
@@ -5551,7 +5565,7 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     // For each instruction in the old loop.
     for (Instruction &I : BB->instructionsWithoutDebug()) {
       // Skip ignored values.
-      if (ValuesToIgnore.count(&I) ||
+      if (ValuesToIgnore.count(&I) || ValuesToIgnoreForVF.count(&I) ||
           (VF.isVector() && VecValuesToIgnore.count(&I)))
         continue;
 
@@ -7221,6 +7235,20 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
         continue;
       IVInsts.push_back(CI);
     }
+
+    // If with the given VF loop gets fully unrolled, ignore the costs of
+    // comparison and induction instructions, as they'll get simplified away
+    auto TC = CM.PSE.getSE()->getSmallConstantTripCount(OrigLoop);
+    auto *Cmp = OrigLoop->getLatchCmpInst();
+    if (Cmp && TC == VF.getKnownMinValue()) {
+      CostCtx.SkipCostComputation.insert(Cmp);
+      for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
+        Instruction *IVInc = cast<Instruction>(
+            IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
+        CostCtx.SkipCostComputation.insert(IVInc);
+      }
+    }
+
     for (Instruction *IVInst : IVInsts) {
       if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
         continue;
