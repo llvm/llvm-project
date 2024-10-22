@@ -45,6 +45,11 @@ static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus
 DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
                                 const MCDisassembler *Decoder);
+template <unsigned Min, unsigned Max>
+static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder);
+template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder);
@@ -358,13 +363,29 @@ DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   return Success;
 }
 
+template <unsigned Min, unsigned Max>
+static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder) {
+  unsigned Reg = (RegNo * 2) + Min;
+  if (Reg < Min || Reg > Max || (Reg & 1))
+    return Fail;
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPRRegClassID].getRegister(Reg);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder) {
-  if (RegNo * 2 > 30)
+  unsigned Reg = (RegNo * 2) + Min;
+  if (Reg < Min || Reg > Max || (Reg & 1))
     return Fail;
+
   unsigned Register =
-      AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(RegNo * 2);
+      AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(Reg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
