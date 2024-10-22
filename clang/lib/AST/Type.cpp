@@ -5033,7 +5033,7 @@ bool Type::hasSizedVLAType() const {
 bool Type::isHLSLIntangibleType() const {
   const Type *Ty = getUnqualifiedDesugaredType();
 
-  // check if it's a builtin type first (simple check, no need to cache it)
+  // check if it's a builtin type first
   if (Ty->isBuiltinType())
     return Ty->isHLSLBuiltinIntangibleType();
 
