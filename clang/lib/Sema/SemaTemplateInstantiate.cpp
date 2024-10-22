@@ -237,7 +237,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(VTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(VTPSD, VTPSD->getTemplateArgs().asArray(),
+      AddOuterTemplateArguments(VTPSD, VTPSD->getInjectedTemplateArgs(),
                                 /*Final=*/false);
 
     if (VTPSD->isMemberSpecialization())
@@ -274,7 +274,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(CTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(CTPSD, CTPSD->getTemplateArgs().asArray(),
+      AddOuterTemplateArguments(CTPSD, CTPSD->getInjectedTemplateArgs(),
                                 /*Final=*/false);
 
     if (CTPSD->isMemberSpecialization())
@@ -806,8 +806,7 @@ void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
 
   // Check to see if we're low on stack space. We can't do anything about this
   // from here, but we can at least warn the user.
-  if (isStackNearlyExhausted())
-    warnStackExhausted(Ctx.PointOfInstantiation);
+  StackHandler.warnOnStackNearlyExhausted(Ctx.PointOfInstantiation);
 }
 
 void Sema::popCodeSynthesisContext() {

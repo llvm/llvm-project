@@ -2375,7 +2375,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
-      Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
+      Defined(ctx, s->file, StringRef(), s->binding, s->stOther, s->type,
               /*value=*/0, s->size, bss)
           .overwrite(*s);
     }
@@ -2471,7 +2471,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
   for (Partition &part : ctx.partitions) {
     if (part.name == partName) {
-      sym->partition = part.getNumber();
+      sym->partition = part.getNumber(ctx);
       return;
     }
   }
@@ -2500,7 +2500,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   ctx.partitions.emplace_back(ctx);
   Partition &newPart = ctx.partitions.back();
   newPart.name = partName;
-  sym->partition = newPart.getNumber();
+  sym->partition = newPart.getNumber(ctx);
 }
 
 static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {

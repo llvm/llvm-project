@@ -16,6 +16,7 @@ namespace __rtsan {
 
 void IncrementTotalErrorCount();
 void IncrementUniqueErrorCount();
+void IncrementSuppressedCount();
 
 void PrintStatisticsSummary();
 

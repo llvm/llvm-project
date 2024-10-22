@@ -2070,7 +2070,9 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
                      loopNestClauseOps, iv);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private, reduction syms and vars.
+  // TODO: Add private syms and vars.
+  simdArgs.reduction.syms = simdReductionSyms;
+  simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
 
@@ -2207,6 +2209,12 @@ static void genCompositeDistributeParallelDoSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
+  // TODO: Remove this after omp.simd reductions on composite constructs are
+  // supported.
+  simdClauseOps.reductionVars.clear();
+  simdClauseOps.reductionByref.clear();
+  simdClauseOps.reductionSyms.clear();
+
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
@@ -2228,7 +2236,7 @@ static void genCompositeDistributeParallelDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private, reduction syms and vars.
+  // TODO: Add private and reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2285,7 +2293,9 @@ static void genCompositeDistributeSimd(lower::AbstractConverter &converter,
   distributeOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private, reduction syms and vars.
+  // TODO: Add private syms and vars.
+  simdArgs.reduction.syms = simdReductionSyms;
+  simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2319,6 +2329,12 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
+  // TODO: Remove this after omp.simd reductions on composite constructs are
+  // supported.
+  simdClauseOps.reductionVars.clear();
+  simdClauseOps.reductionByref.clear();
+  simdClauseOps.reductionSyms.clear();
+
   // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
@@ -2342,7 +2358,7 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private, reduction syms and vars.
+  // TODO: Add private and reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);

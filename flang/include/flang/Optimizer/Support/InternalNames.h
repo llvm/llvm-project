@@ -184,6 +184,10 @@ struct NameUniquer {
 
   static std::string replaceSpecialSymbols(const std::string &name);
 
+  /// Returns true if the passed name denotes a special symbol (e.g. global
+  /// symbol generated for derived type description).
+  static bool isSpecialSymbol(llvm::StringRef name);
+
 private:
   static std::string intAsString(std::int64_t i);
   static std::string doKind(std::int64_t kind);
