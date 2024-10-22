@@ -1487,15 +1487,13 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
 
   VPValue *Operand = getOperand(0);
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
-  // For Trunc, the context is the only user, which must be a
-  // VPWidenStoreRecipe, a VPInterleaveRecipe ,or a VPReplicateRecipe.
+  // For Trunc/FPTrunc, get the context from the only user.
   if ((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
       !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
     if (auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin()))
       CCH = ComputeCCH(StoreRecipe);
   }
-  // For Z/Sext, the context is the operand, which must be a VPWidenLoadRecipe,
-  // a VPInterleaveRecipe, a VPReplicateRecipe or a live-in value.
+  // For Z/Sext, get the context from the operand.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
            Opcode == Instruction::FPExt) {
     if (Operand->isLiveIn())
