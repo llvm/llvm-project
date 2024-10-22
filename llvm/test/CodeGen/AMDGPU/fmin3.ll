@@ -124,8 +124,6 @@ define amdgpu_kernel void @test_fmin3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    s_mov_b32 s9, s1
 ; GFX11-NEXT:    v_min3_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: test_fmin3_olt_0_f32:
@@ -156,7 +154,6 @@ define amdgpu_kernel void @test_fmin3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    s_mov_b32 s9, s1
 ; GFX1210-NEXT:    v_min3_num_f32 v0, v0, v1, v2
 ; GFX1210-NEXT:    buffer_store_b32 v0, off, s[8:11], null
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -287,8 +284,6 @@ define amdgpu_kernel void @test_fmin3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    s_mov_b32 s9, s1
 ; GFX11-NEXT:    v_min3_f32 v0, v2, v0, v1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: test_fmin3_olt_1_f32:
@@ -319,7 +314,6 @@ define amdgpu_kernel void @test_fmin3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    s_mov_b32 s9, s1
 ; GFX1210-NEXT:    v_min3_num_f32 v0, v2, v0, v1
 ; GFX1210-NEXT:    buffer_store_b32 v0, off, s[8:11], null
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -457,8 +451,6 @@ define amdgpu_kernel void @test_fmin3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    s_mov_b32 s9, s1
 ; GFX11-NEXT:    v_min3_f16 v0, v0, v1, v2
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: test_fmin3_olt_0_f16:
@@ -489,7 +481,6 @@ define amdgpu_kernel void @test_fmin3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    s_mov_b32 s9, s1
 ; GFX1210-NEXT:    v_min3_num_f16 v0, v0, v1, v2
 ; GFX1210-NEXT:    buffer_store_b16 v0, off, s[8:11], null
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
@@ -628,8 +619,6 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    s_mov_b32 s9, s1
 ; GFX11-NEXT:    v_min3_f16 v0, v2, v0, v1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: test_fmin3_olt_1_f16:
@@ -660,7 +649,6 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    s_mov_b32 s9, s1
 ; GFX1210-NEXT:    v_min3_num_f16 v0, v2, v0, v1
 ; GFX1210-NEXT:    buffer_store_b16 v0, off, s[8:11], null
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
@@ -877,8 +865,6 @@ define amdgpu_kernel void @test_fmin3_olt_0_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    v_max_f64 v[2:3], v[4:5], v[4:5]
 ; GFX11-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: test_fmin3_olt_0_f64:
@@ -913,7 +899,6 @@ define amdgpu_kernel void @test_fmin3_olt_0_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[4:5]
 ; GFX1210-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX1210-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], null
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load volatile double, ptr addrspace(1) %aptr, align 4
   %b = load volatile double, ptr addrspace(1) %bptr, align 4
@@ -1059,8 +1044,6 @@ define amdgpu_kernel void @test_fmin3_olt_1_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    v_max_f64 v[2:3], v[4:5], v[4:5]
 ; GFX11-NEXT:    v_min_f64 v[0:1], v[2:3], v[0:1]
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: test_fmin3_olt_1_f64:
@@ -1095,7 +1078,6 @@ define amdgpu_kernel void @test_fmin3_olt_1_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX1210-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[4:5]
 ; GFX1210-NEXT:    v_min_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1210-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], null
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load volatile double, ptr addrspace(1) %aptr, align 4
   %b = load volatile double, ptr addrspace(1) %bptr, align 4

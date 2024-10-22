@@ -74,8 +74,6 @@ define amdgpu_kernel void @constant_load_i1(ptr addrspace(1) %out, ptr addrspace
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_load_i1:
@@ -88,7 +86,6 @@ define amdgpu_kernel void @constant_load_i1(ptr addrspace(1) %out, ptr addrspace
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load i1, ptr addrspace(4) %in
   store i1 %load, ptr addrspace(1) %out
@@ -160,8 +157,6 @@ define amdgpu_kernel void @constant_load_v2i1(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_load_u8 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_load_v2i1:
@@ -172,7 +167,6 @@ define amdgpu_kernel void @constant_load_v2i1(ptr addrspace(1) %out, ptr addrspa
 ; GFX1210-NEXT:    global_load_u8 v1, v0, s[2:3]
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <2 x i1>, ptr addrspace(4) %in
   store <2 x i1> %load, ptr addrspace(1) %out
@@ -243,8 +237,6 @@ define amdgpu_kernel void @constant_load_v3i1(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_load_u8 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_load_v3i1:
@@ -255,7 +247,6 @@ define amdgpu_kernel void @constant_load_v3i1(ptr addrspace(1) %out, ptr addrspa
 ; GFX1210-NEXT:    global_load_u8 v1, v0, s[2:3]
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <3 x i1>, ptr addrspace(4) %in
   store <3 x i1> %load, ptr addrspace(1) %out
@@ -327,8 +318,6 @@ define amdgpu_kernel void @constant_load_v4i1(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_load_u8 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_load_v4i1:
@@ -339,7 +328,6 @@ define amdgpu_kernel void @constant_load_v4i1(ptr addrspace(1) %out, ptr addrspa
 ; GFX1210-NEXT:    global_load_u8 v1, v0, s[2:3]
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <4 x i1>, ptr addrspace(4) %in
   store <4 x i1> %load, ptr addrspace(1) %out
@@ -411,8 +399,6 @@ define amdgpu_kernel void @constant_load_v8i1(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    global_load_u8 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_load_v8i1:
@@ -423,7 +409,6 @@ define amdgpu_kernel void @constant_load_v8i1(ptr addrspace(1) %out, ptr addrspa
 ; GFX1210-NEXT:    global_load_u8 v1, v0, s[2:3]
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <8 x i1>, ptr addrspace(4) %in
   store <8 x i1> %load, ptr addrspace(1) %out
@@ -495,8 +480,6 @@ define amdgpu_kernel void @constant_load_v16i1(ptr addrspace(1) %out, ptr addrsp
 ; GFX12-NEXT:    global_load_u16 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_load_v16i1:
@@ -507,7 +490,6 @@ define amdgpu_kernel void @constant_load_v16i1(ptr addrspace(1) %out, ptr addrsp
 ; GFX1210-NEXT:    global_load_u16 v1, v0, s[2:3]
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <16 x i1>, ptr addrspace(4) %in
   store <16 x i1> %load, ptr addrspace(1) %out
@@ -563,8 +545,6 @@ define amdgpu_kernel void @constant_load_v32i1(ptr addrspace(1) %out, ptr addrsp
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_load_v32i1:
@@ -575,7 +555,6 @@ define amdgpu_kernel void @constant_load_v32i1(ptr addrspace(1) %out, ptr addrsp
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <32 x i1>, ptr addrspace(4) %in
   store <32 x i1> %load, ptr addrspace(1) %out
@@ -634,8 +613,6 @@ define amdgpu_kernel void @constant_load_v64i1(ptr addrspace(1) %out, ptr addrsp
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_load_v64i1:
@@ -647,7 +624,6 @@ define amdgpu_kernel void @constant_load_v64i1(ptr addrspace(1) %out, ptr addrsp
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <64 x i1>, ptr addrspace(4) %in
   store <64 x i1> %load, ptr addrspace(1) %out
@@ -709,8 +685,6 @@ define amdgpu_kernel void @constant_zextload_i1_to_i32(ptr addrspace(1) %out, pt
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_i1_to_i32:
@@ -721,7 +695,6 @@ define amdgpu_kernel void @constant_zextload_i1_to_i32(ptr addrspace(1) %out, pt
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load i1, ptr addrspace(4) %in
   %ext = zext i1 %a to i32
@@ -789,8 +762,6 @@ define amdgpu_kernel void @constant_sextload_i1_to_i32(ptr addrspace(1) %out, pt
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_i1_to_i32:
@@ -803,7 +774,6 @@ define amdgpu_kernel void @constant_sextload_i1_to_i32(ptr addrspace(1) %out, pt
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load i1, ptr addrspace(4) %in
   %ext = sext i1 %a to i32
@@ -866,8 +836,6 @@ define amdgpu_kernel void @constant_zextload_v1i1_to_v1i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v1i1_to_v1i32:
@@ -878,7 +846,6 @@ define amdgpu_kernel void @constant_zextload_v1i1_to_v1i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <1 x i1>, ptr addrspace(4) %in
   %ext = zext <1 x i1> %load to <1 x i32>
@@ -946,8 +913,6 @@ define amdgpu_kernel void @constant_sextload_v1i1_to_v1i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v1i1_to_v1i32:
@@ -960,7 +925,6 @@ define amdgpu_kernel void @constant_sextload_v1i1_to_v1i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <1 x i1>, ptr addrspace(4) %in
   %ext = sext <1 x i1> %load to <1 x i32>
@@ -1034,8 +998,6 @@ define amdgpu_kernel void @constant_zextload_v2i1_to_v2i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 1, v1
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v2i1_to_v2i32:
@@ -1049,7 +1011,6 @@ define amdgpu_kernel void @constant_zextload_v2i1_to_v2i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_dual_lshrrev_b32 v1, 1, v1 :: v_dual_bitop2_b32 v0, 1, v0 bitop3:0x40
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <2 x i1>, ptr addrspace(4) %in
   %ext = zext <2 x i1> %load to <2 x i32>
@@ -1123,8 +1084,6 @@ define amdgpu_kernel void @constant_sextload_v2i1_to_v2i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v2i1_to_v2i32:
@@ -1138,7 +1097,6 @@ define amdgpu_kernel void @constant_sextload_v2i1_to_v2i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s3
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <2 x i1>, ptr addrspace(4) %in
   %ext = sext <2 x i1> %load to <2 x i32>
@@ -1222,8 +1180,6 @@ define amdgpu_kernel void @constant_zextload_v3i1_to_v3i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    v_bfe_u32 v1, v1, 1, 1
 ; GFX12-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-NEXT:    global_store_b96 v3, v[0:2], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v3i1_to_v3i32:
@@ -1239,7 +1195,6 @@ define amdgpu_kernel void @constant_zextload_v3i1_to_v3i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    v_bfe_u32 v1, v1, 1, 1
 ; GFX1210-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX1210-NEXT:    global_store_b96 v3, v[0:2], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <3 x i1>, ptr addrspace(4) %in
   %ext = zext <3 x i1> %load to <3 x i32>
@@ -1322,8 +1277,6 @@ define amdgpu_kernel void @constant_sextload_v3i1_to_v3i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, s3
 ; GFX12-NEXT:    global_store_b96 v3, v[0:2], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v3i1_to_v3i32:
@@ -1338,7 +1291,6 @@ define amdgpu_kernel void @constant_sextload_v3i1_to_v3i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s4
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, s3
 ; GFX1210-NEXT:    global_store_b96 v3, v[0:2], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <3 x i1>, ptr addrspace(4) %in
   %ext = sext <3 x i1> %load to <3 x i32>
@@ -1422,8 +1374,6 @@ define amdgpu_kernel void @constant_zextload_v4i1_to_v4i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v3, 3, v3
 ; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v4i1_to_v4i32:
@@ -1440,7 +1390,6 @@ define amdgpu_kernel void @constant_zextload_v4i1_to_v4i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1210-NEXT:    v_lshrrev_b32_e32 v3, 3, v3
 ; GFX1210-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <4 x i1>, ptr addrspace(4) %in
   %ext = zext <4 x i1> %load to <4 x i32>
@@ -1527,8 +1476,6 @@ define amdgpu_kernel void @constant_sextload_v4i1_to_v4i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s5 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v4i1_to_v4i32:
@@ -1545,7 +1492,6 @@ define amdgpu_kernel void @constant_sextload_v4i1_to_v4i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, s4
 ; GFX1210-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX1210-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <4 x i1>, ptr addrspace(4) %in
   %ext = sext <4 x i1> %load to <4 x i32>
@@ -1671,8 +1617,6 @@ define amdgpu_kernel void @constant_zextload_v8i1_to_v8i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v8, v[4:7], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v8i1_to_v8i32:
@@ -1699,7 +1643,6 @@ define amdgpu_kernel void @constant_zextload_v8i1_to_v8i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v8, v[4:7], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <8 x i1>, ptr addrspace(4) %in
   %ext = zext <8 x i1> %load to <8 x i32>
@@ -1821,8 +1764,6 @@ define amdgpu_kernel void @constant_sextload_v8i1_to_v8i32(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v8, v[4:7], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v8i1_to_v8i32:
@@ -1847,7 +1788,6 @@ define amdgpu_kernel void @constant_sextload_v8i1_to_v8i32(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v8, v[4:7], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <8 x i1>, ptr addrspace(4) %in
   %ext = sext <8 x i1> %load to <8 x i32>
@@ -2047,8 +1987,6 @@ define amdgpu_kernel void @constant_zextload_v16i1_to_v16i32(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v16i1_to_v16i32:
@@ -2091,7 +2029,6 @@ define amdgpu_kernel void @constant_zextload_v16i1_to_v16i32(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <16 x i1>, ptr addrspace(4) %in
   %ext = zext <16 x i1> %load to <16 x i32>
@@ -2285,8 +2222,6 @@ define amdgpu_kernel void @constant_sextload_v16i1_to_v16i32(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v16i1_to_v16i32:
@@ -2325,7 +2260,6 @@ define amdgpu_kernel void @constant_sextload_v16i1_to_v16i32(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <16 x i1>, ptr addrspace(4) %in
   %ext = sext <16 x i1> %load to <16 x i32>
@@ -2695,8 +2629,6 @@ define amdgpu_kernel void @constant_zextload_v32i1_to_v32i32(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v32i1_to_v32i32:
@@ -2766,7 +2698,6 @@ define amdgpu_kernel void @constant_zextload_v32i1_to_v32i32(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <32 x i1>, ptr addrspace(4) %in
   %ext = zext <32 x i1> %load to <32 x i32>
@@ -3169,8 +3100,6 @@ define amdgpu_kernel void @constant_sextload_v32i1_to_v32i32(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v32i1_to_v32i32:
@@ -3240,7 +3169,6 @@ define amdgpu_kernel void @constant_sextload_v32i1_to_v32i32(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <32 x i1>, ptr addrspace(4) %in
   %ext = sext <32 x i1> %load to <32 x i32>
@@ -3943,8 +3871,6 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i32(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v64i1_to_v64i32:
@@ -4083,7 +4009,6 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i32(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <64 x i1>, ptr addrspace(4) %in
   %ext = zext <64 x i1> %load to <64 x i32>
@@ -4846,8 +4771,6 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i32(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v64i1_to_v64i32:
@@ -4985,7 +4908,6 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i32(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <64 x i1>, ptr addrspace(4) %in
   %ext = sext <64 x i1> %load to <64 x i32>
@@ -5055,8 +4977,6 @@ define amdgpu_kernel void @constant_zextload_i1_to_i64(ptr addrspace(1) %out, pt
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX12-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_i1_to_i64:
@@ -5069,7 +4989,6 @@ define amdgpu_kernel void @constant_zextload_i1_to_i64(ptr addrspace(1) %out, pt
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1210-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load i1, ptr addrspace(4) %in
   %ext = zext i1 %a to i64
@@ -5140,8 +5059,6 @@ define amdgpu_kernel void @constant_sextload_i1_to_i64(ptr addrspace(1) %out, pt
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_i1_to_i64:
@@ -5155,7 +5072,6 @@ define amdgpu_kernel void @constant_sextload_i1_to_i64(ptr addrspace(1) %out, pt
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %a = load i1, ptr addrspace(4) %in
   %ext = sext i1 %a to i64
@@ -5225,8 +5141,6 @@ define amdgpu_kernel void @constant_zextload_v1i1_to_v1i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX12-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v1i1_to_v1i64:
@@ -5239,7 +5153,6 @@ define amdgpu_kernel void @constant_zextload_v1i1_to_v1i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1210-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <1 x i1>, ptr addrspace(4) %in
   %ext = zext <1 x i1> %load to <1 x i64>
@@ -5310,8 +5223,6 @@ define amdgpu_kernel void @constant_sextload_v1i1_to_v1i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v1i1_to_v1i64:
@@ -5325,7 +5236,6 @@ define amdgpu_kernel void @constant_sextload_v1i1_to_v1i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <1 x i1>, ptr addrspace(4) %in
   %ext = sext <1 x i1> %load to <1 x i64>
@@ -5408,8 +5318,6 @@ define amdgpu_kernel void @constant_zextload_v2i1_to_v2i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v2i1_to_v2i64:
@@ -5427,7 +5335,6 @@ define amdgpu_kernel void @constant_zextload_v2i1_to_v2i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1210-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX1210-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <2 x i1>, ptr addrspace(4) %in
   %ext = zext <2 x i1> %load to <2 x i64>
@@ -5512,8 +5419,6 @@ define amdgpu_kernel void @constant_sextload_v2i1_to_v2i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v2i1_to_v2i64:
@@ -5529,7 +5434,6 @@ define amdgpu_kernel void @constant_sextload_v2i1_to_v2i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    v_bfe_i32 v2, v2, 0, 1
 ; GFX1210-NEXT:    v_dual_ashrrev_i32 v1, 31, v0 :: v_dual_ashrrev_i32 v3, 31, v2
 ; GFX1210-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <2 x i1>, ptr addrspace(4) %in
   %ext = sext <2 x i1> %load to <2 x i64>
@@ -5633,8 +5537,6 @@ define amdgpu_kernel void @constant_zextload_v3i1_to_v3i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b64 v5, v[4:5], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v5, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v3i1_to_v3i64:
@@ -5656,7 +5558,6 @@ define amdgpu_kernel void @constant_zextload_v3i1_to_v3i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b64 v5, v[4:5], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v5, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <3 x i1>, ptr addrspace(4) %in
   %ext = zext <3 x i1> %load to <3 x i64>
@@ -5767,8 +5668,6 @@ define amdgpu_kernel void @constant_sextload_v3i1_to_v3i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b64 v6, v[4:5], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v6, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v3i1_to_v3i64:
@@ -5791,7 +5690,6 @@ define amdgpu_kernel void @constant_sextload_v3i1_to_v3i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b64 v5, v[6:7], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v5, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <3 x i1>, ptr addrspace(4) %in
   %ext = sext <3 x i1> %load to <3 x i64>
@@ -5908,8 +5806,6 @@ define amdgpu_kernel void @constant_zextload_v4i1_to_v4i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX12-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v4i1_to_v4i64:
@@ -5938,7 +5834,6 @@ define amdgpu_kernel void @constant_zextload_v4i1_to_v4i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v2, s3
 ; GFX1210-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <4 x i1>, ptr addrspace(4) %in
   %ext = zext <4 x i1> %load to <4 x i64>
@@ -6062,8 +5957,6 @@ define amdgpu_kernel void @constant_sextload_v4i1_to_v4i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v4i1_to_v4i64:
@@ -6087,7 +5980,6 @@ define amdgpu_kernel void @constant_sextload_v4i1_to_v4i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v9, v[4:7], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v9, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <4 x i1>, ptr addrspace(4) %in
   %ext = sext <4 x i1> %load to <4 x i64>
@@ -6252,8 +6144,6 @@ define amdgpu_kernel void @constant_zextload_v8i1_to_v8i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    global_store_b128 v1, v[4:7], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v1, v[8:11], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v1, v[12:15], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v8i1_to_v8i64:
@@ -6281,7 +6171,6 @@ define amdgpu_kernel void @constant_zextload_v8i1_to_v8i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    global_store_b128 v1, v[4:7], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v1, v[8:11], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v1, v[12:15], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <8 x i1>, ptr addrspace(4) %in
   %ext = zext <8 x i1> %load to <8 x i64>
@@ -6487,8 +6376,6 @@ define amdgpu_kernel void @constant_sextload_v8i1_to_v8i64(ptr addrspace(1) %out
 ; GFX12-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v8i1_to_v8i64:
@@ -6531,7 +6418,6 @@ define amdgpu_kernel void @constant_sextload_v8i1_to_v8i64(ptr addrspace(1) %out
 ; GFX1210-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <8 x i1>, ptr addrspace(4) %in
   %ext = sext <8 x i1> %load to <8 x i64>
@@ -6822,8 +6708,6 @@ define amdgpu_kernel void @constant_zextload_v16i1_to_v16i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v1, v[8:11], s[0:1] offset:112
 ; GFX12-NEXT:    global_store_b128 v1, v[4:7], s[0:1] offset:64
 ; GFX12-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v16i1_to_v16i64:
@@ -6867,7 +6751,6 @@ define amdgpu_kernel void @constant_zextload_v16i1_to_v16i64(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v1, v[20:23], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v1, v[24:27], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v1, v[28:31], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <16 x i1>, ptr addrspace(4) %in
   %ext = zext <16 x i1> %load to <16 x i64>
@@ -7229,8 +7112,6 @@ define amdgpu_kernel void @constant_sextload_v16i1_to_v16i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v32, v[28:31], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v16i1_to_v16i64:
@@ -7302,7 +7183,6 @@ define amdgpu_kernel void @constant_sextload_v16i1_to_v16i64(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v32, v[28:31], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <16 x i1>, ptr addrspace(4) %in
   %ext = sext <16 x i1> %load to <16 x i64>
@@ -7832,8 +7712,6 @@ define amdgpu_kernel void @constant_zextload_v32i1_to_v32i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX12-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v32i1_to_v32i64:
@@ -7938,7 +7816,6 @@ define amdgpu_kernel void @constant_zextload_v32i1_to_v32i64(ptr addrspace(1) %o
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v2, s3
 ; GFX1210-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <32 x i1>, ptr addrspace(4) %in
   %ext = zext <32 x i1> %load to <32 x i64>
@@ -8647,8 +8524,6 @@ define amdgpu_kernel void @constant_sextload_v32i1_to_v32i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v32i1_to_v32i64:
@@ -8784,7 +8659,6 @@ define amdgpu_kernel void @constant_sextload_v32i1_to_v32i64(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <32 x i1>, ptr addrspace(4) %in
   %ext = sext <32 x i1> %load to <32 x i64>
@@ -9813,8 +9687,6 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX12-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_zextload_v64i1_to_v64i64:
@@ -10019,7 +9891,6 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v1, v[4:7], s[0:1] offset:256
 ; GFX1210-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <64 x i1>, ptr addrspace(4) %in
   %ext = zext <64 x i1> %load to <64 x i64>
@@ -11408,8 +11279,6 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    global_store_b128 v0, v[13:16], s[0:1] offset:32
 ; GFX12-NEXT:    global_store_b128 v0, v[17:20], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v0, v[21:24], s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1210-LABEL: constant_sextload_v64i1_to_v64i64:
@@ -11684,7 +11553,6 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX1210-NEXT:    global_store_b128 v8, v[14:17], s[0:1] offset:32
 ; GFX1210-NEXT:    global_store_b128 v8, v[18:21], s[0:1] offset:16
 ; GFX1210-NEXT:    global_store_b128 v8, v[22:25], s[0:1]
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %load = load <64 x i1>, ptr addrspace(4) %in
   %ext = sext <64 x i1> %load to <64 x i64>

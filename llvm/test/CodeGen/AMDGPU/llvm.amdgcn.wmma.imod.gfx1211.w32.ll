@@ -11,7 +11,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_negA(<2 x double> %A, <2 x doub
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[8:11], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x4_f64_negA:
@@ -22,7 +21,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_negA(<2 x double> %A, <2 x doub
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1 1, <2 x double> %A, i1 0, <2 x double> %B, i16 0, <8 x double> %C)
@@ -39,7 +37,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_negB(<2 x double> %A, <2 x doub
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[8:11], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x4_f64_negB:
@@ -50,7 +47,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_negB(<2 x double> %A, <2 x doub
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1 0, <2 x double> %A, i1 1, <2 x double> %B, i16 0, <8 x double> %C)
@@ -67,7 +63,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_negC(<2 x double> %A, <2 x doub
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[8:11], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x4_f64_negC:
@@ -78,7 +73,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_negC(<2 x double> %A, <2 x doub
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1 0, <2 x double> %A, i1 0, <2 x double> %B, i16 1, <8 x double> %C)
@@ -95,7 +89,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_neg_absC(<2 x double> %A, <2 x 
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[8:11], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x4_f64_neg_absC:
@@ -106,7 +99,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_neg_absC(<2 x double> %A, <2 x 
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1 0, <2 x double> %A, i1 0, <2 x double> %B, i16 3, <8 x double> %C)
@@ -123,7 +115,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_ignoreC(<2 x double> %A, <2 x d
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[8:11], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x4_f64_ignoreC:
@@ -134,7 +125,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_ignoreC(<2 x double> %A, <2 x d
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[12:15], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1 0, <2 x double> %A, i1 0, <2 x double> %B, i16 4, <8 x double> %C)
@@ -152,7 +142,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_negA(<4 x double> %A, <4 x doub
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x8_f64_negA:
@@ -163,7 +152,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_negA(<4 x double> %A, <4 x doub
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x8.f64.v8f64.v4f64(i1 1, <4 x double> %A, i1 0, <4 x double> %B, i16 0, <8 x double> %C)
@@ -180,7 +168,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_negB(<4 x double> %A, <4 x doub
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x8_f64_negB:
@@ -191,7 +178,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_negB(<4 x double> %A, <4 x doub
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x8.f64.v8f64.v4f64(i1 0, <4 x double> %A, i1 1, <4 x double> %B, i16 0, <8 x double> %C)
@@ -208,7 +194,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_negC(<4 x double> %A, <4 x doub
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x8_f64_negC:
@@ -219,7 +204,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_negC(<4 x double> %A, <4 x doub
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x8.f64.v8f64.v4f64(i1 0, <4 x double> %A, i1 0, <4 x double> %B, i16 1, <8 x double> %C)
@@ -236,7 +220,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_neg_absC(<4 x double> %A, <4 x 
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x8_f64_neg_absC:
@@ -247,7 +230,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_neg_absC(<4 x double> %A, <4 x 
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x8.f64.v8f64.v4f64(i1 0, <4 x double> %A, i1 0, <4 x double> %B, i16 3, <8 x double> %C)
@@ -264,7 +246,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_ignoreC(<4 x double> %A, <4 x d
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[32:33], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x8_f64_ignoreC:
@@ -275,7 +256,6 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_ignoreC(<4 x double> %A, <4 x d
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[20:23], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:32
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:48
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x double> @llvm.amdgcn.wmma.f64.16x16x8.f64.v8f64.v4f64(i1 0, <4 x double> %A, i1 0, <4 x double> %B, i16 4, <8 x double> %C)
@@ -290,7 +270,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negA(<16 x half> %A, <16 x hal
 ; GFX1211-NEXT:    s_clause 0x1
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f32_16x16x32_f16_negA:
@@ -299,7 +278,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negA(<16 x half> %A, <16 x hal
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1 1, <16 x half> %A, i1 0, <16 x half> %B, i16 0, <8 x float> %C)
@@ -314,7 +292,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negB(<16 x half> %A, <16 x hal
 ; GFX1211-NEXT:    s_clause 0x1
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f32_16x16x32_f16_negB:
@@ -323,7 +300,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negB(<16 x half> %A, <16 x hal
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1 0, <16 x half> %A, i1 1, <16 x half> %B, i16 0, <8 x float> %C)
@@ -338,7 +314,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negC(<16 x half> %A, <16 x hal
 ; GFX1211-NEXT:    s_clause 0x1
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f32_16x16x32_f16_negC:
@@ -347,7 +322,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negC(<16 x half> %A, <16 x hal
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1 0, <16 x half> %A, i1 0, <16 x half> %B, i16 1, <8 x float> %C)
@@ -362,7 +336,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_neg_absC(<16 x half> %A, <16 x
 ; GFX1211-NEXT:    s_clause 0x1
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f32_16x16x32_f16_neg_absC:
@@ -371,7 +344,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_neg_absC(<16 x half> %A, <16 x
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1 0, <16 x half> %A, i1 0, <16 x half> %B, i16 3, <8 x float> %C)
@@ -386,7 +358,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_ignoreC(<16 x half> %A, <16 x 
 ; GFX1211-NEXT:    s_clause 0x1
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f32_16x16x32_f16_ignoreC:
@@ -395,7 +366,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_ignoreC(<16 x half> %A, <16 x 
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1 0, <16 x half> %A, i1 0, <16 x half> %B, i16 4, <8 x float> %C)
@@ -408,14 +378,12 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_negA(<16 x half> %A, <16 x hal
 ; GFX1211:       ; %bb.0: ; %bb
 ; GFX1211-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX1211-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f16_16x16x32_f16_negA:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1 1, <16 x half> %A, i1 0, <16 x half> %B, i16 0, <8 x half> %C)
@@ -428,14 +396,12 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_negB(<16 x half> %A, <16 x hal
 ; GFX1211:       ; %bb.0: ; %bb
 ; GFX1211-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1211-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f16_16x16x32_f16_negB:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1 0, <16 x half> %A, i1 1, <16 x half> %B, i16 0, <8 x half> %C)
@@ -448,14 +414,12 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_negC(<16 x half> %A, <16 x hal
 ; GFX1211:       ; %bb.0: ; %bb
 ; GFX1211-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
 ; GFX1211-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f16_16x16x32_f16_negC:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
 ; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1 0, <16 x half> %A, i1 0, <16 x half> %B, i16 1, <8 x half> %C)
@@ -468,14 +432,12 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_neg_absC(<16 x half> %A, <16 x
 ; GFX1211:       ; %bb.0: ; %bb
 ; GFX1211-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1211-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f16_16x16x32_f16_neg_absC:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1 0, <16 x half> %A, i1 0, <16 x half> %B, i16 3, <8 x half> %C)
@@ -488,14 +450,12 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_ignoreC(<16 x half> %A, <16 x 
 ; GFX1211:       ; %bb.0: ; %bb
 ; GFX1211-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19]
 ; GFX1211-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f16_16x16x32_f16_ignoreC:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19]
 ; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1 0, <16 x half> %A, i1 0, <16 x half> %B, i16 4, <8 x half> %C)
@@ -511,7 +471,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16_negA(<16 x half> %A, <32 x h
 ; GFX1211-NEXT:    s_clause 0x1
 ; GFX1211-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_f16_negA:
@@ -521,7 +480,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16_negA(<16 x half> %A, <32 x h
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.f16.v8f32.v16f16.v32f16.i16(i1 1, <16 x half> %A, i1 0, <32 x half> %B, <8 x float> %C, i16 %Index)
@@ -537,7 +495,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16_negB(<16 x half> %A, <32 x h
 ; GFX1211-NEXT:    s_clause 0x1
 ; GFX1211-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1211-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_f16_negB:
@@ -547,7 +504,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16_negB(<16 x half> %A, <32 x h
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.f16.v8f32.v16f16.v32f16.i16(i1 0, <16 x half> %A, i1 1, <32 x half> %B, <8 x float> %C, i16 %Index)
@@ -561,7 +517,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16_negA(<16 x half> %A, <32 x h
 ; GFX1211-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX1211-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1211-NEXT:    global_store_b128 v[30:31], v[24:27], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x64_f16_negA:
@@ -569,7 +524,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16_negA(<16 x half> %A, <32 x h
 ; GISEL-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x64.f16.v8f16.v16f16.v32f16.i16(i1 1, <16 x half> %A, i1 0, <32 x half> %B, <8 x half> %C, i16 %Index)
@@ -583,7 +537,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16_negB(<16 x half> %A, <32 x h
 ; GFX1211-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1211-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1211-NEXT:    global_store_b128 v[30:31], v[24:27], off
-; GFX1211-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1211-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x64_f16_negB:
@@ -591,7 +544,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16_negB(<16 x half> %A, <32 x h
 ; GISEL-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x64.f16.v8f16.v16f16.v32f16.i16(i1 0, <16 x half> %A, i1 1, <32 x half> %B, <8 x half> %C, i16 %Index)

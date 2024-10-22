@@ -401,9 +401,7 @@ public:
   /// variables which may not be defined at the time the expression is formed.
   /// If a value is set for the variable later, this method will be called on
   /// users of the value to allow the value to propagate out.
-  virtual const Init *resolveReferences(Resolver &R) const {
-    return const_cast<Init *>(this);
-  }
+  virtual const Init *resolveReferences(Resolver &R) const { return this; }
 
   /// Get the \p Init value of the specified bit.
   virtual const Init *getBit(unsigned Bit) const = 0;
@@ -475,9 +473,7 @@ public:
   const Init *getCastTo(const RecTy *Ty) const override;
   const Init *convertInitializerTo(const RecTy *Ty) const override;
 
-  const Init *getBit(unsigned Bit) const override {
-    return const_cast<UnsetInit*>(this);
-  }
+  const Init *getBit(unsigned Bit) const override { return this; }
 
   /// Is this a complete value with no unset (uninitialized) subvalues?
   bool isComplete() const override { return false; }
@@ -579,7 +575,7 @@ public:
 
   const Init *getBit(unsigned Bit) const override {
     assert(Bit < 1 && "Bit index out of range!");
-    return const_cast<BitInit*>(this);
+    return this;
   }
 
   bool isConcrete() const override { return true; }
@@ -1318,7 +1314,7 @@ public:
 
   const Init *getBit(unsigned B) const override {
     assert(B < 1 && "Bit index out of range!");
-    return const_cast<VarBitInit*>(this);
+    return this;
   }
 };
 

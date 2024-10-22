@@ -8,7 +8,6 @@ define amdgpu_ps void @v_test_add_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b, pt
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_add_bf16 v0, v0, v1
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %add = fadd <2 x bfloat> %a, %b
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -21,7 +20,6 @@ define amdgpu_ps void @v_test_add_v2bf16_vs(<2 x bfloat> %a, <2 x bfloat> inreg 
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_add_bf16 v0, v0, s0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %add = fadd <2 x bfloat> %a, %b
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -33,7 +31,6 @@ define amdgpu_ps void @v_test_add_v2bf16_ss(<2 x bfloat> inreg %a, <2 x bfloat> 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_add_bf16 v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %add = fadd <2 x bfloat> %a, %b
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -46,7 +43,6 @@ define amdgpu_ps void @v_test_add_v2bf16_vc(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_add_bf16 v0, v0, 2.0 op_sel_hi:[1,0]
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %add = fadd <2 x bfloat> %a, <bfloat 2.0, bfloat 2.0>
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -59,7 +55,6 @@ define amdgpu_ps void @v_test_add_v2bf16_vl(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_add_bf16 v0, 0x42c83f80, v0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %add = fadd <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
   store <2 x bfloat> %add, ptr addrspace(1) %out
@@ -71,7 +66,6 @@ define amdgpu_ps void @v_test_mul_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b, pt
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_mul_bf16 v0, v0, v1
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %mul = fmul <2 x bfloat> %a, %b
   store <2 x bfloat> %mul, ptr addrspace(1) %out
@@ -84,7 +78,6 @@ define amdgpu_ps void @v_test_mul_v2bf16_vs(<2 x bfloat> %a, <2 x bfloat> inreg 
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_mul_bf16 v0, v0, s0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %mul = fmul <2 x bfloat> %a, %b
   store <2 x bfloat> %mul, ptr addrspace(1) %out
@@ -96,7 +89,6 @@ define amdgpu_ps void @v_test_mul_v2bf16_ss(<2 x bfloat> inreg %a, <2 x bfloat> 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_mul_bf16 v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %mul = fmul <2 x bfloat> %a, %b
   store <2 x bfloat> %mul, ptr addrspace(1) %out
@@ -111,7 +103,6 @@ define amdgpu_ps void @v_test_mul_v2bf16_vc(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_mul_bf16 v0, v0, 0.5 op_sel_hi:[1,0]
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %mul = fmul <2 x bfloat> %a, <bfloat 0.5, bfloat 0.5>
   store <2 x bfloat> %mul, ptr addrspace(1) %out
@@ -124,7 +115,6 @@ define amdgpu_ps void @v_test_mul_v2bf16_vl(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_mul_bf16 v0, 0x42c83f80, v0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %mul = fmul <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
   store <2 x bfloat> %mul, ptr addrspace(1) %out
@@ -136,7 +126,6 @@ define amdgpu_ps void @v_test_min_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b, pt
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_min_num_bf16 v0, v0, v1
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %min = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
   store <2 x bfloat> %min, ptr addrspace(1) %out
@@ -149,7 +138,6 @@ define amdgpu_ps void @v_test_min_v2bf16_vs(<2 x bfloat> %a, <2 x bfloat> inreg 
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_min_num_bf16 v0, v0, s0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %min = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
   store <2 x bfloat> %min, ptr addrspace(1) %out
@@ -161,7 +149,6 @@ define amdgpu_ps void @v_test_min_v2bf16_ss(<2 x bfloat> inreg %a, <2 x bfloat> 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_min_num_bf16 v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %min = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
   store <2 x bfloat> %min, ptr addrspace(1) %out
@@ -174,7 +161,6 @@ define amdgpu_ps void @v_test_min_v2bf16_vc(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_min_num_bf16 v0, v0, 0.5 op_sel_hi:[1,0]
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %min = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 0.5, bfloat 0.5>)
   store <2 x bfloat> %min, ptr addrspace(1) %out
@@ -187,7 +173,6 @@ define amdgpu_ps void @v_test_min_v2bf16_vl(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_min_num_bf16 v0, 0x42c83f80, v0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %min = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>)
   store <2 x bfloat> %min, ptr addrspace(1) %out
@@ -199,7 +184,6 @@ define amdgpu_ps void @v_test_max_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b, pt
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_max_num_bf16 v0, v0, v1
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
   store <2 x bfloat> %max, ptr addrspace(1) %out
@@ -212,7 +196,6 @@ define amdgpu_ps void @v_test_max_v2bf16_vs(<2 x bfloat> %a, <2 x bfloat> inreg 
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_max_num_bf16 v0, v0, s0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
   store <2 x bfloat> %max, ptr addrspace(1) %out
@@ -224,7 +207,6 @@ define amdgpu_ps void @v_test_max_v2bf16_ss(<2 x bfloat> inreg %a, <2 x bfloat> 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_pk_max_num_bf16 v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
   store <2 x bfloat> %max, ptr addrspace(1) %out
@@ -237,7 +219,6 @@ define amdgpu_ps void @v_test_max_v2bf16_vc(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_max_num_bf16 v0, v0, 0.5 op_sel_hi:[1,0]
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 0.5, bfloat 0.5>)
   store <2 x bfloat> %max, ptr addrspace(1) %out
@@ -250,7 +231,6 @@ define amdgpu_ps void @v_test_max_v2bf16_vl(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_max_num_bf16 v0, 0x42c83f80, v0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>)
   store <2 x bfloat> %max, ptr addrspace(1) %out
@@ -328,7 +308,6 @@ define amdgpu_ps void @v_test_fma_v2bf16_vvv(<2 x bfloat> %a, <2 x bfloat> %b, <
 ; GCN-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GCN-NEXT:    v_pk_fma_bf16 v0, v0, v1, v2
 ; GCN-NEXT:    global_store_b32 v[4:5], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %fma = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
   store <2 x bfloat> %fma, ptr addrspace(1) %out
@@ -341,7 +320,6 @@ define amdgpu_ps void @v_test_fma_v2bf16_vss(<2 x bfloat> %a, <2 x bfloat> inreg
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_fma_bf16 v0, v0, s0, s1
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %fma = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
   store <2 x bfloat> %fma, ptr addrspace(1) %out
@@ -355,7 +333,6 @@ define amdgpu_ps void @v_test_fma_v2bf16_sss(<2 x bfloat> inreg %a, <2 x bfloat>
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_pk_fma_bf16 v2, s0, s1, v2
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %fma = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
   store <2 x bfloat> %fma, ptr addrspace(1) %out
@@ -368,7 +345,6 @@ define amdgpu_ps void @v_test_fma_v2bf16_vsc(<2 x bfloat> %a, <2 x bfloat> inreg
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_fma_bf16 v0, v0, s0, 0.5 op_sel_hi:[1,1,0]
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %fma = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> <bfloat 0.5, bfloat 0.5>)
   store <2 x bfloat> %fma, ptr addrspace(1) %out
@@ -382,7 +358,6 @@ define amdgpu_ps void @v_test_fma_v2bf16_vll(<2 x bfloat> %a, ptr addrspace(1) %
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-NEXT:    v_pk_fma_bf16 v0, v0, s0, 0x43484000
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %fma = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>, <2 x bfloat> <bfloat 2.0, bfloat 200.0>)
   store <2 x bfloat> %fma, ptr addrspace(1) %out
@@ -394,7 +369,6 @@ define amdgpu_ps void @llvm_sqrt_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_sqrt_bf16_e32 v2, v2
 ; GCN-NEXT:    global_store_b16 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %src)
   store bfloat %sqrt, ptr addrspace(1) %out, align 2
@@ -406,7 +380,6 @@ define amdgpu_ps void @llvm_sqrt_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_sqrt_bf16_e32 v2, s0
 ; GCN-NEXT:    global_store_b16 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %src)
   store bfloat %sqrt, ptr addrspace(1) %out, align 2
@@ -418,7 +391,6 @@ define amdgpu_ps void @llvm_log2_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_log_bf16_e32 v2, v2
 ; GCN-NEXT:    global_store_b16 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %log = call bfloat @llvm.log2.bf16(bfloat %src)
   store bfloat %log, ptr addrspace(1) %out, align 2
@@ -430,7 +402,6 @@ define amdgpu_ps void @llvm_log2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_log_bf16_e32 v2, s0
 ; GCN-NEXT:    global_store_b16 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %log = call bfloat @llvm.log2.bf16(bfloat %src)
   store bfloat %log, ptr addrspace(1) %out, align 2
@@ -442,7 +413,6 @@ define amdgpu_ps void @llvm_exp2_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_exp_bf16_e32 v2, v2
 ; GCN-NEXT:    global_store_b16 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
   store bfloat %exp, ptr addrspace(1) %out, align 2
@@ -454,7 +424,6 @@ define amdgpu_ps void @llvm_exp2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_exp_bf16_e32 v2, s0
 ; GCN-NEXT:    global_store_b16 v[0:1], v2, off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
   store bfloat %exp, ptr addrspace(1) %out, align 2

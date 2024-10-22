@@ -286,7 +286,6 @@ define amdgpu_ps void @global_store_b32_idxprom(ptr addrspace(1) align 4 inreg %
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
@@ -300,7 +299,6 @@ define amdgpu_ps void @global_store_b16_idxprom(ptr addrspace(1) align 2 inreg %
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    global_store_b16 v0, v1, s[0:1] scale_offset
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
@@ -314,7 +312,6 @@ define amdgpu_ps void @global_store_b64_idxprom(ptr addrspace(1) align 4 inreg %
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], 1.0
 ; GCN-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
@@ -328,7 +325,6 @@ define amdgpu_ps void @global_atomicrmw_b32_idxprom(ptr addrspace(1) align 4 inr
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
