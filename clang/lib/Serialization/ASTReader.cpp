@@ -4416,19 +4416,6 @@ bool ASTReader::isGlobalIndexUnavailable() const {
          !hasGlobalIndex() && TriedLoadingGlobalIndex;
 }
 
-static void updateModuleTimestamp(ModuleFile &MF) {
-  // Overwrite the timestamp file contents so that file's mtime changes.
-  std::string TimestampFilename = MF.getTimestampFilename();
-  std::error_code EC;
-  llvm::raw_fd_ostream OS(TimestampFilename, EC,
-                          llvm::sys::fs::OF_TextWithCRLF);
-  if (EC)
-    return;
-  OS << "Timestamp file\n";
-  OS.close();
-  OS.clear_error(); // Avoid triggering a fatal error.
-}
-
 /// Given a cursor at the start of an AST file, scan ahead and drop the
 /// cursor into the start of the given block ID, returning false on success and
 /// true on failure.
@@ -4707,7 +4694,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
       ImportedModule &M = Loaded[I];
       if (M.Mod->Kind == MK_ImplicitModule &&
           M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
-        updateModuleTimestamp(*M.Mod);
+        updateModuleTimestamp(M.Mod->FileName);
     }
   }
 

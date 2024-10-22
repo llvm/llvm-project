@@ -52,7 +52,7 @@ Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpA
     This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
 contact: Selehov
 ---
-breaks build of libdevice
-Revert 622e398d88   [AMDGPU] Allow overload of __builtin_amdgcn_mov/update_dpp (#112447)
+breaks devicelibs
+6e0b0038 [clang][OpenCL][CodeGen][AMDGPU] Do not use `private` as the default AS for when `generic` is available (#112442)
 Ron
 ---

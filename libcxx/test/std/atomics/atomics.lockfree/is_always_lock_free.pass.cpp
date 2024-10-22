@@ -52,7 +52,7 @@ void check_always_lock_free(std::atomic<T> const& a) {
   // In all cases, also sanity-check it based on the implication always-lock-free => lock-free.
   if (is_always_lock_free) {
     auto is_lock_free = a.is_lock_free();
-    ASSERT_SAME_TYPE(decltype(is_always_lock_free), bool const);
+    ASSERT_SAME_TYPE(decltype(is_lock_free), bool);
     assert(is_lock_free);
   }
   ASSERT_NOEXCEPT(a.is_lock_free());

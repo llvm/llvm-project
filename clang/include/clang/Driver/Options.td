@@ -8241,7 +8241,7 @@ def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and
 def fallow_half_arguments_and_returns : Flag<["-"], "fallow-half-arguments-and-returns">,
   HelpText<"Allow function arguments and returns of type half">,
   MarshallingInfoFlag<LangOpts<"HalfArgsAndReturns">>,
-  ImpliedByAnyOf<[fnative_half_arguments_and_returns.KeyPath]>;
+  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">,
   Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall">,
