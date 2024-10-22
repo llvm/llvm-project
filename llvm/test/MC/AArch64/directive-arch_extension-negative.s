@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple aarch64 \
 // RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
-// RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs,+cmpbr \
+// RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
@@ -229,11 +229,3 @@ gcspushm x0
 gcspushm x0
 // CHECK: [[@LINE-1]]:1: error: instruction requires: gcs
 // CHECK-NEXT: gcspushm x0
-
-cbhi x5, x5, #1020
-// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: cmpbr
-.arch_extension nocmpbr
-cbhi x5, x5, #1020
-// CHECK: [[@LINE-1]]:1: error: instruction requires: cmpbr
-// CHECK-NEXT: cbhi x5, x5, #1020
-
