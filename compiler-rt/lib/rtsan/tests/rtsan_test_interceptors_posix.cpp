@@ -121,10 +121,10 @@ TEST(TestRtsanInterceptors, VallocDiesWhenRealtime) {
 }
 
 #if __has_builtin(__builtin_available) && SANITIZER_APPLE
-#define ALIGNED_ALLOC_AVAILABLE() __builtin_available(macOS 10.15, *)
+#define ALIGNED_ALLOC_AVAILABLE() (__builtin_available(macOS 10.15, *))
 #else
 // We are going to assume this is true until we hit systems where it isn't
-#define ALIGNED_ALLOC_AVAILABLE() true
+#define ALIGNED_ALLOC_AVAILABLE() (true)
 #endif
 
 TEST(TestRtsanInterceptors, AlignedAllocDiesWhenRealtime) {
