@@ -129,8 +129,6 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX12-NEXT:  .LBB1_3: ; %for.end
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX12-SPREFETCH-LABEL: copy_global:
@@ -156,8 +154,6 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX12-SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX12-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX12-SPREFETCH-NEXT:  .LBB1_3: ; %for.end
-; GFX12-SPREFETCH-NEXT:    s_nop 0
-; GFX12-SPREFETCH-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SPREFETCH-NEXT:    s_endpgm
 ;
 ; GFX12ES2-SPREFETCH-LABEL: copy_global:
@@ -185,8 +181,6 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB1_3: ; %for.end
-; GFX12ES2-SPREFETCH-NEXT:    s_nop 0
-; GFX12ES2-SPREFETCH-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12ES2-SPREFETCH-NEXT:    s_endpgm
 entry:
   %cmp6.not = icmp eq i32 %n, 0
@@ -231,8 +225,6 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX12-NEXT:  .LBB2_3: ; %for.end
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX12-SPREFETCH-LABEL: copy_constant:
@@ -259,8 +251,6 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX12-SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX12-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX12-SPREFETCH-NEXT:  .LBB2_3: ; %for.end
-; GFX12-SPREFETCH-NEXT:    s_nop 0
-; GFX12-SPREFETCH-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SPREFETCH-NEXT:    s_endpgm
 ;
 ; GFX12ES2-SPREFETCH-LABEL: copy_constant:
@@ -290,8 +280,6 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB2_3: ; %for.end
-; GFX12ES2-SPREFETCH-NEXT:    s_nop 0
-; GFX12ES2-SPREFETCH-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12ES2-SPREFETCH-NEXT:    s_endpgm
 entry:
   %cmp6.not = icmp eq i32 %n, 0
