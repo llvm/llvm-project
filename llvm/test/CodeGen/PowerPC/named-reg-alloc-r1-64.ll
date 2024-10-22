@@ -1,12 +1,10 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s
 
 define i64 @get_reg() nounwind {
+; CHECK: Trying to obtain a reserved register "r1".
 entry:
   %reg = call i64 @llvm.read_register.i64(metadata !0)
   ret i64 %reg
-
-; CHECK-LABEL: get_reg
-; CHECK: mr 3, 1
 }
 
 declare i64 @llvm.read_register.i64(metadata) nounwind
