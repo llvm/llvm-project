@@ -79,7 +79,7 @@ Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpA
     This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
 contact: Selehov
 ---
-breaks hip_on_rocclr build
-Revert 8039886e6d  "AMDGPU: Handle folding frame indexes into s_add_i32 (#101694)"
-Ron/MatC
+breaks build of libdevice
+Revert 622e398d88   [AMDGPU] Allow overload of __builtin_amdgcn_mov/update_dpp (#112447)
+Ron
 ---
