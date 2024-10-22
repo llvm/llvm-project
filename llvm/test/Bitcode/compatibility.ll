@@ -2048,7 +2048,7 @@ declare void @f.sanitize_numerical_stability() sanitize_numerical_stability
 declare void @f.sanitize_realtime() sanitize_realtime
 ; CHECK: declare void @f.sanitize_realtime() #52
 
-declare void @f.sanitize_realtime_blocking() sanitize_realtime_unsafe
+declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
 ; CHECK: declare void @f.sanitize_realtime_blocking() #53
 
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
