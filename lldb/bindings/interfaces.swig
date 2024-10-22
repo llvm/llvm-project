@@ -200,6 +200,7 @@
 %include "./interface/SBProcessExtensions.i"
 %include "./interface/SBProcessInfoListExtensions.i"
 %include "./interface/SBQueueItemExtensions.i"
+%include "./interface/SBSaveCoreOptionsExtensions.i"
 %include "./interface/SBScriptObjectExtensions.i"
 %include "./interface/SBSectionExtensions.i"
 %include "./interface/SBStreamExtensions.i"
