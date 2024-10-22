@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa --start-before=si-lower-sgpr-spills --stop-after=prologepilog -o - %s | FileCheck %s
 
 # CHECK: csr_sgpr_spill
-# CHECK: spillPhysVGPRs:
+# CHECK: spillPhysVGPRs
 # CHECK-NEXT: - '$vgpr0'
 ---
 name: csr_sgpr_spill
@@ -17,7 +17,7 @@ body: |
 
 # CHECK-LABEL: name: parse_none
 # CHECK: machineFunctionInfo:
-# CHECK-NOT: spillPhysVGPRs:
+# CHECK-NOT: spillPhysVGPRs
 ---
 name: parse_none
 machineFunctionInfo:
@@ -30,7 +30,7 @@ body: |
 
 # CHECK-LABEL: name: parse_one
 # CHECK: machineFunctionInfo:
-# CHECK: spillPhysVGPRs:
+# CHECK: spillPhysVGPRs
 # CHECK-NEXT: - '$vgpr0'
 ---
 name: parse_one
@@ -42,14 +42,15 @@ body: |
 
 ...
 
-# CHECK-LABEL: name: parse_one
+# CHECK-LABEL: name: parse_two
 # CHECK: machineFunctionInfo:
-# CHECK: spillPhysVGPRs:
+# CHECK: spillPhysVGPRs
 # CHECK-NEXT: - '$vgpr0'
+# CHECK-NEXT: - '$vgpr1'
 ---
-name: parse_one
+name: parse_two
 machineFunctionInfo:
-  spillPhysVGPRs: ['$vgpr0']
+  spillPhysVGPRs: ['$vgpr0', '$vgpr1']
 body: |
   bb.0:
     S_ENDPGM 0
