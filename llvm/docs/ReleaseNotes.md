@@ -42,11 +42,6 @@ point (e.g. maybe you would like to give an example of the
 functionality, or simply have a lot to talk about), see the comment below
 for adding a new subsection. -->
 
-* Added a new IRNormalizer pass which aims to transform LLVM modules into
-  a normal form by reordering and renaming instructions while preserving the
-  same semantics. The normalizer makes it easier to spot semantic differences
-  when diffing two modules which have undergone different passes.
-
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
