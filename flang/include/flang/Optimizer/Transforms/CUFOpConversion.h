@@ -19,7 +19,7 @@ class LLVMTypeConverter;
 namespace mlir {
 class DataLayout;
 class SymbolTable;
-}
+} // namespace mlir
 
 namespace cuf {
 

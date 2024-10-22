@@ -45,8 +45,7 @@ static void prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
   }
 }
 
-class CUFDeviceGlobal
-    : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {
+class CUFDeviceGlobal : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {
 public:
   void runOnOperation() override {
     mlir::Operation *op = getOperation();
