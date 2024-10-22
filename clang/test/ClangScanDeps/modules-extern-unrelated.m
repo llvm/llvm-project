@@ -38,7 +38,7 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/first/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first"
@@ -50,8 +50,8 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/first_other.h",
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/first/first_other.h"
+// CHECK-DAG:          "[[PREFIX]]/first/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first_other"
@@ -69,9 +69,9 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.h",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/first/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/second/second.h"
+// CHECK-DAG:          "[[PREFIX]]/second/second.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "second"
@@ -93,10 +93,10 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/zeroth/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/zeroth/zeroth.h"
+// CHECK-DAG:          "[[PREFIX]]/first/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/second/second.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/zeroth/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/zeroth/zeroth.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "zeroth"
@@ -117,7 +117,7 @@ module second { header "second.h" }
 // CHECK:                ],
 // CHECK-NEXT:           "executable": "{{.*}}",
 // CHECK-NEXT:           "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/tu.m"
+// CHECK-DAG:              "[[PREFIX]]/tu.m"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         }

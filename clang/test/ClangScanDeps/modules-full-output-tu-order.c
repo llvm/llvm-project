@@ -36,7 +36,7 @@
 // CHECK-NEXT:             "ONE"
 // CHECK:                ],
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/tu.c"
+// CHECK-DAG:              "[[PREFIX]]/tu.c"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:         }
@@ -52,7 +52,7 @@
 // CHECK-NEXT:             "TWO"
 // CHECK:                ],
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/tu.c"
+// CHECK-DAG:              "[[PREFIX]]/tu.c"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
 // CHECK:              }

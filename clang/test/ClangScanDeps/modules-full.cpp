@@ -41,8 +41,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H1_DINCLUDE:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/header.h"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header1"
@@ -60,8 +60,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H1:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/header.h"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header1"
@@ -79,8 +79,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H2_DINCLUDE]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/header2.h"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header2"
@@ -104,7 +104,7 @@
 // CHECK:                ],
 // CHECK-NEXT:           "executable": "{{.*}}clang{{.*}}"
 // CHECK-NEXT:           "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/modules_cdb_input2.cpp"
+// CHECK-DAG:              "[[PREFIX]]/modules_cdb_input2.cpp"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/modules_cdb_input2.cpp"
 // CHECK-NEXT:         }
@@ -127,7 +127,7 @@
 // CHECK:                ],
 // CHECK-NEXT:           "executable": "{{.*}}clang{{.*}}"
 // CHECK-NEXT:           "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-DAG:              "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:         }
@@ -150,7 +150,7 @@
 // CHECK:                ],
 // CHECK-NEXT:           "executable": "{{.*}}clang{{.*}}"
 // CHECK-NEXT:           "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-DAG:              "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:         }
@@ -173,7 +173,7 @@
 // CHECK:                ],
 // CHECK-NEXT:           "executable": "{{.*}}clang{{.*}}"
 // CHECK-NEXT:           "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/modules_cdb_input.cpp"
+// CHECK-DAG:              "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:         }

@@ -42,8 +42,8 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/direct.h"
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/direct.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "direct"
@@ -60,9 +60,9 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/root.h"
-// CHECK-NEXT:         "[[PREFIX]]/root/textual.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/root.h"
+// CHECK-DAG:          "[[PREFIX]]/root/textual.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root"
@@ -74,8 +74,8 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/transitive.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/transitive.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "transitive"

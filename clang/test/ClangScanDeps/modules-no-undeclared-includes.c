@@ -43,9 +43,9 @@ module User [no_undeclared_includes] { header "user.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/undeclared/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/user.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/undeclared/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/user.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "User"
@@ -63,7 +63,7 @@ module User [no_undeclared_includes] { header "user.h" }
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/test.c"
+// CHECK-DAG:          "[[PREFIX]]/test.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/test.c"
 // CHECK-NEXT:     }

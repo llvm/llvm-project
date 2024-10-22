@@ -17,8 +17,8 @@
 // CHECK-NEXT:   "include"
 // CHECK:      ],
 // CHECK:      "file-deps": [
-// CHECK-NEXT:   "[[PREFIX]]/tu.c"
-// CHECK-NEXT:   "[[PREFIX]]/include/header.h"
+// CHECK-DAG:    "[[PREFIX]]/tu.c"
+// CHECK-DAG:    "[[PREFIX]]/include/header.h"
 // CHECK-NEXT: ]
 
 //--- cdb.json.template

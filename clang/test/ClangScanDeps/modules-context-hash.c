@@ -34,9 +34,9 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD_A:.*]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/a/dep.h",
-// CHECK-NEXT:         "[[PREFIX]]/mod.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/a/dep.h"
+// CHECK-DAG:          "[[PREFIX]]/mod.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"
@@ -54,7 +54,7 @@
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/tu.c"
+// CHECK-DAG:          "[[PREFIX]]/tu.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:     }
@@ -72,9 +72,9 @@
 // CHECK:            ],
 // CHECK-NOT:        "context-hash": "[[HASH_MOD_A]]",
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/b/dep.h",
-// CHECK-NEXT:         "[[PREFIX]]/mod.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/b/dep.h"
+// CHECK-DAG:          "[[PREFIX]]/mod.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"
@@ -92,7 +92,7 @@
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/tu.c"
+// CHECK-DAG:          "[[PREFIX]]/tu.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:     }

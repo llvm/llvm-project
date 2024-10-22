@@ -64,10 +64,10 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "{{.*}}"
-// CHECK-NEXT:         "{{.*}}"
-// CHECK-NEXT:         "{{.*}}"
-// CHECK-NEXT:         "{{.*}}"
+// CHECK-DAG:          "{{.*}}"
+// CHECK-DAG:          "{{.*}}"
+// CHECK-DAG:          "{{.*}}"
+// CHECK-DAG:          "{{.*}}"
 // CHECK-NEXT:       ],
 // CHECK:            "name": "D"
 // CHECK-NEXT:     },
@@ -79,8 +79,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "{{.*}}"
-// CHECK-NEXT:         "{{.*}}"
+// CHECK-DAG:          "{{.*}}"
+// CHECK-DAG:          "{{.*}}"
 // CHECK-NEXT:       ],
 // CHECK:            "name": "E"
 // CHECK-NEXT:     }

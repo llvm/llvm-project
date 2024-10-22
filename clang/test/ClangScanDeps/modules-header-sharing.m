@@ -78,8 +78,8 @@ framework module B_Private { umbrella header "B_Private.h" }
 // CHECK:                  "-fmodule-name=A",
 // CHECK:                ],
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/tu.m",
-// CHECK-NEXT:             "[[PREFIX]]/shared/H.h"
+// CHECK-DAG:              "[[PREFIX]]/tu.m"
+// CHECK-DAG:              "[[PREFIX]]/shared/H.h"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         }

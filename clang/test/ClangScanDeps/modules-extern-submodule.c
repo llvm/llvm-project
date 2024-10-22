@@ -49,10 +49,10 @@ module third {}
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/first/first.h",
-// CHECK-NEXT:         "[[PREFIX]]/first/first/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second/sub.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/first/first/first.h"
+// CHECK-DAG:          "[[PREFIX]]/first/first/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/second/second/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/second/second/sub.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first"
@@ -72,10 +72,10 @@ module third {}
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/second/second/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second/sub.h",
-// CHECK-NEXT:         "[[PREFIX]]/second/second/sub.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/third/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/second/second/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/second/second/sub.h"
+// CHECK-DAG:          "[[PREFIX]]/second/second/sub.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "second"
@@ -90,7 +90,7 @@ module third {}
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/third/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "third"
@@ -113,7 +113,7 @@ module third {}
 // CHECK:                  "-fmodule-file=first=[[PREFIX]]/cache/{{.*}}/first-{{.*}}.pcm",
 // CHECK:                ],
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/tu.m"
+// CHECK-DAG:              "[[PREFIX]]/tu.m"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:         }

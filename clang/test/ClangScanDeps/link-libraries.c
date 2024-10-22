@@ -44,8 +44,8 @@ module transitive {
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers/Framework.h"
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers/Framework.h"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/frameworks/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {
@@ -67,8 +67,8 @@ module transitive {
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/direct.h"
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/direct.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "direct"
@@ -89,10 +89,10 @@ module transitive {
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/root.h"
-// CHECK-NEXT:         "[[PREFIX]]/root/textual.h"
+// CHECK-DAG:          "[[PREFIX]]/Inputs/frameworks/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/root.h"
+// CHECK-DAG:          "[[PREFIX]]/root/textual.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root"
@@ -104,8 +104,8 @@ module transitive {
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/transitive.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/transitive.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {

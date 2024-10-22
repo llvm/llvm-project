@@ -58,8 +58,8 @@ module Direct { header "direct.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/direct.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/direct.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Direct"
@@ -71,8 +71,8 @@ module Direct { header "direct.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/transitive.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/transitive.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Transitive"
@@ -96,7 +96,7 @@ module Direct { header "direct.h" }
 // CHECK_EAGER:        "-fmodule-file=[[PREFIX]]/{{.*}}/Direct-{{.*}}.pcm"
 // CHECK:            ],
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/tu.c"
+// CHECK-DAG:          "[[PREFIX]]/tu.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:     }

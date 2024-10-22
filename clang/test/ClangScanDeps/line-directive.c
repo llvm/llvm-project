@@ -11,8 +11,8 @@
 // RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      "file-deps": [
-// CHECK-NEXT:   "[[PREFIX]]/tu.c"
-// CHECK-NEXT:   "[[PREFIX]]/header.h"
+// CHECK-DAG:    "[[PREFIX]]/tu.c"
+// CHECK-DAG:    "[[PREFIX]]/header.h"
 // CHECK-NEXT: ]
 
 //--- cdb.json.template

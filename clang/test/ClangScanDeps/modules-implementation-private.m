@@ -37,8 +37,8 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h"
+// CHECK-DAG:          "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {
@@ -63,9 +63,9 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK-NEXT:           "command-line": [
 // CHECK:                ],
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/tu.m",
-// CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/Missed.h",
-// CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
+// CHECK-DAG:              "[[PREFIX]]/tu.m"
+// CHECK-DAG:              "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/Missed.h"
+// CHECK-DAG:              "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         }

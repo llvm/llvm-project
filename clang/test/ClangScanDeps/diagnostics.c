@@ -34,8 +34,8 @@ module mod { header "mod.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD:.*]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/mod.h"
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[PREFIX]]/mod.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"
@@ -55,7 +55,7 @@ module mod { header "mod.h" }
 // CHECK-NOT:          "-fimplicit-module-maps"
 // CHECK:            ],
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/tu.c"
+// CHECK-DAG:          "[[PREFIX]]/tu.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:     }

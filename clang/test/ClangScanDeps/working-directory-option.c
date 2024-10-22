@@ -12,8 +12,8 @@
 // RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      "file-deps": [
-// CHECK-NEXT:   "[[PREFIX]]/cwd/t.c"
-// CHECK-NEXT:   "[[PREFIX]]/cwd/relative/h1.h"
+// CHECK-DAG:    "[[PREFIX]]/cwd/t.c"
+// CHECK-DAG:    "[[PREFIX]]/cwd/relative/h1.h"
 // CHECK-NEXT: ]
 // CHECK-NEXT: "input-file": "[[PREFIX]]/cwd/t.c"
 

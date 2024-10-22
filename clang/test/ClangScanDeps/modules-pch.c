@@ -25,8 +25,8 @@
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_COMMON_1:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
-// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_1.h",
-// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-PCH-DAG:          "[[PREFIX]]/mod_common_1.h"
+// CHECK-PCH-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModCommon1"
@@ -38,8 +38,8 @@
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_COMMON_2:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
-// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_2.h",
-// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-PCH-DAG:          "[[PREFIX]]/mod_common_2.h"
+// CHECK-PCH-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModCommon2"
@@ -56,8 +56,8 @@
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_PCH:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
-// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_pch.h",
-// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-PCH-DAG:          "[[PREFIX]]/mod_pch.h"
+// CHECK-PCH-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModPCH"
@@ -79,7 +79,7 @@
 // CHECK-PCH-NEXT:       "command-line": [
 // CHECK-PCH:            ],
 // CHECK-PCH:            "file-deps": [
-// CHECK-PCH-NEXT:         "[[PREFIX]]/pch.h"
+// CHECK-PCH-DAG:          "[[PREFIX]]/pch.h"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "input-file": "[[PREFIX]]/pch.h"
 // CHECK-PCH-NEXT:     }
@@ -113,8 +113,8 @@
 // CHECK-TU:            ],
 // CHECK-TU-NEXT:       "context-hash": "[[HASH_MOD_TU:.*]]",
 // CHECK-TU-NEXT:       "file-deps": [
-// CHECK-TU-NEXT:         "[[PREFIX]]/mod_tu.h",
-// CHECK-TU-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-TU-DAG:          "[[PREFIX]]/mod_tu.h"
+// CHECK-TU-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "link-libraries": [],
 // CHECK-TU-NEXT:       "name": "ModTU"
@@ -132,8 +132,8 @@
 // CHECK-TU-NEXT:       "command-line": [
 // CHECK-TU:            ],
 // CHECK-TU:            "file-deps": [
-// CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
-// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.pch"
+// CHECK-TU-DAG:          "[[PREFIX]]/tu.c"
+// CHECK-TU-DAG:          "[[PREFIX]]/pch.h.pch"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-TU-NEXT:     }
@@ -163,8 +163,8 @@
 // CHECK-TU-WITH-COMMON:            ],
 // CHECK-TU-WITH-COMMON-NEXT:       "context-hash": "[[HASH_MOD_TU_WITH_COMMON:.*]]",
 // CHECK-TU-WITH-COMMON-NEXT:       "file-deps": [
-// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/mod_tu_with_common.h",
-// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-TU-WITH-COMMON-DAG:          "[[PREFIX]]/mod_tu_with_common.h"
+// CHECK-TU-WITH-COMMON-DAG:          "[[PREFIX]]/module.modulemap"
 // CHECK-TU-WITH-COMMON-NEXT:       ],
 // CHECK-TU-WITH-COMMON-NEXT:       "link-libraries": [],
 // CHECK-TU-WITH-COMMON-NEXT:       "name": "ModTUWithCommon"
@@ -183,8 +183,8 @@
 // CHECK-TU-WITH-COMMON:              "-fmodule-file=[[PREFIX]]/build/{{.*}}/ModCommon2-{{.*}}.pcm"
 // CHECK-TU-WITH-COMMON:            ],
 // CHECK-TU-WITH-COMMON:            "file-deps": [
-// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/tu_with_common.c",
-// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/pch.h.pch"
+// CHECK-TU-WITH-COMMON-DAG:          "[[PREFIX]]/tu_with_common.c"
+// CHECK-TU-WITH-COMMON-DAG:          "[[PREFIX]]/pch.h.pch"
 // CHECK-TU-WITH-COMMON-NEXT:       ],
 // CHECK-TU-WITH-COMMON-NEXT:       "input-file": "[[PREFIX]]/tu_with_common.c"
 // CHECK-TU-WITH-COMMON-NEXT:     }
