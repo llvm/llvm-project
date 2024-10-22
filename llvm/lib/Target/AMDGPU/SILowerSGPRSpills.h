@@ -17,7 +17,7 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 
-  MachineFunctionProperties getClearedProperties() {
+  MachineFunctionProperties getClearedProperties() const {
     // SILowerSGPRSpills introduces new Virtual VGPRs for spilling SGPRs.
     return MachineFunctionProperties()
         .set(MachineFunctionProperties::Property::IsSSA)
