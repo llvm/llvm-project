@@ -1796,8 +1796,7 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MI.getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER)
     return 18;
   if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
-    return 18 +
-           (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
+    return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
 
   return MI.getDesc().getSize();
 }

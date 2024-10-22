@@ -664,11 +664,11 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
     LowerPATCHABLE_FUNCTION_ENTER(*MI, Lower);
-    return ;
+    return;
 
   case TargetOpcode::PATCHABLE_RET:
     LowerPATCHABLE_RET(*MI, Lower);
-    return ;
+    return;
 
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
     llvm_unreachable("PATCHABLE_FUNCTION_EXIT should never be emitted");
