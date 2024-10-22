@@ -4437,7 +4437,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                /*BasePath=*/nullptr, CCK)
                  .get();
     } else { // FromType must be ArrayParameterType
-      FromType = Context.getConstantArrayFromArrayParameterType(FromType);
+      assert(FromType->isArrayParameterType() &&
+             "FromType must be ArrayParameterType in ICK_HLSL_Array_RValue \
+              if it is not ToType");
+      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
+      FromType = APT->getConstantArrayType(Context);
       From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();

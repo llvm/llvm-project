@@ -2244,6 +2244,10 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   }
 
   bool argIsLValue = From->isGLValue();
+  // To handle conversion from ArrayParameterType to ConstantArrayType
+  // this block must be above the one below because Array parameters
+  // do not decay and when handling HLSLOutArgExprs and
+  // the From expression is an LValue.
   if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
       ToType->isConstantArrayType()) {
     // HLSL constant array parameters do not decay, so if the argument is a
@@ -2253,7 +2257,8 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
       FromType = S.Context.getArrayParameterType(FromType);
       SCS.First = ICK_HLSL_Array_RValue;
     } else if (FromType->isArrayParameterType()) {
-      FromType = S.Context.getConstantArrayFromArrayParameterType(FromType);
+      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
+      FromType = APT->getConstantArrayType(S.Context);
       SCS.First = ICK_HLSL_Array_RValue;
     } else {
       SCS.First = ICK_Identity;
