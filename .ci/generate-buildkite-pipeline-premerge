@@ -269,10 +269,11 @@ windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
 if [[ "${linux_projects}" != "" ]]; then
   cat <<EOF
 - label: ':linux: Linux x64'
+  key: "test Linux"
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results*.xml'
+  - 'build/test-results-linux*.xml'
   agents: ${LINUX_AGENTS}
   retry:
     automatic:
@@ -286,16 +287,23 @@ if [[ "${linux_projects}" != "" ]]; then
     CXX: 'clang++'
   commands:
   - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"'
+- plugins:
+    - junit-annotate#v2.5.0:
+        artifacts: build/test-results-linux*.xml
+        context: "linux-test-results"
+  depends_on: "test Linux"
+  allow_dependency_failure: true
 EOF
 fi
 
 if [[ "${windows_projects}" != "" ]]; then
   cat <<EOF
 - label: ':windows: Windows x64'
+  key: "test Windows"
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results*.xml'
+  - 'build/test-results-windows*.xml'
   agents: ${WINDOWS_AGENTS}
   retry:
     automatic:
@@ -311,13 +319,15 @@ if [[ "${windows_projects}" != "" ]]; then
   commands:
   - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
   - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'
+- plugins:
+    - junit-annotate#v2.5.0:
+        artifacts: build/test-results-windows*.xml
+        context: "windows-test-results"
+  depends_on: "test Windows"
+  allow_dependency_failure: true
 EOF
 fi
 
 cat <<EOF
-- wait: ~
-  continue_on_failure: true
-- plugins:
-    - junit-annotate#v2.5.0:
-        artifacts: build/test-results*.xml
+
 EOF

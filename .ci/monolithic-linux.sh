@@ -37,7 +37,7 @@ trap show-stats EXIT
 projects="${1}"
 targets="${2}"
 
-lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
+lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results-linux.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
 echo "--- cmake"
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
