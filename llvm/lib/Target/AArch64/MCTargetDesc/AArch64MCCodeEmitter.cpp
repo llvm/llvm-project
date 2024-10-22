@@ -88,12 +88,6 @@ public:
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const;
 
-  /// getCondCompBranchTargetOpValue - Return the encoded value for a
-  /// conditional compare-and-branch target.
-  uint32_t getCondCompBranchTargetOpValue(const MCInst &MI, unsigned OpIdx,
-                                          SmallVectorImpl<MCFixup> &Fixups,
-                                          const MCSubtargetInfo &STI) const;
-
   /// getPAuthPCRelOpValue - Return the encoded value for a pointer
   /// authentication pc-relative operand.
   uint32_t getPAuthPCRelOpValue(const MCInst &MI, unsigned OpIdx,
@@ -331,27 +325,6 @@ uint32_t AArch64MCCodeEmitter::getCondBranchTargetOpValue(
   assert(MO.isExpr() && "Unexpected target type!");
 
   MCFixupKind Kind = MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19);
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
-
-  ++MCNumFixups;
-
-  // All of the information is in the fixup.
-  return 0;
-}
-
-/// getCondCompBranchTargetOpValue - Return the encoded value for a conditional
-/// compare-and-branch target.
-uint32_t AArch64MCCodeEmitter::getCondCompBranchTargetOpValue(
-    const MCInst &MI, unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
-    const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpIdx);
-
-  // If the destination is an immediate, we have nothing to do.
-  if (MO.isImm())
-    return MO.getImm();
-  assert(MO.isExpr() && "Unexpected target type!");
-
-  MCFixupKind Kind = MCFixupKind(AArch64::fixup_aarch64_pcrel_branch9);
   Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
 
   ++MCNumFixups;
