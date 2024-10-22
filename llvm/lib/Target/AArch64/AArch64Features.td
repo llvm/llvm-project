@@ -522,6 +522,39 @@ def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
 //  Armv9.6 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
+def FeatureCMPBR : ExtensionWithMArch<"cmpbr", "CMPBR", "FEAT_CMPBR",
+  "Enable Armv9.6-A base compare and branch instructions">;
+
+def FeatureF8F32MM: ExtensionWithMArch<"f8f32mm", "F8F32MM", "FEAT_F8F32MM",
+  "Enable Armv9.6-A FP8 to Single-Precision Matrix Multiplication">;
+
+def FeatureF8F16MM: ExtensionWithMArch<"f8f16mm", "F8F16MM", "FEAT_F8F16MM",
+  "Enable Armv9.6-A FP8 to Half-Precision Matrix Multiplication">;
+
+def FeatureFPRCVT: ExtensionWithMArch<"fprcvt", "FPRCVT", "FEAT_FPRCVT",
+  "Enable Armv9.6-A base convert instructions for SIMD&FP scalar register operands of"
+  " different input and output sizes">;
+
+def FeatureLSFE : ExtensionWithMArch<"lsfe", "LSFE", "FEAT_LSFE",
+  "Enable Armv9.6-A base Atomic floating-point in-memory instructions">;
+
+def FeatureSME2p2: ExtensionWithMArch<"sme2p2", "SME2p2", "FEAT_SME2p2",
+  "Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions", [FeatureSME2p1]>;
+
+def FeatureSSVE_AES : ExtensionWithMArch<"ssve-aes", "SSVE_AES", "FEAT_SSVE_AES",
+  "Enable Armv9.6-A SVE2 AES support in streaming SVE mode">;
+
+def FeatureSVE2p2 : ExtensionWithMArch<"sve2p2", "SVE2p2", "FEAT_SVE2p2",
+  "Enable Armv9.6-A Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
+
+def FeatureSVEAES2: ExtensionWithMArch<"sve-aes2", "SVE_AES2", "FEAT_SVE_AES2",
+  "Enable Armv9.6-A SVE multi-vector AES and 128-bit PMULL instructions">;
+
+def FeatureSVEBFSCALE: ExtensionWithMArch<"sve-bfscale", "SVE_BFSCALE", "FEAT_SVE_BFSCALE",
+  "Enable Armv9.6-A SVE BFloat16 scaling instructions">;
+
+def FeatureSVE_F16F32MM: ExtensionWithMArch<"sve-f16f32mm", "SVE_F16F32MM", "FEAT_SVE_F16F32MM",
+  "Enable Armv9.6-A FP16 to FP32 Matrix Multiply instructions">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -833,8 +866,8 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps],
-  !listconcat(HasV9_5aOps.DefaultExts, [])>;
+  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2],
+  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

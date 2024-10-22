@@ -113,8 +113,15 @@ public:
   virtual ~DGNode() = default;
   /// \Returns the number of unscheduled successors.
   unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
+  void decrUnscheduledSuccs() {
+    assert(UnscheduledSuccs > 0 && "Counting error!");
+    --UnscheduledSuccs;
+  }
+  /// \Returns true if all dependent successors have been scheduled.
+  bool ready() const { return UnscheduledSuccs == 0; }
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
+  void setScheduled(bool NewVal) { Scheduled = NewVal; }
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
   using iterator = PredIterator;

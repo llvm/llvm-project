@@ -112,21 +112,23 @@ template void SeedContainer::insert<LoadInst>(LoadInst *);
 template void SeedContainer::insert<StoreInst>(StoreInst *);
 
 #ifndef NDEBUG
-void SeedContainer::dump() const {
+void SeedContainer::print(raw_ostream &OS) const {
   for (const auto &Pair : Bundles) {
     auto [I, Ty, Opc] = Pair.first;
     const auto &SeedsVec = Pair.second;
     std::string RefType = dyn_cast<LoadInst>(I)    ? "Load"
                           : dyn_cast<StoreInst>(I) ? "Store"
                                                    : "Other";
-    dbgs() << "[Inst=" << *I << " Ty=" << Ty << " " << RefType << "]\n";
+    OS << "[Inst=" << *I << " Ty=" << Ty << " " << RefType << "]\n";
     for (const auto &SeedPtr : SeedsVec) {
-      SeedPtr->dump(dbgs());
-      dbgs() << "\n";
+      SeedPtr->dump(OS);
+      OS << "\n";
     }
   }
-  dbgs() << "\n";
+  OS << "\n";
 }
+
+LLVM_DUMP_METHOD void SeedContainer::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
 } // namespace llvm::sandboxir

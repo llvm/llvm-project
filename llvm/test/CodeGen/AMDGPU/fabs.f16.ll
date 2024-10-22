@@ -54,8 +54,6 @@ define amdgpu_kernel void @s_fabs_free_f16(ptr addrspace(1) %out, i16 %in) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %bc= bitcast i16 %in to half
   %fabs = call half @llvm.fabs.f16(half %bc)
@@ -109,8 +107,6 @@ define amdgpu_kernel void @s_fabs_f16(ptr addrspace(1) %out, half %in) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fabs = call half @llvm.fabs.f16(half %in)
   store half %fabs, ptr addrspace(1) %out
@@ -163,8 +159,6 @@ define amdgpu_kernel void @s_fabs_v2f16(ptr addrspace(1) %out, <2 x half> %in) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   store <2 x half> %fabs, ptr addrspace(1) %out
@@ -220,8 +214,6 @@ define amdgpu_kernel void @s_fabs_v4f16(ptr addrspace(1) %out, <4 x half> %in) {
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   store <4 x half> %fabs, ptr addrspace(1) %out
@@ -281,8 +273,6 @@ define amdgpu_kernel void @fabs_fold_f16(ptr addrspace(1) %out, half %in0, half 
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mul_f16_e64 v1, |s4|, s2
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fabs = call half @llvm.fabs.f16(half %in0)
   %fmul = fmul half %fabs, %in1
@@ -341,8 +331,6 @@ define amdgpu_kernel void @v_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
@@ -399,8 +387,6 @@ define amdgpu_kernel void @fabs_free_v2f16(ptr addrspace(1) %out, i32 %in) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %bc = bitcast i32 %in to <2 x half>
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %bc)
@@ -481,8 +467,6 @@ define amdgpu_kernel void @v_fabs_fold_self_v2f16(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
 ; GFX11-NEXT:    v_pk_mul_f16 v0, v1, v0
 ; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x half>, ptr addrspace(1) %in, i32 %tid
@@ -571,8 +555,6 @@ define amdgpu_kernel void @v_fabs_fold_v2f16(ptr addrspace(1) %out, ptr addrspac
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX11-NEXT:    v_pk_mul_f16 v0, v0, s0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x half>, ptr addrspace(1) %in, i32 %tid
@@ -660,8 +642,6 @@ define amdgpu_kernel void @v_extract_fabs_fold_v2f16(ptr addrspace(1) %in) #0 {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v1, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
@@ -742,8 +722,6 @@ define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(ptr addrspace(1) %in) #0
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_d16_hi_b16 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid

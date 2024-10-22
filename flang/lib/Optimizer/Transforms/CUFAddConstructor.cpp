@@ -62,12 +62,15 @@ struct CUFAddConstructor
     // Register kernels
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaModName);
     if (gpuMod) {
+      auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+      auto registeredMod = builder.create<cuf::RegisterModuleOp>(
+          loc, llvmPtrTy, mlir::SymbolRefAttr::get(ctx, gpuMod.getName()));
       for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
         if (func.isKernel()) {
           auto kernelName = mlir::SymbolRefAttr::get(
               builder.getStringAttr(cudaModName),
               {mlir::SymbolRefAttr::get(builder.getContext(), func.getName())});
-          builder.create<cuf::RegisterKernelOp>(loc, kernelName);
+          builder.create<cuf::RegisterKernelOp>(loc, kernelName, registeredMod);
         }
       }
     }

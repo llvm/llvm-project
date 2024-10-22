@@ -2371,9 +2371,9 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
-  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
-    return this->emitGetPtrGlobal(*I, E);
-  return false;
+  if (DiscardResult)
+    return true;
+  return this->emitDummyPtr(E, E);
 }
 
 template <class Emitter>
@@ -3445,11 +3445,8 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
   assert(RD);
   // If the definiton of the result type is incomplete, just return a dummy.
   // If (and when) that is read from, we will fail, but not now.
-  if (!RD->isCompleteDefinition()) {
-    if (std::optional<unsigned> I = P.getOrCreateDummy(GuidDecl))
-      return this->emitGetPtrGlobal(*I, E);
-    return false;
-  }
+  if (!RD->isCompleteDefinition())
+    return this->emitDummyPtr(GuidDecl, E);
 
   std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(GuidDecl);
   if (!GlobalIndex)
@@ -3687,11 +3684,11 @@ bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   if (!E->isExpressibleAsConstantInitializer())
     return this->discard(SubExpr) && this->emitInvalid(E);
 
-  assert(classifyPrim(E) == PT_Ptr);
-  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
-    return this->emitGetPtrGlobal(*I, E);
+  if (DiscardResult)
+    return true;
 
-  return false;
+  assert(classifyPrim(E) == PT_Ptr);
+  return this->emitDummyPtr(E, E);
 }
 
 template <class Emitter>
@@ -4132,10 +4129,16 @@ template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this);
 
+  // If we won't destroy the toplevel scope, check for memory leaks first.
+  if (!DestroyToplevelScope) {
+    if (!this->emitCheckAllocations(E))
+      return false;
+  }
+
   auto maybeDestroyLocals = [&]() -> bool {
     if (DestroyToplevelScope)
-      return RootScope.destroyLocals();
-    return true;
+      return RootScope.destroyLocals() && this->emitCheckAllocations(E);
+    return this->emitCheckAllocations(E);
   };
 
   // Void expressions.
@@ -4171,8 +4174,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  (void)maybeDestroyLocals();
-  return false;
+  return maybeDestroyLocals() && this->emitCheckAllocations(E) && false;
 }
 
 template <class Emitter>
@@ -4214,7 +4216,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
     DeclScope<Emitter> LS(this, VD);
     if (!this->visit(VD->getAnyInitializer()))
       return false;
-    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals();
+    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals() &&
+           this->emitCheckAllocations(VD);
   }
 
   LocalScope<Emitter> VDScope(this, VD);
@@ -4260,7 +4263,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
     return false;
   }
 
-  return VDScope.destroyLocals();
+  return VDScope.destroyLocals() && this->emitCheckAllocations(VD);
 }
 
 template <class Emitter>
@@ -4477,15 +4480,9 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString ||
       BuiltinID == Builtin::BI__builtin_ptrauth_sign_constant ||
       BuiltinID == Builtin::BI__builtin_function_start) {
-    if (std::optional<unsigned> GlobalOffset = P.getOrCreateDummy(E)) {
-      if (!this->emitGetPtrGlobal(*GlobalOffset, E))
-        return false;
-
-      if (PrimType PT = classifyPrim(E); PT != PT_Ptr && isPtrType(PT))
-        return this->emitDecayPtr(PT_Ptr, PT, E);
+    if (DiscardResult)
       return true;
-    }
-    return false;
+    return this->emitDummyPtr(E, E);
   }
 
   QualType ReturnType = E->getType();
@@ -4535,6 +4532,10 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
     }
   }
+  // Explicit calls to trivial destructors
+  if (const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(FuncDecl);
+      DD && DD->isTrivial())
+    return true;
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);
@@ -5728,9 +5729,17 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult)
+    if (DiscardResult) {
+      // assert(false);
       return this->discard(SubExpr);
-    return this->visit(SubExpr);
+    }
+
+    if (!this->visit(SubExpr))
+      return false;
+    if (classifyPrim(SubExpr) == PT_Ptr)
+      return this->emitNarrowPtr(E);
+    return true;
+
   case UO_Not: // ~x
     if (!T)
       return this->emitError(E);
@@ -6079,7 +6088,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
           if (VD->evaluateValue())
             return revisit(VD);
-          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E), E);
+
+          if (!D->getType()->isReferenceType())
+            return this->emitDummyPtr(D, E);
+
+          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                          /*InitializerFailed=*/true, E);
         }
       }
     } else {
@@ -6090,23 +6104,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
   }
 
-  if (std::optional<unsigned> I = P.getOrCreateDummy(D)) {
-    if (!this->emitGetPtrGlobal(*I, E))
-      return false;
-    if (E->getType()->isVoidType())
-      return true;
-    // Convert the dummy pointer to another pointer type if we have to.
-    if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
-      if (isPtrType(PT))
-        return this->emitDecayPtr(PT_Ptr, PT, E);
-      return false;
-    }
-    return true;
-  }
-
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return this->emitInvalidDeclRef(DRE, E);
-  return false;
+  return this->emitDummyPtr(D, E);
 }
 
 template <class Emitter>
@@ -6407,6 +6405,29 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
     return true;
 
   return this->emitRecordDestruction(Desc->ElemRecord, Loc);
+}
+
+/// Create a dummy pointer for the given decl (or expr) and
+/// push a pointer to it on the stack.
+template <class Emitter>
+bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
+  assert(!DiscardResult && "Should've been checked before");
+
+  unsigned DummyID = P.getOrCreateDummy(D);
+
+  if (!this->emitGetPtrGlobal(DummyID, E))
+    return false;
+  if (E->getType()->isVoidType())
+    return true;
+
+  // Convert the dummy pointer to another pointer type if we have to.
+  if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
+    if (isPtrType(PT))
+      return this->emitDecayPtr(PT_Ptr, PT, E);
+    return false;
+  }
+
+  return true;
 }
 
 namespace clang {

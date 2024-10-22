@@ -104,8 +104,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_cfloat128",
+    hdrs = ["include/llvm-libc-types/cfloat128.h"],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_cfloat16",
+    hdrs = ["include/llvm-libc-types/cfloat16.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_fcntl_macros",
     hdrs = ["include/llvm-libc-macros/linux/fcntl-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_size_t",
+    hdrs = ["include/llvm-libc-types/size_t.h"],
 )
 
 ########################### Macro Proxy Header Files ###########################
@@ -266,6 +282,16 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_properties_os",
     hdrs = ["src/__support/macros/properties/os.h"],
+)
+
+libc_support_library(
+    name = "__support_macros_properties_complex_types",
+    hdrs = ["src/__support/macros/properties/complex_types.h"],
+    deps = [
+        ":__support_macros_properties_types",
+        ":llvm_libc_types_cfloat128",
+        ":llvm_libc_types_cfloat16",
+    ],
 )
 
 libc_support_library(
@@ -493,6 +519,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
         ":__support_macros_properties_types",
         ":llvm_libc_macros_stdfix_macros",
     ],
@@ -1390,6 +1417,19 @@ libc_support_library(
         ":__support_time_linux_abs_timeout",
         ":__support_time_linux_clock_conversion",
         ":hdr_time_macros",
+    ],
+)
+
+########################## externally shared targets ###########################
+
+libc_support_library(
+    name = "libc_external_common",
+    hdrs = glob(["shared/*.h"]),
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fp_bits",
+        ":__support_str_to_float",
+        ":__support_str_to_integer",
     ],
 )
 
@@ -3171,6 +3211,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bitset",
         ":__support_macros_optimization",
+        ":llvm_libc_types_size_t",
         ":string_memory_utils",
     ],
 )
