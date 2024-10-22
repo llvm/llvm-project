@@ -56,8 +56,3 @@
 
 # CHECK: error: instruction requires: lse
 # CHECK-NEXT:   casa  w5, w7, [x20]
-
-	.arch arm9.6-a-nocmpbr
-        cbhi x5, x5, #1020
-# CHECK: error: instruction requires: cmpbr
-# CHECK-NEXT:   cbhi x5, x5, #1020

@@ -190,11 +190,6 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       Ctx.reportError(Fixup.getLoc(),
                       "relocation of PAC/AUT instructions is not supported");
       return ELF::R_AARCH64_NONE;
-    case AArch64::fixup_aarch64_pcrel_branch9:
-      Ctx.reportError(
-          Fixup.getLoc(),
-          "relocation of compare-and-branch instructions not supported");
-      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_pcrel_branch19:
       return R_CLS(CONDBR19);
     default:
