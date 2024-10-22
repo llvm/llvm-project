@@ -38,13 +38,14 @@ EvalEmitter::~EvalEmitter() {
 void EvalEmitter::cleanup() { S.cleanup(); }
 
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
-                                            bool ConvertResultToRValue) {
+                                            bool ConvertResultToRValue,
+                                            bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
   this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E)) {
+  if (!this->visitExpr(E, DestroyToplevelScope)) {
     // EvalResult may already have a result set, but something failed
     // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
@@ -131,16 +132,9 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
   return true;
 }
 
-static bool checkReturnState(InterpState &S) {
-  return S.maybeDiagnoseDanglingAllocations();
-}
-
 template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   if (!isActive())
     return true;
-
-  if (!checkReturnState(S))
-    return false;
 
   using T = typename PrimConv<OpType>::T;
   EvalResult.setValue(S.Stk.pop<T>().toAPValue(Ctx.getASTContext()));
@@ -158,18 +152,20 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
-  if (!checkReturnState(S))
-    return false;
-
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
     if (!Ptr.isZero() && !Ptr.isDereferencable())
       return false;
+
+    if (S.getLangOpts().CPlusPlus11 && Ptr.isBlockPointer() &&
+        !CheckFinalLoad(S, OpPC, Ptr)) {
+      return false;
+    }
+
     // Never allow reading from a non-const pointer, unless the memory
     // has been created in this evaluation.
-    if (!Ptr.isZero() && Ptr.isBlockPointer() &&
-        Ptr.block()->getEvalID() != Ctx.getEvalID() &&
-        (!CheckLoad(S, OpPC, Ptr, AK_Read) || !Ptr.isConst()))
+    if (!Ptr.isZero() && !Ptr.isConst() && Ptr.isBlockPointer() &&
+        Ptr.block()->getEvalID() != Ctx.getEvalID())
       return false;
 
     if (std::optional<APValue> V =
@@ -188,16 +184,12 @@ template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
 
-  if (!checkReturnState(S))
-    return false;
   // Function pointers cannot be converted to rvalues.
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
 
 bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
-  if (!checkReturnState(S))
-    return false;
   EvalResult.setValid();
   return true;
 }
@@ -210,11 +202,8 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
-  if (!checkReturnState(S))
-    return false;
-
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getCtx(), EvalResult.getSourceType())) {
+          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
     EvalResult.setValue(*APV);
     return true;
   }

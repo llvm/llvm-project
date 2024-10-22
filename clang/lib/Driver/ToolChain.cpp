@@ -126,7 +126,7 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
                                      "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
                                      "an integer, got '" +
                                          *Str + "'");
-    SecondsToWait = std::min(SecondsToWait, 0); // infinite
+    SecondsToWait = std::max(SecondsToWait, 0); // infinite
   }
   if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
                                 /*MemoryLimit=*/0, &ErrorMessage))
@@ -221,6 +221,17 @@ static void getAArch64MultilibFlags(const Driver &D,
   assert(!ArchName.empty() && "at least one architecture should be found");
   MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
   Result.push_back(llvm::join(MArch, "+"));
+
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  if (BranchProtectionArg) {
+    Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
+
+  const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
+  if (ABIArg) {
+    Result.push_back(ABIArg->getAsString(Args));
+  }
 }
 
 static void getARMMultilibFlags(const Driver &D,
@@ -267,6 +278,12 @@ static void getARMMultilibFlags(const Driver &D,
     break;
   case arm::FloatABI::Invalid:
     llvm_unreachable("Invalid float ABI");
+  }
+
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  if (BranchProtectionArg) {
+    Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 }
 
@@ -369,6 +386,9 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       {"cl", "--driver-mode=cl"},
       {"++", "--driver-mode=g++"},
       {"flang", "--driver-mode=flang"},
+      // For backwards compatibility, we create a symlink for `flang` called
+      // `flang-new`. This will be removed in the future.
+      {"flang-new", "--driver-mode=flang"},
       {"clang-dxc", "--driver-mode=dxc"},
   };
 
@@ -831,8 +851,8 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   llvm::sys::path::append(P, "lib");
   if (auto Ret = getTargetSubDirPath(P))
     return Ret;
-  // Darwin does not use per-target runtime directory.
-  if (Triple.isOSDarwin())
+  // Darwin and AIX does not use per-target runtime directory.
+  if (Triple.isOSDarwin() || Triple.isOSAIX())
     return {};
   llvm::sys::path::append(P, Triple.str());
   return std::string(P);
@@ -1366,7 +1386,7 @@ bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
       Default = false;
     if (A && A->getOption().getID() == options::OPT_ffp_model_EQ) {
       StringRef Model = A->getValue();
-      if (Model != "fast")
+      if (Model != "fast" && Model != "aggressive")
         Default = false;
     }
   }

@@ -4,21 +4,35 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # ctype.h entrypoints
     libc.src.ctype.isalnum
+    libc.src.ctype.isalnum_l
     libc.src.ctype.isalpha
+    libc.src.ctype.isalpha_l
     libc.src.ctype.isascii
     libc.src.ctype.isblank
+    libc.src.ctype.isblank_l
     libc.src.ctype.iscntrl
+    libc.src.ctype.iscntrl_l
     libc.src.ctype.isdigit
+    libc.src.ctype.isdigit_l
     libc.src.ctype.isgraph
+    libc.src.ctype.isgraph_l
     libc.src.ctype.islower
+    libc.src.ctype.islower_l
     libc.src.ctype.isprint
+    libc.src.ctype.isprint_l
     libc.src.ctype.ispunct
+    libc.src.ctype.ispunct_l
     libc.src.ctype.isspace
+    libc.src.ctype.isspace_l
     libc.src.ctype.isupper
+    libc.src.ctype.isupper_l
     libc.src.ctype.isxdigit
+    libc.src.ctype.isxdigit_l
     libc.src.ctype.toascii
     libc.src.ctype.tolower
+    libc.src.ctype.tolower_l
     libc.src.ctype.toupper
+    libc.src.ctype.toupper_l
 
     # string.h entrypoints
     libc.src.string.bcmp
@@ -44,6 +58,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strchrnul
     libc.src.string.strcmp
     libc.src.string.strcoll
+    libc.src.string.strcoll_l
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strdup
@@ -65,6 +80,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
     libc.src.string.strxfrm
+    libc.src.string.strxfrm_l
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
@@ -159,15 +175,23 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.stdlib.strtod
+    libc.src.stdlib.strtod_l
     libc.src.stdlib.strtof
+    libc.src.stdlib.strtof_l
     libc.src.stdlib.strtol
+    libc.src.stdlib.strtol_l
     libc.src.stdlib.strtold
+    libc.src.stdlib.strtold_l
     libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoll_l
     libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoul_l
     libc.src.stdlib.strtoull
+    libc.src.stdlib.strtoull_l
     libc.src.stdlib.at_quick_exit
     libc.src.stdlib.quick_exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.system
 
     # TODO: Implement these correctly
     libc.src.stdlib.aligned_alloc
@@ -192,6 +216,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsprintf
     libc.src.stdio.asprintf
     libc.src.stdio.vasprintf
+    libc.src.stdio.scanf
+    libc.src.stdio.vscanf
+    libc.src.stdio.fscanf
+    libc.src.stdio.vfscanf
     libc.src.stdio.sscanf
     libc.src.stdio.vsscanf
     libc.src.stdio.feof
@@ -212,6 +240,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.remove
+    libc.src.stdio.rename
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
@@ -230,6 +259,15 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wchar.h entrypoints
     libc.src.wchar.wctob
+
+    # locale.h entrypoints
+    libc.src.locale.localeconv
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call
@@ -483,7 +521,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.coshf16
     libc.src.math.exp10f16
+    libc.src.math.exp10m1f16
     libc.src.math.exp2f16
     libc.src.math.expf16
     libc.src.math.f16add
@@ -527,7 +567,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
+    libc.src.math.log10f16
+    libc.src.math.log2f16
     libc.src.math.logbf16
+    libc.src.math.logf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
     libc.src.math.modff16
@@ -546,6 +589,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
+    libc.src.math.sinhf16
+    libc.src.math.sqrtf16
+    libc.src.math.tanhf16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
     libc.src.math.truncf16

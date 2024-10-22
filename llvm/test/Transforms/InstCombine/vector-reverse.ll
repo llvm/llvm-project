@@ -250,7 +250,7 @@ define <vscale x 4 x i1> @icmp_reverse_splat_RHS(<vscale x 4 x i32> %a, i32 %b) 
 ; CHECK-LABEL: @icmp_reverse_splat_RHS(
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <vscale x 4 x i32> [[B_SPLAT]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt <vscale x 4 x i32> [[A:%.*]], [[B_SPLAT]]
 ; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[CMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[CMP]]
 ;

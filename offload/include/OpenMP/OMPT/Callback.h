@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OMPTARGET_OPENMP_OMPT_CALLBACK_H
-#define OMPTARGET_OPENMP_OMPT_CALLBACK_H
+#ifndef OFFLOAD_INCLUDE_OPENMP_OMPT_CALLBACK_H
+#define OFFLOAD_INCLUDE_OPENMP_OMPT_CALLBACK_H
 
 #ifdef OMPT_SUPPORT
 
@@ -102,4 +102,4 @@ extern bool Initialized;
 #define performIfOmptInitialized(stmt)
 #endif // OMPT_SUPPORT
 
-#endif // OMPTARGET_OPENMP_OMPT_CALLBACK_H
+#endif // OFFLOAD_INCLUDE_OPENMP_OMPT_CALLBACK_H

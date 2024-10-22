@@ -91,3 +91,24 @@ module m3
   real(kind(0.d0)), parameter :: x14 = ieee_next_down(nan)
   logical, parameter :: test_14 = .not. (x14 == x14)
 end module
+
+module m4
+  use ieee_arithmetic
+  real(2), parameter :: neg_inf_2 = real(z'fc00',2)
+  real(2), parameter :: neg_huge_2 = real(z'fbff',2)
+  real(3), parameter :: neg_huge_3 = real(z'ff7f',3)
+  logical, parameter :: test_1 = ieee_next_after(neg_inf_2, neg_huge_3) == neg_huge_2
+end module
+
+#if __x86_64__
+module m5
+  use ieee_arithmetic
+  real(8), parameter :: neg_inf_8  = real(z'fff0000000000000',8)
+  real(8), parameter :: neg_huge_8 = real(z'ffefffffffffffff',8)
+  real(10), parameter :: neg_one_10 = real(z'bfff8000000000000000',10)
+  real(10), parameter :: neg_inf_10 = real(z'ffff8000000000000000',10)
+  logical, parameter :: test_1 = ieee_next_after(neg_inf_8, neg_one_10) == neg_huge_8
+  logical, parameter :: test_2 = ieee_next_after(neg_one_10, neg_inf_10) == &
+                                 real(z'bfff8000000000000001', 10)
+end module
+#endif

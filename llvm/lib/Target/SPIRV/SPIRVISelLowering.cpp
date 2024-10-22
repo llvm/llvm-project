@@ -91,13 +91,9 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     return std::make_pair(0u, RC);
 
   if (VT.isFloatingPoint())
-    RC = VT.isVector() ? &SPIRV::vfIDRegClass
-                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::fID64RegClass
-                                                        : &SPIRV::fIDRegClass);
+    RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
   else if (VT.isInteger())
-    RC = VT.isVector() ? &SPIRV::vIDRegClass
-                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::iID64RegClass
-                                                        : &SPIRV::iIDRegClass);
+    RC = VT.isVector() ? &SPIRV::vIDRegClass : &SPIRV::iIDRegClass;
   else
     RC = &SPIRV::iIDRegClass;
 
@@ -115,7 +111,7 @@ static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                             SPIRVGlobalRegistry &GR, MachineInstr &I,
                             Register OpReg, unsigned OpIdx,
                             SPIRVType *NewPtrType) {
-  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MachineIRBuilder MIB(I);
   bool Res = MIB.buildInstr(SPIRV::OpBitcast)
                  .addDef(NewReg)
@@ -357,6 +353,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   GR.setCurrentFunc(MF);
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
     MachineBasicBlock *MBB = &*I;
+    SmallPtrSet<MachineInstr *, 8> ToMove;
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
@@ -460,7 +457,22 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
             MI.removeOperand(i);
         }
       } break;
+      case SPIRV::OpPhi: {
+        // Phi refers to a type definition that goes after the Phi
+        // instruction, so that the virtual register definition of the type
+        // doesn't dominate all uses. Let's place the type definition
+        // instruction at the end of the predecessor.
+        MachineBasicBlock *Curr = MI.getParent();
+        SPIRVType *Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+        if (Type->getParent() == Curr && !Curr->pred_empty())
+          ToMove.insert(const_cast<MachineInstr *>(Type));
+      } break;
       }
+    }
+    for (MachineInstr *MI : ToMove) {
+      MachineBasicBlock *Curr = MI->getParent();
+      MachineBasicBlock *Pred = *Curr->pred_begin();
+      Pred->insert(Pred->getFirstTerminator(), Curr->remove_instr(MI));
     }
   }
   ProcessedMF.insert(&MF);

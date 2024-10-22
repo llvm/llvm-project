@@ -18,6 +18,9 @@
   define i32 @foo2(i32 %a, i32 %b) comdat { ret i32 0 }
 
   define i32 @foo3(i32 %a, i32 %b) section ".abc" { ret i32 0 }
+
+  define i32 @foo4(i32 %a, i32 %b) !section_prefix !0 { ret i32 0 }
+  !0 = !{!"function_section_prefix", !"myprefix"}
 ...
 ---
 name:            foo
@@ -27,23 +30,24 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   PseudoRET
+  ;
   ; CHECK-FS-LABEL: name: foo
   ; CHECK-FS: bb.0:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
@@ -109,26 +113,27 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   PseudoRET
+  ;
   ; CHECK-FS-LABEL: name: foo2
   ; CHECK-FS: bb.0:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
@@ -223,6 +228,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   PseudoRET
+  ;
   ; CHECK-FS-LABEL: name: foo3
   ; CHECK-FS: bb.0:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
@@ -251,6 +257,92 @@ body:             |
   ; CHECK-FS-NEXT:   $x12 = ADDI $x10, 17
   ; CHECK-FS-NEXT:   $x11 = AND $x12, $x11
   ; CHECK-FS-NEXT:   $x10 = SUB $x10, $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+  ; CHECK-FS-NEXT:   PseudoBR %bb.3
+  ; CHECK-FS-NEXT: {{  $}}
+  ; CHECK-FS-NEXT: bb.3:
+  ; CHECK-FS-NEXT:   PseudoRET
+  bb.0:
+    liveins: $x10, $x11, $x13
+
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+    PseudoBR %bb.3
+
+  bb.1:
+    liveins: $x10, $x11, $x13
+
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+    PseudoBR %bb.3
+
+  bb.2:
+    liveins: $x10, $x11, $x13
+
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+    PseudoBR %bb.3
+
+  bb.3:
+    PseudoRET
+...
+---
+name:            foo4
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: foo4
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   PseudoRET
+  ;
+  ; CHECK-FS-LABEL: name: foo4
+  ; CHECK-FS: bb.0:
+  ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
+  ; CHECK-FS-NEXT: {{  $}}
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+  ; CHECK-FS-NEXT:   PseudoBR %bb.3
+  ; CHECK-FS-NEXT: {{  $}}
+  ; CHECK-FS-NEXT: bb.1:
+  ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
+  ; CHECK-FS-NEXT: {{  $}}
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
+  ; CHECK-FS-NEXT:   PseudoBR %bb.3
+  ; CHECK-FS-NEXT: {{  $}}
+  ; CHECK-FS-NEXT: bb.2:
+  ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
+  ; CHECK-FS-NEXT: {{  $}}
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}

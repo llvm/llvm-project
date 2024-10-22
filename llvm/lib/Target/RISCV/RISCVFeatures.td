@@ -243,8 +243,8 @@ def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
                          "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
 
 def FeatureStdExtZacas
-    : RISCVExperimentalExtension<"zacas", 1, 0,
-                                 "'Zacas' (Atomic Compare-And-Swap Instructions)">,
+    : RISCVExtension<"zacas", 1, 0,
+                     "'Zacas' (Atomic Compare-And-Swap Instructions)">,
       RISCVExtensionBitmask<0, 26>;
 def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                      AssemblerPredicate<(all_of FeatureStdExtZacas),
@@ -348,6 +348,11 @@ def FeatureStdExtZfinx
 def HasStdExtZfinx : Predicate<"Subtarget->hasStdExtZfinx()">,
                      AssemblerPredicate<(all_of FeatureStdExtZfinx),
                                         "'Zfinx' (Float in Integer)">;
+def HasStdExtFOrZfinx : Predicate<"Subtarget->hasStdExtFOrZfinx()">,
+                        AssemblerPredicate<(any_of FeatureStdExtF,
+                                                   FeatureStdExtZfinx),
+                            "'F' (Single-Precision Floating-Point) or "
+                            "'Zfinx' (Float in Integer)">;
 
 def FeatureStdExtZdinx
     : RISCVExtension<"zdinx", 1, 0,
@@ -508,9 +513,6 @@ def FeatureStdExtB
     : RISCVExtension<"b", 1, 0,
                      "'B' (the collection of the Zba, Zbb, Zbs extensions)",
                      [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
-def HasStdExtB : Predicate<"Subtarget->hasStdExtB()">,
-                           AssemblerPredicate<(all_of FeatureStdExtB),
-                           "'B' (the collection of the Zba, Zbb, Zbs extensions)">;
 
 def FeatureStdExtZbkb
     : RISCVExtension<"zbkb", 1, 0,
@@ -968,9 +970,9 @@ def FeatureStdExtSstc
     : RISCVExtension<"sstc", 1, 0,
                      "'Sstc' (Supervisor-mode timer interrupts)">;
 
-def FeaturesStdExtSsqosid
-    : RISCVExperimentalExtension<"ssqosid", 1, 0,
-                                 "'Ssqosid' (Quality-of-Service (QoS) Identifiers)">;
+def FeatureStdExtSsqosid
+    : RISCVExtension<"ssqosid", 1, 0,
+                     "'Ssqosid' (Quality-of-Service (QoS) Identifiers)">;
 
 def FeatureStdExtShtvala
     : RISCVExtension<"shtvala", 1, 0,
@@ -1053,6 +1055,19 @@ def FeatureStdExtSspm
 def FeatureStdExtSupm
     : RISCVExperimentalExtension<"supm", 1, 0,
                                  "'Supm' (Indicates User-mode Pointer Masking)">;
+
+def FeatureStdExtSmctr
+    : RISCVExperimentalExtension<"smctr", 1, 0,
+                                 "'Smctr' (Control Transfer Records Machine Level)",
+                                 [FeatureStdExtSscsrind]>;
+def FeatureStdExtSsctr
+    : RISCVExperimentalExtension<"ssctr" ,1, 0,
+                                 "'Ssctr' (Control Transfer Records Supervisor Level)",
+                                 [FeatureStdExtSscsrind]>;
+def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
+                            AssemblerPredicate<(any_of FeatureStdExtSmctr, FeatureStdExtSsctr),
+                               "'Smctr' (Control Transfer Records Machine Level) or "
+                               "'Ssctr' (Control Transfer Records Supervisor Level)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions

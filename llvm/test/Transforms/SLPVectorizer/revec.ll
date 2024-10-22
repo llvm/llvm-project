@@ -304,10 +304,10 @@ define void @test10() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.vector.insert.v32i8.v16i8(<32 x i8> poison, <16 x i8> poison, i64 16)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <32 x i8> @llvm.vector.insert.v32i8.v16i8(<32 x i8> [[TMP1]], <16 x i8> [[TMP0]], i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i8> [[TMP2]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i8> [[TMP3]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i8> [[TMP2]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <16 x i8> [[TMP4]] to <16 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i16> [[TMP5]], <16 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <32 x i16> [[TMP6]], <32 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i16> [[TMP5]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <16 x i16> [[TMP7]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <16 x i8> [[TMP8]] to <16 x i32>
 ; CHECK-NEXT:    store <16 x i32> [[TMP9]], ptr null, align 4

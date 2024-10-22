@@ -1023,6 +1023,16 @@ class concat_iterator
                                   std::forward_iterator_tag, ValueT> {
   using BaseT = typename concat_iterator::iterator_facade_base;
 
+  static constexpr bool ReturnsByValue =
+      !(std::is_reference_v<decltype(*std::declval<IterTs>())> && ...);
+
+  using reference_type =
+      typename std::conditional_t<ReturnsByValue, ValueT, ValueT &>;
+
+  using handle_type =
+      typename std::conditional_t<ReturnsByValue, std::optional<ValueT>,
+                                  ValueT *>;
+
   /// We store both the current and end iterators for each concatenated
   /// sequence in a tuple of pairs.
   ///
@@ -1065,27 +1075,30 @@ class concat_iterator
   /// Returns null if the specified iterator is at the end. Otherwise,
   /// dereferences the iterator and returns the address of the resulting
   /// reference.
-  template <size_t Index> ValueT *getHelper() const {
+  template <size_t Index> handle_type getHelper() const {
     auto &Begin = std::get<Index>(Begins);
     auto &End = std::get<Index>(Ends);
     if (Begin == End)
-      return nullptr;
+      return {};
 
-    return &*Begin;
+    if constexpr (ReturnsByValue)
+      return *Begin;
+    else
+      return &*Begin;
   }
 
   /// Finds the first non-end iterator, dereferences, and returns the resulting
   /// reference.
   ///
   /// It is an error to call this with all iterators at the end.
-  template <size_t... Ns> ValueT &get(std::index_sequence<Ns...>) const {
+  template <size_t... Ns> reference_type get(std::index_sequence<Ns...>) const {
     // Build a sequence of functions to get from iterator if possible.
-    ValueT *(concat_iterator::*GetHelperFns[])() const = {
-        &concat_iterator::getHelper<Ns>...};
+    handle_type (concat_iterator::*GetHelperFns[])()
+        const = {&concat_iterator::getHelper<Ns>...};
 
     // Loop over them, and return the first result we find.
     for (auto &GetHelperFn : GetHelperFns)
-      if (ValueT *P = (this->*GetHelperFn)())
+      if (auto P = (this->*GetHelperFn)())
         return *P;
 
     llvm_unreachable("Attempted to get a pointer from an end concat iterator!");
@@ -1107,7 +1120,7 @@ public:
     return *this;
   }
 
-  ValueT &operator*() const {
+  reference_type operator*() const {
     return get(std::index_sequence_for<IterTs...>());
   }
 
@@ -1194,7 +1207,8 @@ public:
     return index - rhs.index;
   }
   bool operator==(const indexed_accessor_iterator &rhs) const {
-    return base == rhs.base && index == rhs.index;
+    assert(base == rhs.base && "incompatible iterators");
+    return index == rhs.index;
   }
   bool operator<(const indexed_accessor_iterator &rhs) const {
     assert(base == rhs.base && "incompatible iterators");
@@ -1847,7 +1861,7 @@ OutputIt replace_copy(R &&Range, OutputIt Out, const T &OldValue,
 /// begin/end explicitly.
 template <typename R, typename T>
 void replace(R &&Range, const T &OldValue, const T &NewValue) {
-  return std::replace(adl_begin(Range), adl_end(Range), OldValue, NewValue);
+  std::replace(adl_begin(Range), adl_end(Range), OldValue, NewValue);
 }
 
 /// Provide wrappers to std::move which take ranges instead of having to
@@ -1982,6 +1996,8 @@ auto upper_bound(R &&Range, T &&Value, Compare C) {
                           std::forward<T>(Value), C);
 }
 
+/// Provide wrappers to std::min_element which take ranges instead of having to
+/// pass begin/end explicitly.
 template <typename R> auto min_element(R &&Range) {
   return std::min_element(adl_begin(Range), adl_end(Range));
 }
@@ -1990,12 +2006,28 @@ template <typename R, typename Compare> auto min_element(R &&Range, Compare C) {
   return std::min_element(adl_begin(Range), adl_end(Range), C);
 }
 
+/// Provide wrappers to std::max_element which take ranges instead of having to
+/// pass begin/end explicitly.
 template <typename R> auto max_element(R &&Range) {
   return std::max_element(adl_begin(Range), adl_end(Range));
 }
 
 template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
   return std::max_element(adl_begin(Range), adl_end(Range), C);
+}
+
+/// Provide wrappers to std::mismatch which take ranges instead of having to
+/// pass begin/end explicitly.
+/// This function returns a pair of iterators for the first mismatching elements
+/// from `R1` and `R2`. As an example, if:
+///
+/// R1 = [0, 1, 4, 6], R2 = [0, 1, 5, 6]
+///
+/// this function will return a pair of iterators, first pointing to R1[2] and
+/// second pointing to R2[2].
+template <typename R1, typename R2> auto mismatch(R1 &&Range1, R2 &&Range2) {
+  return std::mismatch(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                       adl_end(Range2));
 }
 
 template <typename R>
@@ -2044,7 +2076,7 @@ bool equal(L &&LRange, R &&RRange, BinaryPredicate P) {
 template <typename R> bool all_equal(R &&Range) {
   auto Begin = adl_begin(Range);
   auto End = adl_end(Range);
-  return Begin == End || std::equal(Begin + 1, End, Begin);
+  return Begin == End || std::equal(std::next(Begin), End, Begin);
 }
 
 /// Returns true if all Values in the initializer lists are equal or the list

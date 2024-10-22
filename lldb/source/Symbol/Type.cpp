@@ -134,6 +134,20 @@ bool TypeQuery::ContextMatches(
     if (ctx == ctx_end)
       return false; // Pattern too long.
 
+    if (ctx->kind == CompilerContextKind::Namespace && ctx->name.IsEmpty()) {
+      // We're matching an anonymous namespace. These are optional, so we check
+      // if the pattern expects an anonymous namespace.
+      if (pat->name.IsEmpty() && (pat->kind & CompilerContextKind::Namespace) ==
+                                     CompilerContextKind::Namespace) {
+        // Match, advance both iterators.
+        ++pat;
+      }
+      // Otherwise, only advance the context to skip over the anonymous
+      // namespace, and try matching again.
+      ++ctx;
+      continue;
+    }
+
     // See if there is a kind mismatch; they should have 1 bit in common.
     if ((ctx->kind & pat->kind) == CompilerContextKind())
       return false;
@@ -145,10 +159,16 @@ bool TypeQuery::ContextMatches(
     ++pat;
   }
 
-  // Skip over any remaining module entries if we were asked to do that.
-  while (GetIgnoreModules() && ctx != ctx_end &&
-         ctx->kind == CompilerContextKind::Module)
-    ++ctx;
+  // Skip over any remaining module and anonymous namespace entries if we were
+  // asked to do that.
+  auto should_skip = [this](const CompilerContext &ctx) {
+    if (ctx.kind == CompilerContextKind::Module)
+      return GetIgnoreModules();
+    if (ctx.kind == CompilerContextKind::Namespace && ctx.name.IsEmpty())
+      return !GetStrictNamespaces();
+    return false;
+  };
+  ctx = std::find_if_not(ctx, ctx_end, should_skip);
 
   // At this point, we have exhausted the pattern and we have a partial match at
   // least. If that's all we're looking for, we're done.
@@ -788,7 +808,13 @@ Type::GetTypeScopeAndBasename(llvm::StringRef name) {
     switch (pos.value()) {
     case ':':
       if (prev_is_colon && template_depth == 0) {
-        result.scope.push_back(name.slice(name_begin, pos.index() - 1));
+        llvm::StringRef scope_name = name.slice(name_begin, pos.index() - 1);
+        // The itanium demangler uses this string to represent anonymous
+        // namespaces. Convert it to a more language-agnostic form (which is
+        // also used in DWARF).
+        if (scope_name == "(anonymous namespace)")
+          scope_name = "";
+        result.scope.push_back(scope_name);
         name_begin = pos.index() + 1;
       }
       break;

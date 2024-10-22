@@ -80,7 +80,6 @@ REM Prerequisites:
 REM
 REM   Visual Studio 2019, CMake, Ninja, GNUWin32, SWIG, Python 3,
 REM   NSIS with the strlen_8192 patch,
-REM   Visual Studio 2019 SDK and Nuget (for the clang-format plugin),
 REM   Perl (for the OpenMP run-time).
 REM
 REM
@@ -151,6 +150,7 @@ set common_cmake_flags=^
   -DCMAKE_BUILD_TYPE=Release ^
   -DLLVM_ENABLE_ASSERTIONS=OFF ^
   -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON ^
+  -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" ^
   -DLLVM_BUILD_LLVM_C_DYLIB=ON ^
   -DCMAKE_INSTALL_UCRT_LIBRARIES=ON ^
   -DPython3_FIND_REGISTRY=NEVER ^
@@ -192,6 +192,7 @@ REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
+  -DLLVM_ENABLE_RPMALLOC=OFF ^
   -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^

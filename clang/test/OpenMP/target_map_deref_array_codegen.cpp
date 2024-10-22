@@ -75,7 +75,7 @@ void foo(int **t1d)
 // CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[T1D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[T1D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
-// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 0
+// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP10]], i64 0
 // CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 8
 // CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0

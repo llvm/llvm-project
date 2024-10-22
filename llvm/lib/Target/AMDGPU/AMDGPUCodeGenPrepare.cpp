@@ -119,8 +119,8 @@ public:
       return SqrtF32;
 
     LLVMContext &Ctx = Mod->getContext();
-    SqrtF32 = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_sqrt,
-                                        {Type::getFloatTy(Ctx)});
+    SqrtF32 = Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::amdgcn_sqrt,
+                                                {Type::getFloatTy(Ctx)});
     return SqrtF32;
   }
 
@@ -129,7 +129,7 @@ public:
       return LdexpF32;
 
     LLVMContext &Ctx = Mod->getContext();
-    LdexpF32 = Intrinsic::getDeclaration(
+    LdexpF32 = Intrinsic::getOrInsertDeclaration(
         Mod, Intrinsic::ldexp, {Type::getFloatTy(Ctx), Type::getInt32Ty(Ctx)});
     return LdexpF32;
   }
@@ -576,10 +576,9 @@ bool AMDGPUCodeGenPrepareImpl::promoteUniformBitreverseToI32(
   Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
   Type *I32Ty = getI32Ty(Builder, I.getType());
-  Function *I32 =
-      Intrinsic::getDeclaration(Mod, Intrinsic::bitreverse, { I32Ty });
   Value *ExtOp = Builder.CreateZExt(I.getOperand(0), I32Ty);
-  Value *ExtRes = Builder.CreateCall(I32, { ExtOp });
+  Value *ExtRes =
+      Builder.CreateIntrinsic(Intrinsic::bitreverse, {I32Ty}, {ExtOp});
   Value *LShrOp =
       Builder.CreateLShr(ExtRes, 32 - getBaseElementBitWidth(I.getType()));
   Value *TruncRes =
@@ -1260,9 +1259,8 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
                        : Builder.CreateUIToFP(IB,F32Ty);
 
-  Function *RcpDecl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp,
-                                                Builder.getFloatTy());
-  Value *RCP = Builder.CreateCall(RcpDecl, { FB });
+  Value *RCP = Builder.CreateIntrinsic(Intrinsic::amdgcn_rcp,
+                                       Builder.getFloatTy(), {FB});
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
@@ -1455,8 +1453,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
 
   // Initial estimate of inv(y).
   Value *FloatY = Builder.CreateUIToFP(Y, F32Ty);
-  Function *Rcp = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp, F32Ty);
-  Value *RcpY = Builder.CreateCall(Rcp, {FloatY});
+  Value *RcpY = Builder.CreateIntrinsic(Intrinsic::amdgcn_rcp, F32Ty, {FloatY});
   Constant *Scale = ConstantFP::get(F32Ty, llvm::bit_cast<float>(0x4F7FFFFE));
   Value *ScaledY = Builder.CreateFMul(RcpY, Scale);
   Value *Z = Builder.CreateFPToUI(ScaledY, I32Ty);

@@ -538,7 +538,7 @@ define <2 x i43> @lshr_shl_eq_amt_multi_use_splat_vec(<2 x i43> %A) {
 define i37 @test25(i37 %AA, i37 %BB) {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[D:%.*]] = and i37 [[AA:%.*]], -131072
-; CHECK-NEXT:    [[C2:%.*]] = add i37 [[D]], [[BB:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = add i37 [[BB:%.*]], [[D]]
 ; CHECK-NEXT:    [[F:%.*]] = and i37 [[C2]], -131072
 ; CHECK-NEXT:    ret i37 [[F]]
 ;

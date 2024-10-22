@@ -52,12 +52,12 @@ struct SIInstrWorklist {
   void insert(MachineInstr *MI);
 
   MachineInstr *top() const {
-    auto iter = InstrList.begin();
+    const auto *iter = InstrList.begin();
     return *iter;
   }
 
   void erase_top() {
-    auto iter = InstrList.begin();
+    const auto *iter = InstrList.begin();
     InstrList.erase(iter);
   }
 
@@ -178,6 +178,9 @@ private:
 
   Register findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
 
+  bool verifyCopy(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  StringRef &ErrInfo) const;
+
 protected:
   /// If the specific machine instruction is a instruction that moves/copies
   /// value from one register to another register return destination and source
@@ -255,7 +258,8 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void materializeImmediate(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, const DebugLoc &DL,
@@ -1209,12 +1213,14 @@ public:
   /// Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
-  /// Copy a value from a VGPR (\p SrcReg) to SGPR.  This function can only
-  /// be used when it is know that the value in SrcReg is same across all
-  /// threads in the wave.
+  /// Copy a value from a VGPR (\p SrcReg) to SGPR. The desired register class
+  /// for the dst register (\p DstRC) can be optionally supplied. This function
+  /// can only be used when it is know that the value in SrcReg is same across
+  /// all threads in the wave.
   /// \returns The SGPR register that \p SrcReg was copied to.
   Register readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
-                              MachineRegisterInfo &MRI) const;
+                              MachineRegisterInfo &MRI,
+                              const TargetRegisterClass *DstRC = nullptr) const;
 
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;
@@ -1306,14 +1312,6 @@ public:
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
-
-  bool isNonUniformBranchInstr(MachineInstr &Instr) const;
-
-  void convertNonUniformIfRegion(MachineBasicBlock *IfEntry,
-                                 MachineBasicBlock *IfEnd) const;
-
-  void convertNonUniformLoopRegion(MachineBasicBlock *LoopEntry,
-                                   MachineBasicBlock *LoopEnd) const;
 
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;

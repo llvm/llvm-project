@@ -273,3 +273,89 @@ bool CombinerHelper::matchExtOfExt(const MachineInstr &FirstMI,
 
   return false;
 }
+
+bool CombinerHelper::matchCastOfBuildVector(const MachineInstr &CastMI,
+                                            const MachineInstr &BVMI,
+                                            BuildFnTy &MatchInfo) {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+  const GBuildVector *BV = cast<GBuildVector>(&BVMI);
+
+  if (!MRI.hasOneNonDBGUse(BV->getReg(0)))
+    return false;
+
+  Register Dst = Cast->getReg(0);
+  // The type of the new build vector.
+  LLT DstTy = MRI.getType(Dst);
+  // The scalar or element type of the new build vector.
+  LLT ElemTy = DstTy.getScalarType();
+  // The scalar or element type of the old build vector.
+  LLT InputElemTy = MRI.getType(BV->getReg(0)).getElementType();
+
+  // Check legality of new build vector, the scalar casts, and profitability of
+  // the many casts.
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {DstTy, ElemTy}}) ||
+      !isLegalOrBeforeLegalizer({Cast->getOpcode(), {ElemTy, InputElemTy}}) ||
+      !isCastFree(Cast->getOpcode(), ElemTy, InputElemTy))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    SmallVector<Register> Casts;
+    unsigned Elements = BV->getNumSources();
+    for (unsigned I = 0; I < Elements; ++I) {
+      auto CastI =
+          B.buildInstr(Cast->getOpcode(), {ElemTy}, {BV->getSourceReg(I)});
+      Casts.push_back(CastI.getReg(0));
+    }
+
+    B.buildBuildVector(Dst, Casts);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchNarrowBinop(const MachineInstr &TruncMI,
+                                      const MachineInstr &BinopMI,
+                                      BuildFnTy &MatchInfo) {
+  const GTrunc *Trunc = cast<GTrunc>(&TruncMI);
+  const GBinOp *BinOp = cast<GBinOp>(&BinopMI);
+
+  if (!MRI.hasOneNonDBGUse(BinOp->getReg(0)))
+    return false;
+
+  Register Dst = Trunc->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+
+  // Is narrow binop legal?
+  if (!isLegalOrBeforeLegalizer({BinOp->getOpcode(), {DstTy}}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto LHS = B.buildTrunc(DstTy, BinOp->getLHSReg());
+    auto RHS = B.buildTrunc(DstTy, BinOp->getRHSReg());
+    B.buildInstr(BinOp->getOpcode(), {Dst}, {LHS, RHS});
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
+                                        APInt &MatchInfo) {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+
+  APInt Input = getIConstantFromReg(Cast->getSrcReg(), MRI);
+
+  LLT DstTy = MRI.getType(Cast->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  switch (Cast->getOpcode()) {
+  case TargetOpcode::G_TRUNC: {
+    MatchInfo = Input.trunc(DstTy.getScalarSizeInBits());
+    return true;
+  }
+  default:
+    return false;
+  }
+}

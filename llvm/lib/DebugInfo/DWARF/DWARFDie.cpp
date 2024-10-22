@@ -291,13 +291,12 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
     if (auto Value = Die.find(Attrs))
       return Value;
 
-    if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
-      if (Seen.insert(D).second)
-        Worklist.push_back(D);
-
-    if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_specification))
-      if (Seen.insert(D).second)
-        Worklist.push_back(D);
+    for (dwarf::Attribute Attr :
+         {DW_AT_abstract_origin, DW_AT_specification, DW_AT_signature}) {
+      if (auto D = Die.getAttributeValueAsReferencedDie(Attr))
+        if (Seen.insert(D).second)
+          Worklist.push_back(D);
+    }
   }
 
   return std::nullopt;
@@ -336,6 +335,13 @@ DWARFDie DWARFDie::resolveTypeUnitReference() const {
     }
   }
   return *this;
+}
+
+DWARFDie DWARFDie::resolveReferencedType(dwarf::Attribute Attr) const {
+  return getAttributeValueAsReferencedDie(Attr).resolveTypeUnitReference();
+}
+DWARFDie DWARFDie::resolveReferencedType(const DWARFFormValue &V) const {
+  return getAttributeValueAsReferencedDie(V).resolveTypeUnitReference();
 }
 
 std::optional<uint64_t> DWARFDie::getRangesBaseAttribute() const {
@@ -778,12 +784,12 @@ bool DWARFAttribute::mayHaveLocationExpr(dwarf::Attribute Attr) {
 namespace llvm {
 
 void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS) {
-  DWARFTypePrinter(OS).appendQualifiedName(DIE);
+  DWARFTypePrinter<DWARFDie>(OS).appendQualifiedName(DIE);
 }
 
 void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
                              std::string *OriginalFullName) {
-  DWARFTypePrinter(OS).appendUnqualifiedName(DIE, OriginalFullName);
+  DWARFTypePrinter<DWARFDie>(OS).appendUnqualifiedName(DIE, OriginalFullName);
 }
 
 } // namespace llvm

@@ -75,12 +75,12 @@ define void @divergent_i1_phi_used_outside_loop_larger_loop_body(float %val, ptr
 ; GFX10-NEXT:  .LBB1_1: ; %loop.cond
 ; GFX10-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX10-NEXT:    v_add_co_u32 v1, s4, v1, 4
+; GFX10-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v2, s4, 0, v2, s4
-; GFX10-NEXT:    v_cmp_le_i32_e32 vcc_lo, 10, v0
 ; GFX10-NEXT:    s_andn2_b32 s7, s5, exec_lo
 ; GFX10-NEXT:    s_and_b32 s8, exec_lo, s6
+; GFX10-NEXT:    v_cmp_le_i32_e32 vcc_lo, 10, v0
 ; GFX10-NEXT:    s_or_b32 s4, s7, s8
 ; GFX10-NEXT:    s_cbranch_vccz .LBB1_4
 ; GFX10-NEXT:  .LBB1_2: ; %loop.start
@@ -191,9 +191,9 @@ define void @divergent_i1_xor_used_outside_loop_larger_loop_body(i32 %num.elts, 
 ; GFX10-LABEL: divergent_i1_xor_used_outside_loop_larger_loop_body:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    s_mov_b32 s5, 0
 ; GFX10-NEXT:    s_mov_b32 s6, -1
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX10-NEXT:    s_cbranch_execz .LBB3_6
 ; GFX10-NEXT:  ; %bb.1: ; %loop.start.preheader

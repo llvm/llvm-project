@@ -4,7 +4,7 @@
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
-// CHECK: error: unknown architectural extension: axp64
+// CHECK: error: unsupported architectural extension: axp64
 // CHECK-NEXT: .arch_extension axp64
 
 crc32cx w0, w1, x3
@@ -49,6 +49,8 @@ fminnm d0, d0, d1
 // CHECK: [[@LINE-1]]:1: error: instruction requires: fp
 // CHECK-NEXT: fminnm d0, d0, d1
 
+// nofp implied nosimd, so reinstate it
+.arch_extension simd
 addp v0.4s, v0.4s, v0.4s
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: neon
 .arch_extension nosimd
@@ -70,6 +72,8 @@ casa w5, w7, [x20]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: lse
 // CHECK-NEXT: casa w5, w7, [x20]
 
+// nolse implied nolse128, so reinstate it
+.arch_extension lse128
 swpp x0, x2, [x3]
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: lse128
 .arch_extension nolse128
@@ -84,6 +88,8 @@ cfp rctx, x0
 // CHECK: [[@LINE-1]]:5: error: CFPRCTX requires: predres
 // CHECK-NEXT: cfp rctx, x0
 
+// nopredres implied nopredres2, so reinstate it
+.arch_extension predres2
 cosp rctx, x0
 // CHECK-NOT: [[@LINE-1]]:6: error: COSP requires: predres2
 .arch_extension nopredres2
@@ -133,6 +139,8 @@ ldapr x0, [x1]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: rcpc
 // CHECK-NEXT: ldapr x0, [x1]
 
+// norcpc implied norcpc3, so reinstate it
+.arch_extension rcpc3
 stilp w24, w0, [x16, #-8]!
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: rcpc3
 .arch_extension norcpc3
@@ -169,6 +177,8 @@ cpyfp [x0]!, [x1]!, x2!
 // CHECK: [[@LINE-1]]:1: error: instruction requires: mops
 // CHECK-NEXT: cpyfp [x0]!, [x1]!, x2!
 
+// nolse128 implied nod128, so reinstate it
+.arch_extension d128
 // This needs to come before `.arch_extension nothe` as it uses an instruction
 // that requires both the and d128
 sysp #0, c2, c0, #0, x0, x1
@@ -204,6 +214,8 @@ umax x0, x1, x2
 // CHECK: [[@LINE-1]]:1: error: instruction requires: cssc
 // CHECK-NEXT: umax x0, x1, x2
 
+// noras implied norasv2, so reinstate it
+.arch_extension rasv2
 mrs x0, ERXGSR_EL1
 // CHECK-NOT: [[@LINE-1]]:9: error: expected readable system register
 .arch_extension norasv2

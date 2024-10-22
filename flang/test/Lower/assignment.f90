@@ -58,11 +58,11 @@ complex function negc(a)
 end 
 
 ! CHECK-LABEL: func @_QPnegc(
-! CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "a"}) -> !fir.complex<4> {
-! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4> {bindc_name = "negc", uniq_name = "_QFnegcEnegc"}
-! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[NEG:.*]] = fir.negc %[[A_VAL]] : !fir.complex<4>
-! CHECK:         fir.store %[[NEG]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
+! CHECK-SAME:    %[[A:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "a"}) -> complex<f32> {
+! CHECK:         %[[FCTRES:.*]] = fir.alloca complex<f32> {bindc_name = "negc", uniq_name = "_QFnegcEnegc"}
+! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<complex<f32>>
+! CHECK:         %[[NEG:.*]] = fir.negc %[[A_VAL]] : complex<f32>
+! CHECK:         fir.store %[[NEG]] to %[[FCTRES]] : !fir.ref<complex<f32>>
 
 integer function addi(a, b)
   integer :: a, b
@@ -198,15 +198,15 @@ complex function addc(a, b)
 end
 
 ! CHECK-LABEL: func @_QPaddc(
-! CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "a"},
-! CHECK-SAME:    %[[B:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "b"}
-! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
-! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[ADD:.*]] = fir.addc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
-! CHECK:         fir.store %[[ADD]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
-! CHECK:         return %[[RET]] : !fir.complex<4>
+! CHECK-SAME:    %[[A:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "a"},
+! CHECK-SAME:    %[[B:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "b"}
+! CHECK:         %[[FCTRES:.*]] = fir.alloca complex<f32>
+! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<complex<f32>>
+! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<complex<f32>>
+! CHECK:         %[[ADD:.*]] = fir.addc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:         fir.store %[[ADD]] to %[[FCTRES]] : !fir.ref<complex<f32>>
+! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<complex<f32>>
+! CHECK:         return %[[RET]] : complex<f32>
 
 complex function subc(a, b)
   complex :: a, b
@@ -214,15 +214,15 @@ complex function subc(a, b)
 end
 
 ! CHECK-LABEL: func @_QPsubc(
-! CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "a"},
-! CHECK-SAME:    %[[B:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "b"}
-! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
-! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[SUB:.*]] = fir.subc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
-! CHECK:         fir.store %[[SUB]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
-! CHECK:         return %[[RET]] : !fir.complex<4>
+! CHECK-SAME:    %[[A:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "a"},
+! CHECK-SAME:    %[[B:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "b"}
+! CHECK:         %[[FCTRES:.*]] = fir.alloca complex<f32>
+! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<complex<f32>>
+! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<complex<f32>>
+! CHECK:         %[[SUB:.*]] = fir.subc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:         fir.store %[[SUB]] to %[[FCTRES]] : !fir.ref<complex<f32>>
+! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<complex<f32>>
+! CHECK:         return %[[RET]] : complex<f32>
 
 complex function mulc(a, b)
   complex :: a, b
@@ -230,15 +230,15 @@ complex function mulc(a, b)
 end
 
 ! CHECK-LABEL: func @_QPmulc(
-! CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "a"},
-! CHECK-SAME:    %[[B:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "b"}
-! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
-! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[MUL:.*]] = fir.mulc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
-! CHECK:         fir.store %[[MUL]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
-! CHECK:         return %[[RET]] : !fir.complex<4>
+! CHECK-SAME:    %[[A:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "a"},
+! CHECK-SAME:    %[[B:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "b"}
+! CHECK:         %[[FCTRES:.*]] = fir.alloca complex<f32>
+! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<complex<f32>>
+! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<complex<f32>>
+! CHECK:         %[[MUL:.*]] = fir.mulc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:         fir.store %[[MUL]] to %[[FCTRES]] : !fir.ref<complex<f32>>
+! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<complex<f32>>
+! CHECK:         return %[[RET]] : complex<f32>
 
 complex function divc(a, b)
   complex :: a, b
@@ -246,19 +246,19 @@ complex function divc(a, b)
 end
 
 ! CHECK-LABEL: func @_QPdivc(
-! CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "a"},
-! CHECK-SAME:    %[[B:.*]]: !fir.ref<!fir.complex<4>> {fir.bindc_name = "b"}
-! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
-! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[A_REAL:.*]] = fir.extract_value %[[A_VAL]], [0 : index] : (!fir.complex<4>) -> f32
-! CHECK:         %[[A_IMAG:.*]] = fir.extract_value %[[A_VAL]], [1 : index] : (!fir.complex<4>) -> f32
-! CHECK:         %[[B_REAL:.*]] = fir.extract_value %[[B_VAL]], [0 : index] : (!fir.complex<4>) -> f32
-! CHECK:         %[[B_IMAG:.*]] = fir.extract_value %[[B_VAL]], [1 : index] : (!fir.complex<4>) -> f32
-! CHECK:         %[[DIV:.*]] = fir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) fastmath<contract> : (f32, f32, f32, f32) -> !fir.complex<4>
-! CHECK:         fir.store %[[DIV]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
-! CHECK:         return %[[RET]] : !fir.complex<4>
+! CHECK-SAME:    %[[A:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "a"},
+! CHECK-SAME:    %[[B:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "b"}
+! CHECK:         %[[FCTRES:.*]] = fir.alloca complex<f32>
+! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<complex<f32>>
+! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<complex<f32>>
+! CHECK:         %[[A_REAL:.*]] = fir.extract_value %[[A_VAL]], [0 : index] : (complex<f32>) -> f32
+! CHECK:         %[[A_IMAG:.*]] = fir.extract_value %[[A_VAL]], [1 : index] : (complex<f32>) -> f32
+! CHECK:         %[[B_REAL:.*]] = fir.extract_value %[[B_VAL]], [0 : index] : (complex<f32>) -> f32
+! CHECK:         %[[B_IMAG:.*]] = fir.extract_value %[[B_VAL]], [1 : index] : (complex<f32>) -> f32
+! CHECK:         %[[DIV:.*]] = fir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) fastmath<contract> : (f32, f32, f32, f32) -> complex<f32>
+! CHECK:         fir.store %[[DIV]] to %[[FCTRES]] : !fir.ref<complex<f32>>
+! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<complex<f32>>
+! CHECK:         return %[[RET]] : complex<f32>
 
 subroutine real_constant()
   real(2) :: a
@@ -299,13 +299,13 @@ subroutine complex_constant()
 end
 
 ! CHECK-LABEL: func @_QPcomplex_constant()
-! CHECK:         %[[A:.*]] = fir.alloca !fir.complex<4> {bindc_name = "a", uniq_name = "_QFcomplex_constantEa"}
+! CHECK:         %[[A:.*]] = fir.alloca complex<f32> {bindc_name = "a", uniq_name = "_QFcomplex_constantEa"}
 ! CHECK:         %[[C0:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:         %[[C1:.*]] = arith.constant 1.000000e+00 : f32
-! CHECK:         %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
-! CHECK:         %[[INS0:.*]] = fir.insert_value %[[UNDEF]], %[[C0]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:         %[[INS1:.*]] = fir.insert_value %[[INS0]], %[[C1]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:         fir.store %[[INS1]] to %[[A]] : !fir.ref<!fir.complex<4>>
+! CHECK:         %[[UNDEF:.*]] = fir.undefined complex<f32>
+! CHECK:         %[[INS0:.*]] = fir.insert_value %[[UNDEF]], %[[C0]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:         %[[INS1:.*]] = fir.insert_value %[[INS0]], %[[C1]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:         fir.store %[[INS1]] to %[[A]] : !fir.ref<complex<f32>>
 
 subroutine sub1_arr(a)
   integer :: a(10)

@@ -14,11 +14,17 @@
 namespace lldb_private {
 class DomainSocket : public Socket {
 public:
+  DomainSocket(NativeSocket socket, bool should_close,
+               bool child_processes_inherit);
   DomainSocket(bool should_close, bool child_processes_inherit);
 
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;
-  Status Accept(Socket *&socket) override;
+
+  using Socket::Accept;
+  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
+  Accept(MainLoopBase &loop,
+         std::function<void(std::unique_ptr<Socket> socket)> sock_cb) override;
 
   std::string GetRemoteConnectionURI() const override;
 
