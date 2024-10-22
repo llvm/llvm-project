@@ -69,7 +69,6 @@ define void @offset_i32_known_positive_via_assume_forward_dep_1(ptr %A, i64 %off
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {((4 * %offset)<nsw> + %A),+,4}<nw><%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
