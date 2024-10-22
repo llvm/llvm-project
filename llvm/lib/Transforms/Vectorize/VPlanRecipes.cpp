@@ -3630,6 +3630,10 @@ void VPAliasLaneMaskRecipe::execute(VPTransformState &State) {
 
   Value *Diff = Builder.CreateSub(SourceValue, SinkValue, "sub.diff");
   auto *Type = Diff->getType();
+  if (!WriteAfterRead)
+    Diff = Builder.CreateIntrinsic(
+        Intrinsic::abs, {Type},
+        {Diff, ConstantInt::getFalse(Builder.getInt1Ty())});
   Value *MemEltSize = ConstantInt::get(Type, ElementSize);
   Value *DiffDiv = Builder.CreateSDiv(Diff, MemEltSize, "diff");
   // If the difference is negative then some elements may alias
@@ -3654,6 +3658,8 @@ void VPAliasLaneMaskRecipe::print(raw_ostream &O, const Twine &Indent,
   getSourceValue()->printAsOperand(O, SlotTracker);
   O << ", ";
   getSinkValue()->printAsOperand(O, SlotTracker);
+  O << " (" << (WriteAfterRead ? "write-after-read" : "read-after-write")
+    << ")";
 }
 #endif
 

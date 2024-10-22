@@ -1887,7 +1887,7 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
     VPValue *Src =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, C.SrcStart, *PSE.getSE());
     VPAliasLaneMaskRecipe *M =
-        new VPAliasLaneMaskRecipe(Src, Sink, C.AccessSize);
+        new VPAliasLaneMaskRecipe(Src, Sink, C.AccessSize, C.WriteAfterRead);
     VecPreheader->appendRecipe(M);
     if (AliasMask)
       AliasMask = Builder.createAnd(AliasMask, M);
