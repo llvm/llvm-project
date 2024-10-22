@@ -219,13 +219,33 @@ static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
   const SCEV *ScStart;
   const SCEV *ScEnd;
 
+  auto &DL = Lp->getHeader()->getDataLayout();
+  Type *IdxTy = DL.getIndexType(PtrExpr->getType());
+  const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
-    const SCEV *Ex = PSE.getSymbolicMaxBackedgeTakenCount();
-
     ScStart = AR->getStart();
-    ScEnd = AR->evaluateAtIteration(Ex, *SE);
+    const SCEV *BTC = PSE.getBackedgeTakenCount();
+    if (!isa<SCEVCouldNotCompute>(BTC))
+      // Evaluating AR at an exact BTC is safe: LAA separately checks that
+      // accesses cannot wrap in the loop. If evaluating AR at BTC wraps, then
+      // the loop either triggers UB when executing a memory access with a
+      // poison pointer or the wrapping/poisoned pointer is not used.
+      ScEnd = AR->evaluateAtIteration(BTC, *SE);
+    else {
+      // Evaluating AR at MaxBTC may wrap and create an expression that is less
+      // than the start of the AddRec due to wrapping (for example consider
+      // MaxBTC = -2). If that's the case, set ScEnd to -(EltSize + 1). ScEnd
+      // will get incremented by EltSize before returning, so this effectively
+      // sets ScEnd to unsigned max. Note that LAA separately checks that
+      // accesses cannot not wrap, so unsigned max represents an upper bound.
+      const SCEV *MaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
+      ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
+      if (!SE->isKnownNonNegative(SE->getMinusSCEV(ScEnd, ScStart)))
+        ScEnd = SE->getNegativeSCEV(
+            SE->getAddExpr(EltSizeSCEV, SE->getOne(EltSizeSCEV->getType())));
+    }
     const SCEV *Step = AR->getStepRecurrence(*SE);
 
     // For expressions with negative step, the upper bound is ScStart and the
@@ -247,9 +267,6 @@ static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
   assert(SE->isLoopInvariant(ScEnd, Lp)&& "ScEnd needs to be invariant");
 
   // Add the size of the pointed element to ScEnd.
-  auto &DL = Lp->getHeader()->getDataLayout();
-  Type *IdxTy = DL.getIndexType(PtrExpr->getType());
-  const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
   Iter->second = {ScStart, ScEnd};
