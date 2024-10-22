@@ -843,10 +843,10 @@ Map make(const parser::OmpClause::Map &inp,
   CLAUSET_ENUM_CONVERT( //
       convert2, parser::OmpMapClause::TypeModifier, Map::MapTypeModifier,
       // clang-format off
-      MS(Always,   Always)
-      MS(Close,    Close)
-      MS(OmpxHold, OmpxHold)
-      MS(Present,  Present)
+      MS(Always,    Always)
+      MS(Close,     Close)
+      MS(Ompx_Hold, OmpxHold)
+      MS(Present,   Present)
       // clang-format on
   );
 
