@@ -1616,22 +1616,23 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
   return FnType->getReturnType();
 }
 
-const Attr *CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
+std::pair<const Decl *, const Attr *>
+CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
   // If the return type is a struct, union, or enum that is marked nodiscard,
   // then return the return type attribute.
   if (const TagDecl *TD = getCallReturnType(Ctx)->getAsTagDecl())
     if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
-      return A;
+      return {TD, A};
 
   for (const auto *TD = getCallReturnType(Ctx)->getAs<TypedefType>(); TD;
        TD = TD->desugar()->getAs<TypedefType>())
     if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
-      return A;
+      return {TD->getDecl(), A};
 
   // Otherwise, see if the callee is marked nodiscard and return that attribute
   // instead.
   const Decl *D = getCalleeDecl();
-  return D ? D->getAttr<WarnUnusedResultAttr>() : nullptr;
+  return {D, D ? D->getAttr<WarnUnusedResultAttr>() : nullptr};
 }
 
 SourceLocation CallExpr::getBeginLoc() const {

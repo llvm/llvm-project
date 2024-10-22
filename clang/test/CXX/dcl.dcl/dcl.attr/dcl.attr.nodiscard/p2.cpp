@@ -2,18 +2,18 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx11-17,since-cxx17 -pedantic %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected,since-cxx17 -pedantic %s
 
-struct [[nodiscard]] S {};
+struct [[nodiscard]] S {}; // expected-note 4 {{'S' has been explicitly marked nodiscard here}}
 // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 S get_s();
 S& get_s_ref();
 
-enum [[nodiscard]] E {};
+enum [[nodiscard]] E {}; // expected-note 2 {{'E' has been explicitly marked nodiscard here}}
 // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 E get_e();
 
-[[nodiscard]] int get_i();
+[[nodiscard]] int get_i(); // expected-note {{'get_i' has been explicitly marked nodiscard here}}
 // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
-[[nodiscard]] volatile int &get_vi();
+[[nodiscard]] volatile int &get_vi(); // expected-note {{'get_vi' has been explicitly marked nodiscard here}}
 // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 
 void f() {
@@ -32,6 +32,7 @@ void f() {
 
 [[nodiscard]] volatile char &(*fp)(); // expected-warning {{'nodiscard' attribute only applies to functions, classes, or enumerations}}
 // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
+// expected-note@-2 {{'fp' has been explicitly marked nodiscard here}}
 void g() {
   fp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
@@ -67,20 +68,20 @@ void f() {
 }
 } // namespace PR31526
 
-struct [[nodiscard("reason")]] ReasonStruct {};
+struct [[nodiscard("reason")]] ReasonStruct {}; // expected-note {{'ReasonStruct' has been explicitly marked nodiscard here}}
 // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 struct LaterReason;
-struct [[nodiscard("later reason")]] LaterReason {};
+struct [[nodiscard("later reason")]] LaterReason {}; // expected-note {{'LaterReason' has been explicitly marked nodiscard here}}
 // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 ReasonStruct get_reason();
 LaterReason get_later_reason();
-[[nodiscard("another reason")]] int another_reason();
+[[nodiscard("another reason")]] int another_reason(); // expected-note {{'another_reason' has been explicitly marked nodiscard here}}
 // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 [[nodiscard("conflicting reason")]] int conflicting_reason();
 // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
-[[nodiscard("special reason")]] int conflicting_reason();
+[[nodiscard("special reason")]] int conflicting_reason(); // expected-note {{'conflicting_reason' has been explicitly marked nodiscard here}}
 // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 void cxx20_use() {
@@ -91,23 +92,23 @@ void cxx20_use() {
 }
 
 namespace p1771 {
-struct[[nodiscard("Don't throw me away!")]] ConvertTo{};
+struct[[nodiscard("Don't throw me away!")]] ConvertTo{}; // expected-note 3 {{'ConvertTo' has been explicitly marked nodiscard here}}
 // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 struct S {
-  [[nodiscard]] S();
+  [[nodiscard]] S(); // expected-note {{'S' has been explicitly marked nodiscard here}}
   // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
-  [[nodiscard("Don't let that S-Char go!")]] S(char);
+  [[nodiscard("Don't let that S-Char go!")]] S(char); // expected-note 2 {{'S' has been explicitly marked nodiscard here}}
   // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
   S(int);
   [[gnu::warn_unused_result]] S(double);
   operator ConvertTo();
-  [[nodiscard]] operator int();
+  [[nodiscard]] operator int(); // expected-note 2 {{'operator int' has been explicitly marked nodiscard here}}
   // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
-  [[nodiscard("Don't throw away as a double")]] operator double();
+  [[nodiscard("Don't throw away as a double")]] operator double(); // expected-note {{'operator double' has been explicitly marked nodiscard here}}
   // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 };
 
-struct[[nodiscard("Don't throw me away either!")]] Y{};
+struct[[nodiscard("Don't throw me away either!")]] Y{}; // expected-note {{'Y' has been explicitly marked nodiscard here}}
 // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 void usage() {

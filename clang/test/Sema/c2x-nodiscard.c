@@ -9,7 +9,7 @@ struct [[nodiscard]] S1 { // ok
 struct [[nodiscard, nodiscard]] S2 { // ok
   int i;
 };
-struct [[nodiscard("Wrong")]] S3 {
+struct [[nodiscard("Wrong")]] S3 { // expected-note {{'S3' has been explicitly marked nodiscard here}}
   int i;
 };
 
@@ -20,15 +20,15 @@ enum [[nodiscard]] E1 { One };
 
 [[nodiscard]] int i; // expected-warning {{'nodiscard' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, function pointers, and typedefs}}
 
-struct [[nodiscard]] S4 {
+struct [[nodiscard]] S4 { // expected-note {{'S4' has been explicitly marked nodiscard here}}
   int i;
 };
 struct S4 get_s(void);
 
-enum [[nodiscard]] E2 { Two };
+enum [[nodiscard]] E2 { Two }; // expected-note {{'E2' has been explicitly marked nodiscard here}}
 enum E2 get_e(void);
 
-[[nodiscard]] int get_i(void);
+[[nodiscard]] int get_i(void); // expected-note {{'get_i' has been explicitly marked nodiscard here}}
 
 void f2(void) {
   get_s(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -43,7 +43,7 @@ void f2(void) {
   (void)get_e();
 }
 
-struct [[nodiscard]] error_info{
+struct [[nodiscard]] error_info{ // expected-note {{'error_info' has been explicitly marked nodiscard here}}
   int i;
 };
 
@@ -54,7 +54,7 @@ void test_missiles(void) {
   launch_missiles();
 }
 
-[[nodiscard]] int f3();
+[[nodiscard]] int f3(); // expected-note {{'f3' has been explicitly marked nodiscard here}}
 
 void GH104391() {
 #define M (unsigned int) f3()

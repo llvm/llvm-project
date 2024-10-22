@@ -1497,7 +1497,7 @@ public:
   using handle_type = std::coroutine_handle<>;
   constexpr bool await_ready() noexcept { return false; }
   void await_suspend(handle_type) noexcept {}
-  [[nodiscard]] int await_resume() noexcept { return 1; }
+  [[nodiscard]] int await_resume() noexcept { return 1; } // expected-note 2 {{'await_resume' has been explicitly marked nodiscard here}}
 };
 
 template <class Await>
