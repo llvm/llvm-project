@@ -141,12 +141,7 @@ public:
   bool contains(const GenericCycle *C) const;
 
   const GenericCycle *getParentCycle() const { return ParentCycle; }
-
-  GenericCycle *getParentCycle() {
-    clearCache();
-    return ParentCycle;
-  }
-
+  GenericCycle *getParentCycle() { return ParentCycle; }
   unsigned getDepth() const { return Depth; }
 
   /// Return all of the successor blocks of this cycle.
