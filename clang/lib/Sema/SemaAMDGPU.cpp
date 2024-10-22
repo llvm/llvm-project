@@ -93,13 +93,19 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
         return true;
       }
     }
-    if (ArgTys[0] != ArgTys[1]) {
-      SemaRef.Diag(Args[1]->getBeginLoc(),
-                   diag::err_typecheck_call_different_arg_types)
-          << ArgTys[0] << ArgTys[1];
-      return true;
-    }
-    return false;
+    if (getASTContext().hasSameUnqualifiedType(ArgTys[0], ArgTys[1]))
+      return false;
+    if (((ArgTys[0]->isUnsignedIntegerType() &&
+          ArgTys[1]->isSignedIntegerType()) ||
+         (ArgTys[0]->isSignedIntegerType() &&
+          ArgTys[1]->isUnsignedIntegerType())) &&
+        getASTContext().getTypeSize(ArgTys[0]) ==
+            getASTContext().getTypeSize(ArgTys[1]))
+      return false;
+    SemaRef.Diag(Args[1]->getBeginLoc(),
+                 diag::err_typecheck_call_different_arg_types)
+        << ArgTys[0] << ArgTys[1];
+    return true;
   }
   default:
     return false;
