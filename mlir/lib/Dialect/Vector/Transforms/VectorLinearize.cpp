@@ -160,10 +160,10 @@ struct LinearizeVectorExtractStridedSlice final
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
 
-    ArrayAttr offsets = extractOp.getOffsets();
-    ArrayAttr sizes = extractOp.getSizes();
-    ArrayAttr strides = extractOp.getStrides();
-    if (!isConstantIntValue(strides[0], 1))
+    ArrayRef<int64_t> offsets = extractOp.getOffsets();
+    ArrayRef<int64_t> sizes = extractOp.getSizes();
+    ArrayRef<int64_t> strides = extractOp.getStrides();
+    if (strides[0] != 1)
       return rewriter.notifyMatchFailure(
           extractOp, "Strided slice with stride != 1 is not supported.");
     Value srcVector = adaptor.getVector();
@@ -185,8 +185,8 @@ struct LinearizeVectorExtractStridedSlice final
     }
     // Get total number of extracted slices.
     int64_t nExtractedSlices = 1;
-    for (Attribute size : sizes) {
-      nExtractedSlices *= cast<IntegerAttr>(size).getInt();
+    for (int64_t size : sizes) {
+      nExtractedSlices *= size;
     }
     // Compute the strides of the source vector considering first k dimensions.
     llvm::SmallVector<int64_t, 4> sourceStrides(kD, extractGranularitySize);
@@ -202,8 +202,7 @@ struct LinearizeVectorExtractStridedSlice final
     llvm::SmallVector<int64_t, 4> extractedStrides(kD, 1);
     // Compute extractedStrides.
     for (int i = kD - 2; i >= 0; --i) {
-      extractedStrides[i] =
-          extractedStrides[i + 1] * cast<IntegerAttr>(sizes[i + 1]).getInt();
+      extractedStrides[i] = extractedStrides[i + 1] * sizes[i + 1];
     }
     // Iterate over all extracted slices from 0 to nExtractedSlices - 1
     // and compute the multi-dimensional index and the corresponding linearized
@@ -220,9 +219,7 @@ struct LinearizeVectorExtractStridedSlice final
       // i.e. shift the multiDimIndex by the offsets.
       int64_t linearizedIndex = 0;
       for (int64_t j = 0; j < kD; ++j) {
-        linearizedIndex +=
-            (cast<IntegerAttr>(offsets[j]).getInt() + multiDimIndex[j]) *
-            sourceStrides[j];
+        linearizedIndex += (offsets[j] + multiDimIndex[j]) * sourceStrides[j];
       }
       // Fill the indices array form linearizedIndex to linearizedIndex +
       // extractGranularitySize.
