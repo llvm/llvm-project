@@ -1,4 +1,4 @@
-Files in this directory are used by Flang (the compiler) and FortranRuntime
+Files in this directory are used by Flang (the compiler) and flang-rt
 (the runtime library for Flang-compiled programs). They must be compatible by
 both. For definitions used only by Flang, consider
 `flang/{lib,include/flang}/Support` instead. For definitions used only by

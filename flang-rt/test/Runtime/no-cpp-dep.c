@@ -1,17 +1,22 @@
 /*
 This test makes sure that flang's runtime does not depend on the C++ runtime
-library. It tries to link this simple file against libFortranRuntime.a with
+library. It tries to link this simple file against libflang_rt.a with
 a C compiler.
 
-REQUIRES: c-compiler
+UNSUPPORTED: system-windows
+
+FIXME: This currently fails with CUDA-enabled flang-rt because it needs
+       to link libcudart.
 
 RUN: %if system-aix %{ export OBJECT_MODE=64 %}
-RUN: %cc -std=c99 %s -I%include %libruntime %libdecimal -lm  \
+RUN: %cc -std=c99 %s -I%include %libruntime -lm \
 RUN: %if system-aix %{-lpthread %}
 RUN: rm a.out
 */
 
 #include "flang/Runtime/entry-names.h"
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /*

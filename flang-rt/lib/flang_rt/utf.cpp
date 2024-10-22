@@ -10,7 +10,7 @@
 
 namespace Fortran::runtime {
 
-#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+#ifndef FLANGRT_NO_GLOBAL_VAR_DEFS
 // clang-format off
 RT_OFFLOAD_VAR_GROUP_BEGIN
 const RT_CONST_VAR_ATTRS std::uint8_t UTF8FirstByteTable[256]{
@@ -41,7 +41,7 @@ const RT_CONST_VAR_ATTRS std::uint8_t UTF8FirstByteTable[256]{
 };
 RT_OFFLOAD_VAR_GROUP_END
 // clang-format on
-#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+#endif // FLANGRT_NO_GLOBAL_VAR_DEFS
 
 RT_OFFLOAD_API_GROUP_BEGIN
 

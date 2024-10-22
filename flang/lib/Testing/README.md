@@ -1,8 +1,8 @@
-Files in this directory are used by Flang (the compiler) and FortranRuntime
+Files in this directory are used by Flang (the compiler) and flang-rt
 (the runtime library for Flang-compiled programs). They must be compatible by
 both. For definitions used only by Flang, consider
 `flang/{lib,include/flang}/Support` instead. For definitions used only by
-FortranRuntime, consider `flang-rt/{lib,include/flang-rt}/flang_rt`.
+the runtime, consider `flang-rt/{lib,include/flang-rt}/flang_rt`.
 
 The requirements for common code include:
 
@@ -23,3 +23,5 @@ The requirements for common code include:
 
  * Global declarations may need to be annotated using definitions from
    `api-attrs.h`.
+
+ * The `Runtime` component is header-only.

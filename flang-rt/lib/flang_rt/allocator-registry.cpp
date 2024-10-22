@@ -11,11 +11,11 @@
 
 namespace Fortran::runtime {
 
-#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+#ifndef FLANGRT_NO_GLOBAL_VAR_DEFS
 RT_OFFLOAD_VAR_GROUP_BEGIN
 RT_VAR_ATTRS AllocatorRegistry allocatorRegistry;
 RT_OFFLOAD_VAR_GROUP_END
-#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+#endif // FLANGRT_NO_GLOBAL_VAR_DEFS
 
 RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS void AllocatorRegistry::Register(int pos, Allocator_t allocator) {
