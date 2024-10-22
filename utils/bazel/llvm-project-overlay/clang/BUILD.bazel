@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_python//python:defs.bzl", "py_binary")
 load(
     "//:vars.bzl",
     "LLVM_VERSION_MAJOR",
@@ -707,6 +708,7 @@ cc_library(
         ":config",
         ":diagnostic_defs_gen",
         ":sema_attr_gen",
+        ":support",
         "//llvm:Core",
         "//llvm:FrontendDebug",
         "//llvm:FrontendDriver",
@@ -733,6 +735,7 @@ cc_library(
     deps = [
         ":basic",
         ":config",
+        ":support",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -1330,6 +1333,7 @@ cc_library(
         ":frontend",
         ":lex",
         ":rewrite",
+        ":support",
         ":tooling_core",
         "//llvm:Option",
         "//llvm:Support",
@@ -1867,6 +1871,7 @@ cc_library(
         ":sema",
         ":serialization",
         ":static_analyzer_core_options",
+        ":support",
         "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitstreamReader",

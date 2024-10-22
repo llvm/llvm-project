@@ -6,7 +6,166 @@
 #
 # ===----------------------------------------------------------------------===##
 
-import os, pathlib
+import os, pathlib, functools
+
+libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+libcxx_include = libcxx_root / "include"
+assert libcxx_root.exists()
+
+def _is_header_file(file):
+    """Returns whether the given file is a header file, i.e. not a directory or the modulemap file."""
+    return not file.is_dir() and not file.name in [
+        "module.modulemap",
+        "CMakeLists.txt",
+        "libcxx.imp",
+        "__config_site.in",
+    ]
+
+@functools.total_ordering
+class Header:
+    _name: str
+    """Relative path from the root of libcxx/include"""
+
+    def __init__(self, name: str):
+        """Create a Header.
+
+        name: The path of the header relative to libc++'s include directory.
+              For example '__algorithm/find.h' or 'coroutine'.
+        """
+        self._name = name
+
+    def is_public(self) -> bool:
+        """Returns whether the header is a public libc++ API header."""
+        return "__" not in self._name and not self._name.startswith("ext/")
+
+    def is_internal(self) -> bool:
+        """Returns whether the header is an internal implementation detail of the library."""
+        return not self.is_public()
+
+    def is_C_compatibility(self) -> bool:
+        """
+        Returns whether the header is a C compatibility header (headers ending in .h like stdlib.h).
+
+        Note that headers like <cstdlib> are not considered C compatibility headers.
+        """
+        return self.is_public() and self._name.endswith(".h")
+
+    def is_cstd(self) -> bool:
+        """Returns whether the header is a C 'std' header, like <cstddef>, <cerrno>, etc."""
+        return self._name in [
+            "cassert",
+            "ccomplex",
+            "cctype",
+            "cerrno",
+            "cfenv",
+            "cfloat",
+            "cinttypes",
+            "ciso646",
+            "climits",
+            "clocale",
+            "cmath",
+            "csetjmp",
+            "csignal",
+            "cstdarg",
+            "cstdbool",
+            "cstddef",
+            "cstdint",
+            "cstdio",
+            "cstdlib",
+            "cstring",
+            "ctgmath",
+            "ctime",
+            "cuchar",
+            "cwchar",
+            "cwctype",
+        ]
+
+    def is_experimental(self) -> bool:
+        """Returns whether the header is a public experimental header."""
+        return self.is_public() and self._name.startswith("experimental/")
+
+    def has_cxx20_module(self) -> bool:
+        """
+        Returns whether the header is in the std and std.compat C++20 modules.
+
+        These headers are all C++23-and-later headers, excluding C compatibility headers and
+        experimental headers.
+        """
+        # These headers have been removed in C++20 so are never part of a module.
+        removed_in_20 = ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+        return self.is_public() and not self.is_experimental() and not self.is_C_compatibility() and not self._name in removed_in_20
+
+    def is_in_modulemap(self) -> bool:
+        """Returns whether a header should be listed in the modulemap."""
+        # TODO: Should `__config_site` be in the modulemap?
+        if self._name == "__config_site":
+            return False
+
+        if self._name == "__assertion_handler":
+            return False
+
+        # exclude libc++abi files
+        if self._name in ["cxxabi.h", "__cxxabi_config.h"]:
+            return False
+
+        # exclude headers in __support/ - these aren't supposed to work everywhere,
+        # so they shouldn't be included in general
+        if self._name.startswith("__support/"):
+            return False
+
+        # exclude ext/ headers - these are non-standard extensions and are barely
+        # maintained. People should migrate away from these and we don't need to
+        # burden ourself with maintaining them in any way.
+        if self._name.startswith("ext/"):
+            return False
+        return True
+
+    def __str__(self) -> str:
+        return self._name
+
+    def __repr__(self) -> str:
+        return repr(self._name)
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, str):
+            return self._name == other
+        return self._name == other._name
+
+    def __lt__(self, other) -> bool:
+        if isinstance(other, str):
+            return self._name < other
+        return self._name < other._name
+
+    def __hash__(self) -> int:
+        return hash(self._name)
+
+
+# Commonly-used sets of headers
+all_headers = [Header(p.relative_to(libcxx_include).as_posix()) for p in libcxx_include.rglob("[_a-z]*") if _is_header_file(p)]
+all_headers += [Header("__config_site"), Header("__assertion_handler")] # Headers generated during the build process
+public_headers = [h for h in all_headers if h.is_public()]
+module_headers = [h for h in all_headers if h.has_cxx20_module()]
+module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd()]
+
+# These headers are not yet implemented in libc++
+#
+# These headers are required by the latest (draft) Standard but have not been
+# implemented yet. They are used in the generated module input. The C++23 standard
+# modules will fail to build if a header is added but this list is not updated.
+headers_not_available = list(map(Header, [
+    "debugging",
+    "flat_map",
+    "flat_set",
+    "generator",
+    "hazard_pointer",
+    "inplace_vector",
+    "linalg",
+    "rcu",
+    "spanstream",
+    "stacktrace",
+    "stdfloat",
+    "text_encoding",
+]))
 
 header_restrictions = {
     # headers with #error directives
@@ -112,118 +271,3 @@ mandatory_inclusions = {
     "variant": ["compare"],
     "vector": ["compare", "initializer_list"],
 }
-
-
-# These headers are not yet implemented in libc++
-#
-# These headers are required by the latest (draft) Standard but have not been
-# implemented yet. They are used in the generated module input. The C++23 standard
-# modules will fail to build if a header is added but this list is not updated.
-headers_not_available = [
-    "debugging",
-    "flat_map",
-    "flat_set",
-    "generator",
-    "hazard_pointer",
-    "inplace_vector",
-    "linalg",
-    "rcu",
-    "spanstream",
-    "stacktrace",
-    "stdfloat",
-    "text_encoding",
-]
-
-
-def is_header(file):
-    """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
-    return not file.is_dir() and not file.name in [
-        "module.modulemap",
-        "CMakeLists.txt",
-        "libcxx.imp",
-    ]
-
-
-def is_public_header(header):
-    return "__" not in header and not header.startswith("ext/")
-
-
-def is_modulemap_header(header):
-    """Returns whether a header should be listed in the modulemap"""
-    # TODO: Should `__config_site` be in the modulemap?
-    if header == "__config_site":
-        return False
-
-    if header == "__assertion_handler":
-        return False
-
-    # exclude libc++abi files
-    if header in ["cxxabi.h", "__cxxabi_config.h"]:
-        return False
-
-    # exclude headers in __support/ - these aren't supposed to work everywhere,
-    # so they shouldn't be included in general
-    if header.startswith("__support/"):
-        return False
-
-    # exclude ext/ headers - these are non-standard extensions and are barely
-    # maintained. People should migrate away from these and we don't need to
-    # burden ourself with maintaining them in any way.
-    if header.startswith("ext/"):
-        return False
-    return True
-
-libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-include = pathlib.Path(os.path.join(libcxx_root, "include"))
-test = pathlib.Path(os.path.join(libcxx_root, "test"))
-assert libcxx_root.exists()
-
-all_headers = sorted(
-    p.relative_to(include).as_posix() for p in include.rglob("[_a-z]*") if is_header(p)
-)
-toplevel_headers = sorted(
-    p.relative_to(include).as_posix() for p in include.glob("[_a-z]*") if is_header(p)
-)
-experimental_headers = sorted(
-    p.relative_to(include).as_posix()
-    for p in include.glob("experimental/[a-z]*")
-    if is_header(p)
-)
-
-public_headers = [p for p in all_headers if is_public_header(p)]
-
-# The headers used in the std and std.compat modules.
-#
-# This is the set of all C++23-and-later headers, excluding C compatibility headers.
-module_headers = [
-    header
-    for header in toplevel_headers
-    if not header.endswith(".h") and is_public_header(header)
-    # These headers have been removed in C++20 so are never part of a module.
-    and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
-]
-
-# The C headers used in the std and std.compat modules.
-module_c_headers = [
-    "cassert",
-    "cctype",
-    "cerrno",
-    "cfenv",
-    "cfloat",
-    "cinttypes",
-    "climits",
-    "clocale",
-    "cmath",
-    "csetjmp",
-    "csignal",
-    "cstdarg",
-    "cstddef",
-    "cstdint",
-    "cstdio",
-    "cstdlib",
-    "cstring",
-    "ctime",
-    "cuchar",
-    "cwchar",
-    "cwctype",
-]
