@@ -61,6 +61,8 @@ bool Type::isF64() const { return llvm::isa<Float64Type>(*this); }
 bool Type::isF80() const { return llvm::isa<Float80Type>(*this); }
 bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
 
+bool Type::isFloat() const { return llvm::isa<FloatType>(*this); }
+
 bool Type::isIndex() const { return llvm::isa<IndexType>(*this); }
 
 bool Type::isInteger() const { return llvm::isa<IntegerType>(*this); }
@@ -109,24 +111,20 @@ bool Type::isUnsignedInteger(unsigned width) const {
 }
 
 bool Type::isSignlessIntOrIndex() const {
-  return isSignlessInteger() || llvm::isa<IndexType>(*this);
+  return isSignlessInteger() || isIndex();
 }
 
 bool Type::isSignlessIntOrIndexOrFloat() const {
-  return isSignlessInteger() || llvm::isa<IndexType, FloatType>(*this);
+  return isSignlessInteger() || isIndex() || isFloat();
 }
 
 bool Type::isSignlessIntOrFloat() const {
-  return isSignlessInteger() || llvm::isa<FloatType>(*this);
+  return isSignlessInteger() || isFloat();
 }
 
-bool Type::isIntOrIndex() const {
-  return llvm::isa<IntegerType>(*this) || isIndex();
-}
+bool Type::isIntOrIndex() const { return isInteger() || isIndex(); }
 
-bool Type::isIntOrFloat() const {
-  return llvm::isa<IntegerType, FloatType>(*this);
-}
+bool Type::isIntOrFloat() const { return isInteger() || isFloat(); }
 
 bool Type::isIntOrIndexOrFloat() const { return isIntOrFloat() || isIndex(); }
 
