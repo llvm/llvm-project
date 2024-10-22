@@ -4563,7 +4563,7 @@ def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clan
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
-def iexternal : JoinedOrSeparate<["-"], "iexternal">, Group<I_Group>,
+def iexternal : JoinedOrSeparate<["-"], "iexternal">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to include search path with warnings suppressed">, MetaVarName<"<dir>">;
 def iexternal_after : JoinedOrSeparate<["-"], "iexternal-after">, Group<clang_i_Group>,
