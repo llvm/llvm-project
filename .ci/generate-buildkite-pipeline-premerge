@@ -269,7 +269,7 @@ windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
 if [[ "${linux_projects}" != "" ]]; then
   cat <<EOF
 - label: ':linux: Linux x64'
-  key: "test Linux"
+  key: "test-linux"
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
@@ -291,7 +291,7 @@ if [[ "${linux_projects}" != "" ]]; then
     - junit-annotate#v2.5.0:
         artifacts: build/test-results-linux*.xml
         context: "linux-test-results"
-  depends_on: "test Linux"
+  depends_on: "test-linux"
   allow_dependency_failure: true
   agents: ${LINUX_AGENTS}
 EOF
@@ -300,7 +300,7 @@ fi
 if [[ "${windows_projects}" != "" ]]; then
   cat <<EOF
 - label: ':windows: Windows x64'
-  key: "test Windows"
+  key: "test-windows"
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
@@ -324,7 +324,7 @@ if [[ "${windows_projects}" != "" ]]; then
     - junit-annotate#v2.5.0:
         artifacts: build/test-results-windows*.xml
         context: "windows-test-results"
-  depends_on: "test Windows"
+  depends_on: "test-windows"
   allow_dependency_failure: true
   agents: ${LINUX_AGENTS}
 EOF
