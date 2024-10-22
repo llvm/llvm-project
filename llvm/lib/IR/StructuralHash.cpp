@@ -28,6 +28,10 @@ class StructuralHashImpl {
 
   bool DetailedHash;
 
+  const stable_hash GlobalHeaderHash = stable_hash_name("Global Header");
+  const stable_hash FunctionHeaderHash = stable_hash_name("Function Header");
+  const stable_hash BlockHeaderHash = stable_hash_name("Block Header");
+
   // This will produce different values on 32-bit and 64-bit systens as
   // hash_combine returns a size_t. However, this is only used for
   // detailed hashing which, in-tree, only needs to distinguish between
@@ -130,7 +134,7 @@ public:
 
     SmallVector<stable_hash> Hashes;
     Hashes.emplace_back(Hash);
-    Hashes.emplace_back(stable_hash_name("Function Header"));
+    Hashes.emplace_back(FunctionHeaderHash);
 
     Hashes.emplace_back(F.isVarArg());
     Hashes.emplace_back(F.arg_size());
@@ -149,7 +153,7 @@ public:
       // This random value acts as a block header, as otherwise the partition of
       // opcodes into BBs wouldn't affect the hash, only the order of the
       // opcodes
-      Hashes.emplace_back(stable_hash_name("Block Header"));
+      Hashes.emplace_back(BlockHeaderHash);
       for (auto &Inst : *BB)
         Hashes.emplace_back(hashInstruction(Inst));
 
@@ -170,7 +174,7 @@ public:
       return;
     SmallVector<stable_hash> Hashes;
     Hashes.emplace_back(Hash);
-    Hashes.emplace_back(stable_hash_name("Global Header"));
+    Hashes.emplace_back(GlobalHeaderHash);
     Hashes.emplace_back(GV.getValueType()->getTypeID());
 
     // Update the combined hash in place.
