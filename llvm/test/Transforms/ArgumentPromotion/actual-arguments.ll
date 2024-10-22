@@ -12,7 +12,7 @@ define internal i32 @test_cannot_promote_1(ptr %p, ptr nocapture readonly %test_
 ; CHECK-LABEL: define {{[^@]+}}@test_cannot_promote_1
 ; CHECK-SAME: (ptr [[P:%.*]], ptr nocapture readonly [[TEST_C:%.*]]) {
 ; CHECK-NEXT:    [[TEST_C_VAL:%.*]] = load i32, ptr [[TEST_C]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(ptr [[P]], i32 [[TEST_C_VAL]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee.argprom(ptr [[P]], i32 [[TEST_C_VAL]])
 ; CHECK-NEXT:    [[LTEST_C:%.*]] = load i32, ptr [[TEST_C]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LTEST_C]], [[RES]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
@@ -33,7 +33,7 @@ define internal i32 @test_cannot_promote_2(ptr %p, ptr nocapture readonly %test_
 ; CHECK-LABEL: define {{[^@]+}}@test_cannot_promote_2
 ; CHECK-SAME: (ptr [[P:%.*]], ptr nocapture readonly [[TEST_C:%.*]]) {
 ; CHECK-NEXT:    [[TEST_C_VAL:%.*]] = load i32, ptr [[TEST_C]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(ptr [[P]], i32 [[TEST_C_VAL]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee.argprom(ptr [[P]], i32 [[TEST_C_VAL]])
 ; CHECK-NEXT:    [[LTEST_C:%.*]] = load i32, ptr [[TEST_C]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LTEST_C]], [[RES]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
@@ -54,7 +54,7 @@ define internal i32 @test_cannot_promote_3(ptr %p, ptr nocapture readonly %test_
 ; CHECK-LABEL: define {{[^@]+}}@test_cannot_promote_3
 ; CHECK-SAME: (ptr [[P:%.*]], ptr nocapture readonly [[TEST_C:%.*]]) {
 ; CHECK-NEXT:    [[TEST_C_VAL:%.*]] = load i32, ptr [[TEST_C]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(ptr [[P]], i32 [[TEST_C_VAL]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee.argprom(ptr [[P]], i32 [[TEST_C_VAL]])
 ; CHECK-NEXT:    [[LTEST_C:%.*]] = load i32, ptr [[TEST_C]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LTEST_C]], [[RES]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
@@ -72,9 +72,9 @@ define internal i32 @test_cannot_promote_3(ptr %p, ptr nocapture readonly %test_
 ; %test_c does not alias %p for any Call to the function, so we can promote it.
 ;
 define internal i32 @test_can_promote_1(ptr %p, ptr nocapture readonly %test_c) {
-; CHECK-LABEL: define {{[^@]+}}@test_can_promote_1
+; CHECK-LABEL: define {{[^@]+}}@test_can_promote_1.argprom
 ; CHECK-SAME: (ptr [[P:%.*]], i32 [[TEST_C_0_VAL:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(ptr [[P]], i32 [[TEST_C_0_VAL]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee.argprom(ptr [[P]], i32 [[TEST_C_0_VAL]])
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[TEST_C_0_VAL]], [[RES]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;
@@ -91,9 +91,9 @@ define internal i32 @test_can_promote_1(ptr %p, ptr nocapture readonly %test_c) 
 ; not alias %p for any Call to the function, so we can promote it.
 ;
 define internal i32 @test_can_promote_2(ptr %p, ptr nocapture readonly %test_c) {
-; CHECK-LABEL: define {{[^@]+}}@test_can_promote_2
+; CHECK-LABEL: define {{[^@]+}}@test_can_promote_2.argprom
 ; CHECK-SAME: (ptr [[P:%.*]], i32 [[TEST_C_0_VAL:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(ptr [[P]], i32 [[TEST_C_0_VAL]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee.argprom(ptr [[P]], i32 [[TEST_C_0_VAL]])
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[TEST_C_0_VAL]], [[RES]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;
@@ -108,7 +108,7 @@ define internal i32 @test_can_promote_2(ptr %p, ptr nocapture readonly %test_c) 
 
 ; Called by @test_XXX
 define internal i32 @callee(ptr %p, ptr nocapture readonly %callee_c) {
-; CHECK-LABEL: define {{[^@]+}}@callee
+; CHECK-LABEL: define {{[^@]+}}@callee.argprom
 ; CHECK-SAME: (ptr [[P:%.*]], i32 [[CALLEE_C_0_VAL:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[A]], [[CALLEE_C_0_VAL]]
@@ -178,9 +178,9 @@ define i32 @caller_safe_args_1(i64 %n) {
 ; CHECK-NEXT:    store i32 5, ptr [[CALLER_C]], align 4
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @test_cannot_promote_3(ptr [[P]], ptr [[CALLER_C]])
 ; CHECK-NEXT:    [[CALLER_C_VAL:%.*]] = load i32, ptr [[CALLER_C]], align 4
-; CHECK-NEXT:    [[RES2:%.*]] = call i32 @test_can_promote_1(ptr [[P]], i32 [[CALLER_C_VAL]])
+; CHECK-NEXT:    [[RES2:%.*]] = call i32 @test_can_promote_1.argprom(ptr [[P]], i32 [[CALLER_C_VAL]])
 ; CHECK-NEXT:    [[CALLER_C_VAL1:%.*]] = load i32, ptr [[CALLER_C]], align 4
-; CHECK-NEXT:    [[RES3:%.*]] = call i32 @test_can_promote_2(ptr [[P]], i32 [[CALLER_C_VAL1]])
+; CHECK-NEXT:    [[RES3:%.*]] = call i32 @test_can_promote_2.argprom(ptr [[P]], i32 [[CALLER_C_VAL1]])
 ; CHECK-NEXT:    [[RES12:%.*]] = add i32 [[RES1]], [[RES2]]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[RES12]], [[RES3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -209,7 +209,7 @@ define i32 @caller_safe_args_2(i64 %n, ptr %p) {
 ; CHECK-NEXT:    [[CALLER_C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 5, ptr [[CALLER_C]], align 4
 ; CHECK-NEXT:    [[CALLER_C_VAL:%.*]] = load i32, ptr [[CALLER_C]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @test_can_promote_2(ptr [[P]], i32 [[CALLER_C_VAL]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @test_can_promote_2.argprom(ptr [[P]], i32 [[CALLER_C_VAL]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   call void @memset(ptr %p, i64 0, i64 %n)
@@ -263,7 +263,7 @@ define i32 @caller_invoke_safe_args(i64 %n) personality ptr @__gxx_personality_v
 ; CHECK-NEXT:    [[CALLER_C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 5, ptr [[CALLER_C]], align 4
 ; CHECK-NEXT:    [[CALLER_C_VAL:%.*]] = load i32, ptr [[CALLER_C]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @test_can_promote_2(ptr [[P]], i32 [[CALLER_C_VAL]])
+; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @test_can_promote_2.argprom(ptr [[P]], i32 [[CALLER_C_VAL]])
 ; CHECK-NEXT:            to label [[OUT:%.*]] unwind label [[CPAD:%.*]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i32 [[RES]]
