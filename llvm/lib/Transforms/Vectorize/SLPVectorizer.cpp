@@ -17693,8 +17693,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   // Scan the blocks in the function in post order.
   for (auto *BB : post_order(&F.getEntryBlock())) {
-    if (BB->isEHPad() ||
-        isa_and_nonnull<UnreachableInst>(BB->getTerminator()))
+    if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()))
       continue;
 
     // Start new block - clear the list of reduction roots.
