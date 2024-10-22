@@ -133,7 +133,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.is64Bit())
       addRegisterClass(MVT::f64, &RISCV::GPRRegClass);
     else
-      addRegisterClass(MVT::f64, &RISCV::GPRPairRegClass);
+      addRegisterClass(MVT::f64, &RISCV::GPRF64PairRegClass);
   }
 
   static const MVT::SimpleValueType BoolVecVTs[] = {
@@ -2223,6 +2223,17 @@ MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   MVT PartVT = TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 
   return PartVT;
+}
+
+unsigned
+RISCVTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
+                                     std::optional<MVT> RegisterVT) const {
+  // Pair inline assembly operand
+  if (VT == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) && RegisterVT &&
+      *RegisterVT == MVT::Untyped)
+    return 1;
+
+  return TargetLowering::getNumRegisters(Context, VT, RegisterVT);
 }
 
 unsigned RISCVTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
@@ -6422,7 +6433,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
       return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
     }
-    if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32) {
+    if (VT == MVT::f64 && Op0VT == MVT::i64 && !Subtarget.is64Bit() &&
+        Subtarget.hasStdExtDOrZdinx()) {
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitScalar(Op0, DL, MVT::i32, MVT::i32);
       return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
@@ -12940,7 +12952,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
-    } else if (VT == MVT::i64 && Op0VT == MVT::f64 && XLenVT == MVT::i32) {
+    } else if (VT == MVT::i64 && Op0VT == MVT::f64 && !Subtarget.is64Bit() &&
+               Subtarget.hasStdExtDOrZdinx()) {
       SDValue NewReg = DAG.getNode(RISCVISD::SplitF64, DL,
                                    DAG.getVTList(MVT::i32, MVT::i32), Op0);
       SDValue RetReg = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
@@ -20185,6 +20198,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TAIL)
   NODE_NAME_CASE(SELECT_CC)
   NODE_NAME_CASE(BR_CC)
+  NODE_NAME_CASE(BuildGPRPair)
+  NODE_NAME_CASE(SplitGPRPair)
   NODE_NAME_CASE(BuildPairF64)
   NODE_NAME_CASE(SplitF64)
   NODE_NAME_CASE(ADD_LO)
@@ -20461,6 +20476,8 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_RegisterClass;
     if (Constraint == "cr" || Constraint == "cf")
       return C_RegisterClass;
+    if (Constraint == "Pr")
+      return C_RegisterClass;
   }
   return TargetLowering::getConstraintType(Constraint);
 }
@@ -20482,7 +20499,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
         return std::make_pair(0U, &RISCV::GPRF32NoX0RegClass);
       if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-        return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
+        return std::make_pair(0U, &RISCV::GPRF64PairNoX0RegClass);
       return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
     case 'f':
       if (VT == MVT::f16) {
@@ -20499,7 +20516,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (Subtarget.hasStdExtD())
           return std::make_pair(0U, &RISCV::FPR64RegClass);
         if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-          return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
+          return std::make_pair(0U, &RISCV::GPRF64PairNoX0RegClass);
         if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
           return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
       }
@@ -20541,7 +20558,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
       return std::make_pair(0U, &RISCV::GPRF32CRegClass);
     if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-      return std::make_pair(0U, &RISCV::GPRPairCRegClass);
+      return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
     if (!VT.isVector())
       return std::make_pair(0U, &RISCV::GPRCRegClass);
   } else if (Constraint == "cf") {
@@ -20559,10 +20576,14 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (Subtarget.hasStdExtD())
         return std::make_pair(0U, &RISCV::FPR64CRegClass);
       if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-        return std::make_pair(0U, &RISCV::GPRPairCRegClass);
+        return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
       if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
         return std::make_pair(0U, &RISCV::GPRCRegClass);
     }
+  } else if (Constraint == "Pr") {
+    if (VT == MVT::f64 && !Subtarget.is64Bit() && Subtarget.hasStdExtZdinx())
+      return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
+    return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
   }
 
   // Clang will correctly decode the usage of register name aliases into their
@@ -20723,7 +20744,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // Subtarget into account.
   if (Res.second == &RISCV::GPRF16RegClass ||
       Res.second == &RISCV::GPRF32RegClass ||
-      Res.second == &RISCV::GPRPairRegClass)
+      Res.second == &RISCV::GPRF64PairRegClass)
     return std::make_pair(Res.first, &RISCV::GPRRegClass);
 
   return Res;
@@ -21349,6 +21370,16 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.has_value();
   EVT ValueVT = Val.getValueType();
+
+  if (ValueVT == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) &&
+      NumParts == 1 && PartVT == MVT::Untyped) {
+    // Pairs in Inline Assembly
+    MVT XLenVT = Subtarget.getXLenVT();
+    auto [Lo, Hi] = DAG.SplitScalar(Val, DL, XLenVT, XLenVT);
+    Parts[0] = DAG.getNode(RISCVISD::BuildGPRPair, DL, MVT::Untyped, Lo, Hi);
+    return true;
+  }
+
   if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
       PartVT == MVT::f32) {
     // Cast the [b]f16 to i16, extend to i32, pad with ones to make a float
@@ -21420,6 +21451,17 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
     MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.has_value();
+
+  if (ValueVT == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) &&
+      NumParts == 1 && PartVT == MVT::Untyped) {
+    // Pairs in Inline Assembly
+    MVT XLenVT = Subtarget.getXLenVT();
+    SDValue Res = DAG.getNode(RISCVISD::SplitGPRPair, DL,
+                              DAG.getVTList(XLenVT, XLenVT), Parts[0]);
+    return DAG.getNode(ISD::BUILD_PAIR, DL, ValueVT, Res.getValue(0),
+                       Res.getValue(1));
+  }
+
   if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
       PartVT == MVT::f32) {
     SDValue Val = Parts[0];

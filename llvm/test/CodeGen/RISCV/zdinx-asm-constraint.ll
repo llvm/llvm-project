@@ -26,6 +26,32 @@ entry:
   ret void
 }
 
+define dso_local void @zdinx_asm_Pr(ptr nocapture noundef writeonly %a, double noundef %b, double noundef %c) nounwind {
+; CHECK-LABEL: zdinx_asm_Pr:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    mv a5, a4
+; CHECK-NEXT:    mv s1, a2
+; CHECK-NEXT:    mv a4, a3
+; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    fsgnjx.d a2, s0, a4
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    sw a2, 8(a0)
+; CHECK-NEXT:    sw a3, 12(a0)
+; CHECK-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+entry:
+  %arrayidx = getelementptr inbounds double, ptr %a, i32 1
+  %0 = tail call double asm "fsgnjx.d $0, $1, $2", "=^Pr,^Pr,^Pr"(double %b, double %c)
+  store double %0, ptr %arrayidx, align 8
+  ret void
+}
+
 define dso_local void @zfinx_asm(ptr nocapture noundef writeonly %a, float noundef %b, float noundef %c) nounwind {
 ; CHECK-LABEL: zfinx_asm:
 ; CHECK:       # %bb.0: # %entry
