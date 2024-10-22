@@ -123,7 +123,7 @@ if (NOT WIN32)
   )
 
   enable_cuda_compilation(flang_rt "${supported_sources}")
-  enable_omp_offload_compilation("${supported_sources}")
+  enable_omp_offload_compilation(flang_rt "${supported_sources}")
 
   # For unittests that depend on flang_rt. Should link to the static version
   # of the library.
@@ -148,7 +148,7 @@ else()
       )
 
     enable_cuda_compilation(${name} "${supported_sources}")
-    enable_omp_offload_compilation("${supported_sources}")
+    enable_omp_offload_compilation(${name} "${supported_sources}")
   endfunction ()
 
   add_win_flangrt_library(STATIC static     MultiThreaded)

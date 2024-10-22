@@ -60,7 +60,7 @@ macro(enable_cuda_compilation name files)
   endif()
 endmacro()
 
-macro(enable_omp_offload_compilation files)
+macro(enable_omp_offload_compilation name files)
   if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
     # OpenMP offload build only works with Clang compiler currently.
 
@@ -108,6 +108,7 @@ macro(enable_omp_offload_compilation files)
       set_source_files_properties(${files} PROPERTIES COMPILE_OPTIONS
         "${OMP_COMPILE_OPTIONS}"
         )
+      target_link_options(${name} PUBLIC ${OMP_COMPILE_OPTIONS})
 
       # Enable "declare target" in the source code.
       set_source_files_properties(${files}
