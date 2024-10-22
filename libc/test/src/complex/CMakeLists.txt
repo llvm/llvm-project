@@ -1,0 +1,61 @@
+add_custom_target(libc-complex-unittests)
+
+add_libc_test(
+  creal_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    creal_test.cpp
+  DEPENDS
+    libc.src.complex.creal
+  LINK_LIBRARIES
+      LibcFPTestHelpers
+)
+
+add_libc_test(
+  crealf_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    crealf_test.cpp
+  DEPENDS
+    libc.src.complex.crealf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  creall_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    creall_test.cpp
+  DEPENDS
+    libc.src.complex.creall
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  crealf16_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    crealf16_test.cpp
+  DEPENDS
+    libc.src.complex.crealf16
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  crealf128_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    crealf128_test.cpp
+  DEPENDS
+    libc.src.complex.crealf128
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)

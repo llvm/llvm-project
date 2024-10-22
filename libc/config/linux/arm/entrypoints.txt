@@ -197,6 +197,11 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
 endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # complex.h entrypoints
+    libc.src.complex.creal
+    libc.src.complex.crealf
+    libc.src.complex.creall
+    
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept
