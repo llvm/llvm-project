@@ -781,6 +781,25 @@ def ConvertMathToSPIRV : Pass<"convert-math-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToEmitC
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToEmitC  : Pass<"convert-math-to-emitc", "ModuleOp"> {
+  let summary = "Convert some Math operations to EmitC Call_opaque";
+  let description = [{
+    This pass converts supported Math ops to call_opaque calls to compiler generated
+    functions implementing these operations in software.
+    Unlike convert-math-to-funcs pass, this pass uses call_opaque,
+    therefore enables us to overload the same funtion with different argument types
+  }];
+
+  let constructor = "mlir::createConvertMathToEmitCPass()";
+  let dependentDialects = ["emitc::EmitCDialect",
+                           "math::MathDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // MathToFuncs
 //===----------------------------------------------------------------------===//
 
