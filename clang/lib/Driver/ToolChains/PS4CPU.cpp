@@ -261,7 +261,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // time with specific tombstones, such that they're recognisable by the
     // PlayStation debugger.
     CmdArgs.push_back("-z");
-    CmdArgs.push_back("dead-reloc-in-nonalloc=.debug*=0xffffffffffffffff");
+    CmdArgs.push_back("dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff");
     CmdArgs.push_back("-z");
     CmdArgs.push_back(
         "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe");

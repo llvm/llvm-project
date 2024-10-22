@@ -21,7 +21,7 @@
 // CHECK-Z: {{ld(\.exe)?}}"
 // CHECK-Z-SAME: "-z" "now"
 // CHECK-Z-SAME: "-z" "start-stop-visibility=hidden"
-// CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug*=0xffffffffffffffff"
+// CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff"
 // CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe"
 // CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe"
 
