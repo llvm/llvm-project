@@ -1910,6 +1910,7 @@ private:
   }
 
   bool diagnoseUnknownTemplateId(ExprResult TemplateName, SourceLocation Less);
+  bool isMissingTemplateKeywordBeforeScope(bool AnnotateInvalid);
   void checkPotentialAngleBracket(ExprResult &PotentialTemplateName);
   bool checkPotentialAngleBracketDelimiter(const AngleBracketTracker::Loc &,
                                            const Token &OpToken);
@@ -1970,7 +1971,7 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ Expressions
   ExprResult tryParseCXXIdExpression(CXXScopeSpec &SS, bool isAddressOfOperand,
-                                     Token &Replacement);
+                                     Token *Replacement = nullptr);
 
   ExprResult tryParseCXXPackIndexingExpression(ExprResult PackIdExpression);
   ExprResult ParseCXXPackIndexingExpression(ExprResult PackIdExpression);
@@ -2745,7 +2746,7 @@ private:
   /// Determine whether the current token sequence might be
   ///   '<' template-argument-list '>'
   /// rather than a less-than expression.
-  TPResult isTemplateArgumentList(unsigned TokensToSkip);
+  TPResult isTemplateArgumentList(unsigned TokensToSkip, TemplateNameKind TNK);
 
   /// Determine whether an '(' after an 'explicit' keyword is part of a C++20
   /// 'explicit(bool)' declaration, in earlier language modes where that is an
@@ -2768,6 +2769,7 @@ private:
   TPResult TryParseTypeofSpecifier();
   TPResult TryParseProtocolQualifiers();
   TPResult TryParsePtrOperatorSeq();
+  TPResult TryParseNonConversionOperatorId();
   TPResult TryParseOperatorId();
   TPResult TryParseInitDeclaratorList(bool MayHaveTrailingReturnType = false);
   TPResult TryParseDeclarator(bool mayBeAbstract, bool mayHaveIdentifier = true,
@@ -3382,15 +3384,11 @@ private:
   BaseResult ParseBaseSpecifier(Decl *ClassDecl);
   AccessSpecifier getAccessSpecifierIfPresent() const;
 
-  bool ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
-                                    ParsedType ObjectType,
-                                    bool ObjectHadErrors,
-                                    SourceLocation TemplateKWLoc,
-                                    IdentifierInfo *Name,
-                                    SourceLocation NameLoc,
-                                    bool EnteringContext,
-                                    UnqualifiedId &Id,
-                                    bool AssumeTemplateId);
+  bool ParseUnqualifiedIdTemplateId(
+      CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
+      SourceLocation TemplateKWLoc, SourceLocation TildeLoc,
+      IdentifierInfo *Name, SourceLocation NameLoc, bool EnteringContext,
+      UnqualifiedId &Id, bool AssumeTemplateId);
   bool ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
                                   ParsedType ObjectType,
                                   UnqualifiedId &Result);

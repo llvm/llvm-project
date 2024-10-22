@@ -907,9 +907,7 @@ def missing_template_arg_list_after_template_kw : Extension<
   "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
   DefaultError;
 
-def err_missing_dependent_template_keyword : Error<
-  "use 'template' keyword to treat '%0' as a dependent template name">;
-def warn_missing_dependent_template_keyword : ExtWarn<
+def ext_missing_dependent_template_keyword : ExtWarn<
   "use 'template' keyword to treat '%0' as a dependent template name">;
 
 def ext_extern_template : Extension<

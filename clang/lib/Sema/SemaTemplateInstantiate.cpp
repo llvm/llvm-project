@@ -1519,12 +1519,11 @@ namespace {
                                    NestedNameSpecifierLoc QualifierLoc,
                                    QualType T);
 
-    TemplateName
-    TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
-                          SourceLocation NameLoc,
-                          QualType ObjectType = QualType(),
-                          NamedDecl *FirstQualifierInScope = nullptr,
-                          bool AllowInjectedClassName = false);
+    TemplateName TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
+                                       SourceLocation NameLoc,
+                                       QualType ObjectType = QualType(),
+                                       bool AllowInjectedClassName = false,
+                                       bool MayBeNNS = false);
 
     const AnnotateAttr *TransformAnnotateAttr(const AnnotateAttr *AA);
     const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
@@ -2012,8 +2011,7 @@ TemplateInstantiator::RebuildElaboratedType(SourceLocation KeywordLoc,
 
 TemplateName TemplateInstantiator::TransformTemplateName(
     CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc,
-    QualType ObjectType, NamedDecl *FirstQualifierInScope,
-    bool AllowInjectedClassName) {
+    QualType ObjectType, bool AllowInjectedClassName, bool MayBeNNS) {
   if (TemplateTemplateParmDecl *TTP
        = dyn_cast_or_null<TemplateTemplateParmDecl>(Name.getAsTemplateDecl())) {
     if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
@@ -2087,8 +2085,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
   }
 
   return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
-                                          FirstQualifierInScope,
-                                          AllowInjectedClassName);
+                                          AllowInjectedClassName, MayBeNNS);
 }
 
 ExprResult
