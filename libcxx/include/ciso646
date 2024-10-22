@@ -21,8 +21,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 20 && defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_ENABLE_REMOVED_CISO646) &&      \
-    !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#if _LIBCPP_STD_VER >= 20 && defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 #  warning <ciso646> is removed in C++20. Include <version> instead.
 #endif
 

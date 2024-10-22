@@ -18,15 +18,8 @@
 
 */
 
-#include <__config>
-
-#if _LIBCPP_STD_VER >= 17
-#  include <complex>
-#else
-#  include <ccomplex>
-#endif
-
 #include <cmath>
+#include <complex>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

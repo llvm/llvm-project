@@ -32,23 +32,6 @@ header_restrictions = {
     "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
 }
 
-# Undeprecate headers that are deprecated in C++17 and removed in C++20.
-header_undeprecations = {
-    "ccomplex": """#if !defined (_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
-#endif""",
-    "ciso646": "#define _LIBCPP_ENABLE_REMOVED_CISO646",
-    "cstdalign": """#if !defined (_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
-#endif""",
-    "cstdbool": """#if !defined (_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
-#endif""",
-    "ctgmath": """#if !defined (_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
-#endif""",
-}
-
 lit_header_restrictions = {
     "barrier": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "clocale": "// UNSUPPORTED: no-localization",
@@ -86,6 +69,15 @@ lit_header_restrictions = {
     "thread": "// UNSUPPORTED: no-threads, c++03",
     "wchar.h": "// UNSUPPORTED: no-wide-characters",
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
+}
+
+# Undeprecate headers that are deprecated in C++17 and removed in C++20.
+lit_header_undeprecations = {
+    "ccomplex": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ciso646": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdalign": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdbool": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ctgmath": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
 }
 
 # This table was produced manually, by grepping the TeX source of the Standard's

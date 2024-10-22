@@ -17,7 +17,7 @@ import sys
 sys.path.append(sys.argv[1])
 from libcxx.header_information import (
     lit_header_restrictions,
-    header_undeprecations,
+    lit_header_undeprecations,
     public_headers,
 )
 
@@ -26,7 +26,7 @@ for header in public_headers:
         f"""\
 //--- {header}.compile.pass.cpp
 {lit_header_restrictions.get(header, '')}
-{header_undeprecations.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 #define SYSTEM_RESERVED_NAME This name should not be used in libc++
 

@@ -85,8 +85,8 @@ Deprecations and Removals
 
 - ``<ccomplex>``, ``<cstdalign>`` (previously missing), ``<cstdbool>``, and ``<ctgmath>`` are deprecated since C++17 as
   specified by the standard. They, together with ``<ciso646>``, are removed in C++20, but libc++ still provides these
-  headers as an extension and only deprecates them. The ``_LIBCPP_ENABLE_REMOVED_CISO646`` macro can be defined to
-  suppress deprecation for ``<ciso646>``.
+  headers as an extension and only deprecates them. The ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS`` macro can be defined to
+  suppress deprecation for these headers.
 
 Upcoming Deprecations and Removals
 ----------------------------------

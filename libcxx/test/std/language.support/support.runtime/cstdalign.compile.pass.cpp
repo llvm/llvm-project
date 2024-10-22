@@ -27,5 +27,3 @@
 #ifdef alignof
 #  error alignof should not be defined
 #endif
-
-int main(int, char**) { return 0; }

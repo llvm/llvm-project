@@ -14,7 +14,5 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: clang-modules-build
 
-#include "test_macros.h"
-
 #include <ciso646>
 // expected-warning@ciso646:* {{<ciso646> is removed in C++20. Include <version> instead.}}

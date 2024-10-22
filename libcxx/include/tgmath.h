@@ -24,12 +24,8 @@
 #endif
 
 #ifdef __cplusplus
-#  if _LIBCPP_STD_VER >= 17
-#    include <cmath>
-#    include <complex>
-#  else
-#    include <ctgmath>
-#  endif
+#  include <cmath>
+#  include <complex>
 #else
 #  if __has_include_next(<tgmath.h>)
 #    include_next <tgmath.h>
