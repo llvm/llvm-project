@@ -330,7 +330,7 @@ Syntax:
 
 .. code-block:: llvm
 
-    declare i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.fshl.clamp.i32(i32 %hi, i32 %lo, i32 %n)
 
 Overview:
 """""""""
@@ -344,11 +344,11 @@ Semantics:
 """"""""""
 
 The '``llvm.nvvm.fshl.clamp``' family of intrinsic functions performs a clamped
-funnel shift left: the first two values are concatenated as { %a : %b } (%a is
-the most significant bits of the wide value), the combined value is shifted
+funnel shift left: the first two values are concatenated as { %hi : %lo } (%hi
+is the most significant bits of the wide value), the combined value is shifted
 left, and the most significant bits are extracted to produce a result that is
 the same size as the original arguments. The shift amount is the minimum of the
-value of %c and the bit width of the integer type.
+value of %n and the bit width of the integer type.
 
 '``llvm.nvvm.fshr.clamp.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -358,7 +358,7 @@ Syntax:
 
 .. code-block:: llvm
 
-    declare i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.fshr.clamp.i32(i32 %hi, i32 %lo, i32 %n)
 
 Overview:
 """""""""
@@ -372,11 +372,11 @@ Semantics:
 """"""""""
 
 The '``llvm.nvvm.fshr.clamp``' family of intrinsic functions performs a clamped
-funnel shift right: the first two values are concatenated as { %a : %b } (%a is
-the most significant bits of the wide value), the combined value is shifted
+funnel shift right: the first two values are concatenated as { %hi : %lo } (%hi
+is the most significant bits of the wide value), the combined value is shifted
 right, and the least significant bits are extracted to produce a result that is
 the same size as the original arguments. The shift amount is the minimum of the
-value of %c and the bit width of the integer type.
+value of %n and the bit width of the integer type.
 
 
 Other Intrinsics

@@ -395,13 +395,13 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
         II->getArgOperand(0), II->getName());
 
   case SCP_FunnelShiftClamp: {
-    // Canoncialize a clamping funnel shift to the generic llvm funnel shift
+    // Canonicalize a clamping funnel shift to the generic llvm funnel shift
     // when possible, as this is easier for llvm to optimize further.
     if (const auto *ShiftConst = dyn_cast<ConstantInt>(II->getArgOperand(2))) {
-      if (ShiftConst->getZExtValue() >= II->getType()->getIntegerBitWidth())
-        return IC.replaceInstUsesWith(*II, II->getArgOperand(1));
-
       const bool IsLeft = II->getIntrinsicID() == Intrinsic::nvvm_fshl_clamp;
+      if (ShiftConst->getZExtValue() >= II->getType()->getIntegerBitWidth())
+        return IC.replaceInstUsesWith(*II, II->getArgOperand(IsLeft ? 1 : 0));
+
       const unsigned FshIID = IsLeft ? Intrinsic::fshl : Intrinsic::fshr;
       return CallInst::Create(Intrinsic::getOrInsertDeclaration(
                                   II->getModule(), FshIID, II->getType()),

@@ -385,30 +385,44 @@ define float @test_sqrt_rn_f_ftz(float %a) #0 {
 }
 
 ; CHECK-LABEL: @test_fshl_clamp_1
-define i32 @test_fshl_clamp_1(i32 %a, i32 %b, i32 %c) {
+define i32 @test_fshl_clamp_1(i32 %a, i32 %b) {
 ; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 3)
   %call = call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 3)
   ret i32 %call
 }
 
 ; CHECK-LABEL: @test_fshl_clamp_2
-define i32 @test_fshl_clamp_2(i32 %a, i32 %b, i32 %c) {
+define i32 @test_fshl_clamp_2(i32 %a, i32 %b) {
 ; CHECK: ret i32 %b
   %call = call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 300)
   ret i32 %call
 }
 
+; CHECK-LABEL: @test_fshl_clamp_3
+define i32 @test_fshl_clamp_3(i32 %a, i32 %b, i32 %c) {
+; CHECK: call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 %c)
+  %call = call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %call
+}
+
 ; CHECK-LABEL: @test_fshr_clamp_1
-define i32 @test_fshr_clamp_1(i32 %a, i32 %b, i32 %c) {
+define i32 @test_fshr_clamp_1(i32 %a, i32 %b) {
 ; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 29)
   %call = call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 3)
   ret i32 %call
 }
 
 ; CHECK-LABEL: @test_fshr_clamp_2
-define i32 @test_fshr_clamp_2(i32 %a, i32 %b, i32 %c) {
-; CHECK: ret i32 %b
+define i32 @test_fshr_clamp_2(i32 %a, i32 %b) {
+; CHECK: ret i32 %a
   %call = call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 300)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshr_clamp_3
+define i32 @test_fshr_clamp_3(i32 %a, i32 %b, i32 %c) {
+; CHECK: call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 %c)
+  %call = call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 %c)
   ret i32 %call
 }
 
