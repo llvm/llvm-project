@@ -205,14 +205,14 @@ MATCHER_P(WithMessage, Msg, "has diagnostic message") {
 }
 
 TEST_F(SuppressionMappingTest, MissingMappingFile) {
-  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(takeDiags(), testing::ElementsAre(WithMessage(
                                "no such file or directory: 'foo.txt'")));
 }
 
 TEST_F(SuppressionMappingTest, MalformedFile) {
-  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer("asdf", "foo.txt"));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
@@ -222,7 +222,7 @@ TEST_F(SuppressionMappingTest, MalformedFile) {
 }
 
 TEST_F(SuppressionMappingTest, UnknownDiagName) {
-  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer("[non-existing-warning]"));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
@@ -236,7 +236,7 @@ TEST_F(SuppressionMappingTest, SuppressesGroup) {
   [unused]
   src:*
   )txt";
-  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
@@ -253,7 +253,7 @@ TEST_F(SuppressionMappingTest, ExclusionsWork) {
   src:*
   src:*foo.cpp=emit
   )txt";
-  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
@@ -272,7 +272,7 @@ TEST_F(SuppressionMappingTest, LongestMatchWins) {
   src:*clang/lib/Sema/*=emit
   src:*clang/lib/Sema/foo*
   )txt";
-  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
@@ -291,7 +291,7 @@ TEST_F(SuppressionMappingTest, IsIgnored) {
   [unused]
   src:*clang/*
   )txt";
-  Diags.getDiagnosticOptions().SuppressionMappingsFile = "foo.txt";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   Diags.getDiagnosticOptions().Warnings = {"unused"};
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));

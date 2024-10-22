@@ -1051,7 +1051,8 @@ TEST_F(CommandLineTest, WarningSuppressionMappings) {
   const char *Args[] = {"--warning-suppression-mappings=foo.txt"};
 
   EXPECT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-  EXPECT_EQ(Invocation.getDiagnosticOpts().SuppressionMappingsFile, "foo.txt");
+  EXPECT_EQ(Invocation.getDiagnosticOpts().DiagnosticSuppressionMappingsFile,
+            "foo.txt");
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   EXPECT_THAT(GeneratedArgs, Contains(StrEq(Args[0])));
