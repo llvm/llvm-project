@@ -22,5 +22,4 @@ bgrp z21.s, z10.s, z21.s
 
 .cpu generic+sve-bfscale
 bfscale z0.h, p0/m, z0.h, z0.h
-// CHECK: error: instruction requires: sve-bfscale
-// CHECK-NEXT: bfscale z0.h, p0/m, z0.h, z0.h
+// CHECK: bfscale z0.h, p0/m, z0.h, z0.h
