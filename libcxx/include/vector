@@ -1292,24 +1292,14 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il) {
-  auto __guard = std::__make_exception_guard(__destroy_vector(*this));
-  if (__il.size() > 0) {
-    __vallocate(__il.size());
-    __construct_at_end(__il.begin(), __il.end(), __il.size());
-  }
-  __guard.__complete();
+  __init_with_size(__il.begin(), __il.end(), __il.size());
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il, const allocator_type& __a)
     : __alloc_(__a) {
-  auto __guard = std::__make_exception_guard(__destroy_vector(*this));
-  if (__il.size() > 0) {
-    __vallocate(__il.size());
-    __construct_at_end(__il.begin(), __il.end(), __il.size());
-  }
-  __guard.__complete();
+  __init_with_size(__il.begin(), __il.end(), __il.size());
 }
 
 #endif // _LIBCPP_CXX03_LANG
