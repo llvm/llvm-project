@@ -20,7 +20,7 @@ define void @simple_nocapture_prop(ptr captures(none) %p) {
 define void @simple_nocapture_prop_caller(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@simple_nocapture_prop_caller
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @void.call.p0(ptr [[P]])
+; CHECK-NEXT:    call void @void.call.p0(ptr captures(none) [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @simple_nocapture_prop(ptr %p)
@@ -40,7 +40,7 @@ define i32 @nocapture_with_return_prop(ptr captures(none) %p) {
 define i32 @nocapture_with_return_prop_caller(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@nocapture_with_return_prop_caller
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[R_I:%.*]] = call i32 @ret.call.p0(ptr [[P]])
+; CHECK-NEXT:    [[R_I:%.*]] = call i32 @ret.call.p0(ptr captures(none) [[P]])
 ; CHECK-NEXT:    ret i32 [[R_I]]
 ;
   %r = call i32 @nocapture_with_return_prop(ptr %p)
@@ -193,7 +193,7 @@ define void @nocapture_prop_okay_seperate_alloca_caller(ptr %p, i1 %c) {
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SAVEDSTACK]])
 ; CHECK-NEXT:    br label [[NOCAPTURE_PROP_OKAY_SEPERATE_ALLOCA_EXIT:%.*]]
 ; CHECK:       F.i:
-; CHECK-NEXT:    call void @void.call.p0(ptr [[P]])
+; CHECK-NEXT:    call void @void.call.p0(ptr captures(none) [[P]])
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SAVEDSTACK]])
 ; CHECK-NEXT:    br label [[NOCAPTURE_PROP_OKAY_SEPERATE_ALLOCA_EXIT]]
 ; CHECK:       nocapture_prop_okay_seperate_alloca.exit:
@@ -286,10 +286,10 @@ F:
 define i32 @nocapture_prop_okay_no_sideeffects_caller(ptr %p, i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@nocapture_prop_okay_no_sideeffects_caller
 ; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:    call void @void.call.p0(ptr [[P]])
+; CHECK-NEXT:    call void @void.call.p0(ptr captures(none) [[P]])
 ; CHECK-NEXT:    br i1 [[C]], label [[T_I:%.*]], label [[F_I:%.*]]
 ; CHECK:       T.i:
-; CHECK-NEXT:    [[R_I:%.*]] = call i32 @ret.call.p0(ptr [[P]]) #[[ATTR3]]
+; CHECK-NEXT:    [[R_I:%.*]] = call i32 @ret.call.p0(ptr captures(none) [[P]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label [[NOCAPTURE_PROP_OKAY_NO_SIDEEFFECTS_EXIT:%.*]]
 ; CHECK:       F.i:
 ; CHECK-NEXT:    br label [[NOCAPTURE_PROP_OKAY_NO_SIDEEFFECTS_EXIT]]
