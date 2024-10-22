@@ -132,13 +132,9 @@ unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
 
 std::pair<const Value *, unsigned>
 SPIRVTargetMachine::getPredicatedAddrSpace(const Value *V) const {
-  // TODO: this is only enabled for AMDGCN flavoured SPIR-V at the moment, where
-  // we can rely on the intrinsics being available; we should re-implement it on
-  // top of SPIR-V specific intrinsics if/when they are added or
-  // OpGenericCastToPtrExplicit / OpGenericPtrMemSemantics directly.
-  if (getTargetTriple().getVendor() != Triple::VendorType::AMD)
-    return std::pair(nullptr, UINT32_MAX);
-
+  // TODO: this is will only fire for AMDGCN flavoured SPIR-V at the moment,
+  // where the intrinsics are available; we should re-implement the predicates
+  // on top of SPIR-V specific intrinsics OpGenericPtrMemSemantics directly.
   using namespace PatternMatch;
 
   if (auto *II = dyn_cast<IntrinsicInst>(V)) {
