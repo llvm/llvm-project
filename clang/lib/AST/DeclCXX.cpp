@@ -1420,7 +1420,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
       if (const RecordType *RT = dyn_cast<RecordType>(Ty))
         data().IsHLSLIntangible |= RT->getAsCXXRecordDecl()->isHLSLIntangible();
       else
-        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
+        data().IsHLSLIntangible |= (Ty->isHLSLAttributedResourceType() ||
+                                    Ty->isHLSLBuiltinIntangibleType());
     }
   }
 
