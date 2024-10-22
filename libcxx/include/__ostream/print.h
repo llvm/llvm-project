@@ -97,7 +97,7 @@ _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os);
 #    ifndef _LIBCPP_HAS_NO_UNICODE
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
-#      if _LIBCPP_AVAILABILITY_HAS_PRINT == 0
+#      if _LIBCPP_AVAILABILITY_HAS_PRINT == 0 || !defined(_LIBCPP_WIN32API)
   return std::__vprint_nonunicode(__os, __fmt, __args, __write_nl);
 #      else
   FILE* __file = std::__get_ostream_file(__os);
@@ -120,10 +120,8 @@ _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, fo
 #        endif // _LIBCPP_HAS_EXCEPTIONS
     ostream::sentry __s(__os);
     if (__s) {
-#        ifndef _LIBCPP_WIN32API
-      __print::__vprint_unicode_posix(__file, __fmt, __args, __write_nl, true);
-#        elif !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-    __print::__vprint_unicode_windows(__file, __fmt, __args, __write_nl, true);
+#        ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+      __print::__vprint_unicode_windows(__file, __fmt, __args, __write_nl);
 #        else
 #          error "Windows builds with wchar_t disabled are not supported."
 #        endif
