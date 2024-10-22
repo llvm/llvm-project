@@ -83,9 +83,9 @@ public:
   ///
   /// \param[in] declaration
   ///     The const Declaration object to compare with.
-  ///     
+  ///
   /// \param[in] full
-  ///     Same meaning as Full in FileSpec::Equal.  True means an empty 
+  ///     Same meaning as Full in FileSpec::Equal.  True means an empty
   ///     directory is not equal to a specified one, false means it is equal.
   ///
   /// \return

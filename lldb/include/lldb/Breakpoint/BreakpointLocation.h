@@ -322,8 +322,8 @@ protected:
 
   /// If this location knows that the virtual stack frame it represents is
   /// not frame 0, return the suggested stack frame instead.  This will happen
-  /// when the location's address contains a "virtual inlined call stack" and the
-  /// breakpoint was set on a file & line that are not at the bottom of that
+  /// when the location's address contains a "virtual inlined call stack" and
+  /// the breakpoint was set on a file & line that are not at the bottom of that
   /// stack.  For now we key off the "preferred line entry" - looking for that
   /// in the blocks that start with the stop PC.
   /// This version of the API doesn't take an "inlined" parameter because it

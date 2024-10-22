@@ -81,7 +81,7 @@ private:
                              // a switch in for this if there's
                              // demand for that.
   LazyBool m_virtual_step;   // true if we've just done a "virtual step", i.e.
-                           // just moved the inline stack depth.
+                             // just moved the inline stack depth.
   ConstString m_step_into_target;
   ThreadPlanStepInRange(const ThreadPlanStepInRange &) = delete;
   const ThreadPlanStepInRange &
