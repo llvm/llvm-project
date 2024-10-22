@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
 #include <cstdint>
@@ -953,10 +954,21 @@ public:
   }
 
   /// Diagnostic suppression mappings can be used to ignore diagnostics based on
-  /// the file they occur in.
+  /// the file they occur in. Mapping file is expected to be a special case list
+  /// with sections denoting diagnostic groups and `src` entries for globs to
+  /// suppress. `emit` category can be used to disable suppression. Longest glob
+  /// that matches a filepath takes precendence. For example:
+  ///   [unused]
+  ///   src:*clang/*
+  ///   src:*clang/foo/*=emit
+  ///   src:*clang/foo/bar/*
+  ///
+  /// Such a mappings file suppress all diagnostics produced by -Wunused in all
+  /// sources under `clang/` directory apart from `clang/foo/`. Diagnostics
+  /// under `clang/foo/bar/` will also be suppressed.
   /// These take presumed locations into account, and can still be overriden by
   /// clang-diagnostics pragmas.
-  void setDiagSuppressionMapping(decltype(DiagSuppressionMapping) Mapping);
+  void setDiagSuppressionMapping(llvm::MemoryBuffer &MB);
   bool isSuppressedViaMapping(diag::kind D, llvm::StringRef FilePath) const;
 
   /// Issue the message to the client.

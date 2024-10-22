@@ -2522,9 +2522,9 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     Consumer(StringRef("-R") + Remark);
   }
 
-  if (!Opts.SuppressionMappingsFile.empty()) {
+  if (!Opts.DiagnosticSuppressionMappingsFile.empty()) {
     GenerateArg(Consumer, OPT_warning_suppression_mappings_EQ,
-                Opts.SuppressionMappingsFile);
+                Opts.DiagnosticSuppressionMappingsFile);
   }
 }
 
@@ -2603,7 +2603,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   }
 
   if (const Arg *A = Args.getLastArg(OPT_warning_suppression_mappings_EQ))
-    Opts.SuppressionMappingsFile = A->getValue();
+    Opts.DiagnosticSuppressionMappingsFile = A->getValue();
 
   addDiagnosticArgs(Args, OPT_W_Group, OPT_W_value_Group, Opts.Warnings);
   addDiagnosticArgs(Args, OPT_R_Group, OPT_R_value_Group, Opts.Remarks);

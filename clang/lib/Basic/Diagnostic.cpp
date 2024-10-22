@@ -12,7 +12,9 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticError.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -28,6 +30,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,6 +42,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -479,9 +485,93 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
       setSeverity(Diag, Map, Loc);
 }
 
-void DiagnosticsEngine::setDiagSuppressionMapping(
-    decltype(DiagSuppressionMapping) Mapping) {
-  DiagSuppressionMapping = std::move(Mapping);
+namespace {
+class WarningsSpecialCaseList : public llvm::SpecialCaseList {
+public:
+  static std::unique_ptr<WarningsSpecialCaseList>
+  create(const llvm::MemoryBuffer &MB, std::string &Err) {
+    auto SCL = std::make_unique<WarningsSpecialCaseList>();
+    if (SCL->createInternal(&MB, Err))
+      return SCL;
+    return nullptr;
+  }
+
+  // Section names refer to diagnostic groups, which cover multiple individual
+  // diagnostics. Expand diagnostic groups here to individual diagnostics.
+  // A diagnostic can have multiple diagnostic groups associated with it, we let
+  // the last section take precedence in such cases.
+  void processSections(DiagnosticsEngine &Diags) {
+    // Drop the default section introduced by special case list, we only support
+    // exact diagnostic group names.
+    Sections.erase("*");
+    // Make sure we iterate sections by their line numbers.
+    std::vector<std::pair<unsigned, const llvm::StringMapEntry<Section> *>>
+        LineAndSection;
+    for (const auto &Entry : Sections) {
+      LineAndSection.emplace_back(
+          Entry.second.SectionMatcher->Globs.at(Entry.first()).second, &Entry);
+    }
+    llvm::sort(LineAndSection);
+    static constexpr auto kFlavor = clang::diag::Flavor::WarningOrError;
+    for (const auto &[_, Entry] : LineAndSection) {
+      SmallVector<diag::kind, 256> GroupDiags;
+      if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
+              kFlavor, Entry->first(), GroupDiags)) {
+        StringRef Suggestion =
+            DiagnosticIDs::getNearestOption(kFlavor, Entry->first());
+        Diags.Report(diag::warn_unknown_diag_option)
+            << static_cast<unsigned>(kFlavor) << Entry->first()
+            << !Suggestion.empty() << Suggestion;
+        continue;
+      }
+      for (auto D : GroupDiags)
+        DiagToSection[D] = &Entry->getValue();
+    }
+  }
+
+  bool isDiagSuppressed(diag::kind D, llvm::StringRef FilePath) const {
+    auto Section = DiagToSection.find(D);
+    if (Section == DiagToSection.end())
+      return false;
+    auto SrcEntries = Section->second->Entries.find("src");
+    if (SrcEntries == Section->second->Entries.end())
+      return false;
+    // Find the longest glob pattern that matches FilePath. A positive match
+    // implies D should be suppressed for FilePath.
+    llvm::StringRef LongestMatch;
+    bool LongestWasNegative;
+    for (const auto &CatIt : SrcEntries->second) {
+      bool IsNegative = CatIt.first() == "emit";
+      for (const auto &GlobIt : CatIt.second.Globs) {
+        if (GlobIt.getKeyLength() < LongestMatch.size())
+          continue;
+        if (!GlobIt.second.first.match(FilePath))
+          continue;
+        LongestMatch = GlobIt.getKey();
+        LongestWasNegative = IsNegative;
+      }
+    }
+    return !LongestMatch.empty() && !LongestWasNegative;
+  }
+
+private:
+  llvm::DenseMap<diag::kind, const Section *> DiagToSection;
+};
+} // namespace
+
+void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &MB) {
+  std::string Err;
+  auto SCL = WarningsSpecialCaseList::create(MB, Err);
+  if (!SCL) {
+    Report(diag::err_drv_malformed_warning_suppression_mapping)
+        << MB.getBufferIdentifier() << Err;
+    return;
+  }
+  SCL->processSections(*this);
+  DiagSuppressionMapping = [SCL(std::move(SCL))](diag::kind K,
+                                                  llvm::StringRef Path) {
+    return SCL->isDiagSuppressed(K, Path);
+  };
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind D,
