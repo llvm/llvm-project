@@ -32,13 +32,13 @@ using namespace llvm;
 
 namespace {
 
-class TailDuplicateBase : public MachineFunctionPass {
+class TailDuplicateBaseLegacy : public MachineFunctionPass {
   TailDuplicator Duplicator;
   std::unique_ptr<MBFIWrapper> MBFIW;
   bool PreRegAlloc;
 public:
-  TailDuplicateBase(char &PassID, bool PreRegAlloc)
-    : MachineFunctionPass(PassID), PreRegAlloc(PreRegAlloc) {}
+  TailDuplicateBaseLegacy(char &PassID, bool PreRegAlloc)
+      : MachineFunctionPass(PassID), PreRegAlloc(PreRegAlloc) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -50,18 +50,18 @@ public:
   }
 };
 
-class TailDuplicateLegacy : public TailDuplicateBase {
+class TailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
-  TailDuplicateLegacy() : TailDuplicateBase(ID, false) {
+  TailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, false) {
     initializeTailDuplicateLegacyPass(*PassRegistry::getPassRegistry());
   }
 };
 
-class EarlyTailDuplicateLegacy : public TailDuplicateBase {
+class EarlyTailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
-  EarlyTailDuplicateLegacy() : TailDuplicateBase(ID, true) {
+  EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {
     initializeEarlyTailDuplicateLegacyPass(*PassRegistry::getPassRegistry());
   }
 
@@ -84,7 +84,7 @@ INITIALIZE_PASS(TailDuplicateLegacy, DEBUG_TYPE, "Tail Duplication", false,
 INITIALIZE_PASS(EarlyTailDuplicateLegacy, "early-tailduplication",
                 "Early Tail Duplication", false, false)
 
-bool TailDuplicateBase::runOnMachineFunction(MachineFunction &MF) {
+bool TailDuplicateBaseLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -108,7 +108,10 @@ bool TailDuplicateBase::runOnMachineFunction(MachineFunction &MF) {
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses TailDuplicatePassBase<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
-  MFPropsModifier<DerivedT> _(static_cast<DerivedT &>(*this), MF);
+  MFPropsModifier _(static_cast<DerivedT &>(*this), MF);
+
+  if (MF.getFunction().hasOptNone())
+    return PreservedAnalyses::all();
 
   auto *MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
   auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
