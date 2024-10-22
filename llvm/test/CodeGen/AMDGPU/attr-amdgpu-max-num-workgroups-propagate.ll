@@ -62,6 +62,16 @@ define amdgpu_kernel void @kernel_100_8_32() #1 {
   ret void
 }
 
+define amdgpu_cs void @amdgpu_cs_100_8_32() #1 {
+; CHECK-LABEL: define amdgpu_cs void @amdgpu_cs_100_8_32(
+; CHECK-SAME: ) #[[ATTR3]] {
+; CHECK-NEXT:    call void @callee_merge_100_8_32__16_10_99()
+; CHECK-NEXT:    ret void
+;
+  call void @callee_merge_100_8_32__16_10_99()
+  ret void
+}
+
 attributes #1 = {"amdgpu-max-num-workgroups"="100,8,32"}
 
 define amdgpu_kernel void @kernel_16_10_99() #2 {
