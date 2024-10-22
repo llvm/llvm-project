@@ -35,3 +35,10 @@ subroutine vector_always
   do i=1,10
   enddo
 end subroutine
+
+subroutine ignore_vector_dep
+  !dir$ ivdep
+  ! CHECK: !DIR$ IVDEP
+  do i=1,10
+  enddo
+end subroutine

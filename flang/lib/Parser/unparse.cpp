@@ -1826,6 +1826,9 @@ public:
               Word("!DIR$ IGNORE_TKR"); // emitted even if tkr list is empty
               Walk(" ", tkr, ", ");
             },
+            [&](const CompilerDirective::IgnoreVectorDep &) {
+              Word("!DIR$ IVDEP");
+            },
             [&](const CompilerDirective::LoopCount &lcount) {
               Walk("!DIR$ LOOP COUNT (", lcount.v, ", ", ")");
             },
