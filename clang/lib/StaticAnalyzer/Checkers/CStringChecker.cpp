@@ -576,8 +576,11 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
 
   auto [StInBound, StOutBound] = state->assumeInBoundDual(*Idx, Size);
   if (StOutBound && !StInBound) {
+    // FIXME: We detected a fatal error here, we should stop analysis even if we
+    // chose not to emit a report here. However, as long as our out-of-bounds
+    // checker is in alpha, lets just pretend nothing happened.
     if (!OutOfBounds.isEnabled())
-      return nullptr;
+      return state;
 
     ErrorMessage Message =
         createOutOfBoundErrorMsg(CurrentFunctionDescription, Access);
@@ -609,10 +612,6 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
   State = checkNonNull(C, State, Buffer, BufVal);
   if (!State)
     return nullptr;
-
-  // If out-of-bounds checking is turned off, skip the rest.
-  if (!OutOfBounds.isEnabled())
-    return State;
 
   SVal BufStart =
       svalBuilder.evalCast(BufVal, PtrTy, Buffer.Expression->getType());
@@ -661,9 +660,6 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
                                              SizeArgExpr Size, AnyArgExpr First,
                                              AnyArgExpr Second,
                                              CharKind CK) const {
-  if (!BufferOverlap.isEnabled())
-    return state;
-
   // Do a simple check for overlap: if the two arguments are from the same
   // buffer, see if the end of the first is greater than the start of the second
   // or vice versa.
@@ -702,9 +698,15 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
       state->assume(svalBuilder.evalEQ(state, *firstLoc, *secondLoc));
 
   if (stateTrue && !stateFalse) {
-    // If the values are known to be equal, that's automatically an overlap.
-    emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
-    return nullptr;
+    if (BufferOverlap.isEnabled()) {
+      // If the values are known to be equal, that's automatically an overlap.
+      emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
+      return nullptr;
+    }
+    // FIXME: We detected a fatal error here, we should stop analysis even if we
+    // chose not to emit a report here. However, as long as our overlap checker
+    // is in alpha, lets just pretend nothing happened.
+    return state;
   }
 
   // assume the two expressions are not equal.
@@ -769,8 +771,14 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
 
   if (stateTrue && !stateFalse) {
     // Overlap!
-    emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
-    return nullptr;
+    if (BufferOverlap.isEnabled()) {
+      emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
+      return nullptr;
+    }
+    // FIXME: We detected a fatal error here, we should stop analysis even if we
+    // chose not to emit a report here. However, as long as our overlap checker
+    // is in alpha, lets just pretend nothing happened.
+    return state;
   }
 
   // assume the two expressions don't overlap.
@@ -779,7 +787,10 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
 }
 
 void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
-                                  const Stmt *First, const Stmt *Second) const {
+                                    const Stmt *First,
+                                    const Stmt *Second) const {
+  assert(BufferOverlap.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   ExplodedNode *N = C.generateErrorNode(state);
   if (!N)
     return;
@@ -795,6 +806,8 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
 
 void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
                                     const Stmt *S, StringRef WarningMsg) const {
+  assert(NullArg.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     auto Report =
         std::make_unique<PathSensitiveBugReport>(NullArg, WarningMsg, N);
@@ -809,6 +822,8 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                                               ProgramStateRef State,
                                               const Expr *E, const MemRegion *R,
                                               StringRef Msg) const {
+  assert(UninitializedRead.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     auto Report =
         std::make_unique<PathSensitiveBugReport>(UninitializedRead, Msg, N);
@@ -824,6 +839,8 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
 void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
                                         ProgramStateRef State, const Stmt *S,
                                         StringRef WarningMsg) const {
+  assert(OutOfBounds.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     // FIXME: It would be nice to eventually make this diagnostic more clear,
     // e.g., by referencing the original declaration or by saying *why* this
@@ -838,6 +855,8 @@ void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
 void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
                                        const Stmt *S,
                                        StringRef WarningMsg) const {
+  assert(NotNullTerm.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
     auto Report =
         std::make_unique<PathSensitiveBugReport>(NotNullTerm, WarningMsg, N);
@@ -851,10 +870,6 @@ ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
                                                      ProgramStateRef state,
                                                      NonLoc left,
                                                      NonLoc right) const {
-  // If out-of-bounds checking is turned off, skip the rest.
-  if (!OutOfBounds.isEnabled())
-    return state;
-
   // If a previous check has failed, propagate the failure.
   if (!state)
     return nullptr;
