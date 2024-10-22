@@ -31,7 +31,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <bitset>
+#include <cstdint>
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
@@ -178,21 +180,35 @@ public:
     }
 
     switch (Inst.getOpcode()) {
-    default: {
-      // Clear the state of all defined registers for instructions that we don't
-      // explicitly support.
-      auto NumDefs = Info->get(Inst.getOpcode()).getNumDefs();
-      for (unsigned I = 0; I < NumDefs; ++I) {
-        auto DefReg = Inst.getOperand(I).getReg();
-        if (isGPR(DefReg))
-          setGPRState(DefReg, std::nullopt);
+      case RISCV::LUI: {
+        setGPRState(Inst.getOperand(0).getReg(), 
+                    SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
+        break;
       }
-      break;
-    }
-    case RISCV::AUIPC:
-      setGPRState(Inst.getOperand(0).getReg(),
-                  Addr + (Inst.getOperand(1).getImm() << 12));
-      break;
+      case RISCV::C_LUI: {
+        MCRegister Reg = Inst.getOperand(0).getReg();
+        if (Reg == RISCV::X2)
+          break;
+        setGPRState(Reg, SignExtend64<18>(Inst.getOperand(1).getImm() << 12));
+        break;
+
+      }
+      case RISCV::AUIPC: {
+        setGPRState(Inst.getOperand(0).getReg(), 
+                    Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
+        break;
+      }
+      default: {
+        // Clear the state of all defined registers for instructions that we don't
+        // explicitly support.
+        auto NumDefs = Info->get(Inst.getOpcode()).getNumDefs();
+        for (unsigned I = 0; I < NumDefs; ++I) {
+          auto DefReg = Inst.getOperand(I).getReg();
+          if (isGPR(DefReg))
+            setGPRState(DefReg, std::nullopt);
+        }
+        break;
+      }
     }
   }
 
@@ -227,6 +243,97 @@ public:
       return false;
     }
 
+    return false;
+  }
+
+  bool evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                           uint64_t &Target) const override {
+    switch(Inst.getOpcode()) {
+      default:
+        return false;
+      case RISCV::ADDI: {
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          // TODO: Figure out ways to find the actual value of XLEN during analysis
+          int XLEN = 32;
+          uint64_t Mask = ~((uint64_t)0) >> (64 - XLEN);
+          Target = *TargetRegState + SignExtend64<12>(Inst.getOperand(2).getImm());
+          Target &= Mask;
+          return true;
+        }
+        break;
+      }
+      case RISCV::ADDIW: {
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          uint64_t Mask = ~((uint64_t)0) >> 32;
+          Target  = *TargetRegState + SignExtend64<12>(Inst.getOperand(2).getImm());
+          Target &= Mask;
+          Target = SignExtend64<32>(Target);
+          return true;
+        }
+        break;
+      }
+      case RISCV::C_ADDI: {
+        int64_t Offset = Inst.getOperand(2).getImm();
+        if (Offset == 0)
+          break;
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          Target = *TargetRegState + SignExtend64<6>(Offset);
+          return true;
+        }
+        break;
+      }
+      case RISCV::C_ADDIW: {
+        int64_t Offset = Inst.getOperand(2).getImm(); 
+        if (Offset == 0)
+          break;
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          uint64_t Mask = ~((uint64_t)0) >> 32;
+          Target &= Mask;
+          Target = *TargetRegState + SignExtend64<6>(Offset);
+          Target = SignExtend64<32>(Target);
+          return true;
+        }
+        break;
+      }
+      case RISCV::LB:
+      case RISCV::LH:
+      case RISCV::LD:
+      case RISCV::LW:
+      case RISCV::LBU:
+      case RISCV::LHU:
+      case RISCV::LWU:
+      case RISCV::SB:
+      case RISCV::SH:
+      case RISCV::SW:
+      case RISCV::SD:
+      case RISCV::FLH:
+      case RISCV::FLW:
+      case RISCV::FLD:
+      case RISCV::FSH:
+      case RISCV::FSW:
+      case RISCV::FSD: {
+        int64_t Offset = SignExtend64<12>(Inst.getOperand(2).getImm());
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg()))
+          Target = *TargetRegState + Offset;
+        else
+          Target = Offset;
+        return true;
+      }
+      case RISCV::C_LD:
+      case RISCV::C_SD:
+      case RISCV::C_FLD:
+      case RISCV::C_FSD:
+      case RISCV::C_SW:
+      case RISCV::C_LW:
+      case RISCV::C_FSW:
+      case RISCV::C_FLW: {
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          Target = *TargetRegState + Inst.getOperand(2).getImm();
+          return true;
+        }
+        break;
+      }
+    }
     return false;
   }
 
