@@ -4580,6 +4580,18 @@ const SCEV *ScalarEvolution::getExistingSCEV(Value *V) {
   return nullptr;
 }
 
+const SCEVAddRecExpr *
+ScalarEvolution::getExistingAddRecExpr(ArrayRef<const SCEV *> Ops,
+                                       const Loop *L) {
+  FoldingSetNodeID ID;
+  ID.AddInteger(scAddRecExpr);
+  for (const SCEV *Op : Ops)
+    ID.AddPointer(Op);
+  ID.AddPointer(L);
+  void *IP = nullptr;
+  return static_cast<SCEVAddRecExpr *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP));
+}
+
 /// Return a SCEV corresponding to -V = -1*V
 const SCEV *ScalarEvolution::getNegativeSCEV(const SCEV *V,
                                              SCEV::NoWrapFlags Flags) {
@@ -5763,19 +5775,46 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
     return nullptr;
 
   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
-  if (BO->IsNUW)
+  if (BO->IsNUW) {
     Flags = setFlags(Flags, SCEV::FlagNUW);
-  if (BO->IsNSW)
+    Flags = setFlags(Flags, SCEV::FlagNW);
+  }
+  if (BO->IsNSW) {
     Flags = setFlags(Flags, SCEV::FlagNSW);
+    Flags = setFlags(Flags, SCEV::FlagNW);
+  }
 
   const SCEV *StartVal = getSCEV(StartValueV);
+  SCEV::NoWrapFlags MinFlags = Flags;
+  auto *ExistingAR = getExistingAddRecExpr({StartVal, Accum}, L);
+  // If there's already an AddRec, use its flags to compute the minimal valid
+  // flags that hold for the users of the existing AddRec and the users of the
+  // current phi we are constructing an AddRec for.
+  if (ExistingAR)
+    MinFlags = maskFlags(ExistingAR->getNoWrapFlags(), Flags);
+
   const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
+
+  // Check if the AddRec can never be poison, but avoid constructing new SCEVs
+  // for PN's operands, as this would instantiate the SCEV for the increment
+  // earlier.
+  bool NeverPoison = isAddRecNeverPoison(PN, L, false);
+  // If the AddRec is never poison, it is safe the use the flags from the IR
+  // unconditionally. But if it may be poison,  force the AddRec's flags to the
+  // minimum valid set for both the existing AddRec and the current context.
+  if (!NeverPoison && ExistingAR) {
+    forgetMemoizedResults(PHISCEV);
+    PHISCEV = getAddRecExpr(StartVal, Accum, L, MinFlags);
+    const_cast<SCEVAddRecExpr *>(ExistingAR)->forceSetNoWrapFlags(MinFlags);
+  }
+
   insertValueToMap(PN, PHISCEV);
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
-    setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR),
-                   (SCEV::NoWrapFlags)(AR->getNoWrapFlags() |
-                                       proveNoWrapViaConstantRanges(AR)));
+    SCEV::NoWrapFlags FlagsViaConstantRanges = proveNoWrapViaConstantRanges(AR);
+    setNoWrapFlags(
+        const_cast<SCEVAddRecExpr *>(AR),
+        (SCEV::NoWrapFlags)(AR->getNoWrapFlags() | FlagsViaConstantRanges));
   }
 
   // We can add Flags to the post-inc expression only if we
@@ -7341,9 +7380,10 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
   return isGuaranteedToTransferExecutionTo(DefI, I);
 }
 
-bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
+bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L,
+                                          bool CheckSCEVScope) {
   // If we know that \c I can never be poison period, then that's enough.
-  if (isSCEVExprNeverPoison(I))
+  if (CheckSCEVScope && isSCEVExprNeverPoison(I))
     return true;
 
   // If the loop only has one exit, then we know that, if the loop is entered,

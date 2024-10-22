@@ -338,7 +338,7 @@ define i4 @iv_hoist_nuw_poison_extra_use(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:    [[IV_0:%.*]] = phi i4 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_0_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_0_NEXT]] = add i4 [[IV_0]], 1
 ; CHECK-NEXT:    call void @use(i4 [[IV_0_NEXT]])
-; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i4 [[START]], [[END:%.*]]
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i4 [[IV_0]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i4 [ [[IV_0_NEXT]], [[LOOP]] ]

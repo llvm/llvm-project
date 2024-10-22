@@ -8,7 +8,7 @@ define i2 @iv_nsw_poison(i2 %arg) {
 ; CHECK-NEXT:    %.07 = phi i2 [ 1, %bb ], [ %i, %bb1 ]
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb1> U: [1,-2) S: [1,-2) Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %.0 = phi i2 [ 1, %bb ], [ %i2, %bb1 ]
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb1> U: [1,-2) S: [1,-2) Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %i = add nsw i2 %.07, 1
 ; CHECK-NEXT:    --> {-2,+,1}<nuw><%bb1> U: [-2,0) S: [-2,0) Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %i2 = add i2 %.0, 1
@@ -39,11 +39,11 @@ define i4 @iv_nsw_poison2(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:    %iv.0 = phi i4 [ %start, %entry ], [ %iv.0.next, %loop ]
 ; CHECK-NEXT:    --> {%start,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1 = phi i4 [ %start, %entry ], [ %iv.1.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,1}<nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.0.next = add i4 %iv.0, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1.next = add nsw i4 %iv.1, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @iv_nsw_poison2
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
@@ -167,11 +167,11 @@ define i4 @iv_nsw_poison_extra_use(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:    %iv.0 = phi i4 [ %start, %entry ], [ %iv.0.next, %loop ]
 ; CHECK-NEXT:    --> {%start,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1 = phi i4 [ %start, %entry ], [ %iv.1.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,1}<nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.0.next = add i4 %iv.0, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1.next = add nsw i4 %iv.1, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @iv_nsw_poison_extra_use
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
@@ -201,7 +201,7 @@ define i2 @iv_nuw_poison(i2 %arg, i2 %start) {
 ; CHECK-NEXT:    %.07 = phi i2 [ %start, %bb ], [ %i, %bb1 ]
 ; CHECK-NEXT:    --> {%start,+,1}<nuw><%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %.0 = phi i2 [ %start, %bb ], [ %i2, %bb1 ]
-; CHECK-NEXT:    --> {%start,+,1}<nuw><%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {%start,+,1}<%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %i = add nuw i2 %.07, 1
 ; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%bb1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %i2 = add i2 %.0, 1
@@ -232,11 +232,11 @@ define i4 @iv_nuw_poison2(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:    %iv.0 = phi i4 [ %start, %entry ], [ %iv.0.next, %loop ]
 ; CHECK-NEXT:    --> {%start,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1 = phi i4 [ %start, %entry ], [ %iv.1.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.0.next = add i4 %iv.0, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1.next = add nuw i4 %iv.1, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @iv_nuw_poison2
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
@@ -360,11 +360,11 @@ define i4 @iv_nuw_poison_extra_use(i4 %0, i4 %end, i4 %start) {
 ; CHECK-NEXT:    %iv.0 = phi i4 [ %start, %entry ], [ %iv.0.next, %loop ]
 ; CHECK-NEXT:    --> {%start,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1 = phi i4 [ %start, %entry ], [ %iv.1.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.0.next = add i4 %iv.0, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1.next = add nuw i4 %iv.1, 1
-; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @iv_nuw_poison_extra_use
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.

@@ -557,6 +557,11 @@ public:
   /// Return an existing SCEV for V if there is one, otherwise return nullptr.
   const SCEV *getExistingSCEV(Value *V);
 
+  /// Return the AddRec for \p Ops and \p L if there is one, otherwise return
+  /// nullptr.
+  const SCEVAddRecExpr *getExistingAddRecExpr(ArrayRef<const SCEV *> Ops,
+                                              const Loop *L);
+
   const SCEV *getConstant(ConstantInt *V);
   const SCEV *getConstant(const APInt &Val);
   const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
@@ -2192,8 +2197,10 @@ private:
   /// This is like \c isSCEVExprNeverPoison but it specifically works for
   /// instructions that will get mapped to SCEV add recurrences.  Return true
   /// if \p I will never generate poison under the assumption that \p I is an
-  /// add recurrence on the loop \p L.
-  bool isAddRecNeverPoison(const Instruction *I, const Loop *L);
+  /// add recurrence on the loop \p L. Don't call \c isSCEVExprNeverPoison if \p
+  /// CheckSCEVScope is false.
+  bool isAddRecNeverPoison(const Instruction *I, const Loop *L,
+                           bool CheckSCEVScope = true);
 
   /// Similar to createAddRecFromPHI, but with the additional flexibility of
   /// suggesting runtime overflow checks in case casts are encountered.
