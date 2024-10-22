@@ -473,6 +473,11 @@ bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) {
   return false;
 }
 
+/// Helper function for instruction sequences that can be represented by a
+/// mapping from one index to another. E.x. shufflevectors and insert/extract
+///
+/// Checks whether the input \p Mask refers to a pre-known sequence and is a
+/// valid target to be replaced. Currently supports only concatenation.
 bool CombinerHelper::analysePatternVectorMask(
     MachineInstr &MI, SmallVectorImpl<Register> &Ops, const Register DstReg,
     const std::pair<Register, Register> SrcRegs, ArrayRef<int> Mask) {
@@ -523,6 +528,7 @@ bool CombinerHelper::analysePatternVectorMask(
   }
   return true;
 }
+
 bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
                                                SmallVectorImpl<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
