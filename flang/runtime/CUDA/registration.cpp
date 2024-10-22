@@ -21,7 +21,7 @@ extern void __cudaRegisterFunction(void **fatCubinHandle, const char *hostFun,
     uint3 *bid, dim3 *bDim, dim3 *gDim, int *wSize);
 
 void *RTDECL(CUFRegisterModule)(void *data) {
-  void** fatHandle = __cudaRegisterFatBinary(data);
+  void **fatHandle = __cudaRegisterFatBinary(data);
   __cudaRegisterFatBinaryEnd(fatHandle);
   return fatHandle;
 }
