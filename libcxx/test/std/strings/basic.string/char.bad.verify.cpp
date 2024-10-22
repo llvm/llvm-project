@@ -33,7 +33,7 @@ void f() {
     typedef char C[3];
     static_assert(std::is_array<C>::value, "");
     std::basic_string<C, test_traits<C> > s;
-    // expected-error-re@string:* {{static assertion failed{{.*}}Character type of basic_string must not be an array}}
+    // expected-error-re@string:* {{static assertion failed{{.*}}'std::basic_string' cannot hold C arrays}}
   }
 
   {

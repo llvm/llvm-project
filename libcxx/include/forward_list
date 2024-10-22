@@ -219,6 +219,7 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/container_traits.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_const.h>
@@ -479,6 +480,8 @@ public:
 
 template <class _Tp, class _Alloc>
 class __forward_list_base {
+  static_assert(__container_requirements<forward_list, _Tp>::value);
+
 protected:
   typedef _Tp value_type;
   typedef _Alloc allocator_type;
@@ -589,6 +592,8 @@ private:
     __alloc() = std::move(__x.__alloc());
   }
 };
+
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(forward_list);
 
 #ifndef _LIBCPP_CXX03_LANG
 

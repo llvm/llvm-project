@@ -226,8 +226,10 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/container_traits.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_const.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
@@ -466,6 +468,8 @@ public:
 
 template <class _Tp, class _Alloc>
 class __list_imp {
+  static_assert(__container_requirements<list, _Tp>::value);
+
 public:
   __list_imp(const __list_imp&)            = delete;
   __list_imp& operator=(const __list_imp&) = delete;
@@ -591,6 +595,8 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp&, false_type) _NOEXCEPT {}
 };
+
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(list);
 
 // Unlink nodes [__f, __l]
 template <class _Tp, class _Alloc>

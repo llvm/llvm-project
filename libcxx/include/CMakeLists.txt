@@ -755,6 +755,7 @@ set(files
   __type_traits/decay.h
   __type_traits/dependent_type.h
   __type_traits/desugars_to.h
+  __type_traits/diagnostic_utilities.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h

@@ -596,6 +596,11 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__tree>
 #include <__type_traits/container_traits.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_array.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_unbounded_array.h>
+#include <__type_traits/is_void.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
@@ -970,6 +975,13 @@ public:
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS map {
+  // TODO(#106635): replace with _LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS
+  // Remember to remove relevant headers when this is completed.
+  static_assert(!is_lvalue_reference<_Key>::value, "'std::map' cannot hold references");
+  static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::map' cannot hold functions");
+  static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::map' cannot hold 'void'");
+  static_assert(!__libcpp_is_unbounded_array<_Key>::value, "'std::map' cannot hold C arrays of an unknown size");
+
 public:
   // types:
   typedef _Key key_type;
@@ -1655,6 +1667,13 @@ struct __container_traits<map<_Key, _Tp, _Compare, _Allocator> > {
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS multimap {
+  // TODO(#106635): replace with _LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS
+  // Remember to remove relevant headers when this is completed.
+  static_assert(!is_lvalue_reference<_Key>::value, "'std::multimap' cannot hold references");
+  static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::multimap' cannot hold functions");
+  static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::multimap' cannot hold 'void'");
+  static_assert(!__libcpp_is_unbounded_array<_Key>::value, "'std::multimap' cannot hold C arrays of an unknown size");
+
 public:
   // types:
   typedef _Key key_type;
