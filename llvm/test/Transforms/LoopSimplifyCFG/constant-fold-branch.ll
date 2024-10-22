@@ -291,19 +291,17 @@ define i32 @dead_exit_test_indirectbranch_loop(i32 %end) {
 ; CHECK:       preBB2:
 ; CHECK-NEXT:    indirectbr ptr blockaddress(@dead_exit_test_indirectbranch_loop, [[EXIT:%.*]]), [label [[HEADER]], label %exit]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREBB1]] ], [ 1, [[PREBB2]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[DEAD:%.*]]
-; CHECK:       dead:
-; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[HEADER]] ]
-; CHECK-NEXT:    br label [[DUMMY:%.*]]
-; CHECK:       dummy:
-; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
-; CHECK:       backedge:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREBB1]] ], [ 1, [[PREBB2]] ], [ [[I_INC:%.*]], [[HEADER]] ]
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[LOOP_EXIT_LOOPEXIT:%.*]]
+; CHECK:       dead:
+; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32
+; CHECK-NEXT:    br label [[DUMMY:%.*]]
+; CHECK:       dummy:
+; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop.exit.loopexit:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[HEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT]]
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[I_LCSSA]], [[DUMMY]] ], [ [[I_INC_LCSSA]], [[LOOP_EXIT_LOOPEXIT]] ]
