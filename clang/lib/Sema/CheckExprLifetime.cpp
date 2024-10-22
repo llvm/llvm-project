@@ -1107,7 +1107,8 @@ static bool shouldRunGSLAssignmentAnalysis(const Sema &SemaRef,
       diag::warn_dangling_lifetime_pointer_assignment, SourceLocation());
   return (EnableGSLAssignmentWarnings &&
           (isRecordWithAttr<PointerAttr>(Entity.LHS->getType()) ||
-           isAssignmentOperatorLifetimeBound(Entity.AssignmentOperator)));
+           isAssignmentOperatorLifetimeBound(Entity.AssignmentOperator) ||
+           isContainerOfPointer(Entity.LHS->getType()->getAsRecordDecl())));
 }
 
 static void checkExprLifetimeImpl(Sema &SemaRef,
@@ -1412,8 +1413,21 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
   };
 
   llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
-  if (LK == LK_Assignment && shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity))
+  if (LK == LK_Assignment &&
+      shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity)) {
+    if (isContainerOfPointer(AEntity->LHS->getType()->getAsRecordDecl())) {
+      // Bail out for user-defined assignment operators, as their contract is
+      // unknown.
+      if (!AEntity->AssignmentOperator->isDefaulted())
+        return;
+      // Skip the top MaterializeTemoraryExpr because it is temporary object of
+      // the containerOfPointer itself.
+      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init))
+        Init = MTE->getSubExpr();
+    }
+
     Path.push_back({IndirectLocalPathEntry::GslPointerAssignment, Init});
+  }
 
   if (Init->isGLValue())
     visitLocalsRetainedByReferenceBinding(Path, Init, RK_ReferenceBinding,
