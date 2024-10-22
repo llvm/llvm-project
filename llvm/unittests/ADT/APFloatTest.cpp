@@ -5985,6 +5985,9 @@ TEST(APFloatTest, Float8E8M0FNUExhaustive) {
     APFloat test(APFloat::Float8E8M0FNU(), APInt(8, i));
     SCOPED_TRACE("i=" + std::to_string(i));
 
+    // bitcastToAPInt
+    EXPECT_EQ(i, test.bitcastToAPInt());
+
     // isLargest
     if (i == 254) {
       EXPECT_TRUE(test.isLargest());
