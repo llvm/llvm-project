@@ -195,7 +195,10 @@ eisel_lemire(ExpandedFloat<T> init_num,
   return output;
 }
 
-#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+// TODO: Re-enable eisel-lemire for long double is double double once it's
+// properly supported.
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&                             \
+    !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
 template <>
 LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
 eisel_lemire<long double>(ExpandedFloat<long double> init_num,
@@ -316,7 +319,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   output.exponent = exp2;
   return output;
 }
-#endif // !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+#endif // !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&
+       // !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
 
 // The nth item in POWERS_OF_TWO represents the greatest power of two less than
 // 10^n. This tells us how much we can safely shift without overshooting.
@@ -517,6 +521,18 @@ public:
   static constexpr int32_t DIGITS_IN_MANTISSA = 33;
   static constexpr long double MAX_EXACT_INT =
       10384593717069655257060992658440191.0L;
+};
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
+// TODO: Add proper double double type support here, currently using constants
+// for double since it should be safe.
+template <> class ClingerConsts<long double> {
+public:
+  static constexpr double POWERS_OF_TEN_ARRAY[] = {
+      1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
+      1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
+  static constexpr int32_t EXACT_POWERS_OF_TEN = 22;
+  static constexpr int32_t DIGITS_IN_MANTISSA = 15;
+  static constexpr double MAX_EXACT_INT = 9007199254740991.0;
 };
 #else
 #error "Unknown long double type"
