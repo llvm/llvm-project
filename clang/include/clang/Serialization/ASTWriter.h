@@ -499,6 +499,9 @@ private:
 
   /// Mapping from a source location entry to whether it is affecting or not.
   llvm::BitVector IsSLocAffecting;
+  /// Mapping from a source location entry to whether it must be included as
+  /// input file.
+  llvm::BitVector IsSLocFileEntryAffecting;
 
   /// Mapping from \c FileID to an index into the FileID adjustment table.
   std::vector<FileID> NonAffectingFileIDs;

@@ -38,6 +38,7 @@
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -81,6 +82,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
@@ -166,7 +168,12 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 
 namespace {
 
-std::optional<std::set<const FileEntry *>>
+struct AffectingModuleMaps {
+  llvm::DenseSet<FileID> DefinitionFileIDs;
+  llvm::DenseSet<const FileEntry *> DefinitionFiles;
+};
+
+std::optional<AffectingModuleMaps>
 GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   if (!PP.getHeaderSearchInfo()
            .getHeaderSearchOpts()
@@ -174,10 +181,12 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     return std::nullopt;
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
+  const SourceManager &SM = PP.getSourceManager();
   const ModuleMap &MM = HS.getModuleMap();
 
-  std::set<const FileEntry *> ModuleMaps;
-  std::set<const Module *> ProcessedModules;
+  llvm::DenseSet<FileID> ModuleMaps;
+
+  llvm::DenseSet<const Module *> ProcessedModules;
   auto CollectModuleMapsForHierarchy = [&](const Module *M) {
     M = M->getTopLevelModule();
 
@@ -192,13 +201,13 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
       // The containing module map is affecting, because it's being pointed
       // into by Module::DefinitionLoc.
-      if (auto FE = MM.getContainingModuleMapFile(Mod))
-        ModuleMaps.insert(*FE);
+      if (auto F = MM.getContainingModuleMapFileID(Mod); F.isValid())
+        ModuleMaps.insert(F);
       // For inferred modules, the module map that allowed inferring is not
       // related to the virtual containing module map file. It did affect the
       // compilation, though.
-      if (auto FE = MM.getModuleMapFileForUniquing(Mod))
-        ModuleMaps.insert(*FE);
+      if (auto UniqF = MM.getModuleMapFileIDForUniquing(Mod); UniqF.isValid())
+        ModuleMaps.insert(UniqF);
 
       for (auto *SubM : Mod->submodules())
         Q.push(SubM);
@@ -268,7 +277,16 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   // just ban module map hierarchies where module map defining a (sub)module X
   // includes a module map defining a module that's not a submodule of X.
 
-  return ModuleMaps;
+  llvm::DenseSet<const FileEntry *> ModuleFileEntries;
+  for (FileID MM : ModuleMaps) {
+    if (auto *FE = SM.getFileEntryForID(MM))
+      ModuleFileEntries.insert(FE);
+  }
+
+  AffectingModuleMaps R;
+  R.DefinitionFileIDs = std::move(ModuleMaps);
+  R.DefinitionFiles = std::move(ModuleFileEntries);
+  return std::move(R);
 }
 
 class ASTTypeWriter {
@@ -1773,7 +1791,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
       continue;
 
     // Do not emit input files that do not affect current module.
-    if (!IsSLocAffecting[I])
+    if (!IsSLocFileEntryAffecting[I])
       continue;
 
     InputFileEntry Entry(*Cache->OrigEntry);
@@ -4936,6 +4954,7 @@ void ASTWriter::computeNonAffectingInputFiles() {
   unsigned N = SrcMgr.local_sloc_entry_size();
 
   IsSLocAffecting.resize(N, true);
+  IsSLocFileEntryAffecting.resize(N, true);
 
   if (!WritingModule)
     return;
@@ -4972,10 +4991,12 @@ void ASTWriter::computeNonAffectingInputFiles() {
       continue;
 
     // Don't prune module maps that are affecting.
-    if (llvm::is_contained(*AffectingModuleMaps, *Cache->OrigEntry))
+    if (AffectingModuleMaps->DefinitionFileIDs.contains(FID))
       continue;
 
     IsSLocAffecting[I] = false;
+    IsSLocFileEntryAffecting[I] =
+        AffectingModuleMaps->DefinitionFiles.contains(*Cache->OrigEntry);
 
     FileIDAdjustment += 1;
     // Even empty files take up one element in the offset table.
