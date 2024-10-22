@@ -35,14 +35,14 @@ class VI2 : virtual SI, virtual SI2 {
 };
 class /* __unspecified_inheritance*/ UI;
 
-double SI::* mp1 = nullptr;
-int MI::* mp2 = nullptr;
-int MI2::* mp3 = nullptr;
-int VI::* mp4 = nullptr;
-int VI2::* mp5 = nullptr;
-int UI::* mp6 = nullptr;
-int MI::* mp7 = nullptr;
-int VI2::* mp8 = nullptr;
-char SI2::* mp9 = &SI2::si2;
+double SI::*mp1 = nullptr;
+int MI::*mp2 = nullptr;
+int MI2::*mp3 = nullptr;
+int VI::*mp4 = nullptr;
+int VI2::*mp5 = nullptr;
+int UI::*mp6 = nullptr;
+int MI::*mp7 = nullptr;
+int VI2::*mp8 = nullptr;
+char SI2::*mp9 = &SI2::si2;
 
 int main() { return 0; }
