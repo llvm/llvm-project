@@ -27,7 +27,7 @@ define void @fun0(ptr nocapture %0, double %1) {
 
 ; This function needs the element-load to be recognized in SystemZ
 ; getVectorInstrCost().
-define void @fun1(double %0) local_unnamed_addr {
+define void @fun1(double %0) {
 ; CHECK-LABEL: define void @fun1(
 ; CHECK:    fsub <2 x double>
 ; CHECK:    fsub <2 x double>

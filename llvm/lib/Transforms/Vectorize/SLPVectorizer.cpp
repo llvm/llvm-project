@@ -3110,10 +3110,9 @@ private:
       SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries,
       unsigned NumParts, bool ForOrder = false);
 
-  /// \returns the scalarization cost for this list of values. Assuming that
-  /// this subtree gets vectorized, we may need to insert the values from the
-  /// roots. This method calculates the cost of inserting the values.
-  /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
+  /// \returns the cost of gathering (inserting) the values in \p VL into a
+  /// vector.  \param ForPoisonSrc true if initial vector is poison, false
+  /// otherwise.
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
 
