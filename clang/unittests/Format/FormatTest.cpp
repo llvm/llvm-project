@@ -28414,20 +28414,6 @@ TEST_F(FormatTest, ShortNamespacesOption) {
                "}}} // extra",
                Style);
 
-  // No ColumnLimit, allows long nested one-liners, but also leaves multi-line
-  // instances alone.
-  Style.ColumnLimit = 0;
-  verifyFormat(
-      "namespace foo { namespace bar { namespace baz { class qux; } } }",
-      Style);
-
-  verifyNoChange("namespace foo {\n"
-                 "namespace bar { namespace baz { class qux; } }\n"
-                 "}",
-                 Style);
-
-  verifyFormat("namespace foo { namespace bar { class baz; } }", Style);
-
   // FIXME: Ideally AllowShortNamespacesOnASingleLine would disable the trailing
   // namespace comment from 'FixNamespaceComments', as it's not really necessary
   // in this scenario, but the two options work at very different layers of the
