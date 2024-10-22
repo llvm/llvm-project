@@ -233,6 +233,10 @@ void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
                 const llvm::Reloc::Model &RelocationModel,
                 llvm::opt::ArgStringList &CmdArgs);
 
+/// Handle the -f{no}-color-diagnostics and -f{no}-diagnostics-colors options.
+void handleColorDiagnosticsArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs);
+
 /// Add backslashes to escape spaces and other backslashes.
 /// This is used for the space-separated argument list specified with
 /// the -dwarf-debug-flags option.
@@ -257,6 +261,9 @@ bool shouldRecordCommandLine(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
                              bool &FRecordCommandLine,
                              bool &GRecordCommandLine);
+
+void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
+                                        llvm::opt::ArgStringList &CmdArgs);
 
 } // end namespace tools
 } // end namespace driver

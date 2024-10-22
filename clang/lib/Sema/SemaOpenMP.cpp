@@ -1405,10 +1405,9 @@ const Expr *DSAStackTy::addUniqueAligned(const ValueDecl *D,
   assert(!isStackEmpty() && "Data sharing attributes stack is empty");
   D = getCanonicalDecl(D);
   SharingMapTy &StackElem = getTopOfStack();
-  auto It = StackElem.AlignedMap.find(D);
-  if (It == StackElem.AlignedMap.end()) {
+  auto [It, Inserted] = StackElem.AlignedMap.try_emplace(D, NewDE);
+  if (Inserted) {
     assert(NewDE && "Unexpected nullptr expr to be added into aligned map");
-    StackElem.AlignedMap[D] = NewDE;
     return nullptr;
   }
   assert(It->second && "Unexpected nullptr expr in the aligned map");
@@ -1420,10 +1419,9 @@ const Expr *DSAStackTy::addUniqueNontemporal(const ValueDecl *D,
   assert(!isStackEmpty() && "Data sharing attributes stack is empty");
   D = getCanonicalDecl(D);
   SharingMapTy &StackElem = getTopOfStack();
-  auto It = StackElem.NontemporalMap.find(D);
-  if (It == StackElem.NontemporalMap.end()) {
+  auto [It, Inserted] = StackElem.NontemporalMap.try_emplace(D, NewDE);
+  if (Inserted) {
     assert(NewDE && "Unexpected nullptr expr to be added into aligned map");
-    StackElem.NontemporalMap[D] = NewDE;
     return nullptr;
   }
   assert(It->second && "Unexpected nullptr expr in the aligned map");
@@ -5699,7 +5697,9 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
       llvm_unreachable("unhandled unary increment operator");
     }
     Step = IntegerLiteral::Create(
-        Ctx, llvm::APInt(Ctx.getIntWidth(LogicalTy), Direction), LogicalTy, {});
+        Ctx,
+        llvm::APInt(Ctx.getIntWidth(LogicalTy), Direction, /*isSigned=*/true),
+        LogicalTy, {});
   } else if (auto *IncBin = dyn_cast<BinaryOperator>(Inc)) {
     if (IncBin->getOpcode() == BO_AddAssign) {
       Step = IncBin->getRHS();
@@ -9195,7 +9195,7 @@ static bool checkOpenMPIterationSpace(
         SemaRef.Diag(CollapseLoopCountExpr->getExprLoc(),
                      diag::note_omp_collapse_ordered_expr)
             << 0 << CollapseLoopCountExpr->getSourceRange();
-      else
+      else if (OrderedLoopCountExpr)
         SemaRef.Diag(OrderedLoopCountExpr->getExprLoc(),
                      diag::note_omp_collapse_ordered_expr)
             << 1 << OrderedLoopCountExpr->getSourceRange();
@@ -14958,7 +14958,9 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
     return StmtError();
 
   // interchange without permutation clause swaps two loops.
-  constexpr size_t NumLoops = 2;
+  const OMPPermutationClause *PermutationClause =
+      OMPExecutableDirective::getSingleClause<OMPPermutationClause>(Clauses);
+  size_t NumLoops = PermutationClause ? PermutationClause->getNumLoops() : 2;
 
   // Verify and diagnose loop nest.
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
@@ -14973,6 +14975,12 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
     return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                            NumLoops, AStmt, nullptr, nullptr);
 
+  // An invalid expression in the permutation clause is set to nullptr in
+  // ActOnOpenMPPermutationClause.
+  if (PermutationClause &&
+      llvm::is_contained(PermutationClause->getArgsRefs(), nullptr))
+    return StmtError();
+
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting loop iteration space dimensionaly to match number of "
          "affected loops");
@@ -14981,7 +14989,44 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
          "affected loops");
 
   // Decode the permutation clause.
-  constexpr uint64_t Permutation[] = {1, 0};
+  SmallVector<uint64_t, 2> Permutation;
+  if (!PermutationClause) {
+    Permutation = {1, 0};
+  } else {
+    ArrayRef<Expr *> PermArgs = PermutationClause->getArgsRefs();
+    llvm::BitVector Flags(PermArgs.size());
+    for (Expr *PermArg : PermArgs) {
+      std::optional<llvm::APSInt> PermCstExpr =
+          PermArg->getIntegerConstantExpr(Context);
+      if (!PermCstExpr)
+        continue;
+      uint64_t PermInt = PermCstExpr->getZExtValue();
+      assert(1 <= PermInt && PermInt <= NumLoops &&
+             "Must be a permutation; diagnostic emitted in "
+             "ActOnOpenMPPermutationClause");
+      if (Flags[PermInt - 1]) {
+        SourceRange ExprRange(PermArg->getBeginLoc(), PermArg->getEndLoc());
+        Diag(PermArg->getExprLoc(),
+             diag::err_omp_interchange_permutation_value_repeated)
+            << PermInt << ExprRange;
+        continue;
+      }
+      Flags[PermInt - 1] = true;
+
+      Permutation.push_back(PermInt - 1);
+    }
+
+    if (Permutation.size() != NumLoops)
+      return StmtError();
+  }
+
+  // Nothing to transform with trivial permutation.
+  if (NumLoops <= 1 || llvm::all_of(llvm::enumerate(Permutation), [](auto P) {
+        auto [Idx, Arg] = P;
+        return Idx == Arg;
+      }))
+    return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                           NumLoops, AStmt, AStmt, nullptr);
 
   // Find the affected loops.
   SmallVector<Stmt *> LoopStmts(NumLoops, nullptr);
@@ -16111,6 +16156,44 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
 
   return OMPSizesClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
                                 SanitizedSizeExprs);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
+                                                    SourceLocation StartLoc,
+                                                    SourceLocation LParenLoc,
+                                                    SourceLocation EndLoc) {
+  size_t NumLoops = PermExprs.size();
+  SmallVector<Expr *> SanitizedPermExprs;
+  llvm::append_range(SanitizedPermExprs, PermExprs);
+
+  for (Expr *&PermExpr : SanitizedPermExprs) {
+    // Skip if template-dependent or already sanitized, e.g. during a partial
+    // template instantiation.
+    if (!PermExpr || PermExpr->isInstantiationDependent())
+      continue;
+
+    llvm::APSInt PermVal;
+    ExprResult PermEvalExpr = SemaRef.VerifyIntegerConstantExpression(
+        PermExpr, &PermVal, Sema::AllowFold);
+    bool IsValid = PermEvalExpr.isUsable();
+    if (IsValid)
+      PermExpr = PermEvalExpr.get();
+
+    if (IsValid && (PermVal < 1 || NumLoops < PermVal)) {
+      SourceRange ExprRange(PermEvalExpr.get()->getBeginLoc(),
+                            PermEvalExpr.get()->getEndLoc());
+      Diag(PermEvalExpr.get()->getExprLoc(),
+           diag::err_omp_interchange_permutation_value_range)
+          << NumLoops << ExprRange;
+      IsValid = false;
+    }
+
+    if (!PermExpr->isInstantiationDependent() && !IsValid)
+      PermExpr = nullptr;
+  }
+
+  return OMPPermutationClause::Create(getASTContext(), StartLoc, LParenLoc,
+                                      EndLoc, SanitizedPermExprs);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPFullClause(SourceLocation StartLoc,
@@ -18252,7 +18335,8 @@ static bool checkOMPArraySectionConstantForReduction(
         return false;
 
       // This is an array subscript which has implicit length 1!
-      ArraySizes.push_back(llvm::APSInt::get(1));
+      llvm::APSInt ConstantOne = llvm::APSInt::get(1);
+      ArraySizes.push_back(ConstantOne);
     } else {
       Expr::EvalResult Result;
       if (!Length->EvaluateAsInt(Result, Context))
@@ -18271,7 +18355,8 @@ static bool checkOMPArraySectionConstantForReduction(
   if (!SingleElement) {
     while (const auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base)) {
       // Has implicit length 1!
-      ArraySizes.push_back(llvm::APSInt::get(1));
+      llvm::APSInt ConstantOne = llvm::APSInt::get(1);
+      ArraySizes.push_back(ConstantOne);
       Base = TempASE->getBase()->IgnoreParenImpCasts();
     }
   }
@@ -21650,9 +21735,7 @@ SemaOpenMP::ActOnOpenMPDeclareReductionDirectiveStart(
     while (Filter.hasNext()) {
       auto *PrevDecl = cast<OMPDeclareReductionDecl>(Filter.next());
       if (InCompoundScope) {
-        auto I = UsedAsPrevious.find(PrevDecl);
-        if (I == UsedAsPrevious.end())
-          UsedAsPrevious[PrevDecl] = false;
+        UsedAsPrevious.try_emplace(PrevDecl, false);
         if (OMPDeclareReductionDecl *D = PrevDecl->getPrevDeclInScope())
           UsedAsPrevious[D] = true;
       }
@@ -21906,9 +21989,7 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareMapperDirective(
     while (Filter.hasNext()) {
       auto *PrevDecl = cast<OMPDeclareMapperDecl>(Filter.next());
       if (InCompoundScope) {
-        auto I = UsedAsPrevious.find(PrevDecl);
-        if (I == UsedAsPrevious.end())
-          UsedAsPrevious[PrevDecl] = false;
+        UsedAsPrevious.try_emplace(PrevDecl, false);
         if (OMPDeclareMapperDecl *D = PrevDecl->getPrevDeclInScope())
           UsedAsPrevious[D] = true;
       }

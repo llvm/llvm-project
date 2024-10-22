@@ -136,8 +136,8 @@ private:
       assert(Predicated);
       return ElementSize;
     }
-    unsigned getDstReg() const { return Dst; }
-    unsigned getPgReg() const {
+    MCRegister getDstReg() const { return Dst; }
+    MCRegister getPgReg() const {
       assert(Predicated);
       return Pg;
     }
@@ -146,8 +146,8 @@ private:
     bool Active = false;
     bool Predicated = false;
     unsigned ElementSize;
-    unsigned Dst;
-    unsigned Pg;
+    MCRegister Dst;
+    MCRegister Pg;
   } NextPrefix;
 
   AArch64TargetStreamer &getTargetStreamer() {
@@ -1262,6 +1262,8 @@ public:
     case AArch64::ZPRRegClassID:
     case AArch64::ZPR_3bRegClassID:
     case AArch64::ZPR_4bRegClassID:
+    case AArch64::ZPRMul2_LoRegClassID:
+    case AArch64::ZPRMul2_HiRegClassID:
       RK = RegKind::SVEDataVector;
       break;
     case AArch64::PPRRegClassID:
@@ -1442,13 +1444,13 @@ public:
   }
 
   template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
-            unsigned ElementWidth>
+            unsigned ElementWidth, unsigned RegClass>
   DiagnosticPredicate isTypedVectorListMultiple() const {
     bool Res =
         isTypedVectorList<VectorKind, NumRegs, NumElements, ElementWidth>();
     if (!Res)
       return DiagnosticPredicateTy::NoMatch;
-    if (((VectorList.RegNum - AArch64::Z0) % NumRegs) != 0)
+    if (!AArch64MCRegisterClasses[RegClass].contains(VectorList.RegNum))
       return DiagnosticPredicateTy::NearMatch;
     return DiagnosticPredicateTy::Match;
   }
@@ -3736,6 +3738,17 @@ static const struct Extension {
     {"sme-fa64", {AArch64::FeatureSMEFA64}},
     {"cpa", {AArch64::FeatureCPA}},
     {"tlbiw", {AArch64::FeatureTLBIW}},
+    {"cmpbr", {AArch64::FeatureCMPBR}},
+    {"f8f32mm", {AArch64::FeatureF8F32MM}},
+    {"f8f16mm", {AArch64::FeatureF8F16MM}},
+    {"fprcvt", {AArch64::FeatureFPRCVT}},
+    {"lsfe", {AArch64::FeatureLSFE}},
+    {"sme2p2", {AArch64::FeatureSME2p2}},
+    {"ssve-aes", {AArch64::FeatureSSVE_AES}},
+    {"sve2p2", {AArch64::FeatureSVE2p2}},
+    {"sve-aes2", {AArch64::FeatureSVEAES2}},
+    {"sve-bfscale", {AArch64::FeatureSVEBFSCALE}},
+    {"sve-f16f32mm", {AArch64::FeatureSVE_F16F32MM}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3771,6 +3784,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.4a";
   else if (FBS[AArch64::HasV9_5aOps])
     Str += "ARMv9.5a";
+  else if (FBS[AArch64::HasV9_6aOps])
+    Str += "ARMv9.6a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {
@@ -5234,7 +5249,7 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
-static inline bool isMatchingOrAlias(unsigned ZReg, unsigned Reg) {
+static inline bool isMatchingOrAlias(MCRegister ZReg, MCRegister Reg) {
   assert((ZReg >= AArch64::Z0) && (ZReg <= AArch64::Z31));
   return (ZReg == ((Reg - AArch64::B0) + AArch64::Z0)) ||
          (ZReg == ((Reg - AArch64::H0) + AArch64::Z0)) ||
@@ -5322,7 +5337,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   if (IsWindowsArm64EC) {
     for (unsigned i = 0; i < Inst.getNumOperands(); ++i) {
       if (Inst.getOperand(i).isReg()) {
-        unsigned Reg = Inst.getOperand(i).getReg();
+        MCRegister Reg = Inst.getOperand(i).getReg();
         // At this point, vector registers are matched to their
         // appropriately sized alias.
         if ((Reg == AArch64::W13 || Reg == AArch64::X13) ||
@@ -5351,9 +5366,9 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::LDPWpre:
   case AArch64::LDPXpost:
   case AArch64::LDPXpre: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rt2 = Inst.getOperand(2).getReg();
-    unsigned Rn = Inst.getOperand(3).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rt2 = Inst.getOperand(2).getReg();
+    MCRegister Rn = Inst.getOperand(3).getReg();
     if (RI->isSubRegisterEq(Rn, Rt))
       return Error(Loc[0], "unpredictable LDP instruction, writeback base "
                            "is also a destination");
@@ -5376,8 +5391,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::LDPSWi:
   case AArch64::LDPWi:
   case AArch64::LDPXi: {
-    unsigned Rt = Inst.getOperand(0).getReg();
-    unsigned Rt2 = Inst.getOperand(1).getReg();
+    MCRegister Rt = Inst.getOperand(0).getReg();
+    MCRegister Rt2 = Inst.getOperand(1).getReg();
     if (Rt == Rt2)
       return Error(Loc[1], "unpredictable LDP instruction, Rt2==Rt");
     break;
@@ -5389,8 +5404,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::LDPSpost:
   case AArch64::LDPSpre:
   case AArch64::LDPSWpost: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rt2 = Inst.getOperand(2).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rt2 = Inst.getOperand(2).getReg();
     if (Rt == Rt2)
       return Error(Loc[1], "unpredictable LDP instruction, Rt2==Rt");
     break;
@@ -5405,9 +5420,9 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::STPWpre:
   case AArch64::STPXpost:
   case AArch64::STPXpre: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rt2 = Inst.getOperand(2).getReg();
-    unsigned Rn = Inst.getOperand(3).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rt2 = Inst.getOperand(2).getReg();
+    MCRegister Rn = Inst.getOperand(3).getReg();
     if (RI->isSubRegisterEq(Rn, Rt))
       return Error(Loc[0], "unpredictable STP instruction, writeback base "
                            "is also a source");
@@ -5438,8 +5453,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::LDRSWpost:
   case AArch64::LDRWpost:
   case AArch64::LDRXpost: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rn = Inst.getOperand(2).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rn = Inst.getOperand(2).getReg();
     if (RI->isSubRegisterEq(Rn, Rt))
       return Error(Loc[0], "unpredictable LDR instruction, writeback base "
                            "is also a source");
@@ -5457,8 +5472,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::STRHpre:
   case AArch64::STRWpre:
   case AArch64::STRXpre: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rn = Inst.getOperand(2).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rn = Inst.getOperand(2).getReg();
     if (RI->isSubRegisterEq(Rn, Rt))
       return Error(Loc[0], "unpredictable STR instruction, writeback base "
                            "is also a source");
@@ -5472,9 +5487,9 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::STLXRH:
   case AArch64::STLXRW:
   case AArch64::STLXRX: {
-    unsigned Rs = Inst.getOperand(0).getReg();
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rn = Inst.getOperand(2).getReg();
+    MCRegister Rs = Inst.getOperand(0).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rn = Inst.getOperand(2).getReg();
     if (RI->isSubRegisterEq(Rt, Rs) ||
         (RI->isSubRegisterEq(Rn, Rs) && Rn != AArch64::SP))
       return Error(Loc[0],
@@ -5485,10 +5500,10 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::STXPX:
   case AArch64::STLXPW:
   case AArch64::STLXPX: {
-    unsigned Rs = Inst.getOperand(0).getReg();
-    unsigned Rt1 = Inst.getOperand(1).getReg();
-    unsigned Rt2 = Inst.getOperand(2).getReg();
-    unsigned Rn = Inst.getOperand(3).getReg();
+    MCRegister Rs = Inst.getOperand(0).getReg();
+    MCRegister Rt1 = Inst.getOperand(1).getReg();
+    MCRegister Rt2 = Inst.getOperand(2).getReg();
+    MCRegister Rn = Inst.getOperand(3).getReg();
     if (RI->isSubRegisterEq(Rt1, Rs) || RI->isSubRegisterEq(Rt2, Rs) ||
         (RI->isSubRegisterEq(Rn, Rs) && Rn != AArch64::SP))
       return Error(Loc[0],
@@ -5497,8 +5512,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   }
   case AArch64::LDRABwriteback:
   case AArch64::LDRAAwriteback: {
-    unsigned Xt = Inst.getOperand(0).getReg();
-    unsigned Xn = Inst.getOperand(1).getReg();
+    MCRegister Xt = Inst.getOperand(0).getReg();
+    MCRegister Xn = Inst.getOperand(1).getReg();
     if (Xt == Xn)
       return Error(Loc[0],
           "unpredictable LDRA instruction, writeback base"
@@ -5605,12 +5620,12 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::CPYETWN:
   case AArch64::CPYETRN:
   case AArch64::CPYETN: {
-    unsigned Xd_wb = Inst.getOperand(0).getReg();
-    unsigned Xs_wb = Inst.getOperand(1).getReg();
-    unsigned Xn_wb = Inst.getOperand(2).getReg();
-    unsigned Xd = Inst.getOperand(3).getReg();
-    unsigned Xs = Inst.getOperand(4).getReg();
-    unsigned Xn = Inst.getOperand(5).getReg();
+    MCRegister Xd_wb = Inst.getOperand(0).getReg();
+    MCRegister Xs_wb = Inst.getOperand(1).getReg();
+    MCRegister Xn_wb = Inst.getOperand(2).getReg();
+    MCRegister Xd = Inst.getOperand(3).getReg();
+    MCRegister Xs = Inst.getOperand(4).getReg();
+    MCRegister Xn = Inst.getOperand(5).getReg();
     if (Xd_wb != Xd)
       return Error(Loc[0],
                    "invalid CPY instruction, Xd_wb and Xd do not match");
@@ -5655,11 +5670,11 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::MOPSSETGET:
   case AArch64::MOPSSETGEN:
   case AArch64::MOPSSETGETN: {
-    unsigned Xd_wb = Inst.getOperand(0).getReg();
-    unsigned Xn_wb = Inst.getOperand(1).getReg();
-    unsigned Xd = Inst.getOperand(2).getReg();
-    unsigned Xn = Inst.getOperand(3).getReg();
-    unsigned Xm = Inst.getOperand(4).getReg();
+    MCRegister Xd_wb = Inst.getOperand(0).getReg();
+    MCRegister Xn_wb = Inst.getOperand(1).getReg();
+    MCRegister Xd = Inst.getOperand(2).getReg();
+    MCRegister Xn = Inst.getOperand(3).getReg();
+    MCRegister Xm = Inst.getOperand(4).getReg();
     if (Xd_wb != Xd)
       return Error(Loc[0],
                    "invalid SET instruction, Xd_wb and Xd do not match");
@@ -6079,6 +6094,30 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "Invalid restricted vector register, expected z0.s..z15.s");
   case Match_InvalidZPR_4b64:
     return Error(Loc, "Invalid restricted vector register, expected z0.d..z15.d");
+  case Match_InvalidZPRMul2_Lo8:
+    return Error(Loc, "Invalid restricted vector register, expected even "
+                      "register in z0.b..z14.b");
+  case Match_InvalidZPRMul2_Hi8:
+    return Error(Loc, "Invalid restricted vector register, expected even "
+                      "register in z16.b..z30.b");
+  case Match_InvalidZPRMul2_Lo16:
+    return Error(Loc, "Invalid restricted vector register, expected even "
+                      "register in z0.h..z14.h");
+  case Match_InvalidZPRMul2_Hi16:
+    return Error(Loc, "Invalid restricted vector register, expected even "
+                      "register in z16.h..z30.h");
+  case Match_InvalidZPRMul2_Lo32:
+    return Error(Loc, "Invalid restricted vector register, expected even "
+                      "register in z0.s..z14.s");
+  case Match_InvalidZPRMul2_Hi32:
+    return Error(Loc, "Invalid restricted vector register, expected even "
+                      "register in z16.s..z30.s");
+  case Match_InvalidZPRMul2_Lo64:
+    return Error(Loc, "Invalid restricted vector register, expected even "
+                      "register in z0.d..z14.d");
+  case Match_InvalidZPRMul2_Hi64:
+    return Error(Loc, "Invalid restricted vector register, expected even "
+                      "register in z16.d..z30.d");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPPRorPNRAnyReg:
@@ -6158,19 +6197,36 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "operand must be a register in range [w12, w15]");
   case Match_InvalidMatrixIndexGPR32_8_11:
     return Error(Loc, "operand must be a register in range [w8, w11]");
-  case Match_InvalidSVEVectorListMul2x8:
-  case Match_InvalidSVEVectorListMul2x16:
-  case Match_InvalidSVEVectorListMul2x32:
-  case Match_InvalidSVEVectorListMul2x64:
-  case Match_InvalidSVEVectorListMul2x128:
+  case Match_InvalidSVEVectorList2x8Mul2:
+  case Match_InvalidSVEVectorList2x16Mul2:
+  case Match_InvalidSVEVectorList2x32Mul2:
+  case Match_InvalidSVEVectorList2x64Mul2:
+  case Match_InvalidSVEVectorList2x128Mul2:
     return Error(Loc, "Invalid vector list, expected list with 2 consecutive "
                       "SVE vectors, where the first vector is a multiple of 2 "
                       "and with matching element types");
-  case Match_InvalidSVEVectorListMul4x8:
-  case Match_InvalidSVEVectorListMul4x16:
-  case Match_InvalidSVEVectorListMul4x32:
-  case Match_InvalidSVEVectorListMul4x64:
-  case Match_InvalidSVEVectorListMul4x128:
+  case Match_InvalidSVEVectorList2x8Mul2_Lo:
+  case Match_InvalidSVEVectorList2x16Mul2_Lo:
+  case Match_InvalidSVEVectorList2x32Mul2_Lo:
+  case Match_InvalidSVEVectorList2x64Mul2_Lo:
+    return Error(Loc, "Invalid vector list, expected list with 2 consecutive "
+                      "SVE vectors in the range z0-z14, where the first vector "
+                      "is a multiple of 2 "
+                      "and with matching element types");
+  case Match_InvalidSVEVectorList2x8Mul2_Hi:
+  case Match_InvalidSVEVectorList2x16Mul2_Hi:
+  case Match_InvalidSVEVectorList2x32Mul2_Hi:
+  case Match_InvalidSVEVectorList2x64Mul2_Hi:
+    return Error(Loc,
+                 "Invalid vector list, expected list with 2 consecutive "
+                 "SVE vectors in the range z16-z30, where the first vector "
+                 "is a multiple of 2 "
+                 "and with matching element types");
+  case Match_InvalidSVEVectorList4x8Mul4:
+  case Match_InvalidSVEVectorList4x16Mul4:
+  case Match_InvalidSVEVectorList4x32Mul4:
+  case Match_InvalidSVEVectorList4x64Mul4:
+  case Match_InvalidSVEVectorList4x128Mul4:
     return Error(Loc, "Invalid vector list, expected list with 4 consecutive "
                       "SVE vectors, where the first vector is a multiple of 4 "
                       "and with matching element types");
@@ -6451,7 +6507,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     // GPR64. Twiddle it here if necessary.
     AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[2]);
     if (Op.isScalarReg()) {
-      unsigned Reg = getXRegFromWReg(Op.getReg());
+      MCRegister Reg = getXRegFromWReg(Op.getReg());
       Operands[2] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
                                               Op.getStartLoc(), Op.getEndLoc(),
                                               getContext());
@@ -6467,7 +6523,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       // GPR64. Twiddle it here if necessary.
       AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[2]);
       if (Op.isScalarReg()) {
-        unsigned Reg = getXRegFromWReg(Op.getReg());
+        MCRegister Reg = getXRegFromWReg(Op.getReg());
         Operands[2] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
                                                 Op.getStartLoc(),
                                                 Op.getEndLoc(), getContext());
@@ -6484,7 +6540,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       // GPR32. Twiddle it here if necessary.
       AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[1]);
       if (Op.isScalarReg()) {
-        unsigned Reg = getWRegFromXReg(Op.getReg());
+        MCRegister Reg = getWRegFromXReg(Op.getReg());
         Operands[1] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
                                                 Op.getStartLoc(),
                                                 Op.getEndLoc(), getContext());
@@ -6763,16 +6819,32 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMatrixIndexGPR32_12_15:
   case Match_InvalidMatrixIndexGPR32_8_11:
   case Match_InvalidLookupTable:
-  case Match_InvalidSVEVectorListMul2x8:
-  case Match_InvalidSVEVectorListMul2x16:
-  case Match_InvalidSVEVectorListMul2x32:
-  case Match_InvalidSVEVectorListMul2x64:
-  case Match_InvalidSVEVectorListMul2x128:
-  case Match_InvalidSVEVectorListMul4x8:
-  case Match_InvalidSVEVectorListMul4x16:
-  case Match_InvalidSVEVectorListMul4x32:
-  case Match_InvalidSVEVectorListMul4x64:
-  case Match_InvalidSVEVectorListMul4x128:
+  case Match_InvalidZPRMul2_Lo8:
+  case Match_InvalidZPRMul2_Hi8:
+  case Match_InvalidZPRMul2_Lo16:
+  case Match_InvalidZPRMul2_Hi16:
+  case Match_InvalidZPRMul2_Lo32:
+  case Match_InvalidZPRMul2_Hi32:
+  case Match_InvalidZPRMul2_Lo64:
+  case Match_InvalidZPRMul2_Hi64:
+  case Match_InvalidSVEVectorList2x8Mul2:
+  case Match_InvalidSVEVectorList2x16Mul2:
+  case Match_InvalidSVEVectorList2x32Mul2:
+  case Match_InvalidSVEVectorList2x64Mul2:
+  case Match_InvalidSVEVectorList2x128Mul2:
+  case Match_InvalidSVEVectorList4x8Mul4:
+  case Match_InvalidSVEVectorList4x16Mul4:
+  case Match_InvalidSVEVectorList4x32Mul4:
+  case Match_InvalidSVEVectorList4x64Mul4:
+  case Match_InvalidSVEVectorList4x128Mul4:
+  case Match_InvalidSVEVectorList2x8Mul2_Lo:
+  case Match_InvalidSVEVectorList2x16Mul2_Lo:
+  case Match_InvalidSVEVectorList2x32Mul2_Lo:
+  case Match_InvalidSVEVectorList2x64Mul2_Lo:
+  case Match_InvalidSVEVectorList2x8Mul2_Hi:
+  case Match_InvalidSVEVectorList2x16Mul2_Hi:
+  case Match_InvalidSVEVectorList2x32Mul2_Hi:
+  case Match_InvalidSVEVectorList2x64Mul2_Hi:
   case Match_InvalidSVEVectorListStrided2x8:
   case Match_InvalidSVEVectorListStrided2x16:
   case Match_InvalidSVEVectorListStrided2x32:
@@ -7907,7 +7979,7 @@ ParseStatus AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
     return Error(E, "expected second odd register of a consecutive same-size "
                     "even/odd register pair");
 
-  unsigned Pair = 0;
+  MCRegister Pair;
   if (isXReg) {
     Pair = RI->getMatchingSuperReg(FirstReg, AArch64::sube64,
            &AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID]);
@@ -8047,7 +8119,7 @@ ParseStatus AArch64AsmParser::tryParseGPR64x8(OperandVector &Operands) {
 
   MCContext &ctx = getContext();
   const MCRegisterInfo *RI = ctx.getRegisterInfo();
-  int X8Reg = RI->getMatchingSuperReg(
+  MCRegister X8Reg = RI->getMatchingSuperReg(
       XReg, AArch64::x8sub_0,
       &AArch64MCRegisterClasses[AArch64::GPR64x8ClassRegClassID]);
   if (!X8Reg)

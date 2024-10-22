@@ -1811,9 +1811,9 @@ MallocChecker::MallocMemReturnsAttr(CheckerContext &C, const CallEvent &Call,
   if (!Att->args().empty()) {
     return MallocMemAux(C, Call,
                         Call.getArgExpr(Att->args_begin()->getASTIndex()),
-                        UndefinedVal(), State, Family);
+                        UnknownVal(), State, Family);
   }
-  return MallocMemAux(C, Call, UnknownVal(), UndefinedVal(), State, Family);
+  return MallocMemAux(C, Call, UnknownVal(), UnknownVal(), State, Family);
 }
 
 ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,

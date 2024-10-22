@@ -119,7 +119,7 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
                              bool RequiresNullTerminator, bool IsVolatile,
                              bool IsText) {
-  auto F = openFileForRead(Name, IsText);
+  auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
 
@@ -279,8 +279,9 @@ public:
   }
 
   ErrorOr<Status> status(const Twine &Path) override;
-  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path,
-                                                 bool IsText = true) override;
+  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadBinary(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
@@ -304,6 +305,17 @@ private:
     return Storage;
   }
 
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadWithFlags(const Twine &Name, sys::fs::OpenFlags Flags) {
+    SmallString<256> RealName, Storage;
+    Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
+        adjustPath(Name, Storage), Flags, &RealName);
+    if (!FDOrErr)
+      return errorToErrorCode(FDOrErr.takeError());
+    return std::unique_ptr<File>(
+        new RealFile(*FDOrErr, Name.str(), RealName.str()));
+  }
+
   struct WorkingDirectory {
     // The current working directory, without symlinks resolved. (echo $PWD).
     SmallString<128> Specified;
@@ -325,15 +337,13 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 }
 
 ErrorOr<std::unique_ptr<File>>
-RealFileSystem::openFileForRead(const Twine &Name, bool IsText) {
-  SmallString<256> RealName, Storage;
-  Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      adjustPath(Name, Storage), IsText ? sys::fs::OF_Text : sys::fs::OF_None,
-      &RealName);
-  if (!FDOrErr)
-    return errorToErrorCode(FDOrErr.takeError());
-  return std::unique_ptr<File>(
-      new RealFile(*FDOrErr, Name.str(), RealName.str()));
+RealFileSystem::openFileForRead(const Twine &Name) {
+  return openFileForReadWithFlags(Name, sys::fs::OF_Text);
+}
+
+ErrorOr<std::unique_ptr<File>>
+RealFileSystem::openFileForReadBinary(const Twine &Name) {
+  return openFileForReadWithFlags(Name, sys::fs::OF_None);
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
@@ -461,10 +471,10 @@ bool OverlayFileSystem::exists(const Twine &Path) {
 }
 
 ErrorOr<std::unique_ptr<File>>
-OverlayFileSystem::openFileForRead(const llvm::Twine &Path, bool IsText) {
+OverlayFileSystem::openFileForRead(const llvm::Twine &Path) {
   // FIXME: handle symlinks that cross file systems
   for (iterator I = overlays_begin(), E = overlays_end(); I != E; ++I) {
-    auto Result = (*I)->openFileForRead(Path, IsText);
+    auto Result = (*I)->openFileForRead(Path);
     if (Result || Result.getError() != llvm::errc::no_such_file_or_directory)
       return Result;
   }
@@ -753,7 +763,7 @@ public:
 
 class InMemoryDirectory : public InMemoryNode {
   Status Stat;
-  std::map<std::string, std::unique_ptr<InMemoryNode>> Entries;
+  std::map<std::string, std::unique_ptr<InMemoryNode>, std::less<>> Entries;
 
 public:
   InMemoryDirectory(Status Stat)
@@ -769,7 +779,7 @@ public:
   UniqueID getUniqueID() const { return Stat.getUniqueID(); }
 
   InMemoryNode *getChild(StringRef Name) const {
-    auto I = Entries.find(Name.str());
+    auto I = Entries.find(Name);
     if (I != Entries.end())
       return I->second.get();
     return nullptr;
@@ -1076,7 +1086,7 @@ llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
 }
 
 llvm::ErrorOr<std::unique_ptr<File>>
-InMemoryFileSystem::openFileForRead(const Twine &Path, bool IsText) {
+InMemoryFileSystem::openFileForRead(const Twine &Path) {
   auto Node = lookupNode(Path,/*FollowFinalSymlink=*/true);
   if (!Node)
     return Node.getError();
@@ -2540,7 +2550,7 @@ File::getWithPath(ErrorOr<std::unique_ptr<File>> Result, const Twine &P) {
 }
 
 ErrorOr<std::unique_ptr<File>>
-RedirectingFileSystem::openFileForRead(const Twine &OriginalPath, bool IsText) {
+RedirectingFileSystem::openFileForRead(const Twine &OriginalPath) {
   SmallString<256> Path;
   OriginalPath.toVector(Path);
 

@@ -17410,8 +17410,8 @@ DeclResult Sema::ActOnTemplatedFriendTag(
       return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
                                 Name, NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
-                                FriendLoc, TempParamLists.size() - 1,
-                                TempParamLists.data())
+                                FriendLoc, TempParamLists.drop_back(),
+                                IsMemberSpecialization)
           .get();
     } else {
       // The "template<>" header is extraneous.
@@ -18175,7 +18175,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
 
     if (OldFX != NewFXOrig) {
       FunctionEffectSet NewFX(NewFXOrig);
-      const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
+      const auto Diffs = FunctionEffectDiffVector(OldFX, NewFX);
       FunctionEffectSet::Conflicts Errs;
       for (const auto &Diff : Diffs) {
         switch (Diff.shouldDiagnoseMethodOverride(*Old, OldFX, *New, NewFX)) {
@@ -18188,7 +18188,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
               << Old->getReturnTypeSourceRange();
           break;
         case FunctionEffectDiff::OverrideResult::Merge: {
-          NewFX.insert(Diff.Old, Errs);
+          NewFX.insert(Diff.Old.value(), Errs);
           const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
           FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
           EPI.FunctionEffects = FunctionEffectsRef(NewFX);
@@ -18267,7 +18267,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
   }
 
   // The return types aren't either both pointers or references to a class type.
-  if (NewClassTy.isNull()) {
+  if (NewClassTy.isNull() || !NewClassTy->isStructureOrClassType()) {
     Diag(New->getLocation(),
          diag::err_different_return_type_for_overriding_virtual_function)
         << New->getDeclName() << NewTy << OldTy
@@ -18332,9 +18332,9 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
 
 
   // The new class type must have the same or less qualifiers as the old type.
-  if (NewClassTy.isMoreQualifiedThan(OldClassTy)) {
+  if (!OldClassTy.isAtLeastAsQualifiedAs(NewClassTy)) {
     Diag(New->getLocation(),
-         diag::err_covariant_return_type_class_type_more_qualified)
+         diag::err_covariant_return_type_class_type_not_same_or_less_qualified)
         << New->getDeclName() << NewTy << OldTy
         << New->getReturnTypeSourceRange();
     Diag(Old->getLocation(), diag::note_overridden_virtual_function)

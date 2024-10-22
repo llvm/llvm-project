@@ -11,7 +11,7 @@ body: |
     ; GFX1100-LABEL: name: 16bit_lo128_shrink
     ; GFX1100: liveins: $vgpr127
     ; GFX1100-NEXT: {{  $}}
-    ; GFX1100-NEXT: V_CMP_EQ_U16_t16_e32 0, $vgpr127, implicit-def $vcc, implicit $exec, implicit $exec
+    ; GFX1100-NEXT: V_CMP_EQ_U16_t16_e32 0, $vgpr127, implicit-def $vcc_lo, implicit $exec, implicit $exec
     $vcc_lo = V_CMP_EQ_U16_t16_e64 0, $vgpr127, implicit-def $vcc, implicit $exec
 ...
 

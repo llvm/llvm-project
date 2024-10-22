@@ -131,7 +131,7 @@ void DetailedRecordsEmitter::printDefms(const Record &Rec, raw_ostream &OS) {
 // Print the template arguments of a class.
 void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
                                                raw_ostream &OS) {
-  ArrayRef<Init *> Args = Rec.getTemplateArgs();
+  ArrayRef<const Init *> Args = Rec.getTemplateArgs();
   if (Args.empty()) {
     OS << "  Template args: (none)\n";
     return;
@@ -152,7 +152,8 @@ void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
 // are enclosed in parentheses.
 void DetailedRecordsEmitter::printSuperclasses(const Record &Rec,
                                                raw_ostream &OS) {
-  ArrayRef<std::pair<Record *, SMRange>> Superclasses = Rec.getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> Superclasses =
+      Rec.getSuperClasses();
   if (Superclasses.empty()) {
     OS << "  Superclasses: (none)\n";
     return;

@@ -33,7 +33,7 @@ public:
   }
 
   llvm::Expected<bool> HandleStop(ExecutionContext &exe_ctx,
-                                  lldb::StreamSP output_sp) override;
+                                  lldb::StreamSP &output_sp) override;
 
   static void Initialize();
 

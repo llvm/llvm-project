@@ -41,7 +41,7 @@ ScriptedStopHookPythonInterface::CreatePluginObject(llvm::StringRef class_name,
 
 llvm::Expected<bool>
 ScriptedStopHookPythonInterface::HandleStop(ExecutionContext &exe_ctx,
-                                            lldb::StreamSP output_sp) {
+                                            lldb::StreamSP& output_sp) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
   Status error;

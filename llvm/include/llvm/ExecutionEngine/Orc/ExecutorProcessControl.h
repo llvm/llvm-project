@@ -235,8 +235,6 @@ public:
   }
 
   /// Look up and SPS-deserialize a bootstrap map value.
-  ///
-  ///
   template <typename T, typename SPSTagT>
   Error getBootstrapMapValue(StringRef Key, std::optional<T> &Val) const {
     Val = std::nullopt;

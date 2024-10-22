@@ -23,7 +23,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:   WIDEN-CALL ir<%call> = call @llvm.sqrt.f32(ir<%lv>)
+; CHECK-NEXT:   WIDEN-INTRINSIC ir<%call> = call llvm.sqrt(ir<%lv>)
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx2>
 ; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR2]]>, ir<%call>
@@ -212,6 +212,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:.+]]> = compute-reduction-result ir<%red>, ir<%red.next>
+; CHECK-NEXT:   CLONE store vp<[[RED_RES]]>, ir<%dst>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
@@ -349,10 +350,9 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:     ir<%AB.0> = load from index 0
 ; CHECK-NEXT:     ir<%AB.1> = load from index 1
 ; CHECK-NEXT:     ir<%AB.3> = load from index 3
-; CHECK-NEXT:   CLONE ir<%iv.plus.3> = add vp<[[STEPS]]>, ir<3>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%AB.0>, ir<%AB.1>
-; CHECK-NEXT:   CLONE ir<%gep.CD.3> = getelementptr inbounds ir<@CD>, ir<0>, ir<%iv.plus.3>
-; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at <badref>, ir<%gep.CD.3>
+; CHECK-NEXT:   CLONE ir<%gep.CD.0> = getelementptr inbounds ir<@CD>, ir<0>, vp<[[STEPS]]>
+; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at <badref>, ir<%gep.CD.0>
 ; CHECK-NEXT:     store ir<%add> to index 0
 ; CHECK-NEXT:     store ir<1> to index 1
 ; CHECK-NEXT:     store ir<2> to index 2

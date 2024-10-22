@@ -24,8 +24,6 @@ tablegen(LLVM RISCVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="RISCVPreLegalizerCombiner")
 tablegen(LLVM RISCVGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="RISCVPostLegalizerCombiner")
-tablegen(LLVM RISCVGenPostLegalizeGILowering.inc -gen-global-isel-combiner
-              -combiners="RISCVPostLegalizerLowering")
 
 add_public_tablegen_target(RISCVCommonTableGen)
 
@@ -61,12 +59,12 @@ add_llvm_target(RISCVCodeGen
   RISCVTargetObjectFile.cpp
   RISCVTargetTransformInfo.cpp
   RISCVVectorPeephole.cpp
+  RISCVVLOptimizer.cpp
   RISCVZacasABIFix.cpp
   GISel/RISCVCallLowering.cpp
   GISel/RISCVInstructionSelector.cpp
   GISel/RISCVLegalizerInfo.cpp
   GISel/RISCVPostLegalizerCombiner.cpp
-  GISel/RISCVPostLegalizerLowering.cpp
   GISel/RISCVO0PreLegalizerCombiner.cpp
   GISel/RISCVPreLegalizerCombiner.cpp
   GISel/RISCVRegisterBankInfo.cpp

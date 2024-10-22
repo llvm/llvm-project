@@ -10,7 +10,7 @@ define i32 @main() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl $10271, %ebx # imm = 0x281F
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %forbody
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $.str, %edi

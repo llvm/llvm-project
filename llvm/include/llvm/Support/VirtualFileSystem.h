@@ -271,12 +271,24 @@ public:
   /// Get the status of the entry at \p Path, if one exists.
   virtual llvm::ErrorOr<Status> status(const Twine &Path) = 0;
 
-  /// Get a \p File object for the file at \p Path, if one exists.
+  /// Get a \p File object for the text file at \p Path, if one exists.
   virtual llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path, bool IsText = true) = 0;
+  openFileForRead(const Twine &Path) = 0;
+
+  /// Get a \p File object for the binary file at \p Path, if one exists.
+  /// Some non-ascii based file systems perform encoding conversions
+  /// when reading as a text file, and this function should be used if
+  /// a file's bytes should be read as-is. On most filesystems, this
+  /// is the same behaviour as openFileForRead.
+  virtual llvm::ErrorOr<std::unique_ptr<File>>
+  openFileForReadBinary(const Twine &Path) {
+    return openFileForRead(Path);
+  }
 
   /// This is a convenience method that opens a file, gets its content and then
   /// closes the file.
+  /// The IsText parameter is used to distinguish whether the file should be
+  /// opened as a binary or text file.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(const Twine &Name, int64_t FileSize = -1,
                    bool RequiresNullTerminator = true, bool IsVolatile = false,
@@ -393,7 +405,7 @@ public:
   llvm::ErrorOr<Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path, bool IsText = true) override;
+  openFileForRead(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
@@ -447,8 +459,8 @@ public:
   }
   bool exists(const Twine &Path) override { return FS->exists(Path); }
   llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path, bool IsText = true) override {
-    return FS->openFileForRead(Path, IsText);
+  openFileForRead(const Twine &Path) override {
+    return FS->openFileForRead(Path);
   }
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override {
     return FS->dir_begin(Dir, EC);
@@ -616,7 +628,7 @@ public:
 
   llvm::ErrorOr<Status> status(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path, bool IsText = true) override;
+  openFileForRead(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
@@ -1052,8 +1064,7 @@ public:
 
   ErrorOr<Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;
-  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path,
-                                                 bool IsText = true) override;
+  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
 
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
@@ -1157,10 +1168,9 @@ public:
     return ProxyFileSystem::status(Path);
   }
 
-  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path,
-                                                 bool IsText = true) override {
+  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override {
     ++NumOpenFileForReadCalls;
-    return ProxyFileSystem::openFileForRead(Path, IsText);
+    return ProxyFileSystem::openFileForRead(Path);
   }
 
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override {

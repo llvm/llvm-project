@@ -642,38 +642,57 @@ LogicalResult
 LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
                                     llvm::SmallVector<Value> &returnValues) {
   Location loc = forOp.getLoc();
+  Type t = lb.getType();
+
   // Emit different versions of the induction variable. They will be
   // removed by dead code if not used.
 
-  // bounds_range = ub - lb
-  // total_iterations = (bounds_range + step - 1) / step
-  Type t = lb.getType();
-  Value minus1 =
-      rewriter.create<arith::ConstantOp>(loc, rewriter.getIntegerAttr(t, -1));
-  Value boundsRange = rewriter.create<arith::SubIOp>(loc, ub, lb);
-  Value rangeIncr = rewriter.create<arith::AddIOp>(loc, boundsRange, step);
-  Value rangeDecr = rewriter.create<arith::AddIOp>(loc, rangeIncr, minus1);
-  Value totalIterations = rewriter.create<arith::DivUIOp>(loc, rangeDecr, step);
+  auto createConst = [&](int v) {
+    return rewriter.create<arith::ConstantOp>(loc,
+                                              rewriter.getIntegerAttr(t, v));
+  };
 
+  // total_iterations = cdiv(range_diff, step);
+  // - range_diff = ub - lb
+  // - total_iterations = (range_diff + step + (step < 0 ? 1 : -1)) / step
+  Value zero = createConst(0);
+  Value one = createConst(1);
+  Value stepLessZero = rewriter.create<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::slt, step, zero);
+  Value stepDecr =
+      rewriter.create<arith::SelectOp>(loc, stepLessZero, one, createConst(-1));
+
+  Value rangeDiff = rewriter.create<arith::SubIOp>(loc, ub, lb);
+  Value rangeIncrStep = rewriter.create<arith::AddIOp>(loc, rangeDiff, step);
+  Value rangeDecr =
+      rewriter.create<arith::AddIOp>(loc, rangeIncrStep, stepDecr);
+  Value totalIterations = rewriter.create<arith::DivSIOp>(loc, rangeDecr, step);
+
+  // If total_iters < max_stage, start the epilogue at zero to match the
+  // ramp-up in the prologue.
+  // start_iter = max(0, total_iters - max_stage)
+  Value iterI = rewriter.create<arith::SubIOp>(loc, totalIterations,
+                                               createConst(maxStage));
+  iterI = rewriter.create<arith::MaxSIOp>(loc, zero, iterI);
+
+  // Capture predicates for dynamic loops.
   SmallVector<Value> predicates(maxStage + 1);
-  for (int64_t i = 0; i < maxStage; i++) {
-    // iterI = total_iters - 1 - i
-    // May go negative...
-    Value minusI =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIntegerAttr(t, -i));
-    Value iterI = rewriter.create<arith::AddIOp>(
-        loc, rewriter.create<arith::AddIOp>(loc, totalIterations, minus1),
-        minusI);
+
+  for (int64_t i = 1; i <= maxStage; i++) {
     // newLastIter = lb + step * iterI
     Value newlastIter = rewriter.create<arith::AddIOp>(
         loc, lb, rewriter.create<arith::MulIOp>(loc, step, iterI));
 
-    setValueMapping(forOp.getInductionVar(), newlastIter, maxStage - i);
+    setValueMapping(forOp.getInductionVar(), newlastIter, i);
+
+    // increment to next iterI
+    iterI = rewriter.create<arith::AddIOp>(loc, iterI, one);
 
     if (dynamicLoop) {
-      // pred = iterI >= lb
-      predicates[i + 1] = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::sge, iterI, lb);
+      // Disable stages when `i` is greater than total_iters.
+      // pred = total_iters >= i
+      predicates[i] = rewriter.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::sge, totalIterations, createConst(i));
     }
   }
 

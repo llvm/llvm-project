@@ -8,14 +8,14 @@
 
 #pragma omp begin declare variant match(device = {kind(gpu)})
 // Extension provided by the 'libc' project.
-void rpc_host_call(void *fn, void *args, size_t size);
+unsigned long long rpc_host_call(void *fn, void *args, size_t size);
 #pragma omp declare target to(rpc_host_call) device_type(nohost)
 #pragma omp end declare variant
 
 #pragma omp begin declare variant match(device = {kind(cpu)})
 // Dummy host implementation to make this work for all targets.
-void rpc_host_call(void *fn, void *args, size_t size) {
-  ((void (*)(void *))fn)(args);
+unsigned long long rpc_host_call(void *fn, void *args, size_t size) {
+  return ((unsigned long long (*)(void *))fn)(args);
 }
 #pragma omp end declare variant
 
@@ -25,17 +25,26 @@ typedef struct args_s {
 } args_t;
 
 // CHECK-DAG: Thread: 0, Block: 0
+// CHECK-DAG: Result: 42
 // CHECK-DAG: Thread: 1, Block: 0
+// CHECK-DAG: Result: 42
 // CHECK-DAG: Thread: 0, Block: 1
+// CHECK-DAG: Result: 42
 // CHECK-DAG: Thread: 1, Block: 1
+// CHECK-DAG: Result: 42
 // CHECK-DAG: Thread: 0, Block: 2
+// CHECK-DAG: Result: 42
 // CHECK-DAG: Thread: 1, Block: 2
+// CHECK-DAG: Result: 42
 // CHECK-DAG: Thread: 0, Block: 3
+// CHECK-DAG: Result: 42
 // CHECK-DAG: Thread: 1, Block: 3
-void foo(void *data) {
+// CHECK-DAG: Result: 42
+long long foo(void *data) {
   assert(omp_is_initial_device() && "Not executing on host?");
   args_t *args = (args_t *)data;
   printf("Thread: %d, Block: %d\n", args->thread_id, args->block_id);
+  return 42;
 }
 
 void *fn_ptr = NULL;
@@ -49,6 +58,7 @@ int main() {
 #pragma omp parallel num_threads(2)
   {
     args_t args = {omp_get_thread_num(), omp_get_team_num()};
-    rpc_host_call(fn_ptr, &args, sizeof(args_t));
+    unsigned long long res = rpc_host_call(fn_ptr, &args, sizeof(args_t));
+    printf("Result: %d\n", (int)res);
   }
 }

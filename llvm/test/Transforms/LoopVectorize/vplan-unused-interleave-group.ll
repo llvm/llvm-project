@@ -18,9 +18,9 @@ define void @test_unused_interleave(ptr %src, i32 %length) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%3>
-; CHECK-NEXT:     EMIT vp<%3> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%3>, vp<%1>
+; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 entry:

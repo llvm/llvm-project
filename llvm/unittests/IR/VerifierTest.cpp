@@ -271,7 +271,7 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
 
 TEST(VerifierTest, MDNodeWrongContext) {
   LLVMContext C1, C2;
-  auto *Node = MDNode::get(C1, std::nullopt);
+  auto *Node = MDNode::get(C1, {});
 
   Module M("M", C2);
   auto *NamedNode = M.getOrInsertNamedMetadata("test");

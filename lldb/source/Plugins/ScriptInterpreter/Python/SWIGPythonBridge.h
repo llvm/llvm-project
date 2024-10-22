@@ -86,7 +86,7 @@ public:
   static PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp);
   static PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp);
   static PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp);
-  static PythonObject ToSWIGWrapper(Status status);
+  static PythonObject ToSWIGWrapper(Status &&status);
   static PythonObject ToSWIGWrapper(const StructuredDataImpl &data_impl);
   static PythonObject ToSWIGWrapper(lldb::ThreadSP thread_sp);
   static PythonObject ToSWIGWrapper(lldb::StackFrameSP frame_sp);
@@ -199,6 +199,15 @@ public:
   static std::optional<std::string>
   LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
                                                    std::string &command);
+
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+      PyObject *implementor, std::vector<llvm::StringRef> &args_impl,
+      size_t args_pos, size_t pos_in_arg);
+
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+      PyObject *implementor, llvm::StringRef &long_option, size_t pos_in_arg);
 
   static bool LLDBSwigPythonCallModuleInit(const char *python_module_name,
                                            const char *session_dictionary_name,

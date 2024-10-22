@@ -24,7 +24,7 @@ public:
   /// If nothing is returned, we'll assume we are going to stop.
   /// Also any errors should return true, since we should stop on error.
   virtual llvm::Expected<bool> HandleStop(ExecutionContext &exe_ctx,
-                                          lldb::StreamSP output_sp) {
+                                          lldb::StreamSP &output_sp) {
     return true;
   }
 };

@@ -423,11 +423,11 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
   // is an empty cast path for the method stored in the context (signalling that
   // we've already diagnosed it) and then just not building the call, but that
   // doesn't really seem any simpler than diagnosing it at the call site...
-  if (auto It = Context.LambdaCastPaths.find(Method);
-      It != Context.LambdaCastPaths.end())
+  auto [It, Inserted] = Context.LambdaCastPaths.try_emplace(Method);
+  if (!Inserted)
     return It->second.empty();
 
-  CXXCastPath &Path = Context.LambdaCastPaths[Method];
+  CXXCastPath &Path = It->second;
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/false);
   if (!IsDerivedFrom(RD->getLocation(), ExplicitObjectParameterType, LambdaType,
@@ -1949,6 +1949,9 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
+
+  maybeAddDeclWithEffects(LSI.CallOperator);
+
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
 }
 
@@ -2348,7 +2351,10 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   Block->setBody(new (Context) CompoundStmt(ConvLocation));
 
   // Create the block literal expression.
-  Expr *BuildBlock = new (Context) BlockExpr(Block, Conv->getConversionType());
+  // TODO: Do we ever get here if we have unexpanded packs in the lambda???
+  Expr *BuildBlock =
+      new (Context) BlockExpr(Block, Conv->getConversionType(),
+                              /*ContainsUnexpandedParameterPack=*/false);
   ExprCleanupObjects.push_back(Block);
   Cleanup.setExprNeedsCleanups(true);
 
