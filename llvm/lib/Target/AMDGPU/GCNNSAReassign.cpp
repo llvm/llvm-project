@@ -50,7 +50,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<VirtRegMapWrapperLegacy>();
-    AU.addRequired<LiveRegMatrix>();
+    AU.addRequired<LiveRegMatrixWrapperLegacy>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -96,7 +96,7 @@ INITIALIZE_PASS_BEGIN(GCNNSAReassign, DEBUG_TYPE, "GCN NSA Reassign",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
-INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
+INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_END(GCNNSAReassign, DEBUG_TYPE, "GCN NSA Reassign",
                     false, false)
 
@@ -243,7 +243,7 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST->getRegisterInfo();
   VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
-  LRM = &getAnalysis<LiveRegMatrix>();
+  LRM = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
