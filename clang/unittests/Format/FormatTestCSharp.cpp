@@ -1688,6 +1688,18 @@ TEST_F(FormatTestCSharp, BrokenBrackets) {
   EXPECT_NE("", format("int where b <")); // reduced from crasher
 }
 
+TEST_F(FormatTestCSharp, GotoCaseLabel) {
+  verifyNoCrash("switch (i) {\n"
+                "case 0:\n"
+                "  goto case 1;\n"
+                "case 1:\n"
+                "  j = 0;\n"
+                "  {\n"
+                "    break;\n"
+                "  }\n"
+                "}");
+}
+
 } // namespace
 } // namespace test
 } // namespace format
