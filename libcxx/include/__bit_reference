@@ -609,10 +609,10 @@ struct __bit_array {
         std::__construct_at(__word_ + __i, 0);
     }
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() _LIBCPP_LIFETIMEBOUND {
     return iterator(pointer_traits<__storage_pointer>::pointer_to(__word_[0]), 0);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator end() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator end() _LIBCPP_LIFETIMEBOUND {
     return iterator(pointer_traits<__storage_pointer>::pointer_to(__word_[0]) + __size_ / __bits_per_word,
                     static_cast<unsigned>(__size_ % __bits_per_word));
   }

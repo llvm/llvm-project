@@ -375,10 +375,10 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
 
-  _LIBCPP_HIDE_FROM_ABI reference front() { return c.front(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return c.front(); }
-  _LIBCPP_HIDE_FROM_ABI reference back() { return c.back(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference back() const { return c.back(); }
+  _LIBCPP_HIDE_FROM_ABI reference front() _LIBCPP_LIFETIMEBOUND { return c.front(); }
+  _LIBCPP_HIDE_FROM_ABI const_reference front() const _LIBCPP_LIFETIMEBOUND { return c.front(); }
+  _LIBCPP_HIDE_FROM_ABI reference back() _LIBCPP_LIFETIMEBOUND { return c.back(); }
+  _LIBCPP_HIDE_FROM_ABI const_reference back() const _LIBCPP_LIFETIMEBOUND { return c.back(); }
 
   _LIBCPP_HIDE_FROM_ABI void push(const value_type& __v) { c.push_back(__v); }
 #ifndef _LIBCPP_CXX03_LANG

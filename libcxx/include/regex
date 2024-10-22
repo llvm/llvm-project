@@ -4614,10 +4614,10 @@ public:
     return __suffix_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const { return empty() ? __matches_.end() : __matches_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __matches_.end(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const { return empty() ? __matches_.end() : __matches_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const { return __matches_.end(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _LIBCPP_LIFETIMEBOUND { return empty() ? __matches_.end() : __matches_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const _LIBCPP_LIFETIMEBOUND { return __matches_.end(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _LIBCPP_LIFETIMEBOUND { return empty() ? __matches_.end() : __matches_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _LIBCPP_LIFETIMEBOUND { return __matches_.end(); }
 
   // format:
   template <class _OutputIter>

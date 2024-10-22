@@ -668,7 +668,7 @@ public:
   // native format observers
   _LIBCPP_HIDE_FROM_ABI const string_type& native() const noexcept { return __pn_; }
 
-  _LIBCPP_HIDE_FROM_ABI const value_type* c_str() const noexcept { return __pn_.c_str(); }
+  _LIBCPP_HIDE_FROM_ABI const value_type* c_str() const noexcept _LIBCPP_LIFETIMEBOUND { return __pn_.c_str(); }
 
   _LIBCPP_HIDE_FROM_ABI operator string_type() const { return __pn_; }
 

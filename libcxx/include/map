@@ -1137,20 +1137,20 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT { return __tree_.end(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT { return __tree_.end(); }
+  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __tree_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __tree_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __tree_.end(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __tree_.end(); }
 
-  _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() _NOEXCEPT { return reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const _NOEXCEPT { return const_reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() _NOEXCEPT { return reverse_iterator(begin()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const _NOEXCEPT { return const_reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(begin()); }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT { return begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT { return end(); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const _NOEXCEPT { return rbegin(); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT { return rend(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return end(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return rbegin(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return rend(); }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return __tree_.size() == 0; }
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __tree_.size(); }
@@ -1161,8 +1161,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](key_type&& __k);
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI mapped_type& at(const key_type& __k);
-  _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __k) const;
+  _LIBCPP_HIDE_FROM_ABI mapped_type& at(const key_type& __k) _LIBCPP_LIFETIMEBOUND;
+  _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __k) const _LIBCPP_LIFETIMEBOUND;
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT { return allocator_type(__tree_.__alloc()); }
   _LIBCPP_HIDE_FROM_ABI key_compare key_comp() const { return __tree_.value_comp().key_comp(); }
@@ -1170,39 +1170,39 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__emplace_unique(std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __p, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __p, _Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__emplace_hint_unique(__p.__i_, std::forward<_Args>(__args)...);
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __p) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __p) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_unique(std::forward<_Pp>(__p));
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __pos, _Pp&& __p) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __pos, _Pp&& __p) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_unique(__pos.__i_, std::forward<_Pp>(__p));
   }
 
 #endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __v) { return __tree_.__insert_unique(__v); }
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __v) _LIBCPP_LIFETIMEBOUND { return __tree_.__insert_unique(__v); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_unique(__p.__i_, __v);
   }
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(value_type&& __v) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(value_type&& __v) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_unique(std::move(__v));
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_unique(__p.__i_, std::move(__v));
   }
 
@@ -1270,7 +1270,7 @@ public:
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(const key_type& __k, _Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(const key_type& __k, _Vp&& __v) _LIBCPP_LIFETIMEBOUND {
     iterator __p = lower_bound(__k);
     if (__p != end() && !key_comp()(__k, __p->first)) {
       __p->second = std::forward<_Vp>(__v);
@@ -1280,7 +1280,7 @@ public:
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(key_type&& __k, _Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(key_type&& __k, _Vp&& __v) _LIBCPP_LIFETIMEBOUND {
     iterator __p = lower_bound(__k);
     if (__p != end() && !key_comp()(__k, __p->first)) {
       __p->second = std::forward<_Vp>(__v);
@@ -1290,7 +1290,7 @@ public:
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v) _LIBCPP_LIFETIMEBOUND {
     auto [__r, __inserted] = __tree_.__emplace_hint_unique_key_args(__h.__i_, __k, __k, std::forward<_Vp>(__v));
 
     if (!__inserted)
@@ -1300,7 +1300,7 @@ public:
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v) _LIBCPP_LIFETIMEBOUND {
     auto [__r, __inserted] =
         __tree_.__emplace_hint_unique_key_args(__h.__i_, __k, std::move(__k), std::forward<_Vp>(__v));
 
@@ -1312,10 +1312,10 @@ public:
 
 #endif // _LIBCPP_STD_VER >= 17
 
-  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p) { return __tree_.erase(__p.__i_); }
-  _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __p) { return __tree_.erase(__p.__i_); }
+  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p) _LIBCPP_LIFETIMEBOUND { return __tree_.erase(__p.__i_); }
+  _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __p) _LIBCPP_LIFETIMEBOUND { return __tree_.erase(__p.__i_); }
   _LIBCPP_HIDE_FROM_ABI size_type erase(const key_type& __k) { return __tree_.__erase_unique(__k); }
-  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l) {
+  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l) _LIBCPP_LIFETIMEBOUND {
     return __tree_.erase(__f.__i_, __l.__i_);
   }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
@@ -1326,7 +1326,7 @@ public:
                                         "node_type with incompatible allocator passed to map::insert()");
     return __tree_.template __node_handle_insert_unique< node_type, insert_return_type>(std::move(__nh));
   }
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, node_type&& __nh) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, node_type&& __nh) _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
                                         "node_type with incompatible allocator passed to map::insert()");
     return __tree_.template __node_handle_insert_unique<node_type>(__hint.__i_, std::move(__nh));
@@ -1365,15 +1365,15 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void swap(map& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) { __tree_.swap(__m.__tree_); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) _LIBCPP_LIFETIMEBOUND { return __tree_.find(__k); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const _LIBCPP_LIFETIMEBOUND { return __tree_.find(__k); }
 #if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) {
+  _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.find(__k);
   }
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.find(__k);
   }
 #endif
@@ -1394,46 +1394,46 @@ public:
   }
 #endif // _LIBCPP_STD_VER >= 20
 
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) { return __tree_.lower_bound(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const { return __tree_.lower_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) _LIBCPP_LIFETIMEBOUND { return __tree_.lower_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const _LIBCPP_LIFETIMEBOUND { return __tree_.lower_bound(__k); }
 #if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) {
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.lower_bound(__k);
   }
 
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.lower_bound(__k);
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) { return __tree_.upper_bound(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const { return __tree_.upper_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) _LIBCPP_LIFETIMEBOUND { return __tree_.upper_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const _LIBCPP_LIFETIMEBOUND { return __tree_.upper_bound(__k); }
 #if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) {
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.upper_bound(__k);
   }
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.upper_bound(__k);
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __k) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__equal_range_unique(__k);
   }
-  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const key_type& __k) const {
+  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const key_type& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.__equal_range_unique(__k);
   }
 #if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__equal_range_multi(__k);
   }
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
+  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.__equal_range_multi(__k);
   }
 #endif
@@ -1825,20 +1825,20 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI ~multimap() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT { return __tree_.end(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT { return __tree_.end(); }
+  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __tree_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __tree_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __tree_.end(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __tree_.end(); }
 
-  _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() _NOEXCEPT { return reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const _NOEXCEPT { return const_reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() _NOEXCEPT { return reverse_iterator(begin()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const _NOEXCEPT { return const_reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(begin()); }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT { return begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT { return end(); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const _NOEXCEPT { return rbegin(); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT { return rend(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return end(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return rbegin(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return rend(); }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return __tree_.size() == 0; }
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __tree_.size(); }
@@ -1851,28 +1851,28 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator emplace(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI iterator emplace(_Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__emplace_multi(std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __p, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __p, _Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__emplace_hint_multi(__p.__i_, std::forward<_Args>(__args)...);
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator insert(_Pp&& __p) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(_Pp&& __p) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_multi(std::forward<_Pp>(__p));
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __pos, _Pp&& __p) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __pos, _Pp&& __p) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_multi(__pos.__i_, std::forward<_Pp>(__p));
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __v) { return __tree_.__insert_multi(std::move(__v)); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __v) _LIBCPP_LIFETIMEBOUND { return __tree_.__insert_multi(std::move(__v)); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_multi(__p.__i_, std::move(__v));
   }
 
@@ -1880,9 +1880,9 @@ public:
 
 #endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __v) { return __tree_.__insert_multi(__v); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __v) _LIBCPP_LIFETIMEBOUND { return __tree_.__insert_multi(__v); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__insert_multi(__p.__i_, __v);
   }
 
@@ -1902,20 +1902,20 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p) { return __tree_.erase(__p.__i_); }
-  _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __p) { return __tree_.erase(__p.__i_); }
+  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p) _LIBCPP_LIFETIMEBOUND { return __tree_.erase(__p.__i_); }
+  _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __p) _LIBCPP_LIFETIMEBOUND { return __tree_.erase(__p.__i_); }
   _LIBCPP_HIDE_FROM_ABI size_type erase(const key_type& __k) { return __tree_.__erase_multi(__k); }
-  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l) {
+  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l) _LIBCPP_LIFETIMEBOUND {
     return __tree_.erase(__f.__i_, __l.__i_);
   }
 
 #if _LIBCPP_STD_VER >= 17
-  _LIBCPP_HIDE_FROM_ABI iterator insert(node_type&& __nh) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(node_type&& __nh) _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
                                         "node_type with incompatible allocator passed to multimap::insert()");
     return __tree_.template __node_handle_insert_multi<node_type>(std::move(__nh));
   }
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, node_type&& __nh) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, node_type&& __nh) _LIBCPP_LIFETIMEBOUND {
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
                                         "node_type with incompatible allocator passed to multimap::insert()");
     return __tree_.template __node_handle_insert_multi<node_type>(__hint.__i_, std::move(__nh));
@@ -1958,15 +1958,15 @@ public:
     __tree_.swap(__m.__tree_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) _LIBCPP_LIFETIMEBOUND { return __tree_.find(__k); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const _LIBCPP_LIFETIMEBOUND { return __tree_.find(__k); }
 #if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) {
+  _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.find(__k);
   }
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.find(__k);
   }
 #endif
@@ -1987,46 +1987,46 @@ public:
   }
 #endif // _LIBCPP_STD_VER >= 20
 
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) { return __tree_.lower_bound(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const { return __tree_.lower_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) _LIBCPP_LIFETIMEBOUND { return __tree_.lower_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const _LIBCPP_LIFETIMEBOUND { return __tree_.lower_bound(__k); }
 #if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) {
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.lower_bound(__k);
   }
 
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.lower_bound(__k);
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) { return __tree_.upper_bound(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const { return __tree_.upper_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) _LIBCPP_LIFETIMEBOUND { return __tree_.upper_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const _LIBCPP_LIFETIMEBOUND { return __tree_.upper_bound(__k); }
 #if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) {
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.upper_bound(__k);
   }
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.upper_bound(__k);
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __k) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__equal_range_multi(__k);
   }
-  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const key_type& __k) const {
+  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const key_type& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.__equal_range_multi(__k);
   }
 #if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) _LIBCPP_LIFETIMEBOUND {
     return __tree_.__equal_range_multi(__k);
   }
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
+  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const _LIBCPP_LIFETIMEBOUND {
     return __tree_.__equal_range_multi(__k);
   }
 #endif

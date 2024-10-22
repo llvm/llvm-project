@@ -254,46 +254,46 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reserve(size_type __n);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void shrink_to_fit() _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() _NOEXCEPT { return __make_iter(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator begin() const _NOEXCEPT { return __make_iter(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator end() _NOEXCEPT { return __make_iter(__size_); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator end() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator begin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __make_iter(0); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator begin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __make_iter(0); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator end() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __make_iter(__size_); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator end() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return __make_iter(__size_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reverse_iterator rbegin() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reverse_iterator rbegin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return reverse_iterator(end());
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator rbegin() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator rbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return const_reverse_iterator(end());
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reverse_iterator rend() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reverse_iterator rend() _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return reverse_iterator(begin());
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator rend() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator rend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return const_reverse_iterator(begin());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator cbegin() const _NOEXCEPT { return __make_iter(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator cend() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator cbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return __make_iter(0); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator cend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return __make_iter(__size_);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator crbegin() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator crbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return rbegin();
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator crend() const _NOEXCEPT { return rend(); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator crend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return rend(); }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __n) { return __make_ref(__n); }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __n) const {
     return __make_ref(__n);
   }
-  _LIBCPP_HIDE_FROM_ABI reference at(size_type __n);
-  _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __n) const;
+  _LIBCPP_HIDE_FROM_ABI reference at(size_type __n) _LIBCPP_LIFETIMEBOUND;
+  _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __n) const _LIBCPP_LIFETIMEBOUND;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() { return __make_ref(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const { return __make_ref(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() { return __make_ref(__size_ - 1); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const { return __make_ref(__size_ - 1); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() _LIBCPP_LIFETIMEBOUND { return __make_ref(0); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const _LIBCPP_LIFETIMEBOUND { return __make_ref(0); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() _LIBCPP_LIFETIMEBOUND { return __make_ref(__size_ - 1); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const _LIBCPP_LIFETIMEBOUND { return __make_ref(__size_ - 1); }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void push_back(const value_type& __x);
 #if _LIBCPP_STD_VER >= 14
@@ -322,14 +322,14 @@ public:
 
 #if _LIBCPP_STD_VER >= 14
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator emplace(const_iterator __position, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator emplace(const_iterator __position, _Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return insert(__position, value_type(std::forward<_Args>(__args)...));
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator insert(const_iterator __position, const value_type& __x);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator insert(const_iterator __position, const value_type& __x) _LIBCPP_LIFETIMEBOUND;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator
-  insert(const_iterator __position, size_type __n, const value_type& __x);
+  insert(const_iterator __position, size_type __n, const value_type& __x) _LIBCPP_LIFETIMEBOUND;
   template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
   iterator _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   insert(const_iterator __position, _InputIterator __first, _InputIterator __last);
@@ -339,7 +339,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<bool> _Range>
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator insert_range(const_iterator __position, _Range&& __range) {
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator insert_range(const_iterator __position, _Range&& __range) _LIBCPP_LIFETIMEBOUND {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
       return __insert_with_size(__position, ranges::begin(__range), ranges::end(__range), __n);
@@ -352,13 +352,13 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator
-  insert(const_iterator __position, initializer_list<value_type> __il) {
+  insert(const_iterator __position, initializer_list<value_type> __il) _LIBCPP_LIFETIMEBOUND {
     return insert(__position, __il.begin(), __il.end());
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator erase(const_iterator __position);
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator erase(const_iterator __first, const_iterator __last);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator erase(const_iterator __position) _LIBCPP_LIFETIMEBOUND;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator erase(const_iterator __first, const_iterator __last) _LIBCPP_LIFETIMEBOUND;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void clear() _NOEXCEPT { __size_ = 0; }
 

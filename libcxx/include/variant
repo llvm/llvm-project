@@ -1254,7 +1254,7 @@ public:
              enable_if_t<(_Ip < sizeof...(_Types)), int>         = 0,
              class _Tp                                           = variant_alternative_t<_Ip, variant<_Types...>>,
              enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(_Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return __impl_.template __emplace<_Ip>(std::forward<_Args>(__args)...);
   }
 
@@ -1264,7 +1264,7 @@ public:
              enable_if_t<(_Ip < sizeof...(_Types)), int> = 0,
              class _Tp                                   = variant_alternative_t<_Ip, variant<_Types...>>,
              enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return __impl_.template __emplace<_Ip>(__il, std::forward<_Args>(__args)...);
   }
 
@@ -1272,7 +1272,7 @@ public:
              class... _Args,
              size_t _Ip = __find_detail::__find_unambiguous_index_sfinae<_Tp, _Types...>::value,
              enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(_Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return __impl_.template __emplace<_Ip>(std::forward<_Args>(__args)...);
   }
 
@@ -1281,7 +1281,7 @@ public:
              class... _Args,
              size_t _Ip = __find_detail::__find_unambiguous_index_sfinae<_Tp, _Types...>::value,
              enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     return __impl_.template __emplace<_Ip>(__il, std::forward<_Args>(__args)...);
   }
 

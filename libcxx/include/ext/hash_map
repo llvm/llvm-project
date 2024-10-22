@@ -511,15 +511,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return __table_.size(); }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const { return __table_.max_size(); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator begin() { return __table_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI iterator end() { return __table_.end(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const { return __table_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __table_.end(); }
+  _LIBCPP_HIDE_FROM_ABI iterator begin() _LIBCPP_LIFETIMEBOUND { return __table_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI iterator end() _LIBCPP_LIFETIMEBOUND { return __table_.end(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _LIBCPP_LIFETIMEBOUND { return __table_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const _LIBCPP_LIFETIMEBOUND { return __table_.end(); }
 
-  _LIBCPP_HIDE_FROM_ABI std::pair<iterator, bool> insert(const value_type& __x) {
+  _LIBCPP_HIDE_FROM_ABI std::pair<iterator, bool> insert(const value_type& __x) _LIBCPP_LIFETIMEBOUND {
     return __table_.__insert_unique(__x);
   }
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) { return insert(__x).first; }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) _LIBCPP_LIFETIMEBOUND { return insert(__x).first; }
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last);
 
@@ -535,13 +535,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI hasher hash_funct() const { return __table_.hash_function().hash_function(); }
   _LIBCPP_HIDE_FROM_ABI key_equal key_eq() const { return __table_.key_eq().key_eq(); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __table_.find(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __table_.find(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) _LIBCPP_LIFETIMEBOUND { return __table_.find(__k); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const _LIBCPP_LIFETIMEBOUND { return __table_.find(__k); }
   _LIBCPP_HIDE_FROM_ABI size_type count(const key_type& __k) const { return __table_.__count_unique(__k); }
-  _LIBCPP_HIDE_FROM_ABI std::pair<iterator, iterator> equal_range(const key_type& __k) {
+  _LIBCPP_HIDE_FROM_ABI std::pair<iterator, iterator> equal_range(const key_type& __k) _LIBCPP_LIFETIMEBOUND {
     return __table_.__equal_range_unique(__k);
   }
-  _LIBCPP_HIDE_FROM_ABI std::pair<const_iterator, const_iterator> equal_range(const key_type& __k) const {
+  _LIBCPP_HIDE_FROM_ABI std::pair<const_iterator, const_iterator> equal_range(const key_type& __k) const _LIBCPP_LIFETIMEBOUND {
     return __table_.__equal_range_unique(__k);
   }
 
@@ -736,13 +736,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return __table_.size(); }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const { return __table_.max_size(); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator begin() { return __table_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI iterator end() { return __table_.end(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const { return __table_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __table_.end(); }
+  _LIBCPP_HIDE_FROM_ABI iterator begin() _LIBCPP_LIFETIMEBOUND { return __table_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI iterator end() _LIBCPP_LIFETIMEBOUND { return __table_.end(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _LIBCPP_LIFETIMEBOUND { return __table_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const _LIBCPP_LIFETIMEBOUND { return __table_.end(); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__insert_multi(__x); }
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) { return insert(__x); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) _LIBCPP_LIFETIMEBOUND { return __table_.__insert_multi(__x); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) _LIBCPP_LIFETIMEBOUND { return insert(__x); }
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last);
 
@@ -758,13 +758,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI hasher hash_funct() const { return __table_.hash_function().hash_function(); }
   _LIBCPP_HIDE_FROM_ABI key_equal key_eq() const { return __table_.key_eq().key_eq(); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __table_.find(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __table_.find(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) _LIBCPP_LIFETIMEBOUND { return __table_.find(__k); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const _LIBCPP_LIFETIMEBOUND { return __table_.find(__k); }
   _LIBCPP_HIDE_FROM_ABI size_type count(const key_type& __k) const { return __table_.__count_multi(__k); }
-  _LIBCPP_HIDE_FROM_ABI std::pair<iterator, iterator> equal_range(const key_type& __k) {
+  _LIBCPP_HIDE_FROM_ABI std::pair<iterator, iterator> equal_range(const key_type& __k) _LIBCPP_LIFETIMEBOUND {
     return __table_.__equal_range_multi(__k);
   }
-  _LIBCPP_HIDE_FROM_ABI std::pair<const_iterator, const_iterator> equal_range(const key_type& __k) const {
+  _LIBCPP_HIDE_FROM_ABI std::pair<const_iterator, const_iterator> equal_range(const key_type& __k) const _LIBCPP_LIFETIMEBOUND {
     return __table_.__equal_range_multi(__k);
   }
 

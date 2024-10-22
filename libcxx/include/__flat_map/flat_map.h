@@ -510,31 +510,31 @@ public:
   }
 
   // iterators
-  _LIBCPP_HIDE_FROM_ABI iterator begin() noexcept {
+  _LIBCPP_HIDE_FROM_ABI iterator begin() noexcept _LIBCPP_LIFETIMEBOUND {
     return iterator(__containers_.keys.begin(), __containers_.values.begin());
   }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept _LIBCPP_LIFETIMEBOUND {
     return const_iterator(__containers_.keys.begin(), __containers_.values.begin());
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator end() noexcept {
+  _LIBCPP_HIDE_FROM_ABI iterator end() noexcept _LIBCPP_LIFETIMEBOUND {
     return iterator(__containers_.keys.end(), __containers_.values.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept _LIBCPP_LIFETIMEBOUND {
     return const_iterator(__containers_.keys.end(), __containers_.values.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() noexcept _LIBCPP_LIFETIMEBOUND { return reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() noexcept _LIBCPP_LIFETIMEBOUND { return reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const noexcept _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(begin()); }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const noexcept { return begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const noexcept { return end(); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const noexcept { return const_reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const noexcept _LIBCPP_LIFETIMEBOUND { return begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const noexcept _LIBCPP_LIFETIMEBOUND { return end(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const noexcept _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const noexcept _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(begin()); }
 
   // [flat.map.capacity], capacity
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool empty() const noexcept { return __containers_.keys.empty(); }
@@ -565,7 +565,7 @@ public:
     return try_emplace(std::forward<_Kp>(__x)).first->second;
   }
 
-  _LIBCPP_HIDE_FROM_ABI mapped_type& at(const key_type& __x) {
+  _LIBCPP_HIDE_FROM_ABI mapped_type& at(const key_type& __x) _LIBCPP_LIFETIMEBOUND {
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const key_type&): Key does not exist");
@@ -573,7 +573,7 @@ public:
     return __it->second;
   }
 
-  _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __x) const {
+  _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __x) const _LIBCPP_LIFETIMEBOUND {
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const key_type&) const: Key does not exist");
@@ -583,7 +583,7 @@ public:
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI mapped_type& at(const _Kp& __x) {
+  _LIBCPP_HIDE_FROM_ABI mapped_type& at(const _Kp& __x) _LIBCPP_LIFETIMEBOUND {
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const K&): Key does not exist");
@@ -593,7 +593,7 @@ public:
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const _Kp& __x) const {
+  _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const _Kp& __x) const _LIBCPP_LIFETIMEBOUND {
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const K&) const: Key does not exist");
@@ -604,39 +604,39 @@ public:
   // [flat.map.modifiers], modifiers
   template <class... _Args>
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
     return __try_emplace(std::move(__pair.first), std::move(__pair.second));
   }
 
   template <class... _Args>
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
-  _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __hint, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __hint, _Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
     return __try_emplace_hint(__hint, std::move(__pair.first), std::move(__pair.second)).first;
   }
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return emplace(__x); }
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) _LIBCPP_LIFETIMEBOUND { return emplace(__x); }
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(value_type&& __x) { return emplace(std::move(__x)); }
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(value_type&& __x) _LIBCPP_LIFETIMEBOUND { return emplace(std::move(__x)); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, const value_type& __x) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, const value_type& __x) _LIBCPP_LIFETIMEBOUND {
     return emplace_hint(__hint, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, value_type&& __x) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, value_type&& __x) _LIBCPP_LIFETIMEBOUND {
     return emplace_hint(__hint, std::move(__x));
   }
 
   template <class _Pp>
     requires is_constructible_v<pair<key_type, mapped_type>, _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __x) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __x) _LIBCPP_LIFETIMEBOUND {
     return emplace(std::forward<_Pp>(__x));
   }
 
   template <class _Pp>
     requires is_constructible_v<pair<key_type, mapped_type>, _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _Pp&& __x) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _Pp&& __x) _LIBCPP_LIFETIMEBOUND {
     return emplace_hint(__hint, std::forward<_Pp>(__x));
   }
 
@@ -732,47 +732,47 @@ public:
 
   template <class _Mapped>
     requires is_assignable_v<mapped_type&, _Mapped> && is_constructible_v<mapped_type, _Mapped>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(const key_type& __key, _Mapped&& __obj) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(const key_type& __key, _Mapped&& __obj) _LIBCPP_LIFETIMEBOUND {
     return __insert_or_assign(__key, std::forward<_Mapped>(__obj));
   }
 
   template <class _Mapped>
     requires is_assignable_v<mapped_type&, _Mapped> && is_constructible_v<mapped_type, _Mapped>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(key_type&& __key, _Mapped&& __obj) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(key_type&& __key, _Mapped&& __obj) _LIBCPP_LIFETIMEBOUND {
     return __insert_or_assign(std::move(__key), std::forward<_Mapped>(__obj));
   }
 
   template <class _Kp, class _Mapped>
     requires __is_compare_transparent && is_constructible_v<key_type, _Kp> && is_assignable_v<mapped_type&, _Mapped> &&
              is_constructible_v<mapped_type, _Mapped>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(_Kp&& __key, _Mapped&& __obj) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(_Kp&& __key, _Mapped&& __obj) _LIBCPP_LIFETIMEBOUND {
     return __insert_or_assign(std::forward<_Kp>(__key), std::forward<_Mapped>(__obj));
   }
 
   template <class _Mapped>
     requires is_assignable_v<mapped_type&, _Mapped> && is_constructible_v<mapped_type, _Mapped>
-  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, const key_type& __key, _Mapped&& __obj) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, const key_type& __key, _Mapped&& __obj) _LIBCPP_LIFETIMEBOUND {
     return __insert_or_assign(__hint, __key, std::forward<_Mapped>(__obj));
   }
 
   template <class _Mapped>
     requires is_assignable_v<mapped_type&, _Mapped> && is_constructible_v<mapped_type, _Mapped>
-  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, key_type&& __key, _Mapped&& __obj) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, key_type&& __key, _Mapped&& __obj) _LIBCPP_LIFETIMEBOUND {
     return __insert_or_assign(__hint, std::move(__key), std::forward<_Mapped>(__obj));
   }
 
   template <class _Kp, class _Mapped>
     requires __is_compare_transparent && is_constructible_v<key_type, _Kp> && is_assignable_v<mapped_type&, _Mapped> &&
              is_constructible_v<mapped_type, _Mapped>
-  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, _Kp&& __key, _Mapped&& __obj) {
+  _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, _Kp&& __key, _Mapped&& __obj) _LIBCPP_LIFETIMEBOUND {
     return __insert_or_assign(__hint, std::forward<_Kp>(__key), std::forward<_Mapped>(__obj));
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __position) {
+  _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __position) _LIBCPP_LIFETIMEBOUND {
     return __erase(__position.__key_iter_, __position.__mapped_iter_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position) {
+  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position) _LIBCPP_LIFETIMEBOUND {
     return __erase(__position.__key_iter_, __position.__mapped_iter_);
   }
 
@@ -795,7 +795,7 @@ public:
     return __res;
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last) {
+  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last) _LIBCPP_LIFETIMEBOUND {
     auto __on_failure = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     auto __key_it     = __containers_.keys.erase(__first.__key_iter_, __last.__key_iter_);
     auto __mapped_it  = __containers_.values.erase(__first.__mapped_iter_, __last.__mapped_iter_);
@@ -826,19 +826,19 @@ public:
   _LIBCPP_HIDE_FROM_ABI const mapped_container_type& values() const noexcept { return __containers_.values; }
 
   // map operations
-  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __x) { return __find_impl(*this, __x); }
+  _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __x) _LIBCPP_LIFETIMEBOUND { return __find_impl(*this, __x); }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __x) const { return __find_impl(*this, __x); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __x) const _LIBCPP_LIFETIMEBOUND { return __find_impl(*this, __x); }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI iterator find(const _Kp& __x) {
+  _LIBCPP_HIDE_FROM_ABI iterator find(const _Kp& __x) _LIBCPP_LIFETIMEBOUND {
     return __find_impl(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Kp& __x) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Kp& __x) const _LIBCPP_LIFETIMEBOUND {
     return __find_impl(*this, __x);
   }
 
@@ -858,58 +858,58 @@ public:
     return find(__x) != end();
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) { return __lower_bound<iterator>(*this, __x); }
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) _LIBCPP_LIFETIMEBOUND { return __lower_bound<iterator>(*this, __x); }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __x) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __x) const _LIBCPP_LIFETIMEBOUND {
     return __lower_bound<const_iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _Kp& __x) {
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _Kp& __x) _LIBCPP_LIFETIMEBOUND {
     return __lower_bound<iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _Kp& __x) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _Kp& __x) const _LIBCPP_LIFETIMEBOUND {
     return __lower_bound<const_iterator>(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) { return __upper_bound<iterator>(*this, __x); }
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) _LIBCPP_LIFETIMEBOUND { return __upper_bound<iterator>(*this, __x); }
 
-  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __x) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __x) const _LIBCPP_LIFETIMEBOUND {
     return __upper_bound<const_iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _Kp& __x) {
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _Kp& __x) _LIBCPP_LIFETIMEBOUND {
     return __upper_bound<iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const {
+  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const _LIBCPP_LIFETIMEBOUND {
     return __upper_bound<const_iterator>(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) _LIBCPP_LIFETIMEBOUND {
     return __equal_range_impl(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const key_type& __x) const {
+  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const key_type& __x) const _LIBCPP_LIFETIMEBOUND {
     return __equal_range_impl(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _Kp& __x) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _Kp& __x) _LIBCPP_LIFETIMEBOUND {
     return __equal_range_impl(*this, __x);
   }
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _Kp& __x) const {
+  _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _Kp& __x) const _LIBCPP_LIFETIMEBOUND {
     return __equal_range_impl(*this, __x);
   }
 
