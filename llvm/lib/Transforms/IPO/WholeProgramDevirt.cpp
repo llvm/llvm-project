@@ -168,6 +168,14 @@ static cl::list<std::string>
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
 
+/// If this value is other than 0, the devirt module pass will stop
+/// transformation once the total number of devirtualizations reach the cutoff
+/// value.
+static cl::opt<unsigned> WholeProgramDevirtCutoff(
+    "wholeprogramdevirt-cutoff",
+    cl::desc("Max number of devirtualization for devirt module pass"),
+    cl::init(0));
+
 /// Mechanism to add runtime checking of devirtualization decisions, optionally
 /// trapping or falling back to indirect call on any that are not correct.
 /// Trapping mode is useful for debugging undefined behavior leading to failures
@@ -1168,6 +1176,10 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
     for (auto &&VCallSite : CSInfo.CallSites) {
       if (!OptimizedCalls.insert(&VCallSite.CB).second)
         continue;
+
+      if (WholeProgramDevirtCutoff.getNumOccurrences() > 0 &&
+          NumSingleImpl >= WholeProgramDevirtCutoff)
+        return;
 
       if (RemarksEnabled)
         VCallSite.emitRemark("single-impl",
