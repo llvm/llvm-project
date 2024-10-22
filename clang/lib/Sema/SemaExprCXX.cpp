@@ -9444,11 +9444,11 @@ Sema::BuildExprRequirement(
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     if (Constraint.isInvalid()) {
       return new (Context) concepts::ExprRequirement(
-          concepts::createSubstDiagAt(*this, IDC->getExprLoc(),
-                                      [&](llvm::raw_ostream &OS) {
-                                        IDC->printPretty(OS, /*Helper=*/nullptr,
-                                                         getPrintingPolicy());
-                                      }),
+          createSubstDiagAt(IDC->getExprLoc(),
+                            [&](llvm::raw_ostream &OS) {
+                              IDC->printPretty(OS, /*Helper=*/nullptr,
+                                               getPrintingPolicy());
+                            }),
           IsSimple, NoexceptLoc, ReturnTypeRequirement);
     }
     SubstitutedConstraintExpr =

@@ -334,6 +334,7 @@ add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
 add_math_entrypoint_object(log10f)
+add_math_entrypoint_object(log10f16)
 
 add_math_entrypoint_object(log1p)
 add_math_entrypoint_object(log1pf)
@@ -491,6 +492,7 @@ add_math_entrypoint_object(sinhf16)
 add_math_entrypoint_object(sqrt)
 add_math_entrypoint_object(sqrtf)
 add_math_entrypoint_object(sqrtl)
+add_math_entrypoint_object(sqrtf16)
 add_math_entrypoint_object(sqrtf128)
 
 add_math_entrypoint_object(tan)
