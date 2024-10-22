@@ -1723,19 +1723,3 @@ TargetInfo::BuiltinVaListKind
 DarwinAArch64TargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::CharPtrBuiltinVaList;
 }
-
-// 64-bit RenderScript is aarch64
-RenderScript64TargetInfo::RenderScript64TargetInfo(const llvm::Triple &Triple,
-                                                   const TargetOptions &Opts)
-    : AArch64leTargetInfo(llvm::Triple("aarch64", Triple.getVendorName(),
-                                       Triple.getOSName(),
-                                       Triple.getEnvironmentName()),
-                          Opts) {
-  IsRenderScriptTarget = true;
-}
-
-void RenderScript64TargetInfo::getTargetDefines(const LangOptions &Opts,
-                                                MacroBuilder &Builder) const {
-  Builder.defineMacro("__RENDERSCRIPT__");
-  AArch64leTargetInfo::getTargetDefines(Opts, Builder);
-}
