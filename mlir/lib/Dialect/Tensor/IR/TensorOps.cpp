@@ -1993,9 +1993,8 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
     if (!canFoldIntoConsumerOp(castOp))
       return failure();
 
-    const ArrayRef<int64_t> castSrcShape =
-        castOp.getSource().getType().getShape();
-    const SmallVector<ReassociationIndices, 4> reassoc =
+    ArrayRef<int64_t> castSrcShape = castOp.getSource().getType().getShape();
+    SmallVector<ReassociationIndices, 4> reassoc =
         expandOp.getReassociationIndices();
 
     SmallVector<int64_t> newOutputShape(expandOp.getResultType().getShape());
@@ -2003,7 +2002,7 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
     auto outputIt = expandOp.getOutputShape().begin();
 
     for (const auto &[inputDim, innerReassoc] : llvm::enumerate(reassoc)) {
-      for (const uint64_t outDim : innerReassoc) {
+      for (uint64_t outDim : innerReassoc) {
         if (!ShapedType::isDynamic(newOutputShape[outDim]))
           continue;
 
