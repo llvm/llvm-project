@@ -3424,7 +3424,7 @@ struct AssignedGotoStmt {
 
 WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
-// Parse tree nodes for OpenMP 4.5+ directives and clauses
+// Parse tree nodes for OpenMP 5.2 directives and clauses
 
 // [5.0] 2.1.6 iterator-specifier -> type-declaration-stmt = subscript-triple
 //             iterator-modifier -> iterator-specifier-list
