@@ -47,17 +47,17 @@
 ;; Value: 0x{{.*}}0 checks for 16-alignment of address
 ; CHECK-SOYAML: Symbols:
 ; CHECK-SOYAML:  - Name: internal_four
-; CHECK-SOYAML:    Value: 0x{{.*}}0
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
 ; CHECK-SOYAML:  - Name: four
-; CHECK-SOYAML:    Value: 0x{{.*}}0
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
 ; CHECK-SOYAML:  - Name: sixteen
-; CHECK-SOYAML:    Value: 0x{{.*}}0
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
 ; CHECK-SOYAML:  - Name: huge
-; CHECK-SOYAML:    Value: 0x{{.*}}0
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
 ;; At least as currently laid out, specialcaselisted gets put adjacient to a
 ;; tagged global, so it also has to be aligned to the next granule.
 ; CHECK-SOYAML:  - Name: specialcaselisted
-; CHECK-SOYAML:    Value: 0x{{.*}}0
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
 
 ; CHECK-ASM: .memtag internal_four
 ; CHECK-ASM .p2align        4
