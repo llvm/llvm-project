@@ -348,6 +348,13 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (D->isConstexpr())
     return true;
 
+  // If we're evaluating the initializer for a constexpr variable in C23, we may
+  // only read other contexpr variables. Abort here since this one isn't
+  // constexpr.
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(S.EvaluatingDecl);
+      VD && VD->isConstexpr() && S.getLangOpts().C23)
+    return Invalid(S, OpPC);
+
   QualType T = D->getType();
   bool IsConstant = T.isConstant(S.getASTContext());
   if (T->isIntegralOrEnumerationType()) {
@@ -1033,7 +1040,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
         return nullptr;
       };
 
-      AllocType->dump();
       if (const FunctionDecl *VirtualDelete =
               getVirtualOperatorDelete(AllocType);
           VirtualDelete &&

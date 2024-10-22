@@ -435,6 +435,9 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
         continue;
       }
 
+      if (isa<MemTransferInst>(CurUser))
+        continue;
+
       // supported for grid_constant
       if (IsGridConstant &&
           (isa<CallInst>(CurUser) || isa<StoreInst>(CurUser) ||
@@ -545,7 +548,8 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
 void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
                                       Argument *Arg) {
   Function *Func = Arg->getParent();
-  bool HasCvtaParam = TM.getSubtargetImpl(*Func)->hasCvtaParam();
+  bool HasCvtaParam =
+      TM.getSubtargetImpl(*Func)->hasCvtaParam() && isKernelFunction(*Func);
   bool IsGridConstant = HasCvtaParam && isParamGridConstant(*Arg);
   const DataLayout &DL = Func->getDataLayout();
   BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
@@ -626,10 +630,10 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
     // addrspacecast preserves alignment.  Since params are constant, this load
     // is definitely not volatile.
-    LoadInst *LI =
-        new LoadInst(StructType, ArgInParam, Arg->getName(),
-                     /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
-    new StoreInst(LI, AllocA, FirstInst);
+    const auto ArgSize = *AllocA->getAllocationSize(DL);
+    IRBuilder<> IRB(&*FirstInst);
+    IRB.CreateMemCpy(AllocA, AllocA->getAlign(), ArgInParam, AllocA->getAlign(),
+                     ArgSize);
   }
 }
 

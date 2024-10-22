@@ -535,6 +535,23 @@ LogicalResult ModuleImport::convertIdentMetadata() {
   return success();
 }
 
+LogicalResult ModuleImport::convertCommandlineMetadata() {
+  for (const llvm::NamedMDNode &nmd : llvmModule->named_metadata()) {
+    // llvm.commandline should have a single operand. That operand is itself an
+    // MDNode with a single string operand.
+    if (nmd.getName() != LLVMDialect::getCommandlineAttrName())
+      continue;
+
+    if (nmd.getNumOperands() == 1)
+      if (auto *md = dyn_cast<llvm::MDNode>(nmd.getOperand(0)))
+        if (md->getNumOperands() == 1)
+          if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
+            mlirModule->setAttr(LLVMDialect::getCommandlineAttrName(),
+                                builder.getStringAttr(mdStr->getString()));
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
@@ -564,6 +581,8 @@ LogicalResult ModuleImport::convertMetadata() {
   if (failed(convertLinkerOptionsMetadata()))
     return failure();
   if (failed(convertIdentMetadata()))
+    return failure();
+  if (failed(convertCommandlineMetadata()))
     return failure();
   return success();
 }
@@ -1292,7 +1311,8 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
 }
 
 LogicalResult ModuleImport::convertIntrinsicArguments(
-    ArrayRef<llvm::Value *> values, ArrayRef<unsigned> immArgPositions,
+    ArrayRef<llvm::Value *> values, ArrayRef<llvm::OperandBundleUse> opBundles,
+    bool requiresOpBundles, ArrayRef<unsigned> immArgPositions,
     ArrayRef<StringLiteral> immArgAttrNames, SmallVectorImpl<Value> &valuesOut,
     SmallVectorImpl<NamedAttribute> &attrsOut) {
   assert(immArgPositions.size() == immArgAttrNames.size() &&
@@ -1320,6 +1340,35 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
     if (failed(mlirValue))
       return failure();
     valuesOut.push_back(*mlirValue);
+  }
+
+  SmallVector<int> opBundleSizes;
+  SmallVector<Attribute> opBundleTagAttrs;
+  if (requiresOpBundles) {
+    opBundleSizes.reserve(opBundles.size());
+    opBundleTagAttrs.reserve(opBundles.size());
+
+    for (const llvm::OperandBundleUse &bundle : opBundles) {
+      opBundleSizes.push_back(bundle.Inputs.size());
+      opBundleTagAttrs.push_back(StringAttr::get(context, bundle.getTagName()));
+
+      for (const llvm::Use &opBundleOperand : bundle.Inputs) {
+        auto operandMlirValue = convertValue(opBundleOperand.get());
+        if (failed(operandMlirValue))
+          return failure();
+        valuesOut.push_back(*operandMlirValue);
+      }
+    }
+
+    auto opBundleSizesAttr = DenseI32ArrayAttr::get(context, opBundleSizes);
+    auto opBundleSizesAttrNameAttr =
+        StringAttr::get(context, LLVMDialect::getOpBundleSizesAttrName());
+    attrsOut.push_back({opBundleSizesAttrNameAttr, opBundleSizesAttr});
+
+    auto opBundleTagsAttr = ArrayAttr::get(context, opBundleTagAttrs);
+    auto opBundleTagsAttrNameAttr =
+        StringAttr::get(context, LLVMDialect::getOpBundleTagsAttrName());
+    attrsOut.push_back({opBundleTagsAttrNameAttr, opBundleTagsAttr});
   }
 
   return success();
@@ -2131,7 +2180,7 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
     return emitError(loc) << "failed to convert a debug intrinsic operand: "
                           << diag(*dbgIntr);
 
-  // Ensure that the debug instrinsic is inserted right after its operand is
+  // Ensure that the debug intrinsic is inserted right after its operand is
   // defined. Otherwise, the operand might not necessarily dominate the
   // intrinsic. If the defining operation is a terminator, insert the intrinsic
   // into a dominated block.

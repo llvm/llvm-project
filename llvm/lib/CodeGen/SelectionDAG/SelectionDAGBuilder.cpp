@@ -3138,7 +3138,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   SDValue Chain = DAG.getEntryNode();
-  if (TLI.useLoadStackGuardNode()) {
+  if (TLI.useLoadStackGuardNode(M)) {
     Guard = getLoadStackGuard(DAG, dl, Chain);
   } else {
     const Value *IRGuard = TLI.getSDagStackGuard(M);
@@ -4333,7 +4333,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
           GTI.getSequentialElementStride(DAG.getDataLayout());
       // We intentionally mask away the high bits here; ElementSize may not
       // fit in IdxTy.
-      APInt ElementMul(IdxSize, ElementSize.getKnownMinValue());
+      APInt ElementMul(IdxSize, ElementSize.getKnownMinValue(),
+                       /*isSigned=*/false, /*implicitTrunc=*/true);
       bool ElementScalable = ElementSize.isScalable();
 
       // If this is a scalar constant or a splat vector of constants,
@@ -6861,6 +6862,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)), Flags));
     return;
   }
+  case Intrinsic::atan2:
+    setValue(&I, DAG.getNode(ISD::FATAN2, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
   case Intrinsic::lround:
   case Intrinsic::llround:
   case Intrinsic::lrint:
@@ -7342,7 +7349,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     const Module &M = *MF.getFunction().getParent();
     EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Chain = getRoot();
-    if (TLI.useLoadStackGuardNode()) {
+    if (TLI.useLoadStackGuardNode(M)) {
       Res = getLoadStackGuard(DAG, sdl, Chain);
       Res = DAG.getPtrExtOrTrunc(Res, sdl, PtrTy);
     } else {
@@ -7362,9 +7369,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Emit code into the DAG to store the stack guard onto the stack.
     MachineFunction &MF = DAG.getMachineFunction();
     MachineFrameInfo &MFI = MF.getFrameInfo();
+    const Module &M = *MF.getFunction().getParent();
     SDValue Src, Chain = getRoot();
 
-    if (TLI.useLoadStackGuardNode())
+    if (TLI.useLoadStackGuardNode(M))
       Src = getLoadStackGuard(DAG, sdl, Chain);
     else
       Src = getValue(I.getArgOperand(0));   // The guard's value.
@@ -9351,6 +9359,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_atanf:
       case LibFunc_atanl:
         if (visitUnaryFloatCall(I, ISD::FATAN))
+          return;
+        break;
+      case LibFunc_atan2:
+      case LibFunc_atan2f:
+      case LibFunc_atan2l:
+        if (visitBinaryFloatCall(I, ISD::FATAN2))
           return;
         break;
       case LibFunc_sinh:

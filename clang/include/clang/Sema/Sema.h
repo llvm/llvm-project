@@ -49,6 +49,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/TypeTraits.h"
@@ -546,9 +547,6 @@ public:
   /// Print out statistics about the semantic analysis.
   void PrintStats() const;
 
-  /// Warn that the stack is nearly exhausted.
-  void warnStackExhausted(SourceLocation Loc);
-
   /// Run some code with "sufficient" stack space. (Currently, at least 256K is
   /// guaranteed). Produces a warning if we're low on stack space and allocates
   /// more in that case. Use this in code that may recurse deeply (for example,
@@ -872,8 +870,6 @@ public:
   /// For example, user-defined classes, built-in "id" type, etc.
   Scope *TUScope;
 
-  bool WarnedStackExhausted = false;
-
   void incrementMSManglingNumber() const {
     return CurScope->incrementMSManglingNumber();
   }
@@ -1184,6 +1180,8 @@ protected:
 private:
   std::optional<std::unique_ptr<DarwinSDKInfo>> CachedDarwinSDKInfo;
   bool WarnedDarwinSDKInfoMissing = false;
+
+  StackExhaustionHandler StackHandler;
 
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
@@ -6755,7 +6753,7 @@ public:
 
   ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
-  ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
+  ExprResult ActOnIntegerConstant(SourceLocation Loc, int64_t Val);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero);
 

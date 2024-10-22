@@ -43,6 +43,9 @@ protected:
     if (Triple.isOSBinFormatCOFF() && Triple.isAArch64())
       GTEST_SKIP();
 
+    if (Triple.isPPC())
+      GTEST_SKIP();
+
     ES = std::make_unique<ExecutionSession>(
         std::make_unique<UnsupportedExecutorProcessControl>(
             nullptr, nullptr, JTMB->getTargetTriple().getTriple()));

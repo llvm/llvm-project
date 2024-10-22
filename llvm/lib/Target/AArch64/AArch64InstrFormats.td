@@ -12626,3 +12626,64 @@ def : TokenAlias<".H", ".h">;
 def : TokenAlias<".S", ".s">;
 def : TokenAlias<".D", ".d">;
 def : TokenAlias<".Q", ".q">;
+
+//----------------------------------------------------------------------------
+// 2024 Armv9.6 Extensions
+//----------------------------------------------------------------------------
+
+let mayLoad = 1, mayStore = 1 in
+class BaseAtomicFPLoad<RegisterClass regtype, bits<2> sz, bits<2> AR,
+                     bits<3> op0, string asm>
+: I<(outs regtype:$Rt),
+    (ins regtype:$Rs, GPR64sp:$Rn),
+    asm, "\t$Rs, $Rt, [$Rn]","", []>,
+  Sched<[]> {
+  bits<5> Rt;
+  bits<5> Rs;
+  bits<5> Rn;
+  let Inst{31-30} = sz;
+  let Inst{29-24} = 0b111100;
+  let Inst{23-22} = AR;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rs;
+  let Inst{15}    = 0b0;
+  let Inst{14-12} = op0;
+  let Inst{11-10} = 0b00;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rt;
+}
+
+multiclass AtomicFPLoad<bits<2> AR, bits<3> op0, string asm> {
+  def D : BaseAtomicFPLoad<FPR64, 0b11, AR, op0, asm>;
+  def S : BaseAtomicFPLoad<FPR32, 0b10, AR, op0, asm>;
+  def H : BaseAtomicFPLoad<FPR16, 0b01, AR, op0, asm>;
+}
+
+let mayLoad = 1, mayStore = 1 in
+class BaseAtomicFPStore<RegisterClass regtype, bits<2> sz, bit R,
+                      bits<3> op0, string asm>
+: I<(outs),
+    (ins  regtype:$Rs, GPR64sp:$Rn),
+    asm, "\t$Rs,  [$Rn]",
+    "", []>,
+  Sched<[]> {
+  bits<5> Rt;
+  bits<5> Rs;
+  bits<5> Rn;
+  let Inst{31-30} = sz;
+  let Inst{29-23} = 0b1111000;
+  let Inst{22}    = R;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rs;
+  let Inst{15}    = 0b1;
+  let Inst{14-12} = op0;
+  let Inst{11-10} = 0b00;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = 0b11111;
+}
+
+multiclass AtomicFPStore<bit R, bits<3> op0, string asm> {
+  def D : BaseAtomicFPStore<FPR64, 0b11, R, op0, asm>;
+  def S : BaseAtomicFPStore<FPR32, 0b10, R, op0, asm>;
+  def H : BaseAtomicFPStore<FPR16, 0b01, R, op0, asm>;
+}

@@ -1945,7 +1945,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
                                   replaceUndef(CGM, isPattern, constant));
     }
 
-    if (D.getType()->isBitIntType() &&
+    if (constant && D.getType()->isBitIntType() &&
         CGM.getTypes().typeRequiresSplitIntoByteArray(D.getType())) {
       // Constants for long _BitInt types are split into individual bytes.
       // Try to fold these back into an integer constant so it can be stored

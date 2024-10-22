@@ -43,7 +43,7 @@ define void @test_guard_adjacent_diff_cond2(i32 %V1, i32 %V2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[V1:%.*]], [[V2:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[V1]], 255
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[AND]], 129
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign ult i32 [[AND]], 129
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[C]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 123) [ "deopt"() ]
 ; CHECK-NEXT:    ret void

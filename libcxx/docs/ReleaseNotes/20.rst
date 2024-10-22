@@ -79,9 +79,12 @@ Deprecations and Removals
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
   standards conforming.
 
-- Non-conforming member typedefs ``iterator`` and ``const_iterator`` of ``std::bitset`` are removed. Previously, they
-  were private but could cause ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in
-  LLVM 20.
+- Non-conforming member typedefs ``base``, ``iterator`` and ``const_iterator`` of ``std::bitset``, and member typedef
+  ``base`` of ``std::forward_list`` and ``std::list`` are removed. Previously, they were private but could cause
+  ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in LLVM 20.
+
+- The function ``__libcpp_verbose_abort()`` is now ``noexcept``, to match ``std::terminate()``. (The combination of
+  ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.)
 
 - ``<ccomplex>``, ``<cstdalign>`` (previously missing), ``<cstdbool>``, and ``<ctgmath>`` are deprecated since C++17 as
   specified by the standard. They, together with ``<ciso646>``, are removed in C++20, but libc++ still provides these

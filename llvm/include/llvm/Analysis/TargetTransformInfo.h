@@ -803,6 +803,12 @@ public:
   /// Return true if the target supports strided load.
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
 
+  /// Return true is the target supports interleaved access for the given vector
+  /// type \p VTy, interleave factor \p Factor, alignment \p Alignment and
+  /// address space \p AddrSpace.
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) const;
+
   // Return true if the target supports masked vector histograms.
   bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) const;
 
@@ -1934,6 +1940,10 @@ public:
   virtual bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                            Align Alignment,
+                                            unsigned AddrSpace) = 0;
+
   virtual bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) = 0;
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
@@ -2455,6 +2465,11 @@ public:
   }
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalStridedLoadStore(DataType, Alignment);
+  }
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment,
+                                    unsigned AddrSpace) override {
+    return Impl.isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace);
   }
   bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) override {
     return Impl.isLegalMaskedVectorHistogram(AddrType, DataType);

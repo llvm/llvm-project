@@ -3172,12 +3172,11 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
     // Try parsing .insn [ length , ] value
     std::optional<int64_t> Length;
     int64_t Value = 0;
-    if (Parser.parseIntToken(
-            Value, "expected instruction format or an integer constant"))
+    if (Parser.parseAbsoluteExpression(Value))
       return true;
     if (Parser.parseOptionalToken(AsmToken::Comma)) {
       Length = Value;
-      if (Parser.parseIntToken(Value, "expected an integer constant"))
+      if (Parser.parseAbsoluteExpression(Value))
         return true;
 
       if (*Length == 0 || (*Length % 2) != 0)
@@ -3694,6 +3693,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Inst.getOpcode()) {
   default:
     break;
+  case RISCV::PseudoC_ADDI_NOP:
+    emitToStreamer(Out, MCInstBuilder(RISCV::C_NOP));
+    return false;
   case RISCV::PseudoLLAImm:
   case RISCV::PseudoLAImm:
   case RISCV::PseudoLI: {
