@@ -242,12 +242,13 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(
       Args.MakeArgString("--sysroot=" + TC.getSDKLibraryRootDir()));
 
-  if (!Relocatable) {
-    // Default to PIE for non-static executables.
-    const bool PIE = !Args.hasArg(options::OPT_shared, options::OPT_static);
-    if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
-      CmdArgs.push_back("-pie");
+  // Default to PIE for non-static executables.
+  const bool PIE =
+      !Args.hasArg(options::OPT_r, options::OPT_shared, options::OPT_static);
+  if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
+    CmdArgs.push_back("-pie");
 
+  if (!Relocatable) {
     // Lazy binding of PLTs is not supported on PlayStation. They are placed in
     // the RelRo segment.
     CmdArgs.push_back("-z");
