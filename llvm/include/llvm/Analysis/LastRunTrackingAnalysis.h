@@ -22,9 +22,7 @@
 //   1. Some transform passes have parameters that may vary in the optimization
 //   pipeline. We should check if parameters in current run is compatible with
 //   that in the last run.
-//   2. Module passes are specially handled. If a module pass make changes, we
-//   clear all sets.
-//   3. This pass only tracks at the function level. Loop passes are not
+//   2. This pass only tracks at the module/function level. Loop passes are not
 //   supported for now.
 //
 //===----------------------------------------------------------------------===//
