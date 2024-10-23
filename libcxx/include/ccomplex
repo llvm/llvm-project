@@ -23,12 +23,17 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 17 && defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#if _LIBCPP_STD_VER >= 17
+
+using __standard_header_ccomplex
 #  if _LIBCPP_STD_VER >= 20
-#    warning <ccomplex> is removed in C++20. Include <complex> instead.
+    _LIBCPP_DEPRECATED_("removed in C++20. Include <complex> instead.")
 #  else
-#    warning <ccomplex> is deprecated. Include <complex> instead.
+    _LIBCPP_DEPRECATED_("Include <complex> instead.")
 #  endif
+    = void;
+using __use_standard_header_ccomplex = __standard_header_ccomplex;
+
 #endif
 
 #endif // _LIBCPP_CCOMPLEX

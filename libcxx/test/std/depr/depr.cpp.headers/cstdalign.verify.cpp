@@ -19,7 +19,7 @@
 #include <cstdalign>
 
 #if TEST_STD_VER >= 20
-// expected-warning@cstdalign:* {{<cstdalign> is removed in C++20.}}
+// expected-warning@cstdalign:* {{'__standard_header_cstdalign' is deprecated: removed in C++20.}}
 #else
-// expected-warning@cstdalign:* {{<cstdalign> is deprecated.}}
+// expected-warning@cstdalign:* {{'__standard_header_cstdalign' is deprecated}}
 #endif

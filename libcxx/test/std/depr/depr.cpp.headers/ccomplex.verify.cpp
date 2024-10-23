@@ -19,7 +19,7 @@
 #include <ccomplex>
 
 #if TEST_STD_VER >= 20
-// expected-warning@ccomplex:* {{<ccomplex> is removed in C++20. Include <complex> instead.}}
+// expected-warning@ccomplex:* {{'__standard_header_ccomplex' is deprecated: removed in C++20. Include <complex> instead.}}
 #else
-// expected-warning@ccomplex:* {{<ccomplex> is deprecated. Include <complex> instead.}}
+// expected-warning@ccomplex:* {{'__standard_header_ccomplex' is deprecated: Include <complex> instead.}}
 #endif

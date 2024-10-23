@@ -40,12 +40,17 @@ Macros:
 #undef __alignof_is_defined
 #define __alignof_is_defined 1
 
-#if _LIBCPP_STD_VER >= 17 && defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#if _LIBCPP_STD_VER >= 17
+
+using __standard_header_cstdalign
 #  if _LIBCPP_STD_VER >= 20
-#    warning <cstdalign> is removed in C++20.
+    _LIBCPP_DEPRECATED_("removed in C++20.")
 #  else
-#    warning <cstdalign> is deprecated.
+    _LIBCPP_DEPRECATED
 #  endif
+    = void;
+using __use_standard_header_cstdalign = __standard_header_cstdalign;
+
 #endif
 
 #endif // _LIBCPP_CSTDALIGN

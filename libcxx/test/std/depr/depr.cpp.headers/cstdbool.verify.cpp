@@ -19,7 +19,7 @@
 #include <cstdbool>
 
 #if TEST_STD_VER >= 20
-// expected-warning@cstdbool:* {{<cstdbool> is removed in C++20.}}
+// expected-warning@cstdbool:* {{'__standard_header_cstdbool' is deprecated: removed in C++20.}}
 #else
-// expected-warning@cstdbool:* {{<cstdbool> is deprecated.}}
+// expected-warning@cstdbool:* {{'__standard_header_cstdbool' is deprecated}}
 #endif
