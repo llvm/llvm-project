@@ -133,12 +133,16 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   // diagnostics in a context that lacks language options, a source manager, or
   // other infrastructure necessary when emitting more rich diagnostics.
   if (!Info.getLocation().isValid()) {
-    TextDiagnostic::printDiagnosticLevel(OS, Level, DiagOpts->ShowColors);
+    SmallString<1000> OutText;
+    llvm::raw_svector_ostream OutputBuffer(OutText);
+    OutputBuffer.enable_colors(true);
+    TextDiagnostic::printDiagnosticLevel(OutputBuffer, Level,
+                                         DiagOpts->ShowColors);
     TextDiagnostic::printDiagnosticMessage(
-        OS, /*IsSupplemental=*/Level == DiagnosticsEngine::Note,
+        OutputBuffer, /*IsSupplemental=*/Level == DiagnosticsEngine::Note,
         DiagMessageStream.str(), OS.tell() - StartOfLocationInfo,
         DiagOpts->MessageLength, DiagOpts->ShowColors);
-    OS.flush();
+    OS << OutputBuffer.str();
     return;
   }
 

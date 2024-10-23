@@ -656,7 +656,11 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
 TextDiagnostic::TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                DiagnosticOptions *DiagOpts,
                                const Preprocessor *PP)
-    : DiagnosticRenderer(LangOpts, DiagOpts), OS(OS), PP(PP) {}
+    : DiagnosticRenderer(LangOpts, DiagOpts), Out(OS), PP(PP),
+      OS(InternalBuffer) {
+  this->OS.buffer().clear();
+  this->OS.enable_colors(true);
+}
 
 TextDiagnostic::~TextDiagnostic() {}
 
@@ -664,7 +668,7 @@ void TextDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
     DiagOrStoredDiag D) {
-  uint64_t StartOfLocationInfo = OS.tell();
+  uint64_t StartOfLocationInfo = Out.tell();
 
   // Emit the location of this particular diagnostic.
   if (Loc.isValid())
@@ -677,7 +681,7 @@ void TextDiagnostic::emitDiagnosticMessage(
     printDiagnosticLevel(OS, Level, DiagOpts->ShowColors);
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
-                         Message, OS.tell() - StartOfLocationInfo,
+                         Message, Out.tell() - StartOfLocationInfo,
                          DiagOpts->MessageLength, DiagOpts->ShowColors);
 }
 
@@ -1544,4 +1548,10 @@ void TextDiagnostic::emitParseableFixits(ArrayRef<FixItHint> Hints,
     OS.write_escaped(H.CodeToInsert);
     OS << "\"\n";
   }
+}
+
+void TextDiagnostic::endDiagnostic(DiagOrStoredDiag D,
+                                   DiagnosticsEngine::Level Level) {
+  Out << OS.str();
+  OS.buffer().clear();
 }
