@@ -1096,8 +1096,8 @@ void AsmPrinter::emitFunctionEntryLabel() {
 /// \return The maximum expected latency over all the operands or -1
 /// if no information is available.
 static std::optional<int> getItineraryLatency(const MachineInstr &MI,
-                               const MachineFunction *MF,
-                               const MCSubtargetInfo *STI) {
+                                              const MachineFunction *MF,
+                                              const MCSubtargetInfo *STI) {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
   // Check if we have a CPU to get the itinerary information.
@@ -1122,7 +1122,8 @@ static std::optional<int> getItineraryLatency(const MachineInstr &MI,
 /// Gets latency information for \p Inst.
 /// \return The maximum expected latency over all the definitions or -1
 /// if no information is available.
-static std::optional<int> getLatency(const MachineInstr &MI, const MCSubtargetInfo *STI) {
+static std::optional<int> getLatency(const MachineInstr &MI,
+                                     const MCSubtargetInfo *STI) {
   const MCSchedModel &SCModel = STI->getSchedModel();
 
   const MachineFunction *MF = MI.getMF();
