@@ -139,9 +139,9 @@ int main(int, char**) {
   check_new_delete_called();
 #endif  // TEST_STD_VER >= 14
 
-	try { // Throw in vector(size_type, value_type, const allocator_type&) from the type
-		int throw_after = 1;
-		ThrowingT v(throw_after); 
+  try { // Throw in vector(size_type, value_type, const allocator_type&) from the type
+    int throw_after = 1;
+    ThrowingT v(throw_after);
     std::vector<ThrowingT> vec(1, v, std::allocator<ThrowingT>());
   } catch (int) {
   }
