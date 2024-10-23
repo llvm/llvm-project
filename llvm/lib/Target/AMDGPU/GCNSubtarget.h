@@ -158,6 +158,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
   bool HasAtomicFMinFMaxF64GlobalInsts = false;
@@ -588,6 +589,10 @@ public:
 
   bool hasUnalignedScratchAccess() const {
     return UnalignedScratchAccess;
+  }
+
+  bool hasUnalignedScratchAccessEnabled() const {
+    return UnalignedScratchAccess && UnalignedAccessMode;
   }
 
   bool hasUnalignedAccessMode() const {
@@ -1352,7 +1357,7 @@ public:
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
-  bool hasCvtFP8VOP1Bug() const { return true; }
+  bool hasCvtFP8VOP1Bug() const { return HasCvtFP8Vop1Bug; }
 
   // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
   // no-return form.

@@ -10,7 +10,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I_0]], 1000
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[I_0]], 1000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void

@@ -1422,8 +1422,12 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // the implicit object parameter are of the same type.
 
   auto NormalizeQualifiers = [&](const CXXMethodDecl *M, Qualifiers Q) {
-    if (M->isExplicitObjectMemberFunction())
+    if (M->isExplicitObjectMemberFunction()) {
+      auto ThisType = M->getFunctionObjectParameterReferenceType();
+      if (ThisType.isConstQualified())
+        Q.removeConst();
       return Q;
+    }
 
     // We do not allow overloading based off of '__restrict'.
     Q.removeRestrict();
@@ -1439,14 +1443,23 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     return Q;
   };
 
-  auto CompareType = [&](QualType Base, QualType D) {
-    auto BS = Base.getNonReferenceType().getCanonicalType().split();
+  auto AreQualifiersEqual = [&](SplitQualType BS, SplitQualType DS) {
     BS.Quals = NormalizeQualifiers(OldMethod, BS.Quals);
-
-    auto DS = D.getNonReferenceType().getCanonicalType().split();
     DS.Quals = NormalizeQualifiers(NewMethod, DS.Quals);
 
-    if (BS.Quals != DS.Quals)
+    if (OldMethod->isExplicitObjectMemberFunction()) {
+      BS.Quals.removeVolatile();
+      DS.Quals.removeVolatile();
+    }
+
+    return BS.Quals == DS.Quals;
+  };
+
+  auto CompareType = [&](QualType Base, QualType D) {
+    auto BS = Base.getNonReferenceType().getCanonicalType().split();
+    auto DS = D.getNonReferenceType().getCanonicalType().split();
+
+    if (!AreQualifiersEqual(BS, DS))
       return false;
 
     if (OldMethod->isImplicitObjectMemberFunction() &&
@@ -1783,6 +1796,23 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
       ICS.Standard.Second = ICK_Derived_To_Base;
 
     return ICS;
+  }
+
+  if (S.getLangOpts().HLSL && ToType->isHLSLAttributedResourceType() &&
+      FromType->isHLSLAttributedResourceType()) {
+    auto *ToResType = cast<HLSLAttributedResourceType>(ToType);
+    auto *FromResType = cast<HLSLAttributedResourceType>(FromType);
+    if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
+                                         FromResType->getWrappedType()) &&
+        S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
+                                         FromResType->getContainedType()) &&
+        ToResType->getAttrs() == FromResType->getAttrs()) {
+      ICS.setStandard();
+      ICS.Standard.setAsIdentityConversion();
+      ICS.Standard.setFromType(FromType);
+      ICS.Standard.setAllToTypes(ToType);
+      return ICS;
+    }
   }
 
   return TryUserDefinedConversion(S, From, ToType, SuppressUserConversions,

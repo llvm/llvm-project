@@ -475,6 +475,8 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake:
     case 0xc5:
+    // Arrowlake U:
+    case 0xb5:
       CPU = "arrowlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ARROWLAKE;
@@ -649,6 +651,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
     CPU = "k8";
     break;
   case 16:
+  case 18:
     CPU = "amdfam10";
     *Type = AMDFAM10H; // "amdfam10"
     switch (Model) {

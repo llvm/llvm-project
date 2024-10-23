@@ -1657,7 +1657,8 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   SDValue SignBit = DAG.getNode(ISD::AND, DL, IntVT, SignAsInt.IntValue,
                                 SignMask);
 
-  // If FABS is legal transform FCOPYSIGN(x, y) => sign(x) ? -FABS(x) : FABS(X)
+  // If FABS is legal transform
+  // FCOPYSIGN(x, y) => SignBit(y) ? -FABS(x) : FABS(x)
   EVT FloatVT = Mag.getValueType();
   if (TLI.isOperationLegalOrCustom(ISD::FABS, FloatVT) &&
       TLI.isOperationLegalOrCustom(ISD::FNEG, FloatVT)) {
@@ -4599,6 +4600,11 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::ATAN_F32, RTLIB::ATAN_F64, RTLIB::ATAN_F80,
                     RTLIB::ATAN_F128, RTLIB::ATAN_PPCF128, Results);
     break;
+  case ISD::FATAN2:
+  case ISD::STRICT_FATAN2:
+    ExpandFPLibCall(Node, RTLIB::ATAN2_F32, RTLIB::ATAN2_F64, RTLIB::ATAN2_F80,
+                    RTLIB::ATAN2_F128, RTLIB::ATAN2_PPCF128, Results);
+    break;
   case ISD::FSINH:
   case ISD::STRICT_FSINH:
     ExpandFPLibCall(Node, RTLIB::SINH_F32, RTLIB::SINH_F64, RTLIB::SINH_F80,
@@ -5485,6 +5491,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
   case ISD::FPOW:
+  case ISD::FATAN2:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2,
@@ -5501,6 +5508,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::STRICT_FMAXNUM:
   case ISD::STRICT_FREM:
   case ISD::STRICT_FPOW:
+  case ISD::STRICT_FATAN2:
     Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
                        {Node->getOperand(0), Node->getOperand(1)});
     Tmp2 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},

@@ -302,7 +302,8 @@ protected:
 
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
+  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                const ValueDecl *ExtendingDecl = nullptr);
   unsigned allocateTemporary(const Expr *E);
 
 private:
@@ -369,6 +370,7 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestruction(const Record *R, SourceInfo Loc);
   bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);

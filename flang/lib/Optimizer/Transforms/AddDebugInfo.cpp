@@ -211,10 +211,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
     return;
 
-  // Discard entries that describe a derived type. Usually start with '.c.',
-  // '.dt.' or '.n.'. It would be better if result of the deconstruct had a flag
-  // for such values so that we dont have to look at string values.
-  if (!result.second.name.empty() && result.second.name[0] == '.')
+  if (fir::NameUniquer::isSpecialSymbol(result.second.name))
     return;
 
   unsigned line = getLineFromLoc(globalOp.getLoc());
@@ -267,7 +264,9 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   funcName = mlir::StringAttr::get(context, result.second.name);
 
   // try to use a better function name than _QQmain for the program statement
+  bool isMain = false;
   if (funcName == fir::NameUniquer::doProgramEntry()) {
+    isMain = true;
     mlir::StringAttr bindcName =
         funcOp->getAttrOfType<mlir::StringAttr>(fir::getSymbolAttrName());
     if (bindcName)
@@ -302,6 +301,9 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       mlir::LLVM::DISubprogramFlags{};
   if (isOptimized)
     subprogramFlags = mlir::LLVM::DISubprogramFlags::Optimized;
+  if (isMain)
+    subprogramFlags =
+        subprogramFlags | mlir::LLVM::DISubprogramFlags::MainSubprogram;
   if (!funcOp.isExternal()) {
     // Place holder and final function have to have different IDs, otherwise
     // translation code will reject one of them.
@@ -339,7 +341,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly) {
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
-        line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{});
+        line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
+        /*annotations=*/{});
     funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
     return;
   }
@@ -363,7 +366,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   auto spAttr = mlir::LLVM::DISubprogramAttr::get(
       context, recId, /*isRecSelf=*/true, id, compilationUnit, Scope, funcName,
       fullName, funcFileAttr, line, line, subprogramFlags, subTypeAttr,
-      /*retainedNodes=*/{});
+      /*retainedNodes=*/{}, /*annotations=*/{});
 
   // There is no direct information in the IR for any 'use' statement in the
   // function. We have to extract that information from the DeclareOp. We do
@@ -396,7 +399,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   spAttr = mlir::LLVM::DISubprogramAttr::get(
       context, recId, /*isRecSelf=*/false, id2, compilationUnit, Scope,
       funcName, fullName, funcFileAttr, line, line, subprogramFlags,
-      subTypeAttr, entities);
+      subTypeAttr, entities, /*annotations=*/{});
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {

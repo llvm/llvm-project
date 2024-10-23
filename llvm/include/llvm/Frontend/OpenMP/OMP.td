@@ -349,6 +349,11 @@ def OMPC_Partial: Clause<"partial"> {
   let flangClass = "ScalarIntConstantExpr";
   let isValueOptional = true;
 }
+def OMPC_Permutation: Clause<"permutation"> {
+  let clangClass = "OMPPermutationClause";
+  let flangClass = "ScalarIntExpr";
+  let isValueList = true;
+}
 def OMPC_Priority : Clause<"priority"> {
   let clangClass = "OMPPriorityClause";
   let flangClass = "ScalarIntExpr";
@@ -766,6 +771,9 @@ def OMP_For : Directive<"for"> {
   let category = CA_Executable;
 }
 def OMP_Interchange : Directive<"interchange"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Permutation>,
+  ];
   let association = AS_Loop;
   let category = CA_Executable;
 }
@@ -1162,7 +1170,7 @@ def OMP_Workshare : Directive<"workshare"> {
   let category = CA_Executable;
 }
 def OMP_EndWorkshare : Directive<"end workshare"> {
-  let allowedClauses = [
+  let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait>,
   ];
   let leafConstructs = OMP_Workshare.leafConstructs;

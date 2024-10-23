@@ -357,6 +357,7 @@ def AArch64fcvtr_mt  : SDNode<"AArch64ISD::FP_ROUND_MERGE_PASSTHRU", SDT_AArch64
 def AArch64fcvte_mt  : SDNode<"AArch64ISD::FP_EXTEND_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64ucvtf_mt  : SDNode<"AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64scvtf_mt  : SDNode<"AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+def AArch64fcvtx_mt  : SDNode<"AArch64ISD::FCVTX_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64fcvtzu_mt : SDNode<"AArch64ISD::FCVTZU_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64fcvtzs_mt : SDNode<"AArch64ISD::FCVTZS_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 
@@ -662,6 +663,15 @@ let Predicates = [HasSVEorSME] in {
   defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not",  AArch64not_mt>;
   defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs", AArch64fabs_mt>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg", AArch64fneg_mt>;
+
+  foreach VT = [nxv2bf16, nxv4bf16, nxv8bf16] in {
+    // No dedicated instruction, so just clear the sign bit.
+    def : Pat<(VT (fabs VT:$op)),
+              (AND_ZI $op, (i64 (logical_imm64_XFORM(i64 0x7fff7fff7fff7fff))))>;
+    // No dedicated instruction, so just invert the sign bit.
+    def : Pat<(VT (fneg VT:$op)),
+              (EOR_ZI $op, (i64 (logical_imm64_XFORM(i64 0x8000800080008000))))>;
+  }
 
   // zext(cmpeq(x, splat(0))) -> cnot(x)
   def : Pat<(nxv16i8 (zext (nxv16i1 (AArch64setcc_z (nxv16i1 (SVEAllActive):$Pg), nxv16i8:$Op2, (SVEDup0), SETEQ)))),
@@ -3779,7 +3789,7 @@ let Predicates = [HasSVE2orSME, UseExperimentalZeroingPseudos] in {
 let Predicates = [HasSVE2orSME] in {
   // SVE2 floating-point convert precision
   defm FCVTXNT_ZPmZ : sve2_fp_convert_down_odd_rounding_top<"fcvtxnt", "int_aarch64_sve_fcvtxnt">;
-  defm FCVTX_ZPmZ   : sve2_fp_convert_down_odd_rounding<"fcvtx",       "int_aarch64_sve_fcvtx">;
+  defm FCVTX_ZPmZ   : sve2_fp_convert_down_odd_rounding<"fcvtx",       "int_aarch64_sve_fcvtx", AArch64fcvtx_mt>;
   defm FCVTNT_ZPmZ  : sve2_fp_convert_down_narrow<"fcvtnt",            "int_aarch64_sve_fcvtnt">;
   defm FCVTLT_ZPmZ  : sve2_fp_convert_up_long<"fcvtlt",                "int_aarch64_sve_fcvtlt">;
 
@@ -4153,7 +4163,9 @@ defm BFMIN_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmin>;
 defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
 } // HasSVEB16B16, UseExperimentalZeroingPseudos
 
-
+let Predicates = [HasSVEBFSCALE] in {
+  def BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", DestructiveBinary>;
+} // HasSVEBFSCALE
 //===----------------------------------------------------------------------===//
 // SME2.1 or SVE2.1 instructions
 //===----------------------------------------------------------------------===//
@@ -4186,6 +4198,22 @@ defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2", int_aarch64_sve_uzpq
 defm TBXQ_ZZZ : sve2_int_perm_tbx<"tbxq", 0b10, int_aarch64_sve_tbxq>;
 defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 } // End HasSVE2p1_or_HasSME2p1
+
+
+//===----------------------------------------------------------------------===//
+// SME2.2 or SVE2.2 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE2p2orSME2p2] in {
+  // SVE2p2 floating-point convert precision down (placing odd), zeroing predicate
+  defm FCVTNT_ZPzZ      : sve_fp_fcvtntz<"fcvtnt">;
+  def FCVTXNT_ZPzZ_DtoS : sve_fp_fcvt2z<0b0010, "fcvtxnt", ZPR32, ZPR64>;
+
+  // SVE2p2 floating-point convert precision up, zeroing predicate
+  defm FCVTLT_ZPzZ      : sve_fp_fcvtltz<"fcvtlt">;
+
+  // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
+  def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
+} // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
 // SVE2 FP8 instructions

@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -apply-ext-tsp-for-size=true  < %s | FileCheck %s -check-prefix=CHECK-PERF
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -apply-ext-tsp-for-size=false < %s | FileCheck %s -check-prefix=CHECK-SIZE
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -apply-ext-tsp-for-size < %s | FileCheck %s -check-prefix=CHECK-SIZE
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs < %s | FileCheck %s -check-prefix=CHECK-PERF
 
 define void @func1() minsize {
 ;
@@ -19,15 +19,15 @@ define void @func1() minsize {
 ; | b2  | <+
 ; +-----+
 ;
-; CHECK-PERF-LABEL: func1:
-; CHECK-PERF: %b0
-; CHECK-PERF: %b1
-; CHECK-PERF: %b2
-;
 ; CHECK-SIZE-LABEL: func1:
 ; CHECK-SIZE: %b0
-; CHECK-SIZE: %b2
 ; CHECK-SIZE: %b1
+; CHECK-SIZE: %b2
+;
+; CHECK-PERF-LABEL: func1:
+; CHECK-PERF: %b0
+; CHECK-PERF: %b2
+; CHECK-PERF: %b1
 
 b0:
   %call = call zeroext i1 @a()
@@ -75,21 +75,21 @@ define void @func_loop() minsize !prof !9 {
 ;                  |  end   |
 ;                  +--------+
 ;
-; CHECK-PERF-LABEL: func_loop:
-; CHECK-PERF: %entry
-; CHECK-PERF: %header
-; CHECK-PERF: %if.then
-; CHECK-PERF: %if.else
-; CHECK-PERF: %if.end
-; CHECK-PERF: %end
-;
 ; CHECK-SIZE-LABEL: func_loop:
 ; CHECK-SIZE: %entry
 ; CHECK-SIZE: %header
+; CHECK-SIZE: %if.then
 ; CHECK-SIZE: %if.else
 ; CHECK-SIZE: %if.end
-; CHECK-SIZE: %if.then
 ; CHECK-SIZE: %end
+;
+; CHECK-PERF-LABEL: func_loop:
+; CHECK-PERF: %entry
+; CHECK-PERF: %header
+; CHECK-PERF: %if.else
+; CHECK-PERF: %if.end
+; CHECK-PERF: %if.then
+; CHECK-PERF: %end
 
 entry:
   br label %header

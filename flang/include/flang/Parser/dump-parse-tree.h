@@ -474,6 +474,8 @@ public:
   NODE(parser, NullInit)
   NODE(parser, ObjectDecl)
   NODE(parser, OldParameterStmt)
+  NODE(parser, OmpIteratorSpecifier)
+  NODE(parser, OmpIteratorModifier)
   NODE(parser, OmpAlignedClause)
   NODE(parser, OmpAtomic)
   NODE(parser, OmpAtomicCapture)
@@ -531,9 +533,8 @@ public:
   NODE_ENUM(OmpLinearModifier, Type)
   NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
-  NODE(parser, OmpMapType)
-  NODE(OmpMapType, Always)
-  NODE_ENUM(OmpMapType, Type)
+  NODE_ENUM(OmpMapClause, TypeModifier)
+  NODE_ENUM(OmpMapClause, Type)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
     return llvm::Twine(
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))
@@ -885,8 +886,10 @@ protected:
     } else if constexpr (HasSource<T>::value) {
       return x.source.ToString();
 #endif
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      return x;
+    } else if constexpr (std::is_same_v<T, int>) {
+      return std::to_string(x);
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return x ? "true" : "false";
     } else {
       return "";
     }

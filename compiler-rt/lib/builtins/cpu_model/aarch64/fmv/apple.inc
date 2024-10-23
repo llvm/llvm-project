@@ -31,10 +31,6 @@ static bool isKnownAndSupported(const char *name) {
 }
 
 static uint64_t deriveImplicitFeatures(uint64_t features) {
-  // FEAT_SSBS2 implies FEAT_SSBS
-  if ((1ULL << FEAT_SSBS2) & features)
-    features |= (1ULL << FEAT_SSBS);
-
   // FEAT_FP is always enabled
   features |= (1ULL << FEAT_FP);
 
@@ -77,7 +73,6 @@ void __init_cpu_features_resolver(void) {
     CHECK_BIT(CAP_BIT_FEAT_RDM, FEAT_RDM);
     CHECK_BIT(CAP_BIT_FEAT_LSE, FEAT_LSE);
     CHECK_BIT(CAP_BIT_FEAT_SHA256, FEAT_SHA2);
-    CHECK_BIT(CAP_BIT_FEAT_AES, FEAT_AES);
     CHECK_BIT(CAP_BIT_FEAT_PMULL, FEAT_PMULL);
     CHECK_BIT(CAP_BIT_FEAT_SPECRES, FEAT_PREDRES);
     CHECK_BIT(CAP_BIT_FEAT_SB, FEAT_SB);
@@ -124,7 +119,6 @@ void __init_cpu_features_resolver(void) {
       {"hw.optional.armv8_crc32", FEAT_CRC},
       {"hw.optional.arm.FEAT_SHA256", FEAT_SHA2},
       {"hw.optional.arm.FEAT_SHA3", FEAT_SHA3},
-      {"hw.optional.arm.FEAT_AES", FEAT_AES},
       {"hw.optional.arm.FEAT_PMULL", FEAT_PMULL},
       {"hw.optional.arm.FEAT_FP16", FEAT_FP16},
       {"hw.optional.arm.FEAT_DIT", FEAT_DIT},

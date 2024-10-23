@@ -2484,9 +2484,19 @@ bool Type::isSVESizelessBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
     switch (BT->getKind()) {
       // SVE Types
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:                                                        \
+    return true;
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:                                                        \
+    return true;
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:                                                        \
+    return true;
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:                                                        \
+    return false;
 #include "clang/Basic/AArch64SVEACLETypes.def"
-      return true;
     default:
       return false;
     }
@@ -2525,6 +2535,7 @@ bool Type::isSveVLSBuiltinType() const {
     case BuiltinType::SveBool:
     case BuiltinType::SveBoolx2:
     case BuiltinType::SveBoolx4:
+    case BuiltinType::SveMFloat8:
       return true;
     default:
       return false;
@@ -4575,6 +4586,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<AtomicType>(T)->getValueType());
   case Type::Pipe:
     return Cache::get(cast<PipeType>(T)->getElementType());
+  case Type::HLSLAttributedResource:
+    return Cache::get(cast<HLSLAttributedResourceType>(T)->getWrappedType());
   }
 
   llvm_unreachable("unhandled type class");
@@ -4664,6 +4677,8 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<AtomicType>(T)->getValueType());
   case Type::Pipe:
     return computeTypeLinkageInfo(cast<PipeType>(T)->getElementType());
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("not yet implemented");
   }
 
   llvm_unreachable("unhandled type class");
@@ -4846,6 +4861,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::ArrayParameter:
+  case Type::HLSLAttributedResource:
     return false;
   }
   llvm_unreachable("bad type kind!");
@@ -5022,6 +5038,29 @@ bool Type::hasSizedVLAType() const {
   }
 
   return false;
+}
+
+bool Type::isHLSLIntangibleType() const {
+  const Type *Ty = getUnqualifiedDesugaredType();
+
+  // check if it's a builtin type first
+  if (Ty->isBuiltinType())
+    return Ty->isHLSLBuiltinIntangibleType();
+
+  // unwrap arrays
+  while (isa<ConstantArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual();
+
+  const RecordType *RT =
+      dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
+  if (!RT)
+    return false;
+
+  CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+  assert(RD != nullptr &&
+         "all HLSL struct and classes should be CXXRecordDecl");
+  assert(RD->isCompleteDefinition() && "expecting complete type");
+  return RD->isHLSLIntangible();
 }
 
 QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
@@ -5328,4 +5367,19 @@ std::string FunctionEffectWithCondition::description() const {
   if (Cond.getCondition() != nullptr)
     Result += "(expr)";
   return Result;
+}
+
+const HLSLAttributedResourceType *
+HLSLAttributedResourceType::findHandleTypeOnResource(const Type *RT) {
+  // If the type RT is an HLSL resource class, the first field must
+  // be the resource handle of type HLSLAttributedResourceType
+  const clang::Type *Ty = RT->getUnqualifiedDesugaredType();
+  if (const RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+    if (!RD->fields().empty()) {
+      const auto &FirstFD = RD->fields().begin();
+      return dyn_cast<HLSLAttributedResourceType>(
+          FirstFD->getType().getTypePtr());
+    }
+  }
+  return nullptr;
 }
