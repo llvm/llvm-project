@@ -127,6 +127,15 @@ LogicalResult QuitQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   return mlir::success();
 }
 
+LogicalResult LetQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
+  if (value.hasValue()) {
+    qs.namedValues[name] = value;
+  } else {
+    qs.namedValues.erase(name);
+  }
+  return mlir::success();
+}
+
 LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   Operation *rootOp = qs.getRootOp();
 

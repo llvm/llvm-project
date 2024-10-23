@@ -10,7 +10,6 @@
 // of the registered queries.
 //
 //===----------------------------------------------------------------------===//
-
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
