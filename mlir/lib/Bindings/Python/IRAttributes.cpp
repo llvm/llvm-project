@@ -1053,11 +1053,11 @@ private:
 
     uint8_t *unpackedData = static_cast<uint8_t *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(intermediateAttr)));
-    py::array_t<uint8_t> arr(view.len, unpackedData);
+    py::array_t<uint8_t> unpackedArray(view.len, unpackedData);
 
     py::module numpy = py::module::import("numpy");
     py::object packbits_func = numpy.attr("packbits");
-    py::object packed_booleans = packbits_func(arr, "bitorder"_a = "little");
+    py::object packed_booleans = packbits_func(unpackedArray, "bitorder"_a = "little");
     py::buffer_info buffer_info = packed_booleans.cast<py::buffer>().request();
 
     MlirType bitpackedType =
@@ -1073,12 +1073,12 @@ private:
     int64_t numBitpackedBytes = (numBooleans + 7) / 8;
     uint8_t *bitpackedData = static_cast<uint8_t *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
-    py::array_t<uint8_t> arr(numBitpackedBytes, bitpackedData);
+    py::array_t<uint8_t> packedArray(numBitpackedBytes, bitpackedData);
 
     py::module numpy = py::module::import("numpy");
     py::object unpackbits_func = numpy.attr("unpackbits");
     py::object unpacked_booleans =
-        unpackbits_func(arr, "bitorder"_a = "little");
+        unpackbits_func(packedArray, "bitorder"_a = "little");
     py::buffer_info buffer_info =
         unpacked_booleans.cast<py::buffer>().request();
 
