@@ -1248,6 +1248,8 @@ public:
     case CK_AtomicToNonAtomic:
     case CK_NonAtomicToAtomic:
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
     case CK_ConstructorConversion:
       return Visit(subExpr, destType);
 

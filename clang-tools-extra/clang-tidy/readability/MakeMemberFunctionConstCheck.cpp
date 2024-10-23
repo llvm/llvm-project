@@ -97,7 +97,9 @@ public:
   //  (possibly `-UnaryOperator Deref)
   //        `-CXXThisExpr 'S *' this
   bool visitUser(const ImplicitCastExpr *Cast) {
-    if (Cast->getCastKind() != CK_NoOp)
+    if (Cast->getCastKind() != CK_NoOp &&
+        Cast->getCastKind() != CK_FunctionPointerConversion &&
+        Cast->getCastKind() != CK_MemberFunctionPointerConversion)
       return false; // Stop traversal.
 
     // Only allow NoOp cast to 'const S' or 'const S *'.
@@ -159,7 +161,10 @@ public:
       if (Cast->getCastKind() == CK_LValueToRValue)
         return true;
 
-      if (Cast->getCastKind() == CK_NoOp && Cast->getType().isConstQualified())
+      if ((Cast->getCastKind() == CK_NoOp ||
+           Cast->getCastKind() == CK_FunctionPointerConversion ||
+           Cast->getCastKind() == CK_MemberFunctionPointerConversion) &&
+          Cast->getType().isConstQualified())
         return true;
     }
 

@@ -909,6 +909,8 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_FunctionToPointerDecay:
   case CK_NullToPointer:
   case CK_NullToMemberPointer:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
   case CK_BaseToDerivedMemberPointer:
   case CK_DerivedToBaseMemberPointer:
   case CK_MemberPointerToBoolean:
@@ -1428,6 +1430,8 @@ static bool castPreservesZero(const CastExpr *CE) {
   switch (CE->getCastKind()) {
     // No-ops.
   case CK_NoOp:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
   case CK_UserDefinedConversion:
   case CK_ConstructorConversion:
   case CK_BitCast:

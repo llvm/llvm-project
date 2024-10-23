@@ -84,6 +84,14 @@ CAST_OPERATION(LValueToRValue)
 ///   void () noexcept -> void ()
 CAST_OPERATION(NoOp)
 
+/// CK_FunctionPointerConversion - A conversion from pointer/reference to
+/// noexcept function to pointer/reference to function.
+CAST_OPERATION(FunctionPointerConversion)
+
+/// CK_MemberFunctionPointerConversion - A conversion from pointer to noexcept
+/// member function to pointer to member function.
+CAST_OPERATION(MemberFunctionPointerConversion)
+
 /// CK_BaseToDerived - A conversion from a C++ class pointer/reference
 /// to a derived class pointer/reference.
 ///   B *b = static_cast<B*>(a);

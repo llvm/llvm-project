@@ -19494,6 +19494,8 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
     // can be found.
     switch (ICE->getCastKind()) {
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
     case CK_DerivedToBase:
     case CK_UncheckedDerivedToBase: {
       ExprResult Sub = Rebuild(ICE->getSubExpr());

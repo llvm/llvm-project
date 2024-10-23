@@ -3878,7 +3878,9 @@ namespace {
           if (ILE->getNumInits() == 1)
             ArgExpr = ILE->getInit(0);
         if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(ArgExpr))
-          if (ICE->getCastKind() == CK_NoOp)
+          if (ICE->getCastKind() == CK_NoOp ||
+              ICE->getCastKind() == CK_FunctionPointerConversion ||
+              ICE->getCastKind() == CK_MemberFunctionPointerConversion)
             ArgExpr = ICE->getSubExpr();
         HandleValue(ArgExpr, false /*AddressOf*/);
         return;

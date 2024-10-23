@@ -999,6 +999,8 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
     switch (ICE->getCastKind()) {
     case CK_LValueToRValue:
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
     case CK_UserDefinedConversion:
     case CK_HLSLArrayRValue:
       break;

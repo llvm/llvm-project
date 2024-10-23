@@ -123,7 +123,10 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       DestTypeAsWritten->isRecordType() &&
       !DestTypeAsWritten->isElaboratedTypeSpecifier();
 
-  if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
+  if ((CastExpr->getCastKind() == CK_NoOp ||
+       CastExpr->getCastKind() == CK_FunctionPointerConversion ||
+       CastExpr->getCastKind() == CK_MemberFunctionPointerConversion) &&
+      !FnToFnCast) {
     // Function pointer/reference casts may be needed to resolve ambiguities in
     // case of overloaded functions, so detection of redundant casts is trickier
     // in this case. Don't emit "redundant cast" warnings for function
@@ -201,6 +204,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     }
     return;
   case CK_NoOp:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
     if (FnToFnCast) {
       ReplaceWithNamedCast("static_cast");
       return;

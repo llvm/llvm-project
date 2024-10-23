@@ -397,6 +397,8 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
     case CK_ArrayToPointerDecay:
     case CK_IntegralToPointer:
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
     case CK_BitCast: {
       const Expr *SE = CE->getSubExpr();
       std::optional<SVal> Val = getConstantVal(SE);
