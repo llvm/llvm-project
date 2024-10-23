@@ -1968,6 +1968,7 @@ FormatStyle getClangFormatStyle() {
   Style.IntegerLiteralSeparator.DecimalMinDigits = 5;
   Style.LineEnding = FormatStyle::LE_LF;
   Style.RemoveBracesLLVM = true;
+  Style.RemoveEmptyLinesInUnwrappedLines = true;
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   Style.RemoveSemicolon = true;
   return Style;
