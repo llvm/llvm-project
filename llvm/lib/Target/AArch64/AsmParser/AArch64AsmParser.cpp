@@ -1285,6 +1285,7 @@ public:
     case AArch64::ZPR_4bRegClassID:
     case AArch64::ZPRMul2_LoRegClassID:
     case AArch64::ZPRMul2_HiRegClassID:
+    case AArch64::ZPR_KRegClassID:
       RK = RegKind::SVEDataVector;
       break;
     case AArch64::PPRRegClassID:
@@ -6179,6 +6180,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPRMul2_Hi64:
     return Error(Loc, "Invalid restricted vector register, expected even "
                       "register in z16.d..z30.d");
+  case Match_InvalidZPR_K0:
+    return Error(Loc, "invalid restricted vector register, expected register "
+                      "in z20..z23 or z28..z31");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPPRorPNRAnyReg:
@@ -6888,6 +6892,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPRMul2_Hi32:
   case Match_InvalidZPRMul2_Lo64:
   case Match_InvalidZPRMul2_Hi64:
+  case Match_InvalidZPR_K0:
   case Match_InvalidSVEVectorList2x8Mul2:
   case Match_InvalidSVEVectorList2x16Mul2:
   case Match_InvalidSVEVectorList2x32Mul2:
