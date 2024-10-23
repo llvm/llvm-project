@@ -262,6 +262,10 @@
 
 #define TEST_IGNORE_NODISCARD (void)
 
+#if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT
+#  define TEST_HAS_FROM_CHARS_FLOATING_POINT
+#endif
+
 namespace test_macros_detail {
 template <class T, class U>
 struct is_same { enum { value = 0};} ;

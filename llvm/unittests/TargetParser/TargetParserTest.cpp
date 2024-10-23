@@ -1331,7 +1331,10 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SVE_F16F32MM, AArch64::AEK_SVE_AES2,
       AArch64::AEK_SSVE_AES,     AArch64::AEK_F8F32MM,
       AArch64::AEK_F8F16MM,      AArch64::AEK_LSFE,
-      AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR};
+      AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
+      AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
+      AArch64::AEK_PCDPHINT,
+  };
 
   std::vector<StringRef> Features;
 
@@ -1431,6 +1434,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+lsfe"));
   EXPECT_TRUE(llvm::is_contained(Features, "+fprcvt"));
   EXPECT_TRUE(llvm::is_contained(Features, "+cmpbr"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lsui"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1582,7 +1588,11 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sme-f8f32", "nosme-f8f32", "+sme-f8f32", "-sme-f8f32"},
       {"lsfe", "nolsfe", "+lsfe", "-lsfe"},
       {"fprcvt", "nofprcvt", "+fprcvt", "-fprcvt"},
-      {"cmpbr", "nocmpbr", "+cmpbr", "-cmpbr"}};
+      {"cmpbr", "nocmpbr", "+cmpbr", "-cmpbr"},
+      {"lsui", "nolsui", "+lsui", "-lsui"},
+      {"occmo", "nooccmo", "+occmo", "-occmo"},
+      {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
+  };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),

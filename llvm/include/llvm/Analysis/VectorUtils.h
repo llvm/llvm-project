@@ -154,6 +154,11 @@ bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
 bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
 
+/// Identifies if the vector form of the intrinsic that returns a struct is
+/// overloaded at the struct element index \p RetIdx.
+bool isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                      int RetIdx);
+
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.

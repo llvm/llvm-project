@@ -344,11 +344,14 @@ int test_volatile(volatile atomic_int *i) {
   // CHECK-LABEL: @test_volatile
   // CHECK:      %[[i_addr:.*]] = alloca ptr
   // CHECK-NEXT: %[[atomicdst:.*]] = alloca i32
-  // CHECK-NEXT: store ptr %i, ptr addrspace(5) %[[i_addr]]
-  // CHECK-NEXT: %[[addr:.*]] = load ptr, ptr addrspace(5) %[[i_addr]]
+  // CHECK-NEXT: %[[retval_ascast:.*]] = addrspacecast ptr addrspace(5) {{.*}} to ptr
+  // CHECK-NEXT: %[[i_addr_ascast:.*]] = addrspacecast ptr addrspace(5) %[[i_addr]] to ptr
+  // CHECK-NEXT: %[[atomicdst_ascast:.*]] = addrspacecast ptr addrspace(5) %[[atomicdst]] to ptr
+  // CHECK-NEXT: store ptr %i, ptr %[[i_addr_ascast]]
+  // CHECK-NEXT: %[[addr:.*]] = load ptr, ptr %[[i_addr_ascast]]
   // CHECK-NEXT: %[[res:.*]] = load atomic volatile i32, ptr %[[addr]] syncscope("workgroup") seq_cst, align 4{{$}}
-  // CHECK-NEXT: store i32 %[[res]], ptr addrspace(5) %[[atomicdst]]
-  // CHECK-NEXT: %[[retval:.*]] = load i32, ptr addrspace(5) %[[atomicdst]]
+  // CHECK-NEXT: store i32 %[[res]], ptr %[[atomicdst_ascast]]
+  // CHECK-NEXT: %[[retval:.*]] = load i32, ptr %[[atomicdst_ascast]]
   // CHECK-NEXT: ret i32 %[[retval]]
   return __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_work_group);
 }

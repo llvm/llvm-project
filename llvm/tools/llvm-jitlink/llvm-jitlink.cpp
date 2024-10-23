@@ -1201,7 +1201,7 @@ void Session::modifyPassConfig(const Triple &TT,
 }
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
-  auto It = DynLibJDs.find(LibPath.str());
+  auto It = DynLibJDs.find(LibPath);
   if (It != DynLibJDs.end()) {
     return It->second;
   }

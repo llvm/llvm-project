@@ -296,7 +296,7 @@ void SetTheory::evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
   const auto *DagExpr = dyn_cast<DagInit>(Expr);
   if (!DagExpr)
     PrintFatalError(Loc, "Invalid set element: " + Expr->getAsString());
-  const DefInit *OpInit = dyn_cast<DefInit>(DagExpr->getOperator());
+  const auto *OpInit = dyn_cast<DefInit>(DagExpr->getOperator());
   if (!OpInit)
     PrintFatalError(Loc, "Bad set expression: " + Expr->getAsString());
   auto I = Operators.find(OpInit->getDef()->getName());

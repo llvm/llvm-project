@@ -3455,7 +3455,7 @@ WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 // map-type-modifier -> ALWAYS | CLOSE | PRESENT | OMPX_HOLD
 // map-type -> TO | FROM | TOFROM | ALLOC | RELEASE | DELETE
 struct OmpMapClause {
-  ENUM_CLASS(TypeModifier, Always, Close, Present, OmpxHold);
+  ENUM_CLASS(TypeModifier, Always, Close, Present, Ompx_Hold);
   ENUM_CLASS(Type, To, From, Tofrom, Alloc, Release, Delete)
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
   std::tuple<std::optional<std::list<TypeModifier>>, std::optional<Type>,

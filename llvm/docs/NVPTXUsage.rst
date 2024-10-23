@@ -319,6 +319,64 @@ used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
 with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
 vectors is added to ``%c`` to produce the return.
 
+Bit Manipulation Intrinsics
+---------------------------
+
+'``llvm.nvvm.fshl.clamp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.fshl.clamp.i32(i32 %hi, i32 %lo, i32 %n)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fshl.clamp``' family of intrinsics performs a clamped funnel
+shift left. These intrinsics are very similar to '``llvm.fshl``', except the
+shift ammont is clamped at the integer width (instead of modulo it). Currently,
+only ``i32`` is supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.fshl.clamp``' family of intrinsic functions performs a clamped
+funnel shift left: the first two values are concatenated as { %hi : %lo } (%hi
+is the most significant bits of the wide value), the combined value is shifted
+left, and the most significant bits are extracted to produce a result that is
+the same size as the original arguments. The shift amount is the minimum of the
+value of %n and the bit width of the integer type.
+
+'``llvm.nvvm.fshr.clamp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.fshr.clamp.i32(i32 %hi, i32 %lo, i32 %n)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fshr.clamp``' family of intrinsics perform a clamped funnel
+shift right. These intrinsics are very similar to '``llvm.fshr``', except the
+shift ammont is clamped at the integer width (instead of modulo it). Currently,
+only ``i32`` is supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.fshr.clamp``' family of intrinsic functions performs a clamped
+funnel shift right: the first two values are concatenated as { %hi : %lo } (%hi
+is the most significant bits of the wide value), the combined value is shifted
+right, and the least significant bits are extracted to produce a result that is
+the same size as the original arguments. The shift amount is the minimum of the
+value of %n and the bit width of the integer type.
 
 
 Other Intrinsics

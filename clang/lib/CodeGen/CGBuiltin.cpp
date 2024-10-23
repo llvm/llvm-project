@@ -5853,8 +5853,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           /*IndexTypeQuals=*/0);
       auto Tmp = CreateMemTemp(SizeArrayTy, "block_sizes");
       llvm::Value *TmpPtr = Tmp.getPointer();
+      // The EmitLifetime* pair expect a naked Alloca as their last argument,
+      // however for cases where the default AS is not the Alloca AS, Tmp is
+      // actually the Alloca ascasted to the default AS, hence the
+      // stripPointerCasts()
+      llvm::Value *Alloca = TmpPtr->stripPointerCasts();
       llvm::Value *TmpSize = EmitLifetimeStart(
-          CGM.getDataLayout().getTypeAllocSize(Tmp.getElementType()), TmpPtr);
+          CGM.getDataLayout().getTypeAllocSize(Tmp.getElementType()), Alloca);
       llvm::Value *ElemPtr;
       // Each of the following arguments specifies the size of the corresponding
       // argument passed to the enqueued block.
@@ -5870,7 +5875,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Builder.CreateAlignedStore(
             V, GEP, CGM.getDataLayout().getPrefTypeAlign(SizeTy));
       }
-      return std::tie(ElemPtr, TmpSize, TmpPtr);
+      // Return the Alloca itself rather than a potential ascast as this is only
+      // used by the paired EmitLifetimeEnd.
+      return std::tie(ElemPtr, TmpSize, Alloca);
     };
 
     // Could have events and/or varargs.
@@ -19037,15 +19044,32 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     ASTContext::GetBuiltinTypeError Error;
     getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
     assert(Error == ASTContext::GE_None && "Should not codegen an error");
+    llvm::Type *DataTy = ConvertType(E->getArg(0)->getType());
+    unsigned Size = DataTy->getPrimitiveSizeInBits();
+    llvm::Type *IntTy =
+        llvm::IntegerType::get(Builder.getContext(), std::max(Size, 32u));
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, IntTy);
+    assert(E->getNumArgs() == 5 || E->getNumArgs() == 6);
+    bool InsertOld = E->getNumArgs() == 5;
+    if (InsertOld)
+      Args.push_back(llvm::PoisonValue::get(IntTy));
     for (unsigned I = 0; I != E->getNumArgs(); ++I) {
-      Args.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, I, E));
+      llvm::Value *V = EmitScalarOrConstFoldImmArg(ICEArguments, I, E);
+      if (I <= !InsertOld && Size < 32) {
+        if (!DataTy->isIntegerTy())
+          V = Builder.CreateBitCast(
+              V, llvm::IntegerType::get(Builder.getContext(), Size));
+        V = Builder.CreateZExtOrBitCast(V, IntTy);
+      }
+      llvm::Type *ExpTy =
+          F->getFunctionType()->getFunctionParamType(I + InsertOld);
+      Args.push_back(Builder.CreateTruncOrBitCast(V, ExpTy));
     }
-    assert(Args.size() == 5 || Args.size() == 6);
-    if (Args.size() == 5)
-      Args.insert(Args.begin(), llvm::PoisonValue::get(Args[0]->getType()));
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, Args[0]->getType());
-    return Builder.CreateCall(F, Args);
+    Value *V = Builder.CreateCall(F, Args);
+    if (Size < 32 && !DataTy->isIntegerTy())
+      V = Builder.CreateTrunc(
+          V, llvm::IntegerType::get(Builder.getContext(), Size));
+    return Builder.CreateTruncOrBitCast(V, DataTy);
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
   case AMDGPU::BI__builtin_amdgcn_permlanex16:

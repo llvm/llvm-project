@@ -176,7 +176,10 @@
 ; RUN:  -pass-remarks=. -save-temps \
 ; RUN:  -o %t.noicp.out 2>&1 | FileCheck %s --implicit-check-not "created clone"
 
-; RUN: llvm-dis %t.noicp.out.2.4.opt.bc -o - | FileCheck %s --implicit-check-not "_Z3fooR2B0j.memprof"
+;; Verify that we did not do any cloning of the function with the indirect call
+;; when memprof ICP is off. However, we should still have removed the callsite
+;; metadata.
+; RUN: llvm-dis %t.noicp.out.2.4.opt.bc -o - | FileCheck %s --implicit-check-not "_Z3fooR2B0j.memprof" --implicit-check-not "!callsite"
 
 ; REMARKS-MAIN: call in clone main assigned to call function clone _Z3fooR2B0j.memprof.1
 ; REMARKS-MAIN: call in clone main assigned to call function clone _Z3fooR2B0j.memprof.1

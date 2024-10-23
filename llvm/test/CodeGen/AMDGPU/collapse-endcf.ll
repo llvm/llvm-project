@@ -1135,11 +1135,11 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    s_cbranch_execz .LBB5_5
 ; GCN-O0-NEXT:  ; %bb.3: ; %bb4
 ; GCN-O0-NEXT:    ; in Loop: Header=BB5_1 Depth=1
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[14:15], -1
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[14:15]
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-O0-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0

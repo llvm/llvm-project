@@ -27,9 +27,11 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr5 = IMPLICIT_DEF
   ; CHECK-NEXT:   dead undef [[DEF:%[0-9]+]].sub0:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   renamable $sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = IMPLICIT_DEF
   ; CHECK-NEXT:   dead [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   dead undef [[DEF2:%[0-9]+]].sub0:vreg_64 = IMPLICIT_DEF
-  ; CHECK-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX16_IMM renamable $sgpr4_sgpr5, 0, 0 :: (invariant load (s512), align 32, addrspace 4)
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = S_LOAD_DWORDX16_IMM renamable $sgpr4_sgpr5, 0, 0 :: (invariant load (s512), align 32, addrspace 4)
+  ; CHECK-NEXT:   SI_SPILL_S512_SAVE killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $sgpr24 = IMPLICIT_DEF
   ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = S_LOAD_DWORDX16_IMM undef renamable $sgpr4_sgpr5, 0, 0 :: (invariant load (s512), align 32, addrspace 4)
   ; CHECK-NEXT:   $exec = S_MOV_B64_term undef renamable $sgpr4_sgpr5
@@ -37,14 +39,15 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $sgpr24_sgpr25_sgpr26_sgpr27:0x000000000000000F, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000FFFF
+  ; CHECK-NEXT:   liveins: $sgpr24_sgpr25_sgpr26_sgpr27:0x000000000000000F, $sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000FF, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $exec = S_MOV_B64_term undef renamable $sgpr4_sgpr5
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.4, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $sgpr24_sgpr25_sgpr26_sgpr27:0x000000000000000F, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000FFFF
+  ; CHECK-NEXT:   liveins: $sgpr24_sgpr25_sgpr26_sgpr27:0x000000000000000F, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = SI_SPILL_S512_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s512) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   dead [[IMAGE_SAMPLE_LZ_V1_V2_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V2 undef [[DEF2]], killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43, undef renamable $sgpr24_sgpr25_sgpr26_sgpr27, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
   ; CHECK-NEXT:   dead [[IMAGE_SAMPLE_LZ_V1_V2_1:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V2 undef [[DEF2]], killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, renamable $sgpr24_sgpr25_sgpr26_sgpr27, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
   ; CHECK-NEXT: {{  $}}
@@ -52,37 +55,33 @@ body:             |
   ; CHECK-NEXT:   SI_RETURN
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   liveins: $sgpr24_sgpr25_sgpr26_sgpr27:0x000000000000000F, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000FFFF
+  ; CHECK-NEXT:   liveins: $sgpr24_sgpr25_sgpr26_sgpr27:0x000000000000000F, $sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000FF, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr12 = IMPLICIT_DEF
-  ; CHECK-NEXT:   SI_SPILL_S512_SAVE renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = IMPLICIT_DEF
   ; CHECK-NEXT:   dead undef [[IMAGE_SAMPLE_LZ_V1_V2_2:%[0-9]+]].sub0:vreg_96 = IMAGE_SAMPLE_LZ_V1_V2 undef [[DEF2]], killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43, renamable $sgpr12_sgpr13_sgpr14_sgpr15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; CHECK-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = SI_SPILL_S512_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s512) from %stack.0, align 4, addrspace 5)
-  ; CHECK-NEXT:   renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead undef [[IMAGE_SAMPLE_LZ_V1_V2_3:%[0-9]+]].sub0:vreg_128 = IMAGE_SAMPLE_LZ_V1_V2 undef [[DEF2]], undef renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51, killed renamable $sgpr12_sgpr13_sgpr14_sgpr15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
+  ; CHECK-NEXT:   dead undef [[IMAGE_SAMPLE_LZ_V1_V2_3:%[0-9]+]].sub0:vreg_128 = IMAGE_SAMPLE_LZ_V1_V2 undef [[DEF2]], undef renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19, killed renamable $sgpr20_sgpr21_sgpr22_sgpr23, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000FF, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = COPY killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51
   ; CHECK-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = IMPLICIT_DEF
   ; CHECK-NEXT:   dead [[IMAGE_SAMPLE_LZ_V1_V2_4:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V2 undef [[DEF]], killed renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51, undef renamable $sgpr24_sgpr25_sgpr26_sgpr27, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; CHECK-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = COPY killed renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
   ; CHECK-NEXT:   S_BRANCH %bb.7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6:
-  ; CHECK-NEXT:   liveins: $sgpr24_sgpr25_sgpr26_sgpr27:0x000000000000000F, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000FFFF
+  ; CHECK-NEXT:   liveins: $sgpr24_sgpr25_sgpr26_sgpr27:0x000000000000000F, $sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000FF, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, undef renamable $sgpr4_sgpr5, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.8, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7:
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000FF, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19:0x000000000000FFFF
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead [[IMAGE_SAMPLE_LZ_V1_V2_5:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V2 undef [[DEF]], renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51, undef renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
+  ; CHECK-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51 = SI_SPILL_S512_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s512) from %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   dead [[IMAGE_SAMPLE_LZ_V1_V2_5:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V2 undef [[DEF]], killed renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51, undef renamable $sgpr24_sgpr25_sgpr26_sgpr27, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
   ; CHECK-NEXT:   renamable $sgpr25 = COPY undef renamable $sgpr24
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.6

@@ -1,4 +1,4 @@
-//===-- CufOpConversion.cpp -----------------------------------------------===//
+//===-- CUFDeviceGlobal.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Transforms/CufOpConversion.h"
+#include "flang/Optimizer/Transforms/CUFOpConversion.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
@@ -619,7 +619,7 @@ private:
   const mlir::SymbolTable &symtab;
 };
 
-class CufOpConversion : public fir::impl::CufOpConversionBase<CufOpConversion> {
+class CUFOpConversion : public fir::impl::CUFOpConversionBase<CUFOpConversion> {
 public:
   void runOnOperation() override {
     auto *ctx = &getContext();

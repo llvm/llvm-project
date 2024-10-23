@@ -276,7 +276,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     ClHandleICmpExact("msan-handle-icmp-exact",
                       cl::desc("exact handling of relational integer ICmp"),
-                      cl::Hidden, cl::init(false));
+                      cl::Hidden, cl::init(true));
 
 static cl::opt<bool> ClHandleLifetimeIntrinsics(
     "msan-handle-lifetime-intrinsics",
@@ -2750,12 +2750,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // its undefined bits. Let [b0, b1] be the interval of possible values of B.
     // Then (A cmp B) is defined iff (a0 cmp b1) == (a1 cmp b0).
     bool IsSigned = I.isSigned();
-    Value *S1 = IRB.CreateICmp(I.getPredicate(),
-                               getLowestPossibleValue(IRB, A, Sa, IsSigned),
-                               getHighestPossibleValue(IRB, B, Sb, IsSigned));
-    Value *S2 = IRB.CreateICmp(I.getPredicate(),
-                               getHighestPossibleValue(IRB, A, Sa, IsSigned),
-                               getLowestPossibleValue(IRB, B, Sb, IsSigned));
+    Value *Amin = getLowestPossibleValue(IRB, A, Sa, IsSigned);
+    Value *Bmax = getHighestPossibleValue(IRB, B, Sb, IsSigned);
+    Value *S1 = IRB.CreateICmp(I.getPredicate(), Amin, Bmax);
+    Value *Amax = getHighestPossibleValue(IRB, A, Sa, IsSigned);
+    Value *Bmin = getLowestPossibleValue(IRB, B, Sb, IsSigned);
+    Value *S2 = IRB.CreateICmp(I.getPredicate(), Amax, Bmin);
     Value *Si = IRB.CreateXor(S1, S2);
     setShadow(&I, Si);
     setOriginForNaryOp(I);

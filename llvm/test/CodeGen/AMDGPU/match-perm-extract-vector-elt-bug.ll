@@ -84,8 +84,6 @@ define amdgpu_kernel void @test(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; GFX11-NEXT:    v_not_b32_e32 v1, v1
 ; GFX11-NEXT:    v_not_b32_e32 v0, v0
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()

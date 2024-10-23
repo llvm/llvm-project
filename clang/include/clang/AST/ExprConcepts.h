@@ -489,14 +489,6 @@ public:
     return R->getKind() == RK_Nested;
   }
 };
-
-using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
-
-/// \brief create a Requirement::SubstitutionDiagnostic with only a
-/// SubstitutedEntity and DiagLoc using Sema's allocator.
-Requirement::SubstitutionDiagnostic *
-createSubstDiagAt(Sema &S, SourceLocation Location, EntityPrinter Printer);
-
 } // namespace concepts
 
 /// C++2a [expr.prim.req]:

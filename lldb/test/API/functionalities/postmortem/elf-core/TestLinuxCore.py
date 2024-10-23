@@ -23,6 +23,7 @@ class LinuxCoreTestCase(TestBase):
     _ppc64le_pid = 28147
     _riscv64_gpr_fpr_pid = 1089
     _riscv64_gpr_only_pid = 97
+    _loongarch64_pid = 456735
 
     _aarch64_regions = 4
     _i386_regions = 4
@@ -30,6 +31,7 @@ class LinuxCoreTestCase(TestBase):
     _s390x_regions = 2
     _ppc64le_regions = 2
     _riscv64_regions = 4
+    _loongarch64_regions = 4
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64(self):
@@ -79,6 +81,16 @@ class LinuxCoreTestCase(TestBase):
             "linux-riscv64.gpr_only",
             self._riscv64_gpr_only_pid,
             self._riscv64_regions,
+            "a.out",
+        )
+
+    @skipIfLLVMTargetMissing("LoongArch")
+    def test_loongarch64(self):
+        """Test that lldb can read the process information from an loongarch64 linux core file."""
+        self.do_test(
+            "linux-loongarch64",
+            self._loongarch64_pid,
+            self._loongarch64_regions,
             "a.out",
         )
 
@@ -832,6 +844,106 @@ class LinuxCoreTestCase(TestBase):
             matching=False,
             substrs=["registers were unavailable"],
         )
+
+    @skipIfLLVMTargetMissing("LoongArch")
+    def test_loongarch64_regs(self):
+        # check registers using 64 bit LoongArch core file containing GP and FP registers
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-loongarch64.core")
+
+        values = {}
+        values["r0"] = "0x0000000000000000"
+        values["r1"] = "0x000000012000016c"
+        values["r2"] = "0x0000000000000000"
+        values["r3"] = "0x00007ffffb8249e0"
+        values["r4"] = "0x0000000000000000"
+        values["r5"] = "0x000000012000010c"
+        values["r6"] = "0x0000000000000000"
+        values["r7"] = "0x0000000000000000"
+        values["r8"] = "0x0000000000000000"
+        values["r9"] = "0x0000000000000000"
+        values["r10"] = "0x0000000000000000"
+        values["r11"] = "0x00000000000000dd"
+        values["r12"] = "0x0000000000000000"
+        values["r13"] = "0x000000000000002f"
+        values["r14"] = "0x0000000000000000"
+        values["r15"] = "0x0000000000000000"
+        values["r16"] = "0x0000000000000000"
+        values["r17"] = "0x0000000000000000"
+        values["r18"] = "0x0000000000000000"
+        values["r19"] = "0x0000000000000000"
+        values["r20"] = "0x0000000000000000"
+        values["r21"] = "0x0000000000000000"
+        values["r22"] = "0x00007ffffb824a10"
+        values["r23"] = "0x0000000000000000"
+        values["r24"] = "0x0000000000000000"
+        values["r25"] = "0x0000000000000000"
+        values["r26"] = "0x0000000000000000"
+        values["r27"] = "0x0000000000000000"
+        values["r28"] = "0x0000000000000000"
+        values["r29"] = "0x0000000000000000"
+        values["r30"] = "0x0000000000000000"
+        values["r31"] = "0x0000000000000000"
+        values["orig_a0"] = "0x0000555556b62d50"
+        values["pc"] = "0x000000012000012c"
+
+        fpr_values = {}
+        fpr_values["f0"] = "0x00000000ffffff05"
+        fpr_values["f1"] = "0x2525252525252525"
+        fpr_values["f2"] = "0x2525252525560005"
+        fpr_values["f3"] = "0x000000000000ffff"
+        fpr_values["f4"] = "0x0000000000000000"
+        fpr_values["f5"] = "0x0000000000000008"
+        fpr_values["f6"] = "0x0f0e0d0c0b0a0908"
+        fpr_values["f7"] = "0xffffffffffffffff"
+        fpr_values["f8"] = "0x6261747563657845"
+        fpr_values["f9"] = "0x766173206562206c"
+        fpr_values["f10"] = "0xffffffffffffffff"
+        fpr_values["f11"] = "0xffffffffffffffff"
+        fpr_values["f12"] = "0xffffffffffffffff"
+        fpr_values["f13"] = "0xffffffffffffffff"
+        fpr_values["f14"] = "0xffffffffffffffff"
+        fpr_values["f15"] = "0xffffffffffffffff"
+        fpr_values["f16"] = "0xffffffffffffffff"
+        fpr_values["f17"] = "0xffffffffffffffff"
+        fpr_values["f18"] = "0xffffffffffffffff"
+        fpr_values["f19"] = "0xffffffffffffffff"
+        fpr_values["f20"] = "0xffffffffffffffff"
+        fpr_values["f21"] = "0xffffffffffffffff"
+        fpr_values["f22"] = "0xffffffffffffffff"
+        fpr_values["f23"] = "0xffffffffffffffff"
+        fpr_values["f24"] = "0xffffffffffffffff"
+        fpr_values["f25"] = "0xffffffffffffffff"
+        fpr_values["f26"] = "0xffffffffffffffff"
+        fpr_values["f27"] = "0xffffffffffffffff"
+        fpr_values["f28"] = "0xffffffffffffffff"
+        fpr_values["f29"] = "0xffffffffffffffff"
+        fpr_values["f30"] = "0xffffffffffffffff"
+        fpr_values["f31"] = "0xffffffffffffffff"
+        fpr_values["fcc0"] = "0x01"
+        fpr_values["fcc1"] = "0x00"
+        fpr_values["fcc2"] = "0x01"
+        fpr_values["fcc3"] = "0x01"
+        fpr_values["fcc4"] = "0x01"
+        fpr_values["fcc5"] = "0x01"
+        fpr_values["fcc6"] = "0x00"
+        fpr_values["fcc7"] = "0x01"
+        fpr_values["fcsr"] = "0x00000000"
+
+        for regname, value in values.items():
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        for regname, value in fpr_values.items():
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        self.expect("register read --all")
 
     def test_get_core_file_api(self):
         """

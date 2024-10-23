@@ -63,6 +63,50 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     OrderIndex = 0;
     ScopeIndex = 1;
     break;
+  case AMDGPU::BI__builtin_amdgcn_mov_dpp: {
+    if (SemaRef.checkArgCountRange(TheCall, 5, 5))
+      return true;
+    Expr *ValArg = TheCall->getArg(0);
+    QualType Ty = ValArg->getType();
+    // TODO: Vectors can also be supported.
+    if (!Ty->isArithmeticType() || Ty->isAnyComplexType()) {
+      SemaRef.Diag(ValArg->getBeginLoc(),
+                   diag::err_typecheck_cond_expect_int_float)
+          << Ty << ValArg->getSourceRange();
+      return true;
+    }
+    return false;
+  }
+  case AMDGPU::BI__builtin_amdgcn_update_dpp: {
+    if (SemaRef.checkArgCountRange(TheCall, 6, 6))
+      return true;
+    Expr *Args[2];
+    QualType ArgTys[2];
+    for (unsigned I = 0; I != 2; ++I) {
+      Args[I] = TheCall->getArg(I);
+      ArgTys[I] = Args[I]->getType();
+      // TODO: Vectors can also be supported.
+      if (!ArgTys[I]->isArithmeticType() || ArgTys[I]->isAnyComplexType()) {
+        SemaRef.Diag(Args[I]->getBeginLoc(),
+                     diag::err_typecheck_cond_expect_int_float)
+            << ArgTys[I] << Args[I]->getSourceRange();
+        return true;
+      }
+    }
+    if (getASTContext().hasSameUnqualifiedType(ArgTys[0], ArgTys[1]))
+      return false;
+    if (((ArgTys[0]->isUnsignedIntegerType() &&
+          ArgTys[1]->isSignedIntegerType()) ||
+         (ArgTys[0]->isSignedIntegerType() &&
+          ArgTys[1]->isUnsignedIntegerType())) &&
+        getASTContext().getTypeSize(ArgTys[0]) ==
+            getASTContext().getTypeSize(ArgTys[1]))
+      return false;
+    SemaRef.Diag(Args[1]->getBeginLoc(),
+                 diag::err_typecheck_call_different_arg_types)
+        << ArgTys[0] << ArgTys[1];
+    return true;
+  }
   default:
     return false;
   }

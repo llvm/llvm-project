@@ -47,6 +47,8 @@ private:
   bool legalizeExt(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeSplatVector(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool legalizeExtractSubvector(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool legalizeInsertSubvector(MachineInstr &MI, LegalizerHelper &Helper,
+                               MachineIRBuilder &MIB) const;
   bool legalizeLoadStore(MachineInstr &MI, LegalizerHelper &Helper,
                          MachineIRBuilder &MIB) const;
 };

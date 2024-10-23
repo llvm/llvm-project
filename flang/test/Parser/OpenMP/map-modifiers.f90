@@ -18,7 +18,7 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = OmpxHold
+!PARSE-TREE: | | TypeModifier = Ompx_Hold
 !PARSE-TREE: | | TypeModifier = Always
 !PARSE-TREE: | | TypeModifier = Present
 !PARSE-TREE: | | TypeModifier = Close
@@ -42,7 +42,7 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = OmpxHold
+!PARSE-TREE: | | TypeModifier = Ompx_Hold
 !PARSE-TREE: | | TypeModifier = Always
 !PARSE-TREE: | | TypeModifier = Present
 !PARSE-TREE: | | TypeModifier = Close
@@ -104,7 +104,7 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = OmpxHold
+!PARSE-TREE: | | TypeModifier = Ompx_Hold
 !PARSE-TREE: | | TypeModifier = Always
 !PARSE-TREE: | | TypeModifier = Present
 !PARSE-TREE: | | TypeModifier = Close
@@ -128,7 +128,7 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = OmpxHold
+!PARSE-TREE: | | TypeModifier = Ompx_Hold
 !PARSE-TREE: | | TypeModifier = Always
 !PARSE-TREE: | | TypeModifier = Present
 !PARSE-TREE: | | TypeModifier = Close

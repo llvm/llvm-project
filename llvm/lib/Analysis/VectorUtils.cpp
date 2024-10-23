@@ -152,6 +152,16 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   }
 }
 
+bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                            int RetIdx) {
+  switch (ID) {
+  case Intrinsic::frexp:
+    return RetIdx == 0 || RetIdx == 1;
+  default:
+    return RetIdx == 0;
+  }
+}
+
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its ID, in case it does not found it return not_intrinsic.

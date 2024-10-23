@@ -10188,7 +10188,7 @@ def warn_new_dangling_initializer_list : Warning<
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
 def warn_dangling_pointer_assignment : Warning<
-   "object backing the pointer %0 "
+   "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
 

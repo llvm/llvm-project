@@ -439,7 +439,7 @@ def FeatureSVEB16B16: ExtensionWithMArch<"sve-b16b16", "SVEB16B16", "FEAT_SVE_B1
   "Enable SVE2 non-widening and SME2 Z-targeting non-widening BFloat16 instructions">;
 
 def FeatureSMEB16B16 : ExtensionWithMArch<"sme-b16b16", "SMEB16B16", "FEAT_SME_B16B16",
-  "Enable SME2.1 ZA-targeting non-widening BFloat16 instructions", 
+  "Enable SME2.1 ZA-targeting non-widening BFloat16 instructions",
   [FeatureSME2, FeatureSVEB16B16]>;
 
 def FeatureSMEF16F16 : ExtensionWithMArch<"sme-f16f16", "SMEF16F16", "FEAT_SME_F16F16",
@@ -478,10 +478,10 @@ def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX", "FEAT_FAMINMAX",
 
 def FeatureLUT: ExtensionWithMArch<"lut", "LUT", "FEAT_LUT",
  "Enable Lookup Table instructions">;
-   
+
 def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
   "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
-  
+
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
   "Enable Armv9.5-A FP8 multiply-add instructions", [FeatureFP8]>;
 
@@ -490,7 +490,7 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
   "Enable FP8 4-way dot instructions", [FeatureFP8FMA]>;
-  
+
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
   "Enable FP8 2-way dot instructions", [FeatureFP8DOT4]>;
 
@@ -555,6 +555,14 @@ def FeatureSVEBFSCALE: ExtensionWithMArch<"sve-bfscale", "SVE_BFSCALE", "FEAT_SV
 
 def FeatureSVE_F16F32MM: ExtensionWithMArch<"sve-f16f32mm", "SVE_F16F32MM", "FEAT_SVE_F16F32MM",
   "Enable Armv9.6-A FP16 to FP32 Matrix Multiply instructions">;
+def FeatureLSUI: ExtensionWithMArch<"lsui", "LSUI", "FEAT_LSUI",
+  "Enable Armv9.6-A unprivileged load/store instructions">;
+
+def FeatureOCCMO: ExtensionWithMArch<"occmo", "OCCMO", "FEAT_OCCMO",
+  "Enable Armv9.6-A Outer cacheable cache maintenance operations">;
+
+def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
+  "Enable Armv9.6-A Producer Consumer Data Placement hints">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -866,8 +874,9 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2],
-  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2])>;
+  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2, FeatureLSUI, FeatureOCCMO],
+  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2,
+    FeatureLSUI, FeatureOCCMO])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

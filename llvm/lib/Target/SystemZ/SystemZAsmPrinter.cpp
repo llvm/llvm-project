@@ -12,7 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZAsmPrinter.h"
-#include "MCTargetDesc/SystemZInstPrinter.h"
+#include "MCTargetDesc/SystemZGNUInstPrinter.h"
+#include "MCTargetDesc/SystemZHLASMInstPrinter.h"
 #include "MCTargetDesc/SystemZMCExpr.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMCInstLower.h"
@@ -882,13 +883,16 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
 
 static void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
                                   raw_ostream &OS) {
-  const char *RegName = SystemZInstPrinter::getRegisterName(RegNo);
+  const char *RegName;
   if (MAI->getAssemblerDialect() == AD_HLASM) {
+    RegName = SystemZHLASMInstPrinter::getRegisterName(RegNo);
     // Skip register prefix so that only register number is left
     assert(isalpha(RegName[0]) && isdigit(RegName[1]));
     OS << (RegName + 1);
-  } else
+  } else {
+    RegName = SystemZGNUInstPrinter::getRegisterName(RegNo);
     OS << '%' << RegName;
+  }
 }
 
 static void printReg(unsigned Reg, const MCAsmInfo *MAI, raw_ostream &OS) {

@@ -4918,8 +4918,6 @@ define amdgpu_gs void @sgpr_base_large_offset(ptr addrspace(1) %out, ptr addrspa
 ; GFX11-NEXT:    scratch_load_b32 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: sgpr_base_large_offset:
@@ -4927,8 +4925,6 @@ define amdgpu_gs void @sgpr_base_large_offset(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    scratch_load_b32 v2, off, s0 offset:65512
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: sgpr_base_large_offset:
@@ -4977,8 +4973,6 @@ define amdgpu_gs void @sgpr_base_large_offset(ptr addrspace(1) %out, ptr addrspa
 ; GFX11-PAL-NEXT:    scratch_load_b32 v2, off, s0
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PAL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-PAL-NEXT:    s_nop 0
-; GFX11-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PAL-NEXT:    s_endpgm
 ;
 ; GFX12-PAL-LABEL: sgpr_base_large_offset:
@@ -4986,8 +4980,6 @@ define amdgpu_gs void @sgpr_base_large_offset(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-PAL-NEXT:    scratch_load_b32 v2, off, s0 offset:65512
 ; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-PAL-NEXT:    s_nop 0
-; GFX12-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PAL-NEXT:    s_endpgm
 entry:
   %large_offset = getelementptr i8, ptr addrspace(5) %sgpr_base, i32 65512
@@ -5028,8 +5020,6 @@ define amdgpu_gs void @sgpr_base_large_offset_split(ptr addrspace(1) %out, ptr a
 ; GFX11-NEXT:    scratch_load_b32 v2, v2, s0 offset:4072 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: sgpr_base_large_offset_split:
@@ -5039,8 +5029,6 @@ define amdgpu_gs void @sgpr_base_large_offset_split(ptr addrspace(1) %out, ptr a
 ; GFX12-NEXT:    scratch_load_b32 v2, v2, s0 offset:65512 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: sgpr_base_large_offset_split:
@@ -5093,8 +5081,6 @@ define amdgpu_gs void @sgpr_base_large_offset_split(ptr addrspace(1) %out, ptr a
 ; GFX11-PAL-NEXT:    scratch_load_b32 v2, v2, s0 offset:4072 glc dlc
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PAL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-PAL-NEXT:    s_nop 0
-; GFX11-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PAL-NEXT:    s_endpgm
 ;
 ; GFX12-PAL-LABEL: sgpr_base_large_offset_split:
@@ -5104,8 +5090,6 @@ define amdgpu_gs void @sgpr_base_large_offset_split(ptr addrspace(1) %out, ptr a
 ; GFX12-PAL-NEXT:    scratch_load_b32 v2, v2, s0 offset:65512 scope:SCOPE_SYS
 ; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-PAL-NEXT:    s_nop 0
-; GFX12-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PAL-NEXT:    s_endpgm
 entry:
   ;%allignedBase = alloca [33554432 x i8], align 4, addrspace(5)
@@ -5257,8 +5241,6 @@ define amdgpu_gs void @sgpr_base_negative_offset(ptr addrspace(1) %out, ptr addr
 ; GFX11-NEXT:    scratch_load_b32 v2, off, s0 offset:-24
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: sgpr_base_negative_offset:
@@ -5266,8 +5248,6 @@ define amdgpu_gs void @sgpr_base_negative_offset(ptr addrspace(1) %out, ptr addr
 ; GFX12-NEXT:    scratch_load_b32 v2, off, s0 offset:-24
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: sgpr_base_negative_offset:
@@ -5314,8 +5294,6 @@ define amdgpu_gs void @sgpr_base_negative_offset(ptr addrspace(1) %out, ptr addr
 ; GFX11-PAL-NEXT:    scratch_load_b32 v2, off, s0 offset:-24
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PAL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-PAL-NEXT:    s_nop 0
-; GFX11-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PAL-NEXT:    s_endpgm
 ;
 ; GFX12-PAL-LABEL: sgpr_base_negative_offset:
@@ -5323,8 +5301,6 @@ define amdgpu_gs void @sgpr_base_negative_offset(ptr addrspace(1) %out, ptr addr
 ; GFX12-PAL-NEXT:    scratch_load_b32 v2, off, s0 offset:-24
 ; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-PAL-NEXT:    s_nop 0
-; GFX12-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PAL-NEXT:    s_endpgm
 entry:
   %scevgep28 = getelementptr i8, ptr addrspace(5) %scevgep, i32 -24

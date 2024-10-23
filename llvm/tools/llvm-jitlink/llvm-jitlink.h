@@ -65,7 +65,7 @@ struct Session {
                                  GetSymbolTargetFunction GetSymbolTarget);
   };
 
-  using DynLibJDMap = std::map<std::string, orc::JITDylib *>;
+  using DynLibJDMap = std::map<std::string, orc::JITDylib *, std::less<>>;
   using SymbolInfoMap = StringMap<MemoryRegionInfo>;
   using FileInfoMap = StringMap<FileInfo>;
 

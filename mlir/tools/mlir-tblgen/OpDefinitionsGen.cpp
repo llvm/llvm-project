@@ -1106,7 +1106,7 @@ OpEmitter::OpEmitter(const Operator &op,
   genFolderDecls();
   genTypeInterfaceMethods();
   genOpInterfaceMethods();
-  generateOpFormat(op, opClass);
+  generateOpFormat(op, opClass, emitHelper.hasProperties());
   genSideEffectInterfaceMethods();
 }
 void OpEmitter::emitDecl(

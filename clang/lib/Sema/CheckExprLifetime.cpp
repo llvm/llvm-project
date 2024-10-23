@@ -1206,11 +1206,13 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
       assert(shouldLifetimeExtendThroughPath(Path) ==
                  PathLifetimeKind::NoExtend &&
              "No lifetime extension for assignments");
-      SemaRef.Diag(DiagLoc,
-                   IsGslPtrValueFromGslTempOwner
-                       ? diag::warn_dangling_lifetime_pointer_assignment
-                       : diag::warn_dangling_pointer_assignment)
-          << AEntity->LHS << DiagRange;
+      if (IsGslPtrValueFromGslTempOwner)
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer_assignment)
+            << AEntity->LHS << DiagRange;
+      else
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_pointer_assignment)
+            << AEntity->LHS->getType()->isPointerType() << AEntity->LHS
+            << DiagRange;
       return false;
     }
     case LK_MemInitializer: {
@@ -1412,8 +1414,14 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
   };
 
   llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
-  if (LK == LK_Assignment && shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity))
-    Path.push_back({IndirectLocalPathEntry::GslPointerAssignment, Init});
+  if (LK == LK_Assignment &&
+      shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity)) {
+    Path.push_back(
+        {isAssignmentOperatorLifetimeBound(AEntity->AssignmentOperator)
+             ? IndirectLocalPathEntry::LifetimeBoundCall
+             : IndirectLocalPathEntry::GslPointerAssignment,
+         Init});
+  }
 
   if (Init->isGLValue())
     visitLocalsRetainedByReferenceBinding(Path, Init, RK_ReferenceBinding,

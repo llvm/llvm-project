@@ -43,6 +43,10 @@ char TeeLogHandler::ID;
 
 llvm::ManagedStatic<Log::ChannelMap> Log::g_channel_map;
 
+// The error log is used by LLDB_LOG_ERROR. If the given log channel passed to
+// LLDB_LOG_ERROR is not enabled, error messages are logged to the error log.
+static std::atomic<Log *> g_error_log = nullptr;
+
 void Log::ForEachCategory(
     const Log::ChannelMap::value_type &entry,
     llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> lambda) {
@@ -460,3 +464,7 @@ void TeeLogHandler::Emit(llvm::StringRef message) {
   m_first_log_handler->Emit(message);
   m_second_log_handler->Emit(message);
 }
+
+void lldb_private::SetLLDBErrorLog(Log *log) { g_error_log.store(log); }
+
+Log *lldb_private::GetLLDBErrorLog() { return g_error_log; }

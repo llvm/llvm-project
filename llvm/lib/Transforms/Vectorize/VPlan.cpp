@@ -1701,3 +1701,11 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
       Plan->print(O);
 }
 #endif
+
+TargetTransformInfo::OperandValueInfo
+VPCostContext::getOperandInfo(VPValue *V) const {
+  if (!V->isLiveIn())
+    return {};
+
+  return TTI::getOperandInfo(V->getLiveInIRValue());
+}

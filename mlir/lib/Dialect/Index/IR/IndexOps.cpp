@@ -136,6 +136,28 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+/// Canonicalize
+/// ` x = v + c1; y = x + c2` to `x = v + (c1 + c2)`
+LogicalResult AddOp::canonicalize(AddOp op, PatternRewriter &rewriter) {
+  IntegerAttr c1, c2;
+  if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant(&c1)))
+    return rewriter.notifyMatchFailure(op.getLoc(), "RHS is not a constant");
+
+  auto add = op.getLhs().getDefiningOp<mlir::index::AddOp>();
+  if (!add)
+    return rewriter.notifyMatchFailure(op.getLoc(), "LHS is not a add");
+
+  if (!mlir::matchPattern(add.getRhs(), mlir::m_Constant(&c2)))
+    return rewriter.notifyMatchFailure(op.getLoc(), "RHS is not a constant");
+
+  auto c = rewriter.create<mlir::index::ConstantOp>(op->getLoc(),
+                                                    c1.getInt() + c2.getInt());
+  auto newAdd =
+      rewriter.create<mlir::index::AddOp>(op->getLoc(), add.getLhs(), c);
+
+  rewriter.replaceOp(op, newAdd);
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // SubOp

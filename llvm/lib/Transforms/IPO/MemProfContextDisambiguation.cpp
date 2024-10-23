@@ -4264,9 +4264,6 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           AllocVersionsThinBackend++;
           if (!MaxAllocVersionsThinBackend)
             MaxAllocVersionsThinBackend = 1;
-          // Remove any remaining callsite metadata and we can skip the rest of
-          // the handling for this instruction, since no cloning needed.
-          I.setMetadata(LLVMContext::MD_callsite, nullptr);
           continue;
         }
 
@@ -4419,14 +4416,28 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             CloneCallsite(Callsite->second, CB, CalledFunction);
           }
         }
-        // Memprof and callsite metadata on memory allocations no longer needed.
-        I.setMetadata(LLVMContext::MD_memprof, nullptr);
-        I.setMetadata(LLVMContext::MD_callsite, nullptr);
       }
     }
 
     // Now do any promotion required for cloning.
     performICP(M, FS->callsites(), VMaps, ICallAnalysisInfo, ORE);
+  }
+
+  // We skip some of the functions and instructions above, so remove all the
+  // metadata in a single sweep here.
+  for (auto &F : M) {
+    // We can skip memprof clones because createFunctionClones already strips
+    // the metadata from the newly created clones.
+    if (F.isDeclaration() || isMemProfClone(F))
+      continue;
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (!isa<CallBase>(I))
+          continue;
+        I.setMetadata(LLVMContext::MD_memprof, nullptr);
+        I.setMetadata(LLVMContext::MD_callsite, nullptr);
+      }
+    }
   }
 
   return Changed;
