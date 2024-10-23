@@ -929,6 +929,29 @@ getInterchangeableInstruction(Instruction *I) {
   return PII;
 }
 
+/// \returns the Op and operands which \p I convert to.
+static std::pair<Value *, SmallVector<Value *>>
+getInterchangeableInstruction(Instruction *I, Instruction *MainOp,
+                              Instruction *AltOp) {
+  SmallVector<InterchangeableInstruction> IIList =
+      getInterchangeableInstruction(I);
+  auto Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
+    return II.Opcode == MainOp->getOpcode();
+  });
+  Value *SelectedOp;
+  if (Iter == IIList.end()) {
+    Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
+      return II.Opcode == AltOp->getOpcode();
+    });
+    assert(Iter != IIList.end() &&
+           "Cannot find an interchangeable instruction.");
+    SelectedOp = AltOp;
+  } else {
+    SelectedOp = MainOp;
+  }
+  return std::make_pair(SelectedOp, Iter->Ops);
+}
+
 /// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
 ///
@@ -2484,22 +2507,8 @@ public:
         OpsVec[OpIdx].resize(NumLanes);
       for (auto [I, V] : enumerate(VL)) {
         assert(isa<Instruction>(V) && "Expected instruction");
-        SmallVector<InterchangeableInstruction> IIList =
-            getInterchangeableInstruction(cast<Instruction>(V));
-        Value *SelectedOp;
-        auto Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
-          return II.Opcode == S.MainOp->getOpcode();
-        });
-        if (Iter == IIList.end()) {
-          Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
-            return II.Opcode == S.AltOp->getOpcode();
-          });
-          SelectedOp = S.AltOp;
-        } else {
-          SelectedOp = S.MainOp;
-        }
-        assert(Iter != IIList.end() &&
-               "Cannot find an interchangeable instruction.");
+        auto [SelectedOp, Ops] = getInterchangeableInstruction(
+            cast<Instruction>(V), S.MainOp, S.AltOp);
         // Our tree has just 3 nodes: the root and two operands.
         // It is therefore trivial to get the APO. We only need to check the
         // opcode of V and whether the operand at OpIdx is the LHS or RHS
@@ -2513,7 +2522,7 @@ public:
         bool IsInverseOperation = !isCommutative(cast<Instruction>(SelectedOp));
         for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][I] = {Iter->Ops[OpIdx], APO, false};
+          OpsVec[OpIdx][I] = {Ops[OpIdx], APO, false};
         }
       }
     }
@@ -3417,20 +3426,10 @@ private:
       for (unsigned OpIdx : seq<unsigned>(NumOperands))
         Operands[OpIdx].resize(NumLanes);
       for (auto [I, V] : enumerate(Scalars)) {
-        SmallVector<InterchangeableInstruction> IIList =
-            getInterchangeableInstruction(cast<Instruction>(V));
-        auto Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
-          return II.Opcode == MainOp->getOpcode();
-        });
-        if (Iter == IIList.end())
-          Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
-            return II.Opcode == AltOp->getOpcode();
-          });
-        assert(Iter != IIList.end() &&
-               "Cannot find an interchangeable instruction.");
-        assert(Iter->Ops.size() == NumOperands &&
-               "Expected same number of operands");
-        for (auto [J, Op] : enumerate(Iter->Ops))
+        auto [SelectedOp, Ops] =
+            getInterchangeableInstruction(cast<Instruction>(V), MainOp, AltOp);
+        assert(Ops.size() == NumOperands && "Expected same number of operands");
+        for (auto [J, Op] : enumerate(Ops))
           Operands[J][I] = Op;
       }
     }
