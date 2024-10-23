@@ -612,7 +612,8 @@ static mlir::Block *genEntryBlock(lower::AbstractConverter &converter,
   unsigned numVars = args.inReduction.vars.size() + args.map.vars.size() +
                      args.priv.vars.size() + args.reduction.vars.size() +
                      args.taskReduction.vars.size() +
-                     args.useDeviceAddr.vars.size();
+                     args.useDeviceAddr.vars.size() +
+                     args.useDevicePtr.vars.size();
   types.reserve(numVars);
   locs.reserve(numVars);
 
@@ -1093,9 +1094,6 @@ static OpTy genWrapperOp(lower::AbstractConverter &converter,
   // Create entry block with arguments.
   genEntryBlock(converter, args, op.getRegion());
 
-  firOpBuilder.setInsertionPoint(
-      lower::genOpenMPTerminator(firOpBuilder, op, loc));
-
   return op;
 }
 
@@ -1309,8 +1307,8 @@ static void genTaskClauses(lower::AbstractConverter &converter,
   cp.processUntied(clauseOps);
   // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Affinity, clause::Detach, clause::InReduction>(
-      loc, llvm::omp::Directive::OMPD_task);
+  cp.processTODO<clause::Affinity, clause::Detach, clause::InReduction,
+                 clause::Mergeable>(loc, llvm::omp::Directive::OMPD_task);
 }
 
 static void genTaskgroupClauses(lower::AbstractConverter &converter,
@@ -2211,6 +2209,12 @@ static void genCompositeDistributeParallelDoSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
+  // TODO: Remove this after omp.simd reductions on composite constructs are
+  // supported.
+  simdClauseOps.reductionVars.clear();
+  simdClauseOps.reductionByref.clear();
+  simdClauseOps.reductionSyms.clear();
+
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
@@ -2232,9 +2236,7 @@ static void genCompositeDistributeParallelDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
-  simdArgs.reduction.syms = simdReductionSyms;
-  simdArgs.reduction.vars = simdClauseOps.reductionVars;
+  // TODO: Add private and reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2327,6 +2329,12 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
+  // TODO: Remove this after omp.simd reductions on composite constructs are
+  // supported.
+  simdClauseOps.reductionVars.clear();
+  simdClauseOps.reductionByref.clear();
+  simdClauseOps.reductionSyms.clear();
+
   // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
@@ -2350,9 +2358,7 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
-  simdArgs.reduction.syms = simdReductionSyms;
-  simdArgs.reduction.vars = simdClauseOps.reductionVars;
+  // TODO: Add private and reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2787,7 +2793,10 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::ThreadLimit>(clause.u) &&
         !std::holds_alternative<clause::Threads>(clause.u) &&
         !std::holds_alternative<clause::UseDeviceAddr>(clause.u) &&
-        !std::holds_alternative<clause::UseDevicePtr>(clause.u)) {
+        !std::holds_alternative<clause::UseDevicePtr>(clause.u) &&
+        !std::holds_alternative<clause::InReduction>(clause.u) &&
+        !std::holds_alternative<clause::Mergeable>(clause.u) &&
+        !std::holds_alternative<clause::TaskReduction>(clause.u)) {
       TODO(clauseLocation, "OpenMP Block construct clause");
     }
   }

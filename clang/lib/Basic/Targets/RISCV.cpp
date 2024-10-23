@@ -100,9 +100,17 @@ bool RISCVTargetInfo::validateAsmConstraint(
   case 'S': // A symbol or label reference with a constant offset
     Info.setAllowsRegister();
     return true;
+  case 'c':
+    // A RVC register - GPR or FPR
+    if (Name[1] == 'r' || Name[1] == 'f') {
+      Info.setAllowsRegister();
+      Name += 1;
+      return true;
+    }
+    return false;
   case 'v':
     // A vector register.
-    if (Name[1] == 'r' || Name[1] == 'm') {
+    if (Name[1] == 'r' || Name[1] == 'd' || Name[1] == 'm') {
       Info.setAllowsRegister();
       Name += 1;
       return true;
@@ -114,6 +122,8 @@ bool RISCVTargetInfo::validateAsmConstraint(
 std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
+  // c* and v* are two-letter constraints on RISC-V.
+  case 'c':
   case 'v':
     R = std::string("^") + std::string(Constraint, 2);
     Constraint += 1;

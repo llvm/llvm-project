@@ -519,6 +519,9 @@ public:
                                SPIRV::LinkageType::LinkageType LinkageType,
                                MachineIRBuilder &MIRBuilder,
                                bool IsInstSelector);
+  Register getOrCreateGlobalVariableWithBinding(const SPIRVType *VarType,
+                                                uint32_t Set, uint32_t Binding,
+                                                MachineIRBuilder &MIRBuilder);
 
   // Convenient helpers for getting types with check for duplicates.
   SPIRVType *getOrCreateSPIRVIntegerType(unsigned BitWidth,

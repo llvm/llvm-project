@@ -367,6 +367,14 @@ unsigned int APFloatBase::semanticsIntSizeInBits(const fltSemantics &semantics,
   return MinBitWidth;
 }
 
+bool APFloatBase::semanticsHasZero(const fltSemantics &semantics) {
+  return semantics.hasZero;
+}
+
+bool APFloatBase::semanticsHasSignedRepr(const fltSemantics &semantics) {
+  return semantics.hasSignedRepr;
+}
+
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
                                             const fltSemantics &Dst) {
   // Exponent range must be larger.
@@ -400,7 +408,8 @@ exponentNaN(const fltSemantics &semantics) {
   if (semantics.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly) {
     if (semantics.nanEncoding == fltNanEncoding::NegativeZero)
       return exponentZero(semantics);
-    return semantics.maxExponent;
+    if (semantics.hasSignedRepr)
+      return semantics.maxExponent;
   }
   return semantics.maxExponent + 1;
 }
@@ -1227,11 +1236,11 @@ unsigned int IEEEFloat::partCount() const {
   return partCountForBits(semantics->precision + 1);
 }
 
-const IEEEFloat::integerPart *IEEEFloat::significandParts() const {
+const APFloat::integerPart *IEEEFloat::significandParts() const {
   return const_cast<IEEEFloat *>(this)->significandParts();
 }
 
-IEEEFloat::integerPart *IEEEFloat::significandParts() {
+APFloat::integerPart *IEEEFloat::significandParts() {
   if (partCount() > 1)
     return significand.parts;
   else
@@ -1254,7 +1263,7 @@ void IEEEFloat::incrementSignificand() {
 }
 
 /* Add the significand of the RHS.  Returns the carry flag.  */
-IEEEFloat::integerPart IEEEFloat::addSignificand(const IEEEFloat &rhs) {
+APFloat::integerPart IEEEFloat::addSignificand(const IEEEFloat &rhs) {
   integerPart *parts;
 
   parts = significandParts();
@@ -1267,8 +1276,8 @@ IEEEFloat::integerPart IEEEFloat::addSignificand(const IEEEFloat &rhs) {
 
 /* Subtract the significand of the RHS with a borrow flag.  Returns
    the borrow flag.  */
-IEEEFloat::integerPart IEEEFloat::subtractSignificand(const IEEEFloat &rhs,
-                                                      integerPart borrow) {
+APFloat::integerPart IEEEFloat::subtractSignificand(const IEEEFloat &rhs,
+                                                    integerPart borrow) {
   integerPart *parts;
 
   parts = significandParts();
@@ -1362,8 +1371,9 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
     // Note that we cannot convert the addend directly, as the extendedSemantics
     // is a local variable (which we take a reference to).
     IEEEFloat extendedAddend(addend);
-    status = extendedAddend.convert(extendedSemantics, rmTowardZero, &ignored);
-    assert(status == opOK);
+    status = extendedAddend.convert(extendedSemantics, APFloat::rmTowardZero,
+                                    &ignored);
+    assert(status == APFloat::opOK);
     (void)status;
 
     // Shift the significand of the addend right by one bit. This guarantees
@@ -1541,8 +1551,7 @@ void IEEEFloat::shiftSignificandLeft(unsigned int bits) {
   }
 }
 
-IEEEFloat::cmpResult
-IEEEFloat::compareAbsoluteValue(const IEEEFloat &rhs) const {
+APFloat::cmpResult IEEEFloat::compareAbsoluteValue(const IEEEFloat &rhs) const {
   int compare;
 
   assert(semantics == rhs.semantics);
@@ -1584,7 +1593,7 @@ static void tcSetLeastSignificantBits(APInt::WordType *dst, unsigned parts,
 
 /* Handle overflow.  Sign is preserved.  We either become infinity or
    the largest finite number.  */
-IEEEFloat::opStatus IEEEFloat::handleOverflow(roundingMode rounding_mode) {
+APFloat::opStatus IEEEFloat::handleOverflow(roundingMode rounding_mode) {
   if (semantics->nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly) {
     /* Infinity?  */
     if (rounding_mode == rmNearestTiesToEven ||
@@ -1654,8 +1663,8 @@ bool IEEEFloat::roundAwayFromZero(roundingMode rounding_mode,
   llvm_unreachable("Invalid rounding mode found");
 }
 
-IEEEFloat::opStatus IEEEFloat::normalize(roundingMode rounding_mode,
-                                         lostFraction lost_fraction) {
+APFloat::opStatus IEEEFloat::normalize(roundingMode rounding_mode,
+                                       lostFraction lost_fraction) {
   unsigned int omsb;                /* One, not zero, based MSB.  */
   int exponentChange;
 
@@ -1788,8 +1797,8 @@ IEEEFloat::opStatus IEEEFloat::normalize(roundingMode rounding_mode,
   return (opStatus) (opUnderflow | opInexact);
 }
 
-IEEEFloat::opStatus IEEEFloat::addOrSubtractSpecials(const IEEEFloat &rhs,
-                                                     bool subtract) {
+APFloat::opStatus IEEEFloat::addOrSubtractSpecials(const IEEEFloat &rhs,
+                                                   bool subtract) {
   switch (PackCategoriesIntoKey(category, rhs.category)) {
   default:
     llvm_unreachable(nullptr);
@@ -1917,7 +1926,7 @@ lostFraction IEEEFloat::addOrSubtractSignificand(const IEEEFloat &rhs,
   return lost_fraction;
 }
 
-IEEEFloat::opStatus IEEEFloat::multiplySpecials(const IEEEFloat &rhs) {
+APFloat::opStatus IEEEFloat::multiplySpecials(const IEEEFloat &rhs) {
   switch (PackCategoriesIntoKey(category, rhs.category)) {
   default:
     llvm_unreachable(nullptr);
@@ -1961,7 +1970,7 @@ IEEEFloat::opStatus IEEEFloat::multiplySpecials(const IEEEFloat &rhs) {
   }
 }
 
-IEEEFloat::opStatus IEEEFloat::divideSpecials(const IEEEFloat &rhs) {
+APFloat::opStatus IEEEFloat::divideSpecials(const IEEEFloat &rhs) {
   switch (PackCategoriesIntoKey(category, rhs.category)) {
   default:
     llvm_unreachable(nullptr);
@@ -2010,7 +2019,7 @@ IEEEFloat::opStatus IEEEFloat::divideSpecials(const IEEEFloat &rhs) {
   }
 }
 
-IEEEFloat::opStatus IEEEFloat::modSpecials(const IEEEFloat &rhs) {
+APFloat::opStatus IEEEFloat::modSpecials(const IEEEFloat &rhs) {
   switch (PackCategoriesIntoKey(category, rhs.category)) {
   default:
     llvm_unreachable(nullptr);
@@ -2048,7 +2057,7 @@ IEEEFloat::opStatus IEEEFloat::modSpecials(const IEEEFloat &rhs) {
   }
 }
 
-IEEEFloat::opStatus IEEEFloat::remainderSpecials(const IEEEFloat &rhs) {
+APFloat::opStatus IEEEFloat::remainderSpecials(const IEEEFloat &rhs) {
   switch (PackCategoriesIntoKey(category, rhs.category)) {
   default:
     llvm_unreachable(nullptr);
@@ -2098,9 +2107,9 @@ void IEEEFloat::changeSign() {
 }
 
 /* Normalized addition or subtraction.  */
-IEEEFloat::opStatus IEEEFloat::addOrSubtract(const IEEEFloat &rhs,
-                                             roundingMode rounding_mode,
-                                             bool subtract) {
+APFloat::opStatus IEEEFloat::addOrSubtract(const IEEEFloat &rhs,
+                                           roundingMode rounding_mode,
+                                           bool subtract) {
   opStatus fs;
 
   fs = addOrSubtractSpecials(rhs, subtract);
@@ -2131,20 +2140,20 @@ IEEEFloat::opStatus IEEEFloat::addOrSubtract(const IEEEFloat &rhs,
 }
 
 /* Normalized addition.  */
-IEEEFloat::opStatus IEEEFloat::add(const IEEEFloat &rhs,
-                                   roundingMode rounding_mode) {
+APFloat::opStatus IEEEFloat::add(const IEEEFloat &rhs,
+                                 roundingMode rounding_mode) {
   return addOrSubtract(rhs, rounding_mode, false);
 }
 
 /* Normalized subtraction.  */
-IEEEFloat::opStatus IEEEFloat::subtract(const IEEEFloat &rhs,
-                                        roundingMode rounding_mode) {
+APFloat::opStatus IEEEFloat::subtract(const IEEEFloat &rhs,
+                                      roundingMode rounding_mode) {
   return addOrSubtract(rhs, rounding_mode, true);
 }
 
 /* Normalized multiply.  */
-IEEEFloat::opStatus IEEEFloat::multiply(const IEEEFloat &rhs,
-                                        roundingMode rounding_mode) {
+APFloat::opStatus IEEEFloat::multiply(const IEEEFloat &rhs,
+                                      roundingMode rounding_mode) {
   opStatus fs;
 
   sign ^= rhs.sign;
@@ -2163,8 +2172,8 @@ IEEEFloat::opStatus IEEEFloat::multiply(const IEEEFloat &rhs,
 }
 
 /* Normalized divide.  */
-IEEEFloat::opStatus IEEEFloat::divide(const IEEEFloat &rhs,
-                                      roundingMode rounding_mode) {
+APFloat::opStatus IEEEFloat::divide(const IEEEFloat &rhs,
+                                    roundingMode rounding_mode) {
   opStatus fs;
 
   sign ^= rhs.sign;
@@ -2183,7 +2192,7 @@ IEEEFloat::opStatus IEEEFloat::divide(const IEEEFloat &rhs,
 }
 
 /* Normalized remainder.  */
-IEEEFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
+APFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
   opStatus fs;
   unsigned int origSign = sign;
 
@@ -2293,7 +2302,7 @@ IEEEFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
 }
 
 /* Normalized llvm frem (C fmod). */
-IEEEFloat::opStatus IEEEFloat::mod(const IEEEFloat &rhs) {
+APFloat::opStatus IEEEFloat::mod(const IEEEFloat &rhs) {
   opStatus fs;
   fs = modSpecials(rhs);
   unsigned int origSign = sign;
@@ -2331,9 +2340,9 @@ IEEEFloat::opStatus IEEEFloat::mod(const IEEEFloat &rhs) {
 }
 
 /* Normalized fused-multiply-add.  */
-IEEEFloat::opStatus IEEEFloat::fusedMultiplyAdd(const IEEEFloat &multiplicand,
-                                                const IEEEFloat &addend,
-                                                roundingMode rounding_mode) {
+APFloat::opStatus IEEEFloat::fusedMultiplyAdd(const IEEEFloat &multiplicand,
+                                              const IEEEFloat &addend,
+                                              roundingMode rounding_mode) {
   opStatus fs;
 
   /* Post-multiplication sign, before addition.  */
@@ -2377,7 +2386,7 @@ IEEEFloat::opStatus IEEEFloat::fusedMultiplyAdd(const IEEEFloat &multiplicand,
 }
 
 /* Rounding-mode correct round to integral value.  */
-IEEEFloat::opStatus IEEEFloat::roundToIntegral(roundingMode rounding_mode) {
+APFloat::opStatus IEEEFloat::roundToIntegral(roundingMode rounding_mode) {
   opStatus fs;
 
   if (isInfinity())
@@ -2428,7 +2437,7 @@ IEEEFloat::opStatus IEEEFloat::roundToIntegral(roundingMode rounding_mode) {
   // If the exponent is large enough, we know that this value is already
   // integral, and the arithmetic below would potentially cause it to saturate
   // to +/-Inf.  Bail out early instead.
-  if (exponent+1 >= (int)semanticsPrecision(*semantics))
+  if (exponent + 1 >= (int)APFloat::semanticsPrecision(*semantics))
     return opOK;
 
   // The algorithm here is quite simple: we add 2^(p-1), where p is the
@@ -2437,8 +2446,9 @@ IEEEFloat::opStatus IEEEFloat::roundToIntegral(roundingMode rounding_mode) {
   // for our integral rounding as well.
   // NOTE: When the input value is negative, we do subtraction followed by
   // addition instead.
-  APInt IntegerConstant(NextPowerOf2(semanticsPrecision(*semantics)), 1);
-  IntegerConstant <<= semanticsPrecision(*semantics)-1;
+  APInt IntegerConstant(NextPowerOf2(APFloat::semanticsPrecision(*semantics)),
+                        1);
+  IntegerConstant <<= APFloat::semanticsPrecision(*semantics) - 1;
   IEEEFloat MagicConstant(*semantics);
   fs = MagicConstant.convertFromAPInt(IntegerConstant, false,
                                       rmNearestTiesToEven);
@@ -2462,9 +2472,8 @@ IEEEFloat::opStatus IEEEFloat::roundToIntegral(roundingMode rounding_mode) {
   return fs;
 }
 
-
 /* Comparison requires normalized numbers.  */
-IEEEFloat::cmpResult IEEEFloat::compare(const IEEEFloat &rhs) const {
+APFloat::cmpResult IEEEFloat::compare(const IEEEFloat &rhs) const {
   cmpResult result;
 
   assert(semantics == rhs.semantics);
@@ -2541,9 +2550,9 @@ IEEEFloat::cmpResult IEEEFloat::compare(const IEEEFloat &rhs) const {
 /// original value (this is almost the same as return value==fsOK, but there
 /// are edge cases where this is not so).
 
-IEEEFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
-                                       roundingMode rounding_mode,
-                                       bool *losesInfo) {
+APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
+                                     roundingMode rounding_mode,
+                                     bool *losesInfo) {
   lostFraction lostFraction;
   unsigned int newPartCount, oldPartCount;
   opStatus fs;
@@ -2689,7 +2698,7 @@ IEEEFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
 
    Note that for conversions to integer type the C standard requires
    round-to-zero to always be used.  */
-IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
+APFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
     MutableArrayRef<integerPart> parts, unsigned int width, bool isSigned,
     roundingMode rounding_mode, bool *isExact) const {
   lostFraction lost_fraction;
@@ -2802,7 +2811,7 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
    the original value.  This is almost equivalent to result==opOK,
    except for negative zeroes.
 */
-IEEEFloat::opStatus
+APFloat::opStatus
 IEEEFloat::convertToInteger(MutableArrayRef<integerPart> parts,
                             unsigned int width, bool isSigned,
                             roundingMode rounding_mode, bool *isExact) const {
@@ -2835,7 +2844,7 @@ IEEEFloat::convertToInteger(MutableArrayRef<integerPart> parts,
 /* Convert an unsigned integer SRC to a floating point number,
    rounding according to ROUNDING_MODE.  The sign of the floating
    point number is not modified.  */
-IEEEFloat::opStatus IEEEFloat::convertFromUnsignedParts(
+APFloat::opStatus IEEEFloat::convertFromUnsignedParts(
     const integerPart *src, unsigned int srcCount, roundingMode rounding_mode) {
   unsigned int omsb, precision, dstCount;
   integerPart *dst;
@@ -2863,8 +2872,8 @@ IEEEFloat::opStatus IEEEFloat::convertFromUnsignedParts(
   return normalize(rounding_mode, lost_fraction);
 }
 
-IEEEFloat::opStatus IEEEFloat::convertFromAPInt(const APInt &Val, bool isSigned,
-                                                roundingMode rounding_mode) {
+APFloat::opStatus IEEEFloat::convertFromAPInt(const APInt &Val, bool isSigned,
+                                              roundingMode rounding_mode) {
   unsigned int partCount = Val.getNumWords();
   APInt api = Val;
 
@@ -2880,7 +2889,7 @@ IEEEFloat::opStatus IEEEFloat::convertFromAPInt(const APInt &Val, bool isSigned,
 /* Convert a two's complement integer SRC to a floating point number,
    rounding according to ROUNDING_MODE.  ISSIGNED is true if the
    integer is signed, in which case it must be sign-extended.  */
-IEEEFloat::opStatus
+APFloat::opStatus
 IEEEFloat::convertFromSignExtendedInteger(const integerPart *src,
                                           unsigned int srcCount, bool isSigned,
                                           roundingMode rounding_mode) {
@@ -2906,7 +2915,7 @@ IEEEFloat::convertFromSignExtendedInteger(const integerPart *src,
 }
 
 /* FIXME: should this just take a const APInt reference?  */
-IEEEFloat::opStatus
+APFloat::opStatus
 IEEEFloat::convertFromZeroExtendedInteger(const integerPart *parts,
                                           unsigned int width, bool isSigned,
                                           roundingMode rounding_mode) {
@@ -2922,7 +2931,7 @@ IEEEFloat::convertFromZeroExtendedInteger(const integerPart *parts,
   return convertFromUnsignedParts(api.getRawData(), partCount, rounding_mode);
 }
 
-Expected<IEEEFloat::opStatus>
+Expected<APFloat::opStatus>
 IEEEFloat::convertFromHexadecimalString(StringRef s,
                                         roundingMode rounding_mode) {
   lostFraction lost_fraction = lfExactlyZero;
@@ -3016,7 +3025,7 @@ IEEEFloat::convertFromHexadecimalString(StringRef s,
   return normalize(rounding_mode, lost_fraction);
 }
 
-IEEEFloat::opStatus
+APFloat::opStatus
 IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
                                         unsigned sigPartCount, int exp,
                                         roundingMode rounding_mode) {
@@ -3101,7 +3110,7 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
   }
 }
 
-Expected<IEEEFloat::opStatus>
+Expected<APFloat::opStatus>
 IEEEFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
   decimalInfo D;
   opStatus fs;
@@ -3296,7 +3305,7 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
   return false;
 }
 
-Expected<IEEEFloat::opStatus>
+Expected<APFloat::opStatus>
 IEEEFloat::convertFromString(StringRef str, roundingMode rounding_mode) {
   if (str.empty())
     return createError("Invalid string length");
@@ -3655,7 +3664,7 @@ APInt IEEEFloat::convertIEEEFloatToAPInt() const {
   std::array<uint64_t, (S.sizeInBits + 63) / 64> words;
   auto words_iter =
       std::copy_n(mysignificand.begin(), mysignificand.size(), words.begin());
-  if constexpr (significand_mask != 0) {
+  if constexpr (significand_mask != 0 || trailing_significand_bits == 0) {
     // Clear the integer bit.
     words[mysignificand.size() - 1] &= significand_mask;
   }
@@ -4602,7 +4611,7 @@ bool IEEEFloat::isSignaling() const {
 ///
 /// *NOTE* since nextDown(x) = -nextUp(-x), we only implement nextUp with
 /// appropriate sign switching before/after the computation.
-IEEEFloat::opStatus IEEEFloat::next(bool nextDown) {
+APFloat::opStatus IEEEFloat::next(bool nextDown) {
   // If we are performing nextDown, swap sign so we have -x.
   if (nextDown)
     changeSign();
@@ -4784,11 +4793,11 @@ void IEEEFloat::makeQuiet() {
 
 int ilogb(const IEEEFloat &Arg) {
   if (Arg.isNaN())
-    return IEEEFloat::IEK_NaN;
+    return APFloat::IEK_NaN;
   if (Arg.isZero())
-    return IEEEFloat::IEK_Zero;
+    return APFloat::IEK_Zero;
   if (Arg.isInfinity())
-    return IEEEFloat::IEK_Inf;
+    return APFloat::IEK_Inf;
   if (!Arg.isDenormal())
     return Arg.exponent;
 
@@ -4796,11 +4805,11 @@ int ilogb(const IEEEFloat &Arg) {
   int SignificandBits = Arg.getSemantics().precision - 1;
 
   Normalized.exponent += SignificandBits;
-  Normalized.normalize(IEEEFloat::rmNearestTiesToEven, lfExactlyZero);
+  Normalized.normalize(APFloat::rmNearestTiesToEven, lfExactlyZero);
   return Normalized.exponent - SignificandBits;
 }
 
-IEEEFloat scalbn(IEEEFloat X, int Exp, IEEEFloat::roundingMode RoundingMode) {
+IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode RoundingMode) {
   auto MaxExp = X.getSemantics().maxExponent;
   auto MinExp = X.getSemantics().minExponent;
 
@@ -4821,22 +4830,22 @@ IEEEFloat scalbn(IEEEFloat X, int Exp, IEEEFloat::roundingMode RoundingMode) {
   return X;
 }
 
-IEEEFloat frexp(const IEEEFloat &Val, int &Exp, IEEEFloat::roundingMode RM) {
+IEEEFloat frexp(const IEEEFloat &Val, int &Exp, roundingMode RM) {
   Exp = ilogb(Val);
 
   // Quiet signalling nans.
-  if (Exp == IEEEFloat::IEK_NaN) {
+  if (Exp == APFloat::IEK_NaN) {
     IEEEFloat Quiet(Val);
     Quiet.makeQuiet();
     return Quiet;
   }
 
-  if (Exp == IEEEFloat::IEK_Inf)
+  if (Exp == APFloat::IEK_Inf)
     return Val;
 
   // 1 is added because frexp is defined to return a normalized fraction in
   // +/-[0.5, 1.0), rather than the usual +/-[1.0, 2.0).
-  Exp = Exp == IEEEFloat::IEK_Zero ? 0 : Exp + 1;
+  Exp = Exp == APFloat::IEK_Zero ? 0 : Exp + 1;
   return scalbn(Val, -Exp, RM);
 }
 

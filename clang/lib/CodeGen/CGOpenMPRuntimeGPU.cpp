@@ -2274,6 +2274,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_89:
       case OffloadArch::SM_90:
       case OffloadArch::SM_90a:
+      case OffloadArch::SM_100:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:
@@ -2321,6 +2322,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1150:
       case OffloadArch::GFX1151:
       case OffloadArch::GFX1152:
+      case OffloadArch::GFX1153:
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:

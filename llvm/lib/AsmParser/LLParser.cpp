@@ -360,7 +360,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                                               OverloadTys))
           return error(Info.second, "invalid intrinsic signature");
 
-        U.set(Intrinsic::getDeclaration(M, IID, OverloadTys));
+        U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
       }
 
       Info.first->eraseFromParent();
@@ -3202,8 +3202,14 @@ bool LLParser::parseOptionalOperandBundles(
 
       Type *Ty = nullptr;
       Value *Input = nullptr;
-      if (parseType(Ty) || parseValue(Ty, Input, PFS))
+      if (parseType(Ty))
         return true;
+      if (Ty->isMetadataTy()) {
+        if (parseMetadataAsValue(Input, PFS))
+          return true;
+      } else if (parseValue(Ty, Input, PFS)) {
+        return true;
+      }
       Inputs.push_back(Input);
     }
 
@@ -4000,11 +4006,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (!F) {
       // Make a global variable as a placeholder for this reference.
       GlobalValue *&FwdRef =
-          ForwardRefBlockAddresses.insert(std::make_pair(
-                                              std::move(Fn),
-                                              std::map<ValID, GlobalValue *>()))
-              .first->second.insert(std::make_pair(std::move(Label), nullptr))
-              .first->second;
+          ForwardRefBlockAddresses[std::move(Fn)][std::move(Label)];
       if (!FwdRef) {
         unsigned FwdDeclAS;
         if (ExpectedTy) {
@@ -4082,7 +4084,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       auto &FwdRefMap = (Fn.Kind == ValID::t_GlobalID)
                             ? ForwardRefDSOLocalEquivalentIDs
                             : ForwardRefDSOLocalEquivalentNames;
-      GlobalValue *&FwdRef = FwdRefMap.try_emplace(Fn, nullptr).first->second;
+      GlobalValue *&FwdRef = FwdRefMap[Fn];
       if (!FwdRef) {
         FwdRef = new GlobalVariable(*M, Type::getInt8Ty(Context), false,
                                     GlobalValue::InternalLinkage, nullptr, "",
@@ -6950,8 +6952,14 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_and:
   case lltok::kw_xor:
     return parseLogical(Inst, PFS, KeywordVal);
-  case lltok::kw_icmp:
-    return parseCompare(Inst, PFS, KeywordVal);
+  case lltok::kw_icmp: {
+    bool SameSign = EatIfPresent(lltok::kw_samesign);
+    if (parseCompare(Inst, PFS, KeywordVal))
+      return true;
+    if (SameSign)
+      cast<ICmpInst>(Inst)->setSameSign();
+    return false;
+  }
   case lltok::kw_fcmp: {
     FastMathFlags FMF = EatFastMathFlagsIfPresent();
     int Res = parseCompare(Inst, PFS, KeywordVal);

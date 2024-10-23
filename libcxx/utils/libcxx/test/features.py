@@ -795,4 +795,12 @@ DEFAULT_FEATURES += [
             cfg.available_features,
         ),
     ),
+    # Tests that require std::from_chars(floating-point) in the built library
+    Feature(
+        name="availability-fp_from_chars-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-20)",
+            cfg.available_features,
+        ),
+    ),
 ]

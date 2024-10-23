@@ -90,6 +90,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         env = self.dap_server.request_evaluate("foo")["body"]["result"]
         self.assertIn("bar", env)
 
+    @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminalWithObjectEnv(self):
         if not self.isTestSupported():
             return

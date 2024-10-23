@@ -276,7 +276,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     ClHandleICmpExact("msan-handle-icmp-exact",
                       cl::desc("exact handling of relational integer ICmp"),
-                      cl::Hidden, cl::init(false));
+                      cl::Hidden, cl::init(true));
 
 static cl::opt<bool> ClHandleLifetimeIntrinsics(
     "msan-handle-lifetime-intrinsics",
@@ -2750,12 +2750,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // its undefined bits. Let [b0, b1] be the interval of possible values of B.
     // Then (A cmp B) is defined iff (a0 cmp b1) == (a1 cmp b0).
     bool IsSigned = I.isSigned();
-    Value *S1 = IRB.CreateICmp(I.getPredicate(),
-                               getLowestPossibleValue(IRB, A, Sa, IsSigned),
-                               getHighestPossibleValue(IRB, B, Sb, IsSigned));
-    Value *S2 = IRB.CreateICmp(I.getPredicate(),
-                               getHighestPossibleValue(IRB, A, Sa, IsSigned),
-                               getLowestPossibleValue(IRB, B, Sb, IsSigned));
+    Value *Amin = getLowestPossibleValue(IRB, A, Sa, IsSigned);
+    Value *Bmax = getHighestPossibleValue(IRB, B, Sb, IsSigned);
+    Value *S1 = IRB.CreateICmp(I.getPredicate(), Amin, Bmax);
+    Value *Amax = getHighestPossibleValue(IRB, A, Sa, IsSigned);
+    Value *Bmin = getLowestPossibleValue(IRB, B, Sb, IsSigned);
+    Value *S2 = IRB.CreateICmp(I.getPredicate(), Amax, Bmin);
     Value *Si = IRB.CreateXor(S1, S2);
     setShadow(&I, Si);
     setOriginForNaryOp(I);
@@ -2853,9 +2853,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S2Conv =
         IRB.CreateSExt(IRB.CreateICmpNE(S2, getCleanShadow(S2)), S2->getType());
     Value *V2 = I.getOperand(2);
-    Function *Intrin = Intrinsic::getDeclaration(
-        I.getModule(), I.getIntrinsicID(), S2Conv->getType());
-    Value *Shift = IRB.CreateCall(Intrin, {S0, S1, V2});
+    Value *Shift = IRB.CreateIntrinsic(I.getIntrinsicID(), S2Conv->getType(),
+                                       {S0, S1, V2});
     setShadow(&I, IRB.CreateOr(Shift, S2Conv));
     setOriginForNaryOp(I);
   }
@@ -3057,9 +3056,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *Op = I.getArgOperand(0);
     Type *OpType = Op->getType();
-    Function *BswapFunc = Intrinsic::getDeclaration(
-        F.getParent(), Intrinsic::bswap, ArrayRef(&OpType, 1));
-    setShadow(&I, IRB.CreateCall(BswapFunc, getShadow(Op)));
+    setShadow(&I, IRB.CreateIntrinsic(Intrinsic::bswap, ArrayRef(&OpType, 1),
+                                      getShadow(Op)));
     setOrigin(&I, getOrigin(Op));
   }
 
@@ -3287,11 +3285,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       S2_ext = IRB.CreateBitCast(S2_ext, getMMXVectorTy(64));
     }
 
-    Function *ShadowFn = Intrinsic::getDeclaration(
-        F.getParent(), getSignedPackIntrinsic(I.getIntrinsicID()));
-
-    Value *S =
-        IRB.CreateCall(ShadowFn, {S1_ext, S2_ext}, "_msprop_vector_pack");
+    Value *S = IRB.CreateIntrinsic(getSignedPackIntrinsic(I.getIntrinsicID()),
+                                   {}, {S1_ext, S2_ext}, /*FMFSource=*/nullptr,
+                                   "_msprop_vector_pack");
     if (MMXEltSizeInBits)
       S = IRB.CreateBitCast(S, getShadowTy(&I));
     setShadow(&I, S);

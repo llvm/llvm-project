@@ -649,7 +649,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     // medatada, and we don't want them to end up in the output file for static
     // executables.
     if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
-        !canHaveMemtagGlobals()) {
+        !canHaveMemtagGlobals(ctx)) {
       this->sections[i] = &InputSection::discarded;
       continue;
     }
@@ -1156,14 +1156,14 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
         fatal(toString(this) + ": common symbol '" + sym->getName() +
               "' has invalid alignment: " + Twine(value));
       hasCommonSyms = true;
-      sym->resolve(
-          CommonSymbol{this, StringRef(), binding, stOther, type, value, size});
+      sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
+                                     type, value, size});
       continue;
     }
 
     // Handle global defined symbols. Defined::section will be set in postParse.
-    sym->resolve(Defined{this, StringRef(), binding, stOther, type, value, size,
-                         nullptr});
+    sym->resolve(ctx, Defined{ctx, this, StringRef(), binding, stOther, type,
+                              value, size, nullptr});
   }
 
   // Undefined symbols (excluding those defined relative to non-prevailing
@@ -1175,8 +1175,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   for (unsigned i : undefineds) {
     const Elf_Sym &eSym = eSyms[i];
     Symbol *sym = symbols[i];
-    sym->resolve(Undefined{this, StringRef(), eSym.getBinding(), eSym.st_other,
-                           eSym.getType()});
+    sym->resolve(ctx, Undefined{this, StringRef(), eSym.getBinding(),
+                                eSym.st_other, eSym.getType()});
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
   }
@@ -1219,7 +1219,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
       new (symbols[i]) Undefined(this, name, STB_LOCAL, eSym.st_other, type,
                                  /*discardedSecIdx=*/secIdx);
     else
-      new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
+      new (symbols[i]) Defined(ctx, this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
     symbols[i]->partition = 1;
     symbols[i]->isUsedInRegularObj = true;
@@ -1324,8 +1324,8 @@ static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
 }
 
 template <class ELFT>
-static bool isNonCommonDef(ELFKind ekind, MemoryBufferRef mb, StringRef symName,
-                           StringRef archiveName) {
+static bool isNonCommonDef(Ctx &ctx, ELFKind ekind, MemoryBufferRef mb,
+                           StringRef symName, StringRef archiveName) {
   ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(ctx, ekind, mb, archiveName);
   obj->init();
   StringRef stringtable = obj->getStringTable();
@@ -1339,17 +1339,17 @@ static bool isNonCommonDef(ELFKind ekind, MemoryBufferRef mb, StringRef symName,
   return false;
 }
 
-static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
+static bool isNonCommonDef(Ctx &ctx, MemoryBufferRef mb, StringRef symName,
                            StringRef archiveName) {
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
-    return isNonCommonDef<ELF32LE>(ELF32LEKind, mb, symName, archiveName);
+    return isNonCommonDef<ELF32LE>(ctx, ELF32LEKind, mb, symName, archiveName);
   case ELF32BEKind:
-    return isNonCommonDef<ELF32BE>(ELF32BEKind, mb, symName, archiveName);
+    return isNonCommonDef<ELF32BE>(ctx, ELF32BEKind, mb, symName, archiveName);
   case ELF64LEKind:
-    return isNonCommonDef<ELF64LE>(ELF64LEKind, mb, symName, archiveName);
+    return isNonCommonDef<ELF64LE>(ctx, ELF64LEKind, mb, symName, archiveName);
   case ELF64BEKind:
-    return isNonCommonDef<ELF64BE>(ELF64BEKind, mb, symName, archiveName);
+    return isNonCommonDef<ELF64BE>(ctx, ELF64BEKind, mb, symName, archiveName);
   default:
     llvm_unreachable("getELFKind");
   }
@@ -1759,20 +1759,21 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
     Undefined newSym(&f, StringRef(), binding, visibility, type);
-    sym->resolve(newSym);
+    sym->resolve(ctx, newSym);
     sym->referenced = true;
     return;
   }
 
   if (objSym.isCommon()) {
-    sym->resolve(CommonSymbol{&f, StringRef(), binding, visibility, STT_OBJECT,
-                              objSym.getCommonAlignment(),
-                              objSym.getCommonSize()});
+    sym->resolve(ctx, CommonSymbol{ctx, &f, StringRef(), binding, visibility,
+                                   STT_OBJECT, objSym.getCommonAlignment(),
+                                   objSym.getCommonSize()});
   } else {
-    Defined newSym(&f, StringRef(), binding, visibility, type, 0, 0, nullptr);
+    Defined newSym(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
+                   nullptr);
     if (objSym.canBeOmittedFromSymbolTable())
       newSym.exportDynamic = false;
-    sym->resolve(newSym);
+    sym->resolve(ctx, newSym);
   }
 }
 
@@ -1813,7 +1814,7 @@ void BitcodeFile::parseLazy() {
     irSym.Name = uniqueSaver().save(irSym.getName());
     if (!irSym.isUndefined()) {
       auto *sym = ctx.symtab->insert(irSym.getName());
-      sym->resolve(LazySymbol{*this});
+      sym->resolve(ctx, LazySymbol{*this});
       symbols[i] = sym;
     }
   }
@@ -1849,15 +1850,15 @@ void BinaryFile::parse() {
 
   llvm::StringSaver &saver = lld::saver();
 
-  ctx.symtab->addAndCheckDuplicate(Defined{this, saver.save(s + "_start"),
-                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                           0, 0, section});
-  ctx.symtab->addAndCheckDuplicate(Defined{this, saver.save(s + "_end"),
-                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                           data.size(), 0, section});
-  ctx.symtab->addAndCheckDuplicate(Defined{this, saver.save(s + "_size"),
-                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                           data.size(), 0, nullptr});
+  ctx.symtab->addAndCheckDuplicate(
+      ctx, Defined{ctx, this, saver.save(s + "_start"), STB_GLOBAL, STV_DEFAULT,
+                   STT_OBJECT, 0, 0, section});
+  ctx.symtab->addAndCheckDuplicate(
+      ctx, Defined{ctx, this, saver.save(s + "_end"), STB_GLOBAL, STV_DEFAULT,
+                   STT_OBJECT, data.size(), 0, section});
+  ctx.symtab->addAndCheckDuplicate(
+      ctx, Defined{ctx, this, saver.save(s + "_size"), STB_GLOBAL, STV_DEFAULT,
+                   STT_OBJECT, data.size(), 0, nullptr});
 }
 
 InputFile *elf::createInternalFile(Ctx &ctx, StringRef name) {
@@ -1906,7 +1907,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
     symbols[i] = symtab->insert(CHECK(eSyms[i].getName(stringTable), this));
-    symbols[i]->resolve(LazySymbol{*this});
+    symbols[i]->resolve(ctx, LazySymbol{*this});
     if (!lazy)
       break;
   }
@@ -1916,7 +1917,7 @@ bool InputFile::shouldExtractForCommon(StringRef name) const {
   if (isa<BitcodeFile>(this))
     return isBitcodeNonCommonDef(mb, name, archiveName);
 
-  return isNonCommonDef(mb, name, archiveName);
+  return isNonCommonDef(ctx, mb, name, archiveName);
 }
 
 std::string elf::replaceThinLTOSuffix(Ctx &ctx, StringRef path) {

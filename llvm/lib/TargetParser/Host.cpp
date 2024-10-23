@@ -342,6 +342,12 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x63") { // Arm China.
+    return StringSwitch<const char *>(Part)
+        .Case("0x132", "star-mc1")
+        .Default("generic");
+  }
+
   if (Implementer == "0x6d") { // Microsoft Corporation.
     // The Microsoft Azure Cobalt 100 CPU is handled as a Neoverse N2.
     return StringSwitch<const char *>(Part)
@@ -814,6 +820,8 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake:
     case 0xc5:
+    // Arrowlake U:
+    case 0xb5:
       CPU = "arrowlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ARROWLAKE;

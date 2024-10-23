@@ -2073,9 +2073,18 @@ public:
         ":");
     Walk(std::get<OmpObjectList>(x.t));
   }
-  void Unparse(const OmpMapType::Always &) { Word("ALWAYS,"); }
   void Unparse(const OmpMapClause &x) {
-    Walk(std::get<std::optional<OmpMapType>>(x.t), ":");
+    auto &typeMod =
+        std::get<std::optional<std::list<OmpMapClause::TypeModifier>>>(x.t);
+    auto &type = std::get<std::optional<OmpMapClause::Type>>(x.t);
+    Walk(typeMod);
+    if (typeMod.has_value() && type.has_value()) {
+      Put(", ");
+    }
+    Walk(type);
+    if (typeMod.has_value() || type.has_value()) {
+      Put(": ");
+    }
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpScheduleModifier &x) {
@@ -2775,7 +2784,6 @@ public:
   WALK_NESTED_ENUM(OmpScheduleModifierType, ModType) // OMP schedule-modifier
   WALK_NESTED_ENUM(OmpLinearModifier, Type) // OMP linear-modifier
   WALK_NESTED_ENUM(OmpDependenceType, Type) // OMP dependence-type
-  WALK_NESTED_ENUM(OmpMapType, Type) // OMP map-type
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
@@ -2785,6 +2793,8 @@ public:
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
+  WALK_NESTED_ENUM(OmpMapClause, Type) // OMP map-type
+  WALK_NESTED_ENUM(OmpMapClause, TypeModifier) // OMP map-type-modifier
 #undef WALK_NESTED_ENUM
   void Unparse(const ReductionOperator::Operator x) {
     switch (x) {

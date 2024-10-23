@@ -251,6 +251,24 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     } else /*-mno-lasx*/
       Features.push_back("-lasx");
   }
+
+  // Select frecipe feature determined by -m[no-]frecipe.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mfrecipe, options::OPT_mno_frecipe)) {
+    if (A->getOption().matches(options::OPT_mfrecipe))
+      Features.push_back("+frecipe");
+    else
+      Features.push_back("-frecipe");
+  }
+
+  // Select lam-bh feature determined by -m[no-]lam-bh.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mlam_bh, options::OPT_mno_lam_bh)) {
+    if (A->getOption().matches(options::OPT_mlam_bh))
+      Features.push_back("+lam-bh");
+    else
+      Features.push_back("-lam-bh");
+  }
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,
