@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_STRUCTURALHASH_H
 #define LLVM_IR_STRUCTURALHASH_H
 
+#include "llvm/ADT/StableHashing.h"
 #include <cstdint>
 
 namespace llvm {
@@ -21,7 +22,7 @@ namespace llvm {
 class Function;
 class Module;
 
-using IRHash = uint64_t;
+using IRHash = stable_hash;
 
 /// Returns a hash of the function \p F.
 /// \param F The function to hash.
