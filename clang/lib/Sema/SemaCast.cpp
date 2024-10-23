@@ -2950,8 +2950,7 @@ void CastOperation::CheckCStyleCast() {
   if (Self.getASTContext().isDependenceAllowed() &&
       (DestType->isDependentType() || SrcExpr.get()->isTypeDependent() ||
        SrcExpr.get()->isValueDependent())) {
-    assert((DestType->containsErrors() || SrcExpr.get()->containsErrors() ||
-            SrcExpr.get()->containsErrors()) &&
+    assert((DestType->containsErrors() || SrcExpr.get()->containsErrors()) &&
            "should only occur in error-recovery path.");
     assert(Kind == CK_Dependent);
     return;
