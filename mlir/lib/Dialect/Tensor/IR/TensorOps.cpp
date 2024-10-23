@@ -3865,22 +3865,14 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
           llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
                     mixedTiles),
           [](std::tuple<int64_t, OpFoldResult> it) {
-            std::optional<int64_t> constTileSize =
-                getConstantIntValue(std::get<1>(it));
             int64_t shape = std::get<0>(it);
-            if (!constTileSize) {
-              // If specified tile size is dynamic, output shape should
-              // be dynamic too.
-              return ShapedType::isDynamic(shape);
+            if (Attribute attr =
+                    llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
+              IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
+              int64_t staticTileSize = intAttr.getValue().getSExtValue();
+              return shape == staticTileSize;
             }
-            if (ShapedType::isDynamic(shape)) {
-              // For the shape being dynamic when tile size is
-              // specified, return true. In canonical form a constant
-              // tile size should lead to constant shape of the tiled
-              // dimension, but not needed for verification.
-              return true;
-            }
-            return shape == constTileSize.value();
+            return ShapedType::isDynamic(shape);
           })) {
     return op->emitError("mismatch in inner tile sizes specified and shaped of "
                          "tiled dimension in the packed type");
