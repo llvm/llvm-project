@@ -389,9 +389,6 @@ static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
   return Success;
 }
 
-// Zk Is the name of the control vector register Z20-Z23 or Z28-Z31, encoded in
-// the "K:Zk" fields. Z20-Z23 = 000, 001,010, 011  and Z28-Z31 = 100, 101, 110,
-// 111
 static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
                              const MCDisassembler *Decoder) {
   if (RegNo > 7)
