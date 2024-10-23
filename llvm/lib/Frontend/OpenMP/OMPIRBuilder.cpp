@@ -7315,8 +7315,9 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
 
   OpenMPIRBuilder::TargetKernelArgs KArgs;
 
-  auto TaskBodyCB = [&](Value *DeviceID, Value *RTLoc,
-                        IRBuilderBase::InsertPoint TargetTaskAllocaIP) -> Error {
+  auto TaskBodyCB =
+      [&](Value *DeviceID, Value *RTLoc,
+          IRBuilderBase::InsertPoint TargetTaskAllocaIP) -> Error {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = [&]() {
       // emitKernelLaunch makes the necessary runtime call to offload the
       // kernel. We then outline all that code into a separate function

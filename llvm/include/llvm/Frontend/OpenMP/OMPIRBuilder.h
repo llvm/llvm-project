@@ -2389,7 +2389,7 @@ public:
   /// \return an error, if any were triggered during execution.
   using TargetTaskBodyCallbackTy =
       function_ref<Error(Value *DeviceID, Value *RTLoc,
-                        IRBuilderBase::InsertPoint TargetTaskAllocaIP)>;
+                         IRBuilderBase::InsertPoint TargetTaskAllocaIP)>;
 
   /// Generate a target-task for the target construct
   ///
