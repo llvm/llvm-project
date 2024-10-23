@@ -232,6 +232,46 @@ MAKE_INCOMPLETE_CLASS(Match, Match);
 // MAKE_INCOMPLETE_CLASS(Otherwise, );   // missing-in-parser
 MAKE_INCOMPLETE_CLASS(When, When);
 
+List<IteratorSpecifier>
+makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
+                       semantics::SemanticsContext &semaCtx) {
+  List<IteratorSpecifier> specifiers;
+
+  auto &[begin, end, step] = std::get<parser::SubscriptTriplet>(inp.t).t;
+  assert(begin && end && "Expecting begin/end values");
+  evaluate::ExpressionAnalyzer ea{semaCtx};
+
+  MaybeExpr rbegin{ea.Analyze(*begin)}, rend{ea.Analyze(*end)};
+  MaybeExpr rstep;
+  if (step)
+    rstep = ea.Analyze(*step);
+
+  assert(rbegin && rend && "Unable to get range bounds");
+  Range range{{*rbegin, *rend, rstep}};
+
+  auto &tds = std::get<parser::TypeDeclarationStmt>(inp.t);
+  auto &entities = std::get<std::list<parser::EntityDecl>>(tds.t);
+  for (const parser::EntityDecl &ed : entities) {
+    auto &name = std::get<parser::ObjectName>(ed.t);
+    assert(name.symbol && "Expecting symbol for iterator variable");
+    auto *stype = name.symbol->GetType();
+    assert(stype && "Expecting symbol type");
+    IteratorSpecifier spec{{evaluate::DynamicType::From(*stype),
+                            makeObject(name, semaCtx), range}};
+    specifiers.emplace_back(std::move(spec));
+  }
+
+  return specifiers;
+}
+
+Iterator makeIterator(const parser::OmpIteratorModifier &inp,
+                      semantics::SemanticsContext &semaCtx) {
+  Iterator iterator;
+  for (auto &&spec : inp.v)
+    llvm::append_range(iterator, makeIteratorSpecifiers(spec, semaCtx));
+  return iterator;
+}
+
 DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
                                     semantics::SemanticsContext &semaCtx) {
   CLAUSET_ENUM_CONVERT( //
@@ -851,10 +891,24 @@ Map make(const parser::OmpClause::Map &inp,
   );
 
   auto &t0 = std::get<std::optional<std::list<wrapped::TypeModifier>>>(inp.v.t);
-  auto &t1 = std::get<std::optional<wrapped::Type>>(inp.v.t);
-  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &t1 =
+      std::get<std::optional<std::list<parser::OmpIteratorModifier>>>(inp.v.t);
+  auto &t2 = std::get<std::optional<std::list<wrapped::Type>>>(inp.v.t);
+  auto &t3 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  std::optional<Map::MapType> maybeType = maybeApply(convert1, t1);
+  // These should have been diagnosed already.
+  assert((!t1 || t1->size() == 1) && "Only one iterator modifier is allowed");
+  assert((!t2 || t2->size() == 1) && "Only one map type is allowed");
+
+  auto iterator = [&]() -> std::optional<Iterator> {
+    if (t1)
+      return makeIterator(t1->front(), semaCtx);
+    return std::nullopt;
+  }();
+
+  std::optional<Map::MapType> maybeType;
+  if (t2)
+    maybeType = maybeApply(convert1, std::optional<wrapped::Type>(t2->front()));
 
   std::optional<Map::MapTypeModifiers> maybeTypeMods = maybeApply(
       [&](const std::list<wrapped::TypeModifier> &typeMods) {
@@ -867,8 +921,8 @@ Map make(const parser::OmpClause::Map &inp,
 
   return Map{{/*MapType=*/maybeType,
               /*MapTypeModifiers=*/maybeTypeMods,
-              /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-              /*LocatorList=*/makeObjects(t2, semaCtx)}};
+              /*Mapper=*/std::nullopt, /*Iterator=*/std::move(iterator),
+              /*LocatorList=*/makeObjects(t3, semaCtx)}};
 }
 
 // Match: incomplete
