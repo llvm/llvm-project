@@ -1454,12 +1454,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::UINT_TO_FP, VT, Custom);
       setOperationAction(ISD::SINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Custom);
       setOperationAction(ISD::FP_TO_UINT, VT, Custom);
       setOperationAction(ISD::FP_TO_SINT, VT, Custom);
-      setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
-      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::MUL, VT, Custom);
       setOperationAction(ISD::MULHS, VT, Custom);
@@ -2142,8 +2138,6 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FP_ROUND, VT, Default);
   setOperationAction(ISD::FP_TO_SINT, VT, Default);
   setOperationAction(ISD::FP_TO_UINT, VT, Default);
-  setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Default);
-  setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Default);
   setOperationAction(ISD::FRINT, VT, Default);
   setOperationAction(ISD::LRINT, VT, Default);
   setOperationAction(ISD::LLRINT, VT, Default);
@@ -2170,7 +2164,6 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::SIGN_EXTEND, VT, Default);
   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Default);
   setOperationAction(ISD::SINT_TO_FP, VT, Default);
-  setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Default);
   setOperationAction(ISD::SMAX, VT, Default);
   setOperationAction(ISD::SMIN, VT, Default);
   setOperationAction(ISD::SPLAT_VECTOR, VT, Default);
@@ -2181,7 +2174,6 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::TRUNCATE, VT, Default);
   setOperationAction(ISD::UDIV, VT, Default);
   setOperationAction(ISD::UINT_TO_FP, VT, Default);
-  setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Default);
   setOperationAction(ISD::UMAX, VT, Default);
   setOperationAction(ISD::UMIN, VT, Default);
   setOperationAction(ISD::VECREDUCE_ADD, VT, Default);
@@ -4649,8 +4641,8 @@ static bool CanLowerToScalarSVEFPIntConversion(EVT VT) {
 
 /// Lowers a scalar FP conversion (to/from) int to SVE.
 static SDValue LowerScalarFPConversionToSVE(SDValue Op, SelectionDAG &DAG) {
-  bool IsStrict = Op->isStrictFPOpcode();
-  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+  assert(!Op->isStrictFPOpcode() && "strict fp ops not supported");
+  SDValue SrcVal = Op.getOperand(0);
   EVT SrcTy = SrcVal.getValueType();
   EVT DestTy = Op.getValueType();
   EVT SrcVecTy;
@@ -4672,14 +4664,9 @@ static SDValue LowerScalarFPConversionToSVE(SDValue Op, SelectionDAG &DAG) {
   SDValue ZeroIdx = DAG.getVectorIdxConstant(0, dl);
   SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, SrcVecTy,
                             DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
-  Vec = IsStrict ? DAG.getNode(Op.getOpcode(), dl, {DestVecTy, MVT::Other},
-                               {Op.getOperand(0), Vec})
-                 : DAG.getNode(Op.getOpcode(), dl, DestVecTy, Vec);
-  SDValue Scalar =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op.getValueType(), Vec, ZeroIdx);
-  if (IsStrict)
-    return DAG.getMergeValues({Scalar, Vec.getValue(1)}, dl);
-  return Scalar;
+  Vec = DAG.getNode(Op.getOpcode(), dl, DestVecTy, Vec);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op.getValueType(), Vec,
+                     ZeroIdx);
 }
 
 SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
@@ -4690,7 +4677,7 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
   if (SrcVal.getValueType().isVector())
     return LowerVectorFP_TO_INT(Op, DAG);
 
-  if (!Subtarget->isNeonAvailable() &&
+  if (!IsStrict && !Subtarget->isNeonAvailable() &&
       Subtarget->isSVEorStreamingSVEAvailable() &&
       CanLowerToScalarSVEFPIntConversion(SrcVal.getValueType()) &&
       CanLowerToScalarSVEFPIntConversion(Op.getValueType()))
@@ -4999,7 +4986,7 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
 
-  if (!Subtarget->isNeonAvailable() &&
+  if (!IsStrict && !Subtarget->isNeonAvailable() &&
       Subtarget->isSVEorStreamingSVEAvailable() &&
       CanLowerToScalarSVEFPIntConversion(SrcVal.getValueType()) &&
       CanLowerToScalarSVEFPIntConversion(Op.getValueType()))
@@ -28443,12 +28430,7 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
   assert(VT.isScalableVector() && "Only expect to lower scalable vector op!");
 
   SmallVector<SDValue, 4> Operands = {Pg};
-  SDValue Chain{};
   for (const SDValue &V : Op->op_values()) {
-    if (!isa<CondCodeSDNode>(V) && V.getValueType() == MVT::Other) {
-      Chain = V;
-      continue;
-    }
     assert((!V.getValueType().isVector() ||
             V.getValueType().isScalableVector()) &&
            "Only scalable vectors are supported!");
@@ -28458,10 +28440,7 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
   if (isMergePassthruOpcode(NewOp))
     Operands.push_back(DAG.getUNDEF(VT));
 
-  auto NewNode = DAG.getNode(NewOp, DL, VT, Operands, Op->getFlags());
-  if (Chain)
-    return DAG.getMergeValues({NewNode, Chain}, DL);
-  return NewNode;
+  return DAG.getNode(NewOp, DL, VT, Operands, Op->getFlags());
 }
 
 // If a fixed length vector operation has no side effects when applied to

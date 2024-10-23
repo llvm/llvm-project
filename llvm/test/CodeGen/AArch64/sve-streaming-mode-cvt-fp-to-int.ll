@@ -228,10 +228,7 @@ define i64 @f64_to_u64(double %x) {
 define i32 @strict_convert_signed(double %x) {
 ; CHECK-LABEL: strict_convert_signed:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.d
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzs w0, d0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: strict_convert_signed:
@@ -246,10 +243,7 @@ define i32 @strict_convert_signed(double %x) {
 define i32 @strict_convert_unsigned(float %x) {
 ; CHECK-LABEL: strict_convert_unsigned:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzu w0, s0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: strict_convert_unsigned:
