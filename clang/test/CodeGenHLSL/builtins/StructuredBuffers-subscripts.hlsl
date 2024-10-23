@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -O0 %s | FileCheck %s
 
 StructuredBuffer<int> In;
-StructuredBuffer<int> Out;
+RWStructuredBuffer<int> Out;
 
 [numthreads(1,1,1)]
 void main(unsigned GI : SV_GroupIndex) {
