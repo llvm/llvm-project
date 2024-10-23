@@ -798,6 +798,7 @@ public:
   }
 };
 
+// These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
 extern template LLVM_TEMPLATE_ABI GlobalIFunc &
 GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
                   llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
