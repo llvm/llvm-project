@@ -55,21 +55,25 @@ Value getStride(ConversionPatternRewriter &rewriter,
                 const LLVMTypeConverter &typeConverter, MemRefType mType,
                 Value base, Location loc) {
   assert(mType.getRank() >= 2);
-  int64_t last = mType.getRank() - 1;
+  int64_t preLast = mType.getRank() - 2;
   Type llvmInt64Type = IntegerType::get(&typeConverter.getContext(), 64);
   unsigned width = mType.getElementType().getIntOrFloatBitWidth();
   assert(llvm::isPowerOf2_64(width) && width >= 8);
   unsigned bytes = width >> 3;
-  if (mType.isDynamicDim(last)) {
-    // Dynamic size needs code to compute the stride at runtime.
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  getStridesAndOffset(mType, strides, offset);
+  if (strides[preLast] == ShapedType::kDynamic) {
+    // Dynamic stride needs code to compute the stride at runtime.
     MemRefDescriptor memrefDescriptor(base);
     auto attr = rewriter.getI64IntegerAttr(bytes);
     Value scale = rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Type, attr);
     return rewriter.create<LLVM::MulOp>(
-        loc, llvmInt64Type, scale, memrefDescriptor.size(rewriter, loc, last));
+        loc, llvmInt64Type, scale,
+        memrefDescriptor.stride(rewriter, loc, preLast));
   }
-  // Use direct constant for static size.
-  auto attr = rewriter.getI64IntegerAttr(mType.getDimSize(last) * bytes);
+  // Use direct constant for static stride.
+  auto attr = rewriter.getI64IntegerAttr(strides[preLast] * bytes);
   return rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Type, attr);
 }
 
