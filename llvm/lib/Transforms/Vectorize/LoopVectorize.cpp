@@ -2973,6 +2973,9 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   for (const auto &KV : Plan.getLiveOuts())
     KV.second->fixPhi(Plan, State);
 
+  if (!isa<VPRegionBlock>(State.Plan->getEntry()->getSingleSuccessor()))
+    return;
+
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
 
@@ -7562,23 +7565,31 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
 }
 
 // Check if \p RedResult is a ComputeReductionResult instruction, and if it is
-// create a merge phi node for it.
-static void createAndCollectMergePhiForReduction(
-    VPInstruction *RedResult,
-    VPTransformState &State, Loop *OrigLoop, BasicBlock *LoopMiddleBlock,
-    bool VectorizingEpilogue) {
+// create a merge phi node for it and add incoming values from the main vector
+// loop.
+static void updateAndCollectMergePhiForReductionForEpilogueVectorization(
+    VPInstruction *RedResult, VPTransformState &State, Loop *OrigLoop,
+    BasicBlock *LoopMiddleBlock, bool VectorizingEpilogue) {
   if (!RedResult ||
       RedResult->getOpcode() != VPInstruction::ComputeReductionResult)
     return;
 
+  using namespace VPlanPatternMatch;
+  VPValue *ResumePhiVPV =
+      cast<VPInstruction>(*find_if(RedResult->users(), [](VPUser *U) {
+        return match(U, m_VPInstruction<VPInstruction::ResumePhi>(m_VPValue(),
+                                                                  m_VPValue()));
+      }));
+  auto *BCBlockPhi = cast<PHINode>(State.get(ResumePhiVPV, true));
   auto *PhiR = cast<VPReductionPHIRecipe>(RedResult->getOperand(0));
   const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+  if (!VectorizingEpilogue)
+    return;
 
-  Value *FinalValue = State.get(RedResult, VPLane(VPLane::getFirstLane()));
   auto *ResumePhi =
       dyn_cast<PHINode>(PhiR->getStartValue()->getUnderlyingValue());
-  if (VectorizingEpilogue && RecurrenceDescriptor::isAnyOfRecurrenceKind(
-                                 RdxDesc.getRecurrenceKind())) {
+  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
+          RdxDesc.getRecurrenceKind())) {
     auto *Cmp = cast<ICmpInst>(PhiR->getStartValue()->getUnderlyingValue());
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE);
     assert(Cmp->getOperand(1) == RdxDesc.getRecurrenceStartValue());
@@ -7588,40 +7599,15 @@ static void createAndCollectMergePhiForReduction(
          "when vectorizing the epilogue loop, we need a resume phi from main "
          "vector loop");
 
-  // TODO: bc.merge.rdx should not be created here, instead it should be
-  // modeled in VPlan.
   BasicBlock *LoopScalarPreHeader = OrigLoop->getLoopPreheader();
-  // Create a phi node that merges control-flow from the backedge-taken check
-  // block and the middle block.
-  auto *BCBlockPhi =
-      PHINode::Create(FinalValue->getType(), 2, "bc.merge.rdx",
-                      LoopScalarPreHeader->getTerminator()->getIterator());
-
   // If we are fixing reductions in the epilogue loop then we should already
   // have created a bc.merge.rdx Phi after the main vector body. Ensure that
   // we carry over the incoming values correctly.
   for (auto *Incoming : predecessors(LoopScalarPreHeader)) {
-    if (Incoming == LoopMiddleBlock)
-      BCBlockPhi->addIncoming(FinalValue, Incoming);
-    else if (ResumePhi && is_contained(ResumePhi->blocks(), Incoming))
-      BCBlockPhi->addIncoming(ResumePhi->getIncomingValueForBlock(Incoming),
-                              Incoming);
-    else
-      BCBlockPhi->addIncoming(RdxDesc.getRecurrenceStartValue(), Incoming);
+    if (ResumePhi && is_contained(ResumePhi->blocks(), Incoming))
+      BCBlockPhi->setIncomingValueForBlock(
+          Incoming, ResumePhi->getIncomingValueForBlock(Incoming));
   }
-
-  auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-  // TODO: This fixup should instead be modeled in VPlan.
-  // Fix the scalar loop reduction variable with the incoming reduction sum
-  // from the vector body and from the backedge value.
-  int IncomingEdgeBlockIdx =
-      OrigPhi->getBasicBlockIndex(OrigLoop->getLoopLatch());
-  assert(IncomingEdgeBlockIdx >= 0 && "Invalid block index");
-  // Pick the other block.
-  int SelfEdgeBlockIdx = (IncomingEdgeBlockIdx ? 0 : 1);
-  OrigPhi->setIncomingValue(SelfEdgeBlockIdx, BCBlockPhi);
-  Instruction *LoopExitInst = RdxDesc.getLoopExitInstr();
-  OrigPhi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
 }
 
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
@@ -7649,7 +7635,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   LLVM_DEBUG(BestVPlan.dump());
 
   // Perform the actual loop transformation.
-  VPTransformState State(BestVF, BestUF, LI, DT, ILV.Builder, &ILV, &BestVPlan);
+  VPTransformState State(BestVF, BestUF, LI, DT, ILV.Builder, &ILV, &BestVPlan,
+                         Legal->getWidestInductionType());
 
   // 0. Generate SCEV-dependent code into the preheader, including TripCount,
   // before making any changes to the CFG.
@@ -7710,12 +7697,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BestVPlan.execute(&State);
 
   // 2.5 Collect reduction resume values.
-  auto *ExitVPBB =
-      cast<VPBasicBlock>(BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
-  for (VPRecipeBase &R : *ExitVPBB) {
-    createAndCollectMergePhiForReduction(
-        dyn_cast<VPInstruction>(&R), State, OrigLoop,
-        State.CFG.VPBB2IRBB[ExitVPBB], ExpandedSCEVs);
+  if (IsEpilogueVectorization) {
+    auto *ExitVPBB = cast<VPBasicBlock>(
+        BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
+    for (VPRecipeBase &R : *ExitVPBB) {
+      updateAndCollectMergePhiForReductionForEpilogueVectorization(
+          dyn_cast<VPInstruction>(&R), State, OrigLoop,
+          State.CFG.VPBB2IRBB[ExitVPBB], ExpandedSCEVs);
+    }
   }
 
   // 2.6. Maintain Loop Hints
@@ -7727,24 +7716,26 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupVectorized});
 
-  VPBasicBlock *HeaderVPBB =
-      BestVPlan.getVectorLoopRegion()->getEntryBasicBlock();
-  Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
-  if (VectorizedLoopID)
-    L->setLoopID(*VectorizedLoopID);
-  else {
-    // Keep all loop hints from the original loop on the vector loop (we'll
-    // replace the vectorizer-specific hints below).
-    if (MDNode *LID = OrigLoop->getLoopID())
-      L->setLoopID(LID);
+  if (auto *R =
+          dyn_cast<VPRegionBlock>(BestVPlan.getEntry()->getSingleSuccessor())) {
+    VPBasicBlock *HeaderVPBB = R->getEntryBasicBlock();
+    Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
+    if (VectorizedLoopID)
+      L->setLoopID(*VectorizedLoopID);
+    else {
+      // Keep all loop hints from the original loop on the vector loop (we'll
+      // replace the vectorizer-specific hints below).
+      if (MDNode *LID = OrigLoop->getLoopID())
+        L->setLoopID(LID);
 
-    LoopVectorizeHints Hints(L, true, *ORE);
-    Hints.setAlreadyVectorized();
+      LoopVectorizeHints Hints(L, true, *ORE);
+      Hints.setAlreadyVectorized();
+    }
+    TargetTransformInfo::UnrollingPreferences UP;
+    TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
+    if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue)
+      addRuntimeUnrollDisableMetaData(L);
   }
-  TargetTransformInfo::UnrollingPreferences UP;
-  TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
-  if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue)
-    addRuntimeUnrollDisableMetaData(L);
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
@@ -7753,15 +7744,20 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   ILV.printDebugTracesAtEnd();
 
   // 4. Adjust branch weight of the branch in the middle block.
-  auto *MiddleTerm =
-      cast<BranchInst>(State.CFG.VPBB2IRBB[ExitVPBB]->getTerminator());
-  if (MiddleTerm->isConditional() &&
-      hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
-    // Assume that `Count % VectorTripCount` is equally distributed.
-    unsigned TripCount = BestVPlan.getUF() * State.VF.getKnownMinValue();
-    assert(TripCount > 0 && "trip count should not be zero");
-    const uint32_t Weights[] = {1, TripCount - 1};
-    setBranchWeights(*MiddleTerm, Weights, /*IsExpected=*/false);
+  if (auto *R =
+          dyn_cast<VPRegionBlock>(BestVPlan.getEntry()->getSingleSuccessor())) {
+    auto *ExitVPBB = cast<VPBasicBlock>(R->getSingleSuccessor());
+
+    auto *MiddleTerm =
+        cast<BranchInst>(State.CFG.VPBB2IRBB[ExitVPBB]->getTerminator());
+    if (MiddleTerm->isConditional() &&
+        hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+      // Assume that `Count % VectorTripCount` is equally distributed.
+      unsigned TripCount = BestVPlan.getUF() * State.VF.getKnownMinValue();
+      assert(TripCount > 0 && "trip count should not be zero");
+      const uint32_t Weights[] = {1, TripCount - 1};
+      setBranchWeights(*MiddleTerm, Weights, /*IsExpected=*/false);
+    }
   }
 
   return State.ExpandedSCEVs;
@@ -9503,6 +9499,22 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         });
     FinalReductionResult->insertBefore(*MiddleVPBB, IP);
 
+    VPBasicBlock *ScalarPHVPBB = nullptr;
+    if (MiddleVPBB->getNumSuccessors() == 2) {
+      // Order is strict: first is the exit block, second is the scalar
+      // preheader.
+      ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
+    } else {
+      ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
+    }
+
+    VPBuilder ScalarPHBuilder(ScalarPHVPBB);
+    auto *ResumePhiRecipe = ScalarPHBuilder.createNaryOp(
+        VPInstruction::ResumePhi, {FinalReductionResult, PhiR->getStartValue()},
+        {}, "bc.merge.rdx");
+    auto *RedPhi = cast<PHINode>(PhiR->getUnderlyingInstr());
+    Plan->addLiveOut(RedPhi, ResumePhiRecipe);
+
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
     // with a boolean reduction phi node to check if the condition is true in
     // any iteration. The final value is selected by the final
@@ -9556,7 +9568,8 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
       State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
       Kind, cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName("offset.idx");
-  assert(DerivedIV != CanonicalIV && "IV didn't need transforming?");
+  assert((isa<Constant>(CanonicalIV) || DerivedIV != CanonicalIV) &&
+         "IV didn't need transforming?");
 
   State.set(this, DerivedIV, VPLane(0));
 }

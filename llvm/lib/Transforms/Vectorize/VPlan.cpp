@@ -224,9 +224,10 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 
 VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
-                                   InnerLoopVectorizer *ILV, VPlan *Plan)
+                                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                                   Type *CanonicalIVTy)
     : VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType()) {}
+      LVer(nullptr), TypeAnalysis(CanonicalIVTy) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -275,8 +276,8 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     // Place the code for broadcasting invariant variables in the new preheader.
     IRBuilder<>::InsertPointGuard Guard(Builder);
     if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader = CFG.VPBB2IRBB[cast<VPBasicBlock>(
-          Plan->getVectorLoopRegion()->getSinglePredecessor())];
+      BasicBlock *LoopVectorPreHeader =
+          CFG.VPBB2IRBB[cast<VPBasicBlock>(Plan->getEntry())];
       if (LoopVectorPreHeader)
         Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
     }
@@ -417,6 +418,12 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
                                          PrevBB->getParent(), CFG.ExitBB);
   LLVM_DEBUG(dbgs() << "LV: created " << NewBB->getName() << '\n');
 
+  connectToPredecessors(NewBB, CFG);
+  return NewBB;
+}
+
+void VPBasicBlock::connectToPredecessors(BasicBlock *NewBB,
+                                         VPTransformState::CFGState &CFG) {
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
@@ -447,38 +454,14 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
     }
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
   }
-  return NewBB;
 }
-
 void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().size() <= 2 &&
          "VPIRBasicBlock can have at most two successors at the moment!");
   State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
   executeRecipes(State, getIRBasicBlock());
-  if (getSingleSuccessor()) {
-    assert(isa<UnreachableInst>(getIRBasicBlock()->getTerminator()));
-    auto *Br = State->Builder.CreateBr(getIRBasicBlock());
-    Br->setOperand(0, nullptr);
-    getIRBasicBlock()->getTerminator()->eraseFromParent();
-  }
 
-  for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
-    VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
-    BasicBlock *PredBB = State->CFG.VPBB2IRBB[PredVPBB];
-    assert(PredBB && "Predecessor basic-block not found building successor.");
-    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
-
-    auto *PredBBTerminator = PredBB->getTerminator();
-    auto *TermBr = cast<BranchInst>(PredBBTerminator);
-    // Set each forward successor here when it is created, excluding
-    // backedges. A backward successor is set when the branch is created.
-    const auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
-    unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-    assert(!TermBr->getSuccessor(idx) &&
-           "Trying to reset an existing successor block.");
-    TermBr->setSuccessor(idx, IRBB);
-    State->CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, IRBB}});
-  }
+  connectToPredecessors(getIRBasicBlock(), State->CFG);
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
@@ -962,7 +945,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
-  assert(VFxUF.getNumUsers() && "VFxUF expected to always have users");
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
     Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
@@ -1030,8 +1012,13 @@ void VPlan::execute(VPTransformState *State) {
   // skeleton creation, so we can only create the VPIRBasicBlocks now during
   // VPlan execution rather than earlier during VPlan construction.
   BasicBlock *MiddleBB = State->CFG.ExitBB;
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+  VPBlockBase *Leaf = nullptr;
+  for (VPBlockBase *VPB : vp_depth_first_shallow(getEntry()))
+    if (VPB->getNumSuccessors() == 0) {
+      Leaf = VPB;
+      break;
+    }
+  VPBasicBlock *MiddleVPBB = cast<VPBasicBlock>(Leaf->getSinglePredecessor());
   // Find the VPBB for the scalar preheader, relying on the current structure
   // when creating the middle block and its successrs: if there's a single
   // predecessor, it must be the scalar preheader. Otherwise, the second
@@ -1059,53 +1046,59 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
     Block->execute(State);
 
-  VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
-  BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
+  if (auto *LoopRegion =
+          dyn_cast<VPRegionBlock>(getEntry()->getSingleSuccessor())) {
+    VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
+    BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
-  // Fix the latch value of canonical, reduction and first-order recurrences
-  // phis in the vector loop.
-  VPBasicBlock *Header = getVectorLoopRegion()->getEntryBasicBlock();
-  for (VPRecipeBase &R : Header->phis()) {
-    // Skip phi-like recipes that generate their backedege values themselves.
-    if (isa<VPWidenPHIRecipe>(&R))
-      continue;
+    // Fix the latch value of canonical, reduction and first-order recurrences
+    // phis in the vector loop.
+    VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+    for (VPRecipeBase &R : Header->phis()) {
+      // Skip phi-like recipes that generate their backedege values themselves.
+      if (isa<VPWidenPHIRecipe>(&R))
+        continue;
 
-    if (isa<VPWidenPointerInductionRecipe>(&R) ||
-        isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-      PHINode *Phi = nullptr;
-      if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-        Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
-      } else {
-        auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-               "recipe generating only scalars should have been replaced");
-        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-        Phi = cast<PHINode>(GEP->getPointerOperand());
+      if (isa<VPWidenPointerInductionRecipe>(&R) ||
+          isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+        PHINode *Phi = nullptr;
+        if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+          Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
+        } else {
+          auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
+          assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+                 "recipe generating only scalars should have been replaced");
+          auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
+          Phi = cast<PHINode>(GEP->getPointerOperand());
+        }
+
+        Phi->setIncomingBlock(1, VectorLatchBB);
+
+        // Move the last step to the end of the latch block. This ensures
+        // consistent placement of all induction updates.
+        Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
+        Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+
+        // Use the steps for the last part as backedge value for the induction.
+        if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+          Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
+        continue;
       }
 
-      Phi->setIncomingBlock(1, VectorLatchBB);
-
-      // Move the last step to the end of the latch block. This ensures
-      // consistent placement of all induction updates.
-      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
-
-      // Use the steps for the last part as backedge value for the induction.
-      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
-      continue;
+      // For  canonical IV, first-order recurrences and in-order reduction phis,
+      // only a single part is generated, which provides the last part from the
+      // previous iteration. For non-ordered reductions all UF parts are
+      // generated.
+      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+      bool NeedsScalar =
+          isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
+          (isa<VPReductionPHIRecipe>(PhiR) &&
+           cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+      Value *Phi = State->get(PhiR, NeedsScalar);
+      Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
-
-    auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-    bool NeedsScalar =
-        isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
-        (isa<VPReductionPHIRecipe>(PhiR) &&
-         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
-    Value *Phi = State->get(PhiR, NeedsScalar);
-    Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
-    cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
   }
-
   State->CFG.DTU.flush();
   assert(State->CFG.DTU.getDomTree().verify(
              DominatorTree::VerificationLevel::Fast) &&
