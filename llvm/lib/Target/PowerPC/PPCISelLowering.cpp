@@ -17367,36 +17367,25 @@ SDValue PPCTargetLowering::LowerFRAMEADDR(SDValue Op,
   return FrameAddr;
 }
 
-#define GET_REGISTER_MATCHER
-#include "PPCGenAsmMatcher.inc"
-
-Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
+// FIXME? Maybe this could be a TableGen attribute on some registers and
+// this table could be generated automatically from RegInfo.
+Register PPCTargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                               const MachineFunction &MF) const {
-  bool IsPPC64 = Subtarget.isPPC64();
+  bool isPPC64 = Subtarget.isPPC64();
 
-  bool Is64Bit = IsPPC64 && VT == LLT::scalar(64);
-  if (!Is64Bit && VT != LLT::scalar(32))
+  bool is64Bit = isPPC64 && VT == LLT::scalar(64);
+  if (!is64Bit && VT != LLT::scalar(32))
     report_fatal_error("Invalid register global variable type");
 
-  Register Reg = MatchRegisterName(RegName);
-  if (!Reg)
-    report_fatal_error(
-        Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
+  Register Reg = StringSwitch<Register>(RegName)
+                     .Case("r1", is64Bit ? PPC::X1 : PPC::R1)
+                     .Case("r2", isPPC64 ? Register() : PPC::R2)
+                     .Case("r13", (is64Bit ? PPC::X13 : PPC::R13))
+                     .Default(Register());
 
-  // FIXME: These registers are not flagged as reserved and we can generate
-  // code for `-O0` but not for `-O2`.  Need followup investigation as to why.
-  if ((IsPPC64 && Reg == PPC::R2) || Reg == PPC::R0)
-    report_fatal_error(Twine("Trying to reserve an invalid register \"" +
-                             StringRef(RegName) + "\"."));
-
-  // Convert GPR to GP8R register for 64bit.
-  if (Is64Bit && StringRef(RegName).starts_with_insensitive("r"))
-    Reg = Reg.id() - PPC::R0 + PPC::X0;
-
-  if (Subtarget.getRegisterInfo()->getReservedRegs(MF).test(Reg))
-    report_fatal_error(Twine("Trying to obtain a reserved register \"" +
-                             StringRef(RegName) + "\"."));
-  return Reg;
+  if (Reg)
+    return Reg;
+  report_fatal_error("Invalid register name global variable");
 }
 
 bool PPCTargetLowering::isAccessedAsGotIndirect(SDValue GA) const {
