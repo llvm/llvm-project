@@ -1392,6 +1392,65 @@ template <typename Ret, typename... Args> class packaged_task<Ret(Args...)> {
             typename = std::enable_if_t<!is_same_v<std::variant<Types...>, decay_t<T>>>>
     variant& operator=(T&&);
   };
+
+  class bad_any_cast;
+ 
+  // class any
+  class any;
+ 
+  // non-member functions
+  void swap(any& x, any& y) noexcept;
+ 
+  template<class T, class... Args>
+    any make_any(Args&&... args);
+  template<class T, class U, class... Args>
+    any make_any(initializer_list<U> il, Args&&... args);
+ 
+  template<class T>
+    T any_cast(const any& operand);
+  template<class T>
+    T any_cast(any& operand);
+  template<class T>
+    T any_cast(any&& operand);
+ 
+  template<class T>
+    const T* any_cast(const any* operand) noexcept;
+  template<class T>
+    T* any_cast(any* operand) noexcept;
+
+  class any {
+  public:
+    // construction and destruction
+    constexpr any() noexcept;
+ 
+    any(const any& other);
+    any(any&& other) noexcept;
+ 
+    template<class T>
+    any(T&& value);
+ 
+    ~any();
+ 
+    // assignments
+    any& operator=(const any& rhs);    
+    any& operator=(any&& rhs) noexcept;
+ 
+    template<typename T,
+            typename = std::enable_if_t<!is_same_v<std::any, decay_t<T>>>>
+    any& operator=(T&& rhs);
+ 
+    // modifiers
+    template<class T, class... Args>
+      decay_t<T>& emplace(Args&&...);
+    template<class T, class U, class... Args>
+      decay_t<T>& emplace(initializer_list<U>, Args&&...);
+    void reset() noexcept;
+    void swap(any& rhs) noexcept;
+ 
+    // observers
+    bool has_value() const noexcept;
+  };
+
   #endif
 
 } // namespace std
