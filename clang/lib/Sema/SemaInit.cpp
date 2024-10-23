@@ -9954,7 +9954,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     auto SynthesizeAggrGuide = [&](InitListExpr *ListInit) {
       auto *Pattern = Template;
       while (Pattern->getInstantiatedFromMemberTemplate()) {
-        if (Pattern->hasMemberSpecialization())
+        if (Pattern->isMemberSpecialization())
           break;
         Pattern = Pattern->getInstantiatedFromMemberTemplate();
       }

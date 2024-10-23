@@ -993,7 +993,17 @@ ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization*>())
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
-  return SpecializedTemplate.get<ClassTemplateDecl*>();
+  return SpecializedTemplate.get<ClassTemplateDecl *>()->getMostRecentDecl();
+}
+
+llvm::PointerUnion<ClassTemplateDecl *,
+                   ClassTemplatePartialSpecializationDecl *>
+ClassTemplateSpecializationDecl::getSpecializedTemplateOrPartial() const {
+  if (const auto *PartialSpec =
+          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+    return PartialSpec->PartialSpecialization->getMostRecentDecl();
+
+  return SpecializedTemplate.get<ClassTemplateDecl *>()->getMostRecentDecl();
 }
 
 SourceRange
@@ -1405,7 +1415,16 @@ VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
-  return SpecializedTemplate.get<VarTemplateDecl *>();
+  return SpecializedTemplate.get<VarTemplateDecl *>()->getMostRecentDecl();
+}
+
+llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
+VarTemplateSpecializationDecl::getSpecializedTemplateOrPartial() const {
+  if (const auto *PartialSpec =
+          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+    return PartialSpec->PartialSpecialization->getMostRecentDecl();
+
+  return SpecializedTemplate.get<VarTemplateDecl *>()->getMostRecentDecl();
 }
 
 SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
