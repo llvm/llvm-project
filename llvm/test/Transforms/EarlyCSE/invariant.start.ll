@@ -472,15 +472,22 @@ define void @test_dse_after_load(ptr %p, i1 %cnd) {
 ; typed due to the user of a Value to represent the address.  Note that other
 ; passes will canonicalize away the bitcasts in this example.
 define i32 @test_false_negative_types(ptr %p) {
-; CHECK-LABEL: define {{[^@]+}}@test_false_negative_types
-; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[V2F:%.*]] = load float, ptr [[P]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = bitcast float [[V2F]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; NO_ASSUME-LABEL: define {{[^@]+}}@test_false_negative_types
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
+; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
+; NO_ASSUME-NEXT:    [[TMP2:%.*]] = bitcast i32 [[V1]] to float
+; NO_ASSUME-NEXT:    call void @clobber()
+; NO_ASSUME-NEXT:    ret i32 0
+;
+; USE_ASSUME-LABEL: define {{[^@]+}}@test_false_negative_types
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
+; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
+; USE_ASSUME-NEXT:    [[TMP2:%.*]] = bitcast i32 [[V1]] to float
+; USE_ASSUME-NEXT:    call void @clobber()
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 4) ]
+; USE_ASSUME-NEXT:    ret i32 0
 ;
   call ptr @llvm.invariant.start.p0(i64 4, ptr %p)
   %v1 = load i32, ptr %p
@@ -571,13 +578,13 @@ define i32 @test_false_negative_scope(ptr %p) {
 define i32 @test_invariant_load_scope(ptr %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_invariant_load_scope
 ; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !invariant.load !4
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !invariant.load [[META4:![0-9]+]]
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_invariant_load_scope
 ; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !invariant.load !4
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !invariant.load [[META4:![0-9]+]]
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
@@ -589,7 +596,6 @@ define i32 @test_invariant_load_scope(ptr %p) {
   ret i32 %sub
 }
 
-; USE_ASSUME: declare void @llvm.assume(i1 noundef)
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"float", !2, i64 0}

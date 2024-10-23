@@ -4,10 +4,8 @@
 define i32 @different_types_load(ptr %p) {
 ; CHECK-LABEL: @different_types_load(
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[P]], align 4
-; CHECK-NEXT:    [[V2_C:%.*]] = trunc i64 [[V2]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2_C]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[V1]] to i64
+; CHECK-NEXT:    ret i32 0
 ;
   %v1 = load i32, ptr %p
   %v2 = load i64, ptr %p
@@ -36,10 +34,8 @@ define i32 @different_types_vector_load(ptr %p) {
 define i32 @different_types_store(ptr %p, i32 %a) {
 ; CHECK-LABEL: @different_types_store(
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[P]], align 4
-; CHECK-NEXT:    [[V2_C:%.*]] = trunc i64 [[V2]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A]], [[V2_C]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    ret i32 0
 ;
   store i32 %a, ptr %p
   %v2 = load i64, ptr %p
@@ -51,7 +47,7 @@ define i32 @different_types_store(ptr %p, i32 %a) {
 define i32 @different_elt_types_vector_load(ptr %p, <4 x i1> %c) {
 ; CHECK-LABEL: @different_elt_types_vector_load(
 ; CHECK-NEXT:    [[V1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[P:%.*]], i32 4, <4 x i1> [[C:%.*]], <4 x i32> poison)
-; CHECK-NEXT:    [[V2:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> [[C]], <4 x float> poison)
+; CHECK-NEXT:    [[V2:%.*]] = bitcast <4 x i32> [[V1]] to <4 x float>
 ; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[V1]], i32 0
 ; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x float> [[V2]], i32 0
 ; CHECK-NEXT:    [[E2I:%.*]] = fptosi float [[E2]] to i32
@@ -70,7 +66,7 @@ define i32 @different_elt_types_vector_load(ptr %p, <4 x i1> %c) {
 define float @different_elt_types_vector_store_load(ptr %p, <4 x i32> %v1, <4 x i1> %c) {
 ; CHECK-LABEL: @different_elt_types_vector_store_load(
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[V1:%.*]], ptr [[P:%.*]], i32 4, <4 x i1> [[C:%.*]])
-; CHECK-NEXT:    [[V2:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> [[C]], <4 x float> poison)
+; CHECK-NEXT:    [[V2:%.*]] = bitcast <4 x i32> [[V1]] to <4 x float>
 ; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x float> [[V2]], i32 0
 ; CHECK-NEXT:    ret float [[E2]]
 ;

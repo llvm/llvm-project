@@ -31,6 +31,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -964,32 +965,45 @@ private:
   bool overridingStores(const ParseMemoryInst &Earlier,
                         const ParseMemoryInst &Later);
 
-  Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
-    // TODO: We could insert relevant casts on type mismatch here.
-    if (auto *LI = dyn_cast<LoadInst>(Inst))
-      return LI->getType() == ExpectedType ? LI : nullptr;
-    if (auto *SI = dyn_cast<StoreInst>(Inst)) {
-      Value *V = SI->getValueOperand();
-      return V->getType() == ExpectedType ? V : nullptr;
-    }
-    assert(isa<IntrinsicInst>(Inst) && "Instruction not supported");
-    auto *II = cast<IntrinsicInst>(Inst);
-    if (isHandledNonTargetIntrinsic(II->getIntrinsicID()))
-      return getOrCreateResultNonTargetMemIntrinsic(II, ExpectedType);
-    return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
-  }
+  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType) const {
+    if (!isa<IntrinsicInst, LoadInst, StoreInst>(Inst))
+      llvm_unreachable("Instruction not supported");
 
-  Value *getOrCreateResultNonTargetMemIntrinsic(IntrinsicInst *II,
-                                                Type *ExpectedType) const {
-    // TODO: We could insert relevant casts on type mismatch here.
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::masked_load:
-      return II->getType() == ExpectedType ? II : nullptr;
-    case Intrinsic::masked_store: {
-      Value *V = II->getOperand(0);
-      return V->getType() == ExpectedType ? V : nullptr;
+    // The load or the store's first operand.
+    Value *V;
+    if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
+      if (isHandledNonTargetIntrinsic(II->getIntrinsicID()))
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::masked_load:
+          V = II;
+          break;
+        case Intrinsic::masked_store:
+          V = II->getOperand(0);
+          break;
+        default:
+          return nullptr;
+        }
+      else
+        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
+    } else {
+      V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();
     }
-    }
+
+    Type *ActualType = V->getType();
+    BasicBlock *TheBB = Inst->getParent();
+
+    // First handle the case when no cast is required.
+    if (ActualType == ExpectedType)
+      return V;
+
+    // Try to create BitCast, SExt, or Trunc.
+    IRBuilder<> Builder(TheBB, std::next(Inst->getIterator()));
+    if (CastInst::castIsValid(Instruction::BitCast, V, ExpectedType))
+      return Builder.CreateBitCast(V, ExpectedType);
+    if (CastInst::castIsValid(Instruction::SExt, V, ExpectedType))
+      return Builder.CreateSExt(V, ExpectedType);
+    if (CastInst::castIsValid(Instruction::Trunc, V, ExpectedType))
+      return Builder.CreateTrunc(V, ExpectedType);
     return nullptr;
   }
 
