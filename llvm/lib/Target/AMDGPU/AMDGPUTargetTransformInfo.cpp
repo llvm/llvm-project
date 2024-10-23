@@ -79,7 +79,7 @@ static cl::opt<size_t> InlineMaxBB(
 static cl::opt<unsigned> MemcpyLoopUnroll(
     "amdgpu-memcpy-loop-unroll",
     cl::desc("Unroll factor (affecting 4x32-bit operations) to use for memory "
-             "operations when lowering memcpy as a loop, must be a power of 2"),
+             "operations when lowering memcpy as a loop"),
     cl::init(16), cl::Hidden);
 
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
