@@ -2657,7 +2657,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_monotonic_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -2671,7 +2670,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_monotonic_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -2839,7 +2837,6 @@ define amdgpu_kernel void @local_singlethread_acquire_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acquire_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -2853,7 +2850,6 @@ define amdgpu_kernel void @local_singlethread_acquire_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acquire_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3021,7 +3017,6 @@ define amdgpu_kernel void @local_singlethread_release_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_release_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3035,7 +3030,6 @@ define amdgpu_kernel void @local_singlethread_release_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_release_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3203,7 +3197,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acq_rel_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3217,7 +3210,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acq_rel_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3385,7 +3377,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_seq_cst_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3399,7 +3390,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_seq_cst_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3567,7 +3557,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_monotonic_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3581,7 +3570,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_monotonic_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3749,7 +3737,6 @@ define amdgpu_kernel void @local_singlethread_acquire_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acquire_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3763,7 +3750,6 @@ define amdgpu_kernel void @local_singlethread_acquire_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acquire_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3931,7 +3917,6 @@ define amdgpu_kernel void @local_singlethread_release_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_release_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -3945,7 +3930,6 @@ define amdgpu_kernel void @local_singlethread_release_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_release_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4113,7 +4097,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acq_rel_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4127,7 +4110,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acq_rel_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4295,7 +4277,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_seq_cst_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4309,7 +4290,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_seq_cst_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4477,7 +4457,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_monotonic_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4491,7 +4470,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_monotonic_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4659,7 +4637,6 @@ define amdgpu_kernel void @local_singlethread_acquire_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acquire_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4673,7 +4650,6 @@ define amdgpu_kernel void @local_singlethread_acquire_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acquire_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4841,7 +4817,6 @@ define amdgpu_kernel void @local_singlethread_release_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_release_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4855,7 +4830,6 @@ define amdgpu_kernel void @local_singlethread_release_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_release_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -5023,7 +4997,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acq_rel_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -5037,7 +5010,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acq_rel_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -5205,7 +5177,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_seq_cst_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -5219,7 +5190,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_seq_cst_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -5420,7 +5390,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_monotonic_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_monotonic_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -5437,7 +5406,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_monotonic_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_monotonic_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -5643,7 +5611,6 @@ define amdgpu_kernel void @local_singlethread_acquire_monotonic_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acquire_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -5660,7 +5627,6 @@ define amdgpu_kernel void @local_singlethread_acquire_monotonic_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acquire_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -5866,7 +5832,6 @@ define amdgpu_kernel void @local_singlethread_release_monotonic_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_release_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -5883,7 +5848,6 @@ define amdgpu_kernel void @local_singlethread_release_monotonic_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_release_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6089,7 +6053,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_monotonic_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acq_rel_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6106,7 +6069,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_monotonic_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acq_rel_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6312,7 +6274,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_monotonic_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_seq_cst_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6329,7 +6290,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_monotonic_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_seq_cst_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6535,7 +6495,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_acquire_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_monotonic_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6552,7 +6511,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_acquire_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_monotonic_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6758,7 +6716,6 @@ define amdgpu_kernel void @local_singlethread_acquire_acquire_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acquire_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6775,7 +6732,6 @@ define amdgpu_kernel void @local_singlethread_acquire_acquire_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acquire_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6981,7 +6937,6 @@ define amdgpu_kernel void @local_singlethread_release_acquire_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_release_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -6998,7 +6953,6 @@ define amdgpu_kernel void @local_singlethread_release_acquire_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_release_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -7204,7 +7158,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_acquire_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acq_rel_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -7221,7 +7174,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_acquire_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acq_rel_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -7427,7 +7379,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_acquire_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_seq_cst_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -7444,7 +7395,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_acquire_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_seq_cst_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -7650,7 +7600,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_monotonic_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -7667,7 +7616,6 @@ define amdgpu_kernel void @local_singlethread_monotonic_seq_cst_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_monotonic_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -7873,7 +7821,6 @@ define amdgpu_kernel void @local_singlethread_acquire_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acquire_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -7890,7 +7837,6 @@ define amdgpu_kernel void @local_singlethread_acquire_seq_cst_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acquire_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -8096,7 +8042,6 @@ define amdgpu_kernel void @local_singlethread_release_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_release_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -8113,7 +8058,6 @@ define amdgpu_kernel void @local_singlethread_release_seq_cst_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_release_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -8319,7 +8263,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -8336,7 +8279,6 @@ define amdgpu_kernel void @local_singlethread_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -8542,7 +8484,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -8559,7 +8500,6 @@ define amdgpu_kernel void @local_singlethread_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -11225,7 +11165,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_monotonic_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_monotonic_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11239,7 +11178,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_monotonic_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_monotonic_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11407,7 +11345,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acquire_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11421,7 +11358,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_acquire_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11589,7 +11525,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_release_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11603,7 +11538,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_release_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11771,7 +11705,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acq_rel_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11785,7 +11718,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_acq_rel_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11953,7 +11885,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_seq_cst_monotonic_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -11967,7 +11898,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_seq_cst_monotonic_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12135,7 +12065,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_monotonic_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12149,7 +12078,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_monotonic_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12317,7 +12245,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acquire_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12331,7 +12258,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_acquire_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12499,7 +12425,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_release_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12513,7 +12438,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_release_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12681,7 +12605,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acq_rel_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12695,7 +12618,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_acq_rel_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12863,7 +12785,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_acquire_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_seq_cst_acquire_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -12877,7 +12798,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_acquire_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_seq_cst_acquire_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13045,7 +12965,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_monotonic_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13059,7 +12978,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_monotonic_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13227,7 +13145,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acquire_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13241,7 +13158,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_acquire_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13409,7 +13325,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_release_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13423,7 +13338,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_release_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13591,7 +13505,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acq_rel_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13605,7 +13518,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_acq_rel_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13773,7 +13685,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX12-WGP-LABEL: local_singlethread_one_as_seq_cst_seq_cst_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13787,7 +13698,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX12-CU-LABEL: local_singlethread_one_as_seq_cst_seq_cst_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -13988,7 +13898,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_monotonic_ret_cmp
 ; GFX12-WGP-LABEL: local_singlethread_one_as_monotonic_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14005,7 +13914,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_monotonic_ret_cmp
 ; GFX12-CU-LABEL: local_singlethread_one_as_monotonic_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14211,7 +14119,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_monotonic_ret_cmpxc
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acquire_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14228,7 +14135,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_monotonic_ret_cmpxc
 ; GFX12-CU-LABEL: local_singlethread_one_as_acquire_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14434,7 +14340,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_monotonic_ret_cmpxc
 ; GFX12-WGP-LABEL: local_singlethread_one_as_release_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14451,7 +14356,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_monotonic_ret_cmpxc
 ; GFX12-CU-LABEL: local_singlethread_one_as_release_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14657,7 +14561,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_monotonic_ret_cmpxc
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acq_rel_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14674,7 +14577,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_monotonic_ret_cmpxc
 ; GFX12-CU-LABEL: local_singlethread_one_as_acq_rel_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14880,7 +14782,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_monotonic_ret_cmpxc
 ; GFX12-WGP-LABEL: local_singlethread_one_as_seq_cst_monotonic_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -14897,7 +14798,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_monotonic_ret_cmpxc
 ; GFX12-CU-LABEL: local_singlethread_one_as_seq_cst_monotonic_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15103,7 +15003,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_acquire_ret_cmpxc
 ; GFX12-WGP-LABEL: local_singlethread_one_as_monotonic_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15120,7 +15019,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_acquire_ret_cmpxc
 ; GFX12-CU-LABEL: local_singlethread_one_as_monotonic_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15326,7 +15224,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_acquire_ret_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acquire_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15343,7 +15240,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_acquire_ret_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_acquire_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15549,7 +15445,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_acquire_ret_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_release_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15566,7 +15461,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_acquire_ret_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_release_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15772,7 +15666,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_acquire_ret_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acq_rel_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15789,7 +15682,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_acquire_ret_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_acq_rel_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -15995,7 +15887,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_acquire_ret_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_seq_cst_acquire_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16012,7 +15903,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_acquire_ret_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_seq_cst_acquire_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16218,7 +16108,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_seq_cst_ret_cmpxc
 ; GFX12-WGP-LABEL: local_singlethread_one_as_monotonic_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16235,7 +16124,6 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_seq_cst_ret_cmpxc
 ; GFX12-CU-LABEL: local_singlethread_one_as_monotonic_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16441,7 +16329,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_seq_cst_ret_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acquire_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16458,7 +16345,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_seq_cst_ret_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_acquire_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16664,7 +16550,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_seq_cst_ret_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_release_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16681,7 +16566,6 @@ define amdgpu_kernel void @local_singlethread_one_as_release_seq_cst_ret_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_release_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16887,7 +16771,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -16904,7 +16787,6 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -17110,7 +16992,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg
 ; GFX12-WGP-LABEL: local_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -17127,7 +17008,6 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg
 ; GFX12-CU-LABEL: local_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[4:5], 0x8

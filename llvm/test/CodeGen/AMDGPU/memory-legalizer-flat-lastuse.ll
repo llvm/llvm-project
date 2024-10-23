@@ -6,7 +6,6 @@ define amdgpu_kernel void @flat_last_use_load_0(ptr %in, ptr %out) {
 ; GFX12-LABEL: flat_last_use_load_0:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -30,25 +29,23 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8
 ; GFX12-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-NEXT:    s_mov_b32 s2, 2
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
 ; GFX12-NEXT:    s_mov_b32 s2, 0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    ; implicit-def: $sgpr2
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s3, s4
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-NEXT:    s_mov_b32 s2, s5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v2
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_add_co_u32 v0, s3, s3, v0
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v2, s2, s2, v1, s3
 ; GFX12-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v2
@@ -70,7 +67,6 @@ define amdgpu_kernel void @flat_last_use_and_volatile_load(ptr %in, ptr %out) {
 ; GFX12-LABEL: flat_last_use_and_volatile_load:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -95,7 +91,6 @@ define amdgpu_kernel void @flat_last_use_and_nontemporal_load(ptr %in, ptr %out)
 ; GFX12-LABEL: flat_last_use_and_nontemporal_load:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-NEXT:    s_wait_kmcnt 0x0

@@ -420,12 +420,13 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v2, v0, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v0, s0, s0, v0
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    v_cmpx_ne_u32_e32 0, v2
@@ -844,7 +845,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_vccnz .LBB7_2
 ; GCN-NEXT:  ; %bb.1: ; %bb1
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0 glc
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 3
 ; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
@@ -883,7 +884,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GFX11-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB7_2
 ; GFX11-NEXT:  ; %bb.1: ; %bb1
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0 glc dlc
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 3
 ; GFX11-NEXT:    s_cselect_b64 s[0:1], -1, 0
@@ -925,7 +926,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GFX12-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_vccnz .LBB7_2
 ; GFX12-NEXT:  ; %bb.1: ; %bb1
-; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x0 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 3
 ; GFX12-NEXT:    s_cselect_b32 s0, -1, 0
@@ -1498,7 +1499,6 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
