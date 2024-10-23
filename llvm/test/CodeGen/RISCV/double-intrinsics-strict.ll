@@ -57,7 +57,7 @@ define double @sqrt_f64(double %a) nounwind strictfp {
   ret double %1
 }
 
-declare double @llvm.experimental.constrained.powi.f64.i32(double, i32, metadata, metadata)
+declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, metadata)
 
 define double @powi_f64(double %a, i32 %b) nounwind strictfp {
 ; RV32IFD-LABEL: powi_f64:
@@ -116,7 +116,7 @@ define double @powi_f64(double %a, i32 %b) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.powi.f64.i32(double %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.powi.f64(double %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
 
