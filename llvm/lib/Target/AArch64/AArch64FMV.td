@@ -37,7 +37,7 @@ class FMVExtension<string n, string b, string f, int p> {
     int Priority = p;
 }
 
-def : FMVExtension<"aes", "FEAT_AES", "+fp-armv8,+neon", 150>;
+def : FMVExtension<"aes", "FEAT_PMULL", "+aes,+fp-armv8,+neon", 150>;
 def : FMVExtension<"bf16", "FEAT_BF16", "+bf16", 280>;
 def : FMVExtension<"bti", "FEAT_BTI", "+bti", 510>;
 def : FMVExtension<"crc", "FEAT_CRC", "+crc", 110>;
@@ -63,7 +63,6 @@ def : FMVExtension<"lse", "FEAT_LSE", "+lse", 80>;
 def : FMVExtension<"memtag", "FEAT_MEMTAG2", "+mte", 440>;
 def : FMVExtension<"memtag3", "FEAT_MEMTAG3", "+mte", 460>;
 def : FMVExtension<"mops", "FEAT_MOPS", "+mops", 650>;
-def : FMVExtension<"pmull", "FEAT_PMULL", "+aes,+fp-armv8,+neon", 160>;
 def : FMVExtension<"predres", "FEAT_PREDRES", "+predres", 480>;
 def : FMVExtension<"rcpc", "FEAT_RCPC", "+rcpc", 230>;
 def : FMVExtension<"rcpc2", "FEAT_RCPC2", "+rcpc", 240>;
@@ -86,9 +85,8 @@ def : FMVExtension<"sve-bf16", "FEAT_SVE_BF16", "+sve,+bf16,+fullfp16,+fp-armv8,
 def : FMVExtension<"sve-ebf16", "FEAT_SVE_EBF16", "+sve,+bf16,+fullfp16,+fp-armv8,+neon", 330>;
 def : FMVExtension<"sve-i8mm", "FEAT_SVE_I8MM", "+sve,+i8mm,+fullfp16,+fp-armv8,+neon", 340>;
 def : FMVExtension<"sve2", "FEAT_SVE2", "+sve2,+sve,+fullfp16,+fp-armv8,+neon", 370>;
-def : FMVExtension<"sve2-aes", "FEAT_SVE_AES", "+sve2,+sve,+sve2-aes,+fullfp16,+fp-armv8,+neon", 380>;
+def : FMVExtension<"sve2-aes", "FEAT_SVE_PMULL128", "+sve2,+sve,+aes,+sve2-aes,+fullfp16,+fp-armv8,+neon", 380>;
 def : FMVExtension<"sve2-bitperm", "FEAT_SVE_BITPERM", "+sve2,+sve,+sve2-bitperm,+fullfp16,+fp-armv8,+neon", 400>;
-def : FMVExtension<"sve2-pmull128", "FEAT_SVE_PMULL128", "+sve2,+sve,+sve2-aes,+fullfp16,+fp-armv8,+neon", 390>;
 def : FMVExtension<"sve2-sha3", "FEAT_SVE_SHA3", "+sve2,+sve,+sve2-sha3,+fullfp16,+fp-armv8,+neon", 410>;
 def : FMVExtension<"sve2-sm4", "FEAT_SVE_SM4", "+sve2,+sve,+sve2-sm4,+fullfp16,+fp-armv8,+neon", 420>;
 def : FMVExtension<"wfxt", "FEAT_WFXT", "+wfxt", 550>;

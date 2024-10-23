@@ -38,7 +38,7 @@ int __attribute__((target_clones("rdm+lse+rdm", "lse+rdm"))) dup1(void) { return
 // expected-warning@+1 {{version list contains duplicate entries}}
 int __attribute__((target_clones("rdm+lse+rdm", "rdm+lse+rdm"))) dup2(void) { return 2; }
 // expected-warning@+1 {{version list contains duplicate entries}}
-int __attribute__((target_clones("rcpc2+sve2-pmull128", "rcpc2+sve2-pmull128"))) dup3(void) { return 3; }
+int __attribute__((target_clones("rcpc2+sve2-aes", "rcpc2+sve2-aes"))) dup3(void) { return 3; }
 // expected-warning@+1 {{version list contains duplicate entries}}
 void __attribute__((target_clones("sha3", "default", "default"))) dup4(void);
 // expected-warning@+2 {{version list contains duplicate entries}}
