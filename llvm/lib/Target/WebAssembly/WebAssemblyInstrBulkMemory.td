@@ -29,19 +29,13 @@ def wasm_memset_t : SDTypeProfile<0, 4,
   [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>, SDTCisInt<3>]
 >;
 
-// memory.copy (may trap on empty ranges)
-def wasm_memory_copy : SDNode<"WebAssemblyISD::MEMORY_COPY", wasm_memcpy_t,
-                              [SDNPHasChain, SDNPMayLoad, SDNPMayStore]>;
-
-// memory.copy with a branch to avoid trapping
+// memory.copy with a branch to avoid trapping in the case of out-of-bounds
+// pointers with empty ranges.
 def wasm_memcpy : SDNode<"WebAssemblyISD::MEMCPY", wasm_memcpy_t,
                          [SDNPHasChain, SDNPMayLoad, SDNPMayStore]>;
 
-// memory.fill (may trap on empty ranges)
-def wasm_memory_fill : SDNode<"WebAssemblyISD::MEMORY_FILL", wasm_memset_t,
-                              [SDNPHasChain, SDNPMayStore]>;
-
-// memory.fill with a branch to avoid trapping
+// memory.fill with a branch to avoid trapping in the case of out-of-bounds
+// pointers with empty ranges.
 def wasm_memset : SDNode<"WebAssemblyISD::MEMSET", wasm_memset_t,
                          [SDNPHasChain, SDNPMayStore]>;
 
