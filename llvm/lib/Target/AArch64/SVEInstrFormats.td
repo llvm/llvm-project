@@ -2735,6 +2735,37 @@ multiclass sve2_fp_convert_down_odd_rounding_top<string asm, string op> {
   def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
+class sve_fp_fcvt2z<bits<4> opc, string asm, ZPRRegOp zprty1,
+                    ZPRRegOp zprty2>
+  : I<(outs zprty1:$Zd), (ins PPR3bAny:$Pg, zprty2:$Zn),
+    asm, "\t$Zd, $Pg/z, $Zn",
+    "",
+    []>, Sched<[]> {
+    bits<5> Zd;
+    bits<5> Zn;
+    bits<3> Pg;
+    let Inst{31-24} = 0b01100100;
+    let Inst{23-22} = opc{3-2};
+    let Inst{21-18} = 0b0000;
+    let Inst{17-16} = opc{1-0};
+    let Inst{15-13} = 0b101;
+    let Inst{12-10} = Pg;
+    let Inst{9-5}   = Zn;
+    let Inst{4-0}   = Zd;
+    let hasSideEffects = 0;
+    let mayRaiseFPException = 1;
+}
+
+multiclass sve_fp_fcvtntz<string asm> {
+  def _StoH : sve_fp_fcvt2z<0b1000, asm,  ZPR16, ZPR32>;
+  def _DtoS : sve_fp_fcvt2z<0b1110, asm,  ZPR32, ZPR64>;
+}
+
+multiclass sve_fp_fcvtltz<string asm> {
+  def _HtoS  : sve_fp_fcvt2z<0b1001, asm,  ZPR32, ZPR16>;
+  def _StoD  : sve_fp_fcvt2z<0b1111, asm,  ZPR64, ZPR32>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE2 Floating Point Pairwise Group
 //===----------------------------------------------------------------------===//
