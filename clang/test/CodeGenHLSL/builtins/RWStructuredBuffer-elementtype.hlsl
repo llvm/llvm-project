@@ -31,12 +31,12 @@ RWStructuredBuffer< vector<int16_t, 4> > BufI16x4;
 RWStructuredBuffer< vector<uint, 3> > BufU32x3;
 RWStructuredBuffer<half2> BufF16x2;
 RWStructuredBuffer<float3> BufF32x3;
-// TODO: RWStructuredBuffer<snorm half> BufSNormF16; -> 11
-// TODO: RWStructuredBuffer<unorm half> BufUNormF16; -> 12
-// TODO: RWStructuredBuffer<snorm float> BufSNormF32; -> 13
-// TODO: RWStructuredBuffer<unorm float> BufUNormF32; -> 14
-// TODO: RWStructuredBuffer<snorm double> BufSNormF64; -> 15
-// TODO: RWStructuredBuffer<unorm double> BufUNormF64; -> 16
+// TODO: RWStructuredBuffer<snorm half> BufSNormF16;
+// TODO: RWStructuredBuffer<unorm half> BufUNormF16;
+// TODO: RWStructuredBuffer<snorm float> BufSNormF32;
+// TODO: RWStructuredBuffer<unorm float> BufUNormF32;
+// TODO: RWStructuredBuffer<snorm double> BufSNormF64;
+// TODO: RWStructuredBuffer<unorm double> BufUNormF64;
 
 [numthreads(1,1,1)]
 void main(int GI : SV_GroupIndex) {
