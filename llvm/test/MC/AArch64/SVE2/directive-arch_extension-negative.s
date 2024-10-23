@@ -30,14 +30,12 @@ bgrp z21.s, z10.s, z21.s
 // CHECK: error: instruction requires: sve2-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s
 
-.arch_extension sve2 
 .arch_extension f8f16mm
 .arch_extension nof8f16mm
 fmmla   z23.h, z13.b, z8.b
 // CHECK: error: instruction requires: f8f16mm
 // CHECK-NEXT: fmmla   z23.h, z13.b, z8.b
 
-.arch_extension sve2 
 .arch_extension f8f32mm
 .arch_extension nof8f32mm
 fmmla   z23.s, z13.b, z8.b
