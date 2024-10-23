@@ -14,13 +14,16 @@ namespace Fortran::runtime::cuda {
 
 extern "C" {
 
-extern void **__cudaRegisterFatBinary(void *data);
+extern void **__cudaRegisterFatBinary(void *);
+extern void __cudaRegisterFatBinaryEnd(void *);
 extern void __cudaRegisterFunction(void **fatCubinHandle, const char *hostFun,
     char *deviceFun, const char *deviceName, int thread_limit, uint3 *tid,
     uint3 *bid, dim3 *bDim, dim3 *gDim, int *wSize);
 
 void *RTDECL(CUFRegisterModule)(void *data) {
-  return __cudaRegisterFatBinary(data);
+  void **fatHandle{__cudaRegisterFatBinary(data)};
+  __cudaRegisterFatBinaryEnd(fatHandle);
+  return fatHandle;
 }
 
 void RTDEF(CUFRegisterFunction)(void **module, const char *fct) {
