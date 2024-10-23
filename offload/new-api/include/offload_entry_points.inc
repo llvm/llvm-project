@@ -40,6 +40,16 @@ offloadPlatformGet(uint32_t NumEntries, offload_platform_handle_t *phPlatforms,
   }
   return result;
 }
+offload_result_t offloadPlatformGetWithCodeLoc(
+    uint32_t NumEntries, offload_platform_handle_t *phPlatforms,
+    uint32_t *pNumPlatforms, offload_code_location_t *pCodeLocation) {
+  CodeLocation() = pCodeLocation;
+  offload_result_t result =
+      offloadPlatformGet(NumEntries, phPlatforms, pNumPlatforms);
+
+  CodeLocation() = nullptr;
+  return result;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 offload_impl_result_t
@@ -88,6 +98,17 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfo(
   }
   return result;
 }
+offload_result_t offloadPlatformGetInfoWithCodeLoc(
+    offload_platform_handle_t hPlatform, offload_platform_info_t propName,
+    size_t propSize, void *pPropValue, size_t *pPropSizeRet,
+    offload_code_location_t *pCodeLocation) {
+  CodeLocation() = pCodeLocation;
+  offload_result_t result = offloadPlatformGetInfo(
+      hPlatform, propName, propSize, pPropValue, pPropSizeRet);
+
+  CodeLocation() = nullptr;
+  return result;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 offload_impl_result_t offloadDeviceGet_val(offload_platform_handle_t hPlatform,
@@ -132,6 +153,17 @@ offloadDeviceGet(offload_platform_handle_t hPlatform,
       std::cout << "     *Error Details* " << result->details << " \n";
     }
   }
+  return result;
+}
+offload_result_t offloadDeviceGetWithCodeLoc(
+    offload_platform_handle_t hPlatform, offload_device_type_t DeviceType,
+    uint32_t NumEntries, offload_device_handle_t *phDevices,
+    uint32_t *pNumDevices, offload_code_location_t *pCodeLocation) {
+  CodeLocation() = pCodeLocation;
+  offload_result_t result = offloadDeviceGet(hPlatform, DeviceType, NumEntries,
+                                             phDevices, pNumDevices);
+
+  CodeLocation() = nullptr;
   return result;
 }
 
@@ -181,5 +213,17 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetInfo(
       std::cout << "     *Error Details* " << result->details << " \n";
     }
   }
+  return result;
+}
+offload_result_t
+offloadDeviceGetInfoWithCodeLoc(offload_device_handle_t hDevice,
+                                offload_device_info_t propName, size_t propSize,
+                                void *pPropValue, size_t *pPropSizeRet,
+                                offload_code_location_t *pCodeLocation) {
+  CodeLocation() = pCodeLocation;
+  offload_result_t result = offloadDeviceGetInfo(hDevice, propName, propSize,
+                                                 pPropValue, pPropSizeRet);
+
+  CodeLocation() = nullptr;
   return result;
 }

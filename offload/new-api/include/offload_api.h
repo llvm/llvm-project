@@ -130,6 +130,16 @@ typedef const offload_error_struct_t *offload_result_t;
 #endif // OFFLOAD_SUCCESS
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Code location information that can optionally be associated with an
+/// API call
+typedef struct offload_code_location_t {
+  const char *FunctionName; /// Function name
+  const char *SourceFile;   /// Source code file
+  uint32_t LineNumber;      /// Source code line number
+  uint32_t ColumnNumber;    /// Source code column number
+} offload_code_location_t;
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Retrieves all available platforms
 ///
 /// @details
@@ -396,6 +406,46 @@ typedef struct offload_device_get_info_params_t {
   void **ppPropValue;
   size_t **ppPropSizeRet;
 } offload_device_get_info_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of offloadPlatformGet that also sets source code location
+/// information
+/// @details See also ::offloadPlatformGet
+OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
+offloadPlatformGetWithCodeLoc(uint32_t NumEntries,
+                              offload_platform_handle_t *phPlatforms,
+                              uint32_t *pNumPlatforms,
+                              offload_code_location_t *pCodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of offloadPlatformGetInfo that also sets source code location
+/// information
+/// @details See also ::offloadPlatformGetInfo
+OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
+offloadPlatformGetInfoWithCodeLoc(offload_platform_handle_t hPlatform,
+                                  offload_platform_info_t propName,
+                                  size_t propSize, void *pPropValue,
+                                  size_t *pPropSizeRet,
+                                  offload_code_location_t *pCodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of offloadDeviceGet that also sets source code location
+/// information
+/// @details See also ::offloadDeviceGet
+OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetWithCodeLoc(
+    offload_platform_handle_t hPlatform, offload_device_type_t DeviceType,
+    uint32_t NumEntries, offload_device_handle_t *phDevices,
+    uint32_t *pNumDevices, offload_code_location_t *pCodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of offloadDeviceGetInfo that also sets source code location
+/// information
+/// @details See also ::offloadDeviceGetInfo
+OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
+offloadDeviceGetInfoWithCodeLoc(offload_device_handle_t hDevice,
+                                offload_device_info_t propName, size_t propSize,
+                                void *pPropValue, size_t *pPropSizeRet,
+                                offload_code_location_t *pCodeLocation);
 
 #if defined(__cplusplus)
 } // extern "C"

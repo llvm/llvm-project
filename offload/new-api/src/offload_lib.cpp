@@ -26,6 +26,11 @@ ErrSetT &Errors() {
   return Errors;
 }
 
+offload_code_location_t *&CodeLocation() {
+  thread_local offload_code_location_t *CodeLoc = nullptr;
+  return CodeLoc;
+}
+
 // Pull in the declarations for the implementation funtions. The actual entry
 // points in this file wrap these.
 #include "offload_impl_func_decls.inc"
