@@ -28252,16 +28252,21 @@ TEST_F(FormatTest, KeepFormFeed) {
                "void f();",
                Style);
 
-  Style.MaxEmptyLinesToKeep = 3;
-  verifyFormat("int i;\n"
-               "\f\n"
-               "\n"
-               "\n"
-               "void f();",
+  constexpr StringRef FormFeedBeforeEmptyLine{"int i;\n"
+                                              "\f\n"
+                                              "\n"
+                                              "void f();"};
+  Style.MaxEmptyLinesToKeep = 2;
+  verifyFormat(FormFeedBeforeEmptyLine,
                "int i;\n"
                "\n"
                "\f\n"
-               "\n"
+               "void f();",
+               Style);
+  verifyFormat(FormFeedBeforeEmptyLine,
+               "int i;\n"
+               "\f\n"
+               "\f\n"
                "void f();",
                Style);
 }

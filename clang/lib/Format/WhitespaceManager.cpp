@@ -1713,7 +1713,7 @@ void WhitespaceManager::appendNewlineText(std::string &Text, const Change &C) {
   StringRef Newline = UseCRLF ? "\r\n" : "\n";
   Text.append(Newline);
 
-  if (Style.KeepFormFeed && C.Tok->HasFormFeedBefore)
+  if (C.Tok->HasFormFeedBefore)
     Text.append("\f");
 
   for (unsigned I = 1; I < C.NewlinesBefore; ++I)
