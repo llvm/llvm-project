@@ -683,11 +683,15 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
     DenseMap<const BinaryBasicBlock *, BinaryBasicBlock *> FragmentTrampolines;
 
     // Create a trampoline code after \p BB or at the end of the fragment if BB
-    // is nullptr.
+    // is nullptr. If /p UpdateOffsets is true, update FragmentSize and offsets
+    // for basic blocks affected by the insertion of the trampoline.
     auto addTrampolineAfter = [&](BinaryBasicBlock *BB,
                                   BinaryBasicBlock *TargetBB, uint64_t Count,
                                   bool UpdateOffsets = true) {
-      std::unique_ptr<BinaryBasicBlock> TrampolineBB = BF.createBasicBlock();
+      FunctionTrampolines.emplace_back(BB ? BB : FF.back(),
+                                       BF.createBasicBlock());
+      BinaryBasicBlock *TrampolineBB = FunctionTrampolines.back().second.get();
+
       MCInst Inst;
       {
         auto L = BC.scopeLock();
@@ -702,37 +706,46 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       TrampolineBB->setOutputEndAddress(TrampolineAddress + TrampolineSize);
       TrampolineBB->setFragmentNum(FF.getFragmentNum());
 
-      if (UpdateOffsets) {
-        FragmentSize += TrampolineSize;
-        for (BinaryBasicBlock *IBB : FF) {
-          if (IBB->getOutputStartAddress() >= TrampolineAddress) {
-            IBB->setOutputStartAddress(IBB->getOutputStartAddress() +
-                                       TrampolineSize);
-            IBB->setOutputEndAddress(IBB->getOutputEndAddress() +
+      if (!FragmentTrampolines.lookup(TargetBB))
+        FragmentTrampolines[TargetBB] = TrampolineBB;
+
+      if (!UpdateOffsets)
+        return TrampolineBB;
+
+      FragmentSize += TrampolineSize;
+
+      // If the trampoline was added at the end of the fragment, offsets of
+      // other fragments should stay intact.
+      if (!BB)
+        return TrampolineBB;
+
+      // Update offsets for blocks after BB.
+      for (BinaryBasicBlock *IBB : FF) {
+        if (IBB->getOutputStartAddress() >= TrampolineAddress) {
+          IBB->setOutputStartAddress(IBB->getOutputStartAddress() +
                                      TrampolineSize);
-          }
-        }
-        for (auto &Pair : FunctionTrampolines) {
-          BinaryBasicBlock *IBB = Pair.second.get();
-          if (IBB->getFragmentNum() != TrampolineBB->getFragmentNum())
-            continue;
-          if (IBB == TrampolineBB.get())
-            continue;
-          if (IBB->getOutputStartAddress() >= TrampolineAddress) {
-            IBB->setOutputStartAddress(IBB->getOutputStartAddress() +
-                                       TrampolineSize);
-            IBB->setOutputEndAddress(IBB->getOutputEndAddress() +
-                                     TrampolineSize);
-          }
+          IBB->setOutputEndAddress(IBB->getOutputEndAddress() + TrampolineSize);
         }
       }
 
-      if (!FragmentTrampolines.lookup(TargetBB))
-        FragmentTrampolines[TargetBB] = TrampolineBB.get();
-      FunctionTrampolines.emplace_back(BB ? BB : FF.back(),
-                                       std::move(TrampolineBB));
+      // Update offsets for trampolines in this fragment that are placed after
+      // the new trampoline. Note that trampoline blocks are not part of the
+      // function/fragment layout until we add them right before the return
+      // from relaxLocalBranches().
+      for (auto &Pair : FunctionTrampolines) {
+        BinaryBasicBlock *IBB = Pair.second.get();
+        if (IBB->getFragmentNum() != TrampolineBB->getFragmentNum())
+          continue;
+        if (IBB == TrampolineBB)
+          continue;
+        if (IBB->getOutputStartAddress() >= TrampolineAddress) {
+          IBB->setOutputStartAddress(IBB->getOutputStartAddress() +
+                                     TrampolineSize);
+          IBB->setOutputEndAddress(IBB->getOutputEndAddress() + TrampolineSize);
+        }
+      }
 
-      return FunctionTrampolines.back().second.get();
+      return TrampolineBB;
     };
 
     // Pre-populate trampolines by splitting unconditional branches from the
