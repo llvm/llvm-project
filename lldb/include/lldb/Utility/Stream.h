@@ -309,6 +309,12 @@ public:
   ///     The current indentation level.
   unsigned GetIndentLevel() const;
 
+  /// Whether or not the stream is using color.
+  ///
+  /// \return
+  ///     The color setting of the stream.
+  bool HasColor();
+
   /// Indent the current line in the stream.
   ///
   /// Indent the current line using the current indentation level and print an
@@ -365,6 +371,8 @@ public:
   /// \param[in] format
   ///     The optional C string format that can be overridden.
   void QuotedCString(const char *cstr, const char *format = "\"%s\"");
+
+  void FormatAnsiTerminalCodes(llvm::StringRef format);
 
   /// Set the address size in bytes.
   ///
