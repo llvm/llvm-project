@@ -24,6 +24,8 @@
 #include <set>
 #include <vector>
 
+#include "llvm/Support/Signals.h"
+
 namespace llvm {
 class raw_ostream;
 }
@@ -753,9 +755,9 @@ public:
       // OpenMP miscellaneous flags
       OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
       OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
-      OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
-      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined,
-      OmpImplicit);
+      OmpDependClause, OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate,
+      OmpDeclareReduction, OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone,
+      OmpPreDetermined, OmpImplicit);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
@@ -976,6 +978,7 @@ public:
   }
 
 private:
+  static int counter;
   using blockType = std::array<Symbol, BLOCK_SIZE>;
   std::list<blockType *> blocks_;
   std::size_t nextIndex_{0};
@@ -993,6 +996,8 @@ private:
     return result;
   }
 };
+
+template <std::size_t BLOCK_SIZE> int Symbols<BLOCK_SIZE>::counter;
 
 // Define a few member functions here in the header so that they
 // can be used by lib/Evaluate without inducing a dependence cycle
