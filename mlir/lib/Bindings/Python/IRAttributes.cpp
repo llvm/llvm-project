@@ -873,9 +873,9 @@ public:
     } else if (mlirTypeIsAInteger(elementType) &&
                mlirIntegerTypeGetWidth(elementType) == 1) {
       // i1 / bool
-      // We can not send the buffer directly back to Python, because the i1 values
-      // are bitpacked within MLIR.
-      // We call numpy's unpackbits function to convert the bytes.
+      // We can not send the buffer directly back to Python, because the i1
+      // values are bitpacked within MLIR. We call numpy's unpackbits function
+      // to convert the bytes.
       return getBooleanBufferFromBitpackedAttribute();
     }
 
@@ -981,7 +981,8 @@ private:
       } else if (format == "?") {
         // i1
         // The i1 type needs to be bit-packed, so we will handle it seperately
-        return getBitpackedAttributeFromBooleanBuffer(view, explicitShape, context);
+        return getBitpackedAttributeFromBooleanBuffer(view, explicitShape,
+                                                      context);
       } else if (isSignedIntegerFormat(format)) {
         if (view.itemsize == 4) {
           // i32
@@ -1061,38 +1062,45 @@ private:
 
     MlirType bitpackedType =
         getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
-    return mlirDenseElementsAttrRawBufferGet(bitpackedType, buffer_info.size, buffer_info.ptr);
+    return mlirDenseElementsAttrRawBufferGet(bitpackedType, buffer_info.size,
+                                             buffer_info.ptr);
   }
 
-  // This does the opposite transformation of `getBitpackedAttributeFromBooleanBuffer`
+  // This does the opposite transformation of
+  // `getBitpackedAttributeFromBooleanBuffer`
   py::buffer_info getBooleanBufferFromBitpackedAttribute() {
     int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
     int64_t numBitpackedBytes = (numBooleans + 7) / 8;
     uint8_t *bitpackedData = static_cast<uint8_t *>(
-      const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
+        const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
     py::array_t<uint8_t> arr(numBitpackedBytes, bitpackedData);
 
     py::module numpy = py::module::import("numpy");
     py::object unpackbits_func = numpy.attr("unpackbits");
-    py::object unpacked_booleans = unpackbits_func(arr, "bitorder"_a = "little");
-    py::buffer_info buffer_info = unpacked_booleans.cast<py::buffer>().request();
+    py::object unpacked_booleans =
+        unpackbits_func(arr, "bitorder"_a = "little");
+    py::buffer_info buffer_info =
+        unpacked_booleans.cast<py::buffer>().request();
 
     MlirType shapedType = mlirAttributeGetType(*this);
-    return bufferInfo<bool>(shapedType, "?", (bool*)buffer_info.ptr);
+    return bufferInfo<bool>(shapedType, (bool *)buffer_info.ptr, "?");
   }
 
   template <typename Type>
   py::buffer_info bufferInfo(MlirType shapedType,
-                             const char *explicitFormat = nullptr,
-                             Type *dataOverride = nullptr) {
-    intptr_t rank = mlirShapedTypeGetRank(shapedType);
+                             const char *explicitFormat = nullptr) {
     // Prepare the data for the buffer_info.
-    // Buffer is configured for read-only access below.
+    // Buffer is configured for read-only access in .
     Type *data = static_cast<Type *>(
-        const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
-    if (dataOverride != nullptr) {
-      data = dataOverride;
-    }
+      const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
+    return bufferInfo<Type>(shapedType, data, explicitFormat);
+  }
+
+  template <typename Type>
+  py::buffer_info bufferInfo(MlirType shapedType,
+                             Type *data,
+                             const char *explicitFormat = nullptr) {
+    intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the shape for the buffer_info.
     SmallVector<intptr_t, 4> shape;
     for (intptr_t i = 0; i < rank; ++i)
