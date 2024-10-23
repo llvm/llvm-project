@@ -6,6 +6,8 @@
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_B 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_B
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_C 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_C
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_D 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_D
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_E 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_E
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_F 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_F
 
 include "clang/Basic/BuiltinsBase.td"
 
@@ -113,3 +115,41 @@ def : Builtin {
 }
 #endif
 
+def : Builtin {
+// CHECK: BUILTIN(__builtin_test_addrspace_attribute_01, "di*3", "")
+  let Prototype = "double(int*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_01"];
+  let Attributes = [AddressSpace<1, 3>];
+}
+
+def : Builtin {
+// CHECK: BUILTIN(__builtin_test_addrspace_attribute_02, "Ii*5i*d", "n")
+  let Prototype = "_Constant int* (int*, double)";
+  let Spellings = ["__builtin_test_addrspace_attribute_02"];
+  let Attributes = [AddressSpace<0, 5>, NoThrow];
+}
+
+def : Builtin {
+// CHECK: BUILTIN(__builtin_test_addrspace_attribute_04, "Ii&4id*7", "En")
+  let Prototype = "_Constant int& (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+  let Attributes = [AddressSpace<0, 4>, Constexpr, AddressSpace<2, 7>, NoThrow];
+}
+
+#ifdef ERROR_EXPECTED_E
+def : Builtin {
+// ERROR_EXPECTED_E: :[[# @LINE + 1]]:7: error: Address space attribute for argument 2 repeated
+  let Prototype = "_Constant int& (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+  let Attributes = [AddressSpace<2, 4>, AddressSpace<2, 7>];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_F
+def : Builtin {
+// ERROR_EXPECTED_F: :[[# @LINE + 1]]:7: error: Address space attribute can only be specified with a pointer or reference type
+  let Prototype = "_Constant int (int , double*)";
+  let Spellings = ["__builtin_test_addrspace_attribute_04"];
+  let Attributes = [AddressSpace<1, 7>];
+}
+#endif
