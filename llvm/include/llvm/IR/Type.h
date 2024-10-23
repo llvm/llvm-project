@@ -473,7 +473,7 @@ public:
   /// Return a pointer to the current type. This is equivalent to
   /// PointerType::get(Ctx, AddrSpace).
   /// TODO: Remove this after opaque pointer transition is complete.
-  [[deprecated("Use PointerType::get instead")]]
+  LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
   PointerType *getPointerTo(unsigned AddrSpace = 0) const;
 
 private:
