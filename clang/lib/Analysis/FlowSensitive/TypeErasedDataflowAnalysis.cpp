@@ -50,7 +50,7 @@ namespace llvm {
 // of creating one in the test executable. when building with
 // CLANG_LINK_CLANG_DYLIB
 template struct CLANG_EXPORT_TEMPLATE Any::TypeId<clang::dataflow::NoopLattice>;
-}
+} // namespace llvm
 
 namespace clang {
 namespace dataflow {
