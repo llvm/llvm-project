@@ -640,3 +640,48 @@ namespace H {
   struct S s;
 }
 }
+
+namespace cwg1898 { // cwg1898: 2.7
+void e(int) {} // #cwg1898-e-int
+void e(int) {}
+// expected-error@-1 {{redefinition of 'e'}}
+//   expected-note@#cwg1898-e-int {{previous definition is here}}
+void e(long) {}
+
+void f(int) {} // #cwg1898-f-int
+void f(const int) {}
+// expected-error@-1 {{redefinition of 'f'}}
+//   expected-note@#cwg1898-f-int {{previous definition is here}}
+
+void g(int) {} // #cwg1898-g-int
+void g(volatile int) {}
+// since-cxx20-warning@-1 {{volatile-qualified parameter type 'volatile int' is deprecated}}
+// expected-error@-2 {{redefinition of 'g'}}
+//   expected-note@#cwg1898-g-int {{previous definition is here}}
+
+void h(int *) {} // #cwg1898-h-int
+void h(int[]) {}
+// expected-error@-1 {{redefinition of 'h'}}
+//   expected-note@#cwg1898-h-int {{previous definition is here}}
+
+void i(int *) {} // #cwg1898-i-int
+void i(int[2]) {}
+// expected-error@-1 {{redefinition of 'i'}}
+//   expected-note@#cwg1898-i-int {{previous definition is here}}
+
+void j(void(*)()) {} // #cwg1898-j-int
+void j(void()) {}
+// expected-error@-1 {{redefinition of 'j'}}
+//   expected-note@#cwg1898-j-int {{previous definition is here}}
+
+struct A {
+  void k(int) {} // #cwg1898-k-int
+  void k(int) {}
+  // expected-error@-1 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1898-k-int {{previous definition is here}}
+};
+
+struct B : A {
+  void k(int) {}
+};
+} // namespace cwg1898
