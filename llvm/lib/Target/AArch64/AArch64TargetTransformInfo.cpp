@@ -4072,6 +4072,23 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   }
 }
 
+bool AArch64TTIImpl::hasVectorMatch(VectorType *VT, unsigned SearchSize) const {
+  // Check that (i) the target has SVE2 and SVE is available, (ii) `VT' is a
+  // legal type for MATCH, and (iii) the search vector can be broadcast
+  // efficently to a legal type.
+  //
+  // Currently, we require the search vector to be 64-bit or 128-bit. In the
+  // future we can support more cases.
+  if (ST->hasSVE2() && ST->isSVEAvailable() &&
+      VT->getPrimitiveSizeInBits().getKnownMinValue() == 128 &&
+      (VT->getElementCount().getKnownMinValue() == 8 ||
+       VT->getElementCount().getKnownMinValue() == 16) &&
+      (VT->getElementCount().getKnownMinValue() == SearchSize ||
+       VT->getElementCount().getKnownMinValue() / 2 == SearchSize))
+    return true;
+  return false;
+}
+
 InstructionCost
 AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                        FastMathFlags FMF,
