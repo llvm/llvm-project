@@ -1536,6 +1536,9 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Match function \p BF to a long veneer for absolute code. Return true if
+  /// the match was successful and populate \p TargetAddress with an address of
+  /// the function veneer jumps to.
   virtual bool matchAbsLongVeneer(const BinaryFunction &BF,
                                   uint64_t &TargetAddress) const {
     llvm_unreachable("not implemented");

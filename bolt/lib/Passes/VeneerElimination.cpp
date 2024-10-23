@@ -37,7 +37,6 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
   if (!opts::EliminateVeneers || !BC.isAArch64())
     return Error::success();
 
-  std::map<uint64_t, BinaryFunction> &BFs = BC.getBinaryFunctions();
   std::unordered_map<const MCSymbol *, const MCSymbol *> VeneerDestinations;
   uint64_t NumEliminatedVeneers = 0;
   for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
@@ -47,7 +46,6 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
     if (BF.isIgnored())
       continue;
 
-    MCInst &FirstInstruction = *(BF.begin()->begin());
     const MCSymbol *VeneerTargetSymbol = 0;
     uint64_t TargetAddress;
     if (BC.MIB->matchAbsLongVeneer(BF, TargetAddress)) {
@@ -55,9 +53,9 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
               BC.getBinaryFunctionAtAddress(TargetAddress))
         VeneerTargetSymbol = TargetBF->getSymbol();
     } else {
-      if (!BC.MIB->hasAnnotation(FirstInstruction, "AArch64Veneer"))
-        continue;
-      VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction, 1);
+      MCInst &FirstInstruction = *(BF.begin()->begin());
+      if (BC.MIB->hasAnnotation(FirstInstruction, "AArch64Veneer"))
+        VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction, 1);
     }
 
     if (!VeneerTargetSymbol)
@@ -84,9 +82,8 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
   }
 
   uint64_t VeneerCallers = 0;
-  for (auto &It : BFs) {
-    BinaryFunction &Function = It.second;
-    for (BinaryBasicBlock &BB : Function) {
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    for (BinaryBasicBlock &BB : BF) {
       for (MCInst &Instr : BB) {
         if (!BC.MIB->isCall(Instr) || BC.MIB->isIndirectCall(Instr))
           continue;
