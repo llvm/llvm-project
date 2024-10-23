@@ -16,10 +16,10 @@
 
 using namespace llvm;
 
-void MipsMCAsmInfo::anchor() { }
+void MipsELFMCAsmInfo::anchor() {}
 
-MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple,
-                             const MCTargetOptions &Options) {
+MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
+                                   const MCTargetOptions &Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
   MipsABIInfo ABI = MipsABIInfo::computeTargetABI(TheTriple, "", Options);
