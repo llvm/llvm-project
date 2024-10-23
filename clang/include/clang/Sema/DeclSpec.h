@@ -472,7 +472,7 @@ public:
             T == TST_class);
   }
   static bool isTransformTypeTrait(TST T) {
-    constexpr std::array<TST, 16> Traits = {
+    constexpr std::array<TST, 17> Traits = {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
 #include "clang/Basic/TransformTypeTraits.def"
     };
