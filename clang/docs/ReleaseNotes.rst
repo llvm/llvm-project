@@ -442,6 +442,7 @@ Bug Fixes in This Version
 - Fixed a crash using ``__array_rank`` on 64-bit targets. (#GH113044).
 - The warning emitted for an unsupported register variable type now points to
   the unsupported type instead of the ``register`` keyword (#GH109776).
+- Fixed a crash when emit ctor for global variant with flexible array init  (#GH113187).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
