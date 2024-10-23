@@ -1133,7 +1133,8 @@ static llvm::Error genIndex(const ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
-static llvm::Error copyFile(StringRef FilePath, StringRef OutDirectory) {
+static llvm::Error 
+copyFile(StringRef FilePath, StringRef OutDirectory) {
   llvm::SmallString<128> PathWrite;
   llvm::sys::path::native(OutDirectory, PathWrite);
   llvm::sys::path::append(PathWrite, llvm::sys::path::filename(FilePath));
