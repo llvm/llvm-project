@@ -8236,6 +8236,29 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitVectorHistogram(I, Intrinsic);
     return;
   }
+  case Intrinsic::experimental_vector_masked_extract_last_active: {
+    SDValue Data = getValue(I.getOperand(0));
+    SDValue Mask = getValue(I.getOperand(1));
+    SDValue PassThru = getValue(I.getOperand(2));
+
+    EVT DataVT = Data.getValueType();
+    EVT ScalarVT = PassThru.getValueType();
+    EVT BoolVT = Mask.getValueType().getScalarType();
+    EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+    EVT IdxVecVT = DataVT.changeVectorElementType(IdxVT);
+
+    SDValue Zeroes = DAG.getConstant(0, sdl, IdxVecVT);
+    SDValue StepVec = DAG.getStepVector(sdl, IdxVecVT);
+    SDValue ActiveElts = DAG.getSelect(sdl, IdxVecVT, Mask, StepVec, Zeroes);
+    SDValue HighestIdx =
+        DAG.getNode(ISD::VECREDUCE_UMAX, sdl, IdxVT, ActiveElts);
+    SDValue Extract =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, ScalarVT, Data, HighestIdx);
+    SDValue AnyActive = DAG.getNode(ISD::VECREDUCE_OR, sdl, BoolVT, Mask);
+    SDValue Result = DAG.getSelect(sdl, ScalarVT, AnyActive, Extract, PassThru);
+    setValue(&I, Result);
+    return;
+  }
   }
 }
 
