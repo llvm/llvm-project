@@ -40,19 +40,19 @@ StructuredBuffer<float3> BufF32x3;
 
 [numthreads(1,1,1)]
 void main(int GI : SV_GroupIndex) {
-  BufI16[GI] = 0;
-  BufU16[GI] = 0;
-  BufI32[GI] = 0;
-  BufU32[GI] = 0;
-  BufI64[GI] = 0;
-  BufU64[GI] = 0;
-  BufF16[GI] = 0;
-  BufF32[GI] = 0;
-  BufF64[GI] = 0;
-  BufI16x4[GI] = 0;
-  BufU32x3[GI] = 0;
-  BufF16x2[GI] = 0;
-  BufF32x3[GI] = 0;
+  int16_t v1 = BufI16[GI];
+  uint16_t v2 = BufU16[GI];
+  int v3 = BufI32[GI];
+  uint v4 = BufU32[GI];
+  int64_t v5 = BufI64[GI];
+  uint64_t v6 = BufU64[GI];
+  half v7 = BufF16[GI];
+  float v8 = BufF32[GI];
+  double v9 = BufF64[GI];
+  vector<int16_t,4> v10 = BufI16x4[GI];
+  vector<int, 3> v11 = BufU32x3[GI];
+  half2 v12 = BufF16x2[GI];
+  float3 v13 = BufF32x3[GI];
 }
 
 // CHECK: !{{[0-9]+}} = !{ptr @BufI16, i32 10, i32 2,
