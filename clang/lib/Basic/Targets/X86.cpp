@@ -917,6 +917,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MOVDIRI__");
   if (HasMOVDIR64B)
     Builder.defineMacro("__MOVDIR64B__");
+  if (HasMOVRS)
+    Builder.defineMacro("__MOVRS__");
   if (HasPCONFIG)
     Builder.defineMacro("__PCONFIG__");
   if (HasPTWRITE)
