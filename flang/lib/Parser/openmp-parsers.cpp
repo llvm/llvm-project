@@ -110,7 +110,7 @@ TYPE_PARSER(construct<OmpProcBindClause>(
 TYPE_PARSER(construct<OmpMapClause::TypeModifier>(
     "ALWAYS" >> pure(OmpMapClause::TypeModifier::Always) ||
     "CLOSE" >> pure(OmpMapClause::TypeModifier::Close) ||
-    "OMPX_HOLD" >> pure(OmpMapClause::TypeModifier::OmpxHold) ||
+    "OMPX_HOLD" >> pure(OmpMapClause::TypeModifier::Ompx_Hold) ||
     "PRESENT" >> pure(OmpMapClause::TypeModifier::Present)))
 
 TYPE_PARSER(
