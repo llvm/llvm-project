@@ -3702,20 +3702,32 @@ user-declared functions. For example:
 
 .. code-block:: c++
 
+    #include <map>
+    #include <string>
+
+    using namespace std::literals;
+
     // Returns m[key] if key is present, or default_value if not.
     template<typename T, typename U>
     const U &get_or_default(const std::map<T, U> &m [[clang::lifetimebound]],
                             const T &key, /* note, not lifetimebound */
-                            const U &default_value [[clang::lifetimebound]]);
+                            const U &default_value [[clang::lifetimebound]]) {
+      if (auto iter = m.find(key); iter != m.end()) return iter->second;
+      else return default_value;
+    }
 
-    std::map<std::string, std::string> m;
-    // warning: temporary "bar"s that might be bound to local reference 'val'
-    // will be destroyed at the end of the full-expression
-    const std::string &val = get_or_default(m, "foo"s, "bar"s);
+    int main() {
+      std::map<std::string, std::string> m;
+      // warning: temporary bound to local reference 'val1' will be destroyed
+      // at the end of the full-expression
+      const std::string &val1 = get_or_default(m, "foo"s, "bar"s);
 
-    // No warning in this case.
-    std::string def_val = "bar"s;
-    const std::string &val = get_or_default(m, "foo"s, def_val);
+      // No warning in this case.
+      std::string def_val = "bar"s;
+      const std::string &val2 = get_or_default(m, "foo"s, def_val);
+
+      return 0;
+    }
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:
