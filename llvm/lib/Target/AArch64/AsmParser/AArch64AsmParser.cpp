@@ -287,6 +287,7 @@ private:
   ParseStatus tryParseGPR64x8(OperandVector &Operands);
   ParseStatus tryParseImmRange(OperandVector &Operands);
   template <int> ParseStatus tryParseAdjImm0_63(OperandVector &Operands);
+  ParseStatus tryParsePHintInstOperand(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -362,6 +363,7 @@ private:
     k_FPImm,
     k_Barrier,
     k_PSBHint,
+    k_PHint,
     k_BTIHint,
   } Kind;
 
@@ -482,7 +484,11 @@ private:
     unsigned Length;
     unsigned Val;
   };
-
+  struct PHintOp {
+    const char *Data;
+    unsigned Length;
+    unsigned Val;
+  };
   struct BTIHintOp {
     const char *Data;
     unsigned Length;
@@ -512,6 +518,7 @@ private:
     struct SysCRImmOp SysCRImm;
     struct PrefetchOp Prefetch;
     struct PSBHintOp PSBHint;
+    struct PHintOp PHint;
     struct BTIHintOp BTIHint;
     struct ShiftExtendOp ShiftExtend;
     struct SVCROp SVCR;
@@ -576,6 +583,9 @@ public:
       break;
     case k_PSBHint:
       PSBHint = o.PSBHint;
+      break;
+    case k_PHint:
+      PHint = o.PHint;
       break;
     case k_BTIHint:
       BTIHint = o.BTIHint;
@@ -729,9 +739,19 @@ public:
     return PSBHint.Val;
   }
 
+  unsigned getPHint() const {
+    assert(Kind == k_PHint && "Invalid access!");
+    return PHint.Val;
+  }
+
   StringRef getPSBHintName() const {
     assert(Kind == k_PSBHint && "Invalid access!");
     return StringRef(PSBHint.Data, PSBHint.Length);
+  }
+
+  StringRef getPHintName() const {
+    assert(Kind == k_PHint && "Invalid access!");
+    return StringRef(PHint.Data, PHint.Length);
   }
 
   unsigned getBTIHint() const {
@@ -1487,6 +1507,7 @@ public:
   bool isSysCR() const { return Kind == k_SysCR; }
   bool isPrefetch() const { return Kind == k_Prefetch; }
   bool isPSBHint() const { return Kind == k_PSBHint; }
+  bool isPHint() const { return Kind == k_PHint; }
   bool isBTIHint() const { return Kind == k_BTIHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
@@ -2071,20 +2092,6 @@ public:
     Inst.addOperand(MCOperand::createImm(MCE->getValue() >> 2));
   }
 
-  void addPCRelLabel9Operands(MCInst &Inst, unsigned N) const {
-    // Branch operands don't encode the low bits, so shift them off
-    // here. If it's a label, however, just put it on directly as there's
-    // not enough information now to do anything.
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE) {
-      addExpr(Inst, getImm());
-      return;
-    }
-    assert(MCE && "Invalid constant immediate operand!");
-    Inst.addOperand(MCOperand::createImm(MCE->getValue() >> 2));
-  }
-
   void addBranchTarget14Operands(MCInst &Inst, unsigned N) const {
     // Branch operands don't encode the low bits, so shift them off
     // here. If it's a label, however, just put it on directly as there's
@@ -2158,6 +2165,11 @@ public:
   void addPSBHintOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getPSBHint()));
+  }
+
+  void addPHintOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getPHint()));
   }
 
   void addBTIHintOperands(MCInst &Inst, unsigned N) const {
@@ -2457,6 +2469,17 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<AArch64Operand>
+  CreatePHintInst(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_PHint, Ctx);
+    Op->PHint.Val = Val;
+    Op->PHint.Data = Str.data();
+    Op->PHint.Length = Str.size();
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
   static std::unique_ptr<AArch64Operand> CreateSysCR(unsigned Val, SMLoc S,
                                                      SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_SysCR, Ctx);
@@ -2608,6 +2631,9 @@ void AArch64Operand::print(raw_ostream &OS) const {
   }
   case k_PSBHint:
     OS << getPSBHintName();
+    break;
+  case k_PHint:
+    OS << getPHintName();
     break;
   case k_BTIHint:
     OS << getBTIHintName();
@@ -3764,6 +3790,9 @@ static const struct Extension {
     {"sve-aes2", {AArch64::FeatureSVEAES2}},
     {"sve-bfscale", {AArch64::FeatureSVEBFSCALE}},
     {"sve-f16f32mm", {AArch64::FeatureSVE_F16F32MM}},
+    {"lsui", {AArch64::FeatureLSUI}},
+    {"occmo", {AArch64::FeatureOCCMO}},
+    {"pcdphint", {AArch64::FeaturePCDPHINT}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4137,6 +4166,23 @@ ParseStatus AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
                                    PStateImm, getContext()));
   Lex(); // Eat identifier
 
+  return ParseStatus::Success;
+}
+
+ParseStatus
+AArch64AsmParser::tryParsePHintInstOperand(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const AsmToken &Tok = getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return TokError("invalid operand for instruction");
+
+  auto PH = AArch64PHint::lookupPHintByName(Tok.getString());
+  if (!PH)
+    return TokError("invalid operand for instruction");
+
+  Operands.push_back(AArch64Operand::CreatePHintInst(
+      PH->Encoding, Tok.getString(), S, getContext()));
+  Lex(); // Eat identifier token.
   return ParseStatus::Success;
 }
 
@@ -5941,8 +5987,6 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 32].");
   case Match_InvalidImm1_64:
     return Error(Loc, "immediate must be an integer in range [1, 64].");
-  case Match_InvalidImmM1_62:
-    return Error(Loc, "immediate must be an integer in range [-1, 62].");
   case Match_InvalidMemoryIndexedRange2UImm0:
     return Error(Loc, "vector select offset must be the immediate range 0:1.");
   case Match_InvalidMemoryIndexedRange2UImm1:
@@ -6713,7 +6757,6 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_16:
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
-  case Match_InvalidImmM1_62:
   case Match_InvalidMemoryIndexedRange2UImm0:
   case Match_InvalidMemoryIndexedRange2UImm1:
   case Match_InvalidMemoryIndexedRange2UImm2:
@@ -8179,39 +8222,5 @@ ParseStatus AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
 
   Operands.push_back(
       AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));
-  return ParseStatus::Success;
-}
-
-template <int Adj>
-ParseStatus AArch64AsmParser::tryParseAdjImm0_63(OperandVector &Operands) {
-  SMLoc S = getLoc();
-
-  parseOptionalToken(AsmToken::Hash);
-  bool IsNegative = parseOptionalToken(AsmToken::Minus);
-
-  if (getTok().isNot(AsmToken::Integer))
-    return ParseStatus::NoMatch;
-
-  const MCExpr *Ex;
-  if (getParser().parseExpression(Ex))
-    return ParseStatus::NoMatch;
-
-  int64_t Imm = dyn_cast<MCConstantExpr>(Ex)->getValue();
-  if (IsNegative)
-    Imm = -Imm;
-
-  // We want an adjusted immediate in the range [0, 63]. If we don't have one,
-  // return a value, which is certain to trigger a error message about invalid
-  // immediate range instead of a non-descriptive invalid operand error.
-  static_assert(Adj == 1 || Adj == -1, "Unsafe immediate adjustment");
-  if (Imm == INT64_MIN || Imm == INT64_MAX || Imm + Adj < 0 || Imm + Adj > 63)
-    Imm = -2;
-  else
-    Imm += Adj;
-
-  SMLoc E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
-  Operands.push_back(AArch64Operand::CreateImm(
-      MCConstantExpr::create(Imm, getContext()), S, E, getContext()));
-
   return ParseStatus::Success;
 }
