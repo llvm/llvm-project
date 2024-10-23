@@ -88,6 +88,12 @@ public:
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const;
 
+  /// getCondCompBranchTargetOpValue - Return the encoded value for a
+  /// conditional compare-and-branch target.
+  uint32_t getCondCompBranchTargetOpValue(const MCInst &MI, unsigned OpIdx,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const;
+
   /// getPAuthPCRelOpValue - Return the encoded value for a pointer
   /// authentication pc-relative operand.
   uint32_t getPAuthPCRelOpValue(const MCInst &MI, unsigned OpIdx,
@@ -195,6 +201,9 @@ public:
   uint32_t EncodeRegMul_MinMax(const MCInst &MI, unsigned OpIdx,
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const;
+  uint32_t EncodeZK(const MCInst &MI, unsigned OpIdx,
+                    SmallVectorImpl<MCFixup> &Fixups,
+                    const MCSubtargetInfo &STI) const;
   uint32_t EncodePNR_p8to15(const MCInst &MI, unsigned OpIdx,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
@@ -325,6 +334,27 @@ uint32_t AArch64MCCodeEmitter::getCondBranchTargetOpValue(
   assert(MO.isExpr() && "Unexpected target type!");
 
   MCFixupKind Kind = MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19);
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+
+  ++MCNumFixups;
+
+  // All of the information is in the fixup.
+  return 0;
+}
+
+/// getCondCompBranchTargetOpValue - Return the encoded value for a conditional
+/// compare-and-branch target.
+uint32_t AArch64MCCodeEmitter::getCondCompBranchTargetOpValue(
+    const MCInst &MI, unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpIdx);
+
+  // If the destination is an immediate, we have nothing to do.
+  if (MO.isImm())
+    return MO.getImm();
+  assert(MO.isExpr() && "Unexpected target type!");
+
+  MCFixupKind Kind = MCFixupKind(AArch64::fixup_aarch64_pcrel_branch9);
   Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
 
   ++MCNumFixups;
@@ -571,6 +601,25 @@ AArch64MCCodeEmitter::EncodeRegMul_MinMax(const MCInst &MI, unsigned OpIdx,
   unsigned RegVal = Ctx.getRegisterInfo()->getEncodingValue(RegOpnd);
   assert(RegVal >= Min && RegVal <= Max && (RegVal & (Multiple - 1)) == 0);
   return (RegVal - Min) / Multiple;
+}
+
+// Zk Is the name of the control vector register Z20-Z23 or Z28-Z31, encoded in
+// the "K:Zk" fields. Z20-Z23 = 000, 001,010, 011  and Z28-Z31 = 100, 101, 110,
+// 111
+uint32_t AArch64MCCodeEmitter::EncodeZK(const MCInst &MI, unsigned OpIdx,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  auto RegOpnd = MI.getOperand(OpIdx).getReg();
+  unsigned RegVal = Ctx.getRegisterInfo()->getEncodingValue(RegOpnd);
+
+  // ZZ8-Z31 => Reg is in 3..7 (offset 24)
+  if (RegOpnd > AArch64::Z27)
+    return (RegVal - 24);
+
+  assert((RegOpnd > AArch64::Z19 && RegOpnd < AArch64::Z24) &&
+         "Expected ZK in Z20..Z23 or Z28..Z31");
+  // Z20-Z23 => Reg is in 0..3 (offset 20)
+  return (RegVal - 20);
 }
 
 uint32_t
