@@ -1124,11 +1124,10 @@ static std::optional<int> getItineraryLatency(const MachineInstr &MI,
 /// if no information is available.
 static std::optional<int> getLatency(const MachineInstr &MI, const MCSubtargetInfo *STI) {
   const MCSchedModel &SCModel = STI->getSchedModel();
-  const int NoInformationAvailable = -1;
 
   const MachineFunction *MF = MI.getMF();
   if (!MF)
-    return NoInformationAvailable;
+    return std::nullopt;
 
   // Check if we have a scheduling model for instructions.
   if (!SCModel.hasInstrSchedModel())
@@ -1142,7 +1141,7 @@ static std::optional<int> getLatency(const MachineInstr &MI, const MCSubtargetIn
   unsigned SCClass = Desc.getSchedClass();
   int Latency = SCModel.computeInstrLatency(*STI, SCClass);
   if (Latency <= 0)
-    return NoInformationAvailable;
+    return std::nullopt;
   return Latency;
 }
 
