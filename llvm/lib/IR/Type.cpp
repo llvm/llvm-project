@@ -408,17 +408,10 @@ bool StructType::isScalableTy(SmallPtrSetImpl<Type *> &Visited) const {
     return false;
 
   for (Type *Ty : elements()) {
-    if (isa<ScalableVectorType>(Ty)) {
+    if (Ty->isScalableTy(Visited)) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsScalableVector);
       return true;
-    }
-    if (auto *STy = dyn_cast<StructType>(Ty)) {
-      if (STy->isScalableTy(Visited)) {
-        const_cast<StructType *>(this)->setSubclassData(
-            getSubclassData() | SCDB_ContainsScalableVector);
-        return true;
-      }
     }
   }
 
