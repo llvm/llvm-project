@@ -11711,7 +11711,7 @@ InstructionCost BoUpSLP::getSpillCost() const {
           if (auto *FPMO = dyn_cast<FPMathOperator>(II))
             FMF = FPMO->getFastMathFlags();
           IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
-                                      FMF);
+                                      FMF, II);
           InstructionCost IntrCost =
               TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
           InstructionCost CallCost = TTI->getCallInstrCost(
