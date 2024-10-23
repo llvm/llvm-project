@@ -34,8 +34,6 @@ public:
 
   ~AArch64ELFObjectWriter() override = default;
 
-  MCSectionELF *getMemtagRelocsSection(MCContext &Ctx) const override;
-
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
@@ -460,12 +458,6 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
                                                      const MCSymbol &,
                                                      unsigned) const {
   return (Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT;
-}
-
-MCSectionELF *
-AArch64ELFObjectWriter::getMemtagRelocsSection(MCContext &Ctx) const {
-  return Ctx.getELFSection(".memtag.globals.static",
-                           ELF::SHT_AARCH64_MEMTAG_GLOBALS_STATIC, 0);
 }
 
 std::unique_ptr<MCObjectTargetWriter>
