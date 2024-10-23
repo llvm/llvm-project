@@ -9840,13 +9840,14 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             ::getShuffleCost(TTI, *RegShuffleKind,
                              getWidenedType(ScalarTy, EltsPerVector), SubMask);
       }
+      const unsigned BaseVF = getFullVectorNumberOfElements(
+          *R.TTI, VL.front()->getType(), alignTo(NumElts, EltsPerVector));
       for (unsigned Idx : Indices) {
-        assert((Idx + EltsPerVector) <= alignTo(NumElts, EltsPerVector) &&
+        assert((Idx + EltsPerVector) <= BaseVF &&
                "SK_ExtractSubvector index out of range");
-        Cost += ::getShuffleCost(
-            TTI, TTI::SK_ExtractSubvector,
-            getWidenedType(ScalarTy, alignTo(NumElts, EltsPerVector)), {},
-            CostKind, Idx, getWidenedType(ScalarTy, EltsPerVector));
+        Cost += ::getShuffleCost(TTI, TTI::SK_ExtractSubvector,
+                                 getWidenedType(ScalarTy, BaseVF), {}, CostKind,
+                                 Idx, getWidenedType(ScalarTy, EltsPerVector));
       }
       // Second attempt to check, if just a permute is better estimated than
       // subvector extract.
