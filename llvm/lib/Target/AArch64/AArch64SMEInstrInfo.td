@@ -1000,3 +1000,7 @@ defm FMOPA_MPPZZ_BtoS : sme_outer_product_fp32<0b0, 0b01, ZPR8, "fmopa", null_fr
 
 } //[HasSMEF8F32]
 
+let Predicates = [HasSME2p2] in {
+  defm FMOP4A : sme2_fmop4as_fp16_fp32_widening<0, "fmop4a">;
+  defm FMOP4S : sme2_fmop4as_fp16_fp32_widening<1, "fmop4s">;
+}
