@@ -764,11 +764,18 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   const DataLayout &DL = GV->getDataLayout();
   uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+  if (GV->isTagged())
+    Size = alignTo(Size, 16);
 
   // If the alignment is specified, we *must* obey it.  Overaligning a global
   // with a specified alignment is a prompt way to break globals emitted to
   // sections and expected to be contiguous (e.g. ObjC metadata).
-  const Align Alignment = getGVAlignment(GV, DL);
+  Align Alignment = getGVAlignment(GV, DL);
+  if (GV->isTagged() && Alignment < 16) {
+    // llvm/lib/IR/Verifier.cpp makes sure tagged globals don't have section.
+    assert(!GV->hasSection());
+    Alignment = Align(16);
+  }
 
   for (auto &Handler : DebugHandlers)
     Handler->setSymbolSize(GVSym, Size);
