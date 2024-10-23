@@ -11588,7 +11588,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 
   if (VectorizableTree.back()->isGather() &&
       VectorizableTree.back()->isAltShuffle() &&
-      VectorizableTree.back()->getVectorFactor() > 2)
+      VectorizableTree.back()->getVectorFactor() > 2 &&
+      allSameBlock(VectorizableTree.back()->Scalars))
     return false;
 
   assert(VectorizableTree.empty()
