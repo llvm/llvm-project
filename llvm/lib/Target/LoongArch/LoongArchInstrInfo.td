@@ -2078,6 +2078,35 @@ multiclass binary_atomic_op_wd<string inst, string op, string signed = ""> {
             (!cast<Instruction>(inst#"__DB_D"#signed) GPR:$rk, GPR:$rj)>;
 }
 
+// Atomic operation for byte and half word
+multiclass binary_atomic_op_bh<string inst, string op> {
+  def : Pat<(!cast<PatFrag>(op#"_i8_monotonic") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"_B") GPR:$rk, GPR:$rj)>;
+  def : Pat<(!cast<PatFrag>(op#"_i16_monotonic") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"_H") GPR:$rk, GPR:$rj)>;
+
+  def : Pat<(!cast<PatFrag>(op#"_i8") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"__DB_B") GPR:$rk, GPR:$rj)>;
+  def : Pat<(!cast<PatFrag>(op#"_i16") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"__DB_H") GPR:$rk, GPR:$rj)>;
+}
+
+let Predicates = [ HasLAM_BH, IsLA64 ] in {
+  
+defm : binary_atomic_op_bh<"AMSWAP", "atomic_swap">;
+defm : binary_atomic_op_bh<"AMADD", "atomic_load_add">;
+def : Pat<(atomic_load_sub_i8_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_B (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_i16_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_H (SUB_W R0, GPR:$rk), GPR:$rj)>;
+
+def : Pat<(atomic_load_sub_i8 GPR:$rj, GPR:$rk),
+          (AMADD__DB_B (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_i16 GPR:$rj, GPR:$rk),
+          (AMADD__DB_H (SUB_W R0, GPR:$rk), GPR:$rj)>;
+} // Predicates = [ IsLA64, HasLAM_BH ]
+
+
 let Predicates = [IsLA64] in {
 
 defm : binary_atomic_op_wd<"AMSWAP", "atomic_swap">;
