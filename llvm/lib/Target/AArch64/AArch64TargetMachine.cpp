@@ -202,6 +202,16 @@ static cl::opt<bool> ForceStreamingCompatible(
     cl::desc("Force the use of streaming-compatible code for all functions"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<unsigned> StreamingHazardSize(
+    "aarch64-streaming-hazard-size",
+    cl::desc("Hazard size for streaming mode memory accesses. 0 = disabled."),
+    cl::init(0), cl::Hidden);
+
+static cl::alias StreamingStackHazardSize(
+    "aarch64-stack-hazard-size",
+    cl::desc("alias for -aarch64-streaming-hazard-size"),
+    cl::aliasopt(StreamingHazardSize));
+
 extern cl::opt<bool> EnableHomogeneousPrologEpilog;
 
 static cl::opt<bool> EnableGISelLoadStoreOptPreLegal(
@@ -472,7 +482,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
+        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible,
+        StreamingHazardSize, HasMinSize);
   }
 
   assert((!IsStreaming || I->hasSME()) && "Expected SME to be available");
