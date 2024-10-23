@@ -57,6 +57,13 @@ class LLVMConfig(object):
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 
+        if platform.system() == "AIX":
+            # Diff on AIX doesn't have all the required features (see
+            # https://github.com/llvm/llvm-project/pull/108871 and
+            # https://github.com/llvm/llvm-project/pull/112997#issuecomment-2429656192)
+            # so always use the internal shell.
+            self.use_lit_shell = True
+
         if platform.system() == "OS/390":
             self.with_environment("_BPXK_AUTOCVT", "ON")
             self.with_environment("_TAG_REDIR_IN", "TXT")
