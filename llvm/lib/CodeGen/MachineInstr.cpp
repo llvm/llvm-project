@@ -620,6 +620,12 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::FmReassoc;
   }
 
+  // Copy the samesign flag.
+  if (const auto *ICI = dyn_cast<ICmpInst>(&I)) {
+    if (ICI->hasSameSign())
+      MIFlags |= MachineInstr::MIFlag::SameSign;
+  }
+
   if (I.getMetadata(LLVMContext::MD_unpredictable))
     MIFlags |= MachineInstr::MIFlag::Unpredictable;
 
@@ -1773,6 +1779,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (getFlag(MachineInstr::SameSign))
+    OS << "samesign ";
 
   // Print the opcode name.
   if (TII)
