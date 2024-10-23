@@ -468,8 +468,8 @@ private:
     // void (&&FunctionReference)(void);
     // void (^ObjCBlock)(void);
     bool MightBeFunctionType = !Contexts[Contexts.size() - 2].IsExpression;
-    bool ProbablyFunctionType =
-        CurrentToken->isPointerOrReference() || CurrentToken->is(tok::caret);
+    bool ProbablyFunctionType = CurrentToken->isPointerOrReference(LangOpts) ||
+                                CurrentToken->is(tok::caret);
     bool HasMultipleLines = false;
     bool HasMultipleParametersOnALine = false;
     bool MightBeObjCForRangeLoop =
@@ -507,7 +507,8 @@ private:
           //   auto my_lambda = MACRO((Type *type, int i) { .. body .. });
           for (FormatToken *Tok = &OpeningParen; Tok != CurrentToken;
                Tok = Tok->Next) {
-            if (Tok->is(TT_BinaryOperator) && Tok->isPointerOrReference())
+            if (Tok->is(TT_BinaryOperator) &&
+                Tok->isPointerOrReference(LangOpts))
               Tok->setType(TT_PointerOrReference);
           }
         }
@@ -578,7 +579,7 @@ private:
              Tok != CurrentToken &&
              !Tok->isOneOf(tok::equal, tok::l_paren, tok::l_brace);
              Tok = Tok->Next) {
-          if (Tok->isPointerOrReference())
+          if (Tok->isPointerOrReference(LangOpts))
             Tok->setFinalizedType(TT_PointerOrReference);
         }
       }
@@ -1411,7 +1412,7 @@ private:
         for (auto *Prev = Tok->Previous;
              Prev && !Prev->isOneOf(tok::semi, tok::l_paren);
              Prev = Prev->Previous) {
-          if (Prev->isPointerOrReference())
+          if (Prev->isPointerOrReference(LangOpts))
             Prev->setFinalizedType(TT_PointerOrReference);
         }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
@@ -2244,7 +2245,7 @@ private:
           if (Previous->opensScope())
             break;
           if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
-              Previous->isPointerOrReference() && Previous->Previous &&
+              Previous->isPointerOrReference(LangOpts) && Previous->Previous &&
               Previous->Previous->isNot(tok::equal)) {
             Previous->setType(TT_PointerOrReference);
           }
@@ -2410,7 +2411,7 @@ private:
     } else if (isDeductionGuide(Current)) {
       // Deduction guides trailing arrow " A(...) -> A<T>;".
       Current.setType(TT_TrailingReturnArrow);
-    } else if (Current.isPointerOrReference()) {
+    } else if (Current.isPointerOrReference(LangOpts)) {
       Current.setType(determineStarAmpUsage(
           Current,
           Contexts.back().CanBeExpression && Contexts.back().IsExpression,
@@ -2580,7 +2581,7 @@ private:
     if (const auto *NextNonComment = Tok.getNextNonComment();
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
-         (NextNonComment->isPointerOrReference() ||
+         (NextNonComment->isPointerOrReference(LangOpts) ||
           NextNonComment->is(tok::string_literal) ||
           (Line.InPragmaDirective && NextNonComment->is(tok::identifier))))) {
       return false;
@@ -3767,7 +3768,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
         continue;
       }
       if ((Next->isTypeName(LangOpts) || Next->is(tok::identifier)) &&
-          Next->Next && Next->Next->isPointerOrReference()) {
+          Next->Next && Next->Next->isPointerOrReference(LangOpts)) {
         // For operator void*(), operator char*(), operator Foo*().
         Next = Next->Next;
         continue;
@@ -3797,7 +3798,8 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
       assert(Previous.MatchingParen->is(TT_TypeDeclarationParen));
       return true;
     }
-    if (!Previous.isPointerOrReference() && Previous.isNot(TT_TemplateCloser))
+    if (!Previous.isPointerOrReference(LangOpts) &&
+        Previous.isNot(TT_TemplateCloser))
       return false;
     Next = skipOperatorName(Next);
   } else {
@@ -3983,7 +3985,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
             continue;
           auto *Next = Tok->Next;
           const bool NextIsBinaryOperator =
-              Next && Next->isPointerOrReference() && Next->Next &&
+              Next && Next->isPointerOrReference(LangOpts) && Next->Next &&
               Next->Next->is(tok::identifier);
           if (!NextIsBinaryOperator)
             continue;
@@ -4632,15 +4634,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   // Ensure right pointer alignment with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && BeforeLeft &&
-      BeforeLeft->isPointerOrReference()) {
+      BeforeLeft->isPointerOrReference(LangOpts)) {
     return Style.PointerAlignment != FormatStyle::PAS_Right;
   }
 
   if (Right.is(tok::star) && Left.is(tok::l_paren))
     return false;
-  if (Left.is(tok::star) && Right.isPointerOrReference())
+  if (Left.is(tok::star) && Right.isPointerOrReference(LangOpts))
     return false;
-  if (Right.isPointerOrReference()) {
+  if (Right.isPointerOrReference(LangOpts)) {
     const FormatToken *Previous = &Left;
     while (Previous && Previous->isNot(tok::kw_operator)) {
       if (Previous->is(tok::identifier) || Previous->isTypeName(LangOpts)) {
@@ -5879,7 +5881,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   }
 
   if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace) &&
-      (Left.isPointerOrReference() || Left.is(TT_TemplateCloser))) {
+      (Left.isPointerOrReference(LangOpts) || Left.is(TT_TemplateCloser))) {
     return true;
   }
 
@@ -6433,7 +6435,7 @@ TokenAnnotator::getTokenPointerOrReferenceAlignment(
       return FormatStyle::PAS_Middle;
     }
   }
-  assert(PointerOrReference.is(tok::star));
+  assert(LangOpts.CPlusPlusCLI ? PointerOrReference.isOneOf(tok::star, tok::caret) : PointerOrReference.is(tok::star));
   return Style.PointerAlignment;
 }
 
