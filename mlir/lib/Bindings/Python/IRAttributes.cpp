@@ -1092,13 +1092,12 @@ private:
     // Prepare the data for the buffer_info.
     // Buffer is configured for read-only access in .
     Type *data = static_cast<Type *>(
-      const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
+        const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
     return bufferInfo<Type>(shapedType, data, explicitFormat);
   }
 
   template <typename Type>
-  py::buffer_info bufferInfo(MlirType shapedType,
-                             Type *data,
+  py::buffer_info bufferInfo(MlirType shapedType, Type *data,
                              const char *explicitFormat = nullptr) {
     intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the shape for the buffer_info.
