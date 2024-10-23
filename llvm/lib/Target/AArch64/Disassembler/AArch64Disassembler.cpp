@@ -49,6 +49,8 @@ template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
                                          uint64_t Address,
                                          const MCDisassembler *Decoder);
+static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder);
 template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
@@ -383,6 +385,17 @@ static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
 
   unsigned Register =
       AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(Reg);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  if (RegNo > 7)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPR_KRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
