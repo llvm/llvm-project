@@ -27,16 +27,20 @@ if [[ -n "${CLEAR_CACHE:-}" ]]; then
 fi
 
 sccache --zero-stats
-function show-stats {
+function at-exit {
+  python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
+    "windows-x64-test-results" "${BUILD_DIR}"/test-results*.xml
+
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
 }
-trap show-stats EXIT
+trap at-exit EXIT
 
 projects="${1}"
 targets="${2}"
 
 echo "--- cmake"
+pip install junitparser==3.2.0
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
