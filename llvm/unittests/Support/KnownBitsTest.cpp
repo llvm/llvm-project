@@ -815,7 +815,7 @@ TEST(KnownBitsTest, ConcatBits) {
   }
 }
 
-TEST(KnownBitsTest, MulExhaustive) {
+TEST(KnownBitsTest, MulLowBitsExhaustive) {
   for (unsigned Bits : {1, 4}) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
       ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
@@ -846,6 +846,56 @@ TEST(KnownBitsTest, MulExhaustive) {
         }
       });
     });
+  }
+}
+
+TEST(KnownBitsTest, MulHighBits) {
+  unsigned Bits = 8;
+  SmallVector<std::pair<int, int>, 4> TestPairs = {
+      {2, 4}, {-2, -4}, {2, -4}, {-2, 4}};
+  for (auto [K1, K2] : TestPairs) {
+    KnownBits Known1(Bits), Known2(Bits);
+    if (K1 > 0) {
+      // If we only set the zeros of ~K1, Known1 could be zero. Avoid this case,
+      // as we can only set leading ones in the case where LHS and RHS have
+      // different signs, when the result is known non-zero.
+      Known1.Zero |= ~(K1 | 1);
+      Known1.One |= 1;
+    } else {
+      Known1.One |= K1;
+    }
+    if (K2 > 0) {
+      // If we only set the zeros of ~K1, Known1 could be zero. Avoid this case,
+      // as we can only set leading ones in the case where LHS and RHS have
+      // different signs, when the result is known non-zero.
+      Known2.Zero |= ~(K2 | 1);
+      Known2.One |= 1;
+    } else {
+      Known2.One |= K2;
+    }
+    KnownBits Computed = KnownBits::mul(Known1, Known2);
+    KnownBits Exact(Bits);
+    Exact.Zero.setAllBits();
+    Exact.One.setAllBits();
+
+    ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+      ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+        APInt Res = N1 * N2;
+        Exact.One &= Res;
+        Exact.Zero &= ~Res;
+      });
+    });
+
+    // Check that the high bits are optimal, with the caveat that mul_ov of LHS
+    // and RHS doesn't overflow, which is the case for our TestPairs.
+    APInt Mask = APInt::getHighBitsSet(
+        Bits, (Exact.Zero | Exact.One).countLeadingOnes());
+    Exact.Zero &= Mask;
+    Exact.One &= Mask;
+    Computed.Zero &= Mask;
+    Computed.One &= Mask;
+    EXPECT_TRUE(checkResult("mul", Exact, Computed, {Known1, Known2},
+                            /*CheckOptimality=*/true));
   }
 }
 
