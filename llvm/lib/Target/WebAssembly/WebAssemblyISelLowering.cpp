@@ -1635,8 +1635,7 @@ SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
 SDValue WebAssemblyTargetLowering::Replace128Op(SDNode *N,
                                                 SelectionDAG &DAG) const {
   assert(Subtarget->hasWideArithmetic());
-  auto ValTy = N->getValueType(0);
-  assert(ValTy == MVT::i128);
+  assert(N->getValueType(0) == MVT::i128);
   SDLoc DL(N);
   unsigned Opcode;
   switch (N->getOpcode()) {
