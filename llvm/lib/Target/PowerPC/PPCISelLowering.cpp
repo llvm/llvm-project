@@ -17383,8 +17383,8 @@ Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
     report_fatal_error(
         Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
 
-  // FIXME: These registers are not flagged as reserved and we can generate
-  // code for `-O0` but not for `-O2`.  Need followup investigation as to why.
+  // FIXME: Unable to generate code for `-O2` but okay for `-O0`.
+  // Need followup investigation as to why.
   if ((IsPPC64 && Reg == PPC::R2) || Reg == PPC::R0)
     report_fatal_error(Twine("Trying to reserve an invalid register \"" +
                              StringRef(RegName) + "\"."));
@@ -17393,9 +17393,6 @@ Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   if (Is64Bit && StringRef(RegName).starts_with_insensitive("r"))
     Reg = Reg.id() - PPC::R0 + PPC::X0;
 
-  if (Subtarget.getRegisterInfo()->getReservedRegs(MF).test(Reg))
-    report_fatal_error(Twine("Trying to obtain a reserved register \"" +
-                             StringRef(RegName) + "\"."));
   return Reg;
 }
 
