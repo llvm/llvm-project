@@ -13,8 +13,7 @@ define i32 @f(i64 %a3, i64 %numElements) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A1]], [[A3]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END_I:%.*]], label [[ABORT:%.*]]
 ; CHECK:       if.end.i:
-; CHECK-NEXT:    [[CMP2_NOT_I:%.*]] = icmp ult i64 [[A1]], [[A3]]
-; CHECK-NEXT:    br i1 [[CMP2_NOT_I]], label [[ABORT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[ABORT]], label [[EXIT:%.*]]
 ; CHECK:       abort:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       exit:
