@@ -1624,6 +1624,9 @@ public:
     return PGO.getIsCounterPair(S);
   }
 
+  void markStmtAsUsed(bool Skipped, const Stmt *S) {
+    PGO.markStmtAsUsed(Skipped, S);
+  }
   void markStmtMaybeUsed(const Stmt *S) { PGO.markStmtMaybeUsed(S); }
 
   /// Increment the profiler's counter for the given statement by \p StepV.
