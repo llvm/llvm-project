@@ -18,6 +18,7 @@
 #include "lld/Common/Timer.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Parallel.h"
@@ -631,8 +632,47 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
   return s;
 }
 
+// On ARM64EC, a function symbol may appear in both mangled and demangled forms:
+// - ARM64EC archives contain only the mangled name, while the demangled symbol
+//   is defined by the object file as an alias.
+// - x86_64 archives contain only the demangled name (the mangled name is
+//   usually defined by an object referencing the symbol as an alias to a guess
+//   exit thunk).
+// - ARM64EC import files contain both the mangled and demangled names for
+//   thunks.
+// If more than one archive defines the same function, this could lead
+// to different libraries being used for the same function depending on how they
+// are referenced. Avoid this by checking if the paired symbol is already
+// defined before adding a symbol to the table.
+template <typename T>
+bool checkLazyECPair(SymbolTable *symtab, StringRef name, InputFile *f) {
+  if (name.starts_with("__imp_"))
+    return true;
+  std::string pairName;
+  if (std::optional<std::string> mangledName =
+          getArm64ECMangledFunctionName(name))
+    pairName = std::move(*mangledName);
+  else
+    pairName = *getArm64ECDemangledFunctionName(name);
+
+  Symbol *sym = symtab->find(pairName);
+  if (!sym)
+    return true;
+  if (sym->pendingArchiveLoad)
+    return false;
+  if (auto u = dyn_cast<Undefined>(sym))
+    return !u->weakAlias || u->isAntiDep;
+  // If the symbol is lazy, allow it only if it originates from the same
+  // archive.
+  auto lazy = dyn_cast<T>(sym);
+  return lazy && lazy->file == f;
+}
+
 void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
   StringRef name = sym.getName();
+  if (isArm64EC(ctx.config.machine) &&
+      !checkLazyECPair<LazyArchive>(this, name, f))
+    return;
   auto [s, wasInserted] = insert(name);
   if (wasInserted) {
     replaceSymbol<LazyArchive>(s, f, sym);
@@ -648,6 +688,8 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
 
 void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
   assert(f->lazy);
+  if (isArm64EC(ctx.config.machine) && !checkLazyECPair<LazyObject>(this, n, f))
+    return;
   auto [s, wasInserted] = insert(n, f);
   if (wasInserted) {
     replaceSymbol<LazyObject>(s, f, n);
