@@ -636,6 +636,8 @@ void MSVCToolChain::AddSystemIncludeWithSubfolder(
 
 void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                               ArgStringList &CC1Args) const {
+  // FIXME: Options explicitly present in the command line should still be
+  // FIXME: processed. E.g., the /imsvc option handled below.
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
@@ -675,7 +677,7 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       SmallVector<StringRef, 8> Dirs;
       StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
       if (!Dirs.empty()) {
-        addExternalAfterIncludes(DriverArgs, CC1Args, Dirs);
+        addExternalIncludesFromEnv(DriverArgs, CC1Args, Var);
         return true;
       }
     }

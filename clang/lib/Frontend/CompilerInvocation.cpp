@@ -3373,22 +3373,9 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   }
 
   // Add the MSVC /external:env and -iexternal-after options in order.
-  for (const auto *A :
-      Args.filtered(OPT_iexternal_after, OPT_iexternal_env_EQ)) {
-    if (A->getOption().matches(OPT_iexternal_after))
-      Opts.AddPath(A->getValue(), frontend::ExternalAfter,
-                   /*IsFramework=*/false, /*IgnoreSysRoot=*/true);
-    else {
-      if (auto Val = llvm::sys::Process::GetEnv(A->getValue())) {
-        SmallVector<StringRef, 8> Dirs;
-        StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-        for (const auto &Dir : Dirs) {
-          Opts.AddPath(Dir, frontend::ExternalAfter, /*IsFramework=*/false,
-                       /*IgnoreSysRoot=*/true);
-        }
-      }
-    }
-  }
+  for (const auto *A : Args.filtered(OPT_iexternal_after))
+    Opts.AddPath(A->getValue(), frontend::ExternalAfter,
+                 /*IsFramework=*/false, /*IgnoreSysRoot=*/true);
 
   // Add -iprefix/-iwithprefix/-iwithprefixbefore options.
   StringRef Prefix = ""; // FIXME: This isn't the correct default prefix.

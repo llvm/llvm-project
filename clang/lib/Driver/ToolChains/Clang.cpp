@@ -1178,6 +1178,17 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     } else if (A->getOption().matches(options::OPT_iexternal)) {
       // This option has to retain relative order with other -I options.
       continue;
+    } else if (A->getOption().matches(options::OPT_iexternal_env_EQ)) {
+      A->claim();
+      if (auto Val = llvm::sys::Process::GetEnv(A->getValue())) {
+        SmallVector<StringRef, 8> Dirs;
+        StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+        for (const auto &Dir : Dirs) {
+          CmdArgs.push_back("-iexternal-after");
+          CmdArgs.push_back(Args.MakeArgString(Dir));
+        }
+      }
+      continue;
     }
 
     // Not translated, render as usual.

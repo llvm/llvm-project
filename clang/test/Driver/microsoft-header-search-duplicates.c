@@ -8,29 +8,31 @@
 // Test the clang driver with a Windows target that implicitly enables the
 // -fms-compatibility option. The -nostdinc option is used to suppress default
 // search paths to ease testing.
-// XUN: env INCLUDE="%t/include/p;%t/include/o" \
-// XUN: env EXTRA_INCLUDE="%t/include/t;%t/include/q;%t/include/r" \
-// XUN  %clang \
-// XUN:     -target x86_64-pc-windows \
-// XUN:     -v -fsyntax-only \
-// XUN:     -nostdinc \
-// XUN:     -isystem %t/include/s \
-// XUN:     -isystem %t/include/w \
-// XUN:     -I%t/include/v \
-// XUN:     -isystem %t/include/x \
-// XUN:     -I%t/include/z \
-// XUN:     -isystem %t/include/y \
-// XUN:     -I%t/include/r \
-// XUN:     -external:env:EXTRA_INCLUDE \
-// XUN:     -I%t/include/t \
-// XUN:     -isystem %t/include/z \
-// XUN:     -I%t/include/o \
-// XUN:     -I%t/include/x \
-// XUN:     -isystem %t/include/y \
-// XUN:     -I%t/include/v \
-// XUN:     -isystem %t/include/w \
-// XUN:     -I%t/include/u \
-// XUN:     %t/test.c 2>&1 | FileCheck -DPWD=%t %t/test.c
+// RUN: env INCLUDE="%t/include/p;%t/include/o" \
+// RUN: env EXTRA_INCLUDE="%t/include/t;%t/include/q;%t/include/r" \
+// RUN: %clang \
+// RUN:     -target x86_64-pc-windows \
+// RUN:     -v -fsyntax-only \
+// RUN:     -nostdinc \
+// RUN:     -iexternal %t/include/s \
+// RUN:     -iexternal %t/include/w \
+// RUN:     -I%t/include/v \
+// RUN:     -iexternal %t/include/x \
+// RUN:     -I%t/include/z \
+// RUN:     -iexternal %t/include/y \
+// RUN:     -I%t/include/r \
+// RUN:     -iexternal-env=EXTRA_INCLUDE \
+// RUN:     -I%t/include/t \
+// RUN:     -iexternal %t/include/z \
+// RUN:     -I%t/include/o \
+// RUN:     -I%t/include/x \
+// RUN:     -iexternal %t/include/y \
+// RUN:     -I%t/include/v \
+// RUN:     -iexternal %t/include/w \
+// RUN:     -I%t/include/u \
+// RUN:     -iexternal-env=INCLUDE \
+// RUN:     -iexternal-env=EXTERNAL_INCLUDE \
+// RUN:     %t/test.c 2>&1 | FileCheck -DPWD=%t %t/test.c
 
 // Test the clang-cl driver with a Windows target that implicitly enables the
 // -fms-compatibility option. The -nobuiltininc option is uesd to suppress the

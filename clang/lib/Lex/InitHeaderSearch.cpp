@@ -403,6 +403,7 @@ static unsigned RemoveDuplicates(const LangOptions &Lang,
     // to ensure that #include and #include_next directives produce the same
     // results as these other compilers.
     //
+    // FIXME: The following comment isn't accurate.
     // GCC and MSVC both prune duplicate user search locations that follow a
     // previous matching user search location. Both compilers also prune user
     // search locations that are also present as system search locations
@@ -508,7 +509,7 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   RemoveDuplicates(Lang, SearchList, 0, Verbose);
   unsigned NumQuoted = SearchList.size();
 
-  // FIXME: GCC Ignore the last path for quoted inclusion when it matches the
+  // FIXME: GCC ignores the last path for quoted inclusion when it matches the
   // FIXME: first path for angled inclusion. This is observable when using
   // FIXME: #include_next.
 

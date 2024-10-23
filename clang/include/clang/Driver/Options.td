@@ -4563,14 +4563,14 @@ def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clan
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
-def iexternal : JoinedOrSeparate<["-"], "iexternal">, Group<clang_i_Group>,
+def iexternal : Separate<["-"], "iexternal">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to include search path with warnings suppressed">, MetaVarName<"<dir>">;
-def iexternal_after : JoinedOrSeparate<["-"], "iexternal-after">, Group<clang_i_Group>,
+def iexternal_after : Separate<["-"], "iexternal-after">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to include search path with warnings suppressed">, MetaVarName<"<dir>">;
 def iexternal_env_EQ : Joined<["-"], "iexternal-env=">, Group<clang_i_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption]>,
   HelpText<"Add dirs in env var <var> to include search path with warnings suppressed">, MetaVarName<"<var>">;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
