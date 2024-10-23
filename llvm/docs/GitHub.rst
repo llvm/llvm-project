@@ -133,6 +133,11 @@ or in some dependent code.
 After your PR is reviewed and accepted, you want to rebase your branch to ensure
 you won't encounter merge conflicts when landing the PR.
 
+.. note::
+  This guide assumes that the PR branch only has 1 author. If you are
+  collaborating with others on a single branch, be careful how and when you push
+  changes. ``--force-with-lease`` may be useful in this situation.
+
 Landing your change
 -------------------
 
