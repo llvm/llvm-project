@@ -2149,6 +2149,10 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
 
   SmallVector<OptionalFileEntryRef, 16> FilesByUID;
   HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
+  const auto &SM = Context->getSourceManager();
+  unsigned MainFileUID = -1;
+  if (const auto *Entry = SM.getFileEntryForID(SM.getMainFileID()))
+    MainFileUID = Entry->getUID();
 
   if (FilesByUID.size() > HS.header_file_size())
     FilesByUID.resize(HS.header_file_size());
@@ -2186,6 +2190,14 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     };
     Generator.insert(Key, Data, GeneratorTrait);
     ++NumHeaderSearchEntries;
+    // We may reuse a preamble even if the rest of the file is different, so
+    // allow looking up info for the main file with a zero size.
+    if (this->getASTContext().getLangOpts().CompilingPCH &&
+        File->getUID() == MainFileUID) {
+      Key.Size = 0;
+      Generator.insert(Key, Data, GeneratorTrait);
+      ++NumHeaderSearchEntries;
+    }
   }
 
   // Create the on-disk hash table in a buffer.
