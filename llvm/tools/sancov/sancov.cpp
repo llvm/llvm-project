@@ -1049,7 +1049,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
 
   {
     // Short name => file name.
-    std::map<std::string, std::string> ObjFiles;
+    std::map<std::string, std::string, std::less<>> ObjFiles;
     std::string FirstObjFile;
     std::set<std::string> CovFiles;
 
@@ -1066,7 +1066,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
         CovFiles.insert(FileName);
       } else {
         auto ShortFileName = llvm::sys::path::filename(FileName);
-        if (ObjFiles.find(std::string(ShortFileName)) != ObjFiles.end()) {
+        if (ObjFiles.find(ShortFileName) != ObjFiles.end()) {
           fail("Duplicate binary file with a short name: " + ShortFileName);
         }
 
@@ -1089,7 +1089,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
              FileName);
       }
 
-      auto Iter = ObjFiles.find(std::string(Components[1]));
+      auto Iter = ObjFiles.find(Components[1]);
       if (Iter == ObjFiles.end()) {
         fail("Object file for coverage not found: " + FileName);
       }
