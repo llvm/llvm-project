@@ -2423,8 +2423,13 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Visit(const_cast<Expr*>(E));
 
   case CK_NoOp: {
-    return CE->changesVolatileQualification() ? EmitLoadOfLValue(CE)
-                                              : Visit(const_cast<Expr *>(E));
+    if (CE->changesVolatileQualification())
+      return EmitLoadOfLValue(CE);
+    auto V = Visit(const_cast<Expr *>(E));
+    if (CGF.CGM.getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers &&
+        CE->getType()->isMemberFunctionPointerType())
+      V = CGF.CGM.getCXXABI().EmitMemberPointerConversion(CGF, CE, V);
+    return V;
   }
 
   case CK_BaseToDerived: {

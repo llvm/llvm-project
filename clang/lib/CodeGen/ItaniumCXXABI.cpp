@@ -924,17 +924,20 @@ ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
   if (isa<llvm::Constant>(src))
     return EmitMemberPointerConversion(E, cast<llvm::Constant>(src));
 
+  QualType DstType = E->getType(), SrcType = E->getSubExpr()->getType();
+
   assert(E->getCastKind() == CK_DerivedToBaseMemberPointer ||
          E->getCastKind() == CK_BaseToDerivedMemberPointer ||
-         E->getCastKind() == CK_ReinterpretMemberPointer);
+         E->getCastKind() == CK_ReinterpretMemberPointer ||
+         (E->getCastKind() == CK_NoOp &&
+          getContext().hasSameFunctionTypeIgnoringExceptionSpec(
+              DstType->getPointeeType(), SrcType->getPointeeType())));
 
   CGBuilderTy &Builder = CGF.Builder;
-  QualType DstType = E->getType();
 
   if (DstType->isMemberFunctionPointerType()) {
     if (const auto &NewAuthInfo =
             CGM.getMemberFunctionPointerAuthInfo(DstType)) {
-      QualType SrcType = E->getSubExpr()->getType();
       assert(SrcType->isMemberFunctionPointerType());
       const auto &CurAuthInfo = CGM.getMemberFunctionPointerAuthInfo(SrcType);
       llvm::Value *MemFnPtr = Builder.CreateExtractValue(src, 0, "memptr.ptr");
@@ -970,6 +973,11 @@ ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
       src = NewSrc;
     }
   }
+
+  // Conversion from a pointer to a noexcept member function to a pointer to a
+  // member function without noexcept doesn't require any additional processing.
+  if (E->getCastKind() == CK_NoOp)
+    return src;
 
   // Under Itanium, reinterprets don't require any additional processing.
   if (E->getCastKind() == CK_ReinterpretMemberPointer) return src;
@@ -1045,15 +1053,23 @@ pointerAuthResignMemberFunctionPointer(llvm::Constant *Src, QualType DestType,
 llvm::Constant *
 ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
                                            llvm::Constant *src) {
+  QualType DstType = E->getType(), SrcType = E->getSubExpr()->getType();
+
   assert(E->getCastKind() == CK_DerivedToBaseMemberPointer ||
          E->getCastKind() == CK_BaseToDerivedMemberPointer ||
-         E->getCastKind() == CK_ReinterpretMemberPointer);
-
-  QualType DstType = E->getType();
+         E->getCastKind() == CK_ReinterpretMemberPointer ||
+         (E->getCastKind() == CK_NoOp &&
+          getContext().hasSameFunctionTypeIgnoringExceptionSpec(
+              DstType->getPointeeType(), SrcType->getPointeeType())));
 
   if (DstType->isMemberFunctionPointerType())
     src = pointerAuthResignMemberFunctionPointer(
         src, DstType, E->getSubExpr()->getType(), CGM);
+
+  // Conversion from a pointer to a noexcept member function to a pointer to a
+  // member function without noexcept doesn't require any additional processing.
+  if (E->getCastKind() == CK_NoOp)
+    return src;
 
   // Under Itanium, reinterprets don't require any additional processing.
   if (E->getCastKind() == CK_ReinterpretMemberPointer) return src;
