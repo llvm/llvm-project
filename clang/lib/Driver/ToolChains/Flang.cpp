@@ -205,21 +205,24 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
 
 void Flang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
   bool VecExtabi = false;
-  for (const Arg *A : Args.filtered(options::OPT_mabi_EQ)) {
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
     StringRef V = A->getValue();
-    if (V == "vec-default") {
-      VecExtabi = false;
-      A->claim();
-    } else if (V == "vec-extabi") {
+    if (V == "vec-extabi") {
       VecExtabi = true;
-      A->claim();
+    } else if (V == "vec-default") {
+      VecExtabi = false;
+    } else {
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << V;
     }
   }
+
   const llvm::Triple &T = getToolChain().getTriple();
   if (VecExtabi) {
     if (!T.isOSAIX()) {
-      const Driver &D = getToolChain().getDriver();
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << "-mabi=vec-extabi" << T.str();
     }
