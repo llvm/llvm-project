@@ -418,8 +418,16 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
   elements.push_back(subrangeTy);
   mlir::Type llvmTy = llvmTypeConverter.convertType(vecTy.getEleTy());
   uint64_t sizeInBits = dataLayout->getTypeSize(llvmTy) * vecTy.getLen() * 8;
+  std::string name("vector");
+  // The element type of the vector must be integer or real so it will be a
+  // DIBasicTypeAttr.
+  if (auto ty = mlir::dyn_cast_if_present<mlir::LLVM::DIBasicTypeAttr>(elemTy))
+    name += " " + ty.getName().str();
+
+  name += " (" + std::to_string(vecTy.getLen()) + ")";
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
+      context, llvm::dwarf::DW_TAG_array_type,
+      mlir::StringAttr::get(context, name),
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Vector, sizeInBits, /*alignInBits=*/0, elements,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
