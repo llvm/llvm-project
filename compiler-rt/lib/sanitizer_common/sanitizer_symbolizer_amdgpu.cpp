@@ -25,8 +25,11 @@ void AMDGPUCodeObjectSymbolizer::InitCOMgr() {
   if (!comgr.inited_) {
     comgr.create_data =
         (decltype(comgr.create_data))dlsym(RTLD_NEXT, "amd_comgr_create_data");
-    comgr.set_data = (decltype(comgr.set_data))dlsym(
-        RTLD_NEXT, "amd_comgr_set_data_from_file_slice");
+    comgr.set_data =
+        (decltype(comgr.set_data))dlsym(RTLD_NEXT, "amd_comgr_set_data");
+    comgr.set_data_from_file_slice =
+        (decltype(comgr.set_data_from_file_slice))dlsym(
+            RTLD_NEXT, "amd_comgr_set_data_from_file_slice");
     comgr.create_symbolizer = (decltype(comgr.create_symbolizer))dlsym(
         RTLD_NEXT, "amd_comgr_create_symbolizer_info");
     comgr.symbolize =
@@ -36,8 +39,10 @@ void AMDGPUCodeObjectSymbolizer::InitCOMgr() {
     comgr.release_data = (decltype(comgr.release_data))dlsym(
         RTLD_NEXT, "amd_comgr_release_data");
 
-    comgr.inited_ = comgr.create_data && comgr.set_data && comgr.create_symbolizer &&
-        comgr.symbolize && comgr.destroy_symbolizer && comgr.release_data;
+    comgr.inited_ = comgr.create_data && comgr.set_data &&
+                    comgr.set_data_from_file_slice && comgr.create_symbolizer &&
+                    comgr.symbolize && comgr.destroy_symbolizer &&
+                    comgr.release_data;
   }
 }
 
@@ -48,9 +53,17 @@ void AMDGPUCodeObjectSymbolizer::Init(int fd, uint64_t off, uint64_t size) {
       return;
 
     object_cnt = comgr_objects::data;
-    if (comgr.set_data(codeobject, fd, off, size)) {
-      Release();
-      return;
+
+    if (fd != -1) {
+      if (comgr.set_data_from_file_slice(codeobject, fd, off, size)) {
+        Release();
+        return;
+      }
+    } else {
+      if (comgr.set_data(codeobject, size, off)) {
+        Release();
+        return;
+      }
     }
 
     if (comgr.create_symbolizer(codeobject, &getSourceLocation, &symbolizer)) {
