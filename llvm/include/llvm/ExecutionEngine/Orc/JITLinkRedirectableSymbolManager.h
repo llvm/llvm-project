@@ -60,12 +60,12 @@ private:
         PtrJumpStubCreator(jitlink::getPointerJumpStubCreator(
             ObjLinkingLayer.getExecutionSession().getTargetTriple())) {
     ErrorAsOutParameter _(&Err);
+    ObjLinkingLayer.getExecutionSession().registerResourceManager(*this);
     if (!AnonymousPtrCreator || !PtrJumpStubCreator)
       Err = make_error<StringError>("Architecture not supported",
                                     inconvertibleErrorCode());
     if (Err)
       return;
-    ObjLinkingLayer.getExecutionSession().registerResourceManager(*this);
   }
 
   ~JITLinkRedirectableSymbolManager() {
