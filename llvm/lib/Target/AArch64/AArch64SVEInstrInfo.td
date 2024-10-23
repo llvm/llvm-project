@@ -3453,7 +3453,7 @@ let Predicates = [HasSVE, HasMatMulFP32] in {
 } // End HasSVE, HasMatMulFP32
 
 let Predicates = [HasSVE_F16F32MM] in {
-  def FMLLA_ZZZ_SH : sve_fp_matrix_mla<0b00, "fmmla", ZPR32, ZPR16>;
+  def FMLLA_ZZZ_HtoS : sve_fp_matrix_mla<0b00, "fmmla", ZPR32, ZPR16>;
 } // End HasSVE_F16F32MM
 
 let Predicates = [HasSVE, HasMatMulFP64] in {

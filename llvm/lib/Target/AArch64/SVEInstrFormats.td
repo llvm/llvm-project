@@ -8905,7 +8905,6 @@ class sve_fp_matrix_mla<bits<2> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_t
 
   let Constraints = "$Zda = $_Zda";
   let DestructiveInstType = DestructiveOther;
-  let ElementSize = reg_ty.ElementSize;
   let hasSideEffects = 0;
   let mayRaiseFPException = 1;
 }
