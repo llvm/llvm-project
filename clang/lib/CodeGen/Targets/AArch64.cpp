@@ -42,7 +42,7 @@ private:
   ABIArgInfo coerceIllegalVector(QualType Ty, unsigned &NSRN,
                                  unsigned &NPRN) const;
   ABIArgInfo coerceAndExpandPureScalableAggregate(
-      QualType Ty, unsigned NVec, unsigned NPred,
+      QualType Ty, bool IsNamedArg, unsigned NVec, unsigned NPred,
       const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
       unsigned &NPRN) const;
   bool isHomogeneousAggregateBaseType(QualType Ty) const override;
@@ -63,11 +63,15 @@ private:
       FI.getReturnInfo() =
           classifyReturnType(FI.getReturnType(), FI.isVariadic());
 
+    unsigned ArgNo = 0;
     unsigned NSRN = 0, NPRN = 0;
-    for (auto &it : FI.arguments())
-      it.info =
-          classifyArgumentType(it.type, FI.isVariadic(), /* IsNamedArg */ true,
-                               FI.getCallingConvention(), NSRN, NPRN);
+    for (auto &it : FI.arguments()) {
+      const bool IsNamedArg =
+          !FI.isVariadic() || ArgNo < FI.getRequiredArgs().getNumRequiredArgs();
+      ++ArgNo;
+      it.info = classifyArgumentType(it.type, FI.isVariadic(), IsNamedArg,
+                                     FI.getCallingConvention(), NSRN, NPRN);
+    }
   }
 
   RValue EmitDarwinVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
@@ -322,10 +326,10 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
 }
 
 ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
-    QualType Ty, unsigned NVec, unsigned NPred,
+    QualType Ty, bool IsNamedArg, unsigned NVec, unsigned NPred,
     const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
     unsigned &NPRN) const {
-  if (NSRN + NVec > 8 || NPRN + NPred > 4)
+  if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
     return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
   NSRN += NVec;
   NPRN += NPred;
@@ -431,13 +435,13 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
 
   // In AAPCS named arguments of a Pure Scalable Type are passed expanded in
   // registers, or indirectly if there are not enough registers.
-  if (Kind == AArch64ABIKind::AAPCS && IsNamedArg) {
+  if (Kind == AArch64ABIKind::AAPCS) {
     unsigned NVec = 0, NPred = 0;
     SmallVector<llvm::Type *> UnpaddedCoerceToSeq;
     if (passAsPureScalableType(Ty, NVec, NPred, UnpaddedCoerceToSeq) &&
         (NVec + NPred) > 0)
       return coerceAndExpandPureScalableAggregate(
-          Ty, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
+          Ty, IsNamedArg, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
   }
 
   // Aggregates <= 16 bytes are passed directly in registers or on the stack.
@@ -522,7 +526,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
     if (passAsPureScalableType(RetTy, NVec, NPred, UnpaddedCoerceToSeq) &&
         (NVec + NPred) > 0)
       return coerceAndExpandPureScalableAggregate(
-          RetTy, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
+          RetTy, /* IsNamedArg */ true, NVec, NPred, UnpaddedCoerceToSeq, NSRN,
+          NPRN);
   }
 
   // Aggregates <= 16 bytes are returned directly in registers or on the stack.
