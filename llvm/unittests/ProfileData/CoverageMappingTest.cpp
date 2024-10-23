@@ -221,13 +221,16 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     InputFunctions.back().Expressions.push_back(CE);
   }
 
-  std::string writeCoverageRegions(InputFunctionCoverageData &Data) {
+  std::string writeCoverageRegions(InputFunctionCoverageData &Data,
+                                   bool KeepMappingsOrder) {
     SmallVector<unsigned, 8> FileIDs(Data.ReverseVirtualFileMapping.size());
     for (const auto &E : Data.ReverseVirtualFileMapping)
       FileIDs[E.second] = E.first;
     std::string Coverage;
     llvm::raw_string_ostream OS(Coverage);
-    CoverageMappingWriter(FileIDs, Data.Expressions, Data.Regions).write(OS);
+    CoverageMappingWriter(FileIDs, Data.Expressions, Data.Regions,
+                          KeepMappingsOrder)
+        .write(OS);
     return OS.str();
   }
 
@@ -245,10 +248,12 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     EXPECT_THAT_ERROR(Reader.read(), Succeeded());
   }
 
-  void writeAndReadCoverageRegions(bool EmitFilenames = true) {
+  void writeAndReadCoverageRegions(bool EmitFilenames = true,
+                                   bool KeepMappingsOrder = false) {
     OutputFunctions.resize(InputFunctions.size());
     for (unsigned I = 0; I < InputFunctions.size(); ++I) {
-      std::string Regions = writeCoverageRegions(InputFunctions[I]);
+      std::string Regions =
+          writeCoverageRegions(InputFunctions[I], KeepMappingsOrder);
       readCoverageRegions(Regions, OutputFunctions[I]);
       OutputFunctions[I].Name = InputFunctions[I].Name;
       OutputFunctions[I].Hash = InputFunctions[I].Hash;
@@ -313,6 +318,76 @@ TEST_P(CoverageMappingTest, basic_write_read) {
     ASSERT_EQ(Input.Regions[I].startLoc(), Output.Regions[I].startLoc());
     ASSERT_EQ(Input.Regions[I].endLoc(), Output.Regions[I].endLoc());
     ASSERT_EQ(Input.Regions[I].Kind, Output.Regions[I].Kind);
+  }
+}
+
+TEST_P(CoverageMappingTest, SortMappings) {
+  startFunction("func", 0x1234);
+  addMCDCDecisionCMR(3, 2, "file", 7, 1, 7, 12);
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
+                   "file", 7, 2, 7, 9);
+  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 1, {-1, -1},
+                   "file", 7, 11, 7, 12);
+  addMCDCDecisionCMR(7, 3, "file", 7, 2, 7, 9);
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(5), 0, {-1, 1},
+                   "file", 7, 2, 7, 3);
+  addMCDCBranchCMR(Counter::getCounter(6), Counter::getCounter(7), 1, {-1, 2},
+                   "file", 7, 5, 7, 6);
+  addMCDCBranchCMR(Counter::getCounter(8), Counter::getCounter(9), 2, {-1, -1},
+                   "file", 7, 8, 7, 9);
+
+  const std::vector<CounterMappingRegion> MappingsBeforeSourt =
+      InputFunctions.back().Regions;
+  writeAndReadCoverageRegions(true, false);
+  ASSERT_EQ(1u, InputFunctions.size());
+  ASSERT_EQ(1u, OutputFunctions.size());
+  const auto &Input = MappingsBeforeSourt;
+  const auto &Output = OutputFunctions.back().Regions;
+
+  size_t N = ArrayRef(Input).size();
+  llvm::SmallVector<std::tuple<size_t, size_t>> SortedMap = {
+      {0, 0}, {3, 1}, {1, 2}, {4, 3}, {5, 4}, {6, 5}, {2, 6}};
+  ASSERT_EQ(N, Output.size());
+  for (const auto &[InputIdx, OutputIdx] : SortedMap) {
+    ASSERT_EQ(Input[InputIdx].Count, Output[OutputIdx].Count);
+    ASSERT_EQ(Input[InputIdx].FileID, Output[OutputIdx].FileID);
+    ASSERT_EQ(Input[InputIdx].startLoc(), Output[OutputIdx].startLoc());
+    ASSERT_EQ(Input[InputIdx].endLoc(), Output[OutputIdx].endLoc());
+    ASSERT_EQ(Input[InputIdx].Kind, Output[OutputIdx].Kind);
+  }
+}
+
+TEST_P(CoverageMappingTest, SkipMappingSorting) {
+  startFunction("func", 0x1234);
+  addMCDCDecisionCMR(3, 2, "file", 7, 1, 7, 12);
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
+                   "file", 7, 2, 7, 9);
+  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 1, {-1, -1},
+                   "file", 7, 11, 7, 12);
+  addMCDCDecisionCMR(7, 3, "file", 7, 2, 7, 9);
+  addMCDCBranchCMR(Counter::getCounter(4), Counter::getCounter(5), 0, {-1, 1},
+                   "file", 7, 2, 7, 3);
+  addMCDCBranchCMR(Counter::getCounter(6), Counter::getCounter(7), 1, {-1, 2},
+                   "file", 7, 5, 7, 6);
+  addMCDCBranchCMR(Counter::getCounter(8), Counter::getCounter(9), 2, {-1, -1},
+                   "file", 7, 8, 7, 9);
+
+  const std::vector<CounterMappingRegion> MappingsBeforeSourt =
+      InputFunctions.back().Regions;
+  writeAndReadCoverageRegions(true, true);
+  ASSERT_EQ(1u, InputFunctions.size());
+  ASSERT_EQ(1u, OutputFunctions.size());
+  const auto &Input = MappingsBeforeSourt;
+  const auto &Output = OutputFunctions.back().Regions;
+
+  size_t N = ArrayRef(Input).size();
+  ASSERT_EQ(N, Output.size());
+  for (size_t I = 0; I < N; ++I) {
+    ASSERT_EQ(Input[I].Count, Output[I].Count);
+    ASSERT_EQ(Input[I].FileID, Output[I].FileID);
+    ASSERT_EQ(Input[I].startLoc(), Output[I].startLoc());
+    ASSERT_EQ(Input[I].endLoc(), Output[I].endLoc());
+    ASSERT_EQ(Input[I].Kind, Output[I].Kind);
   }
 }
 
