@@ -60,18 +60,12 @@
 
 // DPP16
 #define uint_dpp(ID,X,C,R,B,W) __builtin_amdgcn_update_dpp(ID,X,C,R,B,W)
-#define ulong_dpp(ID,X,C,R,B,W) ({ \
-    uint2 __x = AS_UINT2(X); \
-    uint2 __r; \
-    __r.lo = uint_dpp((uint)ID, __x.lo, C, R, B, W); \
-    __r.hi = uint_dpp((uint)(ID >> 32), __x.hi, C, R, B, W); \
-    AS_ULONG(__r); \
-})
-#define int_dpp(ID,X,C,R,B,W) AS_INT(uint_dpp(AS_UINT(ID),AS_UINT(X),C,R,B,W))
-#define long_dpp(ID,X,C,R,B,W) AS_LONG(ulong_dpp(AS_ULONG(ID),AS_ULONG(X),C,R,B,W))
-#define float_dpp(ID,X,C,R,B,W) AS_FLOAT(uint_dpp(AS_UINT(ID),AS_UINT(X),C,R,B,W))
-#define double_dpp(ID,X,C,R,B,W) AS_DOUBLE(ulong_dpp(AS_ULONG(ID),AS_ULONG(X),C,R,B,W))
-#define half_dpp(ID,X,C,R,B,W) AS_HALF((ushort)uint_dpp((uint)AS_USHORT(ID),(uint)AS_USHORT(X),C,R,B,W))
+#define ulong_dpp(ID,X,C,R,B,W) __builtin_amdgcn_update_dpp(ID,X,C,R,B,W)
+#define int_dpp(ID,X,C,R,B,W) __builtin_amdgcn_update_dpp(ID,X,C,R,B,W)
+#define long_dpp(ID,X,C,R,B,W) __builtin_amdgcn_update_dpp(ID,X,C,R,B,W)
+#define float_dpp(ID,X,C,R,B,W) __builtin_amdgcn_update_dpp(ID,X,C,R,B,W)
+#define double_dpp(ID,X,C,R,B,W) __builtin_amdgcn_update_dpp(ID,X,C,R,B,W)
+#define half_dpp(ID,X,C,R,B,W) __builtin_amdgcn_update_dpp(ID,X,C,R,B,W)
 
 // DPP8
 #define uint_dpp8(X,S) __builtin_amdgcn_mov_dpp8(X,S)
