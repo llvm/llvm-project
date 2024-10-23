@@ -1525,6 +1525,28 @@ llvm.func @_QPomp_atomic_capture_complex() {
 
 // -----
 
+// CHECK-LABEL: define void @omp_atomic_read_complex() {
+llvm.func @omp_atomic_read_complex(){
+
+// CHECK: %[[a:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[b:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
+// CHECK: call void @__atomic_load(i64 8, ptr %[[b]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+// CHECK: %[[LOADED_VAL:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
+// CHECK: store { float, float } %[[LOADED_VAL]], ptr %[[a]], align 4
+// CHECK: ret void
+// CHECK: }
+
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<(f32, f32)> {bindc_name = "ib"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x !llvm.struct<(f32, f32)> {bindc_name = "ia"} : (i64) -> !llvm.ptr
+    omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    llvm.return
+}
+
+// -----
+
 // Checking an order-dependent operation when the order is `expr binop x`
 // CHECK-LABEL: @omp_atomic_update_ordering
 // CHECK-SAME: (ptr %[[x:.*]], i32 %[[expr:.*]])
