@@ -35,20 +35,23 @@
 ;
 ; RUN: opt -module-summary -o %t1.bc %s
 ; RUN: opt -module-summary -o %t2.bc %S/Inputs/ditemplatevalueparameter-remap.ll
-; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t3.o -save-temps \
+; RUN: llvm-lto2 run --thinlto-distributed-indexes %t1.bc %t2.bc -o %t3.o -save-temps \
 ; RUN:   -r=%t1.bc,_Z5func1v,p    \
-; RUN:   -r=%t1.bc,_Z3bazv,       \
-; RUN:   -r=%t1.bc,_Z8thinlto1v,  \
+; RUN:   -r=%t1.bc,_Z3bazv,px     \
+; RUN:   -r=%t1.bc,_Z8thinlto1v,x \
 ; RUN:   -r=%t1.bc,_Z3barv,px     \
-; RUN:   -r=%t2.bc,_Z8thinlto1v,p
-; RUN: clang -O3 -fthinlto-index=%t3.o.index.bc -x ir %t1.bc -S -emit-llvm -o - | FileCheck %s
+; RUN:   -r=%t2.bc,_Z8thinlto1v,px
+; RUN: opt -passes='internalize<preserve-gv=_Z3bazv;preserve-gv=_Z3barv>,function-import,module-inline' \
+; RUN:   -enable-import-metadata -import-all-index \
+; RUN:   -summary-file=%t1.bc.thinlto.bc %t1.bc -o %t1.o
+; RUN: llvm-dis %t1.o -o - | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 $_Z5func1v = comdat any
 
-define linkonce_odr dso_local void @_Z5func1v() unnamed_addr !dbg !10 {
+define linkonce_odr void @_Z5func1v() unnamed_addr !dbg !10 {
   ret void
 }
 
@@ -60,9 +63,10 @@ define void @_Z3bazv() {
 
 declare void @_Z8thinlto1v() unnamed_addr
 
+; Check _Z8thinlto1v is inlined after thinLTO.
 ; CHECK: void @_Z3barv()
-; CHECK-NOT: call void @_Z8thinlto1v()
-; CHECK-NEXT: ret void
+; CHECK-NOT: @_Z8thinlto1v()
+; CHECK: ret void
 define void @_Z3barv() unnamed_addr !dbg !14 {
   tail call void @_Z8thinlto1v(), !dbg !25
   ret void
