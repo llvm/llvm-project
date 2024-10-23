@@ -324,7 +324,7 @@ if [[ "${windows_projects}" != "" ]]; then
 - label: ':windows: Report Windows x64 Test Results'
   plugins:
     - junit-annotate#v2.5.0:
-        artifacts: build/test-results-windows*.xml
+        artifacts: build\test-results-windows*.xml
         context: "windows-test-results"
   depends_on: "test-windows"
   allow_dependency_failure: true
