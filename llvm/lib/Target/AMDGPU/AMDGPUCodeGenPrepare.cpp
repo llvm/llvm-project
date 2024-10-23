@@ -317,6 +317,7 @@ public:
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
   bool visitMinNum(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
+  bool visitMovDppIntrinsic(IntrinsicInst &I);
   bool run(Function &F);
 };
 
@@ -2099,6 +2100,8 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
     return visitMinNum(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
+  case Intrinsic::amdgcn_mov_dpp8:
+    return visitMovDppIntrinsic(I);
   default:
     return false;
   }
@@ -2254,6 +2257,38 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   NewSqrt->takeName(&Sqrt);
   Sqrt.replaceAllUsesWith(NewSqrt);
   Sqrt.eraseFromParent();
+  return true;
+}
+
+// Split unsupported wide integer calls.
+bool AMDGPUCodeGenPrepareImpl::visitMovDppIntrinsic(IntrinsicInst &I) {
+  Type *SrcTy = I.getType();
+  assert(SrcTy->isIntegerTy());
+  unsigned Size = SrcTy->getPrimitiveSizeInBits();
+  assert(Size % 32 == 0);
+  if (Size <= 32)
+    return false;
+
+  IRBuilder<> Builder(&I);
+  Builder.SetCurrentDebugLocation(I.getDebugLoc());
+  unsigned NumElt = Size / 32;
+  IntegerType *EltTy = Builder.getInt32Ty();
+  Type *VecTy = VectorType::get(EltTy, NumElt, false);
+  Value *Vec = Builder.CreateBitCast(I.getArgOperand(0), VecTy);
+
+  unsigned IID = I.getIntrinsicID();
+  SmallVector<Value *, 6> Args(I.args());
+  SmallVector<Value *, 4> Elts;
+  for (unsigned N = 0; N != NumElt; ++N) {
+    Args[0] = Builder.CreateExtractElement(Vec, N);
+    Elts.push_back(Builder.CreateIntrinsic(EltTy, IID, Args));
+  }
+
+  Value *DppVec = insertValues(Builder, VecTy, Elts);
+  Value *NewVal = Builder.CreateBitCast(DppVec, SrcTy);
+  NewVal->takeName(&I);
+  I.replaceAllUsesWith(NewVal);
+  I.eraseFromParent();
   return true;
 }
 
