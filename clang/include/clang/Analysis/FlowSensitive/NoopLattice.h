@@ -40,6 +40,10 @@ inline std::ostream &operator<<(std::ostream &OS, const NoopLattice &) {
 } // namespace clang
 
 namespace llvm {
+// This needs to be exported for ClangAnalysisFlowSensitiveTests so any_cast
+// uses the correct address of Any::TypeId from the clang shared library instead
+// of creating one in the test executable. when building with
+// CLANG_LINK_CLANG_DYLIB
 extern template struct CLANG_TEMPLATE_ABI
     Any::TypeId<clang::dataflow::NoopLattice>;
 };
