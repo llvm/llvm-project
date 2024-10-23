@@ -505,7 +505,7 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerCtpopToCBits(Function &F) {
+  [[nodiscard]] bool lowerCtpopToCountBits(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
 
@@ -516,13 +516,11 @@ public:
 
       Type *RetTy = Int32Ty;
       Type *FRT = F.getReturnType();
-      if (FRT->isVectorTy()) {
-        VectorType *VT = cast<VectorType>(FRT);
+      if (const auto *VT = dyn_cast<VectorType>(FRT))
         RetTy = VectorType::get(RetTy, VT);
-      }
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-          dxil::OpCode::CBits, Args, CI->getName(), RetTy);
+          dxil::OpCode::CountBits, Args, CI->getName(), RetTy);
       if (Error E = OpCall.takeError())
         return E;
 
@@ -536,31 +534,36 @@ public:
       unsigned CastOp;
       if (FRT->isIntOrIntVectorTy(16))
         CastOp = Instruction::ZExt;
-      else // must be 64 bits
+      else { // must be 64 bits
+        assert(FRT->isIntOrIntVectorTy(64) &&
+               "Currently only lowering 16, 32, or 64 bit ctpop to CountBits \
+                is supported.");
         CastOp = Instruction::Trunc;
+      }
 
       // It is correct to replace the ctpop with the dxil op and
-      // remove an existing cast iff the cast is the only usage of
-      // the ctpop
-      // can use hasOneUse instead of hasOneUser, because the user
-      // we care about should have one operand
-      if (CI->hasOneUse()) {
-        User *U = CI->user_back();
+      // remove all casts to i32
+      bool nonCastInstr = false;
+      for (User *User : make_early_inc_range(CI->users())) {
         Instruction *I;
-        if (isa<Instruction>(U) && (I = cast<Instruction>(U)) &&
+        if ((I = dyn_cast<Instruction>(User)) != NULL &&
             I->getOpcode() == CastOp && I->getType() == RetTy) {
           I->replaceAllUsesWith(*OpCall);
           I->eraseFromParent();
-          CI->eraseFromParent();
-          return Error::success();
-        }
+        } else
+          nonCastInstr = true;
       }
 
-      // It is always correct to replace a ctpop with the dxil op and
-      // a cast
-      Value *Cast =
-          IRB.CreateZExtOrTrunc(*OpCall, F.getReturnType(), "ctpop.cast");
-      CI->replaceAllUsesWith(Cast);
+      // It is correct to replace a ctpop with the dxil op and
+      // a cast from i32 to the return type of the ctpop
+      // the cast is emitted here if there is a non-cast to i32
+      // instr which uses the ctpop
+      if (nonCastInstr) {
+        Value *Cast =
+            IRB.CreateZExtOrTrunc(*OpCall, F.getReturnType(), "ctpop.cast");
+        CI->replaceAllUsesWith(Cast);
+      }
+
       CI->eraseFromParent();
       return Error::success();
     });
@@ -605,7 +608,7 @@ public:
             });
         break;
       case Intrinsic::ctpop:
-        HasErrors |= lowerCtpopToCBits(F);
+        HasErrors |= lowerCtpopToCountBits(F);
         break;
       }
       Updated = true;
