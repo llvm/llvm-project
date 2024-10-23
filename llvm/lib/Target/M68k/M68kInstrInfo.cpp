@@ -757,13 +757,27 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   bool ToSR = DstReg == M68k::SR;
 
   if (FromCCR) {
-    assert(M68k::DR8RegClass.contains(DstReg) &&
-           "Need DR8 register to copy CCR");
-    Opc = M68k::MOV8dc;
+    if (M68k::DR8RegClass.contains(DstReg))
+      Opc = M68k::MOV8dc;
+    else if (M68k::DR16RegClass.contains(DstReg))
+      Opc = M68k::MOV16dc;
+    else if (M68k::DR32RegClass.contains(DstReg))
+      Opc = M68k::MOV16dc;
+    else {
+      LLVM_DEBUG(dbgs() << "Cannot copy CCR to " << RI.getName(DstReg) << '\n');
+      llvm_unreachable("Invalid register for MOVE from CCR");
+    }
   } else if (ToCCR) {
-    assert(M68k::DR8RegClass.contains(SrcReg) &&
-           "Need DR8 register to copy CCR");
-    Opc = M68k::MOV8cd;
+    if (M68k::DR8RegClass.contains(SrcReg))
+      Opc = M68k::MOV8cd;
+    else if (M68k::DR16RegClass.contains(SrcReg))
+      Opc = M68k::MOV16cd;
+    else if (M68k::DR32RegClass.contains(SrcReg))
+      Opc = M68k::MOV16cd;
+    else {
+      LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
+      llvm_unreachable("Invalid register for MOVE to CCR");
+    }
   } else if (FromSR || ToSR)
     llvm_unreachable("Cannot emit SR copy instruction");
 
