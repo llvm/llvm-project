@@ -2,18 +2,10 @@
 # Define targets for linking against the selected ABI library
 #
 # After including this file, the following targets are defined:
-# - libcxx-abi-headers: An interface target that allows getting access to the
-#                       headers of the selected ABI library.
-# - libcxx-abi-shared: A target representing the selected shared ABI library.
-# - libcxx-abi-static: A target representing the selected static ABI library.
-#
-# Furthermore, some ABI libraries also define the following target:
-# - libcxx-abi-shared-objects: An object library representing a set of object files
-#                              constituting the ABI library, suitable for bundling
-#                              into a shared library.
-# - libcxx-abi-static-objects: An object library representing a set of object files
-#                              constituting the ABI library, suitable for bundling
-#                              into a static library.
+# - libcxx-abi-shared: A target representing the selected ABI library for linking into
+#                      the libc++ shared library.
+# - libcxx-abi-static: A target representing the selected ABI library for linking into
+#                      the libc++ static library.
 #===============================================================================
 
 include(GNUInstallDirs)
@@ -28,7 +20,10 @@ include(GNUInstallDirs)
 # since we would end up also adding the system-provided C++ Standard Library to
 # the search path. Instead, what we do is copy just the ABI library headers to
 # a private directory and add just that path when we build libc++.
-function(import_private_headers target include_dirs headers)
+function(_import_private_headers target include_dirs headers)
+  if (NOT ${include_dirs})
+    message(FATAL_ERROR "Missing include paths for the selected ABI library!")
+  endif()
   foreach(header ${headers})
     set(found FALSE)
     foreach(incpath ${include_dirs})
@@ -38,11 +33,11 @@ function(import_private_headers target include_dirs headers)
         get_filename_component(dstdir ${header} PATH)
         get_filename_component(header_file ${header} NAME)
         set(src ${incpath}/${header})
-        set(dst "${LIBCXX_BINARY_DIR}/private-abi-headers/${dstdir}/${header_file}")
+        set(dst "${LIBCXX_BINARY_DIR}/private-abi-headers/${target}/${dstdir}/${header_file}")
 
         add_custom_command(OUTPUT ${dst}
             DEPENDS ${src}
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBCXX_BINARY_DIR}/private-abi-headers/${dstdir}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBCXX_BINARY_DIR}/private-abi-headers/${target}/${dstdir}"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
             COMMENT "Copying C++ ABI header ${header}")
         list(APPEND abilib_headers "${dst}")
@@ -60,142 +55,151 @@ function(import_private_headers target include_dirs headers)
   set_target_properties(${target}-generate-private-headers PROPERTIES LINKER_LANGUAGE CXX)
 
   target_link_libraries(${target} INTERFACE ${target}-generate-private-headers)
-  target_include_directories(${target} INTERFACE "${LIBCXX_BINARY_DIR}/private-abi-headers")
+  target_include_directories(${target} INTERFACE "${LIBCXX_BINARY_DIR}/private-abi-headers/${target}")
 endfunction()
 
-# This function creates an imported static library named <target>.
-# It imports a library named <name> searched at the given <path>.
-function(import_static_library target path name)
-  add_library(${target} STATIC IMPORTED GLOBAL)
-  find_library(file
-    NAMES "${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    PATHS "${path}"
-    NO_CACHE)
-  set_target_properties(${target} PROPERTIES IMPORTED_LOCATION "${file}")
+# This function adds linker flags to a <target> appropriate for merging the object
+# files of another static <library> into whoever links against <target>.
+function(_merge_static_library target library)
+  if (APPLE)
+    target_link_options(${target} INTERFACE "-Wl,-force_load" "${library}")
+  else()
+    target_link_options(${target} INTERFACE "-Wl,--whole-archive" "-Wl,-Bstatic" "${library}" "-Wl,-Bdynamic" "-Wl,--no-whole-archive")
+  endif()
 endfunction()
 
-# This function creates an imported shared (interface) library named <target>
-# for the given library <name>.
-function(import_shared_library target name)
-  add_library(${target} INTERFACE IMPORTED GLOBAL)
-  set_target_properties(${target} PROPERTIES IMPORTED_LIBNAME "${name}")
-endfunction()
-
-# Link against a system-provided libstdc++
-if ("${LIBCXX_CXX_ABI}" STREQUAL "libstdc++")
-  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
-    message(FATAL_ERROR "LIBCXX_CXX_ABI_INCLUDE_PATHS must be set when selecting libstdc++ as an ABI library")
+# This function creates a library target for linking against an external ABI library.
+#
+# <target>: The name of the target to create
+# <name>: The name of the library file to search for (e.g. c++abi, stdc++, cxxrt, supc++)
+# <type>: Whether to set up a static or a shared library (e.g. SHARED or STATIC)
+# <merged>: Whether to include the ABI library's object files directly into libc++. Only makes sense for a static ABI library.
+function(_import_external_abi_library target name type merged)
+  if (${merged} AND "${type}" STREQUAL "SHARED")
+    message(FATAL_ERROR "Can't import an external ABI library for merging when requesting a shared ABI library.")
   endif()
 
-  add_library(libcxx-abi-headers INTERFACE)
-  import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
-    "cxxabi.h;bits/c++config.h;bits/os_defines.h;bits/cpu_defines.h;bits/cxxabi_tweaks.h;bits/cxxabi_forced.h")
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBSTDCXX" "-D__GLIBCXX__")
+  if ("${type}" STREQUAL "SHARED")
+    add_library(${target} INTERFACE IMPORTED GLOBAL)
+    set_target_properties(${target} PROPERTIES IMPORTED_LIBNAME "${name}")
 
-  import_shared_library(libcxx-abi-shared stdc++)
-  target_link_libraries(libcxx-abi-shared INTERFACE libcxx-abi-headers)
+  elseif ("${type}" STREQUAL "STATIC")
+    add_library(${target}-imported STATIC IMPORTED GLOBAL)
+    find_library(file
+      NAMES "${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+      PATHS "${LIBCXX_CXX_ABI_LIBRARY_PATH}"
+      NO_CACHE)
+    if (NOT "${file}")
+      message(FATAL_ERROR "Failed to find static library ${name} at path ${LIBCXX_CXX_ABI_LIBRARY_PATH}")
+    endif()
+    set_target_properties(${target}-imported PROPERTIES IMPORTED_LOCATION "${file}")
 
-  import_static_library(libcxx-abi-static "${LIBCXX_CXX_ABI_LIBRARY_PATH}" stdc++)
-  target_link_libraries(libcxx-abi-static INTERFACE libcxx-abi-headers)
+    add_library(${target} INTERFACE)
+    if (${merged})
+      _merge_static_library(${target} "$<TARGET_PROPERTY:${target}-imported,IMPORTED_LOCATION>")
+    else()
+      target_link_libraries(${target} INTERFACE ${target}-imported)
+    endif()
+  endif()
+endfunction()
 
-# Link against a system-provided libsupc++
-elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libsupc++")
-  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
-    message(FATAL_ERROR "LIBCXX_CXX_ABI_INCLUDE_PATHS must be set when selecting libsupc++ as an ABI library")
+# This function parses an ABI library choice (including optional consumption specifiers)
+# and generates a target representing the ABI library to link against.
+#
+# When a merged ABI library is requested, we only look for a static ABI library because
+# doing otherwise makes no sense. Otherwise, we search for the same type of ABI library
+# as we're linking into, i.e. we search for a shared ABI library when linking the shared
+# libc++ library, and a static ABI library otherwise.
+#
+# <abi_target>: The name of the target to create
+# <linked_into>: Whether this ABI library is linked into a STATIC or SHARED libc++
+# <input>: Input to parse as an ABI library choice with an optional consumption specifier.
+function(setup_abi_library abi_target linked_into input)
+  if ("${input}" MATCHES "^merged-(.+)$")
+    set(merged TRUE)
+    set(search_type "STATIC")
+  elseif ("${input}" MATCHES "^static-(.+)$")
+    set(merged FALSE)
+    set(search_type "STATIC")
+  elseif ("${input}" MATCHES "^shared-(.+)$")
+    set(merged FALSE)
+    set(search_type "SHARED")
+  else()
+    set(merged FALSE)
+    set(search_type "${linked_into}")
   endif()
 
-  add_library(libcxx-abi-headers INTERFACE)
-  import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
-    "cxxabi.h;bits/c++config.h;bits/os_defines.h;bits/cpu_defines.h;bits/cxxabi_tweaks.h;bits/cxxabi_forced.h")
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-D__GLIBCXX__")
+  # Strip the consumption specifier from the name, which leaves the name of the standard library.
+  string(REGEX REPLACE "^(merged-|static-|shared-)" "" stdlib "${input}")
 
-  import_shared_library(libcxx-abi-shared supc++)
-  target_link_libraries(libcxx-abi-shared INTERFACE libcxx-abi-headers)
+  # Link against a system-provided libstdc++
+  if ("${stdlib}" STREQUAL "libstdc++")
+    _import_external_abi_library(${abi_target} stdc++ ${search_type} ${merged})
+    _import_private_headers(${abi_target} "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
+      "cxxabi.h;bits/c++config.h;bits/os_defines.h;bits/cpu_defines.h;bits/cxxabi_tweaks.h;bits/cxxabi_forced.h")
+    target_compile_definitions(${abi_target} INTERFACE "-DLIBSTDCXX" "-D__GLIBCXX__")
 
-  import_static_library(libcxx-abi-static "${LIBCXX_CXX_ABI_LIBRARY_PATH}" supc++)
-  target_link_libraries(libcxx-abi-static INTERFACE libcxx-abi-headers)
+  # Link against a system-provided libsupc++
+  elseif ("${stdlib}" STREQUAL "libsupc++")
+    _import_external_abi_library(${abi_target} supc++ ${search_type} ${merged})
+    _import_private_headers(${abi_target} "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
+      "cxxabi.h;bits/c++config.h;bits/os_defines.h;bits/cpu_defines.h;bits/cxxabi_tweaks.h;bits/cxxabi_forced.h")
+    target_compile_definitions(${abi_target} INTERFACE "-D__GLIBCXX__")
 
-# Link against the in-tree libc++abi
-elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxabi")
-  add_library(libcxx-abi-headers INTERFACE)
-  target_link_libraries(libcxx-abi-headers INTERFACE cxxabi-headers)
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBCXX_BUILDING_LIBCXXABI")
+  # Link against a system-provided libcxxrt
+  elseif ("${stdlib}" STREQUAL "libcxxrt")
+    _import_external_abi_library(${abi_target} cxxrt ${search_type} ${merged})
+    _import_private_headers(${abi_target} "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
+      "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h")
+    target_compile_definitions(${abi_target} INTERFACE "-DLIBCXXRT")
 
-  if (TARGET cxxabi_shared)
-    add_library(libcxx-abi-shared INTERFACE)
-    target_link_libraries(libcxx-abi-shared INTERFACE cxxabi_shared)
+  # Link against a system-provided vcruntime
+  elseif ("${stdlib}" STREQUAL "vcruntime")
+    # FIXME: Figure out how to configure the ABI library on Windows.
+    add_library(${abi_target} INTERFACE)
+
+  # Link against a system-provided libc++abi
+  elseif ("${stdlib}" STREQUAL "system-libcxxabi")
+    _import_external_abi_library(${abi_target} c++abi ${search_type} ${merged})
+    _import_private_headers(${abi_target} "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
+      "cxxabi.h;__cxxabi_config.h")
+    target_compile_definitions(${abi_target} INTERFACE "-DLIBCXX_BUILDING_LIBCXXABI")
+
+  # Link against the in-tree libc++abi.
+  elseif ("${stdlib}" STREQUAL "libcxxabi")
+    if (${merged})
+      add_library(${abi_target} INTERFACE)
+      _merge_static_library(${abi_target}
+        "$<TARGET_PROPERTY:cxxabi_static,LIBRARY_OUTPUT_DIRECTORY>/${CMAKE_STATIC_LIBRARY_PREFIX}$<TARGET_PROPERTY:cxxabi_static,OUTPUT_NAME>${CMAKE_STATIC_LIBRARY_SUFFIX}")
+      target_link_libraries(${abi_target} INTERFACE cxxabi-headers)
+      add_dependencies(${abi_target} cxxabi_static)
+    else()
+      string(TOLOWER "${search_type}" type)
+      add_library(${abi_target} INTERFACE)
+      target_link_libraries(${abi_target} INTERFACE cxxabi_${type})
+
+      # Populate the OUTPUT_NAME property of the target because that is used when
+      # generating a linker script.
+      get_target_property(_outname cxxabi_${type} OUTPUT_NAME)
+      set_target_properties(${abi_target} PROPERTIES "OUTPUT_NAME" "${_outname}")
+    endif()
 
     # When using the in-tree libc++abi as an ABI library, libc++ re-exports the
     # libc++abi symbols (on platforms where it can) because libc++abi is only an
     # implementation detail of libc++.
-    target_link_libraries(libcxx-abi-shared INTERFACE cxxabi-reexports)
+    target_link_libraries(${abi_target} INTERFACE cxxabi-reexports)
 
-    # Populate the OUTPUT_NAME property of libcxx-abi-shared because that is used when
-    # generating a linker script.
-    get_target_property(_output_name cxxabi_shared OUTPUT_NAME)
-    set_target_properties(libcxx-abi-shared PROPERTIES "OUTPUT_NAME" "${_output_name}")
+    target_compile_definitions(${abi_target} INTERFACE "LIBCXX_BUILDING_LIBCXXABI")
+
+  # Don't link against any ABI library
+  elseif ("${stdlib}" STREQUAL "none")
+    add_library(${abi_target} INTERFACE)
+    target_compile_definitions(${abi_target} INTERFACE "-D_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY")
+
+  else()
+    message(FATAL_ERROR "Unsupported C++ ABI library selection: Got ABI selection '${input}', which parsed into standard library '${stdlib}'.")
   endif()
+endfunction()
 
-  if (TARGET cxxabi_static)
-    add_library(libcxx-abi-static ALIAS cxxabi_static)
-  endif()
-
-  if (TARGET cxxabi_shared_objects)
-    add_library(libcxx-abi-shared-objects ALIAS cxxabi_shared_objects)
-  endif()
-
-  if (TARGET cxxabi_static_objects)
-    add_library(libcxx-abi-static-objects ALIAS cxxabi_static_objects)
-  endif()
-
-# Link against a system-provided libc++abi
-elseif ("${LIBCXX_CXX_ABI}" STREQUAL "system-libcxxabi")
-  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
-    message(FATAL_ERROR "LIBCXX_CXX_ABI_INCLUDE_PATHS must be set when selecting system-libcxxabi as an ABI library")
-  endif()
-
-  add_library(libcxx-abi-headers INTERFACE)
-  import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}" "cxxabi.h;__cxxabi_config.h")
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBCXX_BUILDING_LIBCXXABI")
-
-  import_shared_library(libcxx-abi-shared c++abi)
-  target_link_libraries(libcxx-abi-shared INTERFACE libcxx-abi-headers)
-
-  import_static_library(libcxx-abi-static "${LIBCXX_CXX_ABI_LIBRARY_PATH}" c++abi)
-  target_link_libraries(libcxx-abi-static INTERFACE libcxx-abi-headers)
-
-# Link against a system-provided libcxxrt
-elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxrt")
-  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
-    message(STATUS "LIBCXX_CXX_ABI_INCLUDE_PATHS not set, using /usr/include/c++/v1")
-    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")
-  endif()
-  add_library(libcxx-abi-headers INTERFACE)
-  import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
-    "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h")
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBCXXRT")
-
-  import_shared_library(libcxx-abi-shared cxxrt)
-  target_link_libraries(libcxx-abi-shared INTERFACE libcxx-abi-headers)
-
-  import_static_library(libcxx-abi-static "${LIBCXX_CXX_ABI_LIBRARY_PATH}" cxxrt)
-  target_link_libraries(libcxx-abi-static INTERFACE libcxx-abi-headers)
-
-# Link against a system-provided vcruntime
-# FIXME: Figure out how to configure the ABI library on Windows.
-elseif ("${LIBCXX_CXX_ABI}" STREQUAL "vcruntime")
-  add_library(libcxx-abi-headers INTERFACE)
-  add_library(libcxx-abi-shared INTERFACE)
-  add_library(libcxx-abi-static INTERFACE)
-
-# Don't link against any ABI library
-elseif ("${LIBCXX_CXX_ABI}" STREQUAL "none")
-  add_library(libcxx-abi-headers INTERFACE)
-  target_compile_definitions(libcxx-abi-headers INTERFACE "-D_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY")
-
-  add_library(libcxx-abi-shared INTERFACE)
-  target_link_libraries(libcxx-abi-shared INTERFACE libcxx-abi-headers)
-
-  add_library(libcxx-abi-static INTERFACE)
-  target_link_libraries(libcxx-abi-static INTERFACE libcxx-abi-headers)
-endif()
+setup_abi_library(libcxx-abi-shared SHARED "${LIBCXX_ABILIB_FOR_SHARED}")
+setup_abi_library(libcxx-abi-static STATIC "${LIBCXX_ABILIB_FOR_STATIC}")

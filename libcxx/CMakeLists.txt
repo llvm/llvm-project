@@ -230,11 +230,22 @@ else()
 endif()
 
 set(LIBCXX_SUPPORTED_ABI_LIBRARIES none libcxxabi system-libcxxabi libcxxrt libstdc++ libsupc++ vcruntime)
-set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}" CACHE STRING "Specify C++ ABI library to use. Supported values are ${LIBCXX_SUPPORTED_ABI_LIBRARIES}.")
-if (NOT "${LIBCXX_CXX_ABI}" IN_LIST LIBCXX_SUPPORTED_ABI_LIBRARIES)
-  message(FATAL_ERROR "Unsupported C++ ABI library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_ABI_LIBRARIES}.")
-endif()
+set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}" CACHE STRING
+  "Specify the C++ ABI library to use for the shared and the static libc++ libraries. Supported values are ${LIBCXX_SUPPORTED_ABI_LIBRARIES}.
+   This CMake option also supports \"consumption specifiers\", which specify how the selected ABI library should be consumed by
+   libc++. The supported specifiers are:
+   - `shared`: The selected ABI library should be used as a shared library.
+   - `static`: The selected ABI library should be used as a static library.
+   - `merged`: The selected ABI library should be a static library whose object files will be merged directly into the produced libc++ library.
 
+   A consumption specifier is provided by appending it to the name of the library, such as `LIBCXX_CXX_ABI=merged-libcxxabi`.
+   If no consumption specifier is provided, the libc++ shared library will default to using a shared ABI library, and the
+   libc++ static library will default to using a static ABI library.")
+set(LIBCXX_ABILIB_FOR_SHARED "${LIBCXX_CXX_ABI}" CACHE STRING "C++ ABI library to use for the shared libc++ library.")
+set(LIBCXX_ABILIB_FOR_STATIC "${LIBCXX_CXX_ABI}" CACHE STRING "C++ ABI library to use for the static libc++ library.")
+
+#############################
+# TODO: Remove these options in LLVM 21.
 option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY
   "Use a static copy of the ABI library when linking libc++.
    This option cannot be used with LIBCXX_ENABLE_ABI_LINKER_SCRIPT." OFF)
@@ -247,17 +258,34 @@ option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
   "Statically link the ABI library to shared library"
   ${LIBCXX_ENABLE_STATIC_ABI_LIBRARY})
 
+if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY OR LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY OR LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
+  message(WARNING "The LIBCXX_ENABLE_STATIC_ABI_LIBRARY, LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY and "
+                  "LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY options have been deprecated in favor of "
+                  "using LIBCXX_CXX_ABI=merged-libcxxabi. This will become an error in LLVM 21.")
+endif()
+if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
+  set(LIBCXX_ABILIB_FOR_STATIC "merged-libcxxabi" CACHE STRING "" FORCE)
+endif()
+if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
+  set(LIBCXX_ABILIB_FOR_SHARED "merged-libcxxabi" CACHE STRING "" FORCE)
+endif()
+#############################
+
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple, and on the Fuchsia platform unless we
-# statically link libc++abi inside libc++.so, we don't build libc++.so at all
-# or we don't have any ABI library.
-if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
-    OR NOT LIBCXX_ENABLE_SHARED
-    OR LIBCXX_CXX_ABI STREQUAL "none")
-  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
-elseif((UNIX OR FUCHSIA) AND NOT APPLE)
-  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
+# on UNIX platforms other than Apple unless we are linking the ABI library as
+# an object library. This option is also disabled when the ABI library is not
+# specified or is specified to be "none".
+if(LIBCXX_ENABLE_SHARED)
+  if ((UNIX OR FUCHSIA) AND NOT APPLE)
+    if (LIBCXX_ABILIB_FOR_SHARED STREQUAL "merged-libcxxabi" OR LIBCXX_ABILIB_FOR_SHARED STREQUAL "none")
+      set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
+    else()
+      set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
+    endif()
+  else()
+    set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
+  endif()
 else()
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 endif()
@@ -379,12 +407,6 @@ if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     endif()
 endif()
 
-if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-    message(FATAL_ERROR "Conflicting options given.
-        LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY cannot be specified with
-        LIBCXX_ENABLE_ABI_LINKER_SCRIPT")
-endif()
-
 if (LIBCXX_ABI_FORCE_ITANIUM AND LIBCXX_ABI_FORCE_MICROSOFT)
   message(FATAL_ERROR "Only one of LIBCXX_ABI_FORCE_ITANIUM and LIBCXX_ABI_FORCE_MICROSOFT can be specified.")
 endif ()
@@ -481,10 +503,6 @@ include(config-ix)
 #===============================================================================
 # Setup Compiler Flags
 #===============================================================================
-
-include(HandleLibC) # Setup the C library flags
-include(HandleLibCXXABI) # Setup the ABI library flags
-
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors
 # so they don't get transformed into -Wno and -errors respectively.
@@ -815,7 +833,7 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
-if (WIN32 AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+if (WIN32 AND LIBCXX_CXX_ABI STREQUAL "merged-libcxxabi")
   # If linking libcxxabi statically into libcxx, skip the dllimport attributes
   # on symbols we refer to from libcxxabi.
   add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
