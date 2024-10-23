@@ -1714,6 +1714,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(Opc, MVT::v8f16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16f16, MVT::v16f32);
     }
+    // trunc+store via vcvtps2ph
+    setOperationAction(ISD::STORE, MVT::v4f16, Custom);
+    setOperationAction(ISD::STORE, MVT::v8f16, Custom);
   }
 
   // This block controls legalization of the mask vector sizes that are
@@ -1784,6 +1787,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v1i1, MVT::v2i1, MVT::v4i1, MVT::v8i1 })
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+
+    // trunc+store via vcvtps2ph
+    setOperationAction(ISD::STORE, MVT::v16f16, Custom);
   }
   if (Subtarget.hasDQI() && Subtarget.hasVLX()) {
     for (MVT VT : {MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64}) {
