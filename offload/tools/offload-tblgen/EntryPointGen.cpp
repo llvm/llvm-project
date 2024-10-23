@@ -102,10 +102,33 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   OS << "}\n";
 }
 
+static void EmitCodeLocWrapper(const FunctionRec &F, raw_ostream &OS) {
+  // Emit preamble
+  OS << formatv("{0}_result_t {1}WithCodeLoc(\n  ", PrefixLower, F.getName());
+  // Emit arguments
+  std::string ParamNameList = "";
+  for (auto &Param : F.getParams()) {
+    OS << Param.getType() << " " << Param.getName() << ", ";
+    ParamNameList += Param.getName().str();
+    if (Param != F.getParams().back()) {
+      ParamNameList += ", ";
+    }
+  }
+  OS << "offload_code_location_t *pCodeLocation";
+  OS << ") {\n";
+  OS << TAB_1 "CodeLocation() = pCodeLocation;\n";
+  OS << formatv(TAB_1 "{0}_result_t result = {1}({2});\n\n", PrefixLower,
+                F.getName(), ParamNameList);
+  OS << TAB_1 "CodeLocation() = nullptr;\n";
+  OS << TAB_1 "return result;\n";
+  OS << "}\n";
+}
+
 void EmitOffloadEntryPoints(RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     EmitValidationFunc(FunctionRec{R}, OS);
     EmitEntryPointFunc(FunctionRec{R}, OS);
+    EmitCodeLocWrapper(FunctionRec{R}, OS);
   }
 }
