@@ -29,6 +29,7 @@
 #define LLVM_SUPPORT_MD5_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <array>
 #include <cstdint>
@@ -38,9 +39,9 @@ namespace llvm {
 template <unsigned N> class SmallString;
 template <typename T> class ArrayRef;
 
-class MD5 {
+class LLVM_ABI MD5 {
 public:
-  struct MD5Result : public std::array<uint8_t, 16> {
+  struct LLVM_ABI MD5Result : public std::array<uint8_t, 16> {
     SmallString<32> digest() const;
 
     uint64_t low() const {

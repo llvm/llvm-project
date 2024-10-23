@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_DATAEXTRACTOR_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 
@@ -38,7 +39,7 @@ inline uint24_t getSwappedBytes(uint24_t C) {
   return uint24_t(C.Bytes[2], C.Bytes[1], C.Bytes[0]);
 }
 
-class DataExtractor {
+class LLVM_ABI DataExtractor {
   StringRef Data;
   uint8_t IsLittleEndian;
   uint8_t AddressSize;

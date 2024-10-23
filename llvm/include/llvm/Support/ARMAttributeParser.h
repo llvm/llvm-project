@@ -12,13 +12,14 @@
 #include "ARMBuildAttributes.h"
 #include "ELFAttributeParser.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 
 class ScopedPrinter;
 
-class ARMAttributeParser : public ELFAttributeParser {
+class LLVM_ABI ARMAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
     ARMBuildAttrs::AttrType attribute;
     Error (ARMAttributeParser::*routine)(ARMBuildAttrs::AttrType);

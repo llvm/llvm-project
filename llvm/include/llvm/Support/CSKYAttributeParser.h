@@ -10,10 +10,11 @@
 #define LLVM_SUPPORT_CSKYATTRIBUTEPARSER_H
 
 #include "llvm/Support/CSKYAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttributeParser.h"
 
 namespace llvm {
-class CSKYAttributeParser : public ELFAttributeParser {
+class LLVM_ABI CSKYAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
     CSKYAttrs::AttrType attribute;
     Error (CSKYAttributeParser::*routine)(unsigned);

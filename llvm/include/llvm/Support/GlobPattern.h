@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
@@ -47,7 +48,7 @@ namespace llvm {
 ///
 /// For example, \p "*[/\\\\]foo.{c,cpp}" (with two backslashes) will match
 /// (unix or windows) paths to all files named \p "foo.c" or \p "foo.cpp".
-class GlobPattern {
+class LLVM_ABI GlobPattern {
 public:
   /// \param Pat the pattern to match against
   /// \param MaxSubPatterns if provided limit the number of allowed subpatterns
@@ -71,7 +72,7 @@ public:
 private:
   StringRef Prefix;
 
-  struct SubGlobPattern {
+  struct LLVM_ABI SubGlobPattern {
     /// \param Pat the pattern to match against
     static Expected<SubGlobPattern> create(StringRef Pat);
     /// \returns \p true if \p S matches this glob pattern

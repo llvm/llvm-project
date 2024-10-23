@@ -9,6 +9,7 @@
 #define LLVM_SUPPORT_LOCKFILEMANAGER_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <system_error>
 #include <utility> // for std::pair
@@ -24,7 +25,7 @@ class StringRef;
 /// system to ensure that only a single process can create that ".lock" file.
 /// When the lock file is removed, the owning process has finished the
 /// operation.
-class LockFileManager {
+class LLVM_ABI LockFileManager {
 public:
   /// Describes the state of a lock file.
   enum LockFileState {

@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -54,24 +55,24 @@ using namespace cl;
 //
 namespace llvm {
 namespace cl {
-template class basic_parser<bool>;
-template class basic_parser<boolOrDefault>;
-template class basic_parser<int>;
-template class basic_parser<long>;
-template class basic_parser<long long>;
-template class basic_parser<unsigned>;
-template class basic_parser<unsigned long>;
-template class basic_parser<unsigned long long>;
-template class basic_parser<double>;
-template class basic_parser<float>;
-template class basic_parser<std::string>;
-template class basic_parser<char>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<bool>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<boolOrDefault>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<int>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<long long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned long long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<double>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<float>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<std::string>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<char>;
 
-template class opt<unsigned>;
-template class opt<int>;
-template class opt<std::string>;
-template class opt<char>;
-template class opt<bool>;
+template class LLVM_EXPORT_TEMPLATE opt<unsigned>;
+template class LLVM_EXPORT_TEMPLATE opt<int>;
+template class LLVM_EXPORT_TEMPLATE opt<std::string>;
+template class LLVM_EXPORT_TEMPLATE opt<char>;
+template class LLVM_EXPORT_TEMPLATE opt<bool>;
 } // namespace cl
 } // namespace llvm
 

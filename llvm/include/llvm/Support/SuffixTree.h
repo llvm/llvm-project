@@ -34,10 +34,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SuffixTreeNode.h"
 
 namespace llvm {
-class SuffixTree {
+class LLVM_ABI SuffixTree {
 public:
   /// Each element is an integer representing an instruction in the module.
   ArrayRef<unsigned> Str;
@@ -156,7 +157,7 @@ public:
              bool OutlinerLeafDescendants = false);
 
   /// Iterator for finding all repeated substrings in the suffix tree.
-  struct RepeatedSubstringIterator {
+  struct LLVM_ABI RepeatedSubstringIterator {
   private:
     /// The current node we're visiting.
     SuffixTreeNode *N = nullptr;

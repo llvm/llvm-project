@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/JSON.h"
@@ -80,7 +81,7 @@ struct FlagEntry {
   uint64_t Value;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
 
 template <class T> std::string to_string(const T &Value) {
   std::string number;
@@ -97,7 +98,7 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   return utohexstr(Value, true);
 }
 
-class ScopedPrinter {
+class LLVM_ABI ScopedPrinter {
 public:
   enum class ScopedPrinterKind {
     Base,
@@ -541,7 +542,7 @@ ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
 
 struct DelimitedScope;
 
-class JSONScopedPrinter : public ScopedPrinter {
+class LLVM_ABI JSONScopedPrinter : public ScopedPrinter {
 private:
   enum class Scope {
     Array,
@@ -838,7 +839,7 @@ private:
   }
 };
 
-struct DelimitedScope {
+struct LLVM_ABI DelimitedScope {
   DelimitedScope(ScopedPrinter &W) : W(&W) {}
   DelimitedScope() : W(nullptr) {}
   virtual ~DelimitedScope() = default;

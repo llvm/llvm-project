@@ -25,6 +25,7 @@
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/circular_raw_ostream.h"
@@ -42,7 +43,7 @@ using namespace llvm;
 // built without NDEBUG can depend on via the llvm/Support/Debug.h header.
 namespace llvm {
 /// Exported boolean set by the -debug option.
-bool DebugFlag = false;
+LLVM_ABI bool DebugFlag = false;
 
 static ManagedStatic<std::vector<std::string>> CurrentDebugType;
 
@@ -193,4 +194,4 @@ void llvm::initDebugOptions() {}
 
 /// EnableDebugBuffering - Turn on signal handler installation.
 ///
-bool llvm::EnableDebugBuffering = false;
+LLVM_ABI bool llvm::EnableDebugBuffering = false;

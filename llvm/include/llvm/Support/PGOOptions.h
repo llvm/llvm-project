@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_PGOOPTIONS_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -24,7 +25,7 @@ class FileSystem;
 } // namespace vfs
 
 /// A struct capturing PGO tunables.
-struct PGOOptions {
+struct LLVM_ABI PGOOptions {
   enum PGOAction { NoAction, IRInstr, IRUse, SampleUse };
   enum CSPGOAction { NoCSAction, CSIRInstr, CSIRUse };
   enum class ColdFuncOpt { Default, OptSize, MinSize, OptNone };
