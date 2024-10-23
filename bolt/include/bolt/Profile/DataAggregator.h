@@ -492,6 +492,11 @@ public:
   /// and return a file name matching a given \p FileBuildID.
   std::optional<StringRef> getFileNameForBuildID(StringRef FileBuildID);
 
+  /// Get a constant reference to the parsed binary mmap entries.
+  const std::unordered_map<uint64_t, MMapInfo> &getBinaryMMapInfo() {
+    return BinaryMMapInfo;
+  }
+
   friend class YAMLProfileWriter;
 };
 } // namespace bolt
