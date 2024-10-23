@@ -117,6 +117,8 @@ extern const inline unsigned __oclc_ISA_version = 11500;
 extern const inline unsigned __oclc_ISA_version = 11501;
 #elif defined(__gfx1152__)
 extern const inline unsigned __oclc_ISA_version = 11502;
+#elif defined(__gfx1153__)
+extern const inline unsigned __oclc_ISA_version = 11503;
 #elif defined(__gfx1200__)
 extern const inline unsigned __oclc_ISA_version = 12000;
 #elif defined(__gfx1201__)
