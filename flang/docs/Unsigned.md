@@ -22,7 +22,7 @@ language interoperability.
 
 ## `UNSIGNED` type
 
-`UNSIGNED` is a numeric with the same kinds as `INTEGER`.
+`UNSIGNED` is a numeric type with the same kinds as `INTEGER`.
 It may appear as a type-spec in any context, including
 a type declaration statement, a type-decl in an array
 constructor or `ALLOCATE` statement, `IMPLICIT`, or a
@@ -81,6 +81,13 @@ All of the restructuring array transformational intrinsics: `CSHIFT`, `EOSHIFT`,
   `PACK`, `RESHAPE`, `SPREAD`, `TRANSPOSE`, and `UNPACK`.
 
 The location transformationals `FINDLOC`, `MAXLOC`, and `MINLOC`.
+
+There is a new `SELECTED_UNSIGNED_KIND` intrinsic function; it happens
+to work identically to the existing `SELECTED_INT_KIND`.
+
+Conversions to `UNSIGNED`, or between `UNSIGNED` kinds, can be done
+via the new `UINT` intrinsic.  The `UNSIGNED` intrinsic name is also
+supported as an alias.
 
 Support for `UNSIGNED` in the `OUT_OF_RANGE` predicate and `RANDOM_NUMBER`
 remains to be implemented.
