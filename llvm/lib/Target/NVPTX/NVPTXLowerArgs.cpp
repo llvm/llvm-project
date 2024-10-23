@@ -745,7 +745,8 @@ static bool copyFunctionByValArgs(Function &F) {
                     << "\n");
   bool Changed = false;
   for (Argument &Arg : F.args())
-    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr() &&
+        !(isParamGridConstant(Arg) && isKernelFunction(F))) {
       copyByValParam(F, Arg);
       Changed = true;
     }
