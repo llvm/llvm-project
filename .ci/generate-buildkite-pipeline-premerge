@@ -331,7 +331,3 @@ if [[ "${windows_projects}" != "" ]]; then
   agents: ${LINUX_AGENTS}
 EOF
 fi
-
-cat <<EOF
-
-EOF
