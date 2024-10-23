@@ -108,6 +108,7 @@ struct DsymutilOptions {
   bool Flat = false;
   bool InputIsYAMLDebugMap = false;
   bool ForceKeepFunctionForStatic = false;
+  bool NoObjectTimestamp = false;
   std::string OutputFile;
   std::string Toolchain;
   std::string ReproducerPath;
@@ -292,6 +293,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.DumpStab = Args.hasArg(OPT_symtab);
   Options.Flat = Args.hasArg(OPT_flat);
   Options.InputIsYAMLDebugMap = Args.hasArg(OPT_yaml_input);
+  Options.NoObjectTimestamp = Args.hasArg(OPT_no_object_timestamp);
 
   if (Expected<DWARFVerify> Verify = getVerifyKind(Args)) {
     Options.Verify = *Verify;
@@ -664,7 +666,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
   for (auto &InputFile : Options.InputFiles) {
     // Shared a single binary holder for all the link steps.
-    BinaryHolder BinHolder(Options.LinkOpts.VFS, Options.LinkOpts.Verbose);
+    BinaryHolder::Options BinOpts;
+    BinOpts.Verbose = Options.LinkOpts.Verbose;
+    BinOpts.Warn = !Options.NoObjectTimestamp;
+    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts);
 
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
