@@ -1927,14 +1927,6 @@ static Instruction *foldOrToXor(BinaryOperator &I,
         match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
       return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
-  // (A & ~B) | (~A & B) --> A ^ B
-  // (A & ~B) | (B & ~A) --> A ^ B
-  // (~B & A) | (~A & B) --> A ^ B
-  // (~B & A) | (B & ~A) --> A ^ B
-  if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-      match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B))))
-    return BinaryOperator::CreateXor(A, B);
-
   return nullptr;
 }
 
@@ -3547,16 +3539,16 @@ static Value *foldOrOfInversions(BinaryOperator &I,
   assert(I.getOpcode() == Instruction::Or &&
          "Simplification only supports or at the moment.");
 
-  Value *Cmp1, *Cmp2, *Cmp3, *Cmp4;
-  if (!match(I.getOperand(0), m_And(m_Value(Cmp1), m_Value(Cmp2))) ||
-      !match(I.getOperand(1), m_And(m_Value(Cmp3), m_Value(Cmp4))))
+  Value *A, *B, *C, *D;
+  if (!match(I.getOperand(0), m_And(m_Value(A), m_Value(B))) ||
+      !match(I.getOperand(1), m_And(m_Value(C), m_Value(D))))
     return nullptr;
 
   // Check if any two pairs of the and operations are inversions of each other.
-  if (isKnownInversion(Cmp1, Cmp3) && isKnownInversion(Cmp2, Cmp4))
-    return Builder.CreateXor(Cmp1, Cmp4);
-  if (isKnownInversion(Cmp1, Cmp4) && isKnownInversion(Cmp2, Cmp3))
-    return Builder.CreateXor(Cmp1, Cmp3);
+  if (isKnownInversion(A, C) && isKnownInversion(B, D))
+    return Builder.CreateXor(A, D);
+  if (isKnownInversion(A, D) && isKnownInversion(B, C))
+    return Builder.CreateXor(A, C);
 
   return nullptr;
 }
