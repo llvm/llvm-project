@@ -36,42 +36,42 @@ STATISTIC(NumDeadPHICycles, "Number of dead PHI cycles");
 
 namespace {
 
-  class OptimizePHIs {
-    MachineRegisterInfo *MRI = nullptr;
-    const TargetInstrInfo *TII = nullptr;
+class OptimizePHIs {
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 
-  public:
-    bool run(MachineFunction &Fn);
+public:
+  bool run(MachineFunction &Fn);
 
-  private:
-    using InstrSet = SmallPtrSet<MachineInstr *, 16>;
-    using InstrSetIterator = SmallPtrSetIterator<MachineInstr *>;
+private:
+  using InstrSet = SmallPtrSet<MachineInstr *, 16>;
+  using InstrSetIterator = SmallPtrSetIterator<MachineInstr *>;
 
-    bool IsSingleValuePHICycle(MachineInstr *MI, unsigned &SingleValReg,
-                               InstrSet &PHIsInCycle);
-    bool IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle);
-    bool OptimizeBB(MachineBasicBlock &MBB);
-  };
+  bool IsSingleValuePHICycle(MachineInstr *MI, unsigned &SingleValReg,
+                             InstrSet &PHIsInCycle);
+  bool IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle);
+  bool OptimizeBB(MachineBasicBlock &MBB);
+};
 
-  class OptimizePHIsLegacy : public MachineFunctionPass {
-  public:
-    static char ID;
-    OptimizePHIsLegacy() : MachineFunctionPass(ID) {
-      initializeOptimizePHIsLegacyPass(*PassRegistry::getPassRegistry());
-    }
+class OptimizePHIsLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  OptimizePHIsLegacy() : MachineFunctionPass(ID) {
+    initializeOptimizePHIsLegacyPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnMachineFunction(MachineFunction &MF) override {
-      if (skipFunction(MF.getFunction()))
-        return false;
-      OptimizePHIs OP;
-      return OP.run(MF);
-    }
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    OptimizePHIs OP;
+    return OP.run(MF);
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
-  };
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
 } // end anonymous namespace
 
 char OptimizePHIsLegacy::ID = 0;

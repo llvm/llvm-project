@@ -22,4 +22,3 @@ public:
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_OPTIMIZE_PHIS_H
-
