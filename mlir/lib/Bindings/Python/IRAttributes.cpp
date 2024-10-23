@@ -1038,9 +1038,9 @@ private:
     return mlirDenseElementsAttrRawBufferGet(type, view.len, view.buf);
   }
 
-  // There is a complication for boolean numpy arrays, as numpy represent them
-  // as 8 bits per boolean, whereas MLIR bitpacks them into 8 booleans per byte.
-  // This function does the bit-packing respecting endianess.
+  // There is a complication for boolean numpy arrays, as numpy represents them
+  // as 8 bits (1 byte) per boolean, whereas MLIR bitpacks them into 8 booleans
+  // per byte. This function does the bit-packing respecting endianess.
   static MlirAttribute getBitpackedAttributeFromBooleanBuffer(
       Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
       MlirContext &context) {
@@ -1091,7 +1091,7 @@ private:
   py::buffer_info bufferInfo(MlirType shapedType,
                              const char *explicitFormat = nullptr) {
     // Prepare the data for the buffer_info.
-    // Buffer is configured for read-only access in .
+    // Buffer is configured for read-only access inside the `bufferInfo` call.
     Type *data = static_cast<Type *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
     return bufferInfo<Type>(shapedType, data, explicitFormat);
