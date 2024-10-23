@@ -27,3 +27,5 @@ void RTDEF(CUFLaunchKernel)(const void *kernelName, intptr_t gridX,
 } // extern "C"
 
 } // namespace Fortran::runtime::cuda
+
+#endif // FORTRAN_RUNTIME_CUDA_KERNEL_H_
