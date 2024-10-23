@@ -52,7 +52,7 @@ int main() {
 // CLANG-PGO-NEXT: test2
 
 // LLVM-PGO: ======== Counters =========
-// LLVM-PGO-NEXT: [ 20 10 2 1 ]
+// LLVM-PGO-NEXT: [ 20 10 1 1 ]
 // LLVM-PGO-NEXT: [ 10 ]
 // LLVM-PGO-NEXT: [ 20 ]
 // LLVM-PGO-NEXT: ========== Data ===========

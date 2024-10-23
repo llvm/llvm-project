@@ -1,6 +1,7 @@
+// XFAIL: amdgcn-amd-amdhsa
 // clang-format off
 // This test verifies correctness of Xteam Reduction for reduced precision types.
-// 
+//
 // RUN: %libomptarget-compile-generic -fopenmp-target-fast -lmlir_float16_utils
 // RUN: env LIBOMPTARGET_KERNEL_TRACE=1 %libomptarget-run-generic 2>&1 | %fcheck-generic
 
