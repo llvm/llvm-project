@@ -646,15 +646,22 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
 
   // add temporary record for this type to be added later
 
-  bool IsImplementation = false;
+  unsigned Flags = 0;
   if (auto *CT = dyn_cast<DICompositeType>(Ty)) {
     // A runtime language of 0 actually means C/C++ and that any
     // non-negative value is some version of Objective-C/C++.
-    IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
+    if (CT->getRuntimeLang() == 0 || CT->isObjcClassComplete())
+      Flags = dwarf::DW_FLAG_type_implementation;
   }
-  unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
+
   DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
                    Flags);
+
+  if (auto *CT = dyn_cast<DICompositeType>(Ty))
+    if (Ty->getName() != CT->getIdentifier() &&
+        CT->getRuntimeLang() == dwarf::DW_LANG_Swift)
+      DD->addAccelType(*this, CUNode->getNameTableKind(), CT->getIdentifier(),
+                       TyDIE, Flags);
 
   addGlobalType(Ty, TyDIE, Context);
 }
