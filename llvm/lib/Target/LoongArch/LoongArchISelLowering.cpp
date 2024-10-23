@@ -5737,7 +5737,8 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   if (Subtarget.hasLAM_BH() && Subtarget.is64Bit() &&
       (AI->getOperation() == AtomicRMWInst::Xchg ||
-       AI->getOperation() == AtomicRMWInst::Add)) {
+       AI->getOperation() == AtomicRMWInst::Add ||
+       AI->getOperation() == AtomicRMWInst::Sub)) {
     return AtomicExpansionKind::None;
   }
 

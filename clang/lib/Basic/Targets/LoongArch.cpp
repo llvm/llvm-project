@@ -205,7 +205,7 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
       // TODO: As more features of the V1.1 ISA are supported, a unified "v1.1"
       // arch feature set will be used to include all sub-features belonging to
       // the V1.1 ISA version.
-      if (HasFeatureFrecipe || HasFeatureLAM_BH)
+      if (HasFeatureFrecipe && HasFeatureLAM_BH)
         Builder.defineMacro("__loongarch_arch",
                             Twine('"') + "la64v1.1" + Twine('"'));
       else
