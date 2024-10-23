@@ -3536,6 +3536,20 @@ struct OmpOrderClause {
   std::tuple<std::optional<OmpOrderModifier>, Type> t;
 };
 
+// OMP 5.2 12.6.1 grainsize-clause -> grainsize ([prescriptiveness :] value)
+struct OmpGrainsizeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
+  ENUM_CLASS(Prescriptiveness, Strict);
+  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
+};
+
+// OMP 5.2 12.6.2 num_tasks-clause -> num_tasks ([prescriptiveness :] value)
+struct OmpNumTasksClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
+  ENUM_CLASS(Prescriptiveness, Strict);
+  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
+};
+
 // 2.15.3.7 linear-modifier -> REF | VAL | UVAL
 struct OmpLinearModifier {
   ENUM_CLASS(Type, Ref, Val, Uval)
