@@ -166,6 +166,8 @@ QueryRef QueryParser::doParse() {
           .Case("", ParsedQueryKind::NoOp)
           .Case("#", ParsedQueryKind::Comment, /*isCompletion=*/false)
           .Case("help", ParsedQueryKind::Help)
+          .Case("l", ParsedQueryKind::Let, /*isCompletion=*/false)
+          .Case("let", ParsedQueryKind::Let, /*isCompletion=*/false)
           .Case("m", ParsedQueryKind::Match, /*isCompletion=*/false)
           .Case("set", ParsedQueryKind::Set)
           .Case("match", ParsedQueryKind::Match)
@@ -188,6 +190,27 @@ QueryRef QueryParser::doParse() {
   case ParsedQueryKind::Quit:
     return endQuery(new QuitQuery);
 
+  case ParsedQueryKind::Let: {
+    llvm::StringRef name = lexWord();
+
+    if (name.empty()) {
+      return new InvalidQuery("expected variable name");
+    }
+
+    if (completionPos) {
+      return completeMatcherExpression();
+    }
+
+    matcher::internal::Diagnostics diag;
+    matcher::VariantValue value;
+    if (!matcher::internal::Parser::parseExpression(
+            line, qs.getRegistryData(), &qs.namedValues, &value, &diag)) {
+      return makeInvalidQueryFromDiagnostics(diag);
+    }
+    QueryRef query = new LetQuery(name, value);
+    query->remainingContent = line;
+    return query;
+  }
   case ParsedQueryKind::Match: {
     if (completionPos) {
       return completeMatcherExpression();
@@ -204,6 +227,7 @@ QueryRef QueryParser::doParse() {
     }
     auto actualSource = origMatcherSource.substr(0, origMatcherSource.size() -
                                                         matcherSource.size());
+
     QueryRef query = new MatchQuery(actualSource, *matcher);
     query->remainingContent = matcherSource;
     return query;
