@@ -273,29 +273,6 @@ void InstrProfCallsite::setCallee(Value *Callee) {
   setArgOperand(4, Callee);
 }
 
-std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
-  unsigned NumOperands = arg_size();
-  Metadata *MD = nullptr;
-  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2));
-  if (MAV)
-    MD = MAV->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return std::nullopt;
-  return convertStrToRoundingMode(cast<MDString>(MD)->getString());
-}
-
-std::optional<fp::ExceptionBehavior>
-ConstrainedFPIntrinsic::getExceptionBehavior() const {
-  unsigned NumOperands = arg_size();
-  Metadata *MD = nullptr;
-  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1));
-  if (MAV)
-    MD = MAV->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return std::nullopt;
-  return convertStrToExceptionBehavior(cast<MDString>(MD)->getString());
-}
-
 bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
   std::optional<fp::ExceptionBehavior> Except = getExceptionBehavior();
   if (Except) {

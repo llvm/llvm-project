@@ -602,6 +602,24 @@ bool CallBase::hasClobberingOperandBundles() const {
          getIntrinsicID() != Intrinsic::assume;
 }
 
+std::optional<RoundingMode> CallBase::getRoundingMode() const {
+  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fpe_round)) {
+    uint64_t RM =
+        cast<ConstantInt>(RoundingBundle->Inputs.front())->getSExtValue();
+    return castToRoundingMode(RM);
+  }
+  return std::nullopt;
+}
+
+std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
+  if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fpe_except)) {
+    uint64_t EB =
+        cast<ConstantInt>(ExceptionBundle->Inputs.front())->getZExtValue();
+    return castToExceptionBehavior(EB);
+  }
+  return std::nullopt;
+}
+
 MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {

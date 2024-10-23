@@ -25,6 +25,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
@@ -2162,6 +2163,12 @@ public:
     }
     return false;
   }
+
+  /// Return rounding mode specified by operand bundles.
+  std::optional<RoundingMode> getRoundingMode() const;
+
+  /// Return exception behavior specified by operand bundles.
+  std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
 
   /// Used to keep track of an operand bundle.  See the main comment on
   /// OperandBundleUser above.

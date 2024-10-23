@@ -6308,6 +6308,50 @@ bool isOldDbgFormatIntrinsic(StringRef Name) {
          FnID == Intrinsic::dbg_assign;
 }
 
+bool updateConstrainedIntrinsic(StringRef Name, ArrayRef<Value *> Args,
+                                SmallVectorImpl<OperandBundleDef> &Bundles,
+                                LLVMContext &C) {
+  if (Args.empty())
+    return false;
+  if (!Name.starts_with("llvm.experimental.constrained."))
+    return false;
+  for (auto &B : Bundles) {
+    if (B.getTag().starts_with("fpe."))
+      return false;
+  }
+
+  const auto getMetadataArgumentValue = [](Value *Arg) -> StringRef {
+    if (auto *MAV = dyn_cast<MetadataAsValue>(Arg)) {
+      if (const auto *MD = MAV->getMetadata()) {
+        if (auto MDStr = dyn_cast<MDString>(MD))
+          return MDStr->getString();
+      }
+    }
+    return StringRef();
+  };
+
+  if (Args.size() > 1) {
+    Value *V = Args.take_back(2).front();
+    if (StringRef VStr = getMetadataArgumentValue(V); !VStr.empty()) {
+      if (auto RM = convertStrToRoundingMode(VStr)) {
+        int RMVal = static_cast<int>(*RM);
+        Bundles.emplace_back("fpe.round",
+                             ConstantInt::get(Type::getInt32Ty(C), RMVal));
+      }
+    }
+  }
+
+  Value *V = Args.back();
+  if (StringRef VStr = getMetadataArgumentValue(V); !VStr.empty()) {
+    if (auto EB = convertStrToExceptionBehavior(VStr)) {
+      Bundles.emplace_back("fpe.except",
+                           ConstantInt::get(Type::getInt32Ty(C), *EB));
+    }
+  }
+
+  return true;
+}
+
 /// FunctionHeader
 ///   ::= OptionalLinkage OptionalPreemptionSpecifier OptionalVisibility
 ///       OptionalCallingConv OptRetAttrs OptUnnamedAddr Type GlobalName
@@ -8074,6 +8118,8 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
   AttributeList PAL =
       AttributeList::get(Context, AttributeSet::get(Context, FnAttrs),
                          AttributeSet::get(Context, RetAttrs), Attrs);
+
+  updateConstrainedIntrinsic(CalleeID.StrVal, Args, BundleList, Context);
 
   CallInst *CI = CallInst::Create(Ty, Callee, Args, BundleList);
   CI->setTailCallKind(TCK);

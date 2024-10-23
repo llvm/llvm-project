@@ -660,6 +660,9 @@ private:
 
   /// Verify the llvm.experimental.noalias.scope.decl declarations
   void verifyNoAliasScopeDecl();
+
+  /// Verify the call of a constrained intrinsic call.
+  void verifyConstrainedInstrinsicCall(const CallBase &CB);
 };
 
 } // end anonymous namespace
@@ -3717,7 +3720,9 @@ void Verifier::visitCallBase(CallBase &Call) {
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
        FoundPtrauthBundle = false, FoundKCFIBundle = false,
-       FoundAttachedCallBundle = false;
+       FoundAttachedCallBundle = false, FoundFpeRoundBundle = false,
+       FoundFpeExceptBundle = false;
+
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3780,8 +3785,30 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
+    } else if (Tag == LLVMContext::OB_fpe_round) {
+      Check(!FoundFpeRoundBundle, "Multiple fpe.round operand bundles", Call);
+      Check(BU.Inputs.size() == 1,
+            "Expected exactly one fpe.round bundle operand", Call);
+      auto RM = dyn_cast<ConstantInt>(BU.Inputs.front());
+      Check(RM, "Value of fpe.round bundle operand must be an integer", Call);
+      Check(isValidRoundingMode(RM->getSExtValue()),
+            "Invalid value of fpe.round bundle operand", Call);
+      FoundFpeRoundBundle = true;
+    } else if (Tag == LLVMContext::OB_fpe_except) {
+      Check(!FoundFpeExceptBundle, "Multiple fpe.except operand bundles", Call);
+      Check(BU.Inputs.size() == 1,
+            "Expected exactly one fpe.except bundle operand", Call);
+      auto EB = dyn_cast<ConstantInt>(BU.Inputs.front());
+      Check(EB, "Value of fpe.except bundle operand must be an integer", Call);
+      Check(isValidExceptionBehavior(EB->getZExtValue()),
+            "Invalid value of fpe.except bundle operand", Call);
+      FoundFpeExceptBundle = true;
     }
   }
+
+  // Verify if FP options specified in constrained intrinsic arguments agree
+  // with the options specified in operand bundles.
+  verifyConstrainedInstrinsicCall(Call);
 
   // Verify that callee and callsite agree on whether to use pointer auth.
   Check(!(Call.getCalledFunction() && FoundPtrauthBundle),
@@ -3807,6 +3834,47 @@ void Verifier::visitCallBase(CallBase &Call) {
   ConvergenceVerifyHelper.visit(Call);
 
   visitInstruction(Call);
+}
+
+void Verifier::verifyConstrainedInstrinsicCall(const CallBase &CB) {
+  const auto *CFPI = dyn_cast<ConstrainedFPIntrinsic>(&CB);
+  if (!CFPI)
+    return;
+
+  // FP metadata arguments must not conflict with the corresponding
+  // operand bundles.
+  if (std::optional<RoundingMode> RM = CFPI->getRoundingMode()) {
+    RoundingMode Rounding = *RM;
+    auto RoundingBundle = CB.getOperandBundle(LLVMContext::OB_fpe_round);
+    Check(RoundingBundle,
+          "Constrained intrinsic has a rounding argument but the call does not",
+          CB);
+    if (RoundingBundle) {
+      OperandBundleUse OBU = *RoundingBundle;
+      uint64_t BundleRM = cast<ConstantInt>(OBU.Inputs.front())->getZExtValue();
+      Check(BundleRM == static_cast<uint64_t>(Rounding),
+            "Rounding mode of the constrained intrinsic differs from that in "
+            "operand bundle",
+            CB);
+    }
+  }
+
+  if (std::optional<fp::ExceptionBehavior> EB = CFPI->getExceptionBehavior()) {
+    fp::ExceptionBehavior Excepts = *EB;
+    auto ExceptionBundle = CB.getOperandBundle(LLVMContext::OB_fpe_except);
+    Check(ExceptionBundle,
+          "Constrained intrinsic has an exception handling argument but the "
+          "call does not",
+          CB);
+    if (ExceptionBundle) {
+      OperandBundleUse OBU = *ExceptionBundle;
+      uint64_t BundleEB = cast<ConstantInt>(OBU.Inputs.front())->getZExtValue();
+      Check(BundleEB == static_cast<uint64_t>(Excepts),
+            "Exception behavior of the constrained intrinsic differs from that "
+            "in operand bundle",
+            CB);
+    }
+  }
 }
 
 void Verifier::verifyTailCCMustTailAttrs(const AttrBuilder &Attrs,
