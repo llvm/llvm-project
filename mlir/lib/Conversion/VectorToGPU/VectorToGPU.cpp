@@ -200,7 +200,9 @@ static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
 /// Return true if this integer extend op can be folded into a contract op.
 template <typename ExtOpTy>
 static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
-  if (!isa<vector::TransferReadOp>(extOp.getOperand().getDefiningOp()))
+  auto transferReadOp =
+      extOp.getOperand().template getDefiningOp<vector::TransferReadOp>();
+  if (!transferReadOp)
     return false;
   return llvm::all_of(extOp->getUsers(), llvm::IsaPred<vector::ContractionOp>);
 }
