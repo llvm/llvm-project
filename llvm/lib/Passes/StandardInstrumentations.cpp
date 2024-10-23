@@ -14,6 +14,7 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -1048,12 +1049,15 @@ void OptNoneInstrumentation::registerCallbacks(
 }
 
 bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
+  errs() << "shouldRun callback for " << PassID << " on " << getIRName(IR)
+         << "\n";
   const auto *F = unwrapIR<Function>(IR);
   if (!F) {
     if (const auto *L = unwrapIR<Loop>(IR))
       F = L->getHeader()->getParent();
   }
   bool ShouldRun = !(F && F->hasOptNone());
+  errs() << "\tShouldRun is " << ShouldRun << " and F is " << F << "\n";
   if (!ShouldRun && DebugLogging) {
     errs() << "Skipping pass " << PassID << " on " << F->getName()
            << " due to optnone attribute\n";

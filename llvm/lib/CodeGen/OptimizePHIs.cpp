@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -18,8 +19,10 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include <cassert>
@@ -33,23 +36,12 @@ STATISTIC(NumDeadPHICycles, "Number of dead PHI cycles");
 
 namespace {
 
-  class OptimizePHIs : public MachineFunctionPass {
+  class OptimizePHIs {
     MachineRegisterInfo *MRI = nullptr;
     const TargetInstrInfo *TII = nullptr;
 
   public:
-    static char ID; // Pass identification
-
-    OptimizePHIs() : MachineFunctionPass(ID) {
-      initializeOptimizePHIsPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnMachineFunction(MachineFunction &Fn) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+    bool run(MachineFunction &Fn);
 
   private:
     using InstrSet = SmallPtrSet<MachineInstr *, 16>;
@@ -61,19 +53,45 @@ namespace {
     bool OptimizeBB(MachineBasicBlock &MBB);
   };
 
+  class OptimizePHIsLegacy : public MachineFunctionPass {
+  public:
+    static char ID;
+    OptimizePHIsLegacy() : MachineFunctionPass(ID) {
+      initializeOptimizePHIsLegacyPass(*PassRegistry::getPassRegistry());
+    }
+
+    bool runOnMachineFunction(MachineFunction &MF) override {
+      if (skipFunction(MF.getFunction()))
+        return false;
+      OptimizePHIs OP;
+      return OP.run(MF);
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesCFG();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
+  };
 } // end anonymous namespace
 
-char OptimizePHIs::ID = 0;
+char OptimizePHIsLegacy::ID = 0;
 
-char &llvm::OptimizePHIsID = OptimizePHIs::ID;
+char &llvm::OptimizePHIsLegacyID = OptimizePHIsLegacy::ID;
 
-INITIALIZE_PASS(OptimizePHIs, DEBUG_TYPE,
+INITIALIZE_PASS(OptimizePHIsLegacy, DEBUG_TYPE,
                 "Optimize machine instruction PHIs", false, false)
 
-bool OptimizePHIs::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
+PreservedAnalyses OptimizePHIsPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  OptimizePHIs OP;
+  if (!OP.run(MF))
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
 
+bool OptimizePHIs::run(MachineFunction &Fn) {
   MRI = &Fn.getRegInfo();
   TII = Fn.getSubtarget().getInstrInfo();
 
