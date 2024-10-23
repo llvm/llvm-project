@@ -1,8 +1,7 @@
 // RUN: %clang_cc1 -std=c++23 -verify %s
 
 namespace usage_invalid {
-  // FIXME: Should we diagnose a void return type?
-  void voidreturn(int &param [[clang::lifetimebound]]);
+  void voidreturn(int &param [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute cannot be applied to a parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
 
   int *not_class_member() [[clang::lifetimebound]]; // expected-error {{non-member function has no implicit object parameter}}
   struct A {
