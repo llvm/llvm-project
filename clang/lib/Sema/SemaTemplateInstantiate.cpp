@@ -3978,11 +3978,23 @@ bool Sema::usesPartialOrExplicitSpecialization(
     return true;
 
   SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
-  ClassTemplateSpec->getSpecializedTemplate()
-                   ->getPartialSpecializations(PartialSpecs);
-  for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
+  ClassTemplateDecl *CTD = ClassTemplateSpec->getSpecializedTemplate();
+  CTD->getPartialSpecializations(PartialSpecs);
+  for (ClassTemplatePartialSpecializationDecl *CTPSD : PartialSpecs) {
+    // C++ [temp.spec.partial.member]p2:
+    //   If the primary member template is explicitly specialized for a given
+    //   (implicit) specialization of the enclosing class template, the partial
+    //   specializations of the member template are ignored for this
+    //   specialization of the enclosing class template. If a partial
+    //   specialization of the member template is explicitly specialized for a
+    //   given (implicit) specialization of the enclosing class template, the
+    //   primary member template and its other partial specializations are still
+    //   considered for this specialization of the enclosing class template.
+    if (CTD->isMemberSpecialization() && !CTPSD->isMemberSpecialization())
+      continue;
+
     TemplateDeductionInfo Info(Loc);
-    if (DeduceTemplateArguments(PartialSpecs[I],
+    if (DeduceTemplateArguments(CTPSD,
                                 ClassTemplateSpec->getTemplateArgs().asArray(),
                                 Info) == TemplateDeductionResult::Success)
       return true;
@@ -4027,6 +4039,20 @@ getPatternForClassTemplateSpecialization(
     TemplateSpecCandidateSet FailedCandidates(PointOfInstantiation);
     for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
       ClassTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
+      // C++ [temp.spec.partial.member]p2:
+      //   If the primary member template is explicitly specialized for a given
+      //   (implicit) specialization of the enclosing class template, the
+      //   partial specializations of the member template are ignored for this
+      //   specialization of the enclosing class template. If a partial
+      //   specialization of the member template is explicitly specialized for a
+      //   given (implicit) specialization of the enclosing class template, the
+      //   primary member template and its other partial specializations are
+      //   still considered for this specialization of the enclosing class
+      //   template.
+      if (Template->isMemberSpecialization() &&
+          !Partial->isMemberSpecialization())
+        continue;
+
       TemplateDeductionInfo Info(FailedCandidates.getLocation());
       if (TemplateDeductionResult Result = S.DeduceTemplateArguments(
               Partial, ClassTemplateSpec->getTemplateArgs().asArray(), Info);
