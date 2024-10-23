@@ -324,6 +324,10 @@ if(case_sensitive_filesystem)
        -libpath:"${msvc_lib_symlinks_dir}")
 endif()
 
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25")
+  list(TRANSFORM LINK_FLAGS PREPEND "${CMAKE_CXX_LINKER_WRAPPER_FLAG}")
+endif()
+
 string(REPLACE ";" " " LINK_FLAGS "${LINK_FLAGS}")
 string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${LINK_FLAGS}")
 string(APPEND CMAKE_MODULE_LINKER_FLAGS_INIT " ${LINK_FLAGS}")
