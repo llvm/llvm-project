@@ -1362,7 +1362,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
                Die.getTag() == dwarf::DW_TAG_compile_unit)) {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: cannot update ranges for DIE in Unit offset 0x"
-             << Unit.getOffset() << '\n';
+             << Twine::utohexstr(Unit.getOffset()) << '\n';
   }
 }
 

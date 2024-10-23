@@ -64,6 +64,13 @@ public:
   virtual void
   GetNamespaces(ConstString name,
                 llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  /// Get type DIEs meeting requires of \a query.
+  /// in its decl parent chain as subset.  A base implementation is provided,
+  /// Specializations should override this if they are able to provide a faster
+  /// implementation.
+  virtual void
+  GetTypesWithQuery(TypeQuery &query,
+                    llvm::function_ref<bool(DWARFDIE die)> callback);
   virtual void
   GetFunctions(const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
                const CompilerDeclContext &parent_decl_ctx,
@@ -115,6 +122,11 @@ protected:
   bool
   GetFullyQualifiedTypeImpl(const DWARFDeclContext &context, DWARFDIE die,
                             llvm::function_ref<bool(DWARFDIE die)> callback);
+
+  /// Check if the type \a die can meet the requirements of \a query.
+  bool
+  ProcessTypeDIEMatchQuery(TypeQuery &query, DWARFDIE die,
+                           llvm::function_ref<bool(DWARFDIE die)> callback);
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

@@ -591,26 +591,28 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
-    if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.t)}) {
-      using Type = parser::OmpMapType::Type;
-      const Type &type{std::get<Type>(maptype->t)};
-      switch (type) {
-      case Type::To:
+    // There is only one `type' allowed, but it's parsed as a list. Multiple
+    // types are diagnosed in the semantic checks for OpenMP.
+    if (const auto &mapType{
+            std::get<std::optional<std::list<parser::OmpMapClause::Type>>>(
+                x.t)}) {
+      switch (mapType->front()) {
+      case parser::OmpMapClause::Type::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case Type::From:
+      case parser::OmpMapClause::Type::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case Type::Tofrom:
+      case parser::OmpMapClause::Type::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case Type::Alloc:
+      case parser::OmpMapClause::Type::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case Type::Release:
+      case parser::OmpMapClause::Type::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case Type::Delete:
+      case parser::OmpMapClause::Type::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       }
@@ -2419,10 +2421,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpShared,
                       Symbol::Flag::OmpLinear};
 
-                  for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
-                    for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
-                      checkExclusivelists(
-                          hostAssocSym, ompFlag1, symbol, ompFlag2);
+                  // For OMP TARGET TEAMS directive some sharing attribute
+                  // flags and mapping attribute flags can co-exist.
+                  if (!(llvm::omp::allTeamsSet.test(GetContext().directive) ||
+                          llvm::omp::allParallelSet.test(
+                              GetContext().directive))) {
+                    for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
+                      for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
+                        checkExclusivelists(
+                            hostAssocSym, ompFlag1, symbol, ompFlag2);
+                      }
                     }
                   }
                 }

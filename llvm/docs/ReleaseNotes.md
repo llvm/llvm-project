@@ -88,6 +88,8 @@ Changes to the LLVM IR
   * `llvm.nvvm.ptr.shared.to.gen`
   * `llvm.nvvm.ptr.constant.to.gen`
   * `llvm.nvvm.ptr.local.to.gen`
+  
+* Operand bundle values can now be metadata strings.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -122,6 +124,17 @@ Changes to the ARM Backend
 * `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
+
+* The default behavior for frame pointers in leaf functions has been updated.
+  When the `-fno-omit-frame-pointer` option is specified, `FPKeepKindStr` is
+  set to `-mframe-pointer=all`, meaning the frame pointer (FP) is now retained
+  in leaf functions by default. To eliminate the frame pointer in leaf functions,
+  you must explicitly use the `-momit-leaf-frame-pointer` option.
+
+* When using the `MOVT` or `MOVW` instructions, the Assembler will now check to
+  ensure that any addend that is used is within a 16-bit signed value range. If the
+  addend falls outside of this range, the LLVM backend will emit an error like so
+  `Relocation Not In Range`.
 
 Changes to the AVR Backend
 --------------------------

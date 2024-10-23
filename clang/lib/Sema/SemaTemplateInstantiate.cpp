@@ -237,7 +237,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(VTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(VTPSD, VTPSD->getTemplateArgs().asArray(),
+      AddOuterTemplateArguments(VTPSD, VTPSD->getInjectedTemplateArgs(),
                                 /*Final=*/false);
 
     if (VTPSD->isMemberSpecialization())
@@ -274,7 +274,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(CTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(CTPSD, CTPSD->getTemplateArgs().asArray(),
+      AddOuterTemplateArguments(CTPSD, CTPSD->getInjectedTemplateArgs(),
                                 /*Final=*/false);
 
     if (CTPSD->isMemberSpecialization())
@@ -341,7 +341,7 @@ struct TemplateInstantiationArgumentCollecter
       // If this function was instantiated from a specialized member that is
       // a function template, we're done.
       assert(FD->getPrimaryTemplate() && "No function template?");
-      if (FD->getPrimaryTemplate()->isMemberSpecialization())
+      if (FD->getPrimaryTemplate()->hasMemberSpecialization())
         return Done();
 
       // If this function is a generic lambda specialization, we are done.
@@ -440,11 +440,11 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = CTSD->getSpecializedTemplateOrPartial();
     if (auto *CTPSD =
             Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      if (CTPSD->isMemberSpecialization())
+      if (CTPSD->hasMemberSpecialization())
         return Done();
     } else {
       auto *CTD = Specialized.get<ClassTemplateDecl *>();
-      if (CTD->isMemberSpecialization())
+      if (CTD->hasMemberSpecialization())
         return Done();
     }
     return UseNextDecl(CTSD);
@@ -476,11 +476,11 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = VTSD->getSpecializedTemplateOrPartial();
     if (auto *VTPSD =
             Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      if (VTPSD->isMemberSpecialization())
+      if (VTPSD->hasMemberSpecialization())
         return Done();
     } else {
       auto *VTD = Specialized.get<VarTemplateDecl *>();
-      if (VTD->isMemberSpecialization())
+      if (VTD->hasMemberSpecialization())
         return Done();
     }
     return UseNextDecl(VTSD);
@@ -512,13 +512,13 @@ struct TemplateInstantiationArgumentCollecter
 
 } // namespace
 
-void Sema::getTemplateInstantiationArgs(
-    MultiLevelTemplateArgumentList &Result, const NamedDecl *ND,
-    const DeclContext *DC, bool Final,
+MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
+    const NamedDecl *ND, const DeclContext *DC, bool Final,
     std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
     bool ForConstraintInstantiation) {
   assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
   // Accumulate the set of template argument lists in this structure.
+  MultiLevelTemplateArgumentList Result;
   const Decl *CurDecl = ND;
 
   if (!CurDecl)
@@ -529,17 +529,6 @@ void Sema::getTemplateInstantiationArgs(
   do {
     CurDecl = Collecter.Visit(const_cast<Decl *>(CurDecl));
   } while (CurDecl);
-}
-
-MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
-    const NamedDecl *ND, const DeclContext *DC, bool Final,
-    std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
-    bool ForConstraintInstantiation) {
-  assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
-  // Accumulate the set of template argument lists in this structure.
-  MultiLevelTemplateArgumentList Result;
-  getTemplateInstantiationArgs(Result, ND, DC, Final, Innermost,
-                               RelativeToPrimary, ForConstraintInstantiation);
   return Result;
 }
 
@@ -817,8 +806,7 @@ void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
 
   // Check to see if we're low on stack space. We can't do anything about this
   // from here, but we can at least warn the user.
-  if (isStackNearlyExhausted())
-    warnStackExhausted(Ctx.PointOfInstantiation);
+  StackHandler.warnOnStackNearlyExhausted(Ctx.PointOfInstantiation);
 }
 
 void Sema::popCodeSynthesisContext() {
@@ -1538,6 +1526,7 @@ namespace {
                           NamedDecl *FirstQualifierInScope = nullptr,
                           bool AllowInjectedClassName = false);
 
+    const AnnotateAttr *TransformAnnotateAttr(const AnnotateAttr *AA);
     const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
     const NoInlineAttr *TransformStmtNoInlineAttr(const Stmt *OrigS,
@@ -1692,10 +1681,16 @@ namespace {
       if (SemaRef.RebuildingImmediateInvocation)
         return E;
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
-                                    /*InstantiatingLambda=*/true);
+                                    /*InstantiatingLambdaOrBlock=*/true);
       Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
 
       return inherited::TransformLambdaExpr(E);
+    }
+
+    ExprResult TransformBlockExpr(BlockExpr *E) {
+      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
+                                    /*InstantiatingLambdaOrBlock=*/true);
+      return inherited::TransformBlockExpr(E);
     }
 
     ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -2166,6 +2161,18 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
                                          Arg, PackIndex);
 }
 
+const AnnotateAttr *
+TemplateInstantiator::TransformAnnotateAttr(const AnnotateAttr *AA) {
+  SmallVector<Expr *> Args;
+  for (Expr *Arg : AA->args()) {
+    ExprResult Res = getDerived().TransformExpr(Arg);
+    if (Res.isUsable())
+      Args.push_back(Res.get());
+  }
+  return AnnotateAttr::CreateImplicit(getSema().Context, AA->getAnnotation(),
+                                      Args.data(), Args.size(), AA->getRange());
+}
+
 const CXXAssumeAttr *
 TemplateInstantiator::TransformCXXAssumeAttr(const CXXAssumeAttr *AA) {
   ExprResult Res = getDerived().TransformExpr(AA->getAssumption());
@@ -2474,7 +2481,7 @@ QualType TemplateInstantiator::TransformFunctionProtoType(TypeLocBuilder &TLB,
                                  CXXRecordDecl *ThisContext,
                                  Qualifiers ThisTypeQuals,
                                  Fn TransformExceptionSpec) {
-  // If this is a lambda, the transformation MUST be done in the
+  // If this is a lambda or block, the transformation MUST be done in the
   // CurrentInstantiationScope since it introduces a mapping of
   // the original to the newly created transformed parameters.
   //
@@ -2483,7 +2490,7 @@ QualType TemplateInstantiator::TransformFunctionProtoType(TypeLocBuilder &TLB,
   // a second one.
   LocalInstantiationScope *Current = getSema().CurrentInstantiationScope;
   std::optional<LocalInstantiationScope> Scope;
-  if (!Current || !Current->isLambda())
+  if (!Current || !Current->isLambdaOrBlock())
     Scope.emplace(SemaRef, /*CombineWithOuterScope=*/true);
 
   return inherited::TransformFunctionProtoType(
@@ -2647,7 +2654,7 @@ QualType TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
 
 static concepts::Requirement::SubstitutionDiagnostic *
 createSubstDiag(Sema &S, TemplateDeductionInfo &Info,
-                concepts::EntityPrinter Printer) {
+                Sema::EntityPrinter Printer) {
   SmallString<128> Message;
   SourceLocation ErrorLoc;
   if (Info.hasSFINAEDiagnostic()) {
@@ -2668,12 +2675,11 @@ createSubstDiag(Sema &S, TemplateDeductionInfo &Info,
 }
 
 concepts::Requirement::SubstitutionDiagnostic *
-concepts::createSubstDiagAt(Sema &S, SourceLocation Location,
-                            EntityPrinter Printer) {
+Sema::createSubstDiagAt(SourceLocation Location, EntityPrinter Printer) {
   SmallString<128> Entity;
   llvm::raw_svector_ostream OS(Entity);
   Printer(OS);
-  const ASTContext &C = S.Context;
+  const ASTContext &C = Context;
   return new (C) concepts::Requirement::SubstitutionDiagnostic{
       /*SubstitutedEntity=*/C.backupStr(Entity),
       /*DiagLoc=*/Location, /*DiagMessage=*/StringRef()};
@@ -4109,10 +4115,7 @@ getPatternForClassTemplateSpecialization(
   CXXRecordDecl *Pattern = nullptr;
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
   if (auto *CTD = Specialized.dyn_cast<ClassTemplateDecl *>()) {
-    while (true) {
-      CTD = CTD->getMostRecentDecl();
-      if (CTD->isMemberSpecialization())
-        break;
+    while (!CTD->hasMemberSpecialization()) {
       if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
         CTD = NewCTD;
       else
@@ -4122,10 +4125,7 @@ getPatternForClassTemplateSpecialization(
   } else if (auto *CTPSD =
                  Specialized
                      .dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-    while (true) {
-      CTPSD = CTPSD->getMostRecentDecl();
-      if (CTPSD->isMemberSpecialization())
-        break;
+    while (!CTPSD->hasMemberSpecialization()) {
       if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
         CTPSD = NewCTPSD;
       else

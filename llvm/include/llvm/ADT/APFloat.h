@@ -309,6 +309,8 @@ struct APFloatBase {
   static ExponentType semanticsMaxExponent(const fltSemantics &);
   static unsigned int semanticsSizeInBits(const fltSemantics &);
   static unsigned int semanticsIntSizeInBits(const fltSemantics&, bool);
+  static bool semanticsHasZero(const fltSemantics &);
+  static bool semanticsHasSignedRepr(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
@@ -1044,7 +1046,10 @@ public:
   ///
   /// \param Negative True iff the number should be negative.
   static APFloat getOne(const fltSemantics &Sem, bool Negative = false) {
-    return APFloat(Sem, Negative ? -1 : 1);
+    APFloat Val(Sem, 1U);
+    if (Negative)
+      Val.changeSign();
+    return Val;
   }
 
   /// Factory for Positive and Negative Infinity.

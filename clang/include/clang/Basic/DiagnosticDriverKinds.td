@@ -147,6 +147,9 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
+def warn_openmp_experimental : Warning<
+  "OpenMP support in flang is still experimental">,
+  InGroup<ExperimentalOption>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -499,6 +502,10 @@ def err_sls_hardening_arm_not_supported : Error<
 def warn_drv_large_data_threshold_invalid_code_model: Warning<
   "'%0' only applies to medium and large code models">,
   InGroup<UnusedCommandLineArgument>;
+def warn_drv_math_errno_enabled_after_veclib: Warning<
+  "math errno enabled by '%0' after it was implicitly disabled by '%1',"
+  " this may limit the utilization of the vector library">,
+  InGroup<MathErrnoEnabledWithVecLib>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;

@@ -1175,26 +1175,19 @@ private:
 
     ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);
     Contexts.back().ColonIsDictLiteral = true;
-
-    const auto *Prev = OpeningBrace.getPreviousNonComment();
-
-    if (OpeningBrace.is(BK_BracedInit)) {
+    if (OpeningBrace.is(BK_BracedInit))
       Contexts.back().IsExpression = true;
-      if (Prev) {
-        for (auto *Tok = Prev->Previous; Tok && Tok->isPointerOrReference();
-             Tok = Tok->Previous) {
-          Tok->setFinalizedType(TT_PointerOrReference);
-        }
-      }
-    }
-
-    if (Style.isJavaScript() && Prev && Prev->is(TT_JsTypeColon))
+    if (Style.isJavaScript() && OpeningBrace.Previous &&
+        OpeningBrace.Previous->is(TT_JsTypeColon)) {
       Contexts.back().IsExpression = false;
-
+    }
+    if (Style.isVerilog() &&
+        (!OpeningBrace.getPreviousNonComment() ||
+         OpeningBrace.getPreviousNonComment()->isNot(Keywords.kw_apostrophe))) {
+      Contexts.back().VerilogMayBeConcatenation = true;
+    }
     if (Style.isTableGen())
       Contexts.back().ColonIsDictLiteral = false;
-    else if (Style.isVerilog() && !(Prev && Prev->is(Keywords.kw_apostrophe)))
-      Contexts.back().VerilogMayBeConcatenation = true;
 
     unsigned CommaCount = 0;
     while (CurrentToken) {
@@ -1551,7 +1544,8 @@ private:
           // Case D.
           if (Keywords.isVerilogIdentifier(*Prev) && PrevPrev->is(tok::comma)) {
             const FormatToken *PrevParen = PrevPrev->getPreviousNonComment();
-            if (PrevParen->is(tok::r_paren) && PrevParen->MatchingParen &&
+            if (PrevParen && PrevParen->is(tok::r_paren) &&
+                PrevParen->MatchingParen &&
                 PrevParen->MatchingParen->is(TT_VerilogInstancePortLParen)) {
               return true;
             }
@@ -5515,8 +5509,10 @@ static bool isAllmanLambdaBrace(const FormatToken &Tok) {
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                                      const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
-  if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
+  if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0 &&
+      (!Style.RemoveEmptyLinesInUnwrappedLines || &Right == Line.First)) {
     return true;
+  }
 
   if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
       Line.mightBeFunctionDefinition() && Left.MightBeFunctionDeclParen &&

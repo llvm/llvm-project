@@ -860,6 +860,16 @@ public:
   /// \endcode
   bool isMemberSpecialization() const { return Common.getInt(); }
 
+  /// Determines whether any redeclaration of this template was
+  /// a specialization of a member template.
+  bool hasMemberSpecialization() const {
+    for (const auto *D : redecls()) {
+      if (D->isMemberSpecialization())
+        return true;
+    }
+    return false;
+  }
+
   /// Note that this member template is a specialization.
   void setMemberSpecialization() {
     assert(!isMemberSpecialization() && "already a member specialization");
@@ -1006,15 +1016,6 @@ public:
   /// pattern.
   bool isThisDeclarationADefinition() const {
     return getTemplatedDecl()->isThisDeclarationADefinition();
-  }
-
-  bool isCompatibleWithDefinition() const {
-    return getTemplatedDecl()->isInstantiatedFromMemberTemplate() ||
-           isThisDeclarationADefinition();
-  }
-  void setInstantiatedFromMemberTemplate(FunctionTemplateDecl *D) {
-    getTemplatedDecl()->setInstantiatedFromMemberTemplate();
-    RedeclarableTemplateDecl::setInstantiatedFromMemberTemplate(D);
   }
 
   /// Return the specialization with the provided arguments if it exists,
@@ -2084,7 +2085,11 @@ public:
 class ClassTemplatePartialSpecializationDecl
   : public ClassTemplateSpecializationDecl {
   /// The list of template parameters
-  TemplateParameterList* TemplateParams = nullptr;
+  TemplateParameterList *TemplateParams = nullptr;
+
+  /// The set of "injected" template arguments used within this
+  /// partial specialization.
+  TemplateArgument *InjectedArgs = nullptr;
 
   /// The class template partial specialization from which this
   /// class template partial specialization was instantiated.
@@ -2130,6 +2135,10 @@ public:
   TemplateParameterList *getTemplateParameters() const {
     return TemplateParams;
   }
+
+  /// Retrieve the template arguments list of the template parameter list
+  /// of this template.
+  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
   /// \brief All associated constraints of this partial specialization,
   /// including the requires clause and any constraints derived from
@@ -2199,6 +2208,17 @@ public:
   /// \endcode
   bool isMemberSpecialization() const {
     return InstantiatedFromMember.getInt();
+  }
+
+  /// Determines whether any redeclaration of this this class template partial
+  /// specialization was a specialization of a member partial specialization.
+  bool hasMemberSpecialization() const {
+    for (const auto *D : redecls()) {
+      if (cast<ClassTemplatePartialSpecializationDecl>(D)
+              ->isMemberSpecialization())
+        return true;
+    }
+    return false;
   }
 
   /// Note that this member template is a specialization.
@@ -2844,6 +2864,10 @@ class VarTemplatePartialSpecializationDecl
   /// The list of template parameters
   TemplateParameterList *TemplateParams = nullptr;
 
+  /// The set of "injected" template arguments used within this
+  /// partial specialization.
+  TemplateArgument *InjectedArgs = nullptr;
+
   /// The variable template partial specialization from which this
   /// variable template partial specialization was instantiated.
   ///
@@ -2889,6 +2913,10 @@ public:
   TemplateParameterList *getTemplateParameters() const {
     return TemplateParams;
   }
+
+  /// Retrieve the template arguments list of the template parameter list
+  /// of this template.
+  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
   /// \brief All associated constraints of this partial specialization,
   /// including the requires clause and any constraints derived from
@@ -2954,6 +2982,18 @@ public:
   /// \endcode
   bool isMemberSpecialization() const {
     return InstantiatedFromMember.getInt();
+  }
+
+  /// Determines whether any redeclaration of this this variable template
+  /// partial specialization was a specialization of a member partial
+  /// specialization.
+  bool hasMemberSpecialization() const {
+    for (const auto *D : redecls()) {
+      if (cast<VarTemplatePartialSpecializationDecl>(D)
+              ->isMemberSpecialization())
+        return true;
+    }
+    return false;
   }
 
   /// Note that this member template is a specialization.

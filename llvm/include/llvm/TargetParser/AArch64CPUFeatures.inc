@@ -65,7 +65,7 @@ enum CPUFeatures {
   FEAT_SVE_SHA3,
   FEAT_SVE_SM4,
   FEAT_SME,
-  FEAT_MEMTAG,
+  RESERVED_FEAT_MEMTAG, // previously used and now ABI legacy
   FEAT_MEMTAG2,
   FEAT_MEMTAG3,
   FEAT_SB,

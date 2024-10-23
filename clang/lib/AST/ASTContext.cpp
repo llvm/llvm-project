@@ -2239,6 +2239,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = 0;                                                                 \
     Align = 16;                                                                \
     break;
+#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    Width = NumEls * ElBits * NF;                                              \
+    Align = NumEls * ElBits;                                                   \
+    break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
@@ -3437,6 +3443,9 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << II->getLength() << II->getName();
     return;
   }
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("should never get here");
+    break;
   case Type::DeducedTemplateSpecialization:
   case Type::Auto:
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
@@ -4108,6 +4117,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::ArrayParameter:
+  case Type::HLSLAttributedResource:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -4357,6 +4367,11 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
+#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, false),                              \
+            llvm::ElementCount::getFixed(NumEls), NF};
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
@@ -4423,6 +4438,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -5233,9 +5249,8 @@ QualType ASTContext::getHLSLAttributedResourceType(
   if (Ty)
     return QualType(Ty, 0);
 
-  QualType Canon = getCanonicalType(Wrapped);
   Ty = new (*this, alignof(HLSLAttributedResourceType))
-      HLSLAttributedResourceType(Canon, Wrapped, Contained, Attrs);
+      HLSLAttributedResourceType(Wrapped, Contained, Attrs);
 
   Types.push_back(Ty);
   HLSLAttributedResourceTypes.InsertNode(Ty, InsertPos);
@@ -9106,6 +9121,9 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::DeducedTemplateSpecialization:
     return;
 
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("unexpected type");
+
   case Type::ArrayParameter:
   case Type::Pipe:
 #define ABSTRACT_TYPE(KIND, BASE)
@@ -11533,6 +11551,20 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return {};
     return LHS;
   }
+  case Type::HLSLAttributedResource: {
+    const HLSLAttributedResourceType *LHSTy =
+        LHS->castAs<HLSLAttributedResourceType>();
+    const HLSLAttributedResourceType *RHSTy =
+        RHS->castAs<HLSLAttributedResourceType>();
+    assert(LHSTy->getWrappedType() == RHSTy->getWrappedType() &&
+           LHSTy->getWrappedType()->isHLSLResourceType() &&
+           "HLSLAttributedResourceType should always wrap __hlsl_resource_t");
+
+    if (LHSTy->getAttrs() == RHSTy->getAttrs() &&
+        LHSTy->getContainedType() == RHSTy->getContainedType())
+      return LHS;
+    return {};
+  }
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -13368,6 +13400,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(Record)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
+    SUGAR_FREE_TYPE(HLSLAttributedResource)
 #undef SUGAR_FREE_TYPE
 #define NON_UNIQUE_TYPE(Class) UNEXPECTED_TYPE(Class, "non-unique")
     NON_UNIQUE_TYPE(TypeOfExpr)

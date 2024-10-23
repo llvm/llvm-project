@@ -23,7 +23,160 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+// Helper class to deal with a list of modifiers of various types.
+// The list (to be parsed) is assumed to start with all modifiers of the
+// first type, followed by a list of modifiers of the second type, etc.
+// Each list can be empty, e.g.
+//   mod_of_kind_2, mod_of_kind_3, mod_of_kind_5, ...
+// The result type is a tuple of optional lists of each modifier type.
+template <typename Separator, typename Parser, typename... Parsers>
+struct ConcatSeparated {
+  template <typename P>
+  using OptListOf = std::optional<std::list<typename P::resultType>>;
+  template <typename P> using TupleFor = std::tuple<OptListOf<P>>;
+
+  using resultType = std::tuple<OptListOf<Parser>, OptListOf<Parsers>...>;
+
+  constexpr ConcatSeparated(ConcatSeparated &&) = default;
+  constexpr ConcatSeparated(const ConcatSeparated &) = default;
+  constexpr ConcatSeparated(Separator sep, Parser p, Parsers... ps)
+      : parser_(p), sepAndParsers_(sep, ps...) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // firstParser is a list parser, it returns optional<list>.
+    auto firstParser =
+        attempt(nonemptySeparated(parser_, std::get<0>(sepAndParsers_)));
+
+    if constexpr (sizeof...(Parsers) == 0) {
+      return TupleFor<Parser>{std::move(firstParser.Parse(state))};
+    } else {
+      using restParserType = ConcatSeparated<Separator, Parsers...>;
+      auto restParser = std::make_from_tuple<restParserType>(sepAndParsers_);
+
+      if (auto first{firstParser.Parse(state)}) {
+        if (attempt(std::get<0>(sepAndParsers_)).Parse(state)) {
+          return std::tuple_cat(TupleFor<Parser>(std::move(*first)),
+              std::move(*restParser.Parse(state)));
+        }
+        return std::tuple_cat(TupleFor<Parser>{std::move(*first)},
+            std::tuple<OptListOf<Parsers>...>{});
+      }
+      return std::tuple_cat(
+          TupleFor<Parser>{}, std::move(*restParser.Parse(state)));
+    }
+  }
+
+private:
+  const Parser parser_;
+  const std::tuple<Separator, Parsers...> sepAndParsers_;
+};
+
+// Map modifiers come from four categories:
+// - map-type-modifier,
+// - mapper (not parsed yet),
+// - iterator,
+// - map-type.
+// There can be zero or more map-type-modifiers, and zero or one modifier
+// of every other kind.
+// Syntax-wise they look like a single list, where the last element could
+// be a map-type, and all elements in that list are comma-separated[1].
+// Only if there was at least one modifier (of any kind) specified, the
+// list must end with ":".
+// There are complications coming from the fact that the comma separating the
+// two kinds of modifiers is only allowed if there is at least one modifier of
+// each kind. The MapModifiers parser utilizes the ConcatSeparated parser, which
+// takes care of that. ConcatSeparated returns a tuple with optional lists of
+// modifiers for every type.
+// [1] Any of the commas are optional, but that syntax has been deprecated
+// in OpenMP 5.2, and the parsing code keeps a record of whether the commas
+// were present.
+template <typename Separator> struct MapModifiers {
+  constexpr MapModifiers(Separator sep) : sep_(sep) {}
+  constexpr MapModifiers(const MapModifiers &) = default;
+  constexpr MapModifiers(MapModifiers &&) = default;
+
+  // Parsing of mappers is not supported yet.
+  using TypeModParser = Parser<OmpMapClause::TypeModifier>;
+  using IterParser = Parser<OmpIteratorModifier>;
+  using TypeParser = Parser<OmpMapClause::Type>;
+  using ModParser =
+      ConcatSeparated<Separator, TypeModParser, IterParser, TypeParser>;
+
+  using resultType = typename ModParser::resultType;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto mp = ModParser(sep_, TypeModParser{}, IterParser{}, TypeParser{});
+    auto mods = mp.Parse(state);
+    // The ModParser always "succeeds", i.e. even if the input is junk, it
+    // will return a tuple filled with nullopts. If any of the components
+    // is not a nullopt, expect a ":".
+    if (std::apply([](auto &&...opts) { return (... || !!opts); }, *mods)) {
+      if (!attempt(":"_tok).Parse(state)) {
+        return std::nullopt;
+      }
+    }
+    return std::move(mods);
+  }
+
+private:
+  const Separator sep_;
+};
+
 // OpenMP Clauses
+
+// [5.0] 2.1.6 iterator-specifier -> type-declaration-stmt = subscript-triple |
+//                                   identifier = subscript-triple
+// [5.0:47:17-18] In an iterator-specifier, if the iterator-type is not
+// specified then the type of that iterator is default integer.
+// [5.0:49:14] The iterator-type must be an integer type.
+static std::list<EntityDecl> makeEntityList(std::list<ObjectName> &&names) {
+  std::list<EntityDecl> entities;
+
+  for (auto iter = names.begin(), end = names.end(); iter != end; ++iter) {
+    EntityDecl entityDecl(
+        /*ObjectName=*/std::move(*iter), std::optional<ArraySpec>{},
+        std::optional<CoarraySpec>{}, std::optional<CharLength>{},
+        std::optional<Initialization>{});
+    entities.push_back(std::move(entityDecl));
+  }
+  return entities;
+}
+
+static TypeDeclarationStmt makeIterSpecDecl(
+    DeclarationTypeSpec &&spec, std::list<ObjectName> &&names) {
+  return TypeDeclarationStmt(
+      std::move(spec), std::list<AttrSpec>{}, makeEntityList(std::move(names)));
+}
+
+static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
+  // Assume INTEGER without kind selector.
+  DeclarationTypeSpec typeSpec(
+      IntrinsicTypeSpec{IntegerTypeSpec{std::nullopt}});
+
+  return TypeDeclarationStmt(std::move(typeSpec), std::list<AttrSpec>{},
+      makeEntityList(std::move(names)));
+}
+
+TYPE_PARSER(construct<OmpIteratorSpecifier>(
+    // Using Parser<TypeDeclarationStmt> or Parser<EntityDecl> has the problem
+    // that they will attempt to treat what follows the '=' as initialization.
+    // There are several issues with that,
+    // 1. integer :: i = 0:10 will be parsed as "integer :: i = 0", followed
+    // by triplet ":10".
+    // 2. integer :: j = i:10 will be flagged as an error because the
+    // initializer 'i' must be constant (in declarations). In an iterator
+    // specifier the 'j' is not an initializer and can be a variable.
+    (applyFunction<TypeDeclarationStmt>(makeIterSpecDecl,
+         Parser<DeclarationTypeSpec>{} / maybe("::"_tok),
+         nonemptyList(Parser<ObjectName>{}) / "="_tok) ||
+        applyFunction<TypeDeclarationStmt>(
+            makeIterSpecDecl, nonemptyList(Parser<ObjectName>{}) / "="_tok)),
+    subscriptTriplet))
+
+// [5.0] 2.1.6 iterator -> iterator-specifier-list
+TYPE_PARSER(construct<OmpIteratorModifier>("ITERATOR" >>
+    parenthesized(nonemptyList(sourced(Parser<OmpIteratorSpecifier>{})))))
+
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause>(
     "PRIVATE" >> pure(OmpDefaultClause::Type::Private) ||
@@ -38,20 +191,41 @@ TYPE_PARSER(construct<OmpProcBindClause>(
     "PRIMARY" >> pure(OmpProcBindClause::Type::Primary) ||
     "SPREAD" >> pure(OmpProcBindClause::Type::Spread)))
 
-// 2.15.5.1 MAP ([ [ALWAYS[,]] map-type : ] variable-name-list)
-//          map-type -> TO | FROM | TOFROM | ALLOC | RELEASE | DELETE
-TYPE_PARSER(construct<OmpMapType>(
-    maybe("ALWAYS" >> construct<OmpMapType::Always>() / maybe(","_tok)),
-    ("TO"_id >> pure(OmpMapType::Type::To) ||
-        "FROM" >> pure(OmpMapType::Type::From) ||
-        "TOFROM" >> pure(OmpMapType::Type::Tofrom) ||
-        "ALLOC" >> pure(OmpMapType::Type::Alloc) ||
-        "RELEASE" >> pure(OmpMapType::Type::Release) ||
-        "DELETE" >> pure(OmpMapType::Type::Delete)) /
-        ":"))
+// 2.15.5.1 map ->
+//    MAP ([ [map-type-modifiers [,] ] map-type : ] variable-name-list)
+// map-type-modifiers -> map-type-modifier [,] [...]
+// map-type-modifier -> ALWAYS | CLOSE | OMPX_HOLD | PRESENT
+// map-type -> ALLOC | DELETE | FROM | RELEASE | TO | TOFROM
+TYPE_PARSER(construct<OmpMapClause::TypeModifier>(
+    "ALWAYS" >> pure(OmpMapClause::TypeModifier::Always) ||
+    "CLOSE" >> pure(OmpMapClause::TypeModifier::Close) ||
+    "OMPX_HOLD" >> pure(OmpMapClause::TypeModifier::Ompx_Hold) ||
+    "PRESENT" >> pure(OmpMapClause::TypeModifier::Present)))
+
+TYPE_PARSER(
+    construct<OmpMapClause::Type>("ALLOC" >> pure(OmpMapClause::Type::Alloc) ||
+        "DELETE" >> pure(OmpMapClause::Type::Delete) ||
+        "FROM" >> pure(OmpMapClause::Type::From) ||
+        "RELEASE" >> pure(OmpMapClause::Type::Release) ||
+        "TO"_id >> pure(OmpMapClause::Type::To) ||
+        "TOFROM" >> pure(OmpMapClause::Type::Tofrom)))
+
+template <bool CommasEverywhere>
+static inline OmpMapClause makeMapClause(
+    std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
+        std::optional<std::list<OmpIteratorModifier>>,
+        std::optional<std::list<OmpMapClause::Type>>> &&mods,
+    OmpObjectList &&objs) {
+  auto &&[tm, it, ty] = std::move(mods);
+  return OmpMapClause{std::move(tm), std::move(it), std::move(ty),
+      std::move(objs), CommasEverywhere};
+}
 
 TYPE_PARSER(construct<OmpMapClause>(
-    maybe(Parser<OmpMapType>{}), Parser<OmpObjectList>{}))
+    applyFunction<OmpMapClause>(
+        makeMapClause<true>, MapModifiers(","_tok), Parser<OmpObjectList>{}) ||
+    applyFunction<OmpMapClause>(makeMapClause<false>,
+        MapModifiers(maybe(","_tok)), Parser<OmpObjectList>{})))
 
 // [OpenMP 5.0]
 // 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
@@ -350,6 +524,8 @@ TYPE_PARSER(
                      parenthesized(scalarIntConstantExpr))) ||
     "SIZES" >> construct<OmpClause>(construct<OmpClause::Sizes>(
                    parenthesized(nonemptyList(scalarIntExpr)))) ||
+    "PERMUTATION" >> construct<OmpClause>(construct<OmpClause::Permutation>(
+                         parenthesized(nonemptyList(scalarIntExpr)))) ||
     "THREADS" >> construct<OmpClause>(construct<OmpClause::Threads>()) ||
     "THREAD_LIMIT" >> construct<OmpClause>(construct<OmpClause::ThreadLimit>(
                           parenthesized(scalarIntExpr))) ||
@@ -572,33 +748,36 @@ TYPE_PARSER(construct<OmpEndAtomic>(startOmpLine >> "END ATOMIC"_tok))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] READ [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicRead>(Parser<OmpAtomicClauseList>{} / maybe(","_tok),
-        verbatim("READ"_tok), Parser<OmpAtomicClauseList>{} / endOmpLine,
-        statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
+    sourced(construct<OmpAtomicRead>(
+        Parser<OmpAtomicClauseList>{} / maybe(","_tok), verbatim("READ"_tok),
+        Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
+        maybe(Parser<OmpEndAtomic>{} / endOmpLine))))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] CAPTURE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicCapture>(Parser<OmpAtomicClauseList>{} / maybe(","_tok),
-        verbatim("CAPTURE"_tok), Parser<OmpAtomicClauseList>{} / endOmpLine,
-        statement(assignmentStmt), statement(assignmentStmt),
-        Parser<OmpEndAtomic>{} / endOmpLine))
+    sourced(construct<OmpAtomicCapture>(
+        Parser<OmpAtomicClauseList>{} / maybe(","_tok), verbatim("CAPTURE"_tok),
+        Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
+        statement(assignmentStmt), Parser<OmpEndAtomic>{} / endOmpLine)))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] UPDATE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicUpdate>(Parser<OmpAtomicClauseList>{} / maybe(","_tok),
-        verbatim("UPDATE"_tok), Parser<OmpAtomicClauseList>{} / endOmpLine,
-        statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
+    sourced(construct<OmpAtomicUpdate>(
+        Parser<OmpAtomicClauseList>{} / maybe(","_tok), verbatim("UPDATE"_tok),
+        Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
+        maybe(Parser<OmpEndAtomic>{} / endOmpLine))))
 
 // OMP ATOMIC [atomic-clause-list]
-TYPE_PARSER(construct<OmpAtomic>(verbatim("ATOMIC"_tok),
+TYPE_PARSER(sourced(construct<OmpAtomic>(verbatim("ATOMIC"_tok),
     Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
-    maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
+    maybe(Parser<OmpEndAtomic>{} / endOmpLine))))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] WRITE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicWrite>(Parser<OmpAtomicClauseList>{} / maybe(","_tok),
-        verbatim("WRITE"_tok), Parser<OmpAtomicClauseList>{} / endOmpLine,
-        statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
+    sourced(construct<OmpAtomicWrite>(
+        Parser<OmpAtomicClauseList>{} / maybe(","_tok), verbatim("WRITE"_tok),
+        Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
+        maybe(Parser<OmpEndAtomic>{} / endOmpLine))))
 
 // Atomic Construct
 TYPE_PARSER(construct<OpenMPAtomicConstruct>(Parser<OmpAtomicRead>{}) ||
