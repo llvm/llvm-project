@@ -807,14 +807,13 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   // fit in the bitwidth (it must not overflow).
   bool HasOverflow;
   APInt Result = MaxLHS.umul_ov(MaxRHS, HasOverflow);
-  bool NegResult = LHS.isNegative() ^ RHS.isNegative();
   unsigned LeadZ = 0, LeadO = 0;
   if (!HasOverflow) {
-    // Do not set leading ones unless the result is known to be non-zero.
-    if (NegResult && LHS.isNonZero() && RHS.isNonZero())
-      LeadO = (-Result).countLeadingOnes();
-    else if (!NegResult)
+    if (LHS.isNegative() == RHS.isNegative())
       LeadZ = Result.countLeadingZeros();
+    // Do not set leading ones unless the result is known to be non-zero.
+    else if (LHS.isNonZero() && RHS.isNonZero())
+      LeadO = (-Result).countLeadingOnes();
   }
 
   // The result of the bottom bits of an integer multiply can be
