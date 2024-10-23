@@ -15338,11 +15338,16 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf16:
   case Builtin::BI__builtin_fmaxf128: {
+    // TODO: Handle sNaN.
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
-    Result = maxnum(Result, RHS);
+    // When comparing zeroes, return +0.0 if one of the zeroes is positive.
+    if (Result.isZero() && RHS.isZero() && Result.isNegative())
+      Result = RHS;
+    else if (Result.isNaN() || RHS > Result)
+      Result = RHS;
     return true;
   }
 
@@ -15351,11 +15356,16 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminf128: {
+    // TODO: Handle sNaN.
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
-    Result = minnum(Result, RHS);
+    // When comparing zeroes, return -0.0 if one of the zeroes is negative.
+    if (Result.isZero() && RHS.isZero() && RHS.isNegative())
+      Result = RHS;
+    else if (Result.isNaN() || RHS < Result)
+      Result = RHS;
     return true;
   }
 
