@@ -9672,8 +9672,8 @@ static void emitTargetCallKernelLaunch(
         DynCGGroupMem, HasNoWait);
 
     CGF.Builder.restoreIP(OMPRuntime->getOMPBuilder().emitKernelLaunch(
-        CGF.Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, Args,
-        DeviceID, RTLoc, AllocaIP));
+        CGF.Builder, OutlinedFnID, EmitTargetCallFallbackCB, Args, DeviceID,
+        RTLoc, AllocaIP));
   };
 
   if (RequiresOuterTask)
