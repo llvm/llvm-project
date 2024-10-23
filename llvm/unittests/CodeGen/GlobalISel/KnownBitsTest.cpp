@@ -2002,7 +2002,7 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsUBFX) {
 }
 
 TEST_F(AMDGPUGISelMITest, TestKnownBitsSBFX) {
-  // FIXME known its for G_SBFX are broken
+  // FIXME known bits for G_SBFX are broken
   GTEST_SKIP();
   StringRef MIRString = "  %3:_(s32) = G_IMPLICIT_DEF\n"
                         "  %4:_(s32) = G_CONSTANT i32 8\n"
@@ -2099,7 +2099,7 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsUBFX) {
 
 TEST_F(AMDGPUGISelMITest, TestNumSignBitsSBFX) {
   GTEST_SKIP();
-  // FIXME known its for G_SBFX are broken
+  // FIXME known bits for G_SBFX are broken
   StringRef MIRString = "  %3:_(s32) = G_CONSTANT i32 -1\n"
                         "  %4:_(s32) = G_CONSTANT i32 8\n"
                         "  %5:_(s32) = G_CONSTANT i32 4\n"
