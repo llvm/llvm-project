@@ -1353,6 +1353,9 @@ public:
   // \returns true if preloading kernel arguments is supported.
   bool hasKernargPreload() const { return KernargPreload; }
 
+  // \returns true if target enables preloading kernel arguments by default.
+  bool defaultEnabledKernargPreload() const { return hasGFX940Insts(); }
+
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
