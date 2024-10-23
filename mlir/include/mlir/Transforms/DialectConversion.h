@@ -434,18 +434,19 @@ private:
         // This is a 1:N target materialization. Return the produces values
         // directly.
         result = callback(builder, resultTypes, inputs, loc, originalType);
-      } else {
+      } else if constexpr (std::is_assignable<Type, T>::value) {
         // This is a 1:1 target materialization. Invoke it only if the result
         // type class of the callback matches the requested result type.
         if (T derivedType = dyn_cast<T>(resultTypes.front())) {
           // 1:1 materializations produce single values, but we store 1:N
           // target materialization functions in the type converter. Wrap the
           // result value in a SmallVector<Value>.
-          std::optional<Value> val =
-              callback(builder, derivedType, inputs, loc, originalType);
-          if (val.has_value() && *val)
-            result.push_back(*val);
+          Value val = callback(builder, derivedType, inputs, loc, originalType);
+          if (val)
+            result.push_back(val);
         }
+      } else {
+        static_assert(false, "T must be a Type or a TypeRange");
       }
       return result;
     };
