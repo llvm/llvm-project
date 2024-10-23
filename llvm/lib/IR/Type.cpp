@@ -63,7 +63,7 @@ bool Type::isScalableTy() const {
     return ATy->getElementType()->isScalableTy();
   if (const auto *STy = dyn_cast<StructType>(this)) {
     SmallPtrSet<Type *, 4> Visited;
-    return STy->containsScalableVectorType(&Visited);
+    return STy->isScalableTy(&Visited);
   }
   return getTypeID() == ScalableVectorTyID || isScalableTargetExtTy();
 }
@@ -394,8 +394,7 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   return ST;
 }
 
-bool StructType::containsScalableVectorType(
-    SmallPtrSetImpl<Type *> *Visited) const {
+bool StructType::isScalableTy(SmallPtrSetImpl<Type *> *Visited) const {
   if ((getSubclassData() & SCDB_ContainsScalableVector) != 0)
     return true;
 
@@ -412,7 +411,7 @@ bool StructType::containsScalableVectorType(
       return true;
     }
     if (auto *STy = dyn_cast<StructType>(Ty)) {
-      if (STy->containsScalableVectorType(Visited)) {
+      if (STy->isScalableTy(Visited)) {
         const_cast<StructType *>(this)->setSubclassData(
             getSubclassData() | SCDB_ContainsScalableVector);
         return true;
