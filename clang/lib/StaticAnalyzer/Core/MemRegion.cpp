@@ -766,7 +766,7 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
     }
 
     // FieldRegion may have ElementRegion as SuperRegion.
-    if (const auto *FR = R->getAs<clang::ento::FieldRegion>()) {
+    if (const auto *FR = R->getAs<FieldRegion>()) {
       std::string Super = FR->getSuperRegion()->getDescriptiveName(false);
       if (Super.empty())
         return "";
