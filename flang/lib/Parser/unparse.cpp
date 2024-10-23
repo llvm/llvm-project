@@ -2129,6 +2129,10 @@ public:
     Walk(std::get<std::optional<OmpDeviceClause::DeviceModifier>>(x.t), ":");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
+  void Unparse(const OmpAffinityClause &x) {
+    Walk(std::get<std::optional<OmpIteratorModifier>>(x.t), ":");
+    Walk(std::get<OmpObjectList>(x.t));
+  }
   void Unparse(const OmpAlignedClause &x) {
     Walk(std::get<OmpObjectList>(x.t));
     Put(",");
