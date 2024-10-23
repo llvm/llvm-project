@@ -101,9 +101,12 @@ class ModuleMap {
   /// named LangOpts::CurrentModule, if we've loaded it).
   Module *SourceModule = nullptr;
 
+  /// The allocator for all (sub)modules.
+  llvm::SpecificBumpPtrAllocator<Module> ModulesAlloc;
+
   /// Submodules of the current module that have not yet been attached to it.
-  /// (Ownership is transferred if/when we create an enclosing module.)
-  llvm::SmallVector<std::unique_ptr<Module>, 8> PendingSubmodules;
+  /// (Relationship is set up if/when we create an enclosing module.)
+  llvm::SmallVector<Module *, 8> PendingSubmodules;
 
   /// The top-level modules that are known.
   llvm::StringMap<Module *> Modules;
@@ -512,6 +515,8 @@ public:
   ///
   /// \returns The named module, if known; otherwise, returns null.
   Module *findModule(StringRef Name) const;
+
+  Module *findOrInferSubmodule(Module *Parent, StringRef Name);
 
   /// Retrieve a module with the given name using lexical name lookup,
   /// starting at the given context.
