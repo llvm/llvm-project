@@ -34,6 +34,15 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
     CPU = "generic";
 
   ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
+
+  // reference-types implies call-indirect-overlong
+  if (HasReferenceTypes)
+    HasCallIndirectOverlong = true;
+
+  // bulk-memory implies bulk-memory-opt
+  if (HasBulkMemory)
+    HasBulkMemoryOpt = true;
+
   return *this;
 }
 
