@@ -1156,14 +1156,14 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
         fatal(toString(this) + ": common symbol '" + sym->getName() +
               "' has invalid alignment: " + Twine(value));
       hasCommonSyms = true;
-      sym->resolve(ctx, CommonSymbol{this, StringRef(), binding, stOther, type,
-                                     value, size});
+      sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
+                                     type, value, size});
       continue;
     }
 
     // Handle global defined symbols. Defined::section will be set in postParse.
-    sym->resolve(ctx, Defined{this, StringRef(), binding, stOther, type, value,
-                              size, nullptr});
+    sym->resolve(ctx, Defined{ctx, this, StringRef(), binding, stOther, type,
+                              value, size, nullptr});
   }
 
   // Undefined symbols (excluding those defined relative to non-prevailing
@@ -1219,7 +1219,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
       new (symbols[i]) Undefined(this, name, STB_LOCAL, eSym.st_other, type,
                                  /*discardedSecIdx=*/secIdx);
     else
-      new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
+      new (symbols[i]) Defined(ctx, this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
     symbols[i]->partition = 1;
     symbols[i]->isUsedInRegularObj = true;
@@ -1765,11 +1765,12 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   }
 
   if (objSym.isCommon()) {
-    sym->resolve(ctx, CommonSymbol{&f, StringRef(), binding, visibility,
+    sym->resolve(ctx, CommonSymbol{ctx, &f, StringRef(), binding, visibility,
                                    STT_OBJECT, objSym.getCommonAlignment(),
                                    objSym.getCommonSize()});
   } else {
-    Defined newSym(&f, StringRef(), binding, visibility, type, 0, 0, nullptr);
+    Defined newSym(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
+                   nullptr);
     if (objSym.canBeOmittedFromSymbolTable())
       newSym.exportDynamic = false;
     sym->resolve(ctx, newSym);
@@ -1849,14 +1850,14 @@ void BinaryFile::parse() {
 
   llvm::StringSaver &saver = lld::saver();
 
-  ctx.symtab->addAndCheckDuplicate(ctx, Defined{this, saver.save(s + "_start"),
-                                                STB_GLOBAL, STV_DEFAULT,
-                                                STT_OBJECT, 0, 0, section});
   ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{this, saver.save(s + "_end"), STB_GLOBAL, STV_DEFAULT,
+      ctx, Defined{ctx, this, saver.save(s + "_start"), STB_GLOBAL, STV_DEFAULT,
+                   STT_OBJECT, 0, 0, section});
+  ctx.symtab->addAndCheckDuplicate(
+      ctx, Defined{ctx, this, saver.save(s + "_end"), STB_GLOBAL, STV_DEFAULT,
                    STT_OBJECT, data.size(), 0, section});
   ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{this, saver.save(s + "_size"), STB_GLOBAL, STV_DEFAULT,
+      ctx, Defined{ctx, this, saver.save(s + "_size"), STB_GLOBAL, STV_DEFAULT,
                    STT_OBJECT, data.size(), 0, nullptr});
 }
 

@@ -322,13 +322,13 @@ def AArch64PostLegalizerCombiner
                         extractvecelt_pairwise_add, redundant_or,
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
-                        icmp_to_true_false_known_bits, merge_unmerge,
+                        icmp_to_true_false_known_bits,
                         select_combines, fold_merge_to_zext,
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
-                        commute_constant_to_rhs,
+                        commute_constant_to_rhs, merge_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate]> {
 }

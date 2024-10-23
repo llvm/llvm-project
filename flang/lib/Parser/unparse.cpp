@@ -2087,13 +2087,6 @@ public:
     }
     Walk(std::get<OmpObjectList>(x.t));
   }
-  void Unparse(const OmpMapClause::TypeModifier &x) {
-    if (x == OmpMapClause::TypeModifier::OmpxHold) {
-      Word("OMPX_HOLD");
-    } else {
-      Word(OmpMapClause::EnumToString(x));
-    }
-  }
   void Unparse(const OmpScheduleModifier &x) {
     Walk(std::get<OmpScheduleModifier::Modifier1>(x.t));
     Walk(",", std::get<std::optional<OmpScheduleModifier::Modifier2>>(x.t));
@@ -2801,6 +2794,7 @@ public:
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
   WALK_NESTED_ENUM(OmpMapClause, Type) // OMP map-type
+  WALK_NESTED_ENUM(OmpMapClause, TypeModifier) // OMP map-type-modifier
 #undef WALK_NESTED_ENUM
   void Unparse(const ReductionOperator::Operator x) {
     switch (x) {

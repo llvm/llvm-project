@@ -1,4 +1,0 @@
-FixIt/fixit-newline-style.c text eol=crlf
-Frontend/system-header-line-directive-ms-lineendings.c text eol=crlf
-Frontend/rewrite-includes-mixed-eol-crlf.* text eol=crlf
-clang/test/Frontend/rewrite-includes-mixed-eol-lf.h text eolf=lf

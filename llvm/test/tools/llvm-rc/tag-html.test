@@ -1,5 +1,7 @@
 ; RUN: rm -rf %t && mkdir %t && cd %t
-; RUN: cp %p/Inputs/webpage*.html .
+; Remove `\r` in case Git on Windows decided to checkout with Windows newlines.
+; RUN: tr -d '\r' <%p/Inputs/webpage1.html > ./webpage1.html
+; RUN: tr -d '\r' <%p/Inputs/webpage2.html > ./webpage2.html
 ; RUN: llvm-rc -no-preprocess /FO %t/tag-html.res -- %p/Inputs/tag-html.rc
 ; RUN: llvm-readobj %t/tag-html.res | FileCheck %s --check-prefix HTML
 
