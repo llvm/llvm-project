@@ -57,6 +57,28 @@ ConstantInt *CrossDSOCFI::extractNumericTypeId(MDNode *MD) {
   return C;
 }
 
+void setDefaultSubtargetFeatures(const Triple &Triple,
+                                 const StringRef TargetABI, Function *F) {
+  if (Triple.isRISCV64()) {
+    if (TargetABI.contains("lp64d"))
+      F->addFnAttr("target-features", "+d");
+    else if (TargetABI.contains("lp64f"))
+      F->addFnAttr("target-features", "+f");
+    else if (TargetABI.contains("lp64q"))
+      F->addFnAttr("target-features", "+q");
+  } else if (Triple.isRISCV32() && TargetABI.contains("ilp32f")) {
+    F->addFnAttr("target-features", "+f");
+  }
+}
+
+StringRef getTargetABIFromMD(const Module &M) {
+  StringRef TargetABI = "";
+  if (auto *TargetABIMD =
+          dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    TargetABI = TargetABIMD->getString();
+  return TargetABI;
+}
+
 /// buildCFICheck - emits __cfi_check for the current module.
 void CrossDSOCFI::buildCFICheck(Module &M) {
   // FIXME: verify that __cfi_check ends up near the end of the code section,
@@ -95,6 +117,14 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   Triple T(M.getTargetTriple());
   if (T.isARM() || T.isThumb())
     F->addFnAttr("target-features", "+thumb-mode");
+
+  StringRef DefaultTargetFeatures = Ctx.getDefaultTargetFeatures();
+  if (DefaultTargetFeatures.empty()) {
+    auto TargetABI = getTargetABIFromMD(M);
+    setDefaultSubtargetFeatures(T, TargetABI, F);
+  } else {
+    F->addFnAttr("target-features", DefaultTargetFeatures);
+  }
 
   auto args = F->arg_begin();
   Value &CallSiteTypeId = *(args++);
