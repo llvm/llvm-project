@@ -99,7 +99,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineUniformityInfoPrinterPassPass(Registry);
   initializeMachineVerifierLegacyPassPass(Registry);
   initializeObjCARCContractLegacyPassPass(Registry);
-  initializeOptimizePHIsPass(Registry);
+  initializeOptimizePHIsLegacyPass(Registry);
   initializePEIPass(Registry);
   initializePHIEliminationPass(Registry);
   initializePatchableFunctionPass(Registry);
@@ -138,7 +138,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeUnpackMachineBundlesPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeUnreachableMachineBlockElimPass(Registry);
-  initializeVirtRegMapPass(Registry);
+  initializeVirtRegMapWrapperLegacyPass(Registry);
   initializeVirtRegRewriterPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);

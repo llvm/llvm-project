@@ -49,7 +49,8 @@
 #define CLANG_TEMPLATE_ABI __declspec(dllimport)
 #define CLANG_EXPORT_TEMPLATE
 #endif
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX)
+#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
+    defined(__MVS__)
 #define CLANG_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define CLANG_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define CLANG_EXPORT_TEMPLATE

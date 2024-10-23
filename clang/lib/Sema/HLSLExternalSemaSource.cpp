@@ -513,7 +513,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV,
                     ResourceKind::TypedBuffer, /*IsROV=*/false,
                     /*RawBuffer=*/true)
         .addArraySubscriptOperators()

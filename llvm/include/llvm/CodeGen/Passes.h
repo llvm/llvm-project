@@ -367,7 +367,7 @@ namespace llvm {
 
   /// OptimizePHIs - This pass optimizes machine instruction PHIs
   /// to take advantage of opportunities created during DAG legalization.
-  extern char &OptimizePHIsID;
+  extern char &OptimizePHIsLegacyID;
 
   /// StackSlotColoring - This pass performs stack slot coloring.
   extern char &StackSlotColoringID;
