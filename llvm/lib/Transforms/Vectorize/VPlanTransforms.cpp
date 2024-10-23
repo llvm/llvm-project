@@ -776,13 +776,12 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
 static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
                                         VPRecipeBase *Previous,
                                         VPDominatorTree &VPDT) {
-  using namespace llvm::VPlanPatternMatch;
   if (Previous->mayHaveSideEffects() || Previous->mayReadFromMemory())
     return false;
 
   // Collect recipes that need hoisting.
   SmallVector<VPRecipeBase *> HoistCandidates;
-  SmallPtrSet<VPRecipeBase *, 8> Seen;
+  SmallPtrSet<VPRecipeBase *, 8> Visited;
   VPRecipeBase *HoistPoint = nullptr;
   // Find the closest hoist point by looking at all users of FOR and selecting
   // the recipe dominating all other users.
@@ -793,24 +792,31 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     if (!HoistPoint || VPDT.properlyDominates(R, HoistPoint))
       HoistPoint = R;
   }
+  assert(all_of(FOR->users(),
+                [&VPDT, HoistPoint](VPUser *U) {
+                  auto *R = dyn_cast<VPRecipeBase>(U);
+                  return !R || HoistPoint == R ||
+                         VPDT.properlyDominates(HoistPoint, R);
+                }) &&
+         "HoistPoint must dominate all users of FOR");
 
   auto NeedsHoisting = [HoistPoint, &VPDT,
-                        &Seen](VPValue *HoistCandidateV) -> VPRecipeBase * {
+                        &Visited](VPValue *HoistCandidateV) -> VPRecipeBase * {
     VPRecipeBase *HoistCandidate = HoistCandidateV->getDefiningRecipe();
     if (!HoistCandidate)
       return nullptr;
+    VPRegionBlock *EnclosingLoopRegion =
+        HoistCandidate->getParent()->getEnclosingLoopRegion();
     assert((!HoistCandidate->getParent()->getParent() ||
-            HoistCandidate->getParent()->getParent() ==
-                HoistCandidate->getParent()->getEnclosingLoopRegion()) &&
-           "CFG in VPlan should still be flattened, without replicate regions");
-    // Hoist candidate has already beend visited, no need to hoist.
-    if (!Seen.insert(HoistCandidate).second)
+            HoistCandidate->getParent()->getParent() == EnclosingLoopRegion) &&
+           "CFG in VPlan should still be flat, without replicate regions");
+    // Hoist candidate was already visited, no need to hoist.
+    if (!Visited.insert(HoistCandidate).second)
       return nullptr;
 
     // Candidate is outside loop region or a header phi, dominates FOR users w/o
     // hoisting.
-    if (!HoistCandidate->getParent()->getEnclosingLoopRegion() ||
-        isa<VPHeaderPHIRecipe>(HoistCandidate))
+    if (!EnclosingLoopRegion || isa<VPHeaderPHIRecipe>(HoistCandidate))
       return nullptr;
 
     // If we reached a recipe that dominates HoistPoint, we don't need to
@@ -825,9 +831,11 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     return !HoistCandidate->mayHaveSideEffects();
   };
 
+  if (!NeedsHoisting(Previous->getVPSingleValue()))
+    return true;
+
   // Recursively try to hoist Previous and its operands before all users of FOR.
-  if (NeedsHoisting(Previous->getVPSingleValue()))
-    HoistCandidates.push_back(Previous);
+  HoistCandidates.push_back(Previous);
 
   for (unsigned I = 0; I != HoistCandidates.size(); ++I) {
     VPRecipeBase *Current = HoistCandidates[I];
@@ -849,8 +857,8 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     }
   }
 
-  // Keep recipes to hoist ordered by dominance so earlier instructions are
-  // processed first.
+  // Order recipes to hoist by dominance so earlier instructions are processed
+  // first.
   sort(HoistCandidates, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
     return VPDT.properlyDominates(A, B);
   });
