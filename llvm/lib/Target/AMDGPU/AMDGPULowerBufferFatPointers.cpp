@@ -605,7 +605,7 @@ namespace {
 /// 1. Recursing into structs (and arrays that don't share a memory layout with
 /// vectors) since the intrinsics can't handle complex types.
 /// 2. Converting arrays of non-aggregate, byte-sized types into their
-/// correspondinng vectors
+/// corresponding vectors
 /// 3. Bitcasting unsupported types, namely overly-long scalars and byte
 /// vectors, into vectors of supported types.
 /// 4. Splitting up excessively long reads/writes into multiple operations.
@@ -727,10 +727,7 @@ Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
   // Implicitly zero-extend to the next byte if needed
   if (!DL.typeSizeEqualsStoreSize(T))
     T = IRB.getIntNTy(Size.getFixedValue());
-  Type *ElemTy = T;
-  if (auto *VT = dyn_cast<FixedVectorType>(T)) {
-    ElemTy = VT->getElementType();
-  }
+  Type *ElemTy = T->getScalarType();
   if (isa<PointerType, ScalableVectorType>(ElemTy))
     // Pointers are always big enough, and we'll let scalable vectors through to
     // fail in codegen.
@@ -758,11 +755,11 @@ Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
 Value *LegalizeBufferContentTypesVisitor::makeLegalNonAggregate(
     Value *V, Type *TargetType, const Twine &Name) {
   Type *SourceType = V->getType();
-  if (DL.getTypeSizeInBits(SourceType) != DL.getTypeSizeInBits(TargetType)) {
-    Type *ShortScalarTy =
-        IRB.getIntNTy(DL.getTypeSizeInBits(SourceType).getFixedValue());
-    Type *ByteScalarTy =
-        IRB.getIntNTy(DL.getTypeSizeInBits(TargetType).getFixedValue());
+  TypeSize SourceSize = DL.getTypeSizeInBits(SourceType);
+  TypeSize TargetSize = DL.getTypeSizeInBits(TargetType);
+  if (SourceSize != TargetSize) {
+    Type *ShortScalarTy = IRB.getIntNTy(SourceSize.getFixedValue());
+    Type *ByteScalarTy = IRB.getIntNTy(TargetSize.getFixedValue());
     Value *AsScalar = IRB.CreateBitCast(V, ShortScalarTy, Name + ".as.scalar");
     Value *Zext = IRB.CreateZExt(AsScalar, ByteScalarTy, Name + ".zext");
     V = Zext;
@@ -774,11 +771,11 @@ Value *LegalizeBufferContentTypesVisitor::makeLegalNonAggregate(
 Value *LegalizeBufferContentTypesVisitor::makeIllegalNonAggregate(
     Value *V, Type *OrigType, const Twine &Name) {
   Type *LegalType = V->getType();
-  if (DL.getTypeSizeInBits(LegalType) != DL.getTypeSizeInBits(OrigType)) {
-    Type *ShortScalarTy =
-        IRB.getIntNTy(DL.getTypeSizeInBits(OrigType).getFixedValue());
-    Type *ByteScalarTy =
-        IRB.getIntNTy(DL.getTypeSizeInBits(LegalType).getFixedValue());
+  TypeSize LegalSize = DL.getTypeSizeInBits(LegalType);
+  TypeSize OrigSize = DL.getTypeSizeInBits(OrigType);
+  if (LegalSize != OrigSize) {
+    Type *ShortScalarTy = IRB.getIntNTy(OrigSize.getFixedValue());
+    Type *ByteScalarTy = IRB.getIntNTy(LegalSize.getFixedValue());
     Value *AsScalar = IRB.CreateBitCast(V, ByteScalarTy, Name + ".bytes.cast");
     Value *Trunc = IRB.CreateTrunc(AsScalar, ShortScalarTy, Name + ".trunc");
     return IRB.CreateBitCast(Trunc, OrigType, Name + ".orig");
@@ -791,6 +788,8 @@ Type *LegalizeBufferContentTypesVisitor::intrinsicTypeFor(Type *LegalType) {
   if (!VT)
     return LegalType;
   Type *ET = VT->getElementType();
+  // Explicitly return the element type of 1-element vectors because the
+  // underlying intrinsics don't like <1 x T> even though it's a synonym for T.
   if (VT->getNumElements() == 1)
     return ET;
   if (DL.getTypeSizeInBits(LegalType) == 96 && DL.getTypeSizeInBits(ET) < 32)
@@ -917,9 +916,8 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
   if (auto *AT = dyn_cast<ArrayType>(PartType)) {
     Type *ElemTy = AT->getElementType();
     TypeSize AllocSize = DL.getTypeAllocSize(ElemTy);
-    if (!(ElemTy->isSingleValueType() &&
-          DL.getTypeSizeInBits(ElemTy) == 8 * AllocSize &&
-          !ElemTy->isVectorTy())) {
+    if (!ElemTy->isSingleValueType() ||
+        DL.getTypeSizeInBits(ElemTy) != 8 * AllocSize || ElemTy->isVectorTy()) {
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
@@ -963,9 +961,7 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
     // type will be a vector (ex. an i256 load will have LegalType = <8 x i32>).
     // But if we're already a scalar (which can happen if we're splitting up a
     // struct), the element type will be the legal type itself.
-    Type *ElemType = LegalType;
-    if (auto *VT = dyn_cast<FixedVectorType>(LegalType))
-      ElemType = VT->getElementType();
+    Type *ElemType = LegalType->getScalarType();
     unsigned ElemBytes = DL.getTypeStoreSize(ElemType);
     AAMDNodes AANodes = OrigLI.getAAMetadata();
     if (IsAggPart && Slices.empty())
@@ -986,10 +982,8 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
       copyMetadataForLoad(*NewLI, OrigLI);
       NewLI->setAAMetadata(
           AANodes.adjustForAccess(ByteOffset, LoadableType, DL));
-      if (OrigLI.isAtomic())
-        NewLI->setAtomic(OrigLI.getOrdering(), OrigLI.getSyncScopeID());
-      if (OrigLI.isVolatile())
-        NewLI->setVolatile(OrigLI.isVolatile());
+      NewLI->setAtomic(OrigLI.getOrdering(), OrigLI.getSyncScopeID());
+      NewLI->setVolatile(OrigLI.isVolatile());
       Value *Loaded = IRB.CreateBitCast(NewLI, SliceType,
                                         NewLI->getName() + ".from.loadable");
       LoadsRes = insertSlice(LoadsRes, Loaded, S, Name);
@@ -1042,9 +1036,8 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   if (auto *AT = dyn_cast<ArrayType>(PartType)) {
     Type *ElemTy = AT->getElementType();
     TypeSize AllocSize = DL.getTypeAllocSize(ElemTy);
-    if (!(ElemTy->isSingleValueType() &&
-          DL.getTypeSizeInBits(ElemTy) == 8 * AllocSize &&
-          !ElemTy->isVectorTy())) {
+    if (!ElemTy->isSingleValueType() ||
+        DL.getTypeSizeInBits(ElemTy) != 8 * AllocSize || ElemTy->isVectorTy()) {
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
