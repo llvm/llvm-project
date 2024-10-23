@@ -302,6 +302,7 @@ template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
 template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
                                  llvm::GlobalValue>;
 
+#ifdef _MSC_VER
 // These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
 template LLVM_EXPORT_TEMPLATE GlobalIFunc &
 GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
@@ -320,6 +321,7 @@ template LLVM_EXPORT_TEMPLATE GlobalAlias &
 GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
                   llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
                                                                  &LLVMGV) const;
+#endif
 
 void GlobalIFunc::setResolver(Constant *Resolver) {
   Ctx.getTracker()
