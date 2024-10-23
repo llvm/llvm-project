@@ -353,6 +353,10 @@ public:
     isAntiDep = antiDep;
   }
 
+  bool isECAlias(MachineTypes machine) const {
+    return weakAlias && isAntiDep && isArm64EC(machine);
+  }
+
   // If this symbol is external weak, replace this object with aliased symbol.
   bool resolveWeakAlias();
 };

@@ -3411,6 +3411,9 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Use the given vector functions library">,
+    HelpTextForVariants<[ClangOption, CC1Option],
+      "Use the given vector functions library. "
+      "Note: -fveclib={ArmPL,SLEEF} implies -fno-math-errno">,
     Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM,none">,
     NormalizedValuesScope<"llvm::driver::VectorLibrary">,
     NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
@@ -5394,6 +5397,10 @@ def mfrecipe : Flag<["-"], "mfrecipe">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable frecipe.{s/d} and frsqrte.{s/d}">;
 def mno_frecipe : Flag<["-"], "mno-frecipe">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable frecipe.{s/d} and frsqrte.{s/d}">;
+def mlam_bh : Flag<["-"], "mlam-bh">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable amswap_[db].{b/h} and amadd_[db].{b/h}">;
+def mno_lam_bh : Flag<["-"], "mno-lam-bh">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable amswap_[db].{b/h} and amadd_[db].{b/h}">;
 def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
 def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,
