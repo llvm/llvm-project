@@ -17,7 +17,7 @@
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
 // There should be no more occurrances of RWStructuredBuffer
-// EMPTY-NOT: RWStructuredBuffer
+// EMPTY-NOT: {{^\W}}RWStructuredBuffer
 
 #ifndef EMPTY
 
