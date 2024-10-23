@@ -154,7 +154,7 @@ std::pair<uint64_t, uint64_t> UriLocator::decodeUriAndGetFd(UriInfo &uri,
   if (uri.uriPath.size() == 0)
     return {0, 0};
   auto pos = uri.uriPath.find("//");
-  if (pos == std::string::npos || uri.uriPath.substr(0, pos) != "file:") {
+  if (pos == std::string::npos) {
     uri.uriPath = "";
     return {0, 0};
   }
@@ -174,31 +174,33 @@ std::pair<uint64_t, uint64_t> UriLocator::decodeUriAndGetFd(UriInfo &uri,
   } else {
     rspos = uri.uriPath.size() - 1;
   }
-  pos += 2;
-  // decode filepath
-  for (auto i = pos; i <= rspos;) {
-    cur = uri.uriPath[i];
-    if (isalnum(cur) || cur == '/' || cur == '-' || cur == '_' || cur == '.' ||
-        cur == '~') {
-      ss << cur;
-      i++;
-    } else {
-      // characters prefix with '%' char
-      char tbits = uri.uriPath[i + 1], lbits = uri.uriPath[i + 2];
-      uint8_t t = (tbits < 58) ? (tbits - 48) : ((tbits - 65) + 10);
-      uint8_t l = (lbits < 58) ? (lbits - 48) : ((lbits - 65) + 10);
-      ss << (char)(((0b00000000 | t) << 4) | l);
-      i += 3;
+  if (uri.uriPath.substr(0, pos) == "file:") {
+    pos += 2;
+    // decode filepath
+    for (auto i = pos; i <= rspos;) {
+      cur = uri.uriPath[i];
+      if (isalnum(cur) || cur == '/' || cur == '-' || cur == '_' ||
+          cur == '.' || cur == '~') {
+        ss << cur;
+        i++;
+      } else {
+        // characters prefix with '%' char
+        char tbits = uri.uriPath[i + 1], lbits = uri.uriPath[i + 2];
+        uint8_t t = (tbits < 58) ? (tbits - 48) : ((tbits - 65) + 10);
+        uint8_t l = (lbits < 58) ? (lbits - 48) : ((lbits - 65) + 10);
+        ss << (char)(((0b00000000 | t) << 4) | l);
+        i += 3;
+      }
     }
+    uri.uriPath = ss.str();
+    size_t fd_size;
+    GetFileHandle(uri.uriPath.c_str(), uri_fd, &fd_size);
+    // As per URI locator syntax, range_specifier is optional
+    // if range_specifier is absent return total size of the file
+    // and set offset to begin at 0.
+    if (size == 0)
+      size = fd_size;
   }
-  uri.uriPath = ss.str();
-  size_t fd_size;
-  GetFileHandle(uri.uriPath.c_str(), uri_fd, &fd_size);
-  // As per URI locator syntax, range_specifier is optional
-  // if range_specifier is absent return total size of the file
-  // and set offset to begin at 0.
-  if (size == 0)
-    size = fd_size;
   return {offset, size};
 }
 

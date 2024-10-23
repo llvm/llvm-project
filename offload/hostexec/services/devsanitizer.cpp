@@ -121,12 +121,12 @@ extern "C" void handler_SERVICE_SANITIZER(payload_t *packt_payload,
   int uri_fd = -1;
 
   if (uri_locator) {
-    UriLocator::UriInfo fileuri_info = uri_locator->lookUpUri(callstack[0]);
+    UriLocator::UriInfo uri_info = uri_locator->lookUpUri(callstack[0]);
     std::tie(offset, size) =
-        uri_locator->decodeUriAndGetFd(fileuri_info, &uri_fd);
+        uri_locator->decodeUriAndGetFd(uri_info, &uri_fd);
 #if SANITIZER_AMDGPU
 #if defined(__linux__)
-    loadAddrAdjust = fileuri_info.loadAddressDiff;
+    loadAddrAdjust = uri_info.loadAddressDiff;
 #endif
 #endif
   }
