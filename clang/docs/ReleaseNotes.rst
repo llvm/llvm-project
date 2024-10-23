@@ -469,6 +469,7 @@ Bug Fixes in This Version
   local structs.
 - The warning emitted for an unsupported register variable type now points to
   the unsupported type instead of the ``register`` keyword (#GH109776).
+- Fixed a crash when emit ctor for global variant with flexible array init  (#GH113187).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
