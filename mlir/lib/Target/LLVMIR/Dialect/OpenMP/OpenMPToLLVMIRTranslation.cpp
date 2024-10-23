@@ -2886,6 +2886,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   DataLayout DL = DataLayout(op->getParentOfType<ModuleOp>());
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::TargetDataInfo info(/*RequiresDevicePointerInfo=*/true,
+                                             /*SeparateBeginEndCalls=*/true);
 
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
@@ -2905,9 +2907,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             return success();
           })
           .Case([&](omp::TargetEnterDataOp enterDataOp) {
-            if (enterDataOp.getNowait())
+            if (!enterDataOp.getDependVars().empty())
               return (LogicalResult)(enterDataOp.emitError(
-                  "`nowait` is not supported yet"));
+                  "`depend` is not supported yet"));
 
             if (auto ifVar = enterDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
@@ -2917,14 +2919,18 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                       dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
-            RTLFn = llvm::omp::OMPRTL___tgt_target_data_begin_mapper;
+            RTLFn =
+                enterDataOp.getNowait()
+                    ? llvm::omp::OMPRTL___tgt_target_data_begin_nowait_mapper
+                    : llvm::omp::OMPRTL___tgt_target_data_begin_mapper;
             mapVars = enterDataOp.getMapVars();
+            info.HasNoWait = enterDataOp.getNowait();
             return success();
           })
           .Case([&](omp::TargetExitDataOp exitDataOp) {
-            if (exitDataOp.getNowait())
+            if (!exitDataOp.getDependVars().empty())
               return (LogicalResult)(exitDataOp.emitError(
-                  "`nowait` is not supported yet"));
+                  "`depend` is not supported yet"));
 
             if (auto ifVar = exitDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
@@ -2935,14 +2941,17 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
-            RTLFn = llvm::omp::OMPRTL___tgt_target_data_end_mapper;
+            RTLFn = exitDataOp.getNowait()
+                        ? llvm::omp::OMPRTL___tgt_target_data_end_nowait_mapper
+                        : llvm::omp::OMPRTL___tgt_target_data_end_mapper;
             mapVars = exitDataOp.getMapVars();
+            info.HasNoWait = exitDataOp.getNowait();
             return success();
           })
           .Case([&](omp::TargetUpdateOp updateDataOp) {
-            if (updateDataOp.getNowait())
+            if (!updateDataOp.getDependVars().empty())
               return (LogicalResult)(updateDataOp.emitError(
-                  "`nowait` is not supported yet"));
+                  "`depend` is not supported yet"));
 
             if (auto ifVar = updateDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
@@ -2953,8 +2962,12 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
-            RTLFn = llvm::omp::OMPRTL___tgt_target_data_update_mapper;
+            RTLFn =
+                updateDataOp.getNowait()
+                    ? llvm::omp::OMPRTL___tgt_target_data_update_nowait_mapper
+                    : llvm::omp::OMPRTL___tgt_target_data_update_mapper;
             mapVars = updateDataOp.getMapVars();
+            info.HasNoWait = updateDataOp.getNowait();
             return success();
           })
           .Default([&](Operation *op) {
@@ -3004,9 +3017,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           moduleTranslation.mapValue(arg, mapper ? mapper(basePointer)
                                                  : basePointer);
       };
-
-  llvm::OpenMPIRBuilder::TargetDataInfo info(/*RequiresDevicePointerInfo=*/true,
-                                             /*SeparateBeginEndCalls=*/true);
 
   using BodyGenTy = llvm::OpenMPIRBuilder::BodyGenTy;
   LogicalResult bodyGenStatus = success();
