@@ -229,6 +229,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
 
+  const bool Relocatable = Args.hasArg(options::OPT_r);
+
   // Silence warning for "clang -g foo.o -o foo"
   Args.ClaimAllArgs(options::OPT_g_Group);
   // and "clang -emit-llvm foo.o -o foo"
@@ -245,6 +247,28 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       !Args.hasArg(options::OPT_r, options::OPT_shared, options::OPT_static);
   if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
     CmdArgs.push_back("-pie");
+
+  if (!Relocatable) {
+    // Lazy binding of PLTs is not supported on PlayStation. They are placed in
+    // the RelRo segment.
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("now");
+
+    // Don't export linker-generated __start/stop... section bookends.
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("start-stop-visibility=hidden");
+
+    // Patch relocated regions of DWARF whose targets are eliminated at link
+    // time with specific tombstones, such that they're recognisable by the
+    // PlayStation debugger.
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff");
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back(
+        "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe");
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe");
+  }
 
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-static");

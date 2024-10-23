@@ -1080,8 +1080,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitKernelLaunch(
-    const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
-    EmitFallbackCallbackTy emitTargetCallFallbackCB, TargetKernelArgs &Args,
+    const LocationDescription &Loc, Value *OutlinedFnID,
+    EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
     Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP) {
 
   if (!updateToLocation(Loc))
@@ -1134,7 +1134,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitKernelLaunch(
 
   auto CurFn = Builder.GetInsertBlock()->getParent();
   emitBlock(OffloadFailedBlock, CurFn);
-  Builder.restoreIP(emitTargetCallFallbackCB(Builder.saveIP()));
+  Builder.restoreIP(EmitTargetCallFallbackCB(Builder.saveIP()));
   emitBranch(OffloadContBlock);
   emitBlock(OffloadContBlock, CurFn, /*IsFinished=*/true);
   return Builder.saveIP();
@@ -1736,7 +1736,7 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
 // - All code is inserted in the entry block of the current function.
 static Value *emitTaskDependencies(
     OpenMPIRBuilder &OMPBuilder,
-    SmallVectorImpl<OpenMPIRBuilder::DependData> &Dependencies) {
+    const SmallVectorImpl<OpenMPIRBuilder::DependData> &Dependencies) {
   // Early return if we have no dependencies to process
   if (Dependencies.empty())
     return nullptr;
@@ -6403,16 +6403,44 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
       SrcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
     }
 
-    Value *OffloadingArgs[] = {SrcLocInfo,           DeviceID,
-                               PointerNum,           RTArgs.BasePointersArray,
-                               RTArgs.PointersArray, RTArgs.SizesArray,
-                               RTArgs.MapTypesArray, RTArgs.MapNamesArray,
-                               RTArgs.MappersArray};
+    SmallVector<llvm::Value *, 13> OffloadingArgs = {
+        SrcLocInfo,           DeviceID,
+        PointerNum,           RTArgs.BasePointersArray,
+        RTArgs.PointersArray, RTArgs.SizesArray,
+        RTArgs.MapTypesArray, RTArgs.MapNamesArray,
+        RTArgs.MappersArray};
 
     if (IsStandAlone) {
       assert(MapperFunc && "MapperFunc missing for standalone target data");
-      Builder.CreateCall(getOrCreateRuntimeFunctionPtr(*MapperFunc),
-                         OffloadingArgs);
+
+      auto TaskBodyCB = [&](Value *, Value *, IRBuilderBase::InsertPoint) {
+        if (Info.HasNoWait) {
+          OffloadingArgs.append({llvm::Constant::getNullValue(Int32),
+                                 llvm::Constant::getNullValue(VoidPtr),
+                                 llvm::Constant::getNullValue(Int32),
+                                 llvm::Constant::getNullValue(VoidPtr)});
+        }
+
+        Builder.CreateCall(getOrCreateRuntimeFunctionPtr(*MapperFunc),
+                           OffloadingArgs);
+
+        if (Info.HasNoWait) {
+          BasicBlock *OffloadContBlock =
+              BasicBlock::Create(Builder.getContext(), "omp_offload.cont");
+          Function *CurFn = Builder.GetInsertBlock()->getParent();
+          emitBlock(OffloadContBlock, CurFn, /*IsFinished=*/true);
+          Builder.restoreIP(Builder.saveIP());
+        }
+      };
+
+      bool RequiresOuterTargetTask = Info.HasNoWait;
+
+      if (!RequiresOuterTargetTask)
+        TaskBodyCB(/*DeviceID=*/nullptr, /*RTLoc=*/nullptr,
+                   /*TargetTaskAllocaIP=*/{});
+      else
+        emitTargetTask(TaskBodyCB, DeviceID, SrcLocInfo, AllocaIP,
+                       /*Dependencies=*/{}, Info.HasNoWait);
     } else {
       Function *BeginMapperFunc = getOrCreateRuntimeFunctionPtr(
           omp::OMPRTL___tgt_target_data_begin_mapper);
@@ -6836,13 +6864,18 @@ static void emitTargetOutlinedFunction(
   OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
                                       IsOffloadEntry, OutlinedFn, OutlinedFnID);
 }
+
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
-    Function *OutlinedFn, Value *OutlinedFnID,
-    EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
-    Value *DeviceID, Value *RTLoc, OpenMPIRBuilder::InsertPointTy AllocaIP,
-    SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
+    TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID, Value *RTLoc,
+    OpenMPIRBuilder::InsertPointTy AllocaIP,
+    const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
     bool HasNoWait) {
 
+  // The following explains the code-gen scenario for the `target` directive. A
+  // similar scneario is followed for other device-related directives (e.g.
+  // `target enter data`) but in similar fashion since we only need to emit task
+  // that encapsulates the proper runtime call.
+  //
   // When we arrive at this function, the target region itself has been
   // outlined into the function OutlinedFn.
   // So at ths point, for
@@ -6950,22 +6983,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
 
   Builder.restoreIP(TargetTaskBodyIP);
 
-  if (OutlinedFnID) {
-    // emitKernelLaunch makes the necessary runtime call to offload the kernel.
-    // We then outline all that code into a separate function
-    // ('kernel_launch_function' in the pseudo code above). This function is
-    // then called by the target task proxy function (see
-    // '@.omp_target_task_proxy_func' in the pseudo code above)
-    // "@.omp_target_task_proxy_func' is generated by
-    // emitTargetTaskProxyFunction.
-    Builder.restoreIP(emitKernelLaunch(Builder, OutlinedFn, OutlinedFnID,
-                                       EmitTargetCallFallbackCB, Args, DeviceID,
-                                       RTLoc, TargetTaskAllocaIP));
-  } else {
-    // When OutlinedFnID is set to nullptr, then it's not an offloading call. In
-    // this case, we execute the host implementation directly.
-    Builder.restoreIP(EmitTargetCallFallbackCB(Builder.saveIP()));
-  }
+  TaskBodyCB(DeviceID, RTLoc, TargetTaskAllocaIP);
 
   OI.ExitBB = Builder.saveIP().getBlock();
   OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, HasNoWait,
@@ -7153,6 +7171,29 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   bool HasDependencies = Dependencies.size() > 0;
   bool RequiresOuterTargetTask = HasNoWait || HasDependencies;
 
+  OpenMPIRBuilder::TargetKernelArgs KArgs;
+
+  auto TaskBodyCB = [&](Value *DeviceID, Value *RTLoc,
+                        IRBuilderBase::InsertPoint TargetTaskAllocaIP) {
+    if (OutlinedFnID) {
+      // emitKernelLaunch makes the necessary runtime call to offload the
+      // kernel. We then outline all that code into a separate function
+      // ('kernel_launch_function' in the pseudo code above). This function is
+      // then called by the target task proxy function (see
+      // '@.omp_target_task_proxy_func' in the pseudo code above)
+      // "@.omp_target_task_proxy_func' is generated by
+      // emitTargetTaskProxyFunction.
+      Builder.restoreIP(OMPBuilder.emitKernelLaunch(
+          Builder, OutlinedFnID, EmitTargetCallFallbackCB, KArgs, DeviceID,
+          RTLoc, TargetTaskAllocaIP));
+    } else {
+      // When OutlinedFnID is set to nullptr, then it's not an offloading
+      // call. In this case, we execute the host implementation directly.
+      OMPBuilder.Builder.restoreIP(
+          EmitTargetCallFallbackCB(OMPBuilder.Builder.saveIP()));
+    }
+  };
+
   // If we don't have an ID for the target region, it means an offload entry
   // wasn't created. In this case we just run the host fallback directly.
   if (!OutlinedFnID) {
@@ -7160,11 +7201,10 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
       // Arguments that are intended to be directly forwarded to an
       // emitKernelLaunch call are pased as nullptr, since OutlinedFnID=nullptr
       // results in that call not being done.
-      OpenMPIRBuilder::TargetKernelArgs KArgs;
-      Builder.restoreIP(OMPBuilder.emitTargetTask(
-          OutlinedFn, /*OutlinedFnID=*/nullptr, EmitTargetCallFallbackCB, KArgs,
-          /*DeviceID=*/nullptr, /*RTLoc=*/nullptr, AllocaIP, Dependencies,
-          HasNoWait));
+      Builder.restoreIP(OMPBuilder.emitTargetTask(TaskBodyCB,
+                                                  /*DeviceID=*/nullptr,
+                                                  /*RTLoc=*/nullptr, AllocaIP,
+                                                  Dependencies, HasNoWait));
     } else {
       Builder.restoreIP(EmitTargetCallFallbackCB(Builder.saveIP()));
     }
@@ -7201,20 +7241,19 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   // TODO: Use correct DynCGGroupMem
   Value *DynCGGroupMem = Builder.getInt32(0);
 
-  OpenMPIRBuilder::TargetKernelArgs KArgs(NumTargetItems, RTArgs, NumIterations,
-                                          NumTeamsC, NumThreadsC, DynCGGroupMem,
-                                          HasNoWait);
+  KArgs = OpenMPIRBuilder::TargetKernelArgs(
+      NumTargetItems, RTArgs, NumIterations, NumTeamsC, NumThreadsC,
+      DynCGGroupMem, HasNoWait);
 
   // The presence of certain clauses on the target directive require the
   // explicit generation of the target task.
   if (RequiresOuterTargetTask) {
     Builder.restoreIP(OMPBuilder.emitTargetTask(
-        OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs, DeviceID,
-        RTLoc, AllocaIP, Dependencies, HasNoWait));
+        TaskBodyCB, DeviceID, RTLoc, AllocaIP, Dependencies, HasNoWait));
   } else {
     Builder.restoreIP(OMPBuilder.emitKernelLaunch(
-        Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
-        DeviceID, RTLoc, AllocaIP));
+        Builder, OutlinedFnID, EmitTargetCallFallbackCB, KArgs, DeviceID, RTLoc,
+        AllocaIP));
   }
 }
 

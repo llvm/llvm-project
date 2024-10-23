@@ -2067,6 +2067,16 @@ public:
                   },
         x.u);
   }
+  void Unparse(const OmpIteratorSpecifier &x) {
+    Walk(std::get<TypeDeclarationStmt>(x.t));
+    Put(" = ");
+    Walk(std::get<SubscriptTriplet>(x.t));
+  }
+  void Unparse(const OmpIteratorModifier &x) {
+    Word("ITERATOR(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpLastprivateClause &x) {
     Walk(
         std::get<std::optional<OmpLastprivateClause::LastprivateModifier>>(x.t),
@@ -2076,13 +2086,32 @@ public:
   void Unparse(const OmpMapClause &x) {
     auto &typeMod =
         std::get<std::optional<std::list<OmpMapClause::TypeModifier>>>(x.t);
-    auto &type = std::get<std::optional<OmpMapClause::Type>>(x.t);
-    Walk(typeMod);
-    if (typeMod.has_value() && type.has_value()) {
-      Put(", ");
+    auto &iter = std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t);
+    auto &type = std::get<std::optional<std::list<OmpMapClause::Type>>>(x.t);
+
+    // For a given list of items, if the item has a value, then walk it.
+    // Print commas between items that have values.
+    // Return 'true' if something did get printed, otherwise 'false'.
+    bool needComma{false};
+    if (typeMod) {
+      Walk(*typeMod);
+      needComma = true;
     }
-    Walk(type);
-    if (typeMod.has_value() || type.has_value()) {
+    if (iter) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*iter);
+      needComma = true;
+    }
+    if (type) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*type);
+      needComma = true;
+    }
+    if (needComma) {
       Put(": ");
     }
     Walk(std::get<OmpObjectList>(x.t));

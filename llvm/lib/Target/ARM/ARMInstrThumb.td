@@ -675,7 +675,7 @@ def tSVC : T1pI<(outs), (ins imm0_255:$imm), IIC_Br,
 }
 
 // The assembler uses 0xDEFE for a trap instruction.
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def tTRAP : TI<(outs), (ins), IIC_Br,
                "trap", [(trap)]>, Encoding16, Sched<[WriteBr]> {
   let Inst = 0xdefe;
