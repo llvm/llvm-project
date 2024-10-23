@@ -167,6 +167,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Expand);
   }
 
+  if (Subtarget->hasWideArithmetic()) {
+    setOperationAction(ISD::ADD, MVT::i128, Custom);
+    setOperationAction(ISD::SUB, MVT::i128, Custom);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
+  }
+
   if (Subtarget->hasNontrappingFPToInt())
     for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT})
       for (auto T : {MVT::i32, MVT::i64})
@@ -1419,6 +1426,10 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
     // Do not add any results, signifying that N should not be custom lowered.
     // EXTEND_VECTOR_INREG is implemented for some vectors, but not all.
     break;
+  case ISD::ADD:
+  case ISD::SUB:
+    Results.push_back(Replace128Op(N, DAG));
+    break;
   default:
     llvm_unreachable(
         "ReplaceNodeResults not implemented for this op for WebAssembly!");
@@ -1495,6 +1506,9 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return DAG.UnrollVectorOp(Op.getNode());
   case ISD::CLEAR_CACHE:
     report_fatal_error("llvm.clear_cache is not supported on wasm");
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    return LowerMUL_LOHI(Op, DAG);
   }
 }
 
@@ -1591,6 +1605,63 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
         false);
 
   return Op;
+}
+
+SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Subtarget->hasWideArithmetic());
+  assert(Op.getValueType() == MVT::i64);
+  SDLoc DL(Op);
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::UMUL_LOHI:
+    Opcode = WebAssemblyISD::I64_MUL_WIDE_U;
+    break;
+  case ISD::SMUL_LOHI:
+    Opcode = WebAssemblyISD::I64_MUL_WIDE_S;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Hi =
+      DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
+  SDValue Lo(Hi.getNode(), 1);
+  SDValue Ops[] = {Hi, Lo};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue WebAssemblyTargetLowering::Replace128Op(SDNode *N,
+                                                SelectionDAG &DAG) const {
+  assert(Subtarget->hasWideArithmetic());
+  auto ValTy = N->getValueType(0);
+  assert(ValTy == MVT::i128);
+  SDLoc DL(N);
+  unsigned Opcode;
+  switch (N->getOpcode()) {
+  case ISD::ADD:
+    Opcode = WebAssemblyISD::I64_ADD128;
+    break;
+  case ISD::SUB:
+    Opcode = WebAssemblyISD::I64_SUB128;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDValue C0 = DAG.getConstant(0, DL, MVT::i64);
+  SDValue C1 = DAG.getConstant(1, DL, MVT::i64);
+  SDValue LHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C0);
+  SDValue LHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C1);
+  SDValue RHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C0);
+  SDValue RHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C1);
+  SDValue Result_LO = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64),
+                                  LHS_0, LHS_1, RHS_0, RHS_1);
+  SDValue Result_HI(Result_LO.getNode(), 1);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, N->getVTList(), Result_LO, Result_HI);
 }
 
 SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
