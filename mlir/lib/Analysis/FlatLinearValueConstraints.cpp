@@ -943,8 +943,8 @@ unsigned FlatLinearValueConstraints::insertSymbolVar(unsigned pos,
 }
 
 unsigned FlatLinearValueConstraints::insertVar(VarKind kind, unsigned pos,
-                                               unsigned num) {
-  unsigned absolutePos = IntegerPolyhedron::insertVar(kind, pos, num);
+                                               unsigned num, Identifier id) {
+  unsigned absolutePos = IntegerPolyhedron::insertVar(kind, pos, num, id);
 
   return absolutePos;
 }

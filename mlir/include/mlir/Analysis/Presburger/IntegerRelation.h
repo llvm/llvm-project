@@ -300,7 +300,8 @@ public:
   /// corresponding to the added variables are initialized to zero. Return the
   /// absolute column position (i.e., not relative to the kind of variable)
   /// of the first added variable.
-  virtual unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1);
+  virtual unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1,
+                             Identifier id = Identifier());
 
   /// Append `num` variables of the specified kind after the last variable
   /// of that kind. The coefficient columns corresponding to the added variables
@@ -970,7 +971,8 @@ public:
   /// Positions are relative to the kind of variable. Return the absolute
   /// column position (i.e., not relative to the kind of variable) of the
   /// first added variable.
-  unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1) override;
+  unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1,
+                     Identifier id = Identifier()) override;
 
   /// Return the intersection of the two relations.
   /// If there are locals, they will be merged.
