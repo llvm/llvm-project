@@ -13,6 +13,8 @@ from UpdateTestChecks import common
 import subprocess
 import re
 
+# llvm-mc is the only mc-like in the LLVM tree but downstream forks can add
+# additional ones here if they have them.
 mc_LIKE_TOOLS = [
     "llvm-mc",
 ]
