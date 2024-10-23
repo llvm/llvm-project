@@ -41,6 +41,7 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/XRayArgs.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -2854,6 +2855,14 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
                                        ArgStringList &CmdArgs,
                                        const JobAction &JA) {
+  // List of veclibs which when used with -fveclib imply -fno-math-errno.
+  constexpr std::array VecLibImpliesNoMathErrno{llvm::StringLiteral("ArmPL"),
+                                                llvm::StringLiteral("SLEEF")};
+  bool NoMathErrnoWasImpliedByVecLib = false;
+  const Arg *VecLibArg = nullptr;
+  // Track the arg (if any) that enabled errno after -fveclib for diagnostics.
+  const Arg *ArgThatEnabledMathErrnoAfterVecLib = nullptr;
+
   // Handle various floating point optimization flags, mapping them to the
   // appropriate LLVM code generation flags. This is complicated by several
   // "umbrella" flags, so we do this by stepping through the flags incrementally
@@ -2960,6 +2969,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   for (const Arg *A : Args) {
+    auto CheckMathErrnoForVecLib =
+        llvm::make_scope_exit([&, MathErrnoBeforeArg = MathErrno] {
+          if (NoMathErrnoWasImpliedByVecLib && !MathErrnoBeforeArg && MathErrno)
+            ArgThatEnabledMathErrnoAfterVecLib = A;
+        });
+
     switch (A->getOption().getID()) {
     // If this isn't an FP option skip the claim below
     default: continue;
@@ -3124,6 +3139,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       TrappingMath = true;
       TrappingMathPresent = true;
       FPExceptionBehavior = "strict";
+      break;
+    case options::OPT_fveclib:
+      VecLibArg = A;
+      NoMathErrnoWasImpliedByVecLib =
+          llvm::is_contained(VecLibImpliesNoMathErrno, A->getValue());
+      if (NoMathErrnoWasImpliedByVecLib)
+        MathErrno = false;
       break;
     case options::OPT_fno_trapping_math:
       if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
@@ -3338,8 +3360,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (ApproxFunc)
     CmdArgs.push_back("-fapprox-func");
 
-  if (MathErrno)
+  if (MathErrno) {
     CmdArgs.push_back("-fmath-errno");
+    if (NoMathErrnoWasImpliedByVecLib)
+      D.Diag(clang::diag::warn_drv_math_errno_enabled_after_veclib)
+          << ArgThatEnabledMathErrnoAfterVecLib->getAsString(Args)
+          << VecLibArg->getAsString(Args);
+  }
 
  if (AssociativeMath && ReciprocalMath && !SignedZeros && ApproxFunc &&
      !TrappingMath)
