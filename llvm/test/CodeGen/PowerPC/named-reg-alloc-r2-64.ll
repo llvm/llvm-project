@@ -1,8 +1,10 @@
 ; RUN: not --crash llc < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s
 
 define i64 @get_reg() nounwind {
 entry:
-; CHECK: Trying to reserve an invalid register "r2".
+; FIXME: Include an allocatable-specific error message
+; CHECK: Invalid register name global variable
         %reg = call i64 @llvm.read_register.i64(metadata !0)
   ret i64 %reg
 }
