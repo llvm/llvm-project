@@ -12,8 +12,6 @@
 
 #include "cuda_runtime.h"
 
-namespace Fortran::runtime::cuda {
-
 extern "C" {
 
 void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
@@ -33,5 +31,3 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
 }
 
 } // extern "C"
-
-} // namespace Fortran::runtime::cuda

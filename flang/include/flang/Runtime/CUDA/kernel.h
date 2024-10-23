@@ -13,8 +13,6 @@
 #include <cstddef>
 #include <stdint.h>
 
-namespace Fortran::runtime::cuda {
-
 extern "C" {
 
 // This function uses intptr_t instead of CUDA's unsigned int to match
@@ -25,7 +23,5 @@ void RTDEF(CUFLaunchKernel)(const void *kernelName, intptr_t gridX,
     intptr_t blockZ, int32_t smem, void **params, void **extra);
 
 } // extern "C"
-
-} // namespace Fortran::runtime::cuda
 
 #endif // FORTRAN_RUNTIME_CUDA_KERNEL_H_
