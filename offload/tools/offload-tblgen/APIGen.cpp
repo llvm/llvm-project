@@ -168,6 +168,24 @@ typedef struct {1} {{
   OS << formatv("} {0};\n", Func.getParamStructName());
 }
 
+static void ProcessFuncWithCodeLocVariant(const FunctionRec &Func,
+                                          raw_ostream &OS) {
+
+  auto FuncWithCodeLocBegin = R"(
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of {0} that also sets source code location information
+/// @details See also ::{0}
+OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL {0}WithCodeLoc(
+)";
+  OS << formatv(FuncWithCodeLocBegin, Func.getName());
+  auto Params = Func.getParams();
+  for (auto &Param : Params) {
+    OS << "  " << Param.getType() << " " << Param.getName();
+    OS << ",\n";
+  }
+  OS << "offload_code_location_t *pCodeLocation);\n\n";
+}
+
 void EmitOffloadAPI(RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << FileHeader;
@@ -191,6 +209,10 @@ void EmitOffloadAPI(RecordKeeper &Records, raw_ostream &OS) {
   // Generate auxiliary definitions (func param structs etc)
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     ProcessFuncParamStruct(FunctionRec{R}, OS);
+  }
+
+  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    ProcessFuncWithCodeLocVariant(FunctionRec{R}, OS);
   }
 
   OS << FileFooter;

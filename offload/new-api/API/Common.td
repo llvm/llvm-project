@@ -89,3 +89,14 @@ def : Macro {
   let desc = "Success condition";
   let value = "NULL";
 }
+
+def : Struct {
+  let name = "offload_code_location_t";
+  let desc = "Code location information that can optionally be associated with an API call";
+  let members = [
+    StructMember<"const char*", "FunctionName", "Function name">,
+    StructMember<"const char*", "SourceFile", "Source code file">,
+    StructMember<"uint32_t", "LineNumber", "Source code line number">,
+    StructMember<"uint32_t", "ColumnNumber", "Source code column number">
+  ];
+}
