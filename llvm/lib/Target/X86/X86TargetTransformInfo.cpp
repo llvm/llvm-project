@@ -2977,10 +2977,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   static const TypeConversionCostKindTblEntry F16ConversionTbl[] = {
-    { ISD::FP_ROUND,  MVT::v8f16,   MVT::v8f32,   { 1, 1, 1, 1 } }, // vcvtps2ph
-    { ISD::FP_ROUND,  MVT::v4f16,   MVT::v4f32,   { 1, 1, 1, 1 } }, // vcvtps2ph
-    { ISD::FP_EXTEND, MVT::v8f32,   MVT::v8f16,   { 1, 1, 1, 1 } }, // vcvtph2ps
-    { ISD::FP_EXTEND, MVT::v4f32,   MVT::v4f16,   { 1, 1, 1, 1 } }, // vcvtph2ps
+    { ISD::FP_ROUND,  MVT::f16,     MVT::f32,     { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v8f16,   MVT::v8f32,   { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v4f16,   MVT::v4f32,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::f32,     MVT::f16,     { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::f64,     MVT::f16,     { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
+    { ISD::FP_EXTEND, MVT::v8f32,   MVT::v8f16,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::v4f32,   MVT::v4f16,   { 1, 1, 1, 1 } },
     { ISD::FP_EXTEND, MVT::v4f64,   MVT::v4f16,   { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
   };
 
@@ -3169,6 +3172,11 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return getCastInstrCost(Instruction::FPToSI, TruncDst, Src, CCH, CostKind) +
            getCastInstrCost(Instruction::Trunc, Dst, TruncDst,
                             TTI::CastContextHint::None, CostKind);
+  }
+
+  if (ISD == ISD::FP_ROUND && LTDest.second.getScalarType() == MVT::f16) {
+    // Conversion requires a libcall.
+    return InstructionCost::getInvalid();
   }
 
   // TODO: Allow non-throughput costs that aren't binary.
@@ -6946,6 +6954,14 @@ bool X86TTIImpl::isVectorShiftByScalarCheap(Type *Ty) const {
   // Otherwise, it's significantly cheaper to shift by a scalar amount than by a
   // fully general vector.
   return true;
+}
+
+unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
+                                       Type *ScalarValTy) const {
+  if (ST->hasF16C() && ScalarMemTy->isHalfTy()) {
+    return 4;
+  }
+  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
 }
 
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
