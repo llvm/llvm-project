@@ -2708,9 +2708,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_sign:
     return selectSign(ResVReg, ResType, I);
   case Intrinsic::spv_firstbituhigh: // There is no CL equivalent of FindUMsb
-    return selectFirstBitHigh(ResVReg, ResType, I, false);
+    return selectFirstBitHigh(ResVReg, ResType, I, /*IsSigned=*/false);
   case Intrinsic::spv_firstbitshigh: // There is no CL equivalent of FindSMsb
-    return selectFirstBitHigh(ResVReg, ResType, I, true);
+    return selectFirstBitHigh(ResVReg, ResType, I, /*IsSigned=*/true);
   case Intrinsic::spv_group_memory_barrier_with_group_sync: {
     Register MemSemReg =
         buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
@@ -2889,32 +2889,30 @@ bool SPIRVInstructionSelector::selectFirstBitHigh64(Register ResVReg,
   // count should be one.
 
   Register HighReg = MRI->createVirtualRegister(GR.getRegClass(VResType));
-  auto MIB =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(SPIRV::OpVectorShuffle))
-          .addDef(HighReg)
-          .addUse(GR.getSPIRVTypeID(VResType))
-          .addUse(FBHReg)
-          .addUse(
-              FBHReg); // this vector will not be selected from; could be empty
-  unsigned i;
-  for (i = 0; i < count * 2; i += 2) {
-    MIB.addImm(i);
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpVectorShuffle))
+                 .addDef(HighReg)
+                 .addUse(GR.getSPIRVTypeID(VResType))
+                 .addUse(FBHReg)
+                 .addUse(FBHReg);
+  // ^^ this vector will not be selected from; could be empty
+  unsigned j;
+  for (j = 0; j < count * 2; j += 2) {
+    MIB.addImm(j);
   }
   Result &= MIB.constrainAllUses(TII, TRI, RBI);
 
   // get low bits
   Register LowReg = MRI->createVirtualRegister(GR.getRegClass(VResType));
-  MIB =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(SPIRV::OpVectorShuffle))
-          .addDef(LowReg)
-          .addUse(GR.getSPIRVTypeID(VResType))
-          .addUse(FBHReg)
-          .addUse(
-              FBHReg); // this vector will not be selected from; could be empty
-  for (i = 1; i < count * 2; i += 2) {
-    MIB.addImm(i);
+  MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                TII.get(SPIRV::OpVectorShuffle))
+            .addDef(LowReg)
+            .addUse(GR.getSPIRVTypeID(VResType))
+            .addUse(FBHReg)
+            .addUse(FBHReg);
+  // ^^ this vector will not be selected from; could be empty
+  for (j = 1; j < count * 2; j += 2) {
+    MIB.addImm(j);
   }
   Result &= MIB.constrainAllUses(TII, TRI, RBI);
 
@@ -2943,6 +2941,7 @@ bool SPIRVInstructionSelector::selectFirstBitHigh64(Register ResVReg,
   Register AddReg = ResVReg;
   if (isScalarRes)
     AddReg = MRI->createVirtualRegister(GR.getRegClass(VResType));
+
   Result &= selectNAryOpWithSrcs(AddReg, VResType, I, {ValReg, TmpReg},
                                  SPIRV::OpIAddV);
 
@@ -2960,17 +2959,21 @@ bool SPIRVInstructionSelector::selectFirstBitHigh(Register ResVReg,
                                                   const SPIRVType *ResType,
                                                   MachineInstr &I,
                                                   bool IsSigned) const {
-  // FindUMsb intrinsic only supports 32 bit integers
+  // FindUMsb and FindSMsb intrinsics only support 32 bit integers
   Register OpReg = I.getOperand(2).getReg();
   SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpReg);
-  unsigned bitWidth = GR.getScalarOrVectorBitWidth(OpType);
 
-  if (bitWidth == 16)
+  switch (GR.getScalarOrVectorBitWidth(OpType)) {
+  case 16:
     return selectFirstBitHigh16(ResVReg, ResType, I, IsSigned);
-  else if (bitWidth == 32)
+  case 32:
     return selectFirstBitHigh32(ResVReg, ResType, I, OpReg, IsSigned);
-  else // 64 bit
+  case 64:
     return selectFirstBitHigh64(ResVReg, ResType, I, IsSigned);
+  default:
+    report_fatal_error(
+        "spv_firstbituhigh and spv_firstbitshigh only support 16,32,64 bits.");
+  }
 }
 
 bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
