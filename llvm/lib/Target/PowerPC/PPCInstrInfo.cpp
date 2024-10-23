@@ -5256,22 +5256,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     return;
 
   unsigned Opcode = MI->getOpcode();
-  bool HasNonSignedExtInstrPromoted = false;
-  int NewOpcode = -1;
-
-  std::unordered_map<unsigned, unsigned> OpcodeMap = {
-      {PPC::OR, PPC::OR8},     {PPC::ISEL, PPC::ISEL8},
-      {PPC::ORI, PPC::ORI8},   {PPC::XORI, PPC::XORI8},
-      {PPC::ORIS, PPC::ORIS8}, {PPC::XORIS, PPC::XORIS8},
-      {PPC::AND, PPC::AND8}};
-
-  // Check if the Opcode is in the map.
-  auto It = OpcodeMap.find(Opcode);
-  if (It != OpcodeMap.end()) {
-    // Set the new opcode to the mapped 64-bit version.
-    NewOpcode = It->second;
-    HasNonSignedExtInstrPromoted = true;
-  }
 
   switch (Opcode) {
   case PPC::OR:
@@ -5341,13 +5325,31 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     break;
   }
 
+  bool HasNonSignedExtInstrPromoted = false;
+  int NewOpcode = -1;
+
+  // Map the opcode of instructions (which are not sign- or zero-extended
+  // themselves,but have operands that are destination registers of sign- or
+  // zero-extended instructions) to their 64-bit equivalents.
+  std::unordered_map<unsigned, unsigned> OpcodeMap = {
+      {PPC::OR, PPC::OR8},     {PPC::ISEL, PPC::ISEL8},
+      {PPC::ORI, PPC::ORI8},   {PPC::XORI, PPC::XORI8},
+      {PPC::ORIS, PPC::ORIS8}, {PPC::XORIS, PPC::XORIS8},
+      {PPC::AND, PPC::AND8}};
+
+  auto It = OpcodeMap.find(Opcode);
+  if (It != OpcodeMap.end()) {
+    // Set the new opcode to the mapped 64-bit version.
+    NewOpcode = It->second;
+    HasNonSignedExtInstrPromoted = true;
+  }
+
   const PPCInstrInfo *TII =
       MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
   if (!TII->isSExt32To64(Opcode) && !HasNonSignedExtInstrPromoted)
     return;
 
   const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-
   if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
     return;
 
