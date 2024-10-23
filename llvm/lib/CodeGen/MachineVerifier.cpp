@@ -3871,21 +3871,17 @@ void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
 
 namespace {
 
-  // FrameSetup and FrameDestroy can have zero adjustment, so using a single
-  // integer, we can't tell whether it is a FrameSetup or FrameDestroy if the
-  // value is zero.
-  // We use a bool plus an integer to capture the stack state.
+/// Store for each MachineBasicBlock the call frame size at its entry and its
+/// exit. No value means that no call frame is open, zero means that a
+/// zero-sized call frame is open.
 struct StackStateOfBB {
   StackStateOfBB() = default;
-  StackStateOfBB(int EntryVal, int ExitVal, bool EntrySetup, bool ExitSetup)
-      : EntryValue(EntryVal), ExitValue(ExitVal), EntryIsSetup(EntrySetup),
-        ExitIsSetup(ExitSetup) {}
+  StackStateOfBB(std::optional<unsigned> EntryVal,
+                 std::optional<unsigned> ExitVal)
+      : Entry(EntryVal), Exit(ExitVal) {}
 
-  // Can be negative, which means we are setting up a frame.
-  int EntryValue = 0;
-  int ExitValue = 0;
-  bool EntryIsSetup = false;
-  bool ExitIsSetup = false;
+  std::optional<unsigned> Entry;
+  std::optional<unsigned> Exit;
 };
 
 } // end anonymous namespace
@@ -3894,19 +3890,20 @@ struct StackStateOfBB {
 /// by a FrameDestroy <n>, stack adjustments are identical on all
 /// CFG edges to a merge point, and frame is destroyed at end of a return block.
 void MachineVerifier::verifyStackFrame() {
-  unsigned FrameSetupOpcode   = TII->getCallFrameSetupOpcode();
+  unsigned FrameSetupOpcode = TII->getCallFrameSetupOpcode();
   unsigned FrameDestroyOpcode = TII->getCallFrameDestroyOpcode();
   if (FrameSetupOpcode == ~0u && FrameDestroyOpcode == ~0u)
     return;
 
   SmallVector<StackStateOfBB, 8> SPState;
   SPState.resize(MF->getNumBlockIDs());
-  df_iterator_default_set<const MachineBasicBlock*> Reachable;
+  df_iterator_default_set<const MachineBasicBlock *> Reachable;
 
   // Visit the MBBs in DFS order.
   for (df_ext_iterator<const MachineFunction *,
                        df_iterator_default_set<const MachineBasicBlock *>>
-       DFI = df_ext_begin(MF, Reachable), DFE = df_ext_end(MF, Reachable);
+           DFI = df_ext_begin(MF, Reachable),
+           DFE = df_ext_end(MF, Reachable);
        DFI != DFE; ++DFI) {
     const MachineBasicBlock *MBB = *DFI;
 
@@ -3916,49 +3913,36 @@ void MachineVerifier::verifyStackFrame() {
       const MachineBasicBlock *StackPred = DFI.getPath(DFI.getPathLength() - 2);
       assert(Reachable.count(StackPred) &&
              "DFS stack predecessor is already visited.\n");
-      BBState.EntryValue = SPState[StackPred->getNumber()].ExitValue;
-      BBState.EntryIsSetup = SPState[StackPred->getNumber()].ExitIsSetup;
-      BBState.ExitValue = BBState.EntryValue;
-      BBState.ExitIsSetup = BBState.EntryIsSetup;
-    }
-
-    if ((int)MBB->getCallFrameSize() != -BBState.EntryValue) {
-      report("Call frame size on entry does not match value computed from "
-             "predecessor",
-             MBB);
-      OS << "Call frame size on entry " << MBB->getCallFrameSize()
-         << " does not match value computed from predecessor "
-         << -BBState.EntryValue << '\n';
+      BBState.Entry = SPState[StackPred->getNumber()].Exit;
+      BBState.Exit = BBState.Entry;
     }
 
     // Update stack state by checking contents of MBB.
     for (const auto &I : *MBB) {
       if (I.getOpcode() == FrameSetupOpcode) {
-        if (BBState.ExitIsSetup)
+        if (BBState.Exit.has_value())
           report("FrameSetup is after another FrameSetup", &I);
         if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
           report("AdjustsStack not set in presence of a frame pseudo "
-                 "instruction.", &I);
-        BBState.ExitValue -= TII->getFrameTotalSize(I);
-        BBState.ExitIsSetup = true;
+                 "instruction.",
+                 &I);
+        BBState.Exit = TII->getFrameTotalSize(I);
       }
 
       if (I.getOpcode() == FrameDestroyOpcode) {
-        int Size = TII->getFrameTotalSize(I);
-        if (!BBState.ExitIsSetup)
+        int64_t Size = TII->getFrameTotalSize(I);
+        if (!BBState.Exit.has_value())
           report("FrameDestroy is not after a FrameSetup", &I);
-        int AbsSPAdj = BBState.ExitValue < 0 ? -BBState.ExitValue :
-                                               BBState.ExitValue;
-        if (BBState.ExitIsSetup && AbsSPAdj != Size) {
+        else if ((int64_t)BBState.Exit.value() != Size) {
           report("FrameDestroy <n> is after FrameSetup <m>", &I);
           OS << "FrameDestroy <" << Size << "> is after FrameSetup <"
-             << AbsSPAdj << ">.\n";
+             << BBState.Exit.value() << ">.\n";
         }
         if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
           report("AdjustsStack not set in presence of a frame pseudo "
-                 "instruction.", &I);
-        BBState.ExitValue += Size;
-        BBState.ExitIsSetup = false;
+                 "instruction.",
+                 &I);
+        BBState.Exit.reset();
       }
     }
     SPState[MBB->getNumber()] = BBState;
@@ -3967,14 +3951,12 @@ void MachineVerifier::verifyStackFrame() {
     // state.
     for (const MachineBasicBlock *Pred : MBB->predecessors()) {
       if (Reachable.count(Pred) &&
-          (SPState[Pred->getNumber()].ExitValue != BBState.EntryValue ||
-           SPState[Pred->getNumber()].ExitIsSetup != BBState.EntryIsSetup)) {
+          SPState[Pred->getNumber()].Exit != BBState.Entry) {
         report("The exit stack state of a predecessor is inconsistent.", MBB);
-        OS << "Predecessor " << printMBBReference(*Pred) << " has exit state ("
-           << SPState[Pred->getNumber()].ExitValue << ", "
-           << SPState[Pred->getNumber()].ExitIsSetup << "), while "
-           << printMBBReference(*MBB) << " has entry state ("
-           << BBState.EntryValue << ", " << BBState.EntryIsSetup << ").\n";
+        OS << "Predecessor " << printMBBReference(*Pred) << " has exit state "
+           << SPState[Pred->getNumber()].Exit << ", while "
+           << printMBBReference(*MBB) << " has entry state " << BBState.Entry
+           << ".\n";
       }
     }
 
@@ -3982,23 +3964,19 @@ void MachineVerifier::verifyStackFrame() {
     // state.
     for (const MachineBasicBlock *Succ : MBB->successors()) {
       if (Reachable.count(Succ) &&
-          (SPState[Succ->getNumber()].EntryValue != BBState.ExitValue ||
-           SPState[Succ->getNumber()].EntryIsSetup != BBState.ExitIsSetup)) {
+          SPState[Succ->getNumber()].Entry != BBState.Exit) {
         report("The entry stack state of a successor is inconsistent.", MBB);
-        OS << "Successor " << printMBBReference(*Succ) << " has entry state ("
-           << SPState[Succ->getNumber()].EntryValue << ", "
-           << SPState[Succ->getNumber()].EntryIsSetup << "), while "
-           << printMBBReference(*MBB) << " has exit state ("
-           << BBState.ExitValue << ", " << BBState.ExitIsSetup << ").\n";
+        OS << "Successor " << printMBBReference(*Succ) << " has entry state "
+           << SPState[Succ->getNumber()].Entry << ", while "
+           << printMBBReference(*MBB) << " has exit state " << BBState.Exit
+           << ".\n";
       }
     }
 
     // Make sure a basic block with return ends with zero stack adjustment.
     if (!MBB->empty() && MBB->back().isReturn()) {
-      if (BBState.ExitIsSetup)
+      if (BBState.Exit.has_value())
         report("A return block ends with a FrameSetup.", MBB);
-      if (BBState.ExitValue)
-        report("A return block ends with a nonzero stack adjustment.", MBB);
     }
   }
 }

@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -1622,22 +1623,6 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
   }
 
   return std::nullopt;
-}
-
-// Get the call frame size just before MI.
-unsigned TargetInstrInfo::getCallFrameSizeAt(MachineInstr &MI) const {
-  // Search backwards from MI for the most recent call frame instruction.
-  MachineBasicBlock *MBB = MI.getParent();
-  for (auto &AdjI : reverse(make_range(MBB->instr_begin(), MI.getIterator()))) {
-    if (AdjI.getOpcode() == getCallFrameSetupOpcode())
-      return getFrameTotalSize(AdjI);
-    if (AdjI.getOpcode() == getCallFrameDestroyOpcode())
-      return 0;
-  }
-
-  // If none was found, use the call frame size from the start of the basic
-  // block.
-  return MBB->getCallFrameSize();
 }
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the

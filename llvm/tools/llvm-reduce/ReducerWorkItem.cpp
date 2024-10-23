@@ -249,8 +249,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
     Src2DstMBB[&SrcMBB] = DstMBB;
 
-    DstMBB->setCallFrameSize(SrcMBB.getCallFrameSize());
-
     if (SrcMBB.isIRBlockAddressTaken())
       DstMBB->setAddressTakenIRBlock(SrcMBB.getAddressTakenIRBlock());
     if (SrcMBB.isMachineBlockAddressTaken())

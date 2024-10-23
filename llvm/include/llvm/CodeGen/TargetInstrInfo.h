@@ -2265,9 +2265,6 @@ public:
     return false;
   }
 
-  // Get the call frame size just before MI.
-  unsigned getCallFrameSizeAt(MachineInstr &MI) const;
-
   /// Fills in the necessary MachineOperands to refer to a frame index.
   /// The best way to understand this is to print `asm(""::"m"(x));` after
   /// finalize-isel. Example:
