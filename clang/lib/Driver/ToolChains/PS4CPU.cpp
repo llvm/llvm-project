@@ -230,6 +230,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   const bool Relocatable = Args.hasArg(options::OPT_r);
+  const bool Shared = Args.hasArg(options::OPT_shared);
+  const bool Static = Args.hasArg(options::OPT_static);
 
   // Silence warning for "clang -g foo.o -o foo"
   Args.ClaimAllArgs(options::OPT_g_Group);
@@ -243,8 +245,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString("--sysroot=" + TC.getSDKLibraryRootDir()));
 
   // Default to PIE for non-static executables.
-  const bool PIE =
-      !Args.hasArg(options::OPT_r, options::OPT_shared, options::OPT_static);
+  const bool PIE = !Relocatable && !Shared && !Static;
   if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
     CmdArgs.push_back("-pie");
 
@@ -270,11 +271,11 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe");
   }
 
-  if (Args.hasArg(options::OPT_static))
+  if (Static)
     CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
-  if (Args.hasArg(options::OPT_shared))
+  if (Shared)
     CmdArgs.push_back("--shared");
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
