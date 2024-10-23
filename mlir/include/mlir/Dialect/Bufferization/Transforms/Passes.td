@@ -595,4 +595,18 @@ def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
   let constructor = "mlir::bufferization::createEmptyTensorEliminationPass()";
 }
 
+def EnforceImmutableFuncArgs : Pass<"enforce-immutable-func-args", "func::FuncOp"> {
+  let summary = "Enforcing function's arguments immutabilty by inserting allocOps and copy";
+  let description = [{
+    This pass allocates a new a buffer for each input argument of the function
+    which is being written to and marked to be enforced, also copying it into the
+    allocated buffer.
+    This will avoid in place memory updates for the function's arguments and
+    make it immutable/read-only buffer.
+  }];
+  let constructor = "mlir::bufferization::createEnforceImmutableFuncArgsPass()";
+  let dependentDialects = ["memref::MemRefDialect"];
+}
+
+
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES
