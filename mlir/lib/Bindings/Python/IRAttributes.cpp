@@ -1057,7 +1057,8 @@ private:
 
     py::module numpy = py::module::import("numpy");
     py::object packbits_func = numpy.attr("packbits");
-    py::object packed_booleans = packbits_func(unpackedArray, "bitorder"_a = "little");
+    py::object packed_booleans =
+        packbits_func(unpackedArray, "bitorder"_a = "little");
     py::buffer_info buffer_info = packed_booleans.cast<py::buffer>().request();
 
     MlirType bitpackedType =
