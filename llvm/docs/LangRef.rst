@@ -16736,6 +16736,11 @@ Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
 sNaN for qNaN vs sNaN. With the recent libc versions, libc follows IEEE754-2008:
 NUM vs sNaN -> qNaN; NUM vs qNaN -> NUM; qNaN vs sNaN -> qNaN; sNaN vs sNaN -> qNaN.
 
+Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
+so arithmetic feeding into a minnum can produce inconsistent results.
+Such as `fmin(sNaN+0.0, 1.0)` can produce qNaN or 1.0 depending on whether `+0.0`
+is optimized out.
+
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
 If the operands compare equal, returns either one of the operands.
@@ -16787,6 +16792,11 @@ For other architectures, the custom or expand methods may provide '``nsz``' flav
 Historically, libc returns NUM for NUM vs (sNaN or qNaN), and may return
 sNaN for qNaN vs sNaN. With the recent libc versions, libc follows IEEE754-2008:
 NUM vs sNaN -> qNaN; NUM vs qNaN -> NUM; qNaN vs sNaN -> qNaN; sNaN vs sNaN -> qNaN.
+
+Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
+so arithmetic feeding into a maxnum can produce inconsistent results.
+Such as `fmax(sNaN+0.0, 1.0)` can produce qNaN or 1.0 depending on whether `+0.0`
+is optimized out.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or either operand is sNaN.
