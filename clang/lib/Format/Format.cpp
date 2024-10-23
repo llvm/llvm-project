@@ -1929,6 +1929,7 @@ FormatStyle getGNUStyle() {
   Style.ColumnLimit = 79;
   Style.Cpp11BracedListStyle = false;
   Style.FixNamespaceComments = false;
+  Style.KeepFormFeed = true;
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
   return Style;
 }
