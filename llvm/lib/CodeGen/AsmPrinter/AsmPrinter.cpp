@@ -1095,15 +1095,14 @@ void AsmPrinter::emitFunctionEntryLabel() {
 /// scheduling model.
 /// \return The maximum expected latency over all the operands or -1
 /// if no information is available.
-static int getItineraryLatency(const MachineInstr &MI,
+static std::optional<int> getItineraryLatency(const MachineInstr &MI,
                                const MachineFunction *MF,
                                const MCSubtargetInfo *STI) {
-  const int NoInformationAvailable = -1;
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
   // Check if we have a CPU to get the itinerary information.
   if (STI->getCPU().empty())
-    return NoInformationAvailable;
+    return std::nullopt;
 
   // Get itinerary information.
   InstrItineraryData IID = STI->getInstrItineraryForCPU(STI->getCPU());
@@ -1117,14 +1116,14 @@ static int getItineraryLatency(const MachineInstr &MI,
     if (std::optional<unsigned> OperCycle = IID.getOperandCycle(SCClass, Idx))
       Latency = std::max(Latency, *OperCycle);
 
-  return (int)Latency;
+  return int(Latency);
 }
 
 /// Gets latency information for \p Inst.
 /// \return The maximum expected latency over all the definitions or -1
 /// if no information is available.
-static int getLatency(const MachineInstr &MI, const MCSubtargetInfo *STI) {
-  const MCSchedModel SCModel = STI->getSchedModel();
+static std::optional<int> getLatency(const MachineInstr &MI, const MCSubtargetInfo *STI) {
+  const MCSchedModel &SCModel = STI->getSchedModel();
   const int NoInformationAvailable = -1;
 
   const MachineFunction *MF = MI.getMF();
@@ -1141,22 +1140,9 @@ static int getLatency(const MachineInstr &MI, const MCSubtargetInfo *STI) {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const MCInstrDesc &Desc = TII->get(MI.getOpcode());
   unsigned SCClass = Desc.getSchedClass();
-  const MCSchedClassDesc *SCDesc = SCModel.getSchedClassDesc(SCClass);
-  // Resolving the variant SchedClass requires an MI to pass to
-  // SubTargetInfo::resolveSchedClass.
-  if (!SCDesc || !SCDesc->isValid() || SCDesc->isVariant())
+  int Latency = SCModel.computeInstrLatency(*STI, SCClass);
+  if (Latency <= 0)
     return NoInformationAvailable;
-
-  // Compute output latency.
-  int16_t Latency = 0;
-  for (unsigned DefIdx = 0, DefEnd = SCDesc->NumWriteLatencyEntries;
-       DefIdx != DefEnd; ++DefIdx) {
-    // Lookup the definition's write latency in SubtargetInfo.
-    const MCWriteLatencyEntry *WLEntry =
-        STI->getWriteLatencyEntry(SCDesc, DefIdx);
-    Latency = std::max(Latency, WLEntry->Cycles);
-  }
-
   return Latency;
 }
 
@@ -1192,10 +1178,11 @@ static void emitComments(const MachineInstr &MI, const MCSubtargetInfo *STI,
     CommentOS << " Reload Reuse\n";
 
   if (PrintLatency) {
-    int Latency = getLatency(MI, STI);
-    // Report only interesting latencies.
-    if (1 < Latency)
-      CommentOS << " Latency: " << Latency << "\n";
+    if (auto Latency = getLatency(MI, STI)) {
+      // Report only interesting latencies.
+      if (1 < *Latency)
+        CommentOS << " Latency: " << *Latency << "\n";
+    }
   }
 }
 

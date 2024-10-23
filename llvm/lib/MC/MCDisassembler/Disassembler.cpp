@@ -195,7 +195,7 @@ static int getItineraryLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
 static int getLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
   // Try to compute scheduling information.
   const MCSubtargetInfo *STI = DC->getSubtargetInfo();
-  const MCSchedModel SCModel = STI->getSchedModel();
+  const MCSchedModel &SCModel = STI->getSchedModel();
   const int NoInformationAvailable = -1;
 
   // Check if we have a scheduling model for instructions.
