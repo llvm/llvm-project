@@ -138,7 +138,7 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
     // If we have any sections that are loaded, try and resolve using the
     // section load list
     Target *target = exe_ctx.GetTargetPtr();
-    if (target && !target->SectionLoadListIsEmpty()) {
+    if (target && target->HasLoadedSections()) {
       if (target->ResolveLoadAddress(deref_addr, deref_so_addr))
         return true;
     } else {

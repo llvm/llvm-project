@@ -139,7 +139,7 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
       if (target_sp->ResolveLoadAddress(addr, so_addr)) {
         data_from_file = false;
       } else {
-        if (target_sp->SectionLoadListIsEmpty() ||
+        if (!target_sp->HasLoadedSections() ||
             !target_sp->GetImages().ResolveFileAddress(addr, so_addr))
           so_addr.SetRawAddress(addr);
       }

@@ -266,12 +266,12 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
 
   Target &target = process->GetTarget();
 
-  if (target.SectionLoadListIsEmpty())
+  if (!target.HasLoadedSections())
     return optional_info;
 
   Address vtable_first_entry_resolved;
 
-  if (!target.ResolveLoadAddress(vtable_address_first_entry, 
+  if (!target.ResolveLoadAddress(vtable_address_first_entry,
                                  vtable_first_entry_resolved))
     return optional_info;
 
@@ -321,7 +321,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   // Setup for cases 2, 4 and 5 we have a pointer to a function after the
   // vtable. We will use a process of elimination to drop through each case
   // and obtain the data we need.
-  if (target.ResolveLoadAddress(possible_function_address, 
+  if (target.ResolveLoadAddress(possible_function_address,
                                 function_address_resolved)) {
     target.GetImages().ResolveSymbolContextForAddress(
         function_address_resolved, eSymbolContextEverything, sc);
@@ -417,7 +417,7 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
 
   TargetSP target_sp(thread.CalculateTarget());
 
-  if (target_sp->SectionLoadListIsEmpty())
+  if (!target_sp->HasLoadedSections())
     return ret_plan_sp;
 
   Address pc_addr_resolved;

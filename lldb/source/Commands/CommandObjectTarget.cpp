@@ -1522,7 +1522,7 @@ static bool LookupAddressInModule(CommandInterpreter &interpreter, Stream &strm,
     Address so_addr;
     SymbolContext sc;
     Target *target = interpreter.GetExecutionContext().GetTargetPtr();
-    if (target && !target->SectionLoadListIsEmpty()) {
+    if (target && target->HasLoadedSections()) {
       if (!target->ResolveLoadAddress(addr, so_addr))
         return false;
       else if (so_addr.GetModule().get() != module)
@@ -2974,7 +2974,7 @@ protected:
                               sect_name);
                           break;
                         } else {
-                          if (target.SetSectionLoadAddress(section_sp, 
+                          if (target.SetSectionLoadAddress(section_sp,
                                                            load_addr))
                             changed = true;
                           result.AppendMessageWithFormat(
@@ -3329,7 +3329,7 @@ protected:
           if (objfile) {
             Address base_addr(objfile->GetBaseAddress());
             if (base_addr.IsValid()) {
-              if (!target.SectionLoadListIsEmpty()) {
+              if (target.HasLoadedSections()) {
                 lldb::addr_t load_addr = base_addr.GetLoadAddress(&target);
                 if (load_addr == LLDB_INVALID_ADDRESS) {
                   base_addr.Dump(&strm, &target,

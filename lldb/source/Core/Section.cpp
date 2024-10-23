@@ -637,8 +637,7 @@ bool SectionList::ContainsSection(user_id_t sect_id) const {
 
 void SectionList::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
                        bool show_header, uint32_t depth) const {
-  bool target_has_loaded_sections =
-      target && !target->SectionLoadListIsEmpty();
+  bool target_has_loaded_sections = target && target->HasLoadedSections();
   if (show_header && !m_sections.empty()) {
     s.indent(indent);
     s << llvm::formatv(

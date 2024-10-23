@@ -1151,8 +1151,7 @@ public:
                              Address &pointer_addr,
                              bool force_live_memory = false);
 
-
-  bool SectionLoadListIsEmpty() const;
+  bool HasLoadedSections();
 
   lldb::addr_t GetSectionLoadAddress(const lldb::SectionSP &section_sp);
 

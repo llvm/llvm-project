@@ -302,7 +302,7 @@ protected:
     size_t num_matches = 0;
     assert(module_list.GetSize() > 0);
     Target &target = GetTarget();
-    if (target.SectionLoadListIsEmpty()) {
+    if (!target.HasLoadedSections()) {
       // The target isn't loaded yet, we need to lookup the file address in all
       // modules.  Note: the module list option does not apply to addresses.
       const size_t num_modules = module_list.GetSize();
@@ -959,7 +959,7 @@ protected:
       StreamString error_strm;
       SymbolContextList sc_list;
 
-      if (target.SectionLoadListIsEmpty()) {
+      if (!target.HasLoadedSections()) {
         // The target isn't loaded yet, we need to lookup the file address in
         // all modules
         const ModuleList &module_list = target.GetImages();
