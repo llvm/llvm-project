@@ -186,7 +186,7 @@ static int getItineraryLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
     if (std::optional<unsigned> OperCycle = IID.getOperandCycle(SCClass, Idx))
       Latency = std::max(Latency, *OperCycle);
 
-  return (int)Latency;
+  return int(Latency);
 }
 
 /// Gets latency information for \p Inst, based on \p DC information.
@@ -196,7 +196,6 @@ static int getLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
   // Try to compute scheduling information.
   const MCSubtargetInfo *STI = DC->getSubtargetInfo();
   const MCSchedModel &SCModel = STI->getSchedModel();
-  const int NoInformationAvailable = -1;
 
   // Check if we have a scheduling model for instructions.
   if (!SCModel.hasInstrSchedModel())
@@ -205,25 +204,9 @@ static int getLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
     return getItineraryLatency(DC, Inst);
 
   // Get the scheduling class of the requested instruction.
-  const MCInstrDesc& Desc = DC->getInstrInfo()->get(Inst.getOpcode());
+  const MCInstrDesc &Desc = DC->getInstrInfo()->get(Inst.getOpcode());
   unsigned SCClass = Desc.getSchedClass();
-  const MCSchedClassDesc *SCDesc = SCModel.getSchedClassDesc(SCClass);
-  // Resolving the variant SchedClass requires an MI to pass to
-  // SubTargetInfo::resolveSchedClass.
-  if (!SCDesc || !SCDesc->isValid() || SCDesc->isVariant())
-    return NoInformationAvailable;
-
-  // Compute output latency.
-  int16_t Latency = 0;
-  for (unsigned DefIdx = 0, DefEnd = SCDesc->NumWriteLatencyEntries;
-       DefIdx != DefEnd; ++DefIdx) {
-    // Lookup the definition's write latency in SubtargetInfo.
-    const MCWriteLatencyEntry *WLEntry = STI->getWriteLatencyEntry(SCDesc,
-                                                                   DefIdx);
-    Latency = std::max(Latency, WLEntry->Cycles);
-  }
-
-  return Latency;
+  return SCModel.computeInstrLatency(*STI, SCClass);
 }
 
 /// Emits latency information in DC->CommentStream for \p Inst, based
