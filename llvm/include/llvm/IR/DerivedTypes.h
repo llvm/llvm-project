@@ -290,7 +290,7 @@ public:
   bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
   /// Returns true if this struct contains a scalable vector.
-  bool isScalableTy(SmallPtrSetImpl<Type *> &Visited) const;
+  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   using Type::isScalableTy;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
