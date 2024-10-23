@@ -51,6 +51,7 @@
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1150 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1150 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1151 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1151 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1152 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1152 %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1153 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1153 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1200 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1200 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1201 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1201 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1210 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1210 %s
@@ -109,6 +110,7 @@
 // GFX1150: "target-features"="+16-bit-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot10-insts,+dot12-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
 // GFX1151: "target-features"="+16-bit-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot10-insts,+dot12-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
 // GFX1152: "target-features"="+16-bit-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot10-insts,+dot12-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
+// GFX1153: "target-features"="+16-bit-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot10-insts,+dot12-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
 // GFX1200: "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+ci-insts,+dl-insts,+dot10-insts,+dot11-insts,+dot12-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
 // GFX1201: "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+ci-insts,+dl-insts,+dot10-insts,+dot11-insts,+dot12-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
 // GFX1210: "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1210-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+wavefrontsize32"

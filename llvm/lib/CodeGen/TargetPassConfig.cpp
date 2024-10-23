@@ -1283,7 +1283,7 @@ void TargetPassConfig::addMachineSSAOptimization() {
 
   // Optimize PHIs before DCE: removing dead PHI cycles may make more
   // instructions dead.
-  addPass(&OptimizePHIsID);
+  addPass(&OptimizePHIsLegacyID);
 
   // This pass merges large allocas. StackSlotColoring is a different pass
   // which merges spill slots.
