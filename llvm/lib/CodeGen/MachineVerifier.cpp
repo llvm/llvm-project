@@ -48,6 +48,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -3754,10 +3755,37 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     OwnerLI.computeSubRangeUndefs(Undefs, LaneMask, *MRI, *Indexes);
   }
 
+  bool IsEHa = MF->getMMI().getModule()->getModuleFlag("eh-asynch");
   while (true) {
     assert(LiveInts->isLiveInToMBB(LR, &*MFI));
-    // We don't know how to track physregs into a landing pad.
-    if (!Reg.isVirtual() && MFI->isEHPad()) {
+    auto IsSEHHandler = [](const MachineBasicBlock &Handler) -> bool {
+      if (!Handler.isMachineBlockAddressTaken())
+        return false;
+
+      for (const User *U : Handler.getBasicBlock()->users()) {
+        if (!isa<InvokeInst>(U))
+          continue;
+        const Function *Fn = cast<CallBase>(U)->getCalledFunction();
+        if (!Fn || !Fn->isIntrinsic())
+          continue;
+
+        switch (Fn->getIntrinsicID()) {
+        default:
+          continue;
+        case Intrinsic::seh_scope_begin:
+        case Intrinsic::seh_scope_end:
+        case Intrinsic::seh_try_begin:
+        case Intrinsic::seh_try_end:
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // TODO: we don't know how to track physregs into a landing pad. For async
+    // EH, the virtual reg lives before scope begin, but we don't know seh scope
+    // range of landing pad in Machine IR. Therefore don't check its liveness.
+    if (MFI->isEHPad() && (!Reg.isVirtual() || (IsEHa && IsSEHHandler(*MFI)))) {
       if (&*MFI == EndMBB)
         break;
       ++MFI;
@@ -3771,8 +3799,9 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     // Check that VNI is live-out of all predecessors.
     for (const MachineBasicBlock *Pred : MFI->predecessors()) {
       SlotIndex PEnd = LiveInts->getMBBEndIdx(Pred);
-      // Predecessor of landing pad live-out on last call.
+      // Predecessor of landing pad live-out on last call for sync EH.
       if (MFI->isEHPad()) {
+        assert(!IsEHa && "EHa may raise exception on non call");
         for (const MachineInstr &MI : llvm::reverse(*Pred)) {
           if (MI.isCall()) {
             PEnd = Indexes->getInstructionIndex(MI).getBoundaryIndex();
