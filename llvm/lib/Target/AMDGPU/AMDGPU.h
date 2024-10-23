@@ -39,6 +39,8 @@ FunctionPass *createSIFoldOperandsLegacyPass();
 FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
+FunctionPass *createAMDGPUStandaloneRegBankSelectPass();
+FunctionPass *createAMDGPURegBankLegalizePass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModePass();
@@ -187,6 +189,12 @@ extern char &SILowerI1CopiesLegacyID;
 
 void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
 extern char &AMDGPUGlobalISelDivergenceLoweringID;
+
+void initializeAMDGPUStandaloneRegBankSelectPass(PassRegistry &);
+extern char &AMDGPUStandaloneRegBankSelectID;
+
+void initializeAMDGPURegBankLegalizePass(PassRegistry &);
+extern char &AMDGPURegBankLegalizeID;
 
 void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
