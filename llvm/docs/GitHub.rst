@@ -147,7 +147,7 @@ Before merging a PR you must have the required approvals. See
 Landing your change
 -------------------
 
-When your PR has been apporoved you can merge your changes.
+When your PR has been approved you can merge your changes.
 
 If you do not have write permissions for the repository, the merge button in
 GitHub's web interface will be disabled. If this is the case, continue following
