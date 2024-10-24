@@ -5214,14 +5214,14 @@ class sme2_bf16_fp32_quarter_tile_outer_product<bit M, bit N, bit S, string mnem
 
 multiclass sme2_bfmop4as_widening<bit S, string mnemonic> {
   // Single vectors
-  def _ZZ_S : sme2_bf16_fp32_quarter_tile_outer_product<0, 0, S, mnemonic, ZPR16Mul2_Lo, ZPR16Mul2_Hi>;
+  def _MZZ_S : sme2_bf16_fp32_quarter_tile_outer_product<0, 0, S, mnemonic, ZPR16Mul2_Lo, ZPR16Mul2_Hi>;
 
   // Multiple and single vectors
-  def _2ZZ_S : sme2_bf16_fp32_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>;
+  def _M2ZZ_S : sme2_bf16_fp32_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>;
 
   // Single and multiple vectors
-  def _Z2Z_S : sme2_bf16_fp32_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR16Mul2_Lo, ZZ_h_mul_r_Hi>;
+  def _MZ2Z_S : sme2_bf16_fp32_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR16Mul2_Lo, ZZ_h_mul_r_Hi>;
 
   // Multiple vectors
-  def _2Z2Z_S : sme2_bf16_fp32_quarter_tile_outer_product<1, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi>;
+  def _M2Z2Z_S : sme2_bf16_fp32_quarter_tile_outer_product<1, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi>;
 }
