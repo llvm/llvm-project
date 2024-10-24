@@ -16,4 +16,6 @@
 #include <ctype.h>
 #include <cwctype>
 
+using __libcpp_locale_t = locale_t;
+
 #endif // _LIBCPP___LOCALE_LOCALE_BASE_API_OPENBSD_H

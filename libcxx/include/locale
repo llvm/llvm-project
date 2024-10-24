@@ -256,7 +256,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  else
 #    define _LIBCPP_GET_C_LOCALE __cloc()
 // Get the C locale object
-_LIBCPP_EXPORTED_FROM_ABI locale_t __cloc();
+_LIBCPP_EXPORTED_FROM_ABI __libcpp_locale_t __cloc();
 #    define __cloc_defined
 #  endif
 
@@ -2008,7 +2008,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get<wchar_t>;
 
 class _LIBCPP_EXPORTED_FROM_ABI __time_get {
 protected:
-  locale_t __loc_;
+  __libcpp_locale_t __loc_;
 
   __time_get(const char* __nm);
   __time_get(const string& __nm);
@@ -2103,7 +2103,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<wchar_t>;
 #  endif
 
 class _LIBCPP_EXPORTED_FROM_ABI __time_put {
-  locale_t __loc_;
+  __libcpp_locale_t __loc_;
 
 protected:
   _LIBCPP_HIDE_FROM_ABI __time_put() : __loc_(_LIBCPP_GET_C_LOCALE) {}

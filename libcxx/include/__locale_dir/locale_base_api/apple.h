@@ -7,14 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_APPLE_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_APPLE_H
 
-#include <__support/xlocale/__posix_l_fallback.h>
-#include <__support/xlocale/__strtonum_fallback.h>
-#include <cstdlib>
-#include <cwchar>
+#include <xlocale.h>
 
 using __libcpp_locale_t = locale_t;
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_APPLE_H

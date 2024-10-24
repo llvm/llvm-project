@@ -88,50 +88,57 @@ private:
   std::string __negative_sign_;
 };
 
-class locale_t {
+class __libcpp_locale_t {
 public:
-  locale_t() : __locale_(nullptr), __locale_str_(nullptr), __lc_(nullptr) {}
-  locale_t(std::nullptr_t) : __locale_(nullptr), __locale_str_(nullptr), __lc_(nullptr) {}
-  locale_t(_locale_t __xlocale, const char* __xlocale_str)
+  __libcpp_locale_t() : __locale_(nullptr), __locale_str_(nullptr), __lc_(nullptr) {}
+  __libcpp_locale_t(std::nullptr_t) : __locale_(nullptr), __locale_str_(nullptr), __lc_(nullptr) {}
+  __libcpp_locale_t(_locale_t __xlocale, const char* __xlocale_str)
       : __locale_(__xlocale), __locale_str_(__xlocale_str), __lc_(nullptr) {}
-  locale_t(const locale_t& __l) : __locale_(__l.__locale_), __locale_str_(__l.__locale_str_), __lc_(nullptr) {}
+  __libcpp_locale_t(const __libcpp_locale_t& __l)
+      : __locale_(__l.__locale_), __locale_str_(__l.__locale_str_), __lc_(nullptr) {}
 
-  ~locale_t() { delete __lc_; }
+  ~__libcpp_locale_t() { delete __lc_; }
 
-  locale_t& operator=(const locale_t& __l) {
+  __libcpp_locale_t& operator=(const __libcpp_locale_t& __l) {
     __locale_     = __l.__locale_;
     __locale_str_ = __l.__locale_str_;
     // __lc_ not copied
     return *this;
   }
 
-  friend bool operator==(const locale_t& __left, const locale_t& __right) {
+  friend bool operator==(const __libcpp_locale_t& __left, const __libcpp_locale_t& __right) {
     return __left.__locale_ == __right.__locale_;
   }
 
-  friend bool operator==(const locale_t& __left, int __right) { return __left.__locale_ == nullptr && __right == 0; }
-
-  friend bool operator==(const locale_t& __left, long long __right) {
+  friend bool operator==(const __libcpp_locale_t& __left, int __right) {
     return __left.__locale_ == nullptr && __right == 0;
   }
 
-  friend bool operator==(const locale_t& __left, std::nullptr_t) { return __left.__locale_ == nullptr; }
+  friend bool operator==(const __libcpp_locale_t& __left, long long __right) {
+    return __left.__locale_ == nullptr && __right == 0;
+  }
 
-  friend bool operator==(int __left, const locale_t& __right) { return __left == 0 && nullptr == __right.__locale_; }
+  friend bool operator==(const __libcpp_locale_t& __left, std::nullptr_t) { return __left.__locale_ == nullptr; }
 
-  friend bool operator==(std::nullptr_t, const locale_t& __right) { return nullptr == __right.__locale_; }
+  friend bool operator==(int __left, const __libcpp_locale_t& __right) {
+    return __left == 0 && nullptr == __right.__locale_;
+  }
 
-  friend bool operator!=(const locale_t& __left, const locale_t& __right) { return !(__left == __right); }
+  friend bool operator==(std::nullptr_t, const __libcpp_locale_t& __right) { return nullptr == __right.__locale_; }
 
-  friend bool operator!=(const locale_t& __left, int __right) { return !(__left == __right); }
+  friend bool operator!=(const __libcpp_locale_t& __left, const __libcpp_locale_t& __right) {
+    return !(__left == __right);
+  }
 
-  friend bool operator!=(const locale_t& __left, long long __right) { return !(__left == __right); }
+  friend bool operator!=(const __libcpp_locale_t& __left, int __right) { return !(__left == __right); }
 
-  friend bool operator!=(const locale_t& __left, std::nullptr_t __right) { return !(__left == __right); }
+  friend bool operator!=(const __libcpp_locale_t& __left, long long __right) { return !(__left == __right); }
 
-  friend bool operator!=(int __left, const locale_t& __right) { return !(__left == __right); }
+  friend bool operator!=(const __libcpp_locale_t& __left, std::nullptr_t __right) { return !(__left == __right); }
 
-  friend bool operator!=(std::nullptr_t __left, const locale_t& __right) { return !(__left == __right); }
+  friend bool operator!=(int __left, const __libcpp_locale_t& __right) { return !(__left == __right); }
+
+  friend bool operator!=(std::nullptr_t __left, const __libcpp_locale_t& __right) { return !(__left == __right); }
 
   operator bool() const { return __locale_ != nullptr; }
 
@@ -154,35 +161,41 @@ private:
 // Locale management functions
 #define freelocale _free_locale
 // FIXME: base currently unused. Needs manual work to construct the new locale
-locale_t newlocale(int __mask, const char* __locale, locale_t __base);
+__libcpp_locale_t newlocale(int __mask, const char* __locale, __libcpp_locale_t __base);
 // uselocale can't be implemented on Windows because Windows allows partial modification
 // of thread-local locale and so _get_current_locale() returns a copy while uselocale does
 // not create any copies.
 // We can still implement raii even without uselocale though.
 
-lconv* localeconv_l(locale_t& __loc);
-size_t mbrlen_l(const char* __restrict __s, size_t __n, mbstate_t* __restrict __ps, locale_t __loc);
-size_t mbsrtowcs_l(
-    wchar_t* __restrict __dst, const char** __restrict __src, size_t __len, mbstate_t* __restrict __ps, locale_t __loc);
-size_t wcrtomb_l(char* __restrict __s, wchar_t __wc, mbstate_t* __restrict __ps, locale_t __loc);
-size_t mbrtowc_l(
-    wchar_t* __restrict __pwc, const char* __restrict __s, size_t __n, mbstate_t* __restrict __ps, locale_t __loc);
+lconv* localeconv_l(__libcpp_locale_t& __loc);
+size_t mbrlen_l(const char* __restrict __s, size_t __n, mbstate_t* __restrict __ps, __libcpp_locale_t __loc);
+size_t mbsrtowcs_l(wchar_t* __restrict __dst,
+                   const char** __restrict __src,
+                   size_t __len,
+                   mbstate_t* __restrict __ps,
+                   __libcpp_locale_t __loc);
+size_t wcrtomb_l(char* __restrict __s, wchar_t __wc, mbstate_t* __restrict __ps, __libcpp_locale_t __loc);
+size_t mbrtowc_l(wchar_t* __restrict __pwc,
+                 const char* __restrict __s,
+                 size_t __n,
+                 mbstate_t* __restrict __ps,
+                 __libcpp_locale_t __loc);
 size_t mbsnrtowcs_l(wchar_t* __restrict __dst,
                     const char** __restrict __src,
                     size_t __nms,
                     size_t __len,
                     mbstate_t* __restrict __ps,
-                    locale_t __loc);
+                    __libcpp_locale_t __loc);
 size_t wcsnrtombs_l(char* __restrict __dst,
                     const wchar_t** __restrict __src,
                     size_t __nwc,
                     size_t __len,
                     mbstate_t* __restrict __ps,
-                    locale_t __loc);
-wint_t btowc_l(int __c, locale_t __loc);
-int wctob_l(wint_t __c, locale_t __loc);
+                    __libcpp_locale_t __loc);
+wint_t btowc_l(int __c, __libcpp_locale_t __loc);
+int wctob_l(wint_t __c, __libcpp_locale_t __loc);
 
-decltype(MB_CUR_MAX) MB_CUR_MAX_L(locale_t __l);
+decltype(MB_CUR_MAX) MB_CUR_MAX_L(__libcpp_locale_t __l);
 
 // the *_l functions are prefixed on Windows, only available for msvcr80+, VS2005+
 #define mbtowc_l _mbtowc_l
@@ -193,8 +206,8 @@ decltype(MB_CUR_MAX) MB_CUR_MAX_L(locale_t __l);
 #  define strtof_l _strtof_l
 #  define strtold_l _strtold_l
 #else
-_LIBCPP_EXPORTED_FROM_ABI float strtof_l(const char*, char**, locale_t);
-_LIBCPP_EXPORTED_FROM_ABI long double strtold_l(const char*, char**, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI float strtof_l(const char*, char**, __libcpp_locale_t);
+_LIBCPP_EXPORTED_FROM_ABI long double strtold_l(const char*, char**, __libcpp_locale_t);
 #endif
 inline _LIBCPP_HIDE_FROM_ABI int islower_l(int __c, _locale_t __loc) { return _islower_l((int)__c, __loc); }
 
@@ -220,16 +233,17 @@ inline _LIBCPP_HIDE_FROM_ABI int isupper_l(int __c, _locale_t __loc) { return _i
 #define towupper_l _towupper_l
 #define towlower_l _towlower_l
 #if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
-_LIBCPP_EXPORTED_FROM_ABI size_t strftime_l(char* ret, size_t n, const char* format, const struct tm* tm, locale_t loc);
+_LIBCPP_EXPORTED_FROM_ABI size_t
+strftime_l(char* ret, size_t n, const char* format, const struct tm* tm, __libcpp_locale_t loc);
 #else
 #  define strftime_l _strftime_l
 #endif
 #define sscanf_l(__s, __l, __f, ...) _sscanf_l(__s, __f, __l, __VA_ARGS__)
-_LIBCPP_EXPORTED_FROM_ABI int snprintf_l(char* __ret, size_t __n, locale_t __loc, const char* __format, ...);
-_LIBCPP_EXPORTED_FROM_ABI int asprintf_l(char** __ret, locale_t __loc, const char* __format, ...);
-_LIBCPP_EXPORTED_FROM_ABI int vasprintf_l(char** __ret, locale_t __loc, const char* __format, va_list __ap);
+_LIBCPP_EXPORTED_FROM_ABI int snprintf_l(char* __ret, size_t __n, __libcpp_locale_t __loc, const char* __format, ...);
+_LIBCPP_EXPORTED_FROM_ABI int asprintf_l(char** __ret, __libcpp_locale_t __loc, const char* __format, ...);
+_LIBCPP_EXPORTED_FROM_ABI int vasprintf_l(char** __ret, __libcpp_locale_t __loc, const char* __format, va_list __ap);
 
 // not-so-pressing FIXME: use locale to determine blank characters
-inline int iswblank_l(wint_t __c, locale_t /*loc*/) { return (__c == L' ' || __c == L'\t'); }
+inline int iswblank_l(wint_t __c, __libcpp_locale_t /*loc*/) { return (__c == L' ' || __c == L'\t'); }
 
 #endif // _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H

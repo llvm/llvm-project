@@ -26,12 +26,14 @@
 #  include <__support/xlocale/__posix_l_fallback.h>
 #endif // defined(__MVS__)
 
+using __libcpp_locale_t = locale_t;
+
 namespace {
 
 struct __setAndRestore {
-  explicit __setAndRestore(locale_t locale) {
-    if (locale == (locale_t)0) {
-      __cloc   = newlocale(LC_ALL_MASK, "C", /* base */ (locale_t)0);
+  explicit __setAndRestore(__libcpp_locale_t locale) {
+    if (locale == (__libcpp_locale_t)0) {
+      __cloc   = newlocale(LC_ALL_MASK, "C", /* base */ (__libcpp_locale_t)0);
       __stored = uselocale(__cloc);
     } else {
       __stored = uselocale(locale);
@@ -45,36 +47,37 @@ struct __setAndRestore {
   }
 
 private:
-  locale_t __stored = (locale_t)0;
-  locale_t __cloc   = (locale_t)0;
+  __libcpp_locale_t __stored = (__libcpp_locale_t)0;
+  __libcpp_locale_t __cloc   = (__libcpp_locale_t)0;
 };
 
 } // namespace
 
 // The following are not POSIX routines.  These are quick-and-dirty hacks
 // to make things pretend to work
-inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
+inline _LIBCPP_HIDE_FROM_ABI long long
+strtoll_l(const char* __nptr, char** __endptr, int __base, __libcpp_locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtoll(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, locale_t locale) {
+inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, __libcpp_locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtod(__nptr, __endptr);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI float strtof_l(const char* __nptr, char** __endptr, locale_t locale) {
+inline _LIBCPP_HIDE_FROM_ABI float strtof_l(const char* __nptr, char** __endptr, __libcpp_locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtof(__nptr, __endptr);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double strtold_l(const char* __nptr, char** __endptr, locale_t locale) {
+inline _LIBCPP_HIDE_FROM_ABI long double strtold_l(const char* __nptr, char** __endptr, __libcpp_locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtold(__nptr, __endptr);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-strtoull_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
+strtoull_l(const char* __nptr, char** __endptr, int __base, __libcpp_locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtoull(__nptr, __endptr, __base);
 }

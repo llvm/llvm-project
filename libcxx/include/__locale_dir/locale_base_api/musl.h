@@ -20,11 +20,14 @@
 #include <cstdlib>
 #include <cwchar>
 
-inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __endptr, int __base, locale_t) {
+using __libcpp_locale_t = locale_t;
+
+inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __endptr, int __base, __libcpp_locale_t) {
   return ::strtoll(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long strtoull_l(const char* __nptr, char** __endptr, int __base, locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI unsigned long long
+strtoull_l(const char* __nptr, char** __endptr, int __base, __libcpp_locale_t) {
   return ::strtoull(__nptr, __endptr, __base);
 }
 

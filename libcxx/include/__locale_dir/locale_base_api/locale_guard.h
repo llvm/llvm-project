@@ -10,7 +10,7 @@
 #define _LIBCPP___LOCALE_LOCALE_BASE_API_LOCALE_GUARD_H
 
 #include <__config>
-#include <__locale> // for locale_t
+#include <__locale> // for __libcpp_locale_t
 #include <clocale>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -21,21 +21,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_LOCALE__L_EXTENSIONS)
 struct __libcpp_locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __libcpp_locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
+  _LIBCPP_HIDE_FROM_ABI __libcpp_locale_guard(__libcpp_locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~__libcpp_locale_guard() {
     if (__old_loc_)
       uselocale(__old_loc_);
   }
 
-  locale_t __old_loc_;
+  __libcpp_locale_t __old_loc_;
 
   __libcpp_locale_guard(__libcpp_locale_guard const&)            = delete;
   __libcpp_locale_guard& operator=(__libcpp_locale_guard const&) = delete;
 };
 #elif defined(_LIBCPP_MSVCRT_LIKE)
 struct __libcpp_locale_guard {
-  __libcpp_locale_guard(locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
+  __libcpp_locale_guard(__libcpp_locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
     // Setting the locale can be expensive even when the locale given is
     // already the current locale, so do an explicit check to see if the
     // current locale is already the one we want.
