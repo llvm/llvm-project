@@ -64,8 +64,6 @@ private:
     if (!AnonymousPtrCreator || !PtrJumpStubCreator)
       Err = make_error<StringError>("Architecture not supported",
                                     inconvertibleErrorCode());
-    if (Err)
-      return;
   }
 
   ~JITLinkRedirectableSymbolManager() {
