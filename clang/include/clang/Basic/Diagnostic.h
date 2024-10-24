@@ -325,6 +325,10 @@ private:
   // Cap on depth of constexpr evaluation backtrace stack, 0 -> no limit.
   unsigned ConstexprBacktraceLimit = 0;
 
+  // Cap on size of value in a constexpr diagnostic without ellipsis, 0 -> no
+  // limit.
+  unsigned ConstexprValueSizeLimit = 0;
+
   IntrusiveRefCntPtr<DiagnosticIDs> Diags;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   DiagnosticConsumer *Client = nullptr;
@@ -656,6 +660,16 @@ public:
   /// notes to emit along with a given diagnostic.
   unsigned getConstexprBacktraceLimit() const {
     return ConstexprBacktraceLimit;
+  }
+
+  /// Specify the maximum size of a value to print without ellipsis.
+  void setConstexprValueSizeLimit(unsigned Limit) {
+    ConstexprValueSizeLimit = Limit;
+  }
+
+  /// Retrieve the maximum size of a value to print without ellipsis.
+  unsigned getConstexprValueSizeLimit() const {
+    return ConstexprValueSizeLimit;
   }
 
   /// When set to true, any unmapped warnings are ignored.
