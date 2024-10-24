@@ -25,7 +25,7 @@
 // CHECK-YCTP-SAME: -o
 // CHECK-YCTP-SAME: pchfile.pch
 // CHECK-YCTP-SAME: -x
-// CHECK-YCTP-SAME: c++-header
+// CHECK-YCTP-SAME: c++-header -- this will fail tests on windows!
 
 // Except if a later /TC changes it back.
 // RUN: %clang_cl -Werror /Yc%S/Inputs/pchfile.h /FI%S/Inputs/pchfile.h /c /Fo%t/pchfile.obj /Fp%t/pchfile.pch -v -- %s 2>&1 \
