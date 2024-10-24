@@ -4,6 +4,7 @@
 
 // REQUIRES: aarch64-registered-target
 
+#include <arm_neon.h>
 #include <arm_sve.h>
 #include <stdarg.h>
 
@@ -15,6 +16,10 @@ typedef svmfloat8_t mfvec8 __attribute__((arm_sve_vector_bits(128)));
 typedef struct {
     float f[4];
 } HFA;
+
+typedef struct {
+    mfloat8x16_t f[4];
+} HVA;
 
 // Pure Scalable Type, needs 4 Z-regs, 2 P-regs
 typedef struct {
@@ -140,17 +145,19 @@ void test_argpass_last_p(PST *p) {
 // Not enough Z-regs, push PST to memory and pass a pointer, Z-regs and
 // P-regs still available for other arguments
 //   u     -> z0
-//   0.0   -> d1-d4
+//   v     -> q1
+//   w     -> q2
+//   0.0   -> d3-d4
 //   1     -> w0
 //   *p    -> memory, address -> x1
 //   2     -> w2
 //   3.0   -> d5
 //   true  -> p0
-void test_argpass_no_z(PST *p, double dummy, svmfloat8_t u) {
-    void argpass_no_z_callee(svmfloat8_t, double, double, double, double, int, PST, int, double, svbool_t);
-    argpass_no_z_callee(u, .0, .0, .0, .0, 1, *p, 2, 3.0, svptrue_b64());
+void test_argpass_no_z(PST *p, double dummy, svmfloat8_t u, int8x16_t v, mfloat8x16_t w) {
+    void argpass_no_z_callee(svmfloat8_t, int8x16_t, mfloat8x16_t, double, double, int, PST, int, double, svbool_t);
+    argpass_no_z_callee(u, v, w, .0, .0, 1, *p, 2, 3.0, svptrue_b64());
 }
-// CHECK: declare void @argpass_no_z_callee(<vscale x 16 x i8>, double noundef, double noundef, double noundef, double noundef, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
+// CHECK: declare void @argpass_no_z_callee(<vscale x 16 x i8>, <16 x i8> noundef, <16 x i8>, double noundef, double noundef, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
 
 
 // Like the above, using a tuple to occupy some registers.
@@ -200,6 +207,20 @@ void test_argpass_no_z_hfa(HFA *h, PST *p) {
 // CHECK-AAPCS:  declare void @argpass_no_z_hfa_callee(double noundef, [4 x float] alignstack(8), i32 noundef, ptr noundef, i32 noundef, <vscale x 16 x i1>)
 // CHECK-DARWIN: declare void @argpass_no_z_hfa_callee(double noundef, [4 x float], i32 noundef, ptr noundef, i32 noundef, <vscale x 16 x i1>)
 
+// Not enough Z-regs (consumed by a HVA), PST passed indirectly
+//   0.0  -> d0
+//   *h   -> s1-s4
+//   1    -> w0
+//   *p   -> memory, address -> x1
+//   p    -> x1
+//   2    -> w2
+//   true -> p0
+void test_argpass_no_z_hva(HVA *h, PST *p) {
+    void argpass_no_z_hva_callee(double, HVA, int, PST, int, svbool_t);
+    argpass_no_z_hva_callee(.0, *h, 1, *p, 2, svptrue_b64());
+}
+// CHECK-AAPCS:  declare void @argpass_no_z_hva_callee(double noundef, [4 x <16 x i8>] alignstack(16), i32 noundef, ptr noundef, i32 noundef, <vscale x 16 x i1>)
+// CHECK-DARWIN: declare void @argpass_no_z_hva_callee(double noundef, [4 x <16 x i8>], i32 noundef, ptr noundef, i32 noundef, <vscale x 16 x i1>)
 
 // Not enough P-regs, PST passed indirectly, Z-regs and P-regs still available.
 //   true -> p0-p2

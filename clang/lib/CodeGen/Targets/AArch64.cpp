@@ -368,18 +368,34 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
       if (EIT->getNumBits() > 128)
         return getNaturalAlignIndirect(Ty, false);
 
-    if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-      if (BT->isSVEBool() || BT->isSVECount())
-        NPRN = std::min(NPRN + 1, 4u);
-      else if (BT->getKind() == BuiltinType::SveBoolx2)
-        NPRN = std::min(NPRN + 2, 4u);
-      else if (BT->getKind() == BuiltinType::SveBoolx4)
-        NPRN = std::min(NPRN + 4, 4u);
-      else if (BT->isFloatingPoint() || BT->isVectorType())
+    if (Ty->isVectorType())
+      NSRN = std::min(NSRN + 1, 8u);
+    else if (const auto *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->isFloatingPoint())
         NSRN = std::min(NSRN + 1, 8u);
-      else if (BT->isSVESizelessBuiltinType())
-        NSRN = std::min(
-            NSRN + getContext().getBuiltinVectorTypeInfo(BT).NumVectors, 8u);
+      else {
+        switch (BT->getKind()) {
+        case BuiltinType::MFloat8x8:
+        case BuiltinType::MFloat8x16:
+          NSRN = std::min(NSRN + 1, 8u);
+          break;
+        case BuiltinType::SveBool:
+        case BuiltinType::SveCount:
+          NPRN = std::min(NPRN + 1, 4u);
+          break;
+        case BuiltinType::SveBoolx2:
+          NPRN = std::min(NPRN + 2, 4u);
+          break;
+        case BuiltinType::SveBoolx4:
+          NPRN = std::min(NPRN + 4, 4u);
+          break;
+        default:
+          if (BT->isSVESizelessBuiltinType())
+            NSRN = std::min(
+                NSRN + getContext().getBuiltinVectorTypeInfo(BT).NumVectors,
+                8u);
+        }
+      }
     }
 
     return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
@@ -615,7 +631,8 @@ bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // but with the difference that any floating-point type is allowed,
   // including __fp16.
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-    if (BT->isFloatingPoint())
+    if (BT->isFloatingPoint() || BT->getKind() == BuiltinType::MFloat8x16 ||
+        BT->getKind() == BuiltinType::MFloat8x8)
       return true;
   } else if (const VectorType *VT = Ty->getAs<VectorType>()) {
     if (auto Kind = VT->getVectorKind();
