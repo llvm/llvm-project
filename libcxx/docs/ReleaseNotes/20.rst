@@ -87,6 +87,9 @@ Deprecations and Removals
   the ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro can be defined to make the function non-``noexcept``. That macro
   will be removed in LLVM 21.
 
+- The ``_LIBCPP_DISABLE_AVAILABILITY`` macro that was used to force-disable availability markup has now been removed.
+  Whether availability markup is used by the library is now solely controlled at configuration-time.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
