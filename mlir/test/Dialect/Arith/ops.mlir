@@ -1127,7 +1127,7 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
 // CHECK: {{.*}} = arith.addf %arg0, %arg1 fastmath<nnan,ninf> : f32
   %7 = arith.addf %arg0, %arg1 fastmath<nnan,ninf> : f32
 // CHECK: {{.*}} = arith.mulf %arg0, %arg1 fastmath<fast> : f32
-  %8 = arith.mulf %arg0, %arg1 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : f32
+  %8 = arith.mulf %arg0, %arg1 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn,ftz> : f32
 // CHECK: {{.*}} = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
   %9 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
@@ -1159,5 +1159,19 @@ func.func @intflags_func(%arg0: i64, %arg1: i64) {
   %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
   // CHECK: %{{.*}} = arith.shli %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
   %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
+  return
+}
+
+// CHECK-LABEL: flush_to_zero
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @flush_to_zero(%arg0: f32, %arg1: f32) {
+  // CHECK: %{{.+}} = arith.addf %[[ARG0]], %[[ARG1]] fastmath<ftz> : f32
+  // CHECK-NEXT: %{{.+}} = arith.subf %[[ARG0]], %[[ARG1]] fastmath<ftz> : f32
+  // CHECK-NEXT: %{{.+}} = arith.mulf %[[ARG0]], %[[ARG1]] fastmath<ftz> : f32
+  // CHECK-NEXT: %{{.+}} = arith.divf %[[ARG0]], %[[ARG1]] fastmath<ftz> : f32
+  %0 = arith.addf %arg0, %arg1 fastmath<ftz> : f32
+  %1 = arith.subf %arg0, %arg1 fastmath<ftz> : f32
+  %2 = arith.mulf %arg0, %arg1 fastmath<ftz> : f32
+  %3 = arith.divf %arg0, %arg1 fastmath<ftz> : f32
   return
 }
