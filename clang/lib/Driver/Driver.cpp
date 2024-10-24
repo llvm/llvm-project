@@ -985,7 +985,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
           TC = DeviceTC.get();
         } else
-          TC = &getToolChain(C.getInputArgs(), TT);
+          TC = &getToolChain(C.getInputArgs(), TT, Inputs);
         C.addOffloadDeviceToolChain(TC, Action::OFK_OpenMP);
         auto It = DerivedArchs.find(TT.getTriple());
         if (It != DerivedArchs.end())
@@ -1487,12 +1487,17 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   std::unique_ptr<llvm::opt::InputArgList> UArgs =
       std::make_unique<InputArgList>(std::move(Args));
 
+  llvm::Triple TT = computeTargetTriple(*this, TargetTriple, *UArgs);
+
   // Perform the default argument translations.
   DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs);
 
+  // Construct the list of inputs.
+  InputList Inputs;
+  BuildInputs(TT, *TranslatedArgs, Inputs);
+
   // Owned by the host.
-  const ToolChain &TC = getToolChain(
-      *UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
+  const ToolChain &TC = getToolChain(*UArgs, TT, Inputs);
 
   // Check if the environment version is valid except wasm case.
   llvm::Triple Triple = TC.getTriple();
@@ -1552,10 +1557,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   if (!HandleImmediateArgs(*C))
     return C;
-
-  // Construct the list of inputs.
-  InputList Inputs;
-  BuildInputs(C->getDefaultToolChain(), *TranslatedArgs, Inputs);
 
   // Populate the tool chains for the offloading devices, if any.
   CreateOffloadingDeviceToolChains(*C, Inputs);
@@ -1770,7 +1771,7 @@ void Driver::generateCompilationDiagnostics(
 
   // Construct the list of inputs.
   InputList Inputs;
-  BuildInputs(C.getDefaultToolChain(), C.getArgs(), Inputs);
+  BuildInputs(C.getDefaultToolChain().getTriple(), C.getArgs(), Inputs);
 
   for (InputList::iterator it = Inputs.begin(), ie = Inputs.end(); it != ie;) {
     bool IgnoreInput = false;
@@ -2663,8 +2664,24 @@ static types::ID CXXHeaderUnitType(ModuleHeaderMode HM) {
   return types::TY_CXXHUHeader;
 }
 
+static types::ID lookupTypeForExtension(const Driver &D, const llvm::Triple &TT,
+                                        llvm::StringRef Ext) {
+  types::ID Ty = types::lookupTypeForExtension(Ext);
+
+  // Flang always runs the preprocessor and has no notion of "preprocessed
+  // fortran". Here, TY_PP_Fortran is coerced to TY_Fortran to avoid treating
+  // them differently.
+  if (D.IsFlangMode() && Ty == types::TY_PP_Fortran)
+    Ty = types::TY_Fortran;
+
+  // Darwin always preprocesses assembly files (unless -x is used explicitly).
+  if (TT.isOSBinFormatMachO() && Ty == types::TY_PP_Asm)
+    Ty = types::TY_Asm;
+  return Ty;
+}
+
 // Construct a the list of inputs and their types.
-void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
+void Driver::BuildInputs(const llvm::Triple &TT, DerivedArgList &Args,
                          InputList &Inputs) const {
   const llvm::opt::OptTable &Opts = getOpts();
   // Track the current user specified (-x) input. We also explicitly track the
@@ -2742,7 +2759,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
           // We use a host hook here because Darwin at least has its own
           // idea of what .s is.
           if (const char *Ext = strrchr(Value, '.'))
-            Ty = TC.LookupTypeForExtension(Ext + 1);
+            Ty = lookupTypeForExtension(*this, TT, Ext + 1);
 
           if (Ty == types::TY_INVALID) {
             if (IsCLMode() && (Args.hasArgNoClaim(options::OPT_E) || CCGenDiagnostics))
@@ -2798,7 +2815,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
           // If emulating cl.exe, make sure that /TC and /TP don't affect input
           // object files.
           const char *Ext = strrchr(Value, '.');
-          if (Ext && TC.LookupTypeForExtension(Ext + 1) == types::TY_Object)
+          if (Ext &&
+              lookupTypeForExtension(*this, TT, Ext + 1) == types::TY_Object)
             Ty = types::TY_Object;
         }
         if (Ty == types::TY_INVALID) {
@@ -5609,9 +5627,9 @@ InputInfoList Driver::BuildJobsForActionNoCache(
     StringRef ArchName = BAA->getArchName();
 
     if (!ArchName.empty())
-      TC = &getToolChain(C.getArgs(),
-                         computeTargetTriple(*this, TargetTriple,
-                                             C.getArgs(), ArchName));
+      TC = &getToolChain(
+          C.getArgs(),
+          computeTargetTriple(*this, TargetTriple, C.getArgs(), ArchName), {});
     else
       TC = &C.getDefaultToolChain();
 
@@ -6372,7 +6390,8 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
 }
 
 const ToolChain &Driver::getToolChain(const ArgList &Args,
-                                      const llvm::Triple &Target) const {
+                                      const llvm::Triple &Target,
+                                      const InputList &Inputs) const {
 
   auto &TC = ToolChains[Target.str()];
   if (!TC) {
@@ -6440,7 +6459,12 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       TC = std::make_unique<toolchains::NVPTXToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::AMDHSA:
-      TC = std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args);
+      TC =
+          llvm::any_of(Inputs,
+                       [](auto &Input) { return types::isOpenCL(Input.first); })
+              ? std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args)
+              : std::make_unique<toolchains::AMDGPUToolChain>(*this, Target,
+                                                              Args);
       break;
     case llvm::Triple::AMDPAL:
     case llvm::Triple::Mesa3D:

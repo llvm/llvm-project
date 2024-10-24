@@ -1003,18 +1003,6 @@ std::string ToolChain::GetStaticLibToolPath() const {
   return GetProgramPath("llvm-ar");
 }
 
-types::ID ToolChain::LookupTypeForExtension(StringRef Ext) const {
-  types::ID id = types::lookupTypeForExtension(Ext);
-
-  // Flang always runs the preprocessor and has no notion of "preprocessed
-  // fortran". Here, TY_PP_Fortran is coerced to TY_Fortran to avoid treating
-  // them differently.
-  if (D.IsFlangMode() && id == types::TY_PP_Fortran)
-    id = types::TY_Fortran;
-
-  return id;
-}
-
 bool ToolChain::HasNativeLLVMSupport() const {
   return false;
 }
