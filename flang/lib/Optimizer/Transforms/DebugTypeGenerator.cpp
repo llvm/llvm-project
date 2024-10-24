@@ -511,6 +511,11 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                 /*hasDescriptor=*/false);
   } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(Ty)) {
     return convertRecordType(recTy, fileAttr, scope, declOp);
+  } else if (auto refTy = mlir::dyn_cast_if_present<fir::ReferenceType>(Ty)) {
+    auto elTy = refTy.getEleTy();
+    return convertPointerLikeType(elTy, fileAttr, scope, declOp,
+                                  /*genAllocated=*/false,
+                                  /*genAssociated=*/false);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
