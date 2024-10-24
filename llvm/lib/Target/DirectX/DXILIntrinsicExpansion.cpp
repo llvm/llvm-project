@@ -471,17 +471,17 @@ static Intrinsic::ID getMinForClamp(Intrinsic::ID ClampIntrinsic) {
   return Intrinsic::minnum;
 }
 
-static Value* expandClampIntrinsic(CallInst* Orig,
-  Intrinsic::ID ClampIntrinsic) {
-  Value* X = Orig->getOperand(0);
-  Value* Min = Orig->getOperand(1);
-  Value* Max = Orig->getOperand(2);
-  Type* Ty = X->getType();
+static Value *expandClampIntrinsic(CallInst *Orig,
+                                   Intrinsic::ID ClampIntrinsic) {
+  Value *X = Orig->getOperand(0);
+  Value *Min = Orig->getOperand(1);
+  Value *Max = Orig->getOperand(2);
+  Type *Ty = X->getType();
   IRBuilder<> Builder(Orig);
-  auto* MaxCall = Builder.CreateIntrinsic(
-    Ty, getMaxForClamp(ClampIntrinsic), { X, Min }, nullptr, "dx.max");
+  auto *MaxCall = Builder.CreateIntrinsic(Ty, getMaxForClamp(ClampIntrinsic),
+                                          {X, Min}, nullptr, "dx.max");
   return Builder.CreateIntrinsic(Ty, getMinForClamp(ClampIntrinsic),
-    { MaxCall, Max }, nullptr, "dx.min");
+                                 {MaxCall, Max}, nullptr, "dx.min");
 }
 
 static Value *expandDegreesIntrinsic(CallInst *Orig) {

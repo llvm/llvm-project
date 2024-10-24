@@ -18804,29 +18804,26 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         "hlsl.any");
   }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
-    Value* OpX = EmitScalarExpr(E->getArg(0));
-    Value* OpMin = EmitScalarExpr(E->getArg(1));
-    Value* OpMax = EmitScalarExpr(E->getArg(2));
+    Value *OpX = EmitScalarExpr(E->getArg(0));
+    Value *OpMin = EmitScalarExpr(E->getArg(1));
+    Value *OpMax = EmitScalarExpr(E->getArg(2));
 
     QualType Ty = E->getArg(0)->getType();
-    if (auto* VecTy = Ty->getAs<VectorType>())
+    if (auto *VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
 
     Intrinsic::ID Intr;
     if (Ty->isFloatingType()) {
       Intr = CGM.getHLSLRuntime().getNClampIntrinsic();
-    }
-    else if (Ty->isUnsignedIntegerType()) {
+    } else if (Ty->isUnsignedIntegerType()) {
       Intr = CGM.getHLSLRuntime().getUClampIntrinsic();
-    }
-    else {
+    } else {
       assert(Ty->isSignedIntegerType());
       Intr = CGM.getHLSLRuntime().getSClampIntrinsic();
     }
     return Builder.CreateIntrinsic(
-      /*ReturnType=*/OpX->getType(),
-      Intr,
-      ArrayRef<Value*>{OpX, OpMin, OpMax}, nullptr, "hlsl.clamp");
+        /*ReturnType=*/OpX->getType(), Intr,
+        ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "hlsl.clamp");
   }
   case Builtin::BI__builtin_hlsl_cross: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
