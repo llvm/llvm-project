@@ -201,7 +201,7 @@ Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
 Disabling and suppressing
 -------------------------
 
-There are multiple ways to suppress error reporting when using RealtimeSanitizer.
+There are multiple ways to disable error reporting when using RealtimeSanitizer.
 
 In general, ``ScopedDisabler`` should be preferred, as it is the most performant.
 
@@ -209,7 +209,7 @@ In general, ``ScopedDisabler`` should be preferred, as it is the most performant
    :widths: 30 15 15 10 70
    :header-rows: 1
 
-   * - Suppression method
+   * - Method
      - Specified at?
      - Scope
      - Run-time cost
@@ -218,7 +218,7 @@ In general, ``ScopedDisabler`` should be preferred, as it is the most performant
      - Compile-time
      - Stack
      - Very low
-     - Suppresses all RTSan error reports in the current scope and all invoked functions.
+     - Violations are ignored for the lifetime of the ``ScopedDisabler`` object.
    * - ``function-name-matches`` suppression
      - Run-time
      - Single function
@@ -234,7 +234,7 @@ In general, ``ScopedDisabler`` should be preferred, as it is the most performant
 ``ScopedDisabler``
 ##################
 
-At compile time, RealtimeSanitizer may be disabled for a scope using ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all RTSan error reports are suppressed for that thread. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively.
+At compile time, RealtimeSanitizer may be disabled using ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all potential RTSan errors are ignored for that thread including all invoked functions, and any functions called transitively.
 
 .. code-block:: c++
 
@@ -290,6 +290,8 @@ Suppressions specified in this file are one of two flavors.
 ``call-stack-contains`` suppresses reporting of errors in any stack that contains a string matching the pattern specified. For example, suppressing error reporting of any non-real-time-safe behavior in ``std::vector`` may be specified ``call-stack-contains:std::*vector``. You must include symbols in your build for this method to be effective, unsymbolicated stack traces cannot be matched. ``call-stack-contains`` has the highest run-time cost of any method of suppression.
 
 Patterns may be exact matches or are "regex-light" patterns, containing special characters such as ``^$*``.
+
+The number of potential errors suppressed via this method may be seen on exit when using the ``print_stats_on_exit`` flag.
 
 Compile-time sanitizer detection
 --------------------------------
