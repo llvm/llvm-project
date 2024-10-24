@@ -19774,8 +19774,15 @@ static void DoMarkVarDeclReferenced(
   case OdrUseContext::Dependent:
     // If this is a dependent context, we don't need to mark variables as
     // odr-used, but we may still need to track them for lambda capture.
-    // FIXME: Do we also need to do this inside dependent typeid expressions
-    // (which are modeled as unevaluated at this point)?
+    // 
+    // If an expression potentially references a local entity within a
+    // declarative region in which it is odr-usable, and the expression would be
+    // potentially evaluated if the effect of any enclosing typeid expressions
+    // ([expr.typeid]) were ignored, the entity is said to be implicitly
+    // captured by each intervening lambda-expression with an associated
+    // capture-default that does not explicitly capture it.
+    // TODO: How to determine if the current variable is within a typeid expression?
+
     DoMarkPotentialCapture(SemaRef, Loc, Var, E);
     break;
   }
