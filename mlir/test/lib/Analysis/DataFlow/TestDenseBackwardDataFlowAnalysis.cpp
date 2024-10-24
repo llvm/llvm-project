@@ -271,10 +271,8 @@ struct TestNextAccessPass
 
     auto config = DataFlowConfig().setInterprocedural(interprocedural);
     DataFlowSolver solver(config);
-    solver.load<DeadCodeAnalysis>();
+    UnderlyingValueAnalysis::loadAnalysis(solver);
     solver.load<NextAccessAnalysis>(symbolTable, assumeFuncReads);
-    solver.load<SparseConstantPropagation>();
-    solver.load<UnderlyingValueAnalysis>();
     if (failed(solver.initializeAndRun(op))) {
       emitError(op->getLoc(), "dataflow solver failed");
       return signalPassFailure();
