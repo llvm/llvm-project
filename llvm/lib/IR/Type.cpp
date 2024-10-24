@@ -892,6 +892,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   if (Name.starts_with("dx."))
     return TargetTypeInfo(PointerType::get(C, 0));
 
+  // Opaque types in the AMDGPU name space.
+  if (Name == "amdgcn.named.barrier") {
+    return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
+                          TargetExtType::CanBeGlobal);
+  }
+
   return TargetTypeInfo(Type::getVoidTy(C));
 }
 
