@@ -4190,7 +4190,7 @@ def LoopHint : Attr {
   /// unroll_and_jam: attempt to unroll and jam loop if State == Enable.
   /// unroll_and_jam_count: unroll and jams loop 'Value' times.
   /// distribute: attempt to distribute loop if State == Enable.
-  /// pipeline: disable pipelining loop if State == Disable.
+  /// pipeline: enable pipelining loop if State == Enable.
   /// pipeline_initiation_interval: create loop schedule with initiation interval equal to 'Value'.
 
   /// #pragma unroll <argument> directive
@@ -4210,7 +4210,7 @@ def LoopHint : Attr {
                            "vectorize_predicate"],
                           ["Vectorize", "VectorizeWidth", "Interleave", "InterleaveCount",
                            "Unroll", "UnrollCount", "UnrollAndJam", "UnrollAndJamCount",
-                           "PipelineDisabled", "PipelineInitiationInterval", "Distribute",
+                           "Pipeline", "PipelineInitiationInterval", "Distribute",
                            "VectorizePredicate"]>,
               EnumArgument<"State", "LoopHintState", /*is_string=*/false,
                            ["enable", "disable", "numeric", "fixed_width",
@@ -4230,7 +4230,7 @@ def LoopHint : Attr {
     case UnrollCount: return "unroll_count";
     case UnrollAndJam: return "unroll_and_jam";
     case UnrollAndJamCount: return "unroll_and_jam_count";
-    case PipelineDisabled: return "pipeline";
+    case Pipeline: return "pipeline";
     case PipelineInitiationInterval: return "pipeline_initiation_interval";
     case Distribute: return "distribute";
     case VectorizePredicate: return "vectorize_predicate";
