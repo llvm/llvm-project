@@ -1524,6 +1524,10 @@ in addition with the pragmas or -fmax-tokens flag to get any warnings.
 }];
 }
 
+// Warning group for type aware allocators
+def TypeAwareAllocatorMismatch :
+  DiagGroup<"type-aware-allocator-mismatch">;
+
 def WebAssemblyExceptionSpec : DiagGroup<"wasm-exception-spec">;
 
 def RTTI : DiagGroup<"rtti">;

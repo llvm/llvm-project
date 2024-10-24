@@ -307,6 +307,10 @@ EXTENSION(datasizeof, LangOpts.CPlusPlus)
 
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
 
+// Type aware allocators
+FEATURE(cxx_type_aware_allocators, LangOpts.TypeAwareAllocators)
+FEATURE(cxx_type_aware_destroying_delete, LangOpts.TypeAwareDestroyingDelete)
+
 // CUDA/HIP Features
 FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
 EXTENSION(cuda_implicit_host_device_templates, LangOpts.CUDA && LangOpts.OffloadImplicitHostDeviceTemplates)

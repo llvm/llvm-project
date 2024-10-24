@@ -47,6 +47,7 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
+#include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -9710,10 +9711,16 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
   //    results in an ambiguity or in a function that is deleted or inaccessible
   if (CSM == CXXSpecialMemberKind::Destructor && MD->isVirtual()) {
     FunctionDecl *OperatorDelete = nullptr;
+    auto DeallocType = Context.getRecordType(RD);
     DeclarationName Name =
       Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+    ImplicitDeallocationParameters IDP = {.PassTypeIdentity =
+                                              AllowTypeAwareAllocators(),
+                                          .PassAlignment = false,
+                                          .PassSize = false};
     if (FindDeallocationFunction(MD->getLocation(), MD->getParent(), Name,
-                                 OperatorDelete, /*Diagnose*/false)) {
+                                 OperatorDelete, DeallocType, IDP,
+                                 /*Diagnose*/ false)) {
       if (Diagnose)
         Diag(RD->getLocation(), diag::note_deleted_dtor_no_operator_delete);
       return true;
@@ -10864,14 +10871,19 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       // conversion from 'this' to the type of a destroying operator delete's
       // first parameter, perform that conversion now.
       if (OperatorDelete->isDestroyingOperatorDelete()) {
-        QualType ParamType = OperatorDelete->getParamDecl(0)->getType();
+        unsigned PointerParam = 0;
+        if (IsTypeAwareOperatorNewOrDelete(OperatorDelete)) {
+          ++PointerParam;
+        }
+        QualType ParamType =
+            OperatorDelete->getParamDecl(PointerParam)->getType();
         if (!declaresSameEntity(ParamType->getAsCXXRecordDecl(), RD)) {
           // C++ [class.dtor]p13:
           //   ... as if for the expression 'delete this' appearing in a
           //   non-virtual destructor of the destructor's class.
           ContextRAII SwitchContext(*this, Destructor);
-          ExprResult This =
-              ActOnCXXThis(OperatorDelete->getParamDecl(0)->getLocation());
+          ExprResult This = ActOnCXXThis(
+              OperatorDelete->getParamDecl(PointerParam)->getLocation());
           assert(!This.isInvalid() && "couldn't form 'this' expr in dtor?");
           This = PerformImplicitConversion(This.get(), ParamType,
                                            AssignmentAction::Passing);
@@ -11727,6 +11739,12 @@ NamespaceDecl *Sema::getStdNamespace() const {
   return cast_or_null<NamespaceDecl>(
                                  StdNamespace.get(Context.getExternalSource()));
 }
+
+ClassTemplateDecl *Sema::getStdTypeIdentity() const {
+  return cast_or_null<ClassTemplateDecl>(
+      StdTypeIdentity.get(Context.getExternalSource()));
+}
+
 namespace {
 
 enum UnsupportedSTLSelect {
@@ -16105,6 +16123,127 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
   return Invalid;
 }
 
+bool Sema::IsTypeIdentitySpecialization(QualType Type) const {
+  auto *TypeIdentity = getStdTypeIdentity();
+  if (!TypeIdentity)
+    return false;
+  auto *SpecializedDecl = Type->getSpecializedTemplateDecl();
+  return TypeIdentity == SpecializedDecl;
+}
+
+bool Sema::IsTypeAwareOperatorNewOrDelete(const FunctionDecl *FnDecl) const {
+  // Type aware operators
+  if (FnDecl->getNumParams() < 2)
+    return false;
+  const auto *ParamDecl = FnDecl->getParamDecl(0);
+  return IsTypeIdentitySpecialization(ParamDecl->getType());
+}
+
+bool Sema::IsTypeAwareOperatorNewOrDelete(
+    const FunctionTemplateDecl *FTD) const {
+  return IsTypeAwareOperatorNewOrDelete(FTD->getTemplatedDecl());
+}
+
+bool Sema::IsTypeAwareOperatorNewOrDelete(const NamedDecl *ND) const {
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
+    return IsTypeAwareOperatorNewOrDelete(FTD->getTemplatedDecl());
+  if (auto *FnDecl = dyn_cast<FunctionDecl>(ND))
+    return IsTypeAwareOperatorNewOrDelete(FnDecl);
+  return false;
+}
+
+std::optional<FunctionDecl *>
+Sema::InstantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
+                                      QualType DeallocType) {
+  if (!AllowTypeAwareAllocators())
+    return std::nullopt;
+
+  auto TemplateParameters = FnTemplateDecl->getTemplateParameters();
+  if (TemplateParameters->hasParameterPack())
+    return std::nullopt;
+
+  auto FnDecl = FnTemplateDecl->getTemplatedDecl();
+  if (!IsTypeAwareOperatorNewOrDelete(FnDecl))
+    return std::nullopt;
+
+  if (FnDecl->isVariadic())
+    return std::nullopt;
+
+  unsigned NumParams = FnDecl->getNumParams();
+  if (NumParams < 2)
+    return std::nullopt;
+
+  for (size_t Idx = 1; Idx < NumParams; ++Idx) {
+    // A type aware allocation is only usual if the only dependent parameter is
+    // the first parameter
+    const auto *ParamDecl = FnDecl->getParamDecl(Idx);
+    if (ParamDecl->getType()->isDependentType())
+      return std::nullopt;
+  }
+
+  auto SpecializedTypeIdentity =
+      InstantiateSpecializedTypeIdentity(DeallocType);
+  if (!SpecializedTypeIdentity)
+    return std::nullopt;
+  SmallVector<QualType, 4> ArgTypes;
+  ArgTypes.reserve(NumParams);
+  ArgTypes.push_back(*SpecializedTypeIdentity);
+  ArgTypes.push_back(FnDecl->getParamDecl(1)->getType());
+  unsigned UsualParamsIdx = 2;
+  if (UsualParamsIdx < NumParams && FnDecl->isDestroyingOperatorDelete()) {
+    auto Type = FnDecl->getParamDecl(UsualParamsIdx)->getType();
+    ArgTypes.push_back(Type);
+    ++UsualParamsIdx;
+  }
+
+  if (UsualParamsIdx < NumParams) {
+    auto Type = FnDecl->getParamDecl(UsualParamsIdx)->getType();
+    if (Context.hasSameUnqualifiedType(Type, Context.getSizeType())) {
+      ArgTypes.push_back(Type);
+      ++UsualParamsIdx;
+    }
+  }
+
+  if (UsualParamsIdx < NumParams) {
+    auto Type = FnDecl->getParamDecl(UsualParamsIdx)->getType();
+    if (Type->isAlignValT()) {
+      ArgTypes.push_back(Type);
+      ++UsualParamsIdx;
+    }
+  }
+
+  if (UsualParamsIdx != NumParams)
+    return std::nullopt;
+
+  FunctionProtoType::ExtProtoInfo EPI;
+  auto ExpectedFunctionType =
+      Context.getFunctionType(Context.VoidTy, ArgTypes, EPI);
+  SourceLocation Loc;
+  sema::TemplateDeductionInfo Info(Loc);
+  FunctionDecl *Result;
+  if (DeduceTemplateArguments(FnTemplateDecl, nullptr, ExpectedFunctionType,
+                              Result, Info) != TemplateDeductionResult::Success)
+    return std::nullopt;
+  return Result;
+}
+
+std::optional<QualType>
+Sema::InstantiateSpecializedTypeIdentity(QualType Subject) {
+  assert(AllowTypeAwareAllocators());
+  auto *TypeIdentity = getStdTypeIdentity();
+  if (!TypeIdentity) {
+    return std::nullopt;
+  }
+  auto TN = TemplateName(TypeIdentity);
+  TemplateArgumentListInfo Arguments;
+  Arguments.addArgument(getTrivialTemplateArgumentLoc(
+      TemplateArgument(Subject), QualType(), SourceLocation()));
+  auto Result = CheckTemplateIdType(TN, SourceLocation(), Arguments);
+  if (Result.isNull())
+    return std::nullopt;
+  return Result;
+}
+
 static inline bool
 CheckOperatorNewDeleteDeclarationScope(Sema &SemaRef,
                                        const FunctionDecl *FnDecl) {
@@ -16134,32 +16273,31 @@ static CanQualType RemoveAddressSpaceFromPtr(Sema &SemaRef,
       PtrTy->getPointeeType().getUnqualifiedType(), PtrQuals)));
 }
 
-static inline bool
-CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
-                            CanQualType ExpectedResultType,
-                            CanQualType ExpectedFirstParamType,
-                            unsigned DependentParamTypeDiag,
-                            unsigned InvalidParamTypeDiag) {
-  QualType ResultType =
-      FnDecl->getType()->castAs<FunctionType>()->getReturnType();
-
-  if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
-    // The operator is valid on any address space for OpenCL.
-    // Drop address space from actual and expected result types.
-    if (const auto *PtrTy = ResultType->getAs<PointerType>())
-      ResultType = RemoveAddressSpaceFromPtr(SemaRef, PtrTy);
-
-    if (auto ExpectedPtrTy = ExpectedResultType->getAs<PointerType>())
-      ExpectedResultType = RemoveAddressSpaceFromPtr(SemaRef, ExpectedPtrTy);
-  }
+static inline bool CheckOperatorNewDeleteTypes(
+    Sema &SemaRef, const FunctionDecl *FnDecl, CanQualType ExpectedResultType,
+    CanQualType ExpectedFirstParamType, unsigned DependentParamTypeDiag,
+    unsigned InvalidParamTypeDiag, unsigned *MinimumNonDefaultArgs) {
+  auto NormalizeType = [&SemaRef](QualType T) {
+    if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
+      // The operator is valid on any address space for OpenCL.
+      // Drop address space from actual and expected result types.
+      if (const auto PtrTy = T->template getAs<PointerType>())
+        T = RemoveAddressSpaceFromPtr(SemaRef, PtrTy);
+    }
+    return SemaRef.Context.getCanonicalType(T);
+  };
+  auto *FnType = FnDecl->getType()->castAs<FunctionType>();
+  QualType CanResultType = NormalizeType(FnType->getReturnType());
+  auto CanExpectedResultType = NormalizeType(ExpectedResultType);
+  auto CanExpectedFirstParamType = NormalizeType(ExpectedFirstParamType);
 
   // Check that the result type is what we expect.
-  if (SemaRef.Context.getCanonicalType(ResultType) != ExpectedResultType) {
+  if (CanResultType != CanExpectedResultType) {
     // Reject even if the type is dependent; an operator delete function is
     // required to have a non-dependent result type.
     return SemaRef.Diag(
                FnDecl->getLocation(),
-               ResultType->isDependentType()
+               CanResultType->isDependentType()
                    ? diag::err_operator_new_delete_dependent_result_type
                    : diag::err_operator_new_delete_invalid_result_type)
            << FnDecl->getDeclName() << ExpectedResultType;
@@ -16171,28 +16309,26 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
                       diag::err_operator_new_delete_template_too_few_parameters)
         << FnDecl->getDeclName();
 
+  unsigned FirstNonTypeParam = 0;
+  if (FnDecl->IsTypeAwareOperatorNewOrDelete()) {
+    if (!SemaRef.getLangOpts().TypeAwareAllocators) {
+      return SemaRef.Diag(FnDecl->getLocation(),
+                          diag::err_unsupported_type_aware_allocator);
+    }
+    ++FirstNonTypeParam;
+  }
+
   // The function decl must have at least 1 parameter.
-  if (FnDecl->getNumParams() == 0)
+  if (FnDecl->getNumParams() <= FirstNonTypeParam)
     return SemaRef.Diag(FnDecl->getLocation(),
                         diag::err_operator_new_delete_too_few_parameters)
       << FnDecl->getDeclName();
 
-  QualType FirstParamType = FnDecl->getParamDecl(0)->getType();
-  if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
-    // The operator is valid on any address space for OpenCL.
-    // Drop address space from actual and expected first parameter types.
-    if (const auto *PtrTy =
-            FnDecl->getParamDecl(0)->getType()->getAs<PointerType>())
-      FirstParamType = RemoveAddressSpaceFromPtr(SemaRef, PtrTy);
-
-    if (auto ExpectedPtrTy = ExpectedFirstParamType->getAs<PointerType>())
-      ExpectedFirstParamType =
-          RemoveAddressSpaceFromPtr(SemaRef, ExpectedPtrTy);
-  }
+  QualType FirstParamType =
+      NormalizeType(FnDecl->getParamDecl(FirstNonTypeParam)->getType());
 
   // Check that the first parameter type is what we expect.
-  if (SemaRef.Context.getCanonicalType(FirstParamType).getUnqualifiedType() !=
-      ExpectedFirstParamType) {
+  if (FirstParamType.getUnqualifiedType() != CanExpectedFirstParamType) {
     // The first parameter type is not allowed to be dependent. As a tentative
     // DR resolution, we allow a dependent parameter type if it is the right
     // type anyway, to allow destroying operator delete in class templates.
@@ -16202,6 +16338,7 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
            << FnDecl->getDeclName() << ExpectedFirstParamType;
   }
 
+  *MinimumNonDefaultArgs = FirstNonTypeParam + 1;
   return false;
 }
 
@@ -16217,22 +16354,26 @@ CheckOperatorNewDeclaration(Sema &SemaRef, const FunctionDecl *FnDecl) {
   CanQualType SizeTy =
     SemaRef.Context.getCanonicalType(SemaRef.Context.getSizeType());
 
+  unsigned MinimumNonDefaultArgs = 0;
   // C++ [basic.stc.dynamic.allocation]p1:
   //  The return type shall be void*. The first parameter shall have type
   //  std::size_t.
-  if (CheckOperatorNewDeleteTypes(SemaRef, FnDecl, SemaRef.Context.VoidPtrTy,
-                                  SizeTy,
-                                  diag::err_operator_new_dependent_param_type,
-                                  diag::err_operator_new_param_type))
+  if (CheckOperatorNewDeleteTypes(
+          SemaRef, FnDecl, SemaRef.Context.VoidPtrTy, SizeTy,
+          diag::err_operator_new_dependent_param_type,
+          diag::err_operator_new_param_type, &MinimumNonDefaultArgs))
     return true;
-
+  assert(MinimumNonDefaultArgs > 0);
   // C++ [basic.stc.dynamic.allocation]p1:
   //  The first parameter shall not have an associated default argument.
-  if (FnDecl->getParamDecl(0)->hasDefaultArg())
-    return SemaRef.Diag(FnDecl->getLocation(),
-                        diag::err_operator_new_default_arg)
-      << FnDecl->getDeclName() << FnDecl->getParamDecl(0)->getDefaultArgRange();
-
+  for (unsigned Idx = 0; Idx < MinimumNonDefaultArgs; ++Idx) {
+    auto *ParamDecl = FnDecl->getParamDecl(Idx);
+    if (ParamDecl->hasDefaultArg()) {
+      return SemaRef.Diag(FnDecl->getLocation(),
+                          diag::err_operator_new_default_arg)
+             << FnDecl->getDeclName() << ParamDecl->getDefaultArgRange();
+    }
+  }
   return false;
 }
 
@@ -16257,24 +16398,40 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
                 SemaRef.Context.getRecordType(MD->getParent())))
           : SemaRef.Context.VoidPtrTy;
 
+  unsigned MinimumNonDefaultArgs = 0;
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   Each deallocation function shall return void
   if (CheckOperatorNewDeleteTypes(
           SemaRef, FnDecl, SemaRef.Context.VoidTy, ExpectedFirstParamType,
           diag::err_operator_delete_dependent_param_type,
-          diag::err_operator_delete_param_type))
+          diag::err_operator_delete_param_type, &MinimumNonDefaultArgs))
     return true;
 
+  assert(MinimumNonDefaultArgs > 0);
   // C++ P0722:
   //   A destroying operator delete shall be a usual deallocation function.
   if (MD && !MD->getParent()->isDependentContext() &&
-      MD->isDestroyingOperatorDelete() &&
-      !SemaRef.isUsualDeallocationFunction(MD)) {
-    SemaRef.Diag(MD->getLocation(),
-                 diag::err_destroying_operator_delete_not_usual);
-    return true;
+      MD->isDestroyingOperatorDelete()) {
+    if (!SemaRef.isUsualDeallocationFunction(MD)) {
+      SemaRef.Diag(MD->getLocation(),
+                   diag::err_destroying_operator_delete_not_usual);
+      return true;
+    }
+    if (MD->IsTypeAwareOperatorNewOrDelete() &&
+        !SemaRef.getLangOpts().TypeAwareDestroyingDelete) {
+      SemaRef.Diag(MD->getLocation(),
+                   diag::err_type_aware_destroying_operator_delete);
+      return true;
+    }
   }
-
+  for (unsigned Idx = 0; Idx < MinimumNonDefaultArgs; ++Idx) {
+    auto *ParamDecl = FnDecl->getParamDecl(Idx);
+    if (ParamDecl->hasDefaultArg()) {
+      return SemaRef.Diag(FnDecl->getLocation(),
+                          diag::err_operator_new_default_arg)
+             << FnDecl->getDeclName() << ParamDecl->getDefaultArgRange();
+    }
+  }
   return false;
 }
 
