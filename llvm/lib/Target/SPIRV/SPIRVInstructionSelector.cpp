@@ -2877,82 +2877,82 @@ bool SPIRVInstructionSelector::selectFirstBitHigh64(Register ResVReg,
   Register FBHReg = MRI->createVirtualRegister(GR.getRegClass(postCastT));
   Result &= selectFirstBitHigh32(FBHReg, postCastT, I, bitcastReg, IsSigned);
 
-  // 3. check if result of each top 32 bits is == -1
-  // split result vector into vector of high bits and vector of low bits
-  // get high bits
-  // if ResType is a scalar we need a vector anyways because our code
-  // operates on vectors, even vectors of length one.
-  SPIRVType *VResType = ResType;
+  // 3. split result vector into high bits and low bits
+  Register HighReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  Register LowReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+
+  bool ZeroAsNull = STI.isOpenCLEnv();
   bool isScalarRes = ResType->getOpcode() != SPIRV::OpTypeVector;
-  if (isScalarRes)
-    VResType = GR.getOrCreateSPIRVVectorType(ResType, count, MIRBuilder);
-  // count should be one.
+  if (isScalarRes) {
+    // if scalar do a vector extract
+    Result &= selectNAryOpWithSrcs(
+        HighReg, ResType, I,
+        {FBHReg, GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull)},
+        SPIRV::OpVectorExtractDynamic);
+    Result &= selectNAryOpWithSrcs(
+        LowReg, ResType, I,
+        {FBHReg, GR.getOrCreateConstInt(1, I, ResType, TII, ZeroAsNull)},
+        SPIRV::OpVectorExtractDynamic);
+  } else { // vector case do a shufflevector
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpVectorShuffle))
+                   .addDef(HighReg)
+                   .addUse(GR.getSPIRVTypeID(ResType))
+                   .addUse(FBHReg)
+                   .addUse(FBHReg);
+    // ^^ this vector will not be selected from; could be empty
+    unsigned j;
+    for (j = 0; j < count * 2; j += 2) {
+      MIB.addImm(j);
+    }
+    Result &= MIB.constrainAllUses(TII, TRI, RBI);
 
-  Register HighReg = MRI->createVirtualRegister(GR.getRegClass(VResType));
-  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                     TII.get(SPIRV::OpVectorShuffle))
-                 .addDef(HighReg)
-                 .addUse(GR.getSPIRVTypeID(VResType))
-                 .addUse(FBHReg)
-                 .addUse(FBHReg);
-  // ^^ this vector will not be selected from; could be empty
-  unsigned j;
-  for (j = 0; j < count * 2; j += 2) {
-    MIB.addImm(j);
+    // get low bits
+    MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                  TII.get(SPIRV::OpVectorShuffle))
+              .addDef(LowReg)
+              .addUse(GR.getSPIRVTypeID(ResType))
+              .addUse(FBHReg)
+              .addUse(FBHReg);
+    // ^^ this vector will not be selected from; could be empty
+    for (j = 1; j < count * 2; j += 2) {
+      MIB.addImm(j);
+    }
+    Result &= MIB.constrainAllUses(TII, TRI, RBI);
   }
-  Result &= MIB.constrainAllUses(TII, TRI, RBI);
 
-  // get low bits
-  Register LowReg = MRI->createVirtualRegister(GR.getRegClass(VResType));
-  MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                TII.get(SPIRV::OpVectorShuffle))
-            .addDef(LowReg)
-            .addUse(GR.getSPIRVTypeID(VResType))
-            .addUse(FBHReg)
-            .addUse(FBHReg);
-  // ^^ this vector will not be selected from; could be empty
-  for (j = 1; j < count * 2; j += 2) {
-    MIB.addImm(j);
-  }
-  Result &= MIB.constrainAllUses(TII, TRI, RBI);
+  // 4. check if result of each top 32 bits is == -1
+  SPIRVType *BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
+  if (!isScalarRes)
+    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, count, MIRBuilder);
 
-  SPIRVType *BoolType = GR.getOrCreateSPIRVVectorType(
-      GR.getOrCreateSPIRVBoolType(I, TII), count, MIRBuilder);
   // check if the high bits are == -1;
-  Register NegOneReg = GR.getOrCreateConstVector(-1, I, VResType, TII);
+  Register NegOneReg =
+      GR.getOrCreateConstScalarOrVector(-1, I, ResType, TII, ZeroAsNull);
   // true if -1
   Register BReg = MRI->createVirtualRegister(GR.getRegClass(BoolType));
   Result &= selectNAryOpWithSrcs(BReg, BoolType, I, {HighReg, NegOneReg},
                                  SPIRV::OpIEqual);
 
   // Select low bits if true in BReg, otherwise high bits
-  Register TmpReg = MRI->createVirtualRegister(GR.getRegClass(VResType));
-  Result &= selectNAryOpWithSrcs(TmpReg, VResType, I, {BReg, LowReg, HighReg},
-                                 SPIRV::OpSelectVIVCond);
+  unsigned selectOp =
+      isScalarRes ? SPIRV::OpSelectSISCond : SPIRV::OpSelectVIVCond;
+  Register TmpReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  Result &= selectNAryOpWithSrcs(TmpReg, ResType, I, {BReg, LowReg, HighReg},
+                                 selectOp);
 
   // Add 32 for high bits, 0 for low bits
-  Register ValReg = MRI->createVirtualRegister(GR.getRegClass(VResType));
-  bool ZeroAsNull = STI.isOpenCLEnv();
-  Register Reg32 = GR.getOrCreateConstVector(32, I, VResType, TII, ZeroAsNull);
-  Register Reg0 = GR.getOrCreateConstVector(0, I, VResType, TII, ZeroAsNull);
-  Result &= selectNAryOpWithSrcs(ValReg, VResType, I, {BReg, Reg0, Reg32},
-                                 SPIRV::OpSelectVIVCond);
+  Register ValReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  Register Reg0 =
+      GR.getOrCreateConstScalarOrVector(0, I, ResType, TII, ZeroAsNull);
+  Register Reg32 =
+      GR.getOrCreateConstScalarOrVector(32, I, ResType, TII, ZeroAsNull);
+  Result &=
+      selectNAryOpWithSrcs(ValReg, ResType, I, {BReg, Reg0, Reg32}, selectOp);
 
-  Register AddReg = ResVReg;
-  if (isScalarRes)
-    AddReg = MRI->createVirtualRegister(GR.getRegClass(VResType));
-
-  Result &= selectNAryOpWithSrcs(AddReg, VResType, I, {ValReg, TmpReg},
-                                 SPIRV::OpIAddV);
-
-  // convert result back to scalar if necessary
-  if (!isScalarRes)
-    return Result;
-  else
-    return Result & selectNAryOpWithSrcs(
-                        ResVReg, ResType, I,
-                        {AddReg, GR.getOrCreateConstInt(0, I, ResType, TII)},
-                        SPIRV::OpVectorExtractDynamic);
+  return Result &=
+         selectNAryOpWithSrcs(ResVReg, ResType, I, {ValReg, TmpReg},
+                              isScalarRes ? SPIRV::OpIAddS : SPIRV::OpIAddV);
 }
 
 bool SPIRVInstructionSelector::selectFirstBitHigh(Register ResVReg,
