@@ -42,6 +42,9 @@
 //   * llvm.nvvm.ptr.shared.to.gen   --> ibid.
 //   * llvm.nvvm.ptr.constant.to.gen --> ibid.
 //   * llvm.nvvm.ptr.local.to.gen    --> ibid.
+//   * llvm.nvvm.ldg.global.i        --> load addrspace(1) !load.invariant
+//   * llvm.nvvm.ldg.global.f        --> ibid.
+//   * llvm.nvvm.ldg.global.p        --> ibid.
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
@@ -1604,21 +1607,6 @@ def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.p">;
-
-// Generated within nvvm. Use for ldg on sm_35 or later.  Second arg is the
-// pointer's alignment.
-def int_nvvm_ldg_global_i : Intrinsic<[llvm_anyint_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.i">;
-def int_nvvm_ldg_global_f : Intrinsic<[llvm_anyfloat_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.f">;
-def int_nvvm_ldg_global_p : Intrinsic<[llvm_anyptr_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.p">;
 
 // Used in nvvm internally to help address space opt and ptx code generation
 // This is for params that are passed to kernel functions by pointer by-val.

@@ -70,8 +70,6 @@ enum NodeType : unsigned {
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LoadV4,
-  LDGV2, // LDG.v2
-  LDGV4, // LDG.v4
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
   StoreV2,
