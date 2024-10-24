@@ -34,6 +34,7 @@ void ThreadContext::OnReset() { CHECK(!sync); }
 struct ThreadLeak {
   ThreadContext *tctx;
   int count;
+  ScopedReport rep;
 };
 
 static void CollectThreadLeaks(ThreadContextBase *tctx_base, void *arg) {
@@ -47,7 +48,7 @@ static void CollectThreadLeaks(ThreadContextBase *tctx_base, void *arg) {
       return;
     }
   }
-  leaks.PushBack({tctx, 1});
+  leaks.PushBack({tctx, 1, ScopedReport{ReportTypeThreadLeak}});
 }
 #endif
 
@@ -88,15 +89,19 @@ void ThreadFinalize(ThreadState *thr) {
 #if !SANITIZER_GO
   if (!ShouldReport(thr, ReportTypeThreadLeak))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
   Vector<ThreadLeak> leaks;
-  ctx->thread_registry.RunCallbackForEachThreadLocked(CollectThreadLeaks,
-                                                      &leaks);
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    ctx->thread_registry.RunCallbackForEachThreadLocked(CollectThreadLeaks,
+                                                        &leaks);
+    for (uptr i = 0; i < leaks.Size(); i++) {
+      leaks[i].rep.AddThread(leaks[i].tctx, true);
+      leaks[i].rep.SetCount(leaks[i].count);
+    }
+  }
   for (uptr i = 0; i < leaks.Size(); i++) {
-    ScopedReport rep(ReportTypeThreadLeak);
-    rep.AddThread(leaks[i].tctx, true);
-    rep.SetCount(leaks[i].count);
-    OutputReport(thr, rep);
+    leaks[i].rep.SymbolizeReport();
+    OutputReport(thr, leaks[i].rep);
   }
 #endif
 }

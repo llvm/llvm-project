@@ -21,6 +21,7 @@ void EnterSymbolizer();
 void ExitSymbolizer();
 SymbolizedStack *SymbolizeCode(uptr addr);
 ReportLocation *SymbolizeData(uptr addr);
+bool SymbolizeData(uptr addr, DataInfo *info);
 void SymbolizeFlush();
 
 ReportStack *NewReportStackEntry(uptr addr);

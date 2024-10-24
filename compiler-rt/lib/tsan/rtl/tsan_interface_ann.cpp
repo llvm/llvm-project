@@ -437,15 +437,18 @@ void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
 }
 
 static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
-  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(ReportTypeMutexHeldWrongContext);
-  for (uptr i = 0; i < thr->mset.Size(); ++i) {
-    MutexSet::Desc desc = thr->mset.Get(i);
-    rep.AddMutex(desc.addr, desc.stack_id);
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    for (uptr i = 0; i < thr->mset.Size(); ++i) {
+      MutexSet::Desc desc = thr->mset.Get(i);
+      rep.AddMutex(desc.addr, desc.stack_id);
+    }
+    VarSizeStackTrace trace;
+    ObtainCurrentStack(thr, pc, &trace);
+    rep.AddStack(trace, true);
   }
-  VarSizeStackTrace trace;
-  ObtainCurrentStack(thr, pc, &trace);
-  rep.AddStack(trace, true);
+  rep.SymbolizeReport();
   OutputReport(thr, rep);
 }
 

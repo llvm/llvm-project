@@ -55,13 +55,16 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     return;
   if (!ShouldReport(thr, typ))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(typ);
-  rep.AddMutex(addr, creation_stack_id);
-  VarSizeStackTrace trace;
-  ObtainCurrentStack(thr, pc, &trace);
-  rep.AddStack(trace, true);
-  rep.AddLocation(addr, 1);
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    rep.AddMutex(addr, creation_stack_id);
+    VarSizeStackTrace trace;
+    ObtainCurrentStack(thr, pc, &trace);
+    rep.AddStack(trace, true);
+    rep.AddLocation(addr, 1);
+  }
+  rep.SymbolizeReport();
   OutputReport(thr, rep);
 }
 
@@ -528,50 +531,56 @@ void AfterSleep(ThreadState *thr, uptr pc) {
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
   if (r == 0 || !ShouldReport(thr, ReportTypeDeadlock))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(ReportTypeDeadlock);
-  for (int i = 0; i < r->n; i++) {
-    rep.AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
-    rep.AddUniqueTid((int)r->loop[i].thr_ctx);
-    rep.AddThread((int)r->loop[i].thr_ctx);
-  }
-  uptr dummy_pc = 0x42;
-  for (int i = 0; i < r->n; i++) {
-    for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
-      u32 stk = r->loop[i].stk[j];
-      if (stk && stk != kInvalidStackID) {
-        rep.AddStack(StackDepotGet(stk), true);
-      } else {
-        // Sometimes we fail to extract the stack trace (FIXME: investigate),
-        // but we should still produce some stack trace in the report.
-        rep.AddStack(StackTrace(&dummy_pc, 1), true);
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    for (int i = 0; i < r->n; i++) {
+      rep.AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
+      rep.AddUniqueTid((int)r->loop[i].thr_ctx);
+      rep.AddThread((int)r->loop[i].thr_ctx);
+    }
+    uptr dummy_pc = 0x42;
+    for (int i = 0; i < r->n; i++) {
+      for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
+        u32 stk = r->loop[i].stk[j];
+        if (stk && stk != kInvalidStackID) {
+          rep.AddStack(StackDepotGet(stk), true);
+        } else {
+          // Sometimes we fail to extract the stack trace (FIXME: investigate),
+          // but we should still produce some stack trace in the report.
+          rep.AddStack(StackTrace(&dummy_pc, 1), true);
+        }
       }
     }
   }
+  rep.SymbolizeReport();
   OutputReport(thr, rep);
 }
 
 void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
                          FastState last_lock, StackID creation_stack_id) {
-  // We need to lock the slot during RestoreStack because it protects
-  // the slot journal.
-  Lock slot_lock(&ctx->slots[static_cast<uptr>(last_lock.sid())].mtx);
-  ThreadRegistryLock l0(&ctx->thread_registry);
-  Lock slots_lock(&ctx->slot_mtx);
   ScopedReport rep(ReportTypeMutexDestroyLocked);
-  rep.AddMutex(addr, creation_stack_id);
-  VarSizeStackTrace trace;
-  ObtainCurrentStack(thr, pc, &trace);
-  rep.AddStack(trace, true);
+  {
+    // We need to lock the slot during RestoreStack because it protects
+    // the slot journal.
+    Lock slot_lock(&ctx->slots[static_cast<uptr>(last_lock.sid())].mtx);
+    ThreadRegistryLock l0(&ctx->thread_registry);
+    Lock slots_lock(&ctx->slot_mtx);
+    rep.AddMutex(addr, creation_stack_id);
+    VarSizeStackTrace trace;
+    ObtainCurrentStack(thr, pc, &trace);
+    rep.AddStack(trace, true);
 
-  Tid tid;
-  DynamicMutexSet mset;
-  uptr tag;
-  if (!RestoreStack(EventType::kLock, last_lock.sid(), last_lock.epoch(), addr,
-                    0, kAccessWrite, &tid, &trace, mset, &tag))
-    return;
-  rep.AddStack(trace, true);
-  rep.AddLocation(addr, 1);
+    Tid tid;
+    DynamicMutexSet mset;
+    uptr tag;
+    if (!RestoreStack(EventType::kLock, last_lock.sid(), last_lock.epoch(),
+                      addr, 0, kAccessWrite, &tid, &trace, mset, &tag))
+      return;
+    rep.AddStack(trace, true);
+    rep.AddLocation(addr, 1);
+  }
+  rep.SymbolizeReport();
   OutputReport(thr, rep);
 }
 

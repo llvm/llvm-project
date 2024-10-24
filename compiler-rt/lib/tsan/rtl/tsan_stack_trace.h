@@ -24,11 +24,16 @@ struct VarSizeStackTrace : public StackTrace {
 
   VarSizeStackTrace();
   ~VarSizeStackTrace();
+
   void Init(const uptr *pcs, uptr cnt, uptr extra_top_pc = 0);
+  void Init(const StackTrace &trace);
 
   // Reverses the current stack trace order, the top frame goes to the bottom,
   // the last frame goes to the top.
   void ReverseOrder();
+
+  // Clear and release internal buffer.
+  void Reset();
 
  private:
   void ResizeBuffer(uptr new_size);

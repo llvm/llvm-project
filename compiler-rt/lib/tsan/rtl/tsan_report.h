@@ -16,6 +16,7 @@
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_defs.h"
+#include "tsan_stack_trace.h"
 
 namespace __tsan {
 
@@ -39,6 +40,7 @@ enum ReportType {
 };
 
 struct ReportStack {
+  VarSizeStackTrace raw;
   SymbolizedStack *frames = nullptr;
   bool suppressable = false;
 };
