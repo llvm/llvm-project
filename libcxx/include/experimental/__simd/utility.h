@@ -11,6 +11,7 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_UTILITY_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
@@ -21,7 +22,6 @@
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <__utility/integer_sequence.h>
-#include <cstddef>
 #include <cstdint>
 #include <limits>
 

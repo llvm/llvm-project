@@ -148,6 +148,10 @@ constexpr bool is_detected_convertible_v = is_detected_convertible<_To, _Op, _Ar
 
 _LIBCPP_END_NAMESPACE_LFTS
 
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#    include <cstddef>
+#  endif
+
 #endif /* _LIBCPP_STD_VER >= 14 */
 
 #endif /* _LIBCPP_EXPERIMENTAL_TYPE_TRAITS */
