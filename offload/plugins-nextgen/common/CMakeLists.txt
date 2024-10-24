@@ -1,25 +1,28 @@
-# NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
-# don't want to export `PluginInterface` while `add_llvm_library` requires that.
-add_library(PluginCommon OBJECT
+# Only enable JIT for those targets that LLVM can support.
+set(jit_targets_to_build "AMDGPU;NVPTX")
+set(jit_targets_not_to_build ${jit_targets_to_build})
+list(REMOVE_ITEM jit_targets_not_to_build ${LLVM_TARGETS_TO_BUILD})
+list(REMOVE_ITEM jit_targets_to_build ${jit_targets_not_to_build})
+
+add_llvm_library(PluginCommon STATIC
   src/PluginInterface.cpp
   src/GlobalHandler.cpp
   src/JIT.cpp
   src/RPC.cpp
   src/Utils/ELF.cpp
+
+  LINK_COMPONENTS
+  ProfileData
+  ${jit_targets_to_build}
+  
+  BUILDTREE_ONLY
 )
 add_dependencies(PluginCommon intrinsics_gen LLVMProfileData)
 
-# Only enable JIT for those targets that LLVM can support.
-set(supported_jit_targets AMDGPU NVPTX)
-if (NOT LLVM_LINK_LLVM_DYLIB)
-  foreach(target IN LISTS supported_jit_targets)
-    if("${target}" IN_LIST LLVM_TARGETS_TO_BUILD)
-      target_compile_definitions(PluginCommon PRIVATE "LIBOMPTARGET_JIT_${target}")
-      llvm_map_components_to_libnames(llvm_libs ${target})
-      target_link_libraries(PluginCommon PRIVATE ${llvm_libs})
-    endif()
-  endforeach()
-endif()
+list(TRANSFORM jit_targets_to_build
+  PREPEND "LIBOMPTARGET_JIT_" OUTPUT_VARIABLE compile_defs
+)
+target_compile_definitions(PluginCommon PRIVATE ${compile_defs})
 
 # Include the RPC server from the `libc` project if availible.
 if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
@@ -46,7 +49,6 @@ target_compile_definitions(PluginCommon PRIVATE
 
 target_compile_options(PluginCommon PUBLIC ${offload_compile_flags})
 target_link_options(PluginCommon PUBLIC ${offload_link_flags})
-target_link_libraries(PluginCommon PRIVATE LLVMProfileData)
 
 target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
