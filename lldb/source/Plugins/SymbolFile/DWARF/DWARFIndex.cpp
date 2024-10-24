@@ -151,3 +151,19 @@ bool DWARFIndex::ProcessTypeDIEMatchQuery(
     return true;
   return callback(die);
 }
+
+void DWARFIndex::GetNamespacesWithParents(
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetNamespaces(name, [&](DWARFDIE die) {
+    return ProcessNamespaceDieMatchParents(parent_decl_ctx, die, callback);
+  });
+}
+
+bool DWARFIndex::ProcessNamespaceDieMatchParents(
+    const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
+    return true;
+  return callback(die);
+}
