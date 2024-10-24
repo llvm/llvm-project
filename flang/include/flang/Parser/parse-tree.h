@@ -3458,6 +3458,13 @@ struct OmpReductionOperator {
 
 // --- Clauses
 
+// OMP 5.0 2.10.1 affinity([aff-modifier:] locator-list)
+//                aff-modifier: interator-modifier
+struct OmpAffinityClause {
+  TUPLE_CLASS_BOILERPLATE(OmpAffinityClause);
+  std::tuple<std::optional<OmpIteratorModifier>, OmpObjectList> t;
+};
+
 // 2.8.1 aligned-clause -> ALIGNED (variable-name-list[ : scalar-constant])
 struct OmpAlignedClause {
   TUPLE_CLASS_BOILERPLATE(OmpAlignedClause);
