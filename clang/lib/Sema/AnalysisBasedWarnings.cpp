@@ -2327,19 +2327,21 @@ public:
     }
   }
 
-  void handleUnsafeOperationInContainer(const Stmt *Operation,
+  void handleUnsafeOperationInContainer(const Stmt *Invocation,
+                                        const Stmt *UnsafeSpanCall,
                                         bool IsRelatedToDecl,
                                         ASTContext &Ctx) override {
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
 
-    // This function only handles SpanTwoParamConstructorGadget so far, which
-    // always gives a CXXConstructExpr.
-    const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
-    Loc = CtorExpr->getLocation();
-
-    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
+    Loc = Invocation->getBeginLoc();
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container)
+        << Invocation->getSourceRange();
+    if (Invocation != UnsafeSpanCall)
+      S.Diag(UnsafeSpanCall->getBeginLoc(),
+             diag::note_unsafe_buffer_usage_in_container)
+          << UnsafeSpanCall->getSourceRange();
     if (IsRelatedToDecl) {
       assert(!SuggestSuggestions &&
              "Variables blamed for unsafe buffer usage without suggestions!");

@@ -122,7 +122,12 @@ public:
                                     const Expr *UnsafeArg = nullptr) = 0;
 
   /// Invoked when an unsafe operation with a std container is found.
-  virtual void handleUnsafeOperationInContainer(const Stmt *Operation,
+  /// \param Invocation the `Stmt` that either is a direct call to the unsafe
+  /// span constructor or involves a direct call to it
+  /// \param UnsafeSpanCall the `Stmt` that refers to the direct call to the
+  /// unsafe span constructor
+  virtual void handleUnsafeOperationInContainer(const Stmt *Invocation,
+                                                const Stmt *UnsafeSpanCall,
                                                 bool IsRelatedToDecl,
                                                 ASTContext &Ctx) = 0;
 
