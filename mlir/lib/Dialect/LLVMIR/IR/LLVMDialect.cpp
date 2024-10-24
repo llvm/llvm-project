@@ -3438,7 +3438,46 @@ void InlineAsmOp::getEffects(
 void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
                            mlir::Value cond) {
   return build(builder, state, cond, /*op_bundle_operands=*/{},
-               /*op_bundle_tags=*/{});
+               /*op_bundle_tags=*/ArrayAttr{});
+}
+
+void LLVM::AssumeOp::build(
+    OpBuilder &builder, OperationState &state, mlir::Value cond,
+    ArrayRef<llvm::OperandBundleDefT<mlir::Value>> opBundles) {
+  SmallVector<mlir::ValueRange> opBundleOperands;
+  SmallVector<mlir::Attribute> opBundleTags;
+  opBundleOperands.reserve(opBundles.size());
+  opBundleTags.reserve(opBundles.size());
+
+  for (const llvm::OperandBundleDefT<mlir::Value> &bundle : opBundles) {
+    opBundleOperands.emplace_back(bundle.inputs());
+    opBundleTags.push_back(
+        StringAttr::get(builder.getContext(), bundle.getTag()));
+  }
+
+  auto opBundleTagsAttr = ArrayAttr::get(builder.getContext(), opBundleTags);
+  return build(builder, state, cond, opBundleOperands, opBundleTagsAttr);
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           mlir::Value cond, llvm::StringRef tag,
+                           mlir::ValueRange args) {
+  llvm::OperandBundleDefT<mlir::Value> opBundle(
+      tag.str(), std::vector<mlir::Value>(args.begin(), args.end()));
+  return build(builder, state, cond, opBundle);
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           mlir::Value cond, AssumeAlignTag, mlir::Value ptr,
+                           mlir::Value align) {
+  return build(builder, state, cond, "align", ValueRange{ptr, align});
+}
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           mlir::Value cond, AssumeSeparateStorageTag,
+                           mlir::Value ptr1, mlir::Value ptr2) {
+  return build(builder, state, cond, "separate_storage",
+               ValueRange{ptr1, ptr2});
 }
 
 LogicalResult LLVM::AssumeOp::verify() { return verifyOperandBundles(*this); }
