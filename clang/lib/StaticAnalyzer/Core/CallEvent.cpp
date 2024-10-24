@@ -715,7 +715,7 @@ void CXXInstanceCall::getExtraInvalidatedValues(
     // Get the record decl for the class of 'This'. D->getParent() may return
     // a base class decl, rather than the class of the instance which needs to
     // be checked for mutable fields.
-    const CXXRecordDecl *ParentRecord = getDeclForDynamicType();
+    const CXXRecordDecl *ParentRecord = getDeclForDynamicType().first;
     if (!ParentRecord || !ParentRecord->hasDefinition())
       return;
 
@@ -747,17 +747,19 @@ SVal CXXInstanceCall::getCXXThisVal() const {
   return ThisVal;
 }
 
-const CXXRecordDecl *CXXInstanceCall::getDeclForDynamicType() const {
+std::pair<const CXXRecordDecl *, bool>
+CXXInstanceCall::getDeclForDynamicType() const {
   const MemRegion *R = getCXXThisVal().getAsRegion();
   if (!R)
-    return nullptr;
+    return {};
 
   DynamicTypeInfo DynType = getDynamicTypeInfo(getState(), R);
   if (!DynType.isValid())
-    return nullptr;
+    return {};
 
   assert(!DynType.getType()->getPointeeType().isNull());
-  return DynType.getType()->getPointeeCXXRecordDecl();
+  return {DynType.getType()->getPointeeCXXRecordDecl(),
+          DynType.canBeASubClass()};
 }
 
 RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
@@ -771,7 +773,7 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   if (!MD->isVirtual())
     return AnyFunctionCall::getRuntimeDefinition();
 
-  const CXXRecordDecl *RD = getDeclForDynamicType();
+  auto [RD, CanBeSubClass] = getDeclForDynamicType();
   if (!RD || !RD->hasDefinition())
     return {};
 
@@ -795,14 +797,10 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
     return {};
   }
 
-  const MemRegion *R = getCXXThisVal().getAsRegion();
-  DynamicTypeInfo DynType = getDynamicTypeInfo(getState(), R);
-  assert(DynType.isValid() && "ensured by getDeclForDynamicType()");
-
   // Does the decl that we found have an implementation?
   const FunctionDecl *Definition;
   if (!Result->hasBody(Definition)) {
-    if (!DynType.canBeASubClass())
+    if (!CanBeSubClass)
       return AnyFunctionCall::getRuntimeDefinition();
     return {};
   }
@@ -810,8 +808,9 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   // We found a definition. If we're not sure that this devirtualization is
   // actually what will happen at runtime, make sure to provide the region so
   // that ExprEngine can decide what to do with it.
-  if (DynType.canBeASubClass())
-    return RuntimeDefinition(Definition, R->StripCasts());
+  if (CanBeSubClass)
+    return RuntimeDefinition(Definition,
+                             getCXXThisVal().getAsRegion()->StripCasts());
   return RuntimeDefinition(Definition, /*DispatchRegion=*/nullptr);
 }
 
