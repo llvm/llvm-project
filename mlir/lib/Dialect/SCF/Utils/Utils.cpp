@@ -494,20 +494,25 @@ LogicalResult mlir::loopUnrollByFactor(
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
-/// and return false if not.
+/// or defined by constants, and return false if not.
 static bool areInnerBoundsInvariant(scf::ForOp forOp) {
   auto walkResult = forOp.walk([&](scf::ForOp innerForOp) {
-    if (!forOp.isDefinedOutsideOfLoop(innerForOp.getLowerBound()) ||
-        !forOp.isDefinedOutsideOfLoop(innerForOp.getUpperBound()) ||
-        !forOp.isDefinedOutsideOfLoop(innerForOp.getStep()))
+    auto isValueInvariantInLoop = [&forOp](Value v) -> bool {
+      return forOp.isDefinedOutsideOfLoop(v) ||
+             isa<arith::ConstantOp>(v.getDefiningOp());
+    };
+    if (!isValueInvariantInLoop(innerForOp.getLowerBound()) ||
+        !isValueInvariantInLoop(innerForOp.getUpperBound()) ||
+        !isValueInvariantInLoop(innerForOp.getStep()))
       return WalkResult::interrupt();
-
     return WalkResult::advance();
   });
   return !walkResult.wasInterrupted();
 }
 
 /// Unrolls and jams this loop by the specified factor.
+/// This function doesn't verify that the loop is parallel, if there are true
+/// loop carried dependencies, this function will produce invalid code.
 LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
                                           uint64_t unrollJamFactor) {
   assert(unrollJamFactor > 0 && "unroll jam factor should be positive");
@@ -519,12 +524,6 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   // `forOp`, no unroll jam.
   if (!areInnerBoundsInvariant(forOp)) {
     LDBG("failed to unroll and jam: inner bounds are not invariant");
-    return failure();
-  }
-
-  // Currently, for operations with results are not supported.
-  if (forOp->getNumResults() > 0) {
-    LDBG("failed to unroll and jam: unsupported loop with results");
     return failure();
   }
 
