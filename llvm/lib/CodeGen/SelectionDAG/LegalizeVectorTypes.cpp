@@ -130,7 +130,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_ADDRSPACECAST(N);
     break;
   case ISD::FFREXP:
-    R = ScalarizeVecRes_FFREXP(N, ResNo);
+  case ISD::FSINCOS:
+    R = ScalarizeVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   case ISD::ADD:
   case ISD::AND:
@@ -276,7 +277,9 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_FIX(SDNode *N) {
                      Op2, N->getFlags());
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecRes_FFREXP(SDNode *N, unsigned ResNo) {
+SDValue
+DAGTypeLegalizer::ScalarizeVecRes_UnaryOpWithTwoResults(SDNode *N,
+                                                        unsigned ResNo) {
   assert(N->getValueType(0).getVectorNumElements() == 1 &&
          "Unexpected vector type!");
   SDValue Elt = GetScalarizedVector(N->getOperand(0));
@@ -1253,7 +1256,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_ADDRSPACECAST(N, Lo, Hi);
     break;
   case ISD::FFREXP:
-    SplitVecRes_FFREXP(N, ResNo, Lo, Hi);
+  case ISD::FSINCOS:
+    SplitVecRes_UnaryOpWithTwoResults(N, ResNo, Lo, Hi);
     break;
 
   case ISD::ANY_EXTEND:
@@ -2615,8 +2619,10 @@ void DAGTypeLegalizer::SplitVecRes_ADDRSPACECAST(SDNode *N, SDValue &Lo,
   Hi = DAG.getAddrSpaceCast(dl, HiVT, Hi, SrcAS, DestAS);
 }
 
-void DAGTypeLegalizer::SplitVecRes_FFREXP(SDNode *N, unsigned ResNo,
-                                          SDValue &Lo, SDValue &Hi) {
+void DAGTypeLegalizer::SplitVecRes_UnaryOpWithTwoResults(SDNode *N,
+                                                         unsigned ResNo,
+                                                         SDValue &Lo,
+                                                         SDValue &Hi) {
   SDLoc dl(N);
   auto [LoVT, HiVT] = DAG.GetSplitDestVTs(N->getValueType(0));
   auto [LoVT1, HiVT1] = DAG.GetSplitDestVTs(N->getValueType(1));
@@ -4429,6 +4435,22 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 //  Result Vector Widening
 //===----------------------------------------------------------------------===//
 
+void DAGTypeLegalizer::ReplaceOtherWidenResult(SDNode *N, SDNode *WidenNode,
+                                               unsigned WidenResNo) {
+  assert(N->getNumValues() == 2 && "expected node with two results");
+  unsigned OtherNo = 1 - WidenResNo;
+  EVT OtherVT = N->getValueType(OtherNo);
+  if (getTypeAction(OtherVT) == TargetLowering::TypeWidenVector) {
+    SetWidenedVector(SDValue(N, OtherNo), SDValue(WidenNode, OtherNo));
+  } else {
+    SDLoc DL(N);
+    SDValue OtherVal = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OtherVT,
+                                   SDValue(WidenNode, OtherNo),
+                                   DAG.getVectorIdxConstant(0, DL));
+    ReplaceValueWith(SDValue(N, OtherNo), OtherVal);
+  }
+}
+
 void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   LLVM_DEBUG(dbgs() << "Widen node result " << ResNo << ": "; N->dump(&DAG));
 
@@ -4448,6 +4470,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
         TLI.isOperationExpand(N->getOpcode(), VT.getScalarType())) {
       Res = DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
+      if (N->getNumValues() == 2)
+        ReplaceOtherWidenResult(N, Res.getNode(), ResNo);
       return true;
     }
     return false;
@@ -4752,6 +4776,12 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FSHR:
     Res = WidenVecRes_Ternary(N);
     break;
+  case ISD::FFREXP:
+  case ISD::FSINCOS: {
+    if (!unrollExpandedOp())
+      Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
+    break;
+  }
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -5498,6 +5528,28 @@ SDValue DAGTypeLegalizer::WidenVecRes_InregOp(SDNode *N) {
   SDValue WidenLHS = GetWidenedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N),
                      WidenVT, WidenLHS, DAG.getValueType(ExtVT));
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_UnaryOpWithTwoResults(SDNode *N,
+                                                            unsigned ResNo) {
+  LLVMContext &Ctx = *DAG.getContext();
+  SDValue InOp = GetWidenedVector(N->getOperand(0));
+
+  EVT WidenVT = TLI.getTypeToTransformTo(Ctx, N->getValueType(ResNo));
+  ElementCount WidenEC = WidenVT.getVectorElementCount();
+
+  EVT VT0 = N->getValueType(0);
+  EVT VT1 = N->getValueType(1);
+
+  EVT WidenVT0 = EVT::getVectorVT(Ctx, VT0.getVectorElementType(), WidenEC);
+  EVT WidenVT1 = EVT::getVectorVT(Ctx, VT1.getVectorElementType(), WidenEC);
+
+  SDNode *WidenNode =
+      DAG.getNode(N->getOpcode(), SDLoc(N), {WidenVT0, WidenVT1}, InOp)
+          .getNode();
+
+  ReplaceOtherWidenResult(N, WidenNode, ResNo);
+  return SDValue(WidenNode, ResNo);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MERGE_VALUES(SDNode *N, unsigned ResNo) {
