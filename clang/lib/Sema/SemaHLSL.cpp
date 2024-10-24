@@ -1745,6 +1745,15 @@ static bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
                                     checkFloatorHalf);
 }
 
+static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
+                                  unsigned ArgIndex) {
+  auto *Arg = TheCall->getArg(ArgIndex);
+  if (Arg->isModifiableLvalue(S->getASTContext()) == Expr::MLV_Valid)
+    return false;
+  S->Diag(Arg->getBeginLoc(), diag::error_hlsl_inout_lvalue) << Arg << 0;
+  return true;
+}
+
 static bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   auto checkDoubleVector = [](clang::QualType PassedType) -> bool {
     if (const auto *VecTy = PassedType->getAs<VectorType>())
@@ -2092,6 +2101,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                             1) ||
         CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.UnsignedIntTy,
                             2))
+      return true;
+    if (CheckModifiableLValue(&SemaRef, TheCall, 1) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 2))
       return true;
 
     break;
