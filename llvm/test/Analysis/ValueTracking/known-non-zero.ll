@@ -1546,4 +1546,52 @@ define i1 @vec_reverse_non_zero_demanded_fail(<4 x i8> %xx) {
   ret i1 %r
 }
 
+define i1 @range_assume(i8 %x, i8 %y) {
+; CHECK-LABEL: @range_assume(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 1, i8 0) ]
+; CHECK-NEXT:    ret i1 false
+;
+  call void @llvm.assume(i1 true) ["range"(i8 %x, i8 1, i8 0)]
+  %or = or i8 %y, %x
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_range_assum(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_range_assum(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 -1, i8 1) ]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  call void @llvm.assume(i1 true) ["range"(i8 %x, i8 -1, i8 1)]
+  %or = or i8 %y, %x
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @range_assum_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @range_assum_vec(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(<2 x i8> [[X:%.*]], i8 1, i8 0) ]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  call void @llvm.assume(i1 true) ["range"(<2 x i8> %x, i8 1, i8 0)]
+  %or = or <2 x i8> %y, %x
+  %cmp = icmp ne <2 x i8> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @neg_range_assum_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @neg_range_assum_vec(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(<2 x i8> [[X:%.*]], i8 -1, i8 1) ]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[OR]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  call void @llvm.assume(i1 true) ["range"(<2 x i8> %x, i8 -1, i8 1)]
+  %or = or <2 x i8> %y, %x
+  %cmp = icmp ne <2 x i8> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
 declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)
