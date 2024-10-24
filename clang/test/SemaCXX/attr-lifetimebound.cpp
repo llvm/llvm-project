@@ -30,6 +30,11 @@ namespace usage_ok {
     return *(int*)param;
   }
 
+  template <class T, class R = void> R dependent_void(const T& t [[clang::lifetimebound]]);
+  void dependent_void_instantiation() {
+    dependent_void<int>(1);
+  }
+
   struct A {
     A();
     A(int);
