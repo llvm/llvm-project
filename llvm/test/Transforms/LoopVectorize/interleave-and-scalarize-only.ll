@@ -116,6 +116,12 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
+; DBG-NEXT: Successor(s): ir-bb<loop.header>
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<loop.header>:
+; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; DBG-NEXT:   IR   %d = phi i1 [ false, %entry ], [ %d.next, %loop.latch ]
+; DBG-NEXT:   IR   %d.next = xor i1 %d, true
 ; DBG-NEXT: No successors
 ; DBG-NEXT: }
 
@@ -217,9 +223,13 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
 ; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
-; DBG-NEXT: No successors
+; DBG-NEXT: Successor(s): ir-bb<loop>
 ; DBG-EMPTY:
-; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_P]]>
+; DBG-NEXT: ir-bb<loop>:
+; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; DBG-NEXT:   IR   %for = phi i32 [ 0, %entry ], [ %iv.trunc, %loop ] (extra operand: vp<[[RESUME_P]]>)
+; DBG:        IR   %ec = icmp slt i32 %iv.next.trunc, %n
+; DBG-NEXT: No successors
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {

@@ -145,6 +145,18 @@ compound=true
   ]
   N6 [label =
     "scalar.ph:\l" +
+    "Successor(s): ir-bb\<for.body\>\l"
+  ]
+  N6 -> N7 [ label=""]
+  N7 [label =
+    "ir-bb\<for.body\>:\l" +
+    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\l" +
+    "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
+    "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
+    "  IR   %res = add i32 %l1, 10\l" +
+    "  IR   store i32 %res, ptr %arr.idx, align 4\l" +
+    "  IR   %indvars.iv.next = add i64 %indvars.iv, 1\l" +
+    "  IR   %exitcond = icmp ne i64 %indvars.iv.next, %N\l" +
     "No successors\l"
   ]
 }

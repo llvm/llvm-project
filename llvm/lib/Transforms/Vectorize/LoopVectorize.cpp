@@ -2969,10 +2969,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
                    IVEndValues[Entry.first], LoopMiddleBlock, Plan, State);
   }
 
-  // Fix live-out phis not already fixed earlier.
-  for (const auto &KV : Plan.getLiveOuts())
-    KV.second->fixPhi(Plan, State);
-
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
 
@@ -8878,21 +8874,9 @@ static void addLiveOutsForFirstOrderRecurrences(
   // Start by finding out if middle block branches to scalar preheader, which is
   // not a VPIRBasicBlock, unlike Exit block - the other possible successor of
   // middle block.
-  // TODO: Should be replaced by
-  // Plan->getScalarLoopRegion()->getSinglePredecessor() in the future once the
-  // scalar region is modeled as well.
-  auto *MiddleVPBB = cast<VPBasicBlock>(VectorRegion->getSingleSuccessor());
-  VPBasicBlock *ScalarPHVPBB = nullptr;
-  if (MiddleVPBB->getNumSuccessors() == 2) {
-    // Order is strict: first is the exit block, second is the scalar preheader.
-    ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
-  } else if (ExitUsersToFix.empty()) {
-    ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
-  } else {
-    llvm_unreachable("unsupported CFG in VPlan");
-  }
-
+  VPBasicBlock *ScalarPHVPBB = Plan.getScalarPreheader();
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
+  auto *MiddleVPBB = cast<VPBasicBlock>(VectorRegion->getSingleSuccessor());
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPValue *OneVPV = Plan.getOrAddLiveIn(
       ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
@@ -8979,7 +8963,14 @@ static void addLiveOutsForFirstOrderRecurrences(
         VPInstruction::ResumePhi, {Resume, FOR->getStartValue()}, {},
         "scalar.recur.init");
     auto *FORPhi = cast<PHINode>(FOR->getUnderlyingInstr());
-    Plan.addLiveOut(FORPhi, ResumePhiRecipe);
+    for (VPRecipeBase &R :
+         *cast<VPIRBasicBlock>(ScalarPHVPBB->getSingleSuccessor())) {
+      auto *IRI = cast<VPIRInstruction>(&R);
+      if (&IRI->getInstruction() == FORPhi) {
+        IRI->addOperand(ResumePhiRecipe);
+        break;
+      }
+    }
 
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
     // Extract the penultimate value of the recurrence and use it as operand for

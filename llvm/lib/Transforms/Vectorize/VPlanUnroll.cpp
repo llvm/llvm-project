@@ -264,6 +264,13 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     return;
 
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
+    VPValue *Op0, *Op1;
+    if (match(VPI, m_VPInstruction<VPInstruction::ResumePhi>(m_VPValue(Op0),
+                                                             m_VPValue(Op1)))) {
+      addUniformForAllParts(VPI);
+      return;
+    }
+
     if (vputils::onlyFirstPartUsed(VPI)) {
       addUniformForAllParts(VPI);
       return;
@@ -447,12 +454,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
     }
     Unroller.remapOperands(&H, Part);
     Part++;
-  }
-
-  // Remap the operand of live-outs to the last part.
-  for (const auto &[_, LO] : Plan.getLiveOuts()) {
-    VPValue *In = Unroller.getValueForPart(LO->getOperand(0), UF - 1);
-    LO->setOperand(0, In);
   }
 
   VPlanTransforms::removeDeadRecipes(Plan);
