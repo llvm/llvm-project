@@ -136,7 +136,7 @@ struct XRaySledMap {
 };
 
 bool patchFunctionEntry(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,
-                        const XRayTrampolines &Trampolines, bool logArgs);
+                        const XRayTrampolines &Trampolines, bool LogArgs);
 bool patchFunctionExit(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,
                        const XRayTrampolines &Trampolines);
 bool patchFunctionTailExit(bool Enable, uint32_t FuncId,
