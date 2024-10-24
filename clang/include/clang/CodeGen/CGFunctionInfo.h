@@ -271,12 +271,8 @@ public:
     // in the unpadded type.
     unsigned unpaddedIndex = 0;
     for (auto eltType : coerceToType->elements()) {
-      if (isPaddingForCoerceAndExpand(eltType)) continue;
-      if (unpaddedStruct) {
-        assert(unpaddedStruct->getElementType(unpaddedIndex) == eltType);
-      } else {
-        assert(unpaddedIndex == 0 && unpaddedCoerceToType == eltType);
-      }
+      if (isPaddingForCoerceAndExpand(eltType))
+        continue;
       unpaddedIndex++;
     }
 
@@ -295,12 +291,8 @@ public:
   }
 
   static bool isPaddingForCoerceAndExpand(llvm::Type *eltType) {
-    if (eltType->isArrayTy()) {
-      assert(eltType->getArrayElementType()->isIntegerTy(8));
-      return true;
-    } else {
-      return false;
-    }
+    return eltType->isArrayTy() &&
+           eltType->getArrayElementType()->isIntegerTy(8);
   }
 
   Kind getKind() const { return TheKind; }
