@@ -1051,6 +1051,10 @@ def err_opencl_invalid_param : Error<
   "declaring function parameter of type %0 is not allowed%select{; did you forget * ?|}1">;
 def err_opencl_invalid_return : Error<
   "declaring function return value of type %0 is not allowed %select{; did you forget * ?|}1">;
+def warn_missing_format_attribute : Warning<
+  "diagnostic behavior may be improved by adding the %0 format attribute to the declaration of %1">,
+  InGroup<DiagGroup<"missing-format-attribute">>, DefaultIgnore;
+def note_format_function : Note<"%0 format function">;
 def warn_pragma_options_align_reset_failed : Warning<
   "#pragma options align=reset failed: %0">,
   InGroup<IgnoredPragmas>;
