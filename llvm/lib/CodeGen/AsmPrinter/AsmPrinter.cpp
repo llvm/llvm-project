@@ -1095,19 +1095,19 @@ void AsmPrinter::emitFunctionEntryLabel() {
 /// scheduling model.
 /// \return The maximum expected latency over all the operands or -1
 /// if no information is available.
-static std::optional<int> getItineraryLatency(const MachineInstr &MI,
-                                              const MachineFunction *MF,
-                                              const MCSubtargetInfo *STI) {
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+static std::optional<int> getItineraryLatency(const MCSubtargetInfo *STI,
+                                              const MCInstrInfo *MCII,
+                                              const MachineInstr &MI) {
+  llvm::StringRef CPU = STI->getCPU();
 
   // Check if we have a CPU to get the itinerary information.
-  if (STI->getCPU().empty())
+  if (CPU.empty())
     return std::nullopt;
 
   // Get itinerary information.
-  InstrItineraryData IID = STI->getInstrItineraryForCPU(STI->getCPU());
+  InstrItineraryData IID = STI->getInstrItineraryForCPU(CPU);
   // Get the scheduling class of the requested instruction.
-  const MCInstrDesc &Desc = TII->get(MI.getOpcode());
+  const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
   unsigned SCClass = Desc.getSchedClass();
 
   unsigned Latency = 0;
@@ -1122,23 +1122,20 @@ static std::optional<int> getItineraryLatency(const MachineInstr &MI,
 /// Gets latency information for \p Inst.
 /// \return The maximum expected latency over all the definitions or -1
 /// if no information is available.
-static std::optional<int> getLatency(const MachineInstr &MI,
-                                     const MCSubtargetInfo *STI) {
+static std::optional<int> getLatency(const MCSubtargetInfo *STI,
+                                     const MCInstrInfo *MCII,
+                                     const MachineInstr &MI) {
+  // Try to compute scheduling information.
   const MCSchedModel &SCModel = STI->getSchedModel();
-
-  const MachineFunction *MF = MI.getMF();
-  if (!MF)
-    return std::nullopt;
 
   // Check if we have a scheduling model for instructions.
   if (!SCModel.hasInstrSchedModel())
     // Try to fall back to the itinerary model if the scheduling model doesn't
     // have a scheduling table.  Note the default does not have a table.
-    return getItineraryLatency(MI, MF, STI);
+    return getItineraryLatency(STI, MCII, MI);
 
   // Get the scheduling class of the requested instruction.
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-  const MCInstrDesc &Desc = TII->get(MI.getOpcode());
+  const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
   unsigned SCClass = Desc.getSchedClass();
   int Latency = SCModel.computeInstrLatency(*STI, SCClass);
   if (Latency <= 0)
@@ -1178,7 +1175,8 @@ static void emitComments(const MachineInstr &MI, const MCSubtargetInfo *STI,
     CommentOS << " Reload Reuse\n";
 
   if (PrintLatency) {
-    if (auto Latency = getLatency(MI, STI)) {
+    const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+    if (auto Latency = getLatency(STI, TII, MI)) {
       // Report only interesting latencies.
       if (1 < *Latency)
         CommentOS << " Latency: " << *Latency << "\n";

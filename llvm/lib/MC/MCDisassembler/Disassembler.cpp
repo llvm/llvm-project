@@ -166,18 +166,19 @@ static void emitComments(LLVMDisasmContext *DC,
 /// scheduling model, based on \p DC information.
 /// \return The maximum expected latency over all the operands or -1
 /// if no information is available.
-static int getItineraryLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
-  const int NoInformationAvailable = -1;
+static std::optional<int> getItineraryLatency(const MCSubtargetInfo *STI,
+                                              const MCInstrInfo *MCII,
+                                              const MCInst &Inst) {
+  llvm::StringRef CPU = STI->getCPU();
 
   // Check if we have a CPU to get the itinerary information.
-  if (DC->getCPU().empty())
-    return NoInformationAvailable;
+  if (CPU.empty())
+    return std::nullopt;
 
   // Get itinerary information.
-  const MCSubtargetInfo *STI = DC->getSubtargetInfo();
-  InstrItineraryData IID = STI->getInstrItineraryForCPU(DC->getCPU());
+  InstrItineraryData IID = STI->getInstrItineraryForCPU(CPU);
   // Get the scheduling class of the requested instruction.
-  const MCInstrDesc& Desc = DC->getInstrInfo()->get(Inst.getOpcode());
+  const MCInstrDesc& Desc = MCII->get(Inst.getOpcode());
   unsigned SCClass = Desc.getSchedClass();
 
   unsigned Latency = 0;
@@ -192,33 +193,39 @@ static int getItineraryLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
 /// Gets latency information for \p Inst, based on \p DC information.
 /// \return The maximum expected latency over all the definitions or -1
 /// if no information is available.
-static int getLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
+static std::optional<int> getLatency(const MCSubtargetInfo *STI, const MCInstrInfo *MCII, const MCInst &Inst) {
   // Try to compute scheduling information.
-  const MCSubtargetInfo *STI = DC->getSubtargetInfo();
   const MCSchedModel &SCModel = STI->getSchedModel();
 
   // Check if we have a scheduling model for instructions.
   if (!SCModel.hasInstrSchedModel())
     // Try to fall back to the itinerary model if the scheduling model doesn't
     // have a scheduling table.  Note the default does not have a table.
-    return getItineraryLatency(DC, Inst);
+    return getItineraryLatency(STI, MCII, Inst);
 
   // Get the scheduling class of the requested instruction.
-  const MCInstrDesc &Desc = DC->getInstrInfo()->get(Inst.getOpcode());
+  const MCInstrDesc &Desc = MCII->get(Inst.getOpcode());
   unsigned SCClass = Desc.getSchedClass();
-  return SCModel.computeInstrLatency(*STI, SCClass);
+  int Latency = SCModel.computeInstrLatency(*STI, SCClass);
+  if (Latency <= 0)
+    return std::nullopt;
+  return Latency;
 }
 
 /// Emits latency information in DC->CommentStream for \p Inst, based
 /// on the information available in \p DC.
 static void emitLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
-  int Latency = getLatency(DC, Inst);
-
-  // Report only interesting latencies.
-  if (Latency < 2)
+  const MCSubtargetInfo *STI = DC->getSubtargetInfo();
+  const MCInstrInfo *MCII =  DC->getInstrInfo();
+  std::optional<int> Latency = getLatency(STI, MCII, Inst);
+  if (!Latency)
     return;
 
-  DC->CommentStream << "Latency: " << Latency << '\n';
+  // Report only interesting latencies.
+  if (*Latency < 2)
+    return;
+
+  DC->CommentStream << "Latency: " << *Latency << '\n';
 }
 
 //
