@@ -1,3 +1,4 @@
+; REQUIRES: arm-registered-target
 ; RUN: llvm-dis < %s.bc | FileCheck %s
 
 ; Bitcode was generated from file below

@@ -1,4 +1,4 @@
-// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s 2>&1 | FileCheck %s -DFILE=%s
+// RUN: not llvm-tblgen -gen-intrinsic-enums --enabled-targets=all -I %p/../../include %s 2>&1 | FileCheck %s -DFILE=%s
 
 include "llvm/IR/Intrinsics.td"
 

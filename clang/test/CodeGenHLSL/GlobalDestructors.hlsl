@@ -1,3 +1,4 @@
+// REQUIRES: directx-registered-target
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CS,NOINLINE,CHECK
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=LIB,NOINLINE,CHECK
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -O0 %s -o - | FileCheck %s --check-prefixes=INLINE,CHECK

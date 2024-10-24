@@ -1,3 +1,4 @@
+; REQUIRES: dx-registered-target
 ; RUN: opt -S -disable-output -passes="print<dxil-resource>" < %s 2>&1 | FileCheck %s
 
 @G = external constant <4 x float>, align 4

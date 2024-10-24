@@ -1,6 +1,6 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common -optimize-match-table=false %s -o %T/context-non-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -I %p/../../include -I %p/Common -optimize-match-table=false %s -o %T/context-non-optimized.cpp
 // RUN: FileCheck %s --check-prefixes=CHECK_NOPT -input-file=%T/context-non-optimized.cpp
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common -optimize-match-table=true  %s -o %T/context-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -I %p/../../include -I %p/Common -optimize-match-table=true  %s -o %T/context-optimized.cpp
 // RUN: FileCheck %s --check-prefixes=CHECK_OPT -input-file=%T/context-optimized.cpp
 
 

@@ -7542,7 +7542,7 @@ static unsigned getIntrinsicID(const SDNode *N) {
     return Intrinsic::not_intrinsic;
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = N->getConstantOperandVal(0);
-    if (IID < Intrinsic::num_intrinsics)
+    if (Intrinsic::IsIntrinsicIDValid(IID))
       return IID;
     return Intrinsic::not_intrinsic;
   }
@@ -9376,8 +9376,14 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (CallConv == CallingConv::PreserveNon) {
-    for (unsigned"Swift attributes can't be used with preserve_none",
+  if (CallConv == CallingConv::PreserveNone) {
+    for (const ISD::OutputArg &O : Outs) {
+      if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
+          O.Flags.isSwiftAsync()) {
+        MachineFunction &MF = DAG.getMachineFunction();
+        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+            MF.getFunction(),
+            "Swift attributes can't be used with preserve_none",
             DL.getDebugLoc()));
         break;
       }
@@ -14514,7 +14520,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
+                      cast<BuildVectorSDNode>(Op)->isConstantSequence();
+  if (useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
   // Try to build a simple constant vector.
@@ -29556,4 +29564,3 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
   }
 }
 #endif
-                                                                                                                                                                                                                                                                                                                                                                                                           

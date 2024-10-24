@@ -1,7 +1,7 @@
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s 2>&1 | FileCheck -check-prefixes=SDAG,SCUSTOM %s
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common %s -DHASONEUSE 2>&1 | FileCheck -check-prefixes=SDAG,SBUILTIN %s
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common %s 2>&1 | FileCheck -check-prefixes=GISEL,GCUSTOM %s
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common %s -DHASONEUSE 2>&1 | FileCheck -check-prefixes=GISEL,GBUILTIN %s
+// RUN: llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common %s 2>&1 | FileCheck -check-prefixes=SDAG,SCUSTOM %s
+// RUN: llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common %s -DHASONEUSE 2>&1 | FileCheck -check-prefixes=SDAG,SBUILTIN %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -I %p/../../include -I %p/Common %s 2>&1 | FileCheck -check-prefixes=GISEL,GCUSTOM %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -I %p/../../include -I %p/Common %s -DHASONEUSE 2>&1 | FileCheck -check-prefixes=GISEL,GBUILTIN %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -55,12 +55,12 @@ def TGTmul24_oneuse : PatFrag<
 // SBUILTIN: if (!SDValue(N, 0).hasOneUse()) return false;
 
 // GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
-// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_mul24),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode4(Intrinsic::tgt_mul24),
 // GBUILTIN: GIM_CheckHasOneUse, /*MI*/1,
 // GCUSTOM: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_TGTmul24_oneuse),
 
 // GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
-// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_mul24),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode4(Intrinsic::tgt_mul24),
 // GBUILTIN: GIM_CheckHasOneUse, /*MI*/1,
 // GCUSTOM: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_TGTmul24_oneuse),
 

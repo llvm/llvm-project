@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-global-isel -warn-on-skipped-patterns -optimize-match-table=false -I %p/../../include -I %p/Common %s -o - | FileCheck -check-prefix=GISEL %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -warn-on-skipped-patterns -optimize-match-table=false -I %p/../../include -I %p/Common %s -o - | FileCheck -check-prefix=GISEL %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -23,7 +23,7 @@ def CAT1 : I<(outs GPR32:$dst), (ins GPR32:$src0), []>;
 
 // Make sure there is no type check.
 // GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
-// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode2(Intrinsic::mytarget_sleep),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode4(Intrinsic::mytarget_sleep),
 // GISEL-NEXT: // MIs[0] Operand 1
 // GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, GIMT_Encode8(0),
 def : Pat<
@@ -32,7 +32,7 @@ def : Pat<
 >;
 
 // GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
-// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode2(Intrinsic::mytarget_sleep),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/0, GIMT_Encode4(Intrinsic::mytarget_sleep),
 // GISEL-NEXT: // MIs[0] Operand 1
 // GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, GIMT_Encode8(1),
 def : Pat<

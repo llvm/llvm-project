@@ -1,3 +1,4 @@
+; REQUIRES: arm-registered-target
 ; RUN: llvm-dis < %S/arm-intrinsics.bc | FileCheck %s
 
 define void @f(i32* %p) {

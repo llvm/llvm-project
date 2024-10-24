@@ -1,3 +1,4 @@
+// REQUIRES: directx-registered-target
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -fnative-half-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NATIVE_HALF

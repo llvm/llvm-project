@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common  %s -o %t
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -I %p/../../include -I %p/Common  %s -o %t
 // RUN: FileCheck %s < %t
 
 // Both predicates should be tested

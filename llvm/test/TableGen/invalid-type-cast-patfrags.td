@@ -1,7 +1,7 @@
-// RUN: not llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
-// RUN: not llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
-// RUN: not llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
-// RUN: not llvm-tblgen -gen-dag-isel -I %p/../../include -I %p/Common -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
+// RUN: not llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
+// RUN: not llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
+// RUN: not llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
+// RUN: not llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include -I %p/Common -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"

@@ -1,4 +1,5 @@
 ; REQUIRES: x86_64-linux
+; REQUIRES: x86-registered-target
 ;
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t

@@ -3,6 +3,7 @@
 ; Test memory sanitizer instrumentation for Arm NEON VST_{2,3,4} and
 ; VST_1x{2,3,4} instructions, including floating-point parameters.
 ;
+; REQUIRES: aarch64-registered-target
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Generated with:

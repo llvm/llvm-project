@@ -3,6 +3,7 @@
 ; Test memory sanitizer instrumentation for Arm store with lane instructions.
 ; Note: st{2,3,4}lane uses Arm NEON but st1lane does not.
 ;
+; REQUIRES: aarch64-registered-target
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Forked from llvm/test/CodeGen/AArch64/arm64-st1.ll

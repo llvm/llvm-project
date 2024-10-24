@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-global-isel -warn-on-skipped-patterns -I %p/../../include -I %p/Common %s -o - < %s | FileCheck -check-prefix=GISEL %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -warn-on-skipped-patterns -I %p/../../include -I %p/Common %s -o - < %s | FileCheck -check-prefix=GISEL %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -10,7 +10,7 @@ def FOO : I<(outs GPR32:$dst), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 
 // GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
-// GISEL-NEXT: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_foo),
+// GISEL-NEXT: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode4(Intrinsic::tgt_foo),
 // GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
 // GISEL-NEXT: GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
 // GISEL-NEXT: GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,

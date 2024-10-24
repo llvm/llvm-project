@@ -4,9 +4,9 @@ set(LLVM_TARGET_DEFINITIONS ARC.td)
 
 tablegen(LLVM ARCGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM ARCGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM ARCGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM ARCGenDAGISel.inc -gen-dag-isel ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM ARCGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM ARCGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM ARCGenInstrInfo.inc -gen-instr-info ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM ARCGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ARCGenSubtargetInfo.inc -gen-subtarget)
 

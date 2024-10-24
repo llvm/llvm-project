@@ -79,8 +79,7 @@ enum IntrinsicType : uint16_t {
 };
 
 struct IntrinsicData {
-
-  uint16_t Id;
+  unsigned Id;
   IntrinsicType Type;
   uint16_t Opc0;
   uint16_t Opc1;

@@ -1,3 +1,5 @@
+// REQUIRES: directx-registered-target
+// REQUIRES: spirv-registered-target
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \

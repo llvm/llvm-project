@@ -33,8 +33,65 @@
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/IntrinsicID.h"
 
 using namespace llvm;
+using namespace Intrinsic;
+
+/// Table of per-target intrinsic name tables.
+#define GET_INTRINSIC_TARGET_DATA
+#include "llvm/IR/IntrinsicImpl.inc"
+#undef GET_INTRINSIC_TARGET_DATA
+size_t constexpr NumTargets = sizeof(TargetInfos) / sizeof(TargetInfos[0]);
+
+// Returns true if the given intrinsic ID is valid. ID 0 for not_intrinsic is
+// considered valid. Note that Valid != Enabled. This is essntially replacement
+// for earlier (ID < num_intrinsics) checks.
+bool Intrinsic::IsIntrinsicIDValid(ID ID) {
+  if (ID == 0)
+    return true;
+  auto Decoded = DecodeIntrinsicIDNoFail(ID);
+  if (!Decoded)
+    return false;
+  unsigned TargetIdx = Decoded->first;
+  unsigned IntrinsicIdx = Decoded->second;
+  return TargetIdx < NumTargets && IntrinsicIdx < TargetInfos[TargetIdx].Count;
+}
+
+// Returns linear index of ID if its enabled, else returns 0.
+inline unsigned getLinearIndex(Intrinsic::ID ID) {
+  auto Decoded = DecodeIntrinsicIDNoFail(ID);
+  if (!Decoded)
+    return 0;
+  unsigned TargetIdx = Decoded->first;
+  unsigned IntrinsicIdx = Decoded->second;
+  if (!TargetInfos[TargetIdx].Enabled)
+    return 0;
+  unsigned EnabledIndex = TargetInfos[TargetIdx].EnabledIndex;
+  return TargetLinearIndexInfos[EnabledIndex].FirstLinearIndex + IntrinsicIdx;
+}
+
+bool Intrinsic::IsIntrinsicIDEnabled(Intrinsic::ID ID) {
+  if (!IsIntrinsicIDValid(ID))
+    return false;
+  auto [TargetIdx, _] = DecodeIntrinsicID(ID);
+  return TargetInfos[TargetIdx].Enabled;
+}
+
+ID Intrinsic::GetNextValidIntrinsicID(Intrinsic::ID ID) {
+  if (ID == Intrinsic::not_intrinsic)
+    return 1;
+  if (ID == Intrinsic::last_valid_intrinsic)
+    return Intrinsic::end_id;
+  if (ID == Intrinsic::end_id)
+    llvm_unreachable("Cannot find the next valid intrisnic");
+  auto [TargetIndex, IntrinsicIndex] = DecodeIntrinsicID(ID);
+  if (IntrinsicIndex + 1 < TargetInfos[TargetIndex].Count)
+    return EncodeIntrinsicID(TargetIndex, IntrinsicIndex + 1);
+  else if (TargetIndex + 1 < NumTargets)
+    return EncodeIntrinsicID(TargetIndex + 1, 0);
+  llvm_unreachable("Cannot find the next valid intrisnic");
+}
 
 /// Table of string intrinsic names indexed by enum value.
 static constexpr const char *const IntrinsicNameTable[] = {
@@ -45,12 +102,12 @@ static constexpr const char *const IntrinsicNameTable[] = {
 };
 
 StringRef Intrinsic::getBaseName(ID id) {
-  assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  return IntrinsicNameTable[id];
+  assert(IsIntrinsicIDValid(id) && "Invalid intrinsic ID!");
+  return ArrayRef(IntrinsicNameTable)[getLinearIndex(id)];
 }
 
 StringRef Intrinsic::getName(ID id) {
-  assert(id < num_intrinsics && "Invalid intrinsic ID!");
+  assert(IsIntrinsicIDValid(id) && "Invalid intrinsic ID!");
   assert(!Intrinsic::isOverloaded(id) &&
          "This version of getName does not support overloading");
   return getBaseName(id);
@@ -157,8 +214,7 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
 static std::string getIntrinsicNameImpl(Intrinsic::ID Id, ArrayRef<Type *> Tys,
                                         Module *M, FunctionType *FT,
                                         bool EarlyModuleCheck) {
-
-  assert(Id < Intrinsic::num_intrinsics && "Invalid intrinsic ID!");
+  assert(IsIntrinsicIDEnabled(Id) && "Invalid intrinsic ID!");
   assert((Tys.empty() || Intrinsic::isOverloaded(Id)) &&
          "This version of getName is for overloaded intrinsics only");
   (void)EarlyModuleCheck;
@@ -450,11 +506,15 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 #undef GET_INTRINSIC_GENERATOR_GLOBAL
 
 void Intrinsic::getIntrinsicInfoTableEntries(
-    ID id, SmallVectorImpl<IITDescriptor> &T) {
+    ID IntrinsicID, SmallVectorImpl<IITDescriptor> &T) {
   static_assert(sizeof(IIT_Table[0]) == 2,
                 "Expect 16-bit entries in IIT_Table");
+  assert(IsIntrinsicIDValid(IntrinsicID));
+  unsigned Idx = getLinearIndex(IntrinsicID);
+  if (Idx == 0)
+    return;
   // Check to see if the intrinsic's type was expressible by the table.
-  uint16_t TableVal = IIT_Table[id - 1];
+  uint16_t TableVal = IIT_Table[Idx - 1];
 
   // Decode the TableVal into an array of IITValues.
   SmallVector<unsigned char> IITValues;
@@ -609,19 +669,20 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
   return FunctionType::get(ResultTy, ArgTys, false);
 }
 
-bool Intrinsic::isOverloaded(ID id) {
+// Check if an intrinsic is overloaded or not using its linear index.
+static bool isOverloadedUsingLinearIndex(unsigned Idx) {
 #define GET_INTRINSIC_OVERLOAD_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 
-/// Table of per-target intrinsic name tables.
-#define GET_INTRINSIC_TARGET_DATA
-#include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_TARGET_DATA
+bool Intrinsic::isOverloaded(ID id) {
+  assert(IsIntrinsicIDValid(id));
+  return isOverloadedUsingLinearIndex(getLinearIndex(id));
+}
 
 bool Intrinsic::isTargetIntrinsic(Intrinsic::ID IID) {
-  return IID > TargetInfos[0].Count;
+  return IID != Intrinsic::not_intrinsic && DecodeIntrinsicID(IID).first != 0;
 }
 
 int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
@@ -682,8 +743,31 @@ findTargetSubtable(StringRef Name) {
       Targets, [=](const IntrinsicTargetInfo &TI) { return TI.Name < Target; });
   // We've either found the target or just fall back to the generic set, which
   // is always first.
-  const auto &TI = It != Targets.end() && It->Name == Target ? *It : Targets[0];
-  return {ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count), TI.Name};
+  const auto &TI = It != Targets.end() && It->Name == Target && It->Enabled
+                       ? *It
+                       : Targets[0];
+  unsigned LinearIndex =
+      TargetLinearIndexInfos[TI.EnabledIndex].FirstLinearIndex;
+  return {ArrayRef(IntrinsicNameTable + LinearIndex, TI.Count), TI.Name};
+}
+
+static Intrinsic::ID getIntrinsicIDFromIndex(unsigned Idx) {
+  if (Idx == 0)
+    return Intrinsic::not_intrinsic;
+
+  auto It = partition_point(TargetLinearIndexInfos,
+                            [Idx](const IntrinsicLinearIndexInfo &Info) {
+                              return Info.FirstLinearIndex + Info.Count < Idx;
+                            });
+  // Idx, if present, will be in the entry at It or It + 1.
+  if (It == std::end(TargetLinearIndexInfos))
+    return Intrinsic::not_intrinsic;
+  if (It->FirstLinearIndex <= Idx && Idx < It->FirstLinearIndex + It->Count)
+    return EncodeIntrinsicID(It->TargetIdx, Idx - It->FirstLinearIndex);
+  ++It;
+  if (It->FirstLinearIndex <= Idx && Idx < It->FirstLinearIndex + It->Count)
+    return EncodeIntrinsicID(It->TargetIdx, Idx - It->FirstLinearIndex);
+  return Intrinsic::not_intrinsic;
 }
 
 /// This does the actual lookup of an intrinsic ID which matches the given
@@ -693,19 +777,19 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
   int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name, Target);
   if (Idx == -1)
     return Intrinsic::not_intrinsic;
-
-  // Intrinsic IDs correspond to the location in IntrinsicNameTable, but we have
-  // an index into a sub-table.
+  const auto MatchSize = strlen(NameTable[Idx]);
+  // Adjust the index from sub-table index to index into the global table.
   int Adjust = NameTable.data() - IntrinsicNameTable;
-  Intrinsic::ID ID = static_cast<Intrinsic::ID>(Idx + Adjust);
+  Idx += Adjust;
 
   // If the intrinsic is not overloaded, require an exact match. If it is
   // overloaded, require either exact or prefix match.
-  const auto MatchSize = strlen(NameTable[Idx]);
   assert(Name.size() >= MatchSize && "Expected either exact or prefix match");
   bool IsExactMatch = Name.size() == MatchSize;
-  return IsExactMatch || Intrinsic::isOverloaded(ID) ? ID
-                                                     : Intrinsic::not_intrinsic;
+  Intrinsic::ID r = IsExactMatch || isOverloadedUsingLinearIndex(Idx)
+                        ? getIntrinsicIDFromIndex(Idx)
+                        : Intrinsic::not_intrinsic;
+  return r;
 }
 
 /// This defines the "Intrinsic::getAttributes(ID id)" method.
@@ -718,10 +802,11 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
   auto *FT = getType(M->getContext(), id, Tys);
-  return cast<Function>(
+  Function *F = cast<Function>(
       M->getOrInsertFunction(
            Tys.empty() ? getName(id) : getName(id, Tys, M, FT), FT)
           .getCallee());
+  return F;
 }
 
 Function *Intrinsic::getDeclarationIfExists(const Module *M, ID id) {
@@ -1043,7 +1128,7 @@ bool Intrinsic::matchIntrinsicVarArg(
 
 bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
                                       SmallVectorImpl<Type *> &ArgTys) {
-  if (!ID)
+  if (!ID || !IsIntrinsicIDEnabled(ID))
     return false;
 
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
