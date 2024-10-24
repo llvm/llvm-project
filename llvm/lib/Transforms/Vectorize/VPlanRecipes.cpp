@@ -215,8 +215,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   VPValue *ExitValue = getOperand(0);
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   VPRecipeBase *ExitingRecipe = ExitValue->getDefiningRecipe();
   auto *ExitingVPBB = ExitingRecipe ? ExitingRecipe->getParent() : nullptr;
   // Values leaving the vector loop reach live out phi's in the exiting block
