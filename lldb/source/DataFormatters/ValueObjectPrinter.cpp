@@ -8,12 +8,12 @@
 
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
 

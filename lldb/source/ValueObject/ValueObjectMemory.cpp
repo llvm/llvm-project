@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/ErrorHandling.h"
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectConstResultCast.h"
+#include "lldb/ValueObject/ValueObjectConstResultCast.h"
 
 namespace lldb_private {
 class DataExtractor;

@@ -16,7 +16,6 @@
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackID.h"
@@ -24,6 +23,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 namespace lldb_private {
 

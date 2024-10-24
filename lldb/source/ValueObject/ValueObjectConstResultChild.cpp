@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectConstResultChild.h"
+#include "lldb/ValueObject/ValueObjectConstResultChild.h"
 
 #include "lldb/lldb-private-enumerations.h"
 namespace lldb_private {
@@ -22,11 +22,10 @@ class ValueObject;
 using namespace lldb_private;
 
 ValueObjectConstResultChild::ValueObjectConstResultChild(
-    ValueObject &parent, const CompilerType &compiler_type,
-    ConstString name, uint32_t byte_size, int32_t byte_offset,
-    uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-    bool is_base_class, bool is_deref_of_parent, lldb::addr_t live_address,
-    uint64_t language_flags)
+    ValueObject &parent, const CompilerType &compiler_type, ConstString name,
+    uint32_t byte_size, int32_t byte_offset, uint32_t bitfield_bit_size,
+    uint32_t bitfield_bit_offset, bool is_base_class, bool is_deref_of_parent,
+    lldb::addr_t live_address, uint64_t language_flags)
     : ValueObjectChild(parent, compiler_type, name, byte_size, byte_offset,
                        bitfield_bit_size, bitfield_bit_offset, is_base_class,
                        is_deref_of_parent, eAddressTypeLoad, language_flags),
@@ -51,8 +50,9 @@ lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf(Status &error) {
   return m_impl.AddressOf(error);
 }
 
-lldb::addr_t ValueObjectConstResultChild::GetAddressOf(
-  bool scalar_is_load_address, AddressType* address_type) {
+lldb::addr_t
+ValueObjectConstResultChild::GetAddressOf(bool scalar_is_load_address,
+                                          AddressType *address_type) {
   return m_impl.GetAddressOf(scalar_is_load_address, address_type);
 }
 

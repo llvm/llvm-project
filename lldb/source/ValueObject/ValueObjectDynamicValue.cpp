@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectDynamicValue.h"
+#include "lldb/ValueObject/ValueObjectDynamicValue.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -20,6 +19,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-types.h"
 
 #include <cstring>
@@ -203,7 +203,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
 
   // If we don't have a dynamic type, set ourselves to be invalid and return
   // false.  We used to try to produce a dynamic ValueObject that behaved "like"
-  // its parent, but that failed for ValueObjectConstResult, which is too 
+  // its parent, but that failed for ValueObjectConstResult, which is too
   // complex a beast to try to emulate.  If we return an invalid ValueObject,
   // clients will end up getting the static value instead, which behaves
   // correctly.

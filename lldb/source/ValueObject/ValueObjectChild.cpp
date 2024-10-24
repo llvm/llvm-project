@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectChild.h"
+#include "lldb/ValueObject/ValueObjectChild.h"
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -27,10 +27,9 @@
 using namespace lldb_private;
 
 ValueObjectChild::ValueObjectChild(
-    ValueObject &parent, const CompilerType &compiler_type,
-    ConstString name, uint64_t byte_size, int32_t byte_offset,
-    uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-    bool is_base_class, bool is_deref_of_parent,
+    ValueObject &parent, const CompilerType &compiler_type, ConstString name,
+    uint64_t byte_size, int32_t byte_offset, uint32_t bitfield_bit_size,
+    uint32_t bitfield_bit_offset, bool is_base_class, bool is_deref_of_parent,
     AddressType child_ptr_or_ref_addr_type, uint64_t language_flags)
     : ValueObject(parent), m_compiler_type(compiler_type),
       m_byte_size(byte_size), m_byte_offset(byte_offset),
@@ -200,8 +199,7 @@ bool ValueObjectChild::UpdateValue() {
             GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped));
         if (GetCompilerType().GetTypeInfo() & lldb::eTypeHasValue) {
           Value &value = is_instance_ptr_base ? m_parent->GetValue() : m_value;
-          m_error =
-              value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
+          m_error = value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
         } else {
           m_error.Clear(); // No value so nothing to read...
         }

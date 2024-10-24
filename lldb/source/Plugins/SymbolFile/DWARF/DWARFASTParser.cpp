@@ -11,9 +11,9 @@
 #include "DWARFDIE.h"
 #include "SymbolFileDWARF.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 using namespace lldb;

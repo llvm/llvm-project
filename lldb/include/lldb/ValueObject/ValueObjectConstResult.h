@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCONSTRESULT_H
-#define LLDB_CORE_VALUEOBJECTCONSTRESULT_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULT_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULT_H
 
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResultImpl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResultImpl.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -50,10 +50,11 @@ public:
          lldb::ByteOrder byte_order, uint32_t addr_size,
          lldb::addr_t address = LLDB_INVALID_ADDRESS);
 
-  static lldb::ValueObjectSP
-  Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-         ConstString name, lldb::addr_t address,
-         AddressType address_type, uint32_t addr_byte_size);
+  static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
+                                    const CompilerType &compiler_type,
+                                    ConstString name, lldb::addr_t address,
+                                    AddressType address_type,
+                                    uint32_t addr_byte_size);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     Value &value, ConstString name,
@@ -162,4 +163,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCONSTRESULT_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULT_H

@@ -6,13 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectConstResultImpl.h"
+#include "lldb/ValueObject/ValueObjectConstResultImpl.h"
 
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectConstResultCast.h"
-#include "lldb/Core/ValueObjectConstResultChild.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -20,6 +16,10 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectConstResultCast.h"
+#include "lldb/ValueObject/ValueObjectConstResultChild.h"
 
 #include <string>
 
@@ -36,8 +36,7 @@ using namespace lldb_private;
 ValueObjectConstResultImpl::ValueObjectConstResultImpl(
     ValueObject *valobj, lldb::addr_t live_address)
     : m_impl_backend(valobj), m_live_address(live_address),
-      m_live_address_type(eAddressTypeLoad),
-      m_address_of_backend() {}
+      m_live_address_type(eAddressTypeLoad), m_address_of_backend() {}
 
 lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference(Status &error) {
   if (m_impl_backend == nullptr)

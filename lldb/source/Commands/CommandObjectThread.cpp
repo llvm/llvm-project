@@ -15,7 +15,6 @@
 #include "CommandObjectThreadUtil.h"
 #include "CommandObjectTrace.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -37,6 +36,7 @@
 #include "lldb/Target/Trace.h"
 #include "lldb/Target/TraceDumper.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;

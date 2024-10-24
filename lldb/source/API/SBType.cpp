@@ -13,7 +13,6 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeEnumMember.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
@@ -23,6 +22,7 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"

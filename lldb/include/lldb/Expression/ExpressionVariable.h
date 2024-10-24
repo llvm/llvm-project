@@ -15,8 +15,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-public.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 
