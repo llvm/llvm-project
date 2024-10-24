@@ -276,6 +276,7 @@ private:
   SmallVector<Header, 2> HeadersStorage;
 
 public:
+  ArrayRef<Header> getAllHeaders() const { return HeadersStorage; }
   ArrayRef<Header> getHeaders(HeaderKind HK) const {
     auto BeginIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK];
     auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
