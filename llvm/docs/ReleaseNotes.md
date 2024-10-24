@@ -171,6 +171,8 @@ Changes to the RISC-V Backend
 * Added `Smctr` and `Ssctr` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
+  are no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
