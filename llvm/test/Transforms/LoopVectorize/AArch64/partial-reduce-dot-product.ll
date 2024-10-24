@@ -1113,8 +1113,8 @@ for.end98:                                        ; preds = %for.end98.loopexit1
   ret void
 }
 
-define i32 @dotp_predicated(i32 %N, ptr %a, ptr %b) #0 {
-; CHECK-LABEL: define i32 @dotp_predicated(
+define i32 @not_dotp_predicated(i32 %N, ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define i32 @not_dotp_predicated(
 ; CHECK-SAME: i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[N]], 16
@@ -1132,7 +1132,7 @@ define i32 @dotp_predicated(i32 %N, ptr %a, ptr %b) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i32 0
@@ -1143,16 +1143,15 @@ define i32 @dotp_predicated(i32 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[TMP10]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext <16 x i8> [[WIDE_MASKED_LOAD1]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul nsw <16 x i32> [[TMP16]], [[TMP3]]
-; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP17]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[TMP15]] = select i1 [[TMP8]], <4 x i32> [[PARTIAL_REDUCE]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <16 x i32> [[TMP17]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP15]] = select <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> [[TMP8]], <16 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[INDEX_NEXT]], i64 [[WIDE_TRIP_COUNT]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = xor <16 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i1> [[TMP18]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP15]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ;
 entry:
@@ -1188,8 +1187,8 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-define i32 @dotp_predicated_pragma(i32 %N, ptr %a, ptr %b) #0 {
-; CHECK-LABEL: define i32 @dotp_predicated_pragma(
+define i32 @not_dotp_predicated_pragma(i32 %N, ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define i32 @not_dotp_predicated_pragma(
 ; CHECK-SAME: i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8_NOT:%.*]] = icmp eq i32 [[N]], 0
@@ -1206,7 +1205,7 @@ define i32 @dotp_predicated_pragma(i32 %N, ptr %a, ptr %b) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i32 0
@@ -1217,16 +1216,15 @@ define i32 @dotp_predicated_pragma(i32 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[TMP10]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext <16 x i8> [[WIDE_MASKED_LOAD1]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul nsw <16 x i32> [[TMP16]], [[TMP3]]
-; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP17]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[TMP15]] = select i1 [[TMP8]], <4 x i32> [[PARTIAL_REDUCE]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <16 x i32> [[TMP17]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP15]] = select <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> [[TMP8]], <16 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[INDEX_NEXT]], i64 [[WIDE_TRIP_COUNT]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = xor <16 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i1> [[TMP18]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP15]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ;
 entry:

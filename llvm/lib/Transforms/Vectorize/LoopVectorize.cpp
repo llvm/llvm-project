@@ -8607,6 +8607,8 @@ getScaledReduction(PHINode *PHI, const RecurrenceDescriptor &Rdx,
   // the end of the loop chooses between the phi value and most recent
   // reduction result, both of which have different VFs to the active lane
   // mask when scaling.
+  if (CM.blockNeedsPredicationForAnyReason(Rdx.getLoopExitInstr()->getParent()))
+    return std::nullopt;
 
   auto *Update = dyn_cast<BinaryOperator>(Rdx.getLoopExitInstr());
   if (!Update)

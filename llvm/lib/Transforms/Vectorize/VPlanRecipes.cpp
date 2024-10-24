@@ -469,15 +469,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Cond = State.get(getOperand(0));
     Value *Op1 = State.get(getOperand(1));
     Value *Op2 = State.get(getOperand(2));
-    auto *CondVec = dyn_cast<VectorType>(Cond->getType());
-    auto *Op1Vec = dyn_cast<VectorType>(Op1->getType());
-    // If the condition and values differ in their element count (as can happen
-    // in the case of predicated partial reductions) then reduce the condition
-    // to a single value and select based on that instead.
-    if (CondVec && Op1Vec &&
-        CondVec->getElementCount() != Op1Vec->getElementCount() &&
-        CondVec->getElementType() == IntegerType::getInt1Ty(Cond->getContext()))
-      Cond = Builder.CreateOrReduce(Cond);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
   }
   case VPInstruction::ActiveLaneMask: {
