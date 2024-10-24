@@ -404,41 +404,41 @@ define signext i8 @xor_i8_4(i8 signext %b) {
 ; MIPS-LABEL: xor_i8_4:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    jr $ra
-; MIPS-NEXT:    xori $2, $4, 4
+; MIPS-NEXT:    xor $2, $4, 4
 ;
 ; MIPS32R2-LABEL: xor_i8_4:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    xori $2, $4, 4
+; MIPS32R2-NEXT:    xor $2, $4, 4
 ;
 ; MIPS32R6-LABEL: xor_i8_4:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    xori $2, $4, 4
+; MIPS32R6-NEXT:    xor $2, $4, 4
 ;
 ; MIPS64-LABEL: xor_i8_4:
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    xori $2, $4, 4
+; MIPS64-NEXT:    xor $2, $4, 4
 ;
 ; MIPS64R2-LABEL: xor_i8_4:
 ; MIPS64R2:       # %bb.0: # %entry
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    xori $2, $4, 4
+; MIPS64R2-NEXT:    xor $2, $4, 4
 ;
 ; MIPS64R6-LABEL: xor_i8_4:
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    xori $2, $4, 4
+; MIPS64R6-NEXT:    xor $2, $4, 4
 ;
 ; MM32R3-LABEL: xor_i8_4:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    xori $2, $4, 4
+; MM32R3-NEXT:    xor16 4, $4
+; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: xor_i8_4:
 ; MM32R6:       # %bb.0: # %entry
-; MM32R6-NEXT:    xori $2, $4, 4
+; MM32R6-NEXT:    xor $2, $4, 4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = xor i8 4, %b
@@ -449,41 +449,41 @@ define signext i16 @xor_i16_4(i16 signext %b) {
 ; MIPS-LABEL: xor_i16_4:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    jr $ra
-; MIPS-NEXT:    xori $2, $4, 4
+; MIPS-NEXT:    xor $2, $4, 4
 ;
 ; MIPS32R2-LABEL: xor_i16_4:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    xori $2, $4, 4
+; MIPS32R2-NEXT:    xor $2, $4, 4
 ;
 ; MIPS32R6-LABEL: xor_i16_4:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    xori $2, $4, 4
+; MIPS32R6-NEXT:    xor $2, $4, 4
 ;
 ; MIPS64-LABEL: xor_i16_4:
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    xori $2, $4, 4
+; MIPS64-NEXT:    xor $2, $4, 4
 ;
 ; MIPS64R2-LABEL: xor_i16_4:
 ; MIPS64R2:       # %bb.0: # %entry
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    xori $2, $4, 4
+; MIPS64R2-NEXT:    xor $2, $4, 4
 ;
 ; MIPS64R6-LABEL: xor_i16_4:
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    xori $2, $4, 4
+; MIPS64R6-NEXT:    xor $2, $4, 4
 ;
 ; MM32R3-LABEL: xor_i16_4:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    xori $2, $4, 4
+; MM32R3-NEXT:    xor16 4, $4
+; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: xor_i16_4:
 ; MM32R6:       # %bb.0: # %entry
-; MM32R6-NEXT:    xori $2, $4, 4
+; MM32R6-NEXT:    xor $2, $4, 4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = xor i16 4, %b
@@ -508,21 +508,18 @@ define signext i32 @xor_i32_4(i32 signext %b) {
 ;
 ; MIPS64-LABEL: xor_i32_4:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    xori $1, $4, 4
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    sll $2, $1, 0
+; MIPS64-NEXT:    xor $2, $4, 4
 ;
 ; MIPS64R2-LABEL: xor_i32_4:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    xori $1, $4, 4
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    sll $2, $1, 0
+; MIPS64R2-NEXT:    xor $2, $4, 4
 ;
 ; MIPS64R6-LABEL: xor_i32_4:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    xori $1, $4, 4
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    xor $2, $4, 4
 ;
 ; MM32R3-LABEL: xor_i32_4:
 ; MM32R3:       # %bb.0: # %entry
