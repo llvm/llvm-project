@@ -9376,14 +9376,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (CallConv == CallingConv::PreserveNone) {
-    for (const ISD::OutputArg &O : Outs) {
-      if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
-          O.Flags.isSwiftAsync()) {
-        MachineFunction &MF = DAG.getMachineFunction();
-        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-            MF.getFunction(),
-            "Swift attributes can't be used with preserve_none",
+  if (CallConv == CallingConv::PreserveNon) {
+    for (unsigned"Swift attributes can't be used with preserve_none",
             DL.getDebugLoc()));
         break;
       }
@@ -29562,3 +29556,4 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
   }
 }
 #endif
+                                                                                                                                                                                                                                                                                                                                                                                                           

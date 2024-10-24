@@ -554,7 +554,7 @@ std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
 ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
   const FunctionDecl *D = getDecl();
   if (!D)
-    return std::nullopt;
+    return {};
   return D->parameters();
 }
 
@@ -884,7 +884,7 @@ const BlockDataRegion *BlockCall::getBlockRegion() const {
 ArrayRef<ParmVarDecl*> BlockCall::parameters() const {
   const BlockDecl *D = getDecl();
   if (!D)
-    return std::nullopt;
+    return {};
   return D->parameters();
 }
 
@@ -981,7 +981,7 @@ RuntimeDefinition CXXDestructorCall::getRuntimeDefinition() const {
 ArrayRef<ParmVarDecl*> ObjCMethodCall::parameters() const {
   const ObjCMethodDecl *D = getDecl();
   if (!D)
-    return std::nullopt;
+    return {};
   return D->parameters();
 }
 

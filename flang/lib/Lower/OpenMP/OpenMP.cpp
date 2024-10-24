@@ -2769,7 +2769,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   for (const Clause &clause : clauses) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
-    if (!std::holds_alternative<clause::Allocate>(clause.u) &&
+    if (!std::holds_alternative<clause::Affinity>(clause.u) &&
+        !std::holds_alternative<clause::Allocate>(clause.u) &&
         !std::holds_alternative<clause::Copyin>(clause.u) &&
         !std::holds_alternative<clause::Copyprivate>(clause.u) &&
         !std::holds_alternative<clause::Default>(clause.u) &&

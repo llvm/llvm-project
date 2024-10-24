@@ -221,7 +221,7 @@ void initializeModuloScheduleTestPass(PassRegistry &);
 void initializeNaryReassociateLegacyPassPass(PassRegistry &);
 void initializeObjCARCContractLegacyPassPass(PassRegistry &);
 void initializeOptimizationRemarkEmitterWrapperPassPass(PassRegistry &);
-void initializeOptimizePHIsPass(PassRegistry &);
+void initializeOptimizePHIsLegacyPass(PassRegistry &);
 void initializePEIPass(PassRegistry &);
 void initializePHIEliminationPass(PassRegistry &);
 void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry &);

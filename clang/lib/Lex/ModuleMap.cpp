@@ -707,7 +707,7 @@ ModuleMap::findAllModulesForHeader(FileEntryRef File) {
   if (findOrCreateModuleForHeaderInUmbrellaDir(File))
     return Headers.find(File)->second;
 
-  return std::nullopt;
+  return {};
 }
 
 ArrayRef<ModuleMap::KnownHeader>
@@ -716,7 +716,7 @@ ModuleMap::findResolvedModulesForHeader(FileEntryRef File) const {
   resolveHeaderDirectives(File);
   auto It = Headers.find(File);
   if (It == Headers.end())
-    return std::nullopt;
+    return {};
   return It->second;
 }
 

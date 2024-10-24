@@ -1689,15 +1689,25 @@ TEST_F(FormatTestCSharp, BrokenBrackets) {
 }
 
 TEST_F(FormatTestCSharp, GotoCaseLabel) {
-  verifyNoCrash("switch (i) {\n"
-                "case 0:\n"
-                "  goto case 1;\n"
-                "case 1:\n"
-                "  j = 0;\n"
-                "  {\n"
-                "    break;\n"
-                "  }\n"
-                "}");
+  verifyFormat("switch (i)\n"
+               "{\n"
+               "case 0:\n"
+               "    goto case 1;\n"
+               "case 1:\n"
+               "    j = 0;\n"
+               "    {\n"
+               "        break;\n"
+               "    }\n"
+               "}",
+               "switch (i) {\n"
+               "case 0:\n"
+               "  goto case 1;\n"
+               "case 1:\n"
+               "  j = 0;\n"
+               "  {\n"
+               "    break;\n"
+               "  }\n"
+               "}");
 }
 
 } // namespace

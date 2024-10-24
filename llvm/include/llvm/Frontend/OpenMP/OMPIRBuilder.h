@@ -2264,6 +2264,9 @@ public:
 
     bool EmitDebug = false;
 
+    /// Whether the `target ... data` directive has a `nowait` clause.
+    bool HasNoWait = false;
+
     explicit TargetDataInfo() {}
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
                             bool SeparateBeginEndCalls)
@@ -2342,7 +2345,6 @@ public:
   /// Generate a target region entry call and host fallback call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  /// \param OutlinedFn The outlined kernel function.
   /// \param OutlinedFnID The ooulined function ID.
   /// \param EmitTargetCallFallbackCB Call back function to generate host
   ///        fallback code.
@@ -2350,18 +2352,27 @@ public:
   /// \param DeviceID Identifier for the device via the 'device' clause.
   /// \param RTLoc Source location identifier
   /// \param AllocaIP The insertion point to be used for alloca instructions.
-  InsertPointTy emitKernelLaunch(
-      const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
-      EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
-      Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
+  InsertPointTy
+  emitKernelLaunch(const LocationDescription &Loc, Value *OutlinedFnID,
+                   EmitFallbackCallbackTy EmitTargetCallFallbackCB,
+                   TargetKernelArgs &Args, Value *DeviceID, Value *RTLoc,
+                   InsertPointTy AllocaIP);
+
+  /// Callback type for generating the bodies of device directives that require
+  /// outer target tasks (e.g. in case of having `nowait` or `depend` clauses).
+  ///
+  /// \param DeviceID The ID of the device on which the target region will
+  ///        execute.
+  /// \param RTLoc Source location identifier
+  /// \Param TargetTaskAllocaIP Insertion point for the alloca block of the
+  ///        generated task.
+  using TargetTaskBodyCallbackTy =
+      function_ref<void(Value *DeviceID, Value *RTLoc,
+                        IRBuilderBase::InsertPoint TargetTaskAllocaIP)>;
 
   /// Generate a target-task for the target construct
   ///
-  /// \param OutlinedFn The outlined device/target kernel function.
-  /// \param OutlinedFnID The ooulined function ID.
-  /// \param EmitTargetCallFallbackCB Call back function to generate host
-  ///        fallback code.
-  /// \param Args Data structure holding information about the kernel arguments.
+  /// \param TaskBodyCB Callback to generate the actual body of the target task.
   /// \param DeviceID Identifier for the device via the 'device' clause.
   /// \param RTLoc Source location identifier
   /// \param AllocaIP The insertion point to be used for alloca instructions.
@@ -2370,10 +2381,10 @@ public:
   /// \param HasNoWait True if the target construct had 'nowait' on it, false
   ///        otherwise
   InsertPointTy emitTargetTask(
-      Function *OutlinedFn, Value *OutlinedFnID,
-      EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
-      Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP,
-      SmallVector<OpenMPIRBuilder::DependData> &Dependencies, bool HasNoWait);
+      TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID, Value *RTLoc,
+      OpenMPIRBuilder::InsertPointTy AllocaIP,
+      const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
+      bool HasNoWait);
 
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
