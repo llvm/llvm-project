@@ -374,10 +374,39 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
 }
 
 std::optional<ConstantRange> CallBase::getRange() const {
-  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
-  if (RangeAttr.isValid())
-    return RangeAttr.getRange();
-  return std::nullopt;
+  Attribute CBRangeAttr = Attrs.getRetAttr(llvm::Attribute::Range);
+  Attribute FnRangeAttr{};
+  if (const Function *F = getCalledFunction())
+    FnRangeAttr = F->getAttributes().getRetAttr(llvm::Attribute::Range);
+  if (!CBRangeAttr.isValid() || !FnRangeAttr.isValid()) {
+    if (CBRangeAttr.isValid())
+      return CBRangeAttr.getRange();
+    if (FnRangeAttr.isValid())
+      return FnRangeAttr.getRange();
+    return std::nullopt;
+  }
+  return CBRangeAttr.getRange().intersectWith(FnRangeAttr.getRange());
+}
+
+MaybeAlign CallBase::getRetAlign() const {
+  MaybeAlign CBAlign = Attrs.getRetAlignment();
+  MaybeAlign FNAlign{};
+  if (const Function *F = getCalledFunction())
+    FNAlign = F->getAttributes().getRetAlignment();
+  if (!CBAlign || !FNAlign)
+    return !CBAlign ? FNAlign : CBAlign;
+
+  return MaybeAlign(std::max(CBAlign.valueOrOne(), FNAlign.valueOrOne()));
+}
+MaybeAlign CallBase::getParamAlign(unsigned ArgNo) const {
+  MaybeAlign CBAlign = Attrs.getParamAlignment(ArgNo);
+  MaybeAlign FNAlign{};
+  if (const Function *F = getCalledFunction())
+    FNAlign = F->getAttributes().getParamAlignment(ArgNo);
+  if (!CBAlign || !FNAlign)
+    return !CBAlign ? FNAlign : CBAlign;
+
+  return MaybeAlign(std::max(CBAlign.valueOrOne(), FNAlign.valueOrOne()));
 }
 
 bool CallBase::isReturnNonNull() const {

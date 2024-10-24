@@ -20,16 +20,16 @@ define double @caller() {
 ; 32BIT-NEXT:    li 3, 0
 ; 32BIT-NEXT:    xxlxor 0, 0, 0
 ; 32BIT-NEXT:    xxlxor 1, 1, 1
-; 32BIT-NEXT:    stw 4, 180(1)
+; 32BIT-NEXT:    stw 4, 184(1)
 ; 32BIT-NEXT:    lis 4, 16384
-; 32BIT-NEXT:    stw 3, 184(1)
-; 32BIT-NEXT:    stw 3, 176(1)
-; 32BIT-NEXT:    stw 4, 172(1)
+; 32BIT-NEXT:    stw 3, 188(1)
+; 32BIT-NEXT:    stw 3, 180(1)
+; 32BIT-NEXT:    stw 4, 176(1)
 ; 32BIT-NEXT:    lis 4, 16368
-; 32BIT-NEXT:    stw 3, 168(1)
+; 32BIT-NEXT:    stw 3, 172(1)
+; 32BIT-NEXT:    stw 3, 164(1)
+; 32BIT-NEXT:    stw 4, 168(1)
 ; 32BIT-NEXT:    stw 3, 160(1)
-; 32BIT-NEXT:    stw 4, 164(1)
-; 32BIT-NEXT:    stw 3, 156(1)
 ; 32BIT-NEXT:    li 3, 136
 ; 32BIT-NEXT:    li 4, 120
 ; 32BIT-NEXT:    xxlxor 2, 2, 2
