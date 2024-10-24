@@ -205,6 +205,8 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+void SystemZTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+
 namespace {
 
 /// SystemZ Code Generator Pass Configuration Options.

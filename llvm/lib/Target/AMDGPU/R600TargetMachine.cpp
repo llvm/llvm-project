@@ -50,6 +50,8 @@ static MachineSchedRegistry R600SchedRegistry("r600",
 // R600 Target Machine (R600 -> Cayman)
 //===----------------------------------------------------------------------===//
 
+void R600TargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+
 R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      const TargetOptions &Options,
