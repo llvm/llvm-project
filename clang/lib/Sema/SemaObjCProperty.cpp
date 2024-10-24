@@ -2552,7 +2552,7 @@ void SemaObjC::ProcessPropertyDecl(ObjCPropertyDecl *property) {
                                                   /*TInfo=*/nullptr,
                                                   SC_None,
                                                   nullptr);
-      SetterMethod->setMethodParams(Context, Argument, std::nullopt);
+      SetterMethod->setMethodParams(Context, Argument, {});
 
       AddPropertyAttrs(SemaRef, SetterMethod, property);
 
