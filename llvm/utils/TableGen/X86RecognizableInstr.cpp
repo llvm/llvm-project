@@ -1162,6 +1162,7 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("vz512mem", TYPE_MVSIBZ)
   TYPE("BNDR", TYPE_BNDR)
   TYPE("TILE", TYPE_TMM)
+  TYPE("TILEPair", TYPE_TMM_PAIR)
   errs() << "Unhandled type string " << s << "\n";
   llvm_unreachable("Unhandled type string");
 }
@@ -1243,6 +1244,7 @@ RecognizableInstr::rmRegisterEncodingFromString(const std::string &s,
   ENCODING("VK64", ENCODING_RM)
   ENCODING("BNDR", ENCODING_RM)
   ENCODING("TILE", ENCODING_RM)
+  ENCODING("TILEPair", ENCODING_RM)
   errs() << "Unhandled R/M register encoding " << s << "\n";
   llvm_unreachable("Unhandled R/M register encoding");
 }
@@ -1292,6 +1294,7 @@ RecognizableInstr::roRegisterEncodingFromString(const std::string &s,
   ENCODING("VK64WM", ENCODING_REG)
   ENCODING("BNDR", ENCODING_REG)
   ENCODING("TILE", ENCODING_REG)
+  ENCODING("TILEPair", ENCODING_REG)
   errs() << "Unhandled reg/opcode register encoding " << s << "\n";
   llvm_unreachable("Unhandled reg/opcode register encoding");
 }
@@ -1322,6 +1325,7 @@ RecognizableInstr::vvvvRegisterEncodingFromString(const std::string &s,
   ENCODING("VK32", ENCODING_VVVV)
   ENCODING("VK64", ENCODING_VVVV)
   ENCODING("TILE", ENCODING_VVVV)
+  ENCODING("TILEPair", ENCODING_VVVV)
   errs() << "Unhandled VEX.vvvv register encoding " << s << "\n";
   llvm_unreachable("Unhandled VEX.vvvv register encoding");
 }
