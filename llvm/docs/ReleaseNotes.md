@@ -268,6 +268,9 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
+  * eg. `settings set target.output-path/target.error-path <path/to/file>`
+
 Changes to BOLT
 ---------------------------------
 
