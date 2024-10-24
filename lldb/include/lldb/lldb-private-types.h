@@ -103,18 +103,19 @@ struct RegisterSet {
 struct SourceLanguage {
   SourceLanguage() = default;
   SourceLanguage(lldb::LanguageType language_type);
-  SourceLanguage(uint16_t name, uint32_t version)
+  SourceLanguage(lldb::SourceLanguageName name, uint32_t version)
       : name(name), version(version) {}
-  SourceLanguage(std::optional<std::pair<uint16_t, uint32_t>> name_vers)
-      : name(name_vers ? name_vers->first : 0),
+  SourceLanguage(
+      std::optional<std::pair<lldb::SourceLanguageName, uint32_t>> name_vers)
+      : name(name_vers ? std::optional(name_vers->first) : std::nullopt),
         version(name_vers ? name_vers->second : 0) {}
-  operator bool() const { return name > 0; }
+  operator bool() const { return name.has_value(); }
   lldb::LanguageType AsLanguageType() const;
   llvm::StringRef GetDescription() const;
   bool IsC() const;
   bool IsObjC() const;
   bool IsCPlusPlus() const;
-  uint16_t name = 0;
+  std::optional<lldb::SourceLanguageName> name;
   uint32_t version = 0;
 };
 
