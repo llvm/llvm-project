@@ -56,6 +56,7 @@ def V2UnitD   : ProcResource<2>;  // Store data 0/1
 def V2UnitR   : ProcResGroup<[V2UnitS0, V2UnitS1]>;  // Integer single-cycle 0/1
 def V2UnitS   : ProcResGroup<[V2UnitS0, V2UnitS1, V2UnitS2, V2UnitS3]>;  // Integer single-cycle 0/1/2/3
 def V2UnitF   : ProcResGroup<[V2UnitS0, V2UnitS1, V2UnitM0, V2UnitM1]>;  // Integer single-cycle 0/1 and single/multicycle 0/1
+def V2UnitG   : ProcResGroup<[V2UnitS0, V2UnitS1, V2UnitM0]>;  // Integer single-cycle 0/1 and single/multicycle 0
 def V2UnitI   : ProcResGroup<[V2UnitS0, V2UnitS1, V2UnitS2, V2UnitS3, V2UnitM0, V2UnitM1]>;  // Integer single-cycle 0/1/2/3 and single/multicycle 0/1
 def V2UnitM   : ProcResGroup<[V2UnitM0, V2UnitM1]>;  // Integer single/multicycle 0/1
 def V2UnitL   : ProcResGroup<[V2UnitL01, V2UnitL2]>; // Load/Store 0/1 and Load 2
@@ -97,6 +98,7 @@ def V2Write_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 def V2Write_1c_1B    : SchedWriteRes<[V2UnitB]>   { let Latency = 1; }
 def V2Write_1c_1F    : SchedWriteRes<[V2UnitF]>   { let Latency = 1; }
+def V2Write_1c_1G    : SchedWriteRes<[V2UnitG]>   { let Latency = 1; }
 def V2Write_1c_1I    : SchedWriteRes<[V2UnitI]>   { let Latency = 1; }
 def V2Write_1c_1M    : SchedWriteRes<[V2UnitM]>   { let Latency = 1; }
 def V2Write_1c_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 1; }
@@ -886,11 +888,11 @@ def V2Write_ArithI : SchedWriteVariant<[
                        SchedVar<NoSchedPred, [V2Write_2c_1M]>]>;
 
 def V2Write_ArithF : SchedWriteVariant<[
-                       SchedVar<IsCheapLSL,  [V2Write_1c_1F]>,
+                       SchedVar<IsCheapLSL,  [V2Write_1c_1G]>,
                        SchedVar<NoSchedPred, [V2Write_2c_1M]>]>;
 
 def V2Write_Logical : SchedWriteVariant<[
-                        SchedVar<NeoverseNoLSL, [V2Write_1c_1F]>,
+                        SchedVar<NeoverseNoLSL, [V2Write_1c_1G]>,
                         SchedVar<NoSchedPred,   [V2Write_2c_1M]>]>;
 
 def V2Write_Extr : SchedWriteVariant<[
@@ -1106,18 +1108,18 @@ def : InstRW<[V2Write_1c_1B_1R], (instrs BL, BLR)>;
 // -----------------------------------------------------------------------------
 
 // ALU, basic
-// ALU, basic, flagset
 def : SchedAlias<WriteI, V2Write_1c_1I>;
-def : InstRW<[V2Write_1c_1F], (instregex "^(ADD|SUB)S[WX]r[ir]$",
+
+// ALU, basic, flagset
+def : InstRW<[V2Write_1c_1G],
+             (instregex "^(ADD|SUB)S[WX]r[ir]$",
                         "^(ADC|SBC)S[WX]r$",
-                        "^ANDS[WX]ri$")>;
+                        "^ANDS[WX]ri$",
+                        "^(AND|BIC)S[WX]rr$")>;
 def : InstRW<[V2Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, V2Write_2c_1M>;
-
-// Conditional compare
-def : InstRW<[V2Write_1c_1F], (instregex "^CCM[NP][WX][ir]")>;
 
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, flagset, LSL shift, shift <= 4
@@ -1129,6 +1131,9 @@ def : InstRW<[V2Write_ArithF],
 // Arithmetic, immediate to logical address tag
 def : InstRW<[V2Write_2c_1M], (instrs ADDG, SUBG)>;
 
+// Conditional compare
+def : InstRW<[V2Write_1c_1G], (instregex "^CCM[NP][WX][ir]")>;
+
 // Convert floating-point condition flags
 // Flag manipulation instructions
 def : WriteRes<WriteSys, []> { let Latency = 1; }
@@ -1138,8 +1143,10 @@ def : InstRW<[V2Write_2c_1M], (instrs IRG, IRGstack)>;
 
 // Insert Tag Mask
 // Subtract Pointer
+def : InstRW<[V2Write_1c_1I], (instrs GMI, SUBP)>;
+
 // Subtract Pointer, flagset
-def : InstRW<[V2Write_1c_1I], (instrs GMI, SUBP, SUBPS)>;
+def : InstRW<[V2Write_1c_1G], (instrs SUBPS)>;
 
 // Logical, shift, no flagset
 def : InstRW<[V2Write_1c_1I],    (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
