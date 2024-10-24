@@ -253,7 +253,7 @@ struct __shared_ptr_emplace : __shared_weak_count {
   using __value_type = __remove_cv_t<_Tp>;
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&...) : __storage_(std::move(__a)) {
+  _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&... __args) : __storage_(std::move(__a)) {
     if constexpr (is_same<typename _Alloc::value_type, __for_overwrite_tag>::value) {
       static_assert(
           sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
