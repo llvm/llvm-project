@@ -1057,6 +1057,19 @@ InstructionCost TargetTransformInfo::getVectorInstrCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    Value *Scalar,
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+  // FIXME: Assert that Opcode is either InsertElement or ExtractElement.
+  // This is mentioned in the interface description and respected by all
+  // callers, but never asserted upon.
+  InstructionCost Cost = TTIImpl->getVectorInstrCost(
+      Opcode, Val, CostKind, Index, Scalar, ScalarUserAndIdx);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost
 TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
                                         TTI::TargetCostKind CostKind,
