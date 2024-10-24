@@ -1833,11 +1833,17 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Value *x = moduleTranslation.lookupValue(readOp.getX());
   llvm::Value *v = moduleTranslation.lookupValue(readOp.getV());
 
-  llvm::Type *elementType =
-      moduleTranslation.convertType(readOp.getElementType());
+  llvm::Type *xTy = nullptr;
+  llvm::Type *vTy = nullptr;
+  xTy = moduleTranslation.convertType(readOp.getElementType());
 
-  llvm::OpenMPIRBuilder::AtomicOpValue V = {v, elementType, false, false};
-  llvm::OpenMPIRBuilder::AtomicOpValue X = {x, elementType, false, false};
+  if (llvm::AllocaInst *vAlloca = dyn_cast<llvm::AllocaInst>(v)) {
+    vTy = vAlloca->getAllocatedType();
+  } else {
+    vTy = v->getType();
+  }
+  llvm::OpenMPIRBuilder::AtomicOpValue V = {v, vTy, false, false};
+  llvm::OpenMPIRBuilder::AtomicOpValue X = {x, xTy, false, false};
   builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO));
   return success();
 }
@@ -1997,10 +2003,16 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
       moduleTranslation.lookupValue(atomicCaptureOp.getAtomicReadOp().getV());
   llvm::Type *llvmXElementType = moduleTranslation.convertType(
       atomicCaptureOp.getAtomicReadOp().getElementType());
+  llvm::Type *llvmVElementType = nullptr;
+  if (llvm::AllocaInst *vAlloca = dyn_cast<llvm::AllocaInst>(llvmV)) {
+    llvmVElementType = vAlloca->getAllocatedType();
+  } else {
+    llvmVElementType = llvmV->getType();
+  }
   llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicX = {llvmX, llvmXElementType,
                                                       /*isSigned=*/false,
                                                       /*isVolatile=*/false};
-  llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicV = {llvmV, llvmXElementType,
+  llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicV = {llvmV, llvmVElementType,
                                                       /*isSigned=*/false,
                                                       /*isVolatile=*/false};
 

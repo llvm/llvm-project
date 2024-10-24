@@ -85,3 +85,31 @@ subroutine atomic_read_pointer()
   x = y
 end
 
+!CHECK-LABEL: func.func @_QPread_with_convert() {
+!CHECK:   %[[A:.*]] = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFread_with_convertEa"}
+!CHECK:   %[[A_DECL]]:2 = hlfir.declare %[[A]] {uniq_name = "_QFread_with_convertEa"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:   %[[B:.*]] = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFread_with_convertEb"}
+!CHECK:   %[[B_DECL]]:2 = hlfir.declare %[[B]] {uniq_name = "_QFread_with_convertEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[CVT:.*]] = fir.convert %[[A_DECL]]#1 : (!fir.ref<f32>) -> !fir.ref<i32>
+!CHECK:   omp.atomic.read %[[CVT:.*]] = %[[B_DECL]]#1 : !fir.ref<i32>, i32
+subroutine read_with_convert()
+   real :: a
+   integer :: b
+   !$omp atomic read
+   a = b
+end
+
+!CHECK-LABEL: func.func @_QPread_complex_with_convert() {
+!CHECK:   %[[A:.*]] = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFread_complex_with_convertEa"}
+!CHECK:   %[[A_DECL]]:2 = hlfir.declare %[[A]] {uniq_name = "_QFread_complex_with_convertEa"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:   %[[B:.*]] = fir.alloca !fir.complex<4> {bindc_name = "b", uniq_name = "_QFread_complex_with_convertEb"}
+!CHECK:   %[[B_DECL]]:2 = hlfir.declare %[[B]] {uniq_name = "_QFread_complex_with_convertEb"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+!CHECK:   %[[CVT:.*]] = fir.convert %[[A_DECL]]#1 : (!fir.ref<f32>) -> !fir.ref<!fir.complex<4>>
+!CHECK:   omp.atomic.read %[[CVT:.*]] = %[[B_DECL]]#1 : !fir.ref<!fir.complex<4>>, !fir.complex<4>
+subroutine read_complex_with_convert()
+   real(kind=4)    :: A
+   complex(kind=4) :: B
+ !$omp atomic read
+    A = B
+ !$omp end atomic
+end

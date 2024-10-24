@@ -1367,6 +1367,23 @@ llvm.func @omp_atomic_read(%arg0 : !llvm.ptr, %arg1 : !llvm.ptr) -> () {
 }
 
 // -----
+// CHECK-LABEL: @atomic_read_type_convert
+llvm.func @atomic_read_type_convert() {
+  // CHECK: %[[X:.*]] = alloca float, i64 1, align 4
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x f32 {bindc_name = "r"} : (i64) -> !llvm.ptr
+  // CHECK: %[[V:.*]] = alloca i32, i64 1, align 4
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
+  // CHECK: %[[X_LD:.*]] = load atomic i32, ptr %[[X]] monotonic, align 4
+  // CHECK: %[[X_VAL:.*]] = bitcast i32 %[[X_LD]] to float
+  // CHECK: %[[X_CVT:.*]] = fptosi float %[[X_VAL]] to i32
+  // CHECK: store i32 %[[X_CVT]], ptr %[[V]], align 4
+  omp.atomic.read %3 = %1 : !llvm.ptr, f32
+  llvm.return
+}
+
+// -----
 
 // CHECK-LABEL: @omp_atomic_write
 // CHECK-SAME: (ptr %[[x:.*]], i32 %[[expr:.*]])
@@ -2207,6 +2224,32 @@ llvm.func @omp_atomic_capture_misc(
   }
 
   llvm.return
+}
+
+// -----
+// CHECK-LABEL: @atomic_capture_type_convert
+llvm.func @atomic_capture_type_convert() {
+    // CHECK: %[[V:.*]] = alloca double, i64 1, align 8
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x f64 {bindc_name = "c2"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    // CHECK: %[[X:.*]] = alloca float, i64 1, align 4
+    %3 = llvm.alloca %2 x f32 {bindc_name = "c"} : (i64) -> !llvm.ptr
+    %4 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    omp.atomic.capture {
+        // CHECK: %[[AT_LOAD_VAL:.*]] = load atomic i32, ptr %[[X]] monotonic, align 4
+        // CHECK: %[[LOAD_VAL_PHI:.*]] = phi i32 [ %[[AT_LOAD_VAL]], %entry ], [ %{{.*}}, %.atomic.cont ]
+        // CHECK: %[[X_VAL:.*]] = bitcast i32 %[[LOAD_VAL_PHI]] to float
+        // CHECK: %[[CVT:.*]] = fpext float %[[X_VAL]] to double
+        // CHECK: store double %[[CVT]], ptr %[[V]], align 8
+        omp.atomic.read %1 = %3 : !llvm.ptr, f32
+        omp.atomic.update %3 : !llvm.ptr {
+        ^bb0(%arg0: f32):
+        %5 = llvm.fmul %arg0, %4  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        omp.yield(%5 : f32)
+        }
+    }
+    llvm.return
 }
 
 // -----
