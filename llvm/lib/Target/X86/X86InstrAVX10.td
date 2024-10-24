@@ -1651,7 +1651,7 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
 // SM4(EVEX)
 multiclass avx10_sm4_base<string OpStr> {
   // SM4_Base is in X86InstrSSE.td.
-  let Predicates = [HasSM4, HasAVX10_2] in {
+  let Predicates = [HasSM4, HasAVX10_2], AddedComplexity = 1 in {
     defm Z128 : SM4_Base<OpStr, VR128X, "128", loadv4i32, i128mem>, EVEX_V128;
     defm Z256 : SM4_Base<OpStr, VR256X, "256", loadv8i32, i256mem>, EVEX_V256;
   }

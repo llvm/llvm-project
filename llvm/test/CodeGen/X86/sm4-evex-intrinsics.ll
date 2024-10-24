@@ -5,7 +5,7 @@
 define <4 x i32> @test_int_x86_vsm4key4128(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test_int_x86_vsm4key4128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsm4key4 %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x7a,0xda,0xc1]
+; CHECK-NEXT:    vsm4key4 %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0xda,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ret = call <4 x i32> @llvm.x86.vsm4key4128(<4 x i32> %A, <4 x i32> %B)
   ret <4 x i32> %ret
@@ -15,7 +15,7 @@ declare <4 x i32> @llvm.x86.vsm4key4128(<4 x i32> %A, <4 x i32> %B)
 define <8 x i32> @test_int_x86_vsm4key4256(<8 x i32> %A, <8 x i32> %B) {
 ; CHECK-LABEL: test_int_x86_vsm4key4256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsm4key4 %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7e,0xda,0xc1]
+; CHECK-NEXT:    vsm4key4 %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7e,0xda,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ret = call <8 x i32> @llvm.x86.vsm4key4256(<8 x i32> %A, <8 x i32> %B)
   ret <8 x i32> %ret
@@ -35,7 +35,7 @@ declare <16 x i32> @llvm.x86.vsm4key4512(<16 x i32> %A, <16 x i32> %B)
 define <4 x i32> @test_int_x86_vsm4rnds4128(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test_int_x86_vsm4rnds4128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsm4rnds4 %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x7b,0xda,0xc1]
+; CHECK-NEXT:    vsm4rnds4 %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7b,0xda,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ret = call <4 x i32> @llvm.x86.vsm4rnds4128(<4 x i32> %A, <4 x i32> %B)
   ret <4 x i32> %ret
@@ -45,7 +45,7 @@ declare <4 x i32> @llvm.x86.vsm4rnds4128(<4 x i32> %A, <4 x i32> %B)
 define <8 x i32> @test_int_x86_vsm4rnds4256(<8 x i32> %A, <8 x i32> %B) {
 ; CHECK-LABEL: test_int_x86_vsm4rnds4256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsm4rnds4 %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7f,0xda,0xc1]
+; CHECK-NEXT:    vsm4rnds4 %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7f,0xda,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ret = call <8 x i32> @llvm.x86.vsm4rnds4256(<8 x i32> %A, <8 x i32> %B)
   ret <8 x i32> %ret
