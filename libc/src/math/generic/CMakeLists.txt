@@ -441,9 +441,13 @@ add_entrypoint_object(
     ../cospif16.h
   DEPENDS
     .sincosf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
 )
