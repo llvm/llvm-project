@@ -899,11 +899,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (CodeGenOpts.PointerAuth.IndirectGotos)
     Fn->addFnAttr("ptrauth-indirect-gotos");
 
-  // Add return control flow integrity attributes for RISCV.
-  if (CodeGenOpts.CFProtectionReturn &&
-      getContext().getTargetInfo().getTriple().isRISCV())
-    Fn->addFnAttr("hw-shadow-stack");
-
   // Apply xray attributes to the function (as a string, for now)
   bool AlwaysXRayAttr = false;
   if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
