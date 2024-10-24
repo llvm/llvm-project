@@ -16,6 +16,7 @@
 #define LLVM_CLANG_FRONTEND_TEXTDIAGNOSTIC_H
 
 #include "clang/Frontend/DiagnosticRenderer.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -33,8 +34,15 @@ namespace clang {
 /// DiagnosticClient is implemented through this class as is diagnostic
 /// printing coming out of libclang.
 class TextDiagnostic : public DiagnosticRenderer {
-  raw_ostream &OS;
+  raw_ostream &Out;
   const Preprocessor *PP;
+  // To stabilize output of clang when clang is run in multiple build threads
+  // the whole diagnostic message is written first to internal buffer and then
+  // the whole message is put to the output stream Out which usually points to
+  // stderr to avoid printing to stderr with small chunks and interleaving of
+  // multiple diagnostic messages.
+  SmallString<1024> InternalBuffer;
+  llvm::raw_svector_ostream OS;
 
 public:
   TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
@@ -104,6 +112,8 @@ protected:
 
   void emitBuildingModuleLocation(FullSourceLoc Loc, PresumedLoc PLoc,
                                   StringRef ModuleName) override;
+  void endDiagnostic(DiagOrStoredDiag D,
+                     DiagnosticsEngine::Level Level) override;
 
 private:
   void emitFilename(StringRef Filename, const SourceManager &SM);
