@@ -463,3 +463,22 @@ void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,
   }
   llvm_unreachable("Unknown mask pair register name");
 }
+
+void X86InstPrinterCommon::printTILEPair(const MCInst *MI, unsigned OpNo,
+                                         raw_ostream &OS) {
+  switch (MI->getOperand(OpNo).getReg()) {
+  case X86::TMM0_TMM1:
+    printRegName(OS, X86::TMM0);
+    return;
+  case X86::TMM2_TMM3:
+    printRegName(OS, X86::TMM2);
+    return;
+  case X86::TMM4_TMM5:
+    printRegName(OS, X86::TMM4);
+    return;
+  case X86::TMM6_TMM7:
+    printRegName(OS, X86::TMM6);
+    return;
+  }
+  llvm_unreachable("Unknown mask pair register name");
+}

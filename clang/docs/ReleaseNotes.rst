@@ -623,6 +623,8 @@ X86 Support
 
 - All intrinsics in tbmintrin.h can now be used in constant expressions.
 
+- Support ISA of ``AMX-TRANSPOSE``.
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
