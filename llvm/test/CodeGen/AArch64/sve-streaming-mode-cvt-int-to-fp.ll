@@ -45,9 +45,11 @@ entry:
 define double @s32_to_f64(i32 %x) {
 ; CHECK-LABEL: s32_to_f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    scvtf z0.d, p0/m, z0.s
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -100,9 +102,10 @@ entry:
 define double @u32_to_f64(i32 %x) {
 ; CHECK-LABEL: u32_to_f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.s
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;

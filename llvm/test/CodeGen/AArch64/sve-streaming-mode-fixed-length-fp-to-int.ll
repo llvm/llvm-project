@@ -1166,7 +1166,7 @@ define <1 x i16> @fcvtzu_v1f64_v1i16(<1 x double> %op1) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    mov z0.h, w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -2867,7 +2867,7 @@ define <1 x i16> @fcvtzs_v1f64_v1i16(<1 x double> %op1) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    mov z0.h, w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
