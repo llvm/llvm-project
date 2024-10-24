@@ -53,6 +53,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     case llvm::Triple::mipsel:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
+    case llvm::Triple::systemz:
       break;
     default:
       D.Diag(diag::err_drv_unsupported_opt_for_target)
