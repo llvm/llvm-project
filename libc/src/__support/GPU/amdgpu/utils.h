@@ -136,8 +136,8 @@ LIBC_INLINE uint32_t get_lane_size() {
 
 /// Waits for all the threads in the block to converge and issues a fence.
 [[clang::convergent]] LIBC_INLINE void sync_threads() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
   __builtin_amdgcn_s_barrier();
-  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
 }
 
 /// Waits for all pending memory operations to complete in program order.
