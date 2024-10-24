@@ -567,8 +567,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
           def _V1_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 1>;
       }
       else {
-        def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1,
-                                               !if(enableDisasm, "GFX12", "")>;
+        def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1>;
       }
     }
   }
@@ -789,8 +788,7 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        def _V1_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 1,
-                                            !if(enableDisasm, "GFX12", "")>;
+        def _V1_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 1>;
       }
     }
     let VAddrDwords = 2 in {
@@ -1017,9 +1015,9 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
       }
       if op.HAS_GFX12 then {
         if !empty(renamed) then
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1, enableDasm>;
+          def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1>;
         else
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1, enableDasm>;
+          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1>;
       }
     }
     let VAddrDwords = 2 in {
