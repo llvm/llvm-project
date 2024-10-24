@@ -1000,6 +1000,11 @@ defm FMOPA_MPPZZ_BtoS : sme_outer_product_fp32<0b0, 0b01, ZPR8, "fmopa", null_fr
 
 } //[HasSMEF8F32]
 
+let Predicates = [HasSME2, HasSVEBFSCALE] in {
+  defm BFSCALE : sme2_bfscale_single<"bfscale">;
+  defm BFSCALE : sme2_bfscale_multi<"bfscale">;
+}
+
 let Predicates = [HasSME2p2] in {
   def FTMOPA_M2ZZZI_HtoS  : sme_tmopa_32b<0b11000, ZZ_h_mul_r, ZPR16, "ftmopa">;
   def FTMOPA_M2ZZZI_StoS  : sme_tmopa_32b<0b00000, ZZ_s_mul_r, ZPR32, "ftmopa">;
