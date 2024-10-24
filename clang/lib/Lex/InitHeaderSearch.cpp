@@ -305,6 +305,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::PS5:
   case llvm::Triple::RTEMS:
   case llvm::Triple::Solaris:
+  case llvm::Triple::UEFI:
   case llvm::Triple::WASI:
   case llvm::Triple::ZOS:
     return false;
