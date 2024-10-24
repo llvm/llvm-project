@@ -849,29 +849,83 @@ TEST(KnownBitsTest, MulLowBitsExhaustive) {
   }
 }
 
-TEST(KnownBitsTest, MulHighBits) {
-  unsigned Bits = 8;
-  SmallVector<std::pair<int, int>, 4> TestPairs = {
-      {2, 4}, {-2, -4}, {2, -4}, {-2, 4}};
-  for (auto [K1, K2] : TestPairs) {
+TEST(KnownBitsTest, MulHighBitsNoOverflow) {
+  for (unsigned Bits : {1, 4}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+      ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+        KnownBits Computed = KnownBits::mul(Known1, Known2);
+        KnownBits Exact(Bits), WideExact(2 * Bits);
+        Exact.Zero.setAllBits();
+        Exact.One.setAllBits();
+
+        bool HasOverflow;
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            // The final value of HasOverflow corresponds to the multiplication
+            // in the last iteration, which is the max product.
+            APInt Res = N1.umul_ov(N2, HasOverflow);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+        });
+
+        if (!Exact.hasConflict() && !HasOverflow) {
+          // Check that leading zeros and leading ones are optimal in the
+          // result, provided there is no overflow.
+          APInt ZerosMask =
+                    APInt::getHighBitsSet(Bits, Exact.Zero.countLeadingOnes()),
+                OnesMask =
+                    APInt::getHighBitsSet(Bits, Exact.One.countLeadingOnes());
+
+          KnownBits ExactZeros(Bits), ComputedZeros(Bits);
+          KnownBits ExactOnes(Bits), ComputedOnes(Bits);
+          ExactZeros.Zero.setAllBits();
+          ExactZeros.One.setAllBits();
+          ExactOnes.Zero.setAllBits();
+          ExactOnes.One.setAllBits();
+
+          ExactZeros.Zero = Exact.Zero & ZerosMask;
+          ExactZeros.One = Exact.One & ZerosMask;
+          ComputedZeros.Zero = Computed.Zero & ZerosMask;
+          ComputedZeros.One = Computed.One & ZerosMask;
+          EXPECT_TRUE(checkResult("mul", ExactZeros, ComputedZeros,
+                                  {Known1, Known2},
+                                  /*CheckOptimality=*/true));
+
+          ExactOnes.Zero = Exact.Zero & OnesMask;
+          ExactOnes.One = Exact.One & OnesMask;
+          ComputedOnes.Zero = Computed.Zero & OnesMask;
+          ComputedOnes.One = Computed.One & OnesMask;
+          EXPECT_TRUE(checkResult("mul", ExactOnes, ComputedOnes,
+                                  {Known1, Known2},
+                                  /*CheckOptimality=*/true));
+        }
+      });
+    });
+  }
+}
+
+TEST(KnownBitsTest, MulHighBitsOverflow) {
+  unsigned Bits = 4;
+  using KnownUnknownPair = std::pair<int, int>;
+  SmallVector<std::pair<KnownUnknownPair, KnownUnknownPair>> TestPairs = {
+      {{2, 0}, {7, -1}},  // 001?, 0111
+      {{2, -1}, {10, 0}}, // 0010, 101?
+      {{9, 2}, {9, 1}},   // 1?01, 10?1
+      {{5, 1}, {3, 2}}};  // 01?1, 0?11
+  for (auto [P1, P2] : TestPairs) {
     KnownBits Known1(Bits), Known2(Bits);
-    if (K1 > 0) {
-      // If we only set the zeros of ~K1, Known1 could be zero. Avoid this case,
-      // as we can only set leading ones in the case where LHS and RHS have
-      // different signs, when the result is known non-zero.
-      Known1.Zero |= ~(K1 | 1);
-      Known1.One |= 1;
-    } else {
-      Known1.One |= K1;
+    auto [K1, U1] = P1;
+    auto [K2, U2] = P2;
+    Known1 = KnownBits::makeConstant(APInt(Bits, K1));
+    Known2 = KnownBits::makeConstant(APInt(Bits, K2));
+    if (U1 > -1) {
+      Known1.Zero.setBitVal(U1, 0);
+      Known1.One.setBitVal(U1, 0);
     }
-    if (K2 > 0) {
-      // If we only set the zeros of ~K1, Known1 could be zero. Avoid this case,
-      // as we can only set leading ones in the case where LHS and RHS have
-      // different signs, when the result is known non-zero.
-      Known2.Zero |= ~(K2 | 1);
-      Known2.One |= 1;
-    } else {
-      Known2.One |= K2;
+    if (U2 > -1) {
+      Known2.Zero.setBitVal(U2, 0);
+      Known2.One.setBitVal(U2, 0);
     }
     KnownBits Computed = KnownBits::mul(Known1, Known2);
     KnownBits Exact(Bits);
@@ -886,17 +940,60 @@ TEST(KnownBitsTest, MulHighBits) {
       });
     });
 
-    // Check that the high bits are optimal, with the caveat that mul_ov of LHS
-    // and RHS doesn't overflow, which is the case for our TestPairs.
-    APInt Mask = APInt::getHighBitsSet(
-        Bits, (Exact.Zero | Exact.One).countLeadingOnes());
-    Exact.Zero &= Mask;
-    Exact.One &= Mask;
-    Computed.Zero &= Mask;
-    Computed.One &= Mask;
-    EXPECT_TRUE(checkResult("mul", Exact, Computed, {Known1, Known2},
+    // Check that the leading zeros or ones are optimal for the given examples,
+    // which overflow. It is certainly sub-optimal on other examples.
+    APInt ZerosMask =
+              APInt::getHighBitsSet(Bits, Exact.Zero.countLeadingOnes()),
+          OnesMask = APInt::getHighBitsSet(Bits, Exact.One.countLeadingOnes());
+
+    KnownBits ExactZeros(Bits), ComputedZeros(Bits);
+    KnownBits ExactOnes(Bits), ComputedOnes(Bits);
+    ExactZeros.Zero.setAllBits();
+    ExactZeros.One.setAllBits();
+    ExactOnes.Zero.setAllBits();
+    ExactOnes.One.setAllBits();
+
+    ExactZeros.Zero = Exact.Zero & ZerosMask;
+    ExactZeros.One = Exact.One & ZerosMask;
+    ComputedZeros.Zero = Computed.Zero & ZerosMask;
+    ComputedZeros.One = Computed.One & ZerosMask;
+    EXPECT_TRUE(checkResult("mul", ExactZeros, ComputedZeros, {Known1, Known2},
+                            /*CheckOptimality=*/true));
+
+    ExactOnes.Zero = Exact.Zero & OnesMask;
+    ExactOnes.One = Exact.One & OnesMask;
+    ComputedOnes.Zero = Computed.Zero & OnesMask;
+    ComputedOnes.One = Computed.One & OnesMask;
+    EXPECT_TRUE(checkResult("mul", ExactOnes, ComputedOnes, {Known1, Known2},
                             /*CheckOptimality=*/true));
   }
 }
 
+TEST(KnownBitsTest, MulStress) {
+  // Stress test KnownBits::mul on 5 and 6 bits, checking that the result is
+  // correct, even if not optimal.
+  for (unsigned Bits : {5, 6}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+      ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+        KnownBits Computed = KnownBits::mul(Known1, Known2);
+        KnownBits Exact(Bits);
+        Exact.Zero.setAllBits();
+        Exact.One.setAllBits();
+
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            APInt Res = N1 * N2;
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+        });
+
+        if (!Exact.hasConflict()) {
+          EXPECT_TRUE(checkResult("mul", Exact, Computed, {Known1, Known2},
+                                  /*CheckOptimality=*/false));
+        }
+      });
+    });
+  }
+}
 } // end anonymous namespace
