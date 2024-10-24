@@ -1277,6 +1277,7 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
+    AnyOf,
   };
 
 private:

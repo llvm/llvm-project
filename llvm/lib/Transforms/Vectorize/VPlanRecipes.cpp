@@ -69,6 +69,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
     default:
       return true;
     }
+  case VPExpandSCEVSC:
+    return getParent()->getPlan()->getTripCount() == getVPSingleValue();
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -163,6 +165,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPPredInstPHISC:
   case VPScalarCastSC:
     return false;
+  case VPExpandSCEVSC:
+    return getParent()->getPlan()->getTripCount() == getVPSingleValue();
   case VPInstructionSC:
     return mayWriteToMemory();
   case VPWidenCallSC: {
@@ -402,6 +406,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::AnyOf:
     return true;
   default:
     return false;
@@ -677,6 +682,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
     return NewPhi;
   }
+  case VPInstruction::AnyOf: {
+    Value *A = State.get(getOperand(0));
+    return Builder.CreateOrReduce(A);
+  }
 
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -685,7 +694,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
-         getOpcode() == VPInstruction::ComputeReductionResult;
+         getOpcode() == VPInstruction::ComputeReductionResult ||
+         getOpcode() == VPInstruction::AnyOf;
 }
 
 bool VPInstruction::isSingleScalar() const {
@@ -748,6 +758,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return false;
   case Instruction::ICmp:
   case Instruction::Select:
+  case Instruction::Or:
   case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
@@ -843,6 +854,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::PtrAdd:
     O << "ptradd";
     break;
+  case VPInstruction::AnyOf:
+    O << "any-of";
+    break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
@@ -860,12 +874,13 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 void VPIRInstruction::execute(VPTransformState &State) {
   assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
          "Only PHINodes can have extra operands");
-  if (getNumOperands() == 1) {
-    VPValue *ExitValue = getOperand(0);
+  for (const auto &[Idx, Op] : enumerate(operands())) {
+    VPValue *ExitValue = Op;
     auto Lane = vputils::isUniformAfterVectorization(ExitValue)
                     ? VPLane::getFirstLane()
                     : VPLane::getLastLaneForVF(State.VF);
-    auto *PredVPBB = cast<VPBasicBlock>(getParent()->getSinglePredecessor());
+    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
+    auto *PredVPBB = Pred->getExitingBasicBlock();
     BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
     // Set insertion point in PredBB in case an extract needs to be generated.
     // TODO: Model extracts explicitly.
@@ -893,7 +908,7 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "IR " << I;
 
   if (getNumOperands() != 0) {
-    assert(getNumOperands() == 1 && "can have at most 1 operand");
+    // assert(getNumOperands() == 1 && "can have at most 1 operand");
     O << " (extra operand: ";
     printOperands(O, SlotTracker);
     O << ")";
