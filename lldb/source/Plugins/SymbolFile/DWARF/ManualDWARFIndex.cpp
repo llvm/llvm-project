@@ -219,6 +219,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     case DW_TAG_typedef:
     case DW_TAG_union_type:
     case DW_TAG_unspecified_type:
+    case DW_TAG_member:
     case DW_TAG_variable:
       break;
 
@@ -228,6 +229,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
 
     const char *name = nullptr;
     const char *mangled_cstr = nullptr;
+    bool is_external = false;
     bool is_declaration = false;
     bool has_address = false;
     bool has_location_or_const_value = false;
@@ -244,6 +246,11 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       case DW_AT_name:
         if (attributes.ExtractFormValueAtIndex(i, form_value))
           name = form_value.AsCString();
+        break;
+
+      case DW_AT_external:
+        if (attributes.ExtractFormValueAtIndex(i, form_value))
+          is_external = form_value.Unsigned() != 0;
         break;
 
       case DW_AT_declaration:
@@ -362,6 +369,23 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
         set.namespaces.Insert(ConstString(name), ref);
       break;
 
+    case DW_TAG_member: {
+      // In DWARF 4 and earlier `static const` members of a struct, a class or a
+      // union have an entry tag `DW_TAG_member`, and are also tagged as
+      // `DW_AT_external` and `DW_AT_declaration`, but otherwise follow the
+      // same rules as `DW_TAG_variable`.
+      if (unit.GetVersion() >= 5)
+        break;
+      bool parent_is_class_type = false;
+      if (auto parent = die.GetParent()) {
+        parent_is_class_type = parent->Tag() == DW_TAG_structure_type ||
+                               parent->Tag() == DW_TAG_class_type ||
+                               parent->Tag() == DW_TAG_union_type;
+      }
+      if (!parent_is_class_type || !is_external || !is_declaration)
+        break;
+      [[fallthrough]];
+    }
     case DW_TAG_variable:
       if (name && has_location_or_const_value && is_global_or_static_variable) {
         set.globals.Insert(ConstString(name), ref);
