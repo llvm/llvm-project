@@ -18961,36 +18961,10 @@ static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,
   return SDValue();
 }
 
-/// Creates a scalar FP <-> INT conversion with a scalable one, wrapped
-/// with an insert and extract.
-static SDValue createScalarSVEFPConversion(SelectionDAG &DAG, unsigned Opc,
-                                           SDLoc DL, SDValue SrcVal, EVT SrcTy,
-                                           EVT DestTy) {
-  EVT SrcVecTy;
-  EVT DestVecTy;
-  if (DestTy.bitsGT(SrcTy)) {
-    DestVecTy = getPackedSVEVectorVT(DestTy);
-    SrcVecTy = DestVecTy.changeVectorElementType(SrcTy);
-  } else {
-    SrcVecTy = getPackedSVEVectorVT(SrcTy);
-    DestVecTy = SrcVecTy.changeVectorElementType(DestTy);
-  }
-  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
-  SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SrcVecTy,
-                            DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
-  Vec = DAG.getNode(Opc, DL, DestVecTy, Vec);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Vec, ZeroIdx);
-}
-
 /// Tries to replace scalar FP <-> conversions with SVE in streaming functions.
 static SDValue
 tryReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
-                                    TargetLowering::DAGCombinerInfo &DCI,
                                     const AArch64Subtarget *Subtarget) {
-  // Uncomment to introduce extra fcvts.
-  // if (DCI.isBeforeLegalizeOps())
-  //   return SDValue();
-
   if (N->isStrictFPOpcode())
     return SDValue();
 
@@ -19015,39 +18989,64 @@ tryReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
       (!Subtarget->isStreaming() && !Subtarget->isStreamingCompatible()))
     return SDValue();
 
-  SDLoc DL(N);
   unsigned Opc = N->getOpcode();
+  bool IsSigned = Opc == ISD::SINT_TO_FP || Opc == ISD::FP_TO_SINT;
+
   SDValue SrcVal = N->getOperand(0);
   EVT SrcTy = SrcVal.getValueType();
   EVT DestTy = N->getValueType(0);
 
+  EVT SrcVecTy;
+  EVT DestVecTy;
+  if (DestTy.bitsGT(SrcTy)) {
+    DestVecTy = getPackedSVEVectorVT(DestTy);
+    SrcVecTy = SrcTy == MVT::i32 ? getPackedSVEVectorVT(SrcTy)
+                                 : DestVecTy.changeVectorElementType(SrcTy);
+  } else {
+    SrcVecTy = getPackedSVEVectorVT(SrcTy);
+    DestVecTy = DestTy == MVT::i32 ? getPackedSVEVectorVT(DestTy)
+                                   : SrcVecTy.changeVectorElementType(DestTy);
+  }
+
+  SDLoc DL(N);
+  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+  SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SrcVecTy,
+                            DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
+
   // Conversions between f64 and i32 are a special case as nxv2i32 is an illegal
-  // type (unlike the equivalent nxv2f32 for floating-point types).
-  // May materialize extra instructions :(
-  if (SrcTy == MVT::i32 && DestTy == MVT::f64) {
-    SDValue ExtSrc = DAG.getNode(Opc == ISD::SINT_TO_FP ? ISD::SIGN_EXTEND
-                                                        : ISD::ZERO_EXTEND,
-                                 DL, MVT::i64, SrcVal);
-    return createScalarSVEFPConversion(DAG, Opc, DL, ExtSrc, MVT::i64,
-                                       MVT::f64);
+  // type (unlike the equivalent nxv2f32 for floating-point types). So,
+  // unfortunately, the only way to lower to these variants is via the
+  // intrinsics. Note: We could sign/zero extend to the i64 variant, but that
+  // may result in extra extends or fmovs in the final assembly.
+  bool IsI32ToF64 = SrcTy == MVT::i32 && DestTy == MVT::f64;
+  bool isF64ToI32 = SrcTy == MVT::f64 && DestTy == MVT::i32;
+  if (IsI32ToF64 || isF64ToI32) {
+    unsigned IntrinsicOpc;
+    if (IsI32ToF64)
+      IntrinsicOpc = IsSigned ? Intrinsic::aarch64_sve_scvtf_f64i32
+                              : Intrinsic::aarch64_sve_ucvtf_f64i32;
+    else
+      IntrinsicOpc = IsSigned ? Intrinsic::aarch64_sve_fcvtzs_i32f64
+                              : Intrinsic::aarch64_sve_fcvtzu_i32f64;
+    SDValue PTrue = getPredicateForVector(DAG, DL, MVT::nxv2f64);
+    Vec = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, DestVecTy,
+                      {DAG.getConstant(IntrinsicOpc, DL, MVT::i32),
+                       DAG.getUNDEF(DestTy), PTrue, Vec});
+  } else {
+    Vec = DAG.getNode(Opc, DL, DestVecTy, Vec);
   }
-  if (SrcTy == MVT::f64 && DestTy == MVT::i32) {
-    SDValue ExtDest =
-        createScalarSVEFPConversion(DAG, Opc, DL, SrcVal, MVT::f64, MVT::i64);
-    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, ExtDest);
-  }
-  return createScalarSVEFPConversion(DAG, Opc, DL, SrcVal, SrcTy, DestTy);
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Vec, ZeroIdx);
 }
 
 static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
-                                     TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
   // First try to optimize away the conversion when it's conditionally from
   // a constant. Vectors only.
   if (SDValue Res = performVectorCompareAndMaskUnaryOpCombine(N, DAG))
     return Res;
 
-  if (SDValue Res = tryReplaceScalarFPConversionWithSVE(N, DAG, DCI, Subtarget))
+  if (SDValue Res = tryReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
     return Res;
 
   EVT VT = N->getValueType(0);
@@ -19088,7 +19087,7 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
-  if (SDValue Res = tryReplaceScalarFPConversionWithSVE(N, DAG, DCI, Subtarget))
+  if (SDValue Res = tryReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
     return Res;
 
   if (!Subtarget->isNeonAvailable())
@@ -26110,7 +26109,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMulCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    return performIntToFpCombine(N, DAG, DCI, Subtarget);
+    return performIntToFpCombine(N, DAG, Subtarget);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT_SAT:

@@ -392,8 +392,8 @@ define <1 x double> @ucvtf_v1i16_v1f64(<1 x i16> %op1) {
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -2836,10 +2836,10 @@ define float @scvtf_i16_f32(ptr %0) {
 define double @scvtf_i16_f64(ptr %0) {
 ; CHECK-LABEL: scvtf_i16_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrsh x8, [x0]
+; CHECK-NEXT:    ldrsh w8, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -2895,10 +2895,9 @@ define float @scvtf_i32_f32(ptr %0) {
 define double @scvtf_i32_f64(ptr %0) {
 ; CHECK-LABEL: scvtf_i32_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrsw x8, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -3016,8 +3015,8 @@ define double @ucvtf_i16_f64(ptr %0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w8, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -3073,10 +3072,9 @@ define float @ucvtf_i32_f32(ptr %0) {
 define double @ucvtf_i32_f64(ptr %0) {
 ; CHECK-LABEL: ucvtf_i32_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
