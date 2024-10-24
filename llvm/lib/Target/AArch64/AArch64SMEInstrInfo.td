@@ -1000,3 +1000,24 @@ defm FMOPA_MPPZZ_BtoS : sme_outer_product_fp32<0b0, 0b01, ZPR8, "fmopa", null_fr
 
 } //[HasSMEF8F32]
 
+let Predicates = [HasSME2p2] in {
+  def FTMOPA_M2ZZZI_HtoS  : sme_tmopa_32b<0b11000, ZZ_h_mul_r, ZPR16, "ftmopa">;
+  def FTMOPA_M2ZZZI_StoS  : sme_tmopa_32b<0b00000, ZZ_s_mul_r, ZPR32, "ftmopa">;
+  def BFTMOPA_M2ZZZI_HtoS : sme_tmopa_32b<0b10000, ZZ_h_mul_r, ZPR16, "bftmopa">;
+} // [HasSME2p2]
+
+let Predicates = [HasSME2p2, HasSMEB16B16] in {
+  def BFTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b11001, ZZ_h_mul_r, ZPR16, "bftmopa">;
+} // [HasSME2p2, HasSMEB16B16]
+
+let Predicates = [HasSME2p2, HasSMEF8F32], Uses = [FPMR, FPCR] in {
+  def FTMOPA_M2ZZZI_BtoS : sme_tmopa_32b<0b01000, ZZ_b_mul_r, ZPR8, "ftmopa">;
+} // [HasSME2p2, HasSMEF8F32], Uses = [FPMR, FPCR]
+
+let Predicates = [HasSME2p2, HasSMEF8F16], Uses = [FPMR, FPCR] in {
+  def FTMOPA_M2ZZZI_BtoH : sme_tmopa_16b<0b01001, ZZ_b_mul_r, ZPR8, "ftmopa">;
+} // [HasSME2p2, HasSMEF8F16],  Uses = [FPMR, FPCR]
+
+let Predicates = [HasSME2p2, HasSMEF16F16] in {
+  def FTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b10001, ZZ_h_mul_r, ZPR16, "ftmopa">;
+} // [HasSME2p2, HasSMEF16F16]
