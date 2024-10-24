@@ -2193,41 +2193,10 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
       if (!STI->hasFPAC()) {
         auto AuthKey = (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA
                                                      : AArch64PACKey::DA);
-        unsigned XPACOpc = getXPACOpcodeForKey(AuthKey);
-        MCSymbol *SuccessSym = createTempSymbol("auth_success_");
 
-        // XPAC has tied src/dst: use x17 as a temporary copy.
-        //  mov x17, x16
-        EmitToStreamer(MCInstBuilder(AArch64::ORRXrs)
-                           .addReg(AArch64::X17)
-                           .addReg(AArch64::XZR)
-                           .addReg(AArch64::X16)
-                           .addImm(0));
-
-        //  xpaci x17
-        EmitToStreamer(
-            MCInstBuilder(XPACOpc).addReg(AArch64::X17).addReg(AArch64::X17));
-
-        //  cmp x16, x17
-        EmitToStreamer(MCInstBuilder(AArch64::SUBSXrs)
-                           .addReg(AArch64::XZR)
-                           .addReg(AArch64::X16)
-                           .addReg(AArch64::X17)
-                           .addImm(0));
-
-        //  b.eq Lsuccess
-        EmitToStreamer(
-            MCInstBuilder(AArch64::Bcc)
-                .addImm(AArch64CC::EQ)
-                .addExpr(MCSymbolRefExpr::create(SuccessSym, OutContext)));
-
-        // Trapping sequences do a 'brk'.
-        //  brk #<0xc470 + aut key>
-        EmitToStreamer(MCInstBuilder(AArch64::BRK).addImm(0xc470 | AuthKey));
-
-        // If the auth check succeeds, we can continue.
-        // Lsuccess:
-        OutStreamer->emitLabel(SuccessSym);
+        emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AuthKey,
+                                           /*ShouldTrap=*/true,
+                                           /*OnFailure=*/nullptr);
       }
     } else {
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
