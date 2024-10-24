@@ -2835,8 +2835,7 @@ Value TypeConverter::materializeTargetConversion(OpBuilder &builder,
       builder, loc, TypeRange(resultType), inputs, originalType);
   if (result.empty())
     return nullptr;
-  assert(result.size() == 1 && "requested 1:1 materialization, but callback "
-                               "produced 1:N materialization");
+  assert(result.size() == 1 && "expected single result");
   return result.front();
 }
 
@@ -2849,6 +2848,9 @@ SmallVector<Value> TypeConverter::materializeTargetConversion(
         fn(builder, resultTypes, inputs, loc, originalType);
     if (result.empty())
       continue;
+    assert(TypeRange(result) == resultTypes &&
+           "callback produced incorrect number of values or values with "
+           "incorrect types");
     return result;
   }
   return {};
