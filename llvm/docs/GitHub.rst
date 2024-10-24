@@ -133,64 +133,80 @@ or in some dependent code.
 After your PR is reviewed and accepted, you want to rebase your branch to ensure
 you won't encounter merge conflicts when landing the PR.
 
+.. note::
+  This guide assumes that the PR branch only has 1 author. If you are
+  collaborating with others on a single branch, be careful how and when you push
+  changes. ``--force-with-lease`` may be useful in this situation.
+
 Landing your change
 -------------------
-When your PR has been accepted you can use the web interface to land your change.
-If you have created multiple commits to address feedback at this point you need
-to consolidate those commits into one commit. There are two different ways to
-do this:
 
-`Interactive rebase <https://git-scm.com/docs/git-rebase#_interactive_mode>`_
-with fixup's. This is the recommended method since you can control the final
-commit message and inspect that the final commit looks as you expect. When
-your local state is correct, remember to force-push to your branch and press
-the merge button afterwards.
+When your PR has been accepted you can merge your changes.
 
-Use the button `Squash and merge` in GitHub's web interface, if you do this
-remember to review the commit message when prompted.
+If you do not have write permissions for the repository, the merge button in
+GitHub's web interface will be disabled. If this is the case, continue following
+the steps here but ask one of your reviewers to click the merge button on your
+behalf.
 
-Afterwards you can select the option `Delete branch` to delete the branch
-from your fork.
+If the PR is a single commit, all you need to do is click the merge button in
+GitHub's web interface.
 
-You can also merge via the CLI by switching to your branch locally and run:
+If your PR contains multiple commits, you need to consolidate those commits into
+one commit. There are three different ways to do this, shown here with the most
+commonly used first:
 
-::
+* Use the button `Squash and merge` in GitHub's web interface, if you do this
+  remember to review the commit message when prompted.
 
-  gh pr merge --squash --delete-branch
+  Afterwards you can select the option `Delete branch` to delete the branch
+  from your fork.
 
-If you observe an error message from the above informing you that your pull
-request is not mergeable, then that is likely because upstream has been
-modified since your pull request was authored in a way that now results in a
-merge conflict. You must first resolve this merge conflict in order to merge
-your pull request. In order to do that:
+* `Interactive rebase <https://git-scm.com/docs/git-rebase#_interactive_mode>`_
+  with fixups. This is the recommended method since you can control the final
+  commit message and check that the final commit looks as you expect. When
+  your local state is correct, remember to force-push to your branch and press
+  the merge button in GitHub's web interface afterwards.
 
-::
+* Merge using the GitHub command line interface. Switch to your branch locally
+  and run:
 
-  git fetch upstream
-  git rebase upstream/main
+  ::
 
-Then fix the source files causing merge conflicts and make sure to rebuild and
-retest the result. Then:
+    gh pr merge --squash --delete-branch
 
-::
+  If you observe an error message from the above informing you that your pull
+  request is not mergeable, then that is likely because upstream has been
+  modified since your pull request was authored in a way that now results in a
+  merge conflict. You must first resolve this merge conflict in order to merge
+  your pull request. In order to do that:
 
-  git add <files with resolved merge conflicts>
-  git rebase --continue
+  ::
 
-Finally, you'll need to force push to your branch one more time before you can
-merge:
+    git fetch upstream
+    git rebase upstream/main
 
-::
+  Then fix the source files causing merge conflicts and make sure to rebuild and
+  retest the result. Then:
 
-  git push -f
-  gh pr merge --squash --delete-branch
+  ::
 
-This force push may ask if you intend to push hundreds, or potentially
-thousands of patches (depending on how long it's been since your pull request
-was initially authored vs. when you intended to merge it). Since you're pushing
-to a branch in your fork, this is ok and expected. Github's UI for the pull
-request will understand that you're rebasing just your patches, and display
-this result correctly with a note that a force push did occur.
+    git add <files with resolved merge conflicts>
+    git rebase --continue
+
+  Finally, you'll need to force push to your branch one more time before you can
+  merge:
+
+  ::
+
+    git push --force
+    gh pr merge --squash --delete-branch
+
+  This force push may ask if you intend to push hundreds, or potentially
+  thousands of patches (depending on how long it's been since your pull request
+  was initially authored vs. when you intended to merge it). Since you're pushing
+  to a branch in your fork, this is ok and expected. Github's UI for the pull
+  request will understand that you're rebasing just your patches, and display
+  this result correctly with a note that a force push did occur.
 
 
 Problems After Landing Your Change
@@ -283,7 +299,7 @@ checks:
   ninja check
 
   # Push the rebased changes to your fork.
-  git push origin my_change -f
+  git push origin my_change --force
 
   # Now merge it
   gh pr merge --squash --delete-branch
@@ -378,7 +394,7 @@ checks:
   ninja check
 
   # Push the rebased changes to your fork.
-  git push origin my_change -f
+  git push origin my_change --force
 
 Once your PR is approved, rebased, and tests are passing, click `Squash and
 Merge` on your PR in the GitHub web interface.
