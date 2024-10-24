@@ -15,7 +15,11 @@ import <foo  bar>;
 // CHECK: import <foo  bar>;
 import <foo  bar>;
 
-// CHECK: foo; import <foo  bar>;
+// Since P1857R3, this is a invalid import directive, import will be treated as
+// an identifier. Also <foo  bar> will not be a tok::header_name, but will be 4
+// separate tokens.
+//
+// CHECK: foo; import <foo bar>;
 foo; import <foo  bar>;
 
 // CHECK: foo import <foo bar>;
@@ -45,7 +49,10 @@ export export import <foo  bar>;
 import <foo  bar>;
 
 UNBALANCED_PAREN
-// CHECK: import <foo bar>;
+// Since P1857R3, this is a invalid import directive. '<foo  bar>' will be treated as
+// a tok::header_name, but not 4 separate tokens.
+
+// CHECK: import <foo  bar>;
 import <foo  bar>;
 )
 

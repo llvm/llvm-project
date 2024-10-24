@@ -3992,7 +3992,6 @@ void Parser::ParseDeclarationSpecifiers(
 
       // We're done with the declaration-specifiers.
       goto DoneWithDeclSpec;
-
       // typedef-name
     case tok::kw___super:
     case tok::kw_decltype:
