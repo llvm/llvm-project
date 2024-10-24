@@ -1,340 +1,363 @@
 // Test that pruning of header search paths emulates MSVC behavior when in
-// Microsoft compatibility mode.
-// See header-search-duplicates.c for GCC compatible behavior.
+// Microsoft compatibility mode. See header-search-duplicates.c for GCC
+// compatible behavior.
+
+// This test is intended to be usable to validate MSVC behavior using a .bat
+// test driver similar to the following. A failure to compile successfully
+// would indicate a problem with the test or, perhaps, a behavioral difference
+// across MSVC versions.
+//   @echo on
+//   setlocal
+//   rd /s/q test-msvc
+//   split-file microsoft-header-search-duplicates.c test-msvc
+//   pushd test-msvc
+//   REM Validate test 1:
+//   set INCLUDE=...
+//   set EXTERNAL_INCLUDE=...
+//   set EXTRA_INCLUDE=...
+//   cl.exe /c /showIncludes ... test1.c
+//   popd
+
+// This test exercises both the clang and clang-cl drivers using a target that
+// implicitly enables the '-fms-compatibility' option. The '-nobuiltininc',
+// '-nostdinc', and '/X ('-nostdlibinc') options are used to suppress implicit
+// header search paths to ease testing.
+
+// Header search paths are processed as follows:
+// 1) Paths specified by the '/I' and '/external:I' options are processed in
+//    order.
+//    1.1) Paths specified by '/I' that duplicate a path specified by
+//         '/external:I' are ignored regardless of the option order.
+//    1.2) Paths specified by '/I' that duplicate a prior '/I' option are
+//         ignored.
+//    1.3) Paths specified by '/external:I' that duplicate a later
+//         '/external:I' option are ignored.
+// 2) Paths specified by the '/external:env' options are processed in order.
+//    Paths that duplicate a path from step 1, a prior '/external:env' option,
+//    or a prior path from the current '/external:env' option are ignored.
+// 3) Paths specified by the 'INCLUDE' environment variable are processed in
+//    order. Paths that duplicate a path from step 1, step 2, or an earlier
+//    path in the 'INCLUDE' environment variable are ignored.
+// 4) Paths specified by the 'EXTERNALINCLUDE' environment variable are
+//    processed in order. Paths that duplicate a path from step 1, step 2,
+//    step 3, or an earlier path in the 'EXTERNAL_INCLUDE' environment
+//    variable are ignored.
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// Test the clang driver with a Windows target that implicitly enables the
-// -fms-compatibility option. The -nostdinc option is used to suppress default
-// search paths to ease testing.
-// RUN: env INCLUDE="%t/include/p;%t/include/o" \
-// RUN: env EXTRA_INCLUDE="%t/include/t;%t/include/q;%t/include/r" \
+
+// Test 1: Validate ordering and duplicate elimination for /I.
+//
 // RUN: %clang \
-// RUN:     -target x86_64-pc-windows \
-// RUN:     -v -fsyntax-only \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
 // RUN:     -nostdinc \
-// RUN:     -iexternal %t/include/s \
-// RUN:     -iexternal %t/include/w \
-// RUN:     -I%t/include/v \
-// RUN:     -iexternal %t/include/x \
-// RUN:     -I%t/include/z \
-// RUN:     -iexternal %t/include/y \
-// RUN:     -I%t/include/r \
+// RUN:     -I%t/test1/include/y \
+// RUN:     -I%t/test1/include/z \
+// RUN:     -I%t/test1/include/y \
+// RUN:     %t/test1/t.c 2>&1 | FileCheck -DPWD=%t %t/test1/t.c
+// RUN: %clang_cl \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
+// RUN:     -nobuiltininc /X \
+// RUN:     /I%t/test1/include/y \
+// RUN:     /I%t/test1/include/z \
+// RUN:     /I%t/test1/include/y \
+// RUN:     %t/test1/t.c 2>&1 | FileCheck -DPWD=%t %t/test1/t.c
+
+#--- test1/t.c
+#include <a.h>
+#include <b.h>
+
+// CHECK:      ignoring duplicate directory "[[PWD]]/test1/include/y"
+// CHECK-NEXT: #include "..." search starts here:
+// CHECK-NEXT: #include <...> search starts here:
+// CHECK-NEXT: [[PWD]]/test1/include/y
+// CHECK-NEXT: [[PWD]]/test1/include/z
+// CHECK-NEXT: End of search list.
+
+#--- test1/include/y/a.h
+
+#--- test1/include/z/a.h
+#error 'test1/include/z/a.h' should not have been included!
+
+#--- test1/include/z/b.h
+
+
+// Test 2: Validate ordering and duplicate elimination for /external:I.
+//
+// RUN: %clang \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
+// RUN:     -nostdinc \
+// RUN:     -iexternal %t/test2/include/z \
+// RUN:     -iexternal %t/test2/include/y \
+// RUN:     -iexternal %t/test2/include/z \
+// RUN:     %t/test2/t.c 2>&1 | FileCheck -DPWD=%t %t/test2/t.c
+// RUN: %clang_cl \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
+// RUN:     -nobuiltininc /X \
+// RUN:     /external:I %t/test2/include/z \
+// RUN:     /external:I %t/test2/include/y \
+// RUN:     /external:I %t/test2/include/z \
+// RUN:     %t/test2/t.c 2>&1 | FileCheck -DPWD=%t %t/test2/t.c
+
+#--- test2/t.c
+#include <a.h>
+#include <b.h>
+
+// CHECK:      ignoring duplicate directory "[[PWD]]/test2/include/z"
+// CHECK-NEXT: #include "..." search starts here:
+// CHECK-NEXT: #include <...> search starts here:
+// CHECK-NEXT: [[PWD]]/test2/include/y
+// CHECK-NEXT: [[PWD]]/test2/include/z
+// CHECK-NEXT: End of search list.
+
+#--- test2/include/y/a.h
+
+#--- test2/include/z/a.h
+#error 'test2/include/z/a.h' should not have been included!
+
+#--- test2/include/z/b.h
+
+
+// Test 3: Validate ordering and duplicate elimination for /I vs /external:I.
+//
+// RUN: %clang \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
+// RUN:     -nostdinc \
+// RUN:     -iexternal %t/test3/include/w \
+// RUN:     -I%t/test3/include/z \
+// RUN:     -I%t/test3/include/x \
+// RUN:     -I%t/test3/include/w \
+// RUN:     -iexternal %t/test3/include/y \
+// RUN:     -iexternal %t/test3/include/z \
+// RUN:     %t/test3/t.c 2>&1 | FileCheck -DPWD=%t %t/test3/t.c
+// RUN: %clang_cl \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
+// RUN:     -nobuiltininc /X \
+// RUN:     /external:I %t/test3/include/w \
+// RUN:     /I%t/test3/include/z \
+// RUN:     /I%t/test3/include/x \
+// RUN:     /I%t/test3/include/w \
+// RUN:     /external:I %t/test3/include/y \
+// RUN:     /external:I %t/test3/include/z \
+// RUN:     %t/test3/t.c 2>&1 | FileCheck -DPWD=%t %t/test3/t.c
+
+#--- test3/t.c
+#include <a.h>
+#include <b.h>
+#include <c.h>
+#include <d.h>
+
+// CHECK:      ignoring duplicate directory "[[PWD]]/test3/include/w"
+// CHECK-NEXT:  as it is a non-system directory that duplicates a system directory
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test3/include/z"
+// CHECK-NEXT:  as it is a non-system directory that duplicates a system directory
+// CHECK-NEXT: #include "..." search starts here:
+// CHECK-NEXT: #include <...> search starts here:
+// CHECK-NEXT: [[PWD]]/test3/include/w
+// CHECK-NEXT: [[PWD]]/test3/include/x
+// CHECK-NEXT: [[PWD]]/test3/include/y
+// CHECK-NEXT: [[PWD]]/test3/include/z
+// CHECK-NEXT: End of search list.
+
+#--- test3/include/w/a.h
+
+#--- test3/include/x/a.h
+#error 'test3/include/x/a.h' should not have been included!
+
+#--- test3/include/x/b.h
+
+#--- test3/include/y/a.h
+#error 'test3/include/y/a.h' should not have been included!
+
+#--- test3/include/y/b.h
+#error 'test3/include/y/b.h' should not have been included!
+
+#--- test3/include/y/c.h
+
+#--- test3/include/z/a.h
+#error 'test3/include/z/a.h' should not have been included!
+
+#--- test3/include/z/b.h
+#error 'test3/include/z/b.h' should not have been included!
+
+#--- test3/include/z/c.h
+#error 'test3/include/z/c.h' should not have been included!
+
+#--- test3/include/z/d.h
+
+
+// Test 4: Validate ordering and duplicate elimination for /external:env.
+//
+// RUN: env EXTRA_INCLUDE1="%t/test4/include/y" \
+// RUN: env EXTRA_INCLUDE2="%t/test4/include/z;%t/test4/include/y;%t/test4/include/x;%t/test4/include/w" \
+// RUN: %clang \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
+// RUN:     -nostdinc \
+// RUN:     -I%t/test4/include/w \
+// RUN:     -iexternal %t/test4/include/x \
+// RUN:     -iexternal-env=EXTRA_INCLUDE1 \
+// RUN:     -iexternal-env=EXTRA_INCLUDE2 \
+// RUN:     %t/test4/t.c 2>&1 | FileCheck -DPWD=%t %t/test4/t.c
+// RUN: env EXTRA_INCLUDE1="%t/test4/include/y" \
+// RUN: env EXTRA_INCLUDE2="%t/test4/include/z;%t/test4/include/y;%t/test4/include/x;%t/test4/include/w" \
+// RUN: %clang_cl \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
+// RUN:     -nobuiltininc /X \
+// RUN:     /I%t/test4/include/w \
+// RUN:     /external:I %t/test4/include/x \
+// RUN:     /external:env:EXTRA_INCLUDE1 \
+// RUN:     /external:env:EXTRA_INCLUDE2 \
+// RUN:     %t/test4/t.c 2>&1 | FileCheck -DPWD=%t %t/test4/t.c
+
+#--- test4/t.c
+#include <a.h>
+#include <b.h>
+#include <c.h>
+#include <d.h>
+
+// CHECK:      ignoring duplicate directory "[[PWD]]/test4/include/y"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test4/include/x"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test4/include/w"
+// CHECK-NEXT: #include "..." search starts here:
+// CHECK-NEXT: #include <...> search starts here:
+// CHECK-NEXT: [[PWD]]/test4/include/w
+// CHECK-NEXT: [[PWD]]/test4/include/x
+// CHECK-NEXT: [[PWD]]/test4/include/y
+// CHECK-NEXT: [[PWD]]/test4/include/z
+// CHECK-NEXT: End of search list.
+
+#--- test4/include/w/a.h
+
+#--- test4/include/x/a.h
+#error 'test4/include/x/a.h' should not have been included!
+
+#--- test4/include/x/b.h
+
+#--- test4/include/y/a.h
+#error 'test4/include/y/a.h' should not have been included!
+
+#--- test4/include/y/b.h
+#error 'test4/include/y/b.h' should not have been included!
+
+#--- test4/include/y/c.h
+
+#--- test4/include/z/a.h
+#error 'test4/include/z/a.h' should not have been included!
+
+#--- test4/include/z/b.h
+#error 'test4/include/z/b.h' should not have been included!
+
+#--- test4/include/z/c.h
+#error 'test4/include/z/c.h' should not have been included!
+
+#--- test4/include/z/d.h
+
+
+// Test 5: Validate ordering and duplicate elimination for the INCLUDE and
+// EXTERNAL_INCLUDE environment variables.
+//
+// RUN: env EXTRA_INCLUDE="%t/test5/include/w" \
+// RUN: env INCLUDE="%t/test5/include/x;%t/test5/include/y;%t/test5/include/w;%t/test5/include/v;%t/test5/include/u" \
+// RUN: env EXTERNAL_INCLUDE="%t/test5/include/z;%t/test5/include/y;%t/test5/include/w;%t/test5/include/v;%t/test5/include/u" \
+// RUN: %clang \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
+// RUN:     -nostdinc \
+// RUN:     -I%t/test5/include/u \
+// RUN:     -iexternal %t/test5/include/v \
 // RUN:     -iexternal-env=EXTRA_INCLUDE \
-// RUN:     -I%t/include/t \
-// RUN:     -iexternal %t/include/z \
-// RUN:     -I%t/include/o \
-// RUN:     -I%t/include/x \
-// RUN:     -iexternal %t/include/y \
-// RUN:     -I%t/include/v \
-// RUN:     -iexternal %t/include/w \
-// RUN:     -I%t/include/u \
 // RUN:     -iexternal-env=INCLUDE \
 // RUN:     -iexternal-env=EXTERNAL_INCLUDE \
-// RUN:     %t/test.c 2>&1 | FileCheck -DPWD=%t %t/test.c
-
-// Test the clang-cl driver with a Windows target that implicitly enables the
-// -fms-compatibility option. The -nobuiltininc option is uesd to suppress the
-// Clang resource directory. The -nostdlibinc option is used to suppress search
-// paths for the Windows SDK, CRT, MFC, ATL, etc...
-// RUN: env INCLUDE="%t/include/p;%t/include/o" \
-// RUN: env EXTRA_INCLUDE="%t/include/t;%t/include/q;%t/include/r" \
+// RUN:     %t/test5/t.c 2>&1 | FileCheck -DPWD=%t %t/test5/t.c
+// RUN: env EXTRA_INCLUDE="%t/test5/include/w" \
+// RUN: env INCLUDE="%t/test5/include/x;%t/test5/include/y;%t/test5/include/w;%t/test5/include/v;%t/test5/include/u" \
+// RUN: env EXTERNAL_INCLUDE="%t/test5/include/z;%t/test5/include/y;%t/test5/include/w;%t/test5/include/v;%t/test5/include/u" \
 // RUN: %clang_cl \
-// RUN:     -target x86_64-pc-windows \
-// RUN:     -v -fsyntax-only \
+// RUN:     -target x86_64-pc-windows -v -fsyntax-only \
 // RUN:     -nobuiltininc \
-// RUN:     -nostdlibinc \
-// RUN:     /external:I %t/include/s \
-// RUN:     /external:I %t/include/w \
-// RUN:     /I%t/include/v \
-// RUN:     /external:I %t/include/x \
-// RUN:     /I%t/include/z \
-// RUN:     /external:I %t/include/y \
-// RUN:     /I%t/include/r \
+// RUN:     /I%t/test5/include/u \
+// RUN:     /external:I %t/test5/include/v \
 // RUN:     /external:env:EXTRA_INCLUDE \
-// RUN:     /I%t/include/t \
-// RUN:     /external:I %t/include/z \
-// RUN:     /I%t/include/o \
-// RUN:     /I%t/include/x \
-// RUN:     /external:I %t/include/y \
-// RUN:     /I%t/include/v \
-// RUN:     /external:I %t/include/w \
-// RUN:     /I%t/include/u \
-// RUN:     %t/test.c 2>&1 | FileCheck -DPWD=%t %t/test.c
+// RUN:     %t/test5/t.c 2>&1 | FileCheck -DPWD=%t %t/test5/t.c
 
-#--- test.c
+#--- test5/t.c
 #include <a.h>
 #include <b.h>
 #include <c.h>
 #include <d.h>
 #include <e.h>
 #include <f.h>
-#include <g.h>
-#include <h.h>
-#include <i.h>
-#include <j.h>
-#include <k.h>
-#include <l.h>
 
-// Header search paths are processed as follows:
-// 1) Paths specified by the /I and /external:I options are processed in order.
-//    1.1) Paths specified by /I that duplicate a path specified by /external:I
-//         are ignored regardless of the option order.
-//    1.2) Paths specified by /I that duplicate a prior /I option are ignored.
-//    1.3) Paths specified by /external:I that duplicate a later /external:I
-//         option are ignored.
-// 2) Paths specified by the /external:env options are processed in order.
-//    Paths that duplicate a path from a /I option, an external:I option, a
-//    prior /external:env option, or a prior path from the current /external:env
-//    option are ignored.
-// 3) Paths specified by the %INCLUDE% environment variable are processed in
-//    order. Paths that duplicate any other path are ignored.
-
-// CHECK:      ignoring duplicate directory "[[PWD]]/include/z"
-// CHECK-NEXT:  as it is a non-system directory that duplicates a system directory
-// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/x"
-// CHECK-NEXT:  as it is a non-system directory that duplicates a system directory
-// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/y"
-// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/v"
-// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/w"
-// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/t"
-// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/r"
-// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/o"
+// CHECK:      ignoring duplicate directory "[[PWD]]/test5/include/w"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test5/include/v"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test5/include/u"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test5/include/y"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test5/include/w"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test5/include/v"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/test5/include/u"
 // CHECK-NEXT: #include "..." search starts here:
 // CHECK-NEXT: #include <...> search starts here:
-// CHECK-NEXT: [[PWD]]/include/s
-// CHECK-NEXT: [[PWD]]/include/v
-// CHECK-NEXT: [[PWD]]/include/x
-// CHECK-NEXT: [[PWD]]/include/r
-// CHECK-NEXT: [[PWD]]/include/t
-// CHECK-NEXT: [[PWD]]/include/z
-// CHECK-NEXT: [[PWD]]/include/o
-// CHECK-NEXT: [[PWD]]/include/y
-// CHECK-NEXT: [[PWD]]/include/w
-// CHECK-NEXT: [[PWD]]/include/u
-// CHECK-NEXT: [[PWD]]/include/q
-// CHECK-NEXT: [[PWD]]/include/p
+// CHECK-NEXT: [[PWD]]/test5/include/u
+// CHECK-NEXT: [[PWD]]/test5/include/v
+// CHECK-NEXT: [[PWD]]/test5/include/w
+// CHECK-NEXT: [[PWD]]/test5/include/x
+// CHECK-NEXT: [[PWD]]/test5/include/y
+// CHECK-NEXT: [[PWD]]/test5/include/z
 // CHECK-NEXT: End of search list.
 
-#--- include/s/a.h
+#--- test5/include/u/a.h
 
-#--- include/v/a.h
-#error 'include/v/a.h' should not have been included!
+#--- test5/include/v/a.h
+#error 'test5/include/v/a.h' should not have been included!
 
-#--- include/v/b.h
+#--- test5/include/v/b.h
 
-#--- include/x/a.h
-#error 'include/x/a.h' should not have been included!
+#--- test5/include/w/a.h
+#error 'test5/include/w/a.h' should not have been included!
 
-#--- include/x/b.h
-#error 'include/x/b.h' should not have been included!
+#--- test5/include/w/b.h
+#error 'test5/include/w/b.h' should not have been included!
 
-#--- include/x/c.h
+#--- test5/include/w/c.h
 
-#--- include/r/a.h
-#error 'include/r/a.h' should not have been included!
+#--- test5/include/x/a.h
+#error 'test5/include/x/a.h' should not have been included!
 
-#--- include/r/b.h
-#error 'include/r/b.h' should not have been included!
+#--- test5/include/x/b.h
+#error 'test5/include/x/b.h' should not have been included!
 
-#--- include/r/c.h
-#error 'include/r/c.h' should not have been included!
+#--- test5/include/x/c.h
+#error 'test5/include/x/c.h' should not have been included!
 
-#--- include/r/d.h
+#--- test5/include/x/d.h
 
-#--- include/t/a.h
-#error 'include/t/a.h' should not have been included!
+#--- test5/include/y/a.h
+#error 'test5/include/y/a.h' should not have been included!
 
-#--- include/t/b.h
-#error 'include/t/b.h' should not have been included!
+#--- test5/include/y/b.h
+#error 'test5/include/y/b.h' should not have been included!
 
-#--- include/t/c.h
-#error 'include/t/c.h' should not have been included!
+#--- test5/include/y/c.h
+#error 'test5/include/y/c.h' should not have been included!
 
-#--- include/t/d.h
-#error 'include/t/cdh' should not have been included!
+#--- test5/include/y/d.h
+#error 'test5/include/y/d.h' should not have been included!
 
-#--- include/t/e.h
+#--- test5/include/y/e.h
 
-#--- include/z/a.h
-#error 'include/z/a.h' should not have been included!
+#--- test5/include/z/a.h
+#error 'test5/include/z/a.h' should not have been included!
 
-#--- include/z/b.h
-#error 'include/z/b.h' should not have been included!
+#--- test5/include/z/b.h
+#error 'test5/include/z/b.h' should not have been included!
 
-#--- include/z/c.h
-#error 'include/z/c.h' should not have been included!
+#--- test5/include/z/c.h
+#error 'test5/include/z/c.h' should not have been included!
 
-#--- include/z/d.h
-#error 'include/z/d.h' should not have been included!
+#--- test5/include/z/d.h
+#error 'test5/include/z/d.h' should not have been included!
 
-#--- include/z/e.h
-#error 'include/z/e.h' should not have been included!
+#--- test5/include/z/e.h
+#error 'test5/include/z/e.h' should not have been included!
 
-#--- include/z/f.h
-
-#--- include/o/a.h
-#error 'include/o/a.h' should not have been included!
-
-#--- include/o/b.h
-#error 'include/o/b.h' should not have been included!
-
-#--- include/o/c.h
-#error 'include/o/c.h' should not have been included!
-
-#--- include/o/d.h
-#error 'include/o/d.h' should not have been included!
-
-#--- include/o/e.h
-#error 'include/o/e.h' should not have been included!
-
-#--- include/o/f.h
-#error 'include/o/f.h' should not have been included!
-
-#--- include/o/g.h
-
-#--- include/y/a.h
-#error 'include/y/a.h' should not have been included!
-
-#--- include/y/b.h
-#error 'include/y/b.h' should not have been included!
-
-#--- include/y/c.h
-#error 'include/y/c.h' should not have been included!
-
-#--- include/y/d.h
-#error 'include/y/d.h' should not have been included!
-
-#--- include/y/e.h
-#error 'include/y/e.h' should not have been included!
-
-#--- include/y/f.h
-#error 'include/y/f.h' should not have been included!
-
-#--- include/y/g.h
-#error 'include/y/g.h' should not have been included!
-
-#--- include/y/h.h
-
-#--- include/w/a.h
-#error 'include/w/a.h' should not have been included!
-
-#--- include/w/b.h
-#error 'include/w/b.h' should not have been included!
-
-#--- include/w/c.h
-#error 'include/w/c.h' should not have been included!
-
-#--- include/w/d.h
-#error 'include/w/d.h' should not have been included!
-
-#--- include/w/e.h
-#error 'include/w/e.h' should not have been included!
-
-#--- include/w/f.h
-#error 'include/w/f.h' should not have been included!
-
-#--- include/w/g.h
-#error 'include/w/g.h' should not have been included!
-
-#--- include/w/h.h
-#error 'include/w/h.h' should not have been included!
-
-#--- include/w/i.h
-
-#--- include/u/a.h
-#error 'include/u/a.h' should not have been included!
-
-#--- include/u/b.h
-#error 'include/u/b.h' should not have been included!
-
-#--- include/u/c.h
-#error 'include/u/c.h' should not have been included!
-
-#--- include/u/d.h
-#error 'include/u/d.h' should not have been included!
-
-#--- include/u/e.h
-#error 'include/u/e.h' should not have been included!
-
-#--- include/u/f.h
-#error 'include/u/f.h' should not have been included!
-
-#--- include/u/g.h
-#error 'include/u/g.h' should not have been included!
-
-#--- include/u/h.h
-#error 'include/u/h.h' should not have been included!
-
-#--- include/u/i.h
-#error 'include/u/i.h' should not have been included!
-
-#--- include/u/j.h
-
-#--- include/q/a.h
-#error 'include/q/a.h' should not have been included!
-
-#--- include/q/b.h
-#error 'include/q/b.h' should not have been included!
-
-#--- include/q/c.h
-#error 'include/q/c.h' should not have been included!
-
-#--- include/q/d.h
-#error 'include/q/d.h' should not have been included!
-
-#--- include/q/e.h
-#error 'include/q/e.h' should not have been included!
-
-#--- include/q/f.h
-#error 'include/q/f.h' should not have been included!
-
-#--- include/q/g.h
-#error 'include/q/g.h' should not have been included!
-
-#--- include/q/h.h
-#error 'include/q/h.h' should not have been included!
-
-#--- include/q/i.h
-#error 'include/q/i.h' should not have been included!
-
-#--- include/q/j.h
-#error 'include/q/j.h' should not have been included!
-
-#--- include/q/k.h
-
-#--- include/p/a.h
-#error 'include/p/a.h' should not have been included!
-
-#--- include/p/b.h
-#error 'include/p/b.h' should not have been included!
-
-#--- include/p/c.h
-#error 'include/p/c.h' should not have been included!
-
-#--- include/p/d.h
-#error 'include/p/d.h' should not have been included!
-
-#--- include/p/e.h
-#error 'include/p/e.h' should not have been included!
-
-#--- include/p/f.h
-#error 'include/p/f.h' should not have been included!
-
-#--- include/p/g.h
-#error 'include/p/g.h' should not have been included!
-
-#--- include/p/h.h
-#error 'include/p/h.h' should not have been included!
-
-#--- include/p/i.h
-#error 'include/p/i.h' should not have been included!
-
-#--- include/p/j.h
-#error 'include/p/j.h' should not have been included!
-
-#--- include/p/k.h
-#error 'include/p/k.h' should not have been included!
-
-#--- include/p/l.h
+#--- test5/include/z/f.h
