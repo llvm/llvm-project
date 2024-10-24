@@ -53,3 +53,7 @@ struct TestNotNullTerm {
     strlen((char *)&x); // expected-warning{{Argument to string length function is not a null-terminated string}}
   }
 };
+
+void snprintf_null_dest_nullptr_arg() {
+  snprintf(nullptr, 10, "%s", nullptr); // expected-warning {{Null pointer passed as 1st argument to 'snprintf'}}
+}
