@@ -446,7 +446,7 @@ private:
             result.push_back(val);
         }
       } else {
-        static_assert(false, "T must be a Type or a TypeRange");
+        static_assert(sizeof(T) == 0, "T must be a Type or a TypeRange");
       }
       return result;
     };
