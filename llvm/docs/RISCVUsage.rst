@@ -129,6 +129,7 @@ on support follow.
      ``Smcdeleg``      Supported
      ``Smcsrind``      Supported
      ``Smepmp``        Supported
+     ``Smrnmi``        Assembly Support
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
      ``Ssccfg``        Supported
