@@ -562,6 +562,15 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
   tilingOptions = tilingOptions.setTileSizes(tileSizesOfr);
   scf::SCFTileAndFuseOptions tileAndFuseOptions;
   tileAndFuseOptions.tilingOptions = tilingOptions;
+
+  if (getApplyCleanup()) {
+    MLIRContext *context = rewriter.getContext();
+    RewritePatternSet patterns(context);
+    tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, context);
+    tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
+    tileAndFuseOptions.cleanupPatterns = std::move(patterns);
+  }
+
   LogicalResult result = applyTilingToAll(
       rewriter, getOperation(), state.getPayloadOps(getTarget()),
       tileSizes.size() - llvm::count(tileSizes, 0), transformResults,
