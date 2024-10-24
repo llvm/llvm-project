@@ -1174,6 +1174,9 @@ void MCStreamer::emitFileDirective(StringRef Filename,
                                    StringRef CompilerVersion,
                                    StringRef TimeStamp, StringRef Description) {
 }
+void MCStreamer::emitMachineDirective(StringRef CPU) {
+  llvm_unreachable("this directive only supported on XCOFF targets");
+}
 void MCStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
   llvm_unreachable("this directive only supported on COFF targets");
 }

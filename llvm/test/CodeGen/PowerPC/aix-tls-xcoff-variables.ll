@@ -70,7 +70,7 @@
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
 ; SYMS-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
-; SYMS-NEXT:     CPU Version ID: TCPU_COM (0x3)
+; SYMS-NEXT:     CPU Version ID: TCPU_PWR7 (0x18)
 ; SYMS-NEXT:     StorageClass: C_FILE (0x67)
 ; SYMS-NEXT:     NumberOfAuxEntries: 2
 ; SYMS:         Symbol {

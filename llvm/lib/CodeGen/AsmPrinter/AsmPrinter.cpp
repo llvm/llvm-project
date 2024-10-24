@@ -120,6 +120,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -508,9 +509,28 @@ bool AsmPrinter::doInitialization(Module &M) {
     }
   }
 
-  // On AIX, emit bytes for llvm.commandline metadata after .file so that the
-  // C_INFO symbol is preserved if any csect is kept by the linker.
-  if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+  if (Target.isOSBinFormatXCOFF()) {
+    // Emit .machine directive on AIX.
+    XCOFF::CFileCpuId TargetCpuId = XCOFF::TCPU_INVALID;
+    // Walk through the "target-cpu" attribute of functions and use the newest
+    // level as the CPU of the module.
+    for (auto &F : M) {
+      XCOFF::CFileCpuId FunCpuId =
+          XCOFF::getCpuID(TM.getSubtargetImpl(F)->getCPU());
+      if (FunCpuId > TargetCpuId)
+        TargetCpuId = FunCpuId;
+    }
+    // If there is no "target-cpu" attribute in functions, take the "-mcpu"
+    // value. If both are omitted, use getNormalizedPPCTargetCPU() to determine
+    // the default CPU.
+    if (!TargetCpuId)
+      TargetCpuId = XCOFF::getCpuID(TM.getTargetCPU().empty()
+                                        ? PPC::getNormalizedPPCTargetCPU(Target)
+                                        : TM.getTargetCPU());
+    OutStreamer->emitMachineDirective(XCOFF::getTCPUString(TargetCpuId));
+
+    // On AIX, emit bytes for llvm.commandline metadata after .file so that the
+    // C_INFO symbol is preserved if any csect is kept by the linker.
     emitModuleCommandLines(M);
     // Now we can generate section information.
     OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
