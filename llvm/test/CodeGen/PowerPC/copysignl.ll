@@ -3,6 +3,9 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
+; Once this tested for generating calls to copysignl for lowering certain fcopysigns on PowerPC.
+; Now it tests that such never returns, so that frontends don't have to support this libcall.
+
 define double @foo_d_ll(ppc_fp128 %a, ppc_fp128 %b) #0 {
 entry:
   %call = tail call ppc_fp128 @copysignl(ppc_fp128 %a, ppc_fp128 %b) #0
@@ -41,12 +44,12 @@ entry:
   %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %b) #0
   ret ppc_fp128 %call
 
-; CHECK-LABEL: @foo_ll
-; CHECK: bl copysignl
-; CHECK: blr
+; CHECK-LABEL:     @foo_ll
+; CHECK-NOT:         bl copysignl
+; CHECK:             blr
 ; CHECK-VSX-LABEL: @foo_ll
-; CHECK-VSX: bl copysignl
-; CHECK-VSX: blr
+; CHECK-VSX-NOT:     bl copysignl
+; CHECK-VSX:         blr
 }
 
 define ppc_fp128 @foo_ld(double %a, double %b) #0 {
@@ -56,12 +59,12 @@ entry:
   %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %conv1) #0
   ret ppc_fp128 %call
 
-; CHECK-LABEL: @foo_ld
-; CHECK: bl copysignl
-; CHECK: blr
+; CHECK-LABEL:     @foo_ld
+; CHECK-NOT:         bl copysignl
+; CHECK:             blr
 ; CHECK-VSX-LABEL: @foo_ld
-; CHECK-VSX: bl copysignl
-; CHECK-VSX: blr
+; CHECK-VSX-NOT:     bl copysignl
+; CHECK-VSX:         blr
 }
 
 define ppc_fp128 @foo_lf(double %a, float %b) #0 {
@@ -71,12 +74,12 @@ entry:
   %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %conv1) #0
   ret ppc_fp128 %call
 
-; CHECK-LABEL: @foo_lf
-; CHECK: bl copysignl
-; CHECK: blr
+; CHECK-LABEL:     @foo_lf
+; CHECK-NOT:         bl copysignl
+; CHECK:             blr
 ; CHECK-VSX-LABEL: @foo_lf
-; CHECK-VSX: bl copysignl
-; CHECK-VSX: blr
+; CHECK-VSX-NOT:     bl copysignl
+; CHECK-VSX:         blr
 }
 
 attributes #0 = { nounwind readnone }
