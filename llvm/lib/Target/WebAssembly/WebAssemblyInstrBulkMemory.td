@@ -93,10 +93,10 @@ defm CPY_A#B : I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
 
 let usesCustomInserter = 1, isCodeGenOnly = 1, mayStore = 1 in
 defm SET_A#B : I<(outs), (ins i32imm_op:$idx, rc:$dst, I32:$value, rc:$size),
-                    (outs), (ins i32imm_op:$idx),
-                    [(wasm_memset (i32 imm:$idx), rc:$dst, I32:$value, rc:$size)],
-                    "", "", 0>,
-                  Requires<[HasBulkMemory]>;
+                 (outs), (ins i32imm_op:$idx),
+                 [(wasm_memset (i32 imm:$idx), rc:$dst, I32:$value, rc:$size)],
+                 "", "", 0>,
+                 Requires<[HasBulkMemory]>;
 
 }
 
