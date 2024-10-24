@@ -333,8 +333,8 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 
   assert(Opcode == Instruction::Add && "Unhandled partial reduction opcode");
 
-  Value *BinOpVal = State.get(getOperand(0), 0);
-  Value *PhiVal = State.get(getOperand(1), 0);
+  Value *BinOpVal = State.get(getOperand(0));
+  Value *PhiVal = State.get(getOperand(1));
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
 
   Type *RetTy = PhiVal->getType();
@@ -344,7 +344,7 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
       {PhiVal, BinOpVal}, nullptr, Twine("partial.reduce"));
 
   // Use this vector value for all users of the original instruction.
-  State.set(this, V, 0);
+  State.set(this, V);
   State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
