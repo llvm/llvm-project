@@ -48,6 +48,13 @@ declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
     runtime/*.py
 )
 
+declare_mlir_python_sources(MLIRPythonSources.Presburger
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources
+  SOURCES
+    presburger.py
+  )
+
 declare_mlir_python_sources(MLIRPythonCAPI.HeaderSources
   ROOT_DIR "${MLIR_SOURCE_DIR}/include"
   SOURCES_GLOB "mlir-c/*.h"
@@ -664,6 +671,18 @@ declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPITransformDialectTransforms
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Presburger
+  MODULE_NAME _mlirPresburger
+  ADD_TO_PARENT MLIRPythonSources.Presburger
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    Presburger.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIPresburger
 )
 
 # TODO: Figure out how to put this in the test tree.

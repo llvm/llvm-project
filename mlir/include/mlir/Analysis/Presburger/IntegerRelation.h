@@ -753,6 +753,15 @@ public:
   // false.
   bool isFullDim();
 
+  void *getAsOpaquePointer() const {
+    return const_cast<IntegerRelation *>(this);
+  }
+
+  static IntegerRelation *getFromOpaquePointer(const void *pointer) {
+    return const_cast<IntegerRelation *>(
+        reinterpret_cast<const IntegerRelation *>(pointer));
+  }
+
   void print(raw_ostream &os) const;
   void dump() const;
 

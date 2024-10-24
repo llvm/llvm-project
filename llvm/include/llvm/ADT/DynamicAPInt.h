@@ -217,6 +217,13 @@ public:
 
   raw_ostream &print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
+
+  void *getAsOpaquePointer() const { return const_cast<DynamicAPInt *>(this); }
+
+  static DynamicAPInt *getFromOpaquePointer(const void *Pointer) {
+    return const_cast<DynamicAPInt *>(
+        reinterpret_cast<const DynamicAPInt *>(Pointer));
+  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const DynamicAPInt &X) {
