@@ -1652,17 +1652,11 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
 multiclass avx10_sm4_base<string OpStr> {
   // SM4_Base is in X86InstrSSE.td.
   let Predicates = [HasSM4, HasAVX10_2] in {
-    defm Z128 : SM4_Base<OpStr, avx512vl_i32_info.info128.RC,
-                "128", avx512vl_i32_info.info128.LdFrag,
-                avx512vl_i32_info.info128.MemOp>, EVEX_V128;
-    defm Z256 : SM4_Base<OpStr, avx512vl_i32_info.info256.RC,
-                "256", avx512vl_i32_info.info256.LdFrag,
-                avx512vl_i32_info.info256.MemOp>, EVEX_V256;
+    defm Z128 : SM4_Base<OpStr, VR128X, "128", loadv4i32, i128mem>, EVEX_V128;
+    defm Z256 : SM4_Base<OpStr, VR256X, "256", loadv8i32, i256mem>, EVEX_V256;
   }
   let Predicates = [HasSM4, HasAVX10_2_512] in
-    defm Z : SM4_Base<OpStr, avx512vl_i32_info.info512.RC,
-              "512", avx512vl_i32_info.info512.LdFrag,
-              avx512vl_i32_info.info512.MemOp>, EVEX_V512;
+    defm Z : SM4_Base<OpStr, VR512, "512", loadv16i32, i512mem>, EVEX_V512;
 }
 
 defm VSM4KEY4 : avx10_sm4_base<"vsm4key4">, T8, XS, EVEX, VVVV;
