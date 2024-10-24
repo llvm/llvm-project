@@ -3,266 +3,206 @@
 ; RUN: llc < %s -mtriple aarch64 -mattr=+sve -global-isel -aarch64-enable-gisel-sve=1 | FileCheck %s
 
 ;; add
-define void @addnxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, ptr %p) {
+define <vscale x 2 x i64> @addnxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: addnxv2i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = add <vscale x 2 x i64> %a, %b
-  store <vscale x 2 x i64> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 2 x i64> %c
 }
 
-define void @addnxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, ptr %p) {
+define <vscale x 4 x i32> @addnxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: addnxv4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = add <vscale x 4 x i32> %a, %b
-  store <vscale x 4 x i32> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 4 x i32> %c
 }
 
-define void @addnxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
+define <vscale x 8 x i16> @addnxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
 ; CHECK-LABEL: addnxv8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add z0.h, z0.h, z1.h
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = add <vscale x 8 x i16> %a, %b
-  store <vscale x 8 x i16> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 8 x i16> %c
 }
 
-define void @addnxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, ptr %p) {
+define <vscale x 16 x i8> @addnxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: addnxv16i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add z0.b, z0.b, z1.b
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = add <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 16 x i8> %c
 }
 
 ;; sub
-define void @subnxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, ptr %p) {
+define <vscale x 2 x i64> @subnxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: subnxv2i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = sub <vscale x 2 x i64> %a, %b
-  store <vscale x 2 x i64> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 2 x i64> %c
 }
 
-define void @subnxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, ptr %p) {
+define <vscale x 4 x i32> @subnxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: subnxv4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub z0.s, z0.s, z1.s
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = sub <vscale x 4 x i32> %a, %b
-  store <vscale x 4 x i32> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 4 x i32> %c
 }
 
-define void @subnxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
+define <vscale x 8 x i16> @subnxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
 ; CHECK-LABEL: subnxv8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub z0.h, z0.h, z1.h
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = sub <vscale x 8 x i16> %a, %b
-  store <vscale x 8 x i16> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 8 x i16> %c
 }
 
-define void @subnxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, ptr %p) {
+define <vscale x 16 x i8> @subnxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: subnxv16i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub z0.b, z0.b, z1.b
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = sub <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 16 x i8> %c
 }
 
 ;; and
-define void @andnxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, ptr %p) {
+define <vscale x 2 x i64> @andnxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: andnxv2i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = and <vscale x 2 x i64> %a, %b
-  store <vscale x 2 x i64> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 2 x i64> %c
 }
 
-define void @andnxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, ptr %p) {
+define <vscale x 4 x i32> @andnxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: andnxv4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = and <vscale x 4 x i32> %a, %b
-  store <vscale x 4 x i32> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 4 x i32> %c
 }
 
-define void @andnxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
+define <vscale x 8 x i16> @andnxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
 ; CHECK-LABEL: andnxv8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = and <vscale x 8 x i16> %a, %b
-  store <vscale x 8 x i16> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 8 x i16> %c
 }
 
-define void @andnxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, ptr %p) {
+define <vscale x 16 x i8> @andnxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: andnxv16i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = and <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 16 x i8> %c
 }
 
 ;; or
-define void @ornxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, ptr %p) {
+define <vscale x 2 x i64> @ornxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: ornxv2i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = or <vscale x 2 x i64> %a, %b
-  store <vscale x 2 x i64> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 2 x i64> %c
 }
 
-define void @ornxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, ptr %p) {
+define <vscale x 4 x i32> @ornxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: ornxv4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = or <vscale x 4 x i32> %a, %b
-  store <vscale x 4 x i32> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 4 x i32> %c
 }
 
-define void @ornxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
+define <vscale x 8 x i16> @ornxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
 ; CHECK-LABEL: ornxv8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = or <vscale x 8 x i16> %a, %b
-  store <vscale x 8 x i16> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 8 x i16> %c
 }
 
-define void @ornxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, ptr %p) {
+define <vscale x 16 x i8> @ornxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: ornxv16i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = or <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 16 x i8> %c
 }
 
 ;; xor
-define void @xornxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, ptr %p) {
+define <vscale x 2 x i64> @xornxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: xornxv2i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = xor <vscale x 2 x i64> %a, %b
-  store <vscale x 2 x i64> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 2 x i64> %c
 }
 
-define void @xornxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, ptr %p) {
+define <vscale x 4 x i32> @xornxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: xornxv4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = xor <vscale x 4 x i32> %a, %b
-  store <vscale x 4 x i32> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 4 x i32> %c
 }
 
-define void @xornxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
+define <vscale x 8 x i16> @xornxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, ptr %p) {
 ; CHECK-LABEL: xornxv8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = xor <vscale x 8 x i16> %a, %b
-  store <vscale x 8 x i16> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 8 x i16> %c
 }
 
-define void @xornxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, ptr %p) {
+define <vscale x 16 x i8> @xornxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: xornxv16i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %c = xor <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %c, ptr %p, align 16
-  ret void
+  ret <vscale x 16 x i8> %c
 }
