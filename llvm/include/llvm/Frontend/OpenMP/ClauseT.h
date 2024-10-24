@@ -503,7 +503,7 @@ struct DependT {
   using LocatorList = ObjectListT<I, E>;
   using TaskDependenceType = tomp::type::TaskDependenceType;
 
-  struct DepType {  // The form with task dependence type.
+  struct DepType { // The form with task dependence type.
     using TupleTrait = std::true_type;
     // Empty LocatorList means "omp_all_memory".
     std::tuple<TaskDependenceType, OPT(Iterator), LocatorList> t;
