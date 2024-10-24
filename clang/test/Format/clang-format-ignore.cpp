@@ -47,15 +47,14 @@
 // CHECK5-NOT: foo.js
 
 // RUN: echo "foo.*" > .clang-format-ignore
-// RUN: touch foo.c
-// RUN: echo foo | clang-format -assume-filename=foo.c 2>&1 \
+// RUN: echo "int i ;" > foo.c
+// RUN: clang-format -assume-filename=foo.c < foo.c \
 // RUN:   | FileCheck %s -check-prefix=CHECK6 -allow-empty
-// CHECK6-NOT: foo
+// CHECK6-NOT: int
 
-// RUN: touch bar.c
-// RUN: echo foo | clang-format -assume-filename=bar.c 2>&1 \
-// RUN:   | FileCheck %s -check-prefix=CHECK7 -allow-empty
-// CHECK7: foo
+// RUN: clang-format -assume-filename=bar.c < foo.c \
+// RUN:   | FileCheck %s -check-prefix=CHECK7 -match-full-lines
+// CHECK7: int i;
 
 // RUN: cd ..
 // RUN: rm -r %t.dir

@@ -708,7 +708,7 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty()) {
-    if (!AssumeFileName.empty() && isIgnored(AssumeFileName))
+    if (isIgnored(AssumeFileName))
       return 0;
     return clang::format::format("-", FailOnIncompleteFormat);
   }
