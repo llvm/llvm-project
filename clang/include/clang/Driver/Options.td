@@ -1969,6 +1969,10 @@ def fclang_abi_compat_EQ : Joined<["-"], "fclang-abi-compat=">, Group<f_clang_Gr
   Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">, Values<"<major>.<minor>,latest">,
   HelpText<"Attempt to match the ABI of Clang <version>">;
+def fdemangling_failures: Flag<["-"], "fdemangling-failures">, Group<f_clang_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Produce a diagnostic if clang cannot demangle all the mangled names it generates">,
+  MarshallingInfoFlag<CodeGenOpts<"DemanglingFailures">>;
 def fclasspath_EQ : Joined<["-"], "fclasspath=">, Group<f_Group>;
 def fcolor_diagnostics : Flag<["-"], "fcolor-diagnostics">, Group<f_Group>,
 

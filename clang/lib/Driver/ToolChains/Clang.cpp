@@ -4493,6 +4493,9 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_fspell_checking,
                      options::OPT_fno_spell_checking);
+
+  if (Args.hasArg(options::OPT_fdemangling_failures))
+    CmdArgs.push_back("-fdemangling-failures");
 }
 
 DwarfFissionKind tools::getDebugFissionKind(const Driver &D,
