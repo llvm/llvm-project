@@ -1758,18 +1758,13 @@ Arg *tools::getLastProfileUseArg(const ArgList &Args) {
 
 Arg *tools::getLastProfileSampleUseArg(const ArgList &Args) {
   auto *ProfileSampleUseArg = Args.getLastArg(
-      options::OPT_fprofile_sample_use, options::OPT_fprofile_sample_use_EQ,
-      options::OPT_fauto_profile, options::OPT_fauto_profile_EQ,
-      options::OPT_fno_profile_sample_use, options::OPT_fno_auto_profile);
+      options::OPT_fprofile_sample_use_EQ, options::OPT_fno_profile_sample_use);
 
-  if (ProfileSampleUseArg &&
-      (ProfileSampleUseArg->getOption().matches(
-           options::OPT_fno_profile_sample_use) ||
-       ProfileSampleUseArg->getOption().matches(options::OPT_fno_auto_profile)))
+  if (ProfileSampleUseArg && (ProfileSampleUseArg->getOption().matches(
+                                 options::OPT_fno_profile_sample_use)))
     return nullptr;
 
-  return Args.getLastArg(options::OPT_fprofile_sample_use_EQ,
-                         options::OPT_fauto_profile_EQ);
+  return Args.getLastArg(options::OPT_fprofile_sample_use_EQ);
 }
 
 const char *tools::RelocationModelName(llvm::Reloc::Model Model) {

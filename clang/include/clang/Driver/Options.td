@@ -1729,8 +1729,6 @@ defm gnu_inline_asm : BoolFOption<"gnu-inline-asm",
           "Disable GNU style inline asm">,
   PosFlag<SetTrue>>;
 
-def fprofile_sample_use : Flag<["-"], "fprofile-sample-use">, Group<f_Group>,
-    Visibility<[ClangOption, CLOption]>;
 def fno_profile_sample_use : Flag<["-"], "fno-profile-sample-use">, Group<f_Group>,
     Visibility<[ClangOption, CLOption]>;
 def fprofile_sample_use_EQ : Joined<["-"], "fprofile-sample-use=">,
@@ -1756,8 +1754,6 @@ def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
                basic block counts to branch probabilites to fix them by extended
                and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
-def fauto_profile : Flag<["-"], "fauto-profile">, Group<f_Group>,
-    Alias<fprofile_sample_use>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,
     Alias<fno_profile_sample_use>;
 def fauto_profile_EQ : Joined<["-"], "fauto-profile=">,
