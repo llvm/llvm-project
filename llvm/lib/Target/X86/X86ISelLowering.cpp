@@ -218,10 +218,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
   // SETOEQ and SETUNE require checking two conditions.
-  for (auto VT : {MVT::f32, MVT::f64, MVT::f80}) {
-    setCondCodeAction(ISD::SETOEQ, VT, Subtarget.hasAVX10_2_512() ? Custom : Expand);
-    setCondCodeAction(ISD::SETUNE, VT, Subtarget.hasAVX10_2_512() ? Custom : Expand);
+  for (auto VT : {MVT::f32, MVT::f64}) {
+    setCondCodeAction(ISD::SETOEQ, VT,
+                      Subtarget.hasAVX10_2() ? Custom : Expand);
+    setCondCodeAction(ISD::SETUNE, VT,
+                      Subtarget.hasAVX10_2() ? Custom : Expand);
   }
+  setCondCodeAction(ISD::SETOEQ, MVT::f80, Expand);
+  setCondCodeAction(ISD::SETUNE, MVT::f80, Expand);
 
   // Integer absolute.
   if (Subtarget.canUseCMOV()) {
@@ -2292,8 +2296,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_EXTEND,            MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Legal);
 
-    setCondCodeAction(ISD::SETOEQ, MVT::f16, Expand);
-    setCondCodeAction(ISD::SETUNE, MVT::f16, Expand);
+    setCondCodeAction(ISD::SETOEQ, MVT::f16,
+                      Subtarget.hasAVX10_2() ? Custom : Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f16,
+                      Subtarget.hasAVX10_2() ? Custom : Expand);
 
     if (Subtarget.useAVX512Regs()) {
       setGroup(MVT::v32f16);
@@ -24073,12 +24079,11 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
   }
 
-  if(Subtarget.hasAVX10_2_512()){
-    if( CC == ISD::SETOEQ ||  CC == ISD::SETUNE){
-    auto NewCC = (CC == ISD:::SETOEQ) ? X86::COND_E : (X86::COND_NE);
-    return getSETCC(NewCC,
-                    DAG.getNode(X86ISD::UCOMX,
-                            dl, MVT::i32, Op0, Op1), dl, DAG);
+  if (Subtarget.hasAVX10_2_512()) {
+    if (CC == ISD::SETOEQ || CC == ISD::SETUNE) {
+      auto NewCC = (CC == ISD::SETOEQ) ? X86::COND_E : (X86::COND_NE);
+      return getSETCC(NewCC, DAG.getNode(X86ISD::UCOMX, dl, MVT::i32, Op0, Op1),
+                      dl, DAG);
     }
   }
   // Handle floating point.
@@ -49528,14 +49533,6 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
           // FIXME: need symbolic constants for these magic numbers.
           // See X86ATTInstPrinter.cpp:printSSECC().
           unsigned x86cc = (cc0 == X86::COND_E) ? 0 : 4;
-          // VCOMXSS simplifies conditional code sequence into single setcc
-          // node. Earlier until COMI, it required upto 2 SETCC's to test CC.
-          if (Subtarget.hasAVX10_2()) {
-            return getSETCC(
-                ((cc0 == X86::COND_E) ? X86::COND_E : X86::COND_NE),
-                DAG.getNode(X86ISD::UCOMX, DL, MVT::i32, CMP00, CMP01), DL,
-                DAG);
-          }
           if (Subtarget.hasAVX512()) {
             SDValue FSetCC =
                 DAG.getNode(X86ISD::FSETCCM, DL, MVT::v1i1, CMP00, CMP01,
