@@ -301,6 +301,8 @@ public:
                                              DL);
   }
 
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment);
+
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment);
 
   bool isVScaleKnownToBeAPowerOfTwo() const {

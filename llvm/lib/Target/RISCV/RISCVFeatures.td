@@ -1359,6 +1359,10 @@ def TuneOptimizedZeroStrideLoad
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
+def TuneOptimizedIndexedLoadStore
+   : SubtargetFeature<"optimized-indexed-load-store", "HasOptimizedIndexedLoadStore",
+                      "true", "Optimized vector indexed load/store">;
+
 def Experimental
    : SubtargetFeature<"experimental", "HasExperimental",
                       "true", "Experimental intrinsics">;
