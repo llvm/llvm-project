@@ -142,12 +142,18 @@ from specific performance tests), please explain as many of these up front as
 possible. This allows the patch author and reviewers to make the most efficient
 use of their time.
 
+.. _lgtm_how_a_patch_is_accepted:
+
 LGTM - How a Patch Is Accepted
 ------------------------------
 
 A patch is approved to be committed when a reviewer accepts it, and this is
 almost always associated with a message containing the text "LGTM" (which
-stands for Looks Good To Me). Only approval from a single reviewer is required.
+stands for Looks Good To Me).
+
+Only approval from a single reviewer is required, unless the pull request
+has required reviewers. In which case, you must have approval from all of those
+reviewers.
 
 When providing an unqualified LGTM (approval to commit), it is the
 responsibility of the reviewer to have reviewed all of the discussion and
