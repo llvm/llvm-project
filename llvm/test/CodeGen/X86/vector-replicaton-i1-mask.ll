@@ -6443,10 +6443,9 @@ define void @mask_replication_factor6_vf32(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kmovd %eax, %k0
 ; AVX512BW-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; AVX512BW-NEXT:    kandw %k0, %k1, %k1
-; AVX512BW-NEXT:    kshiftrd $2, %k5, %k2
-; AVX512BW-NEXT:    kshiftlw $15, %k2, %k3
-; AVX512BW-NEXT:    kmovq %k2, %k4
-; AVX512BW-NEXT:    kmovd %k2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512BW-NEXT:    kshiftrd $2, %k5, %k4
+; AVX512BW-NEXT:    kshiftlw $15, %k4, %k3
+; AVX512BW-NEXT:    kmovd %k4, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX512BW-NEXT:    kshiftrw $3, %k3, %k2
 ; AVX512BW-NEXT:    korw %k2, %k1, %k1
 ; AVX512BW-NEXT:    movw $-8193, %ax # imm = 0xDFFF
@@ -6665,8 +6664,8 @@ define void @mask_replication_factor6_vf32(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kshiftrw $1, %k2, %k2
 ; AVX512BW-NEXT:    korw %k4, %k2, %k1
 ; AVX512BW-NEXT:    vmovdqa32 576(%rsi), %zmm3 {%k1} {z}
-; AVX512BW-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 4-byte Reload
-; AVX512BW-NEXT:    kshiftrd $21, %k1, %k2
+; AVX512BW-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k7 # 4-byte Reload
+; AVX512BW-NEXT:    kshiftrd $21, %k7, %k2
 ; AVX512BW-NEXT:    kmovd %k2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k0, %k2, %k3
@@ -6683,8 +6682,7 @@ define void @mask_replication_factor6_vf32(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kshiftrw $12, %k2, %k4
 ; AVX512BW-NEXT:    korw %k4, %k3, %k3
 ; AVX512BW-NEXT:    kandw %k6, %k3, %k3
-; AVX512BW-NEXT:    kshiftrd $22, %k1, %k4
-; AVX512BW-NEXT:    kmovq %k1, %k7
+; AVX512BW-NEXT:    kshiftrd $22, %k7, %k4
 ; AVX512BW-NEXT:    kshiftlw $15, %k4, %k4
 ; AVX512BW-NEXT:    kshiftrw $11, %k4, %k5
 ; AVX512BW-NEXT:    korw %k5, %k3, %k3
@@ -7053,12 +7051,11 @@ define void @mask_replication_factor6_vf32(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    korw %k4, %k1, %k1
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k2, %k1, %k1
-; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 2-byte Reload
-; AVX512BW-NEXT:    kshiftrw $3, %k2, %k4
+; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 # 2-byte Reload
+; AVX512BW-NEXT:    kshiftrw $3, %k5, %k4
 ; AVX512BW-NEXT:    korw %k4, %k1, %k1
 ; AVX512BW-NEXT:    kandw %k7, %k1, %k1
-; AVX512BW-NEXT:    kshiftrw $2, %k2, %k4
-; AVX512BW-NEXT:    kmovq %k2, %k5
+; AVX512BW-NEXT:    kshiftrw $2, %k5, %k4
 ; AVX512BW-NEXT:    korw %k4, %k1, %k1
 ; AVX512BW-NEXT:    kandw %k3, %k1, %k1
 ; AVX512BW-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 4-byte Reload
@@ -7879,8 +7876,8 @@ define void @mask_replication_factor6_vf64(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kshiftrw $1, %k1, %k1
 ; AVX512BW-NEXT:    korw %k0, %k1, %k1
 ; AVX512BW-NEXT:    vmovdqa32 320(%rsi), %zmm5 {%k1} {z}
-; AVX512BW-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k5 # 8-byte Reload
-; AVX512BW-NEXT:    kshiftrq $16, %k5, %k0
+; AVX512BW-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k7 # 8-byte Reload
+; AVX512BW-NEXT:    kshiftrq $16, %k7, %k0
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
@@ -7904,8 +7901,7 @@ define void @mask_replication_factor6_vf64(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    korw %k0, %k1, %k0
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k0
-; AVX512BW-NEXT:    kshiftrq $17, %k5, %k1
-; AVX512BW-NEXT:    kmovq %k5, %k7
+; AVX512BW-NEXT:    kshiftrq $17, %k7, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512BW-NEXT:    kshiftrw $9, %k1, %k6
 ; AVX512BW-NEXT:    korw %k6, %k0, %k0
@@ -8265,8 +8261,8 @@ define void @mask_replication_factor6_vf64(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kshiftrw $1, %k1, %k1
 ; AVX512BW-NEXT:    korw %k0, %k1, %k1
 ; AVX512BW-NEXT:    vmovdqa32 704(%rsi), %zmm11 {%k1} {z}
-; AVX512BW-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 8-byte Reload
-; AVX512BW-NEXT:    kshiftrq $32, %k2, %k0
+; AVX512BW-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k7 # 8-byte Reload
+; AVX512BW-NEXT:    kshiftrq $32, %k7, %k0
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
@@ -8290,8 +8286,7 @@ define void @mask_replication_factor6_vf64(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    korw %k0, %k1, %k0
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k0
-; AVX512BW-NEXT:    kshiftrq $33, %k2, %k1
-; AVX512BW-NEXT:    kmovq %k2, %k7
+; AVX512BW-NEXT:    kshiftrq $33, %k7, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512BW-NEXT:    kshiftrw $9, %k1, %k6
 ; AVX512BW-NEXT:    korw %k6, %k0, %k0
@@ -8651,8 +8646,8 @@ define void @mask_replication_factor6_vf64(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kshiftrw $1, %k1, %k1
 ; AVX512BW-NEXT:    korw %k0, %k1, %k1
 ; AVX512BW-NEXT:    vmovdqa32 1088(%rsi), %zmm17 {%k1} {z}
-; AVX512BW-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k5 # 8-byte Reload
-; AVX512BW-NEXT:    kshiftrq $48, %k5, %k0
+; AVX512BW-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k7 # 8-byte Reload
+; AVX512BW-NEXT:    kshiftrq $48, %k7, %k0
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
@@ -8675,8 +8670,7 @@ define void @mask_replication_factor6_vf64(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kshiftrw $10, %k0, %k0
 ; AVX512BW-NEXT:    korw %k0, %k1, %k0
 ; AVX512BW-NEXT:    kandw %k2, %k0, %k0
-; AVX512BW-NEXT:    kshiftrq $49, %k5, %k1
-; AVX512BW-NEXT:    kmovq %k5, %k7
+; AVX512BW-NEXT:    kshiftrq $49, %k7, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512BW-NEXT:    kshiftrw $9, %k1, %k6
 ; AVX512BW-NEXT:    korw %k6, %k0, %k0
@@ -9905,17 +9899,16 @@ define void @mask_replication_factor7_vf32(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    korw %k0, %k6, %k0
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k4, %k0, %k0
-; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 # 2-byte Reload
-; AVX512BW-NEXT:    kshiftrw $4, %k5, %k6
+; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 # 2-byte Reload
+; AVX512BW-NEXT:    kshiftrw $4, %k7, %k6
 ; AVX512BW-NEXT:    korw %k6, %k0, %k0
 ; AVX512BW-NEXT:    kandw %k2, %k0, %k0
 ; AVX512BW-NEXT:    kmovq %k2, %k4
-; AVX512BW-NEXT:    kshiftrw $3, %k5, %k6
+; AVX512BW-NEXT:    kshiftrw $3, %k7, %k6
 ; AVX512BW-NEXT:    korw %k6, %k0, %k0
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k2, %k0, %k0
-; AVX512BW-NEXT:    kshiftrw $2, %k5, %k6
-; AVX512BW-NEXT:    kmovq %k5, %k7
+; AVX512BW-NEXT:    kshiftrw $2, %k7, %k6
 ; AVX512BW-NEXT:    korw %k6, %k0, %k0
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k2, %k0, %k0
@@ -9990,12 +9983,11 @@ define void @mask_replication_factor7_vf32(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kshiftrw $1, %k2, %k2
 ; AVX512BW-NEXT:    korw %k6, %k2, %k1
 ; AVX512BW-NEXT:    vmovdqa32 704(%rsi), %zmm3 {%k1} {z}
-; AVX512BW-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 4-byte Reload
-; AVX512BW-NEXT:    kshiftrd $23, %k2, %k1
+; AVX512BW-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 4-byte Reload
+; AVX512BW-NEXT:    kshiftrd $23, %k6, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k1, %k3
-; AVX512BW-NEXT:    kshiftrd $22, %k2, %k5
+; AVX512BW-NEXT:    kshiftrd $22, %k6, %k5
 ; AVX512BW-NEXT:    kmovd %k5, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX512BW-NEXT:    kmovq %k2, %k6
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k1, %k5, %k2
 ; AVX512BW-NEXT:    kshiftrw $14, %k3, %k5
@@ -10173,13 +10165,12 @@ define void @mask_replication_factor7_vf32(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-NEXT:    kshiftrw $4, %k5, %k5
 ; AVX512BW-NEXT:    korw %k5, %k6, %k5
 ; AVX512BW-NEXT:    kandw %k0, %k5, %k5
-; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 # 2-byte Reload
-; AVX512BW-NEXT:    kshiftrw $3, %k3, %k6
+; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 # 2-byte Reload
+; AVX512BW-NEXT:    kshiftrw $3, %k7, %k6
 ; AVX512BW-NEXT:    korw %k6, %k5, %k5
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k0, %k5, %k5
-; AVX512BW-NEXT:    kshiftrw $2, %k3, %k6
-; AVX512BW-NEXT:    kmovq %k3, %k7
+; AVX512BW-NEXT:    kshiftrw $2, %k7, %k6
 ; AVX512BW-NEXT:    korw %k6, %k5, %k5
 ; AVX512BW-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
 ; AVX512BW-NEXT:    kandw %k0, %k5, %k5

@@ -3340,7 +3340,7 @@ class TypePromotionTransaction {
         // Set a dummy one.
         // We could use OperandSetter here, but that would imply an overhead
         // that we are not willing to pay.
-        Inst->setOperand(It, UndefValue::get(Val->getType()));
+        Inst->setOperand(It, PoisonValue::get(Val->getType()));
       }
     }
 

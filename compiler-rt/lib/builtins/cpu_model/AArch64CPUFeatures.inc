@@ -36,7 +36,7 @@ enum CPUFeatures {
   RESERVED_FEAT_SHA1, // previously used and now ABI legacy
   FEAT_SHA2,
   FEAT_SHA3,
-  FEAT_AES,
+  RESERVED_FEAT_AES, // previously used and now ABI legacy
   FEAT_PMULL,
   FEAT_FP16,
   FEAT_DIT,
@@ -59,7 +59,7 @@ enum CPUFeatures {
   FEAT_SVE_F32MM,
   FEAT_SVE_F64MM,
   FEAT_SVE2,
-  FEAT_SVE_AES,
+  RESERVED_FEAT_SVE_AES, // previously used and now ABI legacy
   FEAT_SVE_PMULL128,
   FEAT_SVE_BITPERM,
   FEAT_SVE_SHA3,

@@ -911,7 +911,7 @@ private:
     getActiveModuleMacros(Preprocessor &PP, const IdentifierInfo *II) const {
       if (auto *Info = getModuleInfo(PP, II))
         return Info->ActiveModuleMacros;
-      return std::nullopt;
+      return {};
     }
 
     MacroDirective::DefInfo findDirectiveAtLoc(SourceLocation Loc,
@@ -935,7 +935,7 @@ private:
     ArrayRef<ModuleMacro*> getOverriddenMacros() const {
       if (auto *Info = State.dyn_cast<ModuleMacroInfo*>())
         return Info->OverriddenMacros;
-      return std::nullopt;
+      return {};
     }
 
     void setOverriddenMacros(Preprocessor &PP,
@@ -1444,7 +1444,7 @@ public:
     auto I = LeafModuleMacros.find(II);
     if (I != LeafModuleMacros.end())
       return I->second;
-    return std::nullopt;
+    return {};
   }
 
   /// Get the list of submodules that we're currently building.
