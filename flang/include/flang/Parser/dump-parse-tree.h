@@ -476,6 +476,7 @@ public:
   NODE(parser, OldParameterStmt)
   NODE(parser, OmpIteratorSpecifier)
   NODE(parser, OmpIteratorModifier)
+  NODE(parser, OmpAffinityClause)
   NODE(parser, OmpAlignedClause)
   NODE(parser, OmpAtomic)
   NODE(parser, OmpAtomicCapture)
