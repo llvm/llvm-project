@@ -773,9 +773,16 @@ def get_threads_stopped_at_breakpoint_id(process, bpid):
         return threads
 
     for thread in stopped_threads:
-        # Make sure we've hit our breakpoint...
-        break_id = thread.GetStopReasonDataAtIndex(0)
-        if break_id == bpid:
+        # Make sure we've hit our breakpoint.
+        # From the docs of GetStopReasonDataAtIndex: "Breakpoint stop reasons
+        # will have data that consists of pairs of breakpoint IDs followed by
+        # the breakpoint location IDs".
+        # Iterate over all such pairs looking for `bpid`.
+        break_ids = [
+            thread.GetStopReasonDataAtIndex(idx)
+            for idx in range(0, thread.GetStopReasonDataCount(), 2)
+        ]
+        if bpid in break_ids:
             threads.append(thread)
 
     return threads
@@ -809,7 +816,7 @@ def is_thread_crashed(test, thread):
             thread.GetStopReason() == lldb.eStopReasonException
             and "EXC_BAD_ACCESS" in thread.GetStopDescription(100)
         )
-    elif test.getPlatform() == "linux":
+    elif test.getPlatform() in ["linux", "freebsd"]:
         return (
             thread.GetStopReason() == lldb.eStopReasonSignal
             and thread.GetStopReasonDataAtIndex(0)
@@ -1594,11 +1601,11 @@ def set_actions_for_signal(
 ):
     return_obj = lldb.SBCommandReturnObject()
     command = "process handle {0}".format(signal_name)
-    if pass_action != None:
+    if pass_action is not None:
         command += " -p {0}".format(pass_action)
-    if stop_action != None:
+    if stop_action is not None:
         command += " -s {0}".format(stop_action)
-    if notify_action != None:
+    if notify_action is not None:
         command += " -n {0}".format(notify_action)
 
     testcase.dbg.GetCommandInterpreter().HandleCommand(command, return_obj)
@@ -1652,6 +1659,22 @@ def skip_if_library_missing(test, target, library):
         find_library_callable,
         "could not find library matching '%s' in target %s" % (library, target),
     )
+
+
+def install_to_target(test, path):
+    if lldb.remote_platform:
+        filename = os.path.basename(path)
+        remote_path = append_to_process_working_directory(test, filename)
+        err = lldb.remote_platform.Install(
+            lldb.SBFileSpec(path, True), lldb.SBFileSpec(remote_path, False)
+        )
+        if err.Fail():
+            raise Exception(
+                "remote_platform.Install('%s', '%s') failed: %s"
+                % (path, remote_path, err)
+            )
+        path = remote_path
+    return path
 
 
 def read_file_on_target(test, remote):

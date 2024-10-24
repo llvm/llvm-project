@@ -13,6 +13,7 @@
 name:            greedy_fail_alloc_sgpr1024_spill
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo:
   explicitKernArgSize: 16

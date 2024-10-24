@@ -47,7 +47,7 @@ struct LVSymbolTableEntry final {
 
 // Function names extracted from the object symbol table.
 class LVSymbolTable final {
-  using LVSymbolNames = std::map<std::string, LVSymbolTableEntry>;
+  using LVSymbolNames = std::map<std::string, LVSymbolTableEntry, std::less<>>;
   LVSymbolNames SymbolNames;
 
 public:
@@ -121,6 +121,48 @@ protected:
   std::unique_ptr<const MCDisassembler> MD;
   std::unique_ptr<MCContext> MC;
   std::unique_ptr<MCInstPrinter> MIP;
+
+  // https://yurydelendik.github.io/webassembly-dwarf/
+  // 2. Consuming and Generating DWARF for WebAssembly Code
+  // Note: Some DWARF constructs don't map one-to-one onto WebAssembly
+  // constructs. We strive to enumerate and resolve any ambiguities here.
+  //
+  // 2.1. Code Addresses
+  // Note: DWARF associates various bits of debug info
+  // with particular locations in the program via its code address (instruction
+  // pointer or PC). However, WebAssembly's linear memory address space does not
+  // contain WebAssembly instructions.
+  //
+  // Wherever a code address (see 2.17 of [DWARF]) is used in DWARF for
+  // WebAssembly, it must be the offset of an instruction relative within the
+  // Code section of the WebAssembly file. The DWARF is considered malformed if
+  // a PC offset is between instruction boundaries within the Code section.
+  //
+  // Note: It is expected that a DWARF consumer does not know how to decode
+  // WebAssembly instructions. The instruction pointer is selected as the offset
+  // in the binary file of the first byte of the instruction, and it is
+  // consistent with the WebAssembly Web API conventions definition of the code
+  // location.
+  //
+  // EXAMPLE: .DEBUG_LINE INSTRUCTION POINTERS
+  // The .debug_line DWARF section maps instruction pointers to source
+  // locations. With WebAssembly, the .debug_line section maps Code
+  // section-relative instruction offsets to source locations.
+  //
+  // EXAMPLE: DW_AT_* ATTRIBUTES
+  // For entities with a single associated code address, DWARF uses
+  // the DW_AT_low_pc attribute to specify the associated code address value.
+  // For WebAssembly, the DW_AT_low_pc's value is a Code section-relative
+  // instruction offset.
+  //
+  // For entities with a single contiguous range of code, DWARF uses a
+  // pair of DW_AT_low_pc and DW_AT_high_pc attributes to specify the associated
+  // contiguous range of code address values. For WebAssembly, these attributes
+  // are Code section-relative instruction offsets.
+  //
+  // For entities with multiple ranges of code, DWARF uses the DW_AT_ranges
+  // attribute, which refers to the array located at the .debug_ranges section.
+  LVAddress WasmCodeSectionOffset = 0;
 
   // Loads all info for the architecture of the provided object file.
   Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures);

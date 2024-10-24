@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "legalizer"
@@ -99,6 +100,11 @@ public:
       const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
         auto &CstVal = SrcMI->getOperand(1);
+        auto *MergedLocation = DILocation::getMergedLocation(
+            MI.getDebugLoc().get(), SrcMI->getDebugLoc().get());
+        // Set the debug location to the merged location of the SrcMI and the MI
+        // if the aext fold is successful.
+        Builder.setDebugLoc(MergedLocation);
         Builder.buildConstant(
             DstReg, CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits()));
         UpdatedDefs.push_back(DstReg);
@@ -186,7 +192,8 @@ public:
 
   bool tryCombineSExt(MachineInstr &MI,
                       SmallVectorImpl<MachineInstr *> &DeadInsts,
-                      SmallVectorImpl<Register> &UpdatedDefs) {
+                      SmallVectorImpl<Register> &UpdatedDefs,
+                      GISelObserverWrapper &Observer) {
     using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_SEXT);
 
@@ -205,7 +212,14 @@ public:
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
       if (DstTy != MRI.getType(TruncSrc))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
-      Builder.buildSExtInReg(DstReg, TruncSrc, SizeInBits);
+      // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in
+      // tryCombineZExt. Refer to the comment in tryCombineZExt for rationale.
+      if (KB && KB->computeNumSignBits(TruncSrc) >
+                    DstTy.getScalarSizeInBits() - SizeInBits)
+        replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
+                              Observer);
+      else
+        Builder.buildSExtInReg(DstReg, TruncSrc, SizeInBits);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
@@ -432,9 +446,13 @@ public:
             DestTy.isVector() ? CastSrcTy.getNumElements() / NumDefs : 1;
         LLT UnmergeTy = CastSrcTy.changeElementCount(
             ElementCount::getFixed(UnmergeNumElts));
+        LLT SrcWideTy =
+            SrcTy.changeElementCount(ElementCount::getFixed(UnmergeNumElts));
 
         if (isInstUnsupported(
-                {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, CastSrcTy}}))
+                {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, CastSrcTy}}) ||
+            LI.getAction({TargetOpcode::G_TRUNC, {SrcWideTy, UnmergeTy}})
+                    .Action == LegalizeActions::MoreElements)
           return false;
 
         Builder.setInstr(MI);
@@ -902,7 +920,8 @@ public:
                                         unsigned &DefOperandIdx) {
       if (Register Def = findValueFromDefImpl(Reg, 0, Size)) {
         if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(Def))) {
-          DefOperandIdx = Unmerge->findRegisterDefOperandIdx(Def);
+          DefOperandIdx =
+              Unmerge->findRegisterDefOperandIdx(Def, /*TRI=*/nullptr);
           return Unmerge;
         }
       }
@@ -1071,6 +1090,11 @@ public:
       LegalizeActionStep ActionStep = LI.getAction(
           {TargetOpcode::G_UNMERGE_VALUES, {OpTy, SrcUnmergeSrcTy}});
       switch (ActionStep.Action) {
+      case LegalizeActions::Legal:
+        if (!OpTy.isVector() || !LI.isLegal({TargetOpcode::G_UNMERGE_VALUES,
+                                             {DestTy, SrcUnmergeSrcTy}}))
+          return false;
+        break;
       case LegalizeActions::Lower:
       case LegalizeActions::Unsupported:
         break;
@@ -1311,7 +1335,7 @@ public:
       Changed = tryCombineZExt(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_SEXT:
-      Changed = tryCombineSExt(MI, DeadInsts, UpdatedDefs);
+      Changed = tryCombineSExt(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_UNMERGE_VALUES:
       Changed = tryCombineUnmergeValues(cast<GUnmerge>(MI), DeadInsts,

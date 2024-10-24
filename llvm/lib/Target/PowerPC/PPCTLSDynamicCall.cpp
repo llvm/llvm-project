@@ -25,6 +25,7 @@
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/InitializePasses.h"
@@ -159,9 +160,11 @@ protected:
         // We don't really need to save data to the stack - the clobbered
         // registers are already saved when the SDNode (e.g. PPCaddiTlsgdLAddr)
         // gets translated to the pseudo instruction (e.g. ADDItlsgdLADDR).
-        if (NeedFence)
+        if (NeedFence) {
+          MBB.getParent()->getFrameInfo().setAdjustsStack(true);
           BuildMI(MBB, I, DL, TII->get(PPC::ADJCALLSTACKDOWN)).addImm(0)
                                                               .addImm(0);
+        }
 
         if (IsAIX) {
           if (IsTLSLDAIXMI) {
@@ -322,8 +325,8 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LiveIntervals>();
-      AU.addRequired<SlotIndexes>();
+      AU.addRequired<LiveIntervalsWrapperPass>();
+      AU.addRequired<SlotIndexesWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -331,8 +334,8 @@ public:
 
 INITIALIZE_PASS_BEGIN(PPCTLSDynamicCall, DEBUG_TYPE,
                       "PowerPC TLS Dynamic Call Fixup", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(PPCTLSDynamicCall, DEBUG_TYPE,
                     "PowerPC TLS Dynamic Call Fixup", false, false)
 

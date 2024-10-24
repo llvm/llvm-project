@@ -1,4 +1,4 @@
-;; Tests that we can debug-print DPValues that have no markers attached.
+;; Tests that we can debug-print DbgVariableRecords that have no markers attached.
 ; RUN: opt -passes="instcombine" -debug %s -o /dev/null 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 

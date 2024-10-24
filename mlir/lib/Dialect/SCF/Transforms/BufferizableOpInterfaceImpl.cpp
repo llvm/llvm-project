@@ -1267,6 +1267,9 @@ struct ForallOpInterface
         forallOp.getMixedUpperBound(), forallOp.getMixedStep(),
         /*outputs=*/ValueRange(), forallOp.getMapping());
 
+    // Keep discardable attributes from the original op.
+    newForallOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+
     rewriter.eraseOp(newForallOp.getBody()->getTerminator());
 
     // Move over block contents of the old op.

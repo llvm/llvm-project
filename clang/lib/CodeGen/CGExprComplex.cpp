@@ -51,11 +51,12 @@ class ComplexExprEmitter
   CGBuilderTy &Builder;
   bool IgnoreReal;
   bool IgnoreImag;
-public:
-  ComplexExprEmitter(CodeGenFunction &cgf, bool ir=false, bool ii=false)
-    : CGF(cgf), Builder(CGF.Builder), IgnoreReal(ir), IgnoreImag(ii) {
-  }
+  bool FPHasBeenPromoted;
 
+public:
+  ComplexExprEmitter(CodeGenFunction &cgf, bool ir = false, bool ii = false)
+      : CGF(cgf), Builder(CGF.Builder), IgnoreReal(ir), IgnoreImag(ii),
+        FPHasBeenPromoted(false) {}
 
   //===--------------------------------------------------------------------===//
   //                               Utilities
@@ -287,9 +288,49 @@ public:
   ComplexPairTy EmitComplexBinOpLibCall(StringRef LibCallName,
                                         const BinOpInfo &Op);
 
-  QualType getPromotionType(QualType Ty) {
+  QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType,
+                                                   bool IsDivOpCode) {
+    ASTContext &Ctx = CGF.getContext();
+    const QualType HigherElementType =
+        Ctx.GetHigherPrecisionFPType(ElementType);
+    const llvm::fltSemantics &ElementTypeSemantics =
+        Ctx.getFloatTypeSemantics(ElementType);
+    const llvm::fltSemantics &HigherElementTypeSemantics =
+        Ctx.getFloatTypeSemantics(HigherElementType);
+    // Check that the promoted type can handle the intermediate values without
+    // overflowing. This can be interpreted as:
+    // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal) * 2 <=
+    // LargerType.LargestFiniteVal.
+    // In terms of exponent it gives this formula:
+    // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal
+    // doubles the exponent of SmallerType.LargestFiniteVal)
+    if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
+        llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      FPHasBeenPromoted = true;
+      return Ctx.getComplexType(HigherElementType);
+    } else {
+      // The intermediate values can't be represented in the promoted type
+      // without overflowing.
+      return QualType();
+    }
+  }
+
+  QualType getPromotionType(FPOptionsOverride Features, QualType Ty,
+                            bool IsDivOpCode = false) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElementType = CT->getElementType();
+      bool IsFloatingType = ElementType->isFloatingType();
+      bool IsComplexRangePromoted = CGF.getLangOpts().getComplexRange() ==
+                                    LangOptions::ComplexRangeKind::CX_Promoted;
+      bool HasNoComplexRangeOverride = !Features.hasComplexRangeOverride();
+      bool HasMatchingComplexRange = Features.hasComplexRangeOverride() &&
+                                     Features.getComplexRangeOverride() ==
+                                         CGF.getLangOpts().getComplexRange();
+
+      if (IsDivOpCode && IsFloatingType && IsComplexRangePromoted &&
+          (HasNoComplexRangeOverride || HasMatchingComplexRange))
+        return HigherPrecisionTypeForComplexArithmetic(ElementType,
+                                                       IsDivOpCode);
       if (ElementType.UseExcessPrecision(CGF.getContext()))
         return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
     }
@@ -300,11 +341,12 @@ public:
 
 #define HANDLEBINOP(OP)                                                        \
   ComplexPairTy VisitBin##OP(const BinaryOperator *E) {                        \
-    QualType promotionTy = getPromotionType(E->getType());                     \
+    QualType promotionTy = getPromotionType(                                   \
+        E->getStoredFPFeaturesOrDefault(), E->getType(),                       \
+        (E->getOpcode() == BinaryOperatorKind::BO_Div) ? true : false);        \
     ComplexPairTy result = EmitBin##OP(EmitBinOps(E, promotionTy));            \
     if (!promotionTy.isNull())                                                 \
-      result =                                                                 \
-          CGF.EmitUnPromotedValue(result, E->getType());                       \
+      result = CGF.EmitUnPromotedValue(result, E->getType());                  \
     return result;                                                             \
   }
 
@@ -387,7 +429,7 @@ ComplexPairTy ComplexExprEmitter::EmitLoadOfLValue(LValue lvalue,
   if (lvalue.getType()->isAtomicType())
     return CGF.EmitAtomicLoad(lvalue, loc).getComplexVal();
 
-  Address SrcPtr = lvalue.getAddress(CGF);
+  Address SrcPtr = lvalue.getAddress();
   bool isVolatile = lvalue.isVolatileQualified();
 
   llvm::Value *Real = nullptr, *Imag = nullptr;
@@ -413,7 +455,7 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
       (!isInit && CGF.LValueIsSuitableForInlineAtomic(lvalue)))
     return CGF.EmitAtomicStore(RValue::getComplex(Val), lvalue, isInit);
 
-  Address Ptr = lvalue.getAddress(CGF);
+  Address Ptr = lvalue.getAddress();
   Address RealPtr = CGF.emitAddrOfRealComponent(Ptr, lvalue.getType());
   Address ImagPtr = CGF.emitAddrOfImagComponent(Ptr, lvalue.getType());
 
@@ -504,14 +546,14 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
 
   case CK_LValueBitCast: {
     LValue origLV = CGF.EmitLValue(Op);
-    Address V = origLV.getAddress(CGF).withElementType(CGF.ConvertType(DestTy));
+    Address V = origLV.getAddress().withElementType(CGF.ConvertType(DestTy));
     return EmitLoadOfLValue(CGF.MakeAddrLValue(V, DestTy), Op->getExprLoc());
   }
 
   case CK_LValueToRValueBitCast: {
     LValue SourceLVal = CGF.EmitLValue(Op);
-    Address Addr = SourceLVal.getAddress(CGF).withElementType(
-        CGF.ConvertTypeForMem(DestTy));
+    Address Addr =
+        SourceLVal.getAddress().withElementType(CGF.ConvertTypeForMem(DestTy));
     LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
     DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return EmitLoadOfLValue(DestLV, Op->getExprLoc());
@@ -569,6 +611,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLArrayRValue:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_FloatingRealToComplex:
@@ -593,9 +636,11 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
 
 ComplexPairTy ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *E,
                                                  QualType PromotionType) {
-  QualType promotionTy = PromotionType.isNull()
-                             ? getPromotionType(E->getSubExpr()->getType())
-                             : PromotionType;
+  QualType promotionTy =
+      PromotionType.isNull()
+          ? getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                             E->getSubExpr()->getType())
+          : PromotionType;
   ComplexPairTy result = VisitPlus(E, promotionTy);
   if (!promotionTy.isNull())
     return CGF.EmitUnPromotedValue(result, E->getSubExpr()->getType());
@@ -613,9 +658,11 @@ ComplexPairTy ComplexExprEmitter::VisitPlus(const UnaryOperator *E,
 
 ComplexPairTy ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
                                                   QualType PromotionType) {
-  QualType promotionTy = PromotionType.isNull()
-                             ? getPromotionType(E->getSubExpr()->getType())
-                             : PromotionType;
+  QualType promotionTy =
+      PromotionType.isNull()
+          ? getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                             E->getSubExpr()->getType())
+          : PromotionType;
   ComplexPairTy result = VisitMinus(E, promotionTy);
   if (!promotionTy.isNull())
     return CGF.EmitUnPromotedValue(result, E->getSubExpr()->getType());
@@ -769,8 +816,6 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
     //
     // But we can fold away components which would be zero due to a real
     // operand according to C11 Annex G.5.1p2.
-    // FIXME: C11 also provides for imaginary types which would allow folding
-    // still more of this within the type system.
 
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
     if (Op.LHS.second && Op.RHS.second) {
@@ -794,8 +839,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       ResR = Builder.CreateFSub(AC, BD, "mul_r");
       ResI = Builder.CreateFAdd(AD, BC, "mul_i");
 
-      if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
-          Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran)
+      if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
         return ComplexPairTy(ResR, ResI);
 
       // Emit the test for the real part becoming NaN and create a branch to
@@ -807,8 +853,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       llvm::BasicBlock *OrigBB = Branch->getParent();
 
       // Give hint that we very much don't expect to see NaNs.
-      // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
-      llvm::MDNode *BrWeight = MDHelper.createBranchWeights(1, (1U << 20) - 1);
+      llvm::MDNode *BrWeight = MDHelper.createUnlikelyBranchWeights();
       Branch->setMetadata(llvm::LLVMContext::MD_prof, BrWeight);
 
       // Now test the imaginary part and create its branch.
@@ -986,22 +1031,21 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     llvm::Value *OrigLHSi = LHSi;
     if (!LHSi)
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
-    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran)
+    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
+        (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
+         !FPHasBeenPromoted))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
-    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited)
+    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
+             Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
-    else if (!CGF.getLangOpts().FastMath ||
-             // '-ffast-math' is used in the command line but followed by an
-             // '-fno-cx-limited-range'.
-             Op.FPFeatures.getComplexRange() == LangOptions::CX_Full) {
+    // '-ffast-math' is used in the command line but followed by an
+    // '-fno-cx-limited-range' or '-fcomplex-arithmetic=full'.
+    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Full) {
       LHSi = OrigLHSi;
       // If we have a complex operand on the RHS and FastMath is not allowed, we
       // delegate to a libcall to handle all of the complexities and minimize
       // underflow/overflow cases. When FastMath is allowed we construct the
       // divide inline using the same algorithm as for integer operands.
-      //
-      // FIXME: We would be able to avoid the libcall in many places if we
-      // supported imaginary types in addition to complex types.
       BinOpInfo LibCallOp = Op;
       // If LHS was a real, supply a null imaginary part.
       if (!LHSi)
@@ -1173,13 +1217,15 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
   // __block variables need to have the rhs evaluated first, plus this should
   // improve codegen a little.
   QualType PromotionTypeCR;
-  PromotionTypeCR = getPromotionType(E->getComputationResultType());
+  PromotionTypeCR = getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                                     E->getComputationResultType());
   if (PromotionTypeCR.isNull())
     PromotionTypeCR = E->getComputationResultType();
   OpInfo.Ty = PromotionTypeCR;
   QualType ComplexElementTy =
       OpInfo.Ty->castAs<ComplexType>()->getElementType();
-  QualType PromotionTypeRHS = getPromotionType(E->getRHS()->getType());
+  QualType PromotionTypeRHS = getPromotionType(
+      E->getStoredFPFeaturesOrDefault(), E->getRHS()->getType());
 
   // The RHS should have been converted to the computation type.
   if (E->getRHS()->getType()->isRealFloatingType()) {
@@ -1207,7 +1253,8 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
 
   // Load from the l-value and convert it.
   SourceLocation Loc = E->getExprLoc();
-  QualType PromotionTypeLHS = getPromotionType(E->getComputationLHSType());
+  QualType PromotionTypeLHS = getPromotionType(
+      E->getStoredFPFeaturesOrDefault(), E->getComputationLHSType());
   if (LHSTy->isAnyComplexType()) {
     ComplexPairTy LHSVal = EmitLoadOfLValue(LHS, Loc);
     if (!PromotionTypeLHS.isNull())
@@ -1398,9 +1445,9 @@ ComplexPairTy ComplexExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
 ComplexPairTy ComplexExprEmitter::VisitVAArgExpr(VAArgExpr *E) {
   Address ArgValue = Address::invalid();
-  Address ArgPtr = CGF.EmitVAArg(E, ArgValue);
+  RValue RV = CGF.EmitVAArg(E, ArgValue);
 
-  if (!ArgPtr.isValid()) {
+  if (!ArgValue.isValid()) {
     CGF.ErrorUnsupported(E, "complex va_arg expression");
     llvm::Type *EltTy =
       CGF.ConvertType(E->getType()->castAs<ComplexType>()->getElementType());
@@ -1408,8 +1455,7 @@ ComplexPairTy ComplexExprEmitter::VisitVAArgExpr(VAArgExpr *E) {
     return ComplexPairTy(U, U);
   }
 
-  return EmitLoadOfLValue(CGF.MakeAddrLValue(ArgPtr, E->getType()),
-                          E->getExprLoc());
+  return RV.getComplexVal();
 }
 
 //===----------------------------------------------------------------------===//

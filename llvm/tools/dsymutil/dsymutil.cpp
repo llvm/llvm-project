@@ -108,7 +108,7 @@ struct DsymutilOptions {
   bool Flat = false;
   bool InputIsYAMLDebugMap = false;
   bool ForceKeepFunctionForStatic = false;
-  std::string SymbolMap;
+  bool NoObjectTimestamp = false;
   std::string OutputFile;
   std::string Toolchain;
   std::string ReproducerPath;
@@ -170,20 +170,15 @@ static Expected<std::vector<std::string>> getInputs(opt::InputArgList &Args,
 
 // Verify that the given combination of options makes sense.
 static Error verifyOptions(const DsymutilOptions &Options) {
+  if (Options.LinkOpts.Verbose && Options.LinkOpts.Quiet) {
+    return make_error<StringError>(
+        "--quiet and --verbose cannot be specified together",
+        errc::invalid_argument);
+  }
+
   if (Options.InputFiles.empty()) {
     return make_error<StringError>("no input files specified",
                                    errc::invalid_argument);
-  }
-
-  if (Options.LinkOpts.Update && llvm::is_contained(Options.InputFiles, "-")) {
-    // FIXME: We cannot use stdin for an update because stdin will be
-    // consumed by the BinaryHolder during the debugmap parsing, and
-    // then we will want to consume it again in DwarfLinker. If we
-    // used a unique BinaryHolder object that could cache multiple
-    // binaries this restriction would go away.
-    return make_error<StringError>(
-        "standard input cannot be used as input for a dSYM update.",
-        errc::invalid_argument);
   }
 
   if (!Options.Flat && Options.OutputFile == "-")
@@ -298,6 +293,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.DumpStab = Args.hasArg(OPT_symtab);
   Options.Flat = Args.hasArg(OPT_flat);
   Options.InputIsYAMLDebugMap = Args.hasArg(OPT_yaml_input);
+  Options.NoObjectTimestamp = Args.hasArg(OPT_no_object_timestamp);
 
   if (Expected<DWARFVerify> Verify = getVerifyKind(Args)) {
     Options.Verify = *Verify;
@@ -312,6 +308,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.NoTimestamp = Args.hasArg(OPT_no_swiftmodule_timestamp);
   Options.LinkOpts.Update = Args.hasArg(OPT_update);
   Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
+  Options.LinkOpts.Quiet = Args.hasArg(OPT_quiet);
   Options.LinkOpts.Statistics = Args.hasArg(OPT_statistics);
   Options.LinkOpts.Fat64 = Args.hasArg(OPT_fat64);
   Options.LinkOpts.KeepFunctionForStatic =
@@ -340,12 +337,6 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   } else {
     return DWARFLinkerType.takeError();
   }
-
-  if (opt::Arg *SymbolMap = Args.getLastArg(OPT_symbolmap))
-    Options.SymbolMap = SymbolMap->getValue();
-
-  if (Args.hasArg(OPT_symbolmap))
-    Options.LinkOpts.Update = true;
 
   if (Expected<std::vector<std::string>> InputFiles =
           getInputs(Args, Options.LinkOpts.Update)) {
@@ -490,16 +481,20 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
                          DsymutilOptions Options, std::mutex &Mutex) {
 
   if (OutputFile == "-") {
-    std::lock_guard<std::mutex> Guard(Mutex);
-    WithColor::warning() << "verification skipped for " << Arch
-                         << " because writing to stdout.\n";
+    if (!Options.LinkOpts.Quiet) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      WithColor::warning() << "verification skipped for " << Arch
+                           << " because writing to stdout.\n";
+    }
     return true;
   }
 
   if (Options.LinkOpts.NoOutput) {
-    std::lock_guard<std::mutex> Guard(Mutex);
-    WithColor::warning() << "verification skipped for " << Arch
-                         << " because --no-output was passed.\n";
+    if (!Options.LinkOpts.Quiet) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      WithColor::warning() << "verification skipped for " << Arch
+                           << " because --no-output was passed.\n";
+    }
     return true;
   }
 
@@ -514,10 +509,12 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
   if (auto *Obj = dyn_cast<MachOObjectFile>(&Binary)) {
     std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
     if (DICtx->getMaxVersion() > 5) {
-      std::lock_guard<std::mutex> Guard(Mutex);
-      WithColor::warning()
-          << "verification skipped for " << Arch
-          << " because DWARF standard greater than v5 is not supported yet.\n";
+      if (!Options.LinkOpts.Quiet) {
+        std::lock_guard<std::mutex> Guard(Mutex);
+        WithColor::warning() << "verification skipped for " << Arch
+                             << " because DWARF standard greater than v5 is "
+                                "not supported yet.\n";
+      }
       return true;
     }
 
@@ -560,8 +557,7 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
     return OutputLocation(Options.OutputFile);
 
   // When updating, do in place replacement.
-  if (Options.OutputFile.empty() &&
-      (Options.LinkOpts.Update || !Options.SymbolMap.empty()))
+  if (Options.OutputFile.empty() && Options.LinkOpts.Update)
     return OutputLocation(std::string(InputFile));
 
   // When dumping the debug map, just return an empty output location. This
@@ -668,12 +664,16 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
     }
 
-  SymbolMapLoader SymMapLoader(Options.SymbolMap);
-
   for (auto &InputFile : Options.InputFiles) {
+    // Shared a single binary holder for all the link steps.
+    BinaryHolder::Options BinOpts;
+    BinOpts.Verbose = Options.LinkOpts.Verbose;
+    BinOpts.Warn = !Options.NoObjectTimestamp;
+    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts);
+
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
-      if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
+      if (!dumpStab(BinHolder, InputFile, Options.Archs,
                     Options.LinkOpts.DSYMSearchPaths,
                     Options.LinkOpts.PrependPath,
                     Options.LinkOpts.BuildVariantSuffix))
@@ -682,10 +682,9 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     auto DebugMapPtrsOrErr = parseDebugMap(
-        Options.LinkOpts.VFS, InputFile, Options.Archs,
-        Options.LinkOpts.DSYMSearchPaths, Options.LinkOpts.PrependPath,
-        Options.LinkOpts.BuildVariantSuffix, Options.LinkOpts.Verbose,
-        Options.InputIsYAMLDebugMap);
+        BinHolder, InputFile, Options.Archs, Options.LinkOpts.DSYMSearchPaths,
+        Options.LinkOpts.PrependPath, Options.LinkOpts.BuildVariantSuffix,
+        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
@@ -710,9 +709,6 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       WithColor::error() << "no architecture to link\n";
       return EXIT_FAILURE;
     }
-
-    // Shared a single binary holder for all the link steps.
-    BinaryHolder BinHolder(Options.LinkOpts.VFS);
 
     // Compute the output location and update the resource directory.
     Expected<OutputLocation> OutputLocationOrErr =
@@ -760,15 +756,14 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
         if (Options.DumpDebugMap)
           continue;
 
-        if (!Options.SymbolMap.empty())
-          Options.LinkOpts.Translator = SymMapLoader.Load(InputFile, *Map);
-
         if (Map->begin() == Map->end()) {
-          std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
-          WithColor::warning()
-              << "no debug symbols in executable (-arch "
-              << MachOUtils::getArchName(Map->getTriple().getArchName())
-              << ")\n";
+          if (!Options.LinkOpts.Quiet) {
+            std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+            WithColor::warning()
+                << "no debug symbols in executable (-arch "
+                << MachOUtils::getArchName(Map->getTriple().getArchName())
+                << ")\n";
+          }
         }
 
         // Using a std::shared_ptr rather than std::unique_ptr because move-only
@@ -833,7 +828,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     if (Crashed)
       (*Repro)->generate();
 
-    if (!AllOK)
+    if (!AllOK || Crashed)
       return EXIT_FAILURE;
 
     if (NeedsTempFiles) {

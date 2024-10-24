@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/lsp-server-support/Transport.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/SmallString.h"
@@ -40,7 +41,7 @@ public:
   void operator()(llvm::Expected<llvm::json::Value> reply);
 
 private:
-  StringRef method;
+  std::string method;
   std::atomic<bool> replied = {false};
   llvm::json::Value id;
   JSONTransport *transport;
@@ -50,12 +51,12 @@ private:
 
 Reply::Reply(const llvm::json::Value &id, llvm::StringRef method,
              JSONTransport &transport, std::mutex &transportOutputMutex)
-    : id(id), transport(&transport),
+    : method(method), id(id), transport(&transport),
       transportOutputMutex(transportOutputMutex) {}
 
 Reply::Reply(Reply &&other)
-    : replied(other.replied.load()), id(std::move(other.id)),
-      transport(other.transport),
+    : method(other.method), replied(other.replied.load()),
+      id(std::move(other.id)), transport(other.transport),
       transportOutputMutex(other.transportOutputMutex) {
   other.transport = nullptr;
 }
@@ -74,7 +75,7 @@ void Reply::operator()(llvm::Expected<llvm::json::Value> reply) {
     transport->reply(std::move(id), std::move(reply));
   } else {
     llvm::Error error = reply.takeError();
-    Logger::info("--> reply:{0}({1})", method, id, error);
+    Logger::info("--> reply:{0}({1}): {2}", method, id, error);
     transport->reply(std::move(id), std::move(error));
   }
 }
@@ -116,21 +117,29 @@ bool MessageHandler::onCall(llvm::StringRef method, llvm::json::Value params,
 
 bool MessageHandler::onReply(llvm::json::Value id,
                              llvm::Expected<llvm::json::Value> result) {
-  // TODO: Add support for reply callbacks when support for outgoing messages is
-  // added. For now, we just log an error on any replies received.
-  Callback<llvm::json::Value> replyHandler =
-      [&id](llvm::Expected<llvm::json::Value> result) {
-        Logger::error(
-            "received a reply with ID {0}, but there was no such call", id);
-        if (!result)
-          llvm::consumeError(result.takeError());
-      };
+  // Find the response handler in the mapping. If it exists, move it out of the
+  // mapping and erase it.
+  ResponseHandlerTy responseHandler;
+  {
+    std::lock_guard<std::mutex> responseHandlersLock(responseHandlersMutex);
+    auto it = responseHandlers.find(debugString(id));
+    if (it != responseHandlers.end()) {
+      responseHandler = std::move(it->second);
+      responseHandlers.erase(it);
+    }
+  }
 
-  // Log and run the reply handler.
-  if (result)
-    replyHandler(std::move(result));
-  else
-    replyHandler(result.takeError());
+  // If we found a response handler, invoke it. Otherwise, log an error.
+  if (responseHandler.second) {
+    Logger::info("--> reply:{0}({1})", responseHandler.first, id);
+    responseHandler.second(std::move(id), std::move(result));
+  } else {
+    Logger::error(
+        "received a reply with ID {0}, but there was no such outgoing request",
+        id);
+    if (!result)
+      llvm::consumeError(result.takeError());
+  }
   return true;
 }
 
@@ -347,7 +356,7 @@ LogicalResult JSONTransport::readDelimitedMessage(std::string &json) {
     StringRef lineRef = line.str().trim();
     if (lineRef.starts_with("//")) {
       // Found a delimiter for the message.
-      if (lineRef == "// -----")
+      if (lineRef == kDefaultSplitMarker)
         break;
       continue;
     }

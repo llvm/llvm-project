@@ -99,6 +99,8 @@
 ---
 name:            f1
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: x.addr, type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -127,6 +129,8 @@ body:             |
 ---
 name:            f2
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: x.addr, type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

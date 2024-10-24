@@ -536,6 +536,76 @@ csrrs t1, vsireg, zero
 # uimm12
 csrrs t2, 0x251, zero
 
+# vsireg2
+# name
+# CHECK-INST: csrrs t1, vsireg2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x25]
+# CHECK-INST-ALIAS: csrr t1, vsireg2
+# uimm12
+# CHECK-INST: csrrs t2, vsireg2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x25]
+# CHECK-INST-ALIAS: csrr t2, vsireg2
+# name
+csrrs t1, vsireg2, zero
+# uimm12
+csrrs t2, 0x252, zero
+
+# vsireg3
+# name
+# CHECK-INST: csrrs t1, vsireg3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x25]
+# CHECK-INST-ALIAS: csrr t1, vsireg3
+# uimm12
+# CHECK-INST: csrrs t2, vsireg3, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x25]
+# CHECK-INST-ALIAS: csrr t2, vsireg3
+# name
+csrrs t1, vsireg3, zero
+# uimm12
+csrrs t2, 0x253, zero
+
+# vsireg4
+# name
+# CHECK-INST: csrrs t1, vsireg4, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x25]
+# CHECK-INST-ALIAS: csrr t1, vsireg4
+# uimm12
+# CHECK-INST: csrrs t2, vsireg4, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x25]
+# CHECK-INST-ALIAS: csrr t2, vsireg4
+# name
+csrrs t1, vsireg4, zero
+# uimm12
+csrrs t2, 0x255, zero
+
+# vsireg5
+# name
+# CHECK-INST: csrrs t1, vsireg5, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x25]
+# CHECK-INST-ALIAS: csrr t1, vsireg5
+# uimm12
+# CHECK-INST: csrrs t2, vsireg5, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x25]
+# CHECK-INST-ALIAS: csrr t2, vsireg5
+# name
+csrrs t1, vsireg5, zero
+# uimm12
+csrrs t2, 0x256, zero
+
+# vsireg6
+# name
+# CHECK-INST: csrrs t1, vsireg6, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x25]
+# CHECK-INST-ALIAS: csrr t1, vsireg6
+# uimm12
+# CHECK-INST: csrrs t2, vsireg6, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x25]
+# CHECK-INST-ALIAS: csrr t2, vsireg6
+# name
+csrrs t1, vsireg6, zero
+# uimm12
+csrrs t2, 0x257, zero
+
 # vstopei
 # name
 # CHECK-INST: csrrs t1, vstopei, zero
@@ -563,3 +633,20 @@ csrrs t2, 0x25C, zero
 csrrs t1, vstopi, zero
 # uimm12
 csrrs t2, 0xEB0, zero
+
+##################################
+# Control Transfer Records
+##################################
+
+# vsctrctl
+# name
+# CHECK-INST: csrrs t1, vsctrctl, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x24]
+# CHECK-INST-ALIAS: csrr t1, vsctrctl
+# uimm12
+# CHECK-INST: csrrs t2, vsctrctl, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x24]
+# CHECK-INST-ALIAS: csrr t2, vsctrctl
+csrrs t1, vsctrctl, zero
+# uimm12
+csrrs t2, 0x24E, zero

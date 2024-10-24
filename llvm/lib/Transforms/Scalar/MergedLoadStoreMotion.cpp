@@ -199,7 +199,7 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
         CastInst::isBitOrNoopPointerCastable(
             Store0->getValueOperand()->getType(),
             Store1->getValueOperand()->getType(),
-            Store0->getModule()->getDataLayout()))
+            Store0->getDataLayout()))
       return Store1;
   }
   return nullptr;

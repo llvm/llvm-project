@@ -75,31 +75,27 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
 ; SSE-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI3:%.*]], [[VECTOR_BODY]] ]
 ; SSE-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; SSE-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 2
 ; SSE-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[ARR:%.*]], i32 [[TMP0]]
-; SSE-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[ARR]], i32 [[TMP1]]
 ; SSE-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP2]], i32 0
 ; SSE-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP2]], i32 2
 ; SSE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
 ; SSE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; SSE-NEXT:    [[TMP6:%.*]] = fcmp fast une <2 x double> [[WIDE_LOAD]], <double 4.200000e+01, double 4.200000e+01>
 ; SSE-NEXT:    [[TMP7:%.*]] = fcmp fast une <2 x double> [[WIDE_LOAD2]], <double 4.200000e+01, double 4.200000e+01>
-; SSE-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP6]], <i1 true, i1 true>
-; SSE-NEXT:    [[TMP9:%.*]] = xor <2 x i1> [[TMP7]], <i1 true, i1 true>
-; SSE-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[VEC_PHI]], [[WIDE_LOAD]]
-; SSE-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[VEC_PHI1]], [[WIDE_LOAD2]]
-; SSE-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP6]], <2 x double> [[TMP10]], <2 x double> [[VEC_PHI]]
-; SSE-NEXT:    [[PREDPHI3]] = select <2 x i1> [[TMP7]], <2 x double> [[TMP11]], <2 x double> [[VEC_PHI1]]
+; SSE-NEXT:    [[TMP8:%.*]] = fadd fast <2 x double> [[VEC_PHI]], [[WIDE_LOAD]]
+; SSE-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[VEC_PHI1]], [[WIDE_LOAD2]]
+; SSE-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP6]], <2 x double> [[TMP8]], <2 x double> [[VEC_PHI]]
+; SSE-NEXT:    [[PREDPHI3]] = select <2 x i1> [[TMP7]], <2 x double> [[TMP9]], <2 x double> [[VEC_PHI1]]
 ; SSE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; SSE-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
-; SSE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; SSE-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
+; SSE-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SSE:       middle.block:
 ; SSE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[PREDPHI3]], [[PREDPHI]]
-; SSE-NEXT:    [[TMP13:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX]])
+; SSE-NEXT:    [[TMP11:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
 ; SSE-NEXT:    br i1 true, label [[DONE:%.*]], label [[SCALAR_PH]]
 ; SSE:       scalar.ph:
 ; SSE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; SSE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; SSE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; SSE-NEXT:    br label [[LOOP:%.*]]
 ; SSE:       loop:
 ; SSE-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
@@ -119,7 +115,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    [[AGAIN:%.*]] = icmp ult i32 [[I_NEXT]], 32
 ; SSE-NEXT:    br i1 [[AGAIN]], label [[LOOP]], label [[DONE]], !llvm.loop [[LOOP3:![0-9]+]]
 ; SSE:       done:
-; SSE-NEXT:    [[TOT_NEXT_LCSSA:%.*]] = phi double [ [[TOT_NEXT]], [[NEXT_ITER]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; SSE-NEXT:    [[TOT_NEXT_LCSSA:%.*]] = phi double [ [[TOT_NEXT]], [[NEXT_ITER]] ], [ [[TMP11]], [[MIDDLE_BLOCK]] ]
 ; SSE-NEXT:    ret double [[TOT_NEXT_LCSSA]]
 ;
 ; AVX-LABEL: @sumIfVector(
@@ -134,13 +130,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI8:%.*]], [[VECTOR_BODY]] ]
 ; AVX-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI9:%.*]], [[VECTOR_BODY]] ]
 ; AVX-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; AVX-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 4
-; AVX-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 8
-; AVX-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 12
 ; AVX-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[ARR:%.*]], i32 [[TMP0]]
-; AVX-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[ARR]], i32 [[TMP1]]
-; AVX-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[ARR]], i32 [[TMP2]]
-; AVX-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[ARR]], i32 [[TMP3]]
 ; AVX-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[TMP4]], i32 0
 ; AVX-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[TMP4]], i32 4
 ; AVX-NEXT:    [[TMP10:%.*]] = getelementptr double, ptr [[TMP4]], i32 8
@@ -153,30 +143,26 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[TMP13:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD4]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
 ; AVX-NEXT:    [[TMP14:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD5]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
 ; AVX-NEXT:    [[TMP15:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD6]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
-; AVX-NEXT:    [[TMP16:%.*]] = xor <4 x i1> [[TMP12]], <i1 true, i1 true, i1 true, i1 true>
-; AVX-NEXT:    [[TMP17:%.*]] = xor <4 x i1> [[TMP13]], <i1 true, i1 true, i1 true, i1 true>
-; AVX-NEXT:    [[TMP18:%.*]] = xor <4 x i1> [[TMP14]], <i1 true, i1 true, i1 true, i1 true>
-; AVX-NEXT:    [[TMP19:%.*]] = xor <4 x i1> [[TMP15]], <i1 true, i1 true, i1 true, i1 true>
-; AVX-NEXT:    [[TMP20:%.*]] = fadd fast <4 x double> [[VEC_PHI]], [[WIDE_LOAD]]
-; AVX-NEXT:    [[TMP21:%.*]] = fadd fast <4 x double> [[VEC_PHI1]], [[WIDE_LOAD4]]
-; AVX-NEXT:    [[TMP22:%.*]] = fadd fast <4 x double> [[VEC_PHI2]], [[WIDE_LOAD5]]
-; AVX-NEXT:    [[TMP23:%.*]] = fadd fast <4 x double> [[VEC_PHI3]], [[WIDE_LOAD6]]
-; AVX-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP12]], <4 x double> [[TMP20]], <4 x double> [[VEC_PHI]]
-; AVX-NEXT:    [[PREDPHI7]] = select <4 x i1> [[TMP13]], <4 x double> [[TMP21]], <4 x double> [[VEC_PHI1]]
-; AVX-NEXT:    [[PREDPHI8]] = select <4 x i1> [[TMP14]], <4 x double> [[TMP22]], <4 x double> [[VEC_PHI2]]
-; AVX-NEXT:    [[PREDPHI9]] = select <4 x i1> [[TMP15]], <4 x double> [[TMP23]], <4 x double> [[VEC_PHI3]]
+; AVX-NEXT:    [[TMP16:%.*]] = fadd fast <4 x double> [[VEC_PHI]], [[WIDE_LOAD]]
+; AVX-NEXT:    [[TMP17:%.*]] = fadd fast <4 x double> [[VEC_PHI1]], [[WIDE_LOAD4]]
+; AVX-NEXT:    [[TMP18:%.*]] = fadd fast <4 x double> [[VEC_PHI2]], [[WIDE_LOAD5]]
+; AVX-NEXT:    [[TMP19:%.*]] = fadd fast <4 x double> [[VEC_PHI3]], [[WIDE_LOAD6]]
+; AVX-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP12]], <4 x double> [[TMP16]], <4 x double> [[VEC_PHI]]
+; AVX-NEXT:    [[PREDPHI7]] = select <4 x i1> [[TMP13]], <4 x double> [[TMP17]], <4 x double> [[VEC_PHI1]]
+; AVX-NEXT:    [[PREDPHI8]] = select <4 x i1> [[TMP14]], <4 x double> [[TMP18]], <4 x double> [[VEC_PHI2]]
+; AVX-NEXT:    [[PREDPHI9]] = select <4 x i1> [[TMP15]], <4 x double> [[TMP19]], <4 x double> [[VEC_PHI3]]
 ; AVX-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
-; AVX-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
-; AVX-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; AVX-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
+; AVX-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX:       middle.block:
 ; AVX-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x double> [[PREDPHI7]], [[PREDPHI]]
 ; AVX-NEXT:    [[BIN_RDX10:%.*]] = fadd fast <4 x double> [[PREDPHI8]], [[BIN_RDX]]
 ; AVX-NEXT:    [[BIN_RDX11:%.*]] = fadd fast <4 x double> [[PREDPHI9]], [[BIN_RDX10]]
-; AVX-NEXT:    [[TMP25:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX11]])
+; AVX-NEXT:    [[TMP21:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[BIN_RDX11]])
 ; AVX-NEXT:    br i1 true, label [[DONE:%.*]], label [[SCALAR_PH]]
 ; AVX:       scalar.ph:
 ; AVX-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; AVX-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
+; AVX-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; AVX-NEXT:    br label [[LOOP:%.*]]
 ; AVX:       loop:
 ; AVX-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
@@ -196,7 +182,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[AGAIN:%.*]] = icmp ult i32 [[I_NEXT]], 32
 ; AVX-NEXT:    br i1 [[AGAIN]], label [[LOOP]], label [[DONE]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AVX:       done:
-; AVX-NEXT:    [[TOT_NEXT_LCSSA:%.*]] = phi double [ [[TOT_NEXT]], [[NEXT_ITER]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
+; AVX-NEXT:    [[TOT_NEXT_LCSSA:%.*]] = phi double [ [[TOT_NEXT]], [[NEXT_ITER]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
 ; AVX-NEXT:    ret double [[TOT_NEXT_LCSSA]]
 ;
 entry:

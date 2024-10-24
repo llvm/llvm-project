@@ -55,9 +55,13 @@ static std::string computeDataLayout(const Triple &TT) {
   // mean anything.
   if (Arch == Triple::spirv32)
     return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
-           "v96:128-v192:256-v256:256-v512:512-v1024:1024";
+           "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1";
+  if (TT.getVendor() == Triple::VendorType::AMD &&
+      TT.getOS() == Triple::OSType::AMDHSA)
+    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-"
+           "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0";
   return "e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-         "v96:128-v192:256-v256:256-v512:512-v1024:1024";
+         "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1";
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -111,6 +115,7 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
+  void addPreEmitPass() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -135,6 +140,7 @@ void SPIRVPassConfig::addPostRegAlloc() {
   disablePass(&ShrinkWrapID);
   disablePass(&LiveDebugValuesID);
   disablePass(&MachineLateInstrsCleanupID);
+  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   // Do not work with OpPhi.
   disablePass(&BranchFolderPassID);
@@ -153,20 +159,25 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
-  if (TM.getSubtargetImpl()->isVulkanEnv()) {
-    // Once legalized, we need to structurize the CFG to follow the spec.
-    // This is done through the following 8 steps.
-    // TODO(#75801): add the remaining steps.
+  TargetPassConfig::addIRPasses();
 
+  if (TM.getSubtargetImpl()->isVulkanEnv()) {
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
     //  - loops have a single entry edge (pre-header to loop header).
     //  - all loop exits are dominated by the loop pre-header.
     //  - loops have a single back-edge.
     addPass(createLoopSimplifyPass());
+
+    // 2. Merge the convergence region exit nodes into one. After this step,
+    // regions are single-entry, single-exit. This will help determine the
+    // correct merge block.
+    addPass(createSPIRVMergeRegionExitTargetsPass());
+
+    // 3. Structurize.
+    addPass(createSPIRVStructurizerPass());
   }
 
-  TargetPassConfig::addIRPasses();
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
@@ -197,6 +208,17 @@ bool SPIRVPassConfig::addLegalizeMachineIR() {
 bool SPIRVPassConfig::addRegBankSelect() {
   disablePass(&RegBankSelect::ID);
   return false;
+}
+
+static cl::opt<bool> SPVEnableNonSemanticDI(
+    "spv-emit-nonsemantic-debug-info",
+    cl::desc("Emit SPIR-V NonSemantic.Shader.DebugInfo.100 instructions"),
+    cl::Optional, cl::init(false));
+
+void SPIRVPassConfig::addPreEmitPass() {
+  if (SPVEnableNonSemanticDI) {
+    addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
+  }
 }
 
 namespace {

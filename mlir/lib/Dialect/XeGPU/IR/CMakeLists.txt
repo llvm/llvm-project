@@ -11,5 +11,10 @@ add_mlir_dialect_library(MLIRXeGPUDialect
   MLIRXeGPUEnumsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithDialect
+  MLIRArithUtils
+  MLIRDialectUtils
   MLIRIR
+  MLIRViewLikeInterface
+  MLIRVectorDialect
 )

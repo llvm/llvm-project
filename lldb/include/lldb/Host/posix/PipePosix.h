@@ -64,7 +64,9 @@ public:
 
   Status Delete(llvm::StringRef name) override;
 
-  Status Write(const void *buf, size_t size, size_t &bytes_written) override;
+  Status WriteWithTimeout(const void *buf, size_t size,
+                          const std::chrono::microseconds &timeout,
+                          size_t &bytes_written) override;
   Status ReadWithTimeout(void *buf, size_t size,
                          const std::chrono::microseconds &timeout,
                          size_t &bytes_read) override;

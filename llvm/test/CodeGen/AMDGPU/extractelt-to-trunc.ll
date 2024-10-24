@@ -8,8 +8,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 define amdgpu_kernel void @bitcast_int_to_vector_extract_0(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %b) {
 ; GCN-LABEL: bitcast_int_to_vector_extract_0:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_load_dword s12, s[0:1], 0xd
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; GCN-NEXT:    s_load_dword s12, s[2:3], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s10, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -38,8 +38,8 @@ define amdgpu_kernel void @bitcast_int_to_vector_extract_0(ptr addrspace(1) %out
 define amdgpu_kernel void @bitcast_fp_to_vector_extract_0(ptr addrspace(1) %out, ptr addrspace(1) %in, double %b) {
 ; GCN-LABEL: bitcast_fp_to_vector_extract_0:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0xd
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[12:13], s[2:3], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s10, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -68,8 +68,8 @@ define amdgpu_kernel void @bitcast_fp_to_vector_extract_0(ptr addrspace(1) %out,
 define amdgpu_kernel void @bitcast_int_to_fpvector_extract_0(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %b) {
 ; GCN-LABEL: bitcast_int_to_fpvector_extract_0:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_load_dword s12, s[0:1], 0xd
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; GCN-NEXT:    s_load_dword s12, s[2:3], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s10, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -98,7 +98,7 @@ define amdgpu_kernel void @bitcast_int_to_fpvector_extract_0(ptr addrspace(1) %o
 define amdgpu_kernel void @no_extract_volatile_load_extract0(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: no_extract_volatile_load_extract0:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_mov_b32 s10, s6
@@ -122,7 +122,7 @@ entry:
 define amdgpu_kernel void @no_extract_volatile_load_extract2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: no_extract_volatile_load_extract2:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_mov_b32 s10, s6
@@ -146,8 +146,8 @@ entry:
 define amdgpu_kernel void @no_extract_volatile_load_dynextract(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) {
 ; GCN-LABEL: no_extract_volatile_load_dynextract:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_load_dword s12, s[0:1], 0xd
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; GCN-NEXT:    s_load_dword s12, s[2:3], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_mov_b32 s10, s2

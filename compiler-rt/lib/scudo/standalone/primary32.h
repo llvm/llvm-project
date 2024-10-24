@@ -43,26 +43,22 @@ namespace scudo {
 
 template <typename Config> class SizeClassAllocator32 {
 public:
-  typedef typename Config::Primary::CompactPtrT CompactPtrT;
-  typedef typename Config::Primary::SizeClassMap SizeClassMap;
-  static const uptr GroupSizeLog = Config::Primary::GroupSizeLog;
+  typedef typename Config::CompactPtrT CompactPtrT;
+  typedef typename Config::SizeClassMap SizeClassMap;
+  static const uptr GroupSizeLog = Config::getGroupSizeLog();
   // The bytemap can only track UINT8_MAX - 1 classes.
   static_assert(SizeClassMap::LargestClassId <= (UINT8_MAX - 1), "");
   // Regions should be large enough to hold the largest Block.
-  static_assert((1UL << Config::Primary::RegionSizeLog) >=
-                    SizeClassMap::MaxSize,
+  static_assert((1UL << Config::getRegionSizeLog()) >= SizeClassMap::MaxSize,
                 "");
   typedef SizeClassAllocator32<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef TransferBatch<ThisT> TransferBatchT;
   typedef BatchGroup<ThisT> BatchGroupT;
 
-  static_assert(sizeof(BatchGroupT) <= sizeof(TransferBatchT),
-                "BatchGroupT uses the same class size as TransferBatchT");
-
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
-               ? sizeof(TransferBatchT)
+               ? Max(sizeof(BatchGroupT), sizeof(TransferBatchT))
                : SizeClassMap::getSizeByClassId(ClassId);
   }
 
@@ -89,6 +85,10 @@ public:
       Sci->MinRegionIndex = NumRegions;
       Sci->ReleaseInfo.LastReleaseAtNs = Time;
     }
+
+    // The default value in the primary config has the higher priority.
+    if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
+      ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
@@ -329,11 +329,17 @@ public:
     }
   }
 
+  void getMemoryGroupFragmentationInfo(ScopedString *Str) {
+    // Each region is also a memory group because region size is the same as
+    // group size.
+    getFragmentationInfo(Str);
+  }
+
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
-      const s32 Interval = Max(Min(static_cast<s32>(Value),
-                                   Config::Primary::MaxReleaseToOsIntervalMs),
-                               Config::Primary::MinReleaseToOsIntervalMs);
+      const s32 Interval = Max(
+          Min(static_cast<s32>(Value), Config::getMaxReleaseToOsIntervalMs()),
+          Config::getMinReleaseToOsIntervalMs());
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
@@ -373,9 +379,9 @@ public:
 
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
-  static const uptr RegionSize = 1UL << Config::Primary::RegionSizeLog;
-  static const uptr NumRegions =
-      SCUDO_MMAP_RANGE_SIZE >> Config::Primary::RegionSizeLog;
+  static const uptr RegionSize = 1UL << Config::getRegionSizeLog();
+  static const uptr NumRegions = SCUDO_MMAP_RANGE_SIZE >>
+                                 Config::getRegionSizeLog();
   static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
   typedef FlatByteMap<NumRegions> ByteMap;
 
@@ -408,7 +414,7 @@ private:
   static_assert(sizeof(SizeClassInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr computeRegionId(uptr Mem) {
-    const uptr Id = Mem >> Config::Primary::RegionSizeLog;
+    const uptr Id = Mem >> Config::getRegionSizeLog();
     CHECK_LT(Id, NumRegions);
     return Id;
   }
@@ -437,7 +443,7 @@ private:
       unmap(reinterpret_cast<void *>(End), MapEnd - End);
 
     DCHECK_EQ(Region % RegionSize, 0U);
-    static_assert(Config::Primary::RegionSizeLog == GroupSizeLog,
+    static_assert(Config::getRegionSizeLog() == GroupSizeLog,
                   "Memory group should be the same size as Region");
 
     return Region;
@@ -522,9 +528,6 @@ private:
       // BatchClass hasn't enabled memory group. Use `0` to indicate there's no
       // memory group here.
       BG->CompactPtrGroupBase = 0;
-      // `BG` is also the block of BatchClassId. Note that this is different
-      // from `CreateGroup` in `pushBlocksImpl`
-      BG->PushedBlocks = 1;
       BG->BytesInBGAtLastCheckpoint = 0;
       BG->MaxCachedPerBatch =
           CacheT::getMaxCached(getSizeByClassId(SizeClassMap::BatchClassId));
@@ -549,9 +552,6 @@ private:
       TB->add(
           compactPtr(SizeClassMap::BatchClassId, reinterpret_cast<uptr>(BG)));
       --Size;
-      DCHECK_EQ(BG->PushedBlocks, 1U);
-      // `TB` is also the block of BatchClassId.
-      BG->PushedBlocks += 1;
       BG->Batches.push_front(TB);
     }
 
@@ -578,8 +578,6 @@ private:
       CurBatch->appendFromArray(&Array[I], AppendSize);
       I += AppendSize;
     }
-
-    BG->PushedBlocks += Size;
   }
   // Push the blocks to their batch group. The layout will be like,
   //
@@ -615,7 +613,6 @@ private:
 
       BG->CompactPtrGroupBase = CompactPtrGroupBase;
       BG->Batches.push_front(TB);
-      BG->PushedBlocks = 0;
       BG->BytesInBGAtLastCheckpoint = 0;
       BG->MaxCachedPerBatch = TransferBatchT::MaxNumCached;
 
@@ -643,8 +640,6 @@ private:
         CurBatch->appendFromArray(&Array[I], AppendSize);
         I += AppendSize;
       }
-
-      BG->PushedBlocks += Size;
     };
 
     Sci->FreeListInfo.PushedBlocks += Size;
@@ -937,7 +932,7 @@ private:
 
     uptr Integral;
     uptr Fractional;
-    computePercentage(BlockSize * InUseBlocks, InUsePages * PageSize, &Integral,
+    computePercentage(BlockSize * InUseBlocks, InUseBytes, &Integral,
                       &Fractional);
     Str->append("  %02zu (%6zu): inuse/total blocks: %6zu/%6zu inuse/total "
                 "pages: %6zu/%6zu inuse bytes: %6zuK util: %3zu.%02zu%%\n",

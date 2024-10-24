@@ -355,7 +355,7 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
 
   // Swap bytes if required.
   if (BSwapSizeType) {
-    Function *Bswap = Intrinsic::getDeclaration(
+    Function *Bswap = Intrinsic::getOrInsertDeclaration(
         CI->getModule(), Intrinsic::bswap, BSwapSizeType);
     Lhs = Builder.CreateCall(Bswap, Lhs);
     Rhs = Builder.CreateCall(Bswap, Rhs);
@@ -590,7 +590,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
                                   ResBlock.PhiSrc2);
 
   Value *Res =
-      Builder.CreateSelect(Cmp, ConstantInt::get(Builder.getInt32Ty(), -1),
+      Builder.CreateSelect(Cmp, Constant::getAllOnesValue(Builder.getInt32Ty()),
                            ConstantInt::get(Builder.getInt32Ty(), 1));
 
   PhiRes->addIncoming(Res, ResBlock.BB);
@@ -970,7 +970,7 @@ PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-  const DataLayout& DL = F.getParent()->getDataLayout();
+  const DataLayout& DL = F.getDataLayout();
   bool MadeChanges = false;
   for (auto BBIt = F.begin(); BBIt != F.end();) {
     if (runOnBlock(*BBIt, TLI, TTI, TL, DL, PSI, BFI, DTU ? &*DTU : nullptr)) {

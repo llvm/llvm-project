@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_ONCE_FLAG_H
 #define LLVM_LIBC_TYPES_ONCE_FLAG_H
 
-#include <llvm-libc-types/__futex_word.h>
+#include "llvm-libc-types/__futex_word.h"
 
 #ifdef __linux__
 typedef __futex_word once_flag;

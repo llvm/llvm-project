@@ -113,7 +113,7 @@
 ; PASSIVE-NEXT:        Name:            __wasm_init_memory
 
 ;      PASSIVE-PIC:  - Type:            START
-; PASSIVE-PIC-NEXT:    StartFunction:   3
+; PASSIVE-PIC-NEXT:    StartFunction:   2
 ; PASSIVE-PIC-NEXT:  - Type:            DATACOUNT
 ; PASSIVE-PIC-NEXT:    Count:           3
 ; PASSIVE-PIC-NEXT:  - Type:            CODE
@@ -125,9 +125,6 @@
 ; PASSIVE-PIC-NEXT:        Locals:          []
 ; PASSIVE-PIC-NEXT:        Body:            {{.*}}
 ; PASSIVE-PIC-NEXT:      - Index:           2
-; PASSIVE-PIC-NEXT:        Locals:          []
-; PASSIVE-PIC-NEXT:        Body:            0B
-; PASSIVE-PIC-NEXT:      - Index:           3
 ; PASSIVE-PIC-NEXT:        Locals:
 ; PASSIVE32-PIC-NEXT:          - Type:            I32
 ; PASSIVE64-PIC-NEXT:          - Type:            I64
@@ -152,8 +149,6 @@
 ; PASSIVE-PIC-NEXT:      - Index:           1
 ; PASSIVE-PIC-NEXT:        Name:            __wasm_init_tls
 ; PASSIVE-PIC-NEXT:      - Index:           2
-; PASSIVE-PIC-NEXT:        Name:            __wasm_apply_data_relocs
-; PASSIVE-PIC-NEXT:      - Index:           3
 ; PASSIVE-PIC-NEXT:        Name:            __wasm_init_memory
 
 ; no data relocations.
@@ -161,8 +156,6 @@
 ; DIS-EMPTY:
 ; DIS-NEXT:        end
 
-; In PIC mode __wasm_apply_data_relocs is export seperatly to __wasm_call_ctors
-; PIC-DIS:     <__wasm_apply_data_relocs>:
 ; PIC-DIS-EMPTY:
 
 ; DIS-LABEL:       <__wasm_init_memory>:

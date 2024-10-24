@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   TestDialect.cpp
   TestPatterns.cpp
   TestTraits.cpp
+  TestFromLLVMIRTranslation.cpp
   TestToLLVMIRTranslation.cpp
 )
 
@@ -15,8 +16,8 @@ mlir_tablegen(TestOpInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRTestInterfaceIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
-mlir_tablegen(TestAttrDefs.h.inc -gen-attrdef-decls)
-mlir_tablegen(TestAttrDefs.cpp.inc -gen-attrdef-defs)
+mlir_tablegen(TestAttrDefs.h.inc -gen-attrdef-decls -attrdefs-dialect=test)
+mlir_tablegen(TestAttrDefs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=test)
 add_public_tablegen_target(MLIRTestAttrDefIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestTypeDefs.td)
@@ -30,8 +31,6 @@ mlir_tablegen(TestOpEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRTestEnumDefIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
-mlir_tablegen(TestOps.h.inc -gen-op-decls)
-mlir_tablegen(TestOps.cpp.inc -gen-op-defs)
 mlir_tablegen(TestOpsDialect.h.inc -gen-dialect-decls -dialect=test)
 mlir_tablegen(TestOpsDialect.cpp.inc -gen-dialect-defs -dialect=test)
 mlir_tablegen(TestPatterns.inc -gen-rewriters)
@@ -42,16 +41,22 @@ mlir_tablegen(TestOpsSyntax.h.inc -gen-op-decls)
 mlir_tablegen(TestOpsSyntax.cpp.inc -gen-op-defs)
 add_public_tablegen_target(MLIRTestOpsSyntaxIncGen)
 
+add_sharded_ops(TestOps 20)
+
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestDialect
   TestAttributes.cpp
   TestDialect.cpp
+  TestFormatUtils.cpp
   TestInterfaces.cpp
+  TestOpDefs.cpp
+  TestOps.cpp
   TestPatterns.cpp
   TestTraits.cpp
   TestTypes.cpp
   TestOpsSyntax.cpp
   TestDialectInterfaces.cpp
+  ${SHARDED_SRCS}
 
   EXCLUDE_FROM_LIBMLIR
 
@@ -62,6 +67,7 @@ add_mlir_library(MLIRTestDialect
   MLIRTestTypeDefIncGen
   MLIRTestOpsIncGen
   MLIRTestOpsSyntaxIncGen
+  MLIRTestOpsShardGen
 
   LINK_LIBS PUBLIC
   MLIRControlFlowInterfaces
@@ -80,10 +86,29 @@ add_mlir_library(MLIRTestDialect
   MLIRLinalgTransforms
   MLIRLLVMDialect
   MLIRPass
+  MLIRPolynomialDialect
   MLIRReduce
   MLIRTensorDialect
   MLIRTransformUtils
   MLIRTransforms
+  MLIRValueBoundsOpInterface
+)
+
+add_mlir_translation_library(MLIRTestFromLLVMIRTranslation
+  TestFromLLVMIRTranslation.cpp
+
+  EXCLUDE_FROM_LIBMLIR
+
+  LINK_COMPONENTS
+  Core
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRLLVMDialect
+  MLIRTestDialect
+  MLIRSupport
+  MLIRTargetLLVMIRImport
+  MLIRLLVMIRToLLVMTranslation
 )
 
 add_mlir_translation_library(MLIRTestToLLVMIRTranslation

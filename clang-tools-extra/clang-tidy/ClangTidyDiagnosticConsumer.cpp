@@ -311,7 +311,18 @@ ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
     : Context(Ctx), ExternalDiagEngine(ExternalDiagEngine),
       RemoveIncompatibleErrors(RemoveIncompatibleErrors),
       GetFixesFromNotes(GetFixesFromNotes),
-      EnableNolintBlocks(EnableNolintBlocks) {}
+      EnableNolintBlocks(EnableNolintBlocks) {
+
+  if (Context.getOptions().HeaderFilterRegex &&
+      !Context.getOptions().HeaderFilterRegex->empty())
+    HeaderFilter =
+        std::make_unique<llvm::Regex>(*Context.getOptions().HeaderFilterRegex);
+
+  if (Context.getOptions().ExcludeHeaderFilterRegex &&
+      !Context.getOptions().ExcludeHeaderFilterRegex->empty())
+    ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
+        *Context.getOptions().ExcludeHeaderFilterRegex);
+}
 
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
   if (!Errors.empty()) {
@@ -369,7 +380,6 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     ++Context.Stats.ErrorsIgnoredNOLINT;
     // Ignored a warning, should ignore related notes as well
     LastErrorWasIgnored = true;
-    Context.DiagEngine->Clear();
     for (const auto &Error : SuppressionErrors)
       Context.diag(Error);
     return;
@@ -446,7 +456,6 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
   if (Info.hasSourceManager())
     checkFilters(Info.getLocation(), Info.getSourceManager());
 
-  Context.DiagEngine->Clear();
   for (const auto &Error : SuppressionErrors)
     Context.diag(Error);
 }
@@ -562,20 +571,15 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
   }
 
   StringRef FileName(File->getName());
-  LastErrorRelatesToUserCode = LastErrorRelatesToUserCode ||
-                               Sources.isInMainFile(Location) ||
-                               getHeaderFilter()->match(FileName);
+  LastErrorRelatesToUserCode =
+      LastErrorRelatesToUserCode || Sources.isInMainFile(Location) ||
+      (HeaderFilter &&
+       (HeaderFilter->match(FileName) &&
+        !(ExcludeHeaderFilter && ExcludeHeaderFilter->match(FileName))));
 
   unsigned LineNumber = Sources.getExpansionLineNumber(Location);
   LastErrorPassesLineFilter =
       LastErrorPassesLineFilter || passesLineFilter(FileName, LineNumber);
-}
-
-llvm::Regex *ClangTidyDiagnosticConsumer::getHeaderFilter() {
-  if (!HeaderFilter)
-    HeaderFilter =
-        std::make_unique<llvm::Regex>(*Context.getOptions().HeaderFilterRegex);
-  return HeaderFilter.get();
 }
 
 void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {

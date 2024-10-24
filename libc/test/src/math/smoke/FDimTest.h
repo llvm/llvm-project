@@ -6,18 +6,20 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
-class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class FDimTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   using FuncPtr = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const T inf = FPBits::inf(Sign::POS).get_val();
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();
@@ -61,10 +63,11 @@ public:
   void test_in_range(FuncPtr func) {
     constexpr StorageType STORAGE_MAX =
         LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = STORAGE_MAX / COUNT;
-    for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
-         ++i, v += STEP, w -= STEP) {
+    constexpr int COUNT = 100'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0, w = STORAGE_MAX;
+    for (int i = 0; i <= COUNT; ++i, v += STEP, w -= STEP) {
       FPBits xbits(v), ybits(w);
       if (xbits.is_inf_or_nan())
         continue;

@@ -21,8 +21,8 @@ protected:
     return getMicrosoftStyle(FormatStyle::LK_CSharp);
   }
 
-  static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style) {
+  static std::string format(StringRef Code, unsigned Offset, unsigned Length,
+                            const FormatStyle &Style) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
@@ -34,7 +34,7 @@ protected:
   }
 
   static std::string
-  format(llvm::StringRef Code,
+  format(StringRef Code,
          const FormatStyle &Style = getMicrosoftStyle(FormatStyle::LK_CSharp)) {
     return format(Code, 0, Code.size(), Style);
   }
@@ -1149,6 +1149,17 @@ public class SaleItem
     public decimal Price { get; set; }
 })",
                MicrosoftStyle);
+
+  verifyFormat("internal class Program\n"
+               "{\n"
+               "    bool AutoAllowKnownApps\n"
+               "    {\n"
+               "        get;\n"
+               "        [Simple]\n"
+               "        set;\n"
+               "    }\n"
+               "}",
+               MicrosoftStyle);
 }
 
 TEST_F(FormatTestCSharp, DefaultLiteral) {
@@ -1675,6 +1686,28 @@ TEST_F(FormatTestCSharp, ShortFunctions) {
 
 TEST_F(FormatTestCSharp, BrokenBrackets) {
   EXPECT_NE("", format("int where b <")); // reduced from crasher
+}
+
+TEST_F(FormatTestCSharp, GotoCaseLabel) {
+  verifyFormat("switch (i)\n"
+               "{\n"
+               "case 0:\n"
+               "    goto case 1;\n"
+               "case 1:\n"
+               "    j = 0;\n"
+               "    {\n"
+               "        break;\n"
+               "    }\n"
+               "}",
+               "switch (i) {\n"
+               "case 0:\n"
+               "  goto case 1;\n"
+               "case 1:\n"
+               "  j = 0;\n"
+               "  {\n"
+               "    break;\n"
+               "  }\n"
+               "}");
 }
 
 } // namespace

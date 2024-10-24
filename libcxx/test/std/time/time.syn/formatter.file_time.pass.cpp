@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -904,12 +905,6 @@ static void test_valid_values_date_time() {
 
 template <class CharT>
 static void test_valid_values_time_zone() {
-// The Apple CI gives %z='-0700'	%Ez='-0700'	%Oz='-0700'	%Z='UTC'
-// -0700 looks like the local time where the CI happens to reside, therefore
-// omit this test on Apple.
-// The Windows CI gives %z='-0000', but on local machines set to a different
-// timezone, it gives e.g. %z='+0200'.
-#if !defined(__APPLE__) && !defined(_WIN32)
   using namespace std::literals::chrono_literals;
 
   constexpr std::basic_string_view<CharT> fmt  = SV("{:%%z='%z'%t%%Ez='%Ez'%t%%Oz='%Oz'%t%%Z='%Z'%n}");
@@ -918,48 +913,23 @@ static void test_valid_values_time_zone() {
   const std::locale loc(LOCALE_ja_JP_UTF_8);
   std::locale::global(std::locale(LOCALE_fr_FR_UTF_8));
 
-#  if defined(_AIX)
   // Non localized output using C-locale
-  check(SV("%z='UTC'\t%Ez='UTC'\t%Oz='UTC'\t%Z='UTC'\n"),
+  check(SV("%z='+0000'\t%Ez='+00:00'\t%Oz='+00:00'\t%Z='UTC'\n"),
         fmt,
         file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 
   // Use the global locale (fr_FR)
-  check(SV("%z='UTC'\t%Ez='UTC'\t%Oz='UTC'\t%Z='UTC'\n"),
+  check(SV("%z='+0000'\t%Ez='+00:00'\t%Oz='+00:00'\t%Z='UTC'\n"),
         lfmt,
         file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 
-  // Use supplied locale (ja_JP). This locale has a different alternate.a
+  // Use supplied locale (ja_JP).
   check(loc,
-        SV("%z='UTC'\t%Ez='UTC'\t%Oz='UTC'\t%Z='UTC'\n"),
-        lfmt,
-        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#  else                    // defined(_AIX)
-  // Non localized output using C-locale
-  check(SV("%z='+0000'\t%Ez='+0000'\t%Oz='+0000'\t%Z='UTC'\n"),
-        fmt,
-        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-
-  // Use the global locale (fr_FR)
-  check(SV("%z='+0000'\t%Ez='+0000'\t%Oz='+0000'\t%Z='UTC'\n"),
+        SV("%z='+0000'\t%Ez='+00:00'\t%Oz='+00:00'\t%Z='UTC'\n"),
         lfmt,
         file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 
-  // Use supplied locale (ja_JP). This locale has a different alternate.a
-#    if defined(__FreeBSD__)
-  check(loc,
-        SV("%z='+0000'\t%Ez='+0000'\t%Oz='+0000'\t%Z='UTC'\n"),
-        lfmt,
-        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#    else
-  check(loc,
-        SV("%z='+0000'\t%Ez='+0000'\t%Oz='+〇'\t%Z='UTC'\n"),
-        lfmt,
-        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#    endif
-#  endif                   // defined(_AIX)
   std::locale::global(std::locale::classic());
-#endif // !defined(__APPLE__) && !defined(_WIN32)
 }
 
 template <class CharT>

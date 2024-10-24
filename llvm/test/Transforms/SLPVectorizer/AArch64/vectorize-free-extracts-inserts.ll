@@ -12,13 +12,13 @@ define void @noop_extracts_first_2_lanes(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @noop_extracts_first_2_lanes(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, ptr [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <2 x double> [[V_1]], i32 0
+; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <2 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x double> [[V_2]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[V_1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[V_1]], i32 0
-; CHECK-NEXT:    call void @use(double [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[V_1]], i32 1
-; CHECK-NEXT:    call void @use(double [[TMP3]])
+; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
+; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -127,14 +127,14 @@ define void @extract_reverse_order(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @extract_reverse_order(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, ptr [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <2 x double> [[V_1]], i32 0
+; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <2 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x double> [[V_2]], <4 x double> poison, <2 x i32> <i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[V_1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[V_1]], i32 0
-; CHECK-NEXT:    call void @use(double [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[V_1]], i32 1
-; CHECK-NEXT:    call void @use(double [[TMP4]])
+; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
+; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;

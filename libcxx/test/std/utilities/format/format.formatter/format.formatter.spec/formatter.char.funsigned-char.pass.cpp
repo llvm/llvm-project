@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -71,16 +72,18 @@ void test() {
 #if TEST_STD_VER > 20
   test(STR(R"('\u{0}')"), STR("?}"), '\x00');
   test(STR("'a'"), STR("?}"), 'a');
+#  ifndef TEST_HAS_NO_UNICODE
   if constexpr (std::same_as<CharT, char>) {
     test(STR(R"('\x{80}')"), STR("?}"), '\x80');
     test(STR(R"('\x{ff}')"), STR("?}"), '\xff');
   }
-#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#    ifndef TEST_HAS_NO_WIDE_CHARACTERS
   else {
     test(STR(R"('\u{80}')"), STR("?}"), '\x80');
     test(STR("'\u00ff'"), STR("?}"), '\xff');
   }
-#  endif // TEST_HAS_NO_WIDE_CHARACTERS
+#    endif // TEST_HAS_NO_WIDE_CHARACTERS
+#  endif   // TEST_HAS_NO_UNICODE
 #endif   // TEST_STD_VER > 20
 
   test(STR("10000000"), STR("b}"), char(128));

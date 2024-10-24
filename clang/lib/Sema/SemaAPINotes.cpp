@@ -16,6 +16,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaSwift.h"
+#include <stack>
 
 using namespace clang;
 
@@ -52,49 +55,54 @@ static void applyNullability(Sema &S, Decl *D, NullabilityKind Nullability,
   if (!Metadata.IsActive)
     return;
 
-  auto IsModified = [&](Decl *D, QualType QT,
-                        NullabilityKind Nullability) -> bool {
+  auto GetModified =
+      [&](Decl *D, QualType QT,
+          NullabilityKind Nullability) -> std::optional<QualType> {
     QualType Original = QT;
     S.CheckImplicitNullabilityTypeSpecifier(QT, Nullability, D->getLocation(),
                                             isa<ParmVarDecl>(D),
                                             /*OverrideExisting=*/true);
-    return QT.getTypePtr() != Original.getTypePtr();
+    return (QT.getTypePtr() != Original.getTypePtr()) ? std::optional(QT)
+                                                      : std::nullopt;
   };
 
   if (auto Function = dyn_cast<FunctionDecl>(D)) {
-    if (IsModified(D, Function->getReturnType(), Nullability)) {
-      QualType FnType = Function->getType();
-      Function->setType(FnType);
+    if (auto Modified =
+            GetModified(D, Function->getReturnType(), Nullability)) {
+      const FunctionType *FnType = Function->getType()->castAs<FunctionType>();
+      if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(FnType))
+        Function->setType(S.Context.getFunctionType(
+            *Modified, proto->getParamTypes(), proto->getExtProtoInfo()));
+      else
+        Function->setType(
+            S.Context.getFunctionNoProtoType(*Modified, FnType->getExtInfo()));
     }
   } else if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-    QualType Type = Method->getReturnType();
-    if (IsModified(D, Type, Nullability)) {
-      Method->setReturnType(Type);
+    if (auto Modified = GetModified(D, Method->getReturnType(), Nullability)) {
+      Method->setReturnType(*Modified);
 
       // Make it a context-sensitive keyword if we can.
-      if (!isIndirectPointerType(Type))
+      if (!isIndirectPointerType(*Modified))
         Method->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
             Method->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
     }
   } else if (auto Value = dyn_cast<ValueDecl>(D)) {
-    QualType Type = Value->getType();
-    if (IsModified(D, Type, Nullability)) {
-      Value->setType(Type);
+    if (auto Modified = GetModified(D, Value->getType(), Nullability)) {
+      Value->setType(*Modified);
 
       // Make it a context-sensitive keyword if we can.
       if (auto Parm = dyn_cast<ParmVarDecl>(D)) {
-        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(Type))
+        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(*Modified))
           Parm->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
               Parm->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
       }
     }
   } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-    QualType Type = Property->getType();
-    if (IsModified(D, Type, Nullability)) {
-      Property->setType(Type, Property->getTypeSourceInfo());
+    if (auto Modified = GetModified(D, Property->getType(), Nullability)) {
+      Property->setType(*Modified, Property->getTypeSourceInfo());
 
       // Make it a property attribute if we can.
-      if (!isIndirectPointerType(Type))
+      if (!isIndirectPointerType(*Modified))
         Property->setPropertyAttributes(
             ObjCPropertyAttribute::kind_null_resettable);
     }
@@ -263,7 +271,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
               ASTAllocateString(S.Context, Info.UnavailableMsg),
               /*Strict=*/false,
               /*Replacement=*/StringRef(),
-              /*Priority=*/Sema::AP_Explicit);
+              /*Priority=*/Sema::AP_Explicit,
+              /*Environment=*/nullptr);
         },
         [](const Decl *D) {
           return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {
@@ -296,8 +305,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                         SourceLocation(), nullptr, nullptr, nullptr,
                         ParsedAttr::Form::GNU());
 
-          if (!S.DiagnoseSwiftName(D, Info.SwiftName, D->getLocation(), *SNA,
-                                   /*IsAsync=*/false))
+          if (!S.Swift().DiagnoseName(D, Info.SwiftName, D->getLocation(), *SNA,
+                                      /*IsAsync=*/false))
             return nullptr;
 
           return new (S.Context)
@@ -367,7 +376,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
       if (auto Var = dyn_cast<VarDecl>(D)) {
         // Make adjustments to parameter types.
         if (isa<ParmVarDecl>(Var)) {
-          Type = S.AdjustParameterTypeForObjCAutoRefCount(
+          Type = S.ObjC().AdjustParameterTypeForObjCAutoRefCount(
               Type, D->getLocation(), TypeInfo);
           Type = S.Context.getAdjustedParameterType(Type);
         }
@@ -424,6 +433,15 @@ static void ProcessAPINotes(Sema &S, VarDecl *D,
                   metadata);
 }
 
+/// Process API notes for a C field.
+static void ProcessAPINotes(Sema &S, FieldDecl *D,
+                            const api_notes::FieldInfo &Info,
+                            VersionedInfoMetadata metadata) {
+  // Handle common entity information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info),
+                  metadata);
+}
+
 /// Process API notes for an Objective-C property.
 static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
                             const api_notes::ObjCPropertyInfo &Info,
@@ -457,6 +475,8 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     MD = AnyFunc.get<ObjCMethodDecl *>();
     D = MD;
   }
+
+  assert((FD || MD) && "Expecting Function or ObjCMethod");
 
   // Nullability of return type.
   if (Info.NullabilityAudited)
@@ -535,6 +555,13 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
                   Metadata);
 }
 
+/// Process API notes for a C++ method.
+static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
+                            const api_notes::CXXMethodInfo &Info,
+                            VersionedInfoMetadata Metadata) {
+  ProcessAPINotes(S, (FunctionOrMethod)Method, Info, Metadata);
+}
+
 /// Process API notes for a global function.
 static void ProcessAPINotes(Sema &S, FunctionDecl *D,
                             const api_notes::GlobalFunctionInfo &Info,
@@ -586,6 +613,15 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto ReleaseOp = Info.SwiftReleaseOp)
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+
+  if (auto ConformsTo = Info.SwiftConformance)
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
+
+  if (auto Copyable = Info.isSwiftCopyable()) {
+    if (!*Copyable)
+      D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));
+  }
 
   if (auto Extensibility = Info.EnumExtensibility) {
     using api_notes::EnumExtensibilityKind;
@@ -658,7 +694,7 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
 
 /// Process API notes for an Objective-C class or protocol.
 static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Handle common type information.
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info),
@@ -667,7 +703,7 @@ static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
 
 /// Process API notes for an Objective-C class.
 static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (auto AsNonGeneric = Info.getSwiftImportAsNonGeneric()) {
     handleAPINotedAttribute<SwiftImportAsNonGenericAttr>(
@@ -760,6 +796,64 @@ static void ProcessVersionedAPINotes(
   }
 }
 
+static std::optional<api_notes::Context>
+UnwindNamespaceContext(DeclContext *DC, api_notes::APINotesManager &APINotes) {
+  if (auto NamespaceContext = dyn_cast<NamespaceDecl>(DC)) {
+    for (auto Reader : APINotes.findAPINotes(NamespaceContext->getLocation())) {
+      // Retrieve the context ID for the parent namespace of the decl.
+      std::stack<NamespaceDecl *> NamespaceStack;
+      {
+        for (auto CurrentNamespace = NamespaceContext; CurrentNamespace;
+             CurrentNamespace =
+                 dyn_cast<NamespaceDecl>(CurrentNamespace->getParent())) {
+          if (!CurrentNamespace->isInlineNamespace())
+            NamespaceStack.push(CurrentNamespace);
+        }
+      }
+      std::optional<api_notes::ContextID> NamespaceID;
+      while (!NamespaceStack.empty()) {
+        auto CurrentNamespace = NamespaceStack.top();
+        NamespaceStack.pop();
+        NamespaceID =
+            Reader->lookupNamespaceID(CurrentNamespace->getName(), NamespaceID);
+        if (!NamespaceID)
+          return std::nullopt;
+      }
+      if (NamespaceID)
+        return api_notes::Context(*NamespaceID,
+                                  api_notes::ContextKind::Namespace);
+    }
+  }
+  return std::nullopt;
+}
+
+static std::optional<api_notes::Context>
+UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
+  assert(DC && "tag context must not be null");
+  for (auto Reader : APINotes.findAPINotes(DC->getLocation())) {
+    // Retrieve the context ID for the parent tag of the decl.
+    std::stack<TagDecl *> TagStack;
+    {
+      for (auto CurrentTag = DC; CurrentTag;
+           CurrentTag = dyn_cast<TagDecl>(CurrentTag->getParent()))
+        TagStack.push(CurrentTag);
+    }
+    assert(!TagStack.empty());
+    std::optional<api_notes::Context> Ctx =
+        UnwindNamespaceContext(TagStack.top()->getDeclContext(), APINotes);
+    while (!TagStack.empty()) {
+      auto CurrentTag = TagStack.top();
+      TagStack.pop();
+      auto CtxID = Reader->lookupTagID(CurrentTag->getName(), Ctx);
+      if (!CtxID)
+        return std::nullopt;
+      Ctx = api_notes::Context(*CtxID, api_notes::ContextKind::Tag);
+    }
+    return Ctx;
+  }
+  return std::nullopt;
+}
+
 /// Process API notes that are associated with this declaration, mapping them
 /// to attributes as appropriate.
 void Sema::ProcessAPINotes(Decl *D) {
@@ -771,35 +865,8 @@ void Sema::ProcessAPINotes(Decl *D) {
       D->getDeclContext()->isNamespace() ||
       D->getDeclContext()->isExternCContext() ||
       D->getDeclContext()->isExternCXXContext()) {
-    std::optional<api_notes::Context> APINotesContext;
-    if (auto NamespaceContext = dyn_cast<NamespaceDecl>(D->getDeclContext())) {
-      for (auto Reader :
-           APINotes.findAPINotes(NamespaceContext->getLocation())) {
-        // Retrieve the context ID for the parent namespace of the decl.
-        std::stack<NamespaceDecl *> NamespaceStack;
-        {
-          for (auto CurrentNamespace = NamespaceContext; CurrentNamespace;
-               CurrentNamespace =
-                   dyn_cast<NamespaceDecl>(CurrentNamespace->getParent())) {
-            if (!CurrentNamespace->isInlineNamespace())
-              NamespaceStack.push(CurrentNamespace);
-          }
-        }
-        std::optional<api_notes::ContextID> NamespaceID;
-        while (!NamespaceStack.empty()) {
-          auto CurrentNamespace = NamespaceStack.top();
-          NamespaceStack.pop();
-          NamespaceID = Reader->lookupNamespaceID(CurrentNamespace->getName(),
-                                                  NamespaceID);
-          if (!NamespaceID)
-            break;
-        }
-        if (NamespaceID)
-          APINotesContext = api_notes::Context(
-              *NamespaceID, api_notes::ContextKind::Namespace);
-      }
-    }
-
+    std::optional<api_notes::Context> APINotesContext =
+        UnwindNamespaceContext(D->getDeclContext(), APINotes);
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
@@ -846,7 +913,15 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Tags
     if (auto Tag = dyn_cast<TagDecl>(D)) {
-      std::string LookupName = Tag->getName().str();
+      // Determine the name of the entity to search for. If this is an
+      // anonymous tag that gets its linked name from a typedef, look for the
+      // typedef name. This allows tag-specific information to be added
+      // to the declaration.
+      std::string LookupName;
+      if (auto typedefName = Tag->getTypedefNameForAnonDecl())
+        LookupName = typedefName->getName().str();
+      else
+        LookupName = Tag->getName().str();
 
       // Use the source location to discern if this Tag is an OPTIONS macro.
       // For now we would like to limit this trick of looking up the APINote tag
@@ -871,6 +946,8 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
 
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        if (auto ParentTag = dyn_cast<TagDecl>(Tag->getDeclContext()))
+          APINotesContext = UnwindTagContext(ParentTag, APINotes);
         auto Info = Reader->lookupTag(LookupName, APINotesContext);
         ProcessVersionedAPINotes(*this, Tag, Info);
       }
@@ -983,6 +1060,43 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
 
       return;
+    }
+  }
+
+  if (auto TagContext = dyn_cast<TagDecl>(D->getDeclContext())) {
+    if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
+      if (!isa<CXXConstructorDecl>(CXXMethod) &&
+          !isa<CXXDestructorDecl>(CXXMethod) &&
+          !isa<CXXConversionDecl>(CXXMethod) &&
+          !CXXMethod->isOverloadedOperator()) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info =
+                Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
+            ProcessVersionedAPINotes(*this, CXXMethod, Info);
+          }
+        }
+      }
+    }
+
+    if (auto Field = dyn_cast<FieldDecl>(D)) {
+      if (!Field->isUnnamedBitField() && !Field->isAnonymousStructOrUnion()) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info = Reader->lookupField(Context->id, Field->getName());
+            ProcessVersionedAPINotes(*this, Field, Info);
+          }
+        }
+      }
+    }
+
+    if (auto Tag = dyn_cast<TagDecl>(D)) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+          auto Info = Reader->lookupTag(Tag->getName(), Context);
+          ProcessVersionedAPINotes(*this, Tag, Info);
+        }
+      }
     }
   }
 }

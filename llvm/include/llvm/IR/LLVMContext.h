@@ -130,6 +130,10 @@ public:
   /// scope names are ordered by increasing synchronization scope IDs.
   void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
 
+  /// getSyncScopeName - Returns the name of a SyncScope::ID
+  /// registered with LLVMContext, if any.
+  std::optional<StringRef> getSyncScopeName(SyncScope::ID Id) const;
+
   /// Define the GC for a function
   void setGC(const Function &Fn, std::string GCName);
 
@@ -154,6 +158,10 @@ public:
   bool isODRUniquingDebugTypes() const;
   void enableDebugTypeODRUniquing();
   void disableDebugTypeODRUniquing();
+
+  /// generateMachineFunctionNum - Get a unique number for MachineFunction
+  /// that associated with the given Function.
+  unsigned generateMachineFunctionNum(Function &);
 
   /// Defines the type of a yield callback.
   /// \see LLVMContext::setYieldCallback.
@@ -312,16 +320,21 @@ public:
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate&);
 
-  /// Set whether opaque pointers are enabled. The method may be called multiple
-  /// times, but only with the same value. Note that creating a pointer type or
-  /// otherwise querying the opaque pointer mode performs an implicit set to
-  /// the default value.
-  [[deprecated("Opaque pointers are always enabled")]]
-  void setOpaquePointers(bool Enable) const;
+  /// Get or set the current "default" target CPU (target-cpu function
+  /// attribute). The intent is that compiler frontends will set this to a value
+  /// that reflects the attribute that a function would get "by default" without
+  /// any specific function attributes, and compiler passes will attach the
+  /// attribute to newly created functions that are not associated with a
+  /// particular function, such as global initializers.
+  /// Function::createWithDefaultAttr() will create functions with this
+  /// attribute. This function should only be called by passes that run at
+  /// compile time and not by the backend or LTO passes.
+  StringRef getDefaultTargetCPU();
+  void setDefaultTargetCPU(StringRef CPU);
 
-  /// Whether typed pointers are supported. If false, all pointers are opaque.
-  [[deprecated("Always returns false")]]
-  bool supportsTypedPointers() const;
+  /// Similar to {get,set}DefaultTargetCPU() but for default target-features.
+  StringRef getDefaultTargetFeatures();
+  void setDefaultTargetFeatures(StringRef Features);
 
 private:
   // Module needs access to the add/removeModule methods.
@@ -332,7 +345,7 @@ private:
   void addModule(Module*);
 
   /// removeModule - Unregister a module from this context.
-  void removeModule(Module*);
+  void removeModule(Module *);
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

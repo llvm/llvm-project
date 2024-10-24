@@ -36,6 +36,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 namespace clang {
   class ASTContext;
@@ -268,7 +269,7 @@ public:
 
   enum TSC {
     TSC_unspecified,
-    TSC_imaginary,
+    TSC_imaginary, // Unsupported
     TSC_complex
   };
 
@@ -321,6 +322,9 @@ public:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
@@ -874,7 +878,7 @@ public:
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
-  /// things like "_Imaginary" (lacking an FP type).  After calling this method,
+  /// things like "_Complex" (lacking an FP type).  After calling this method,
   /// DeclSpec is guaranteed self-consistent, even if an error occurred.
   void Finish(Sema &S, const PrintingPolicy &Policy);
 
@@ -1049,7 +1053,7 @@ public:
   union {
     /// When Kind == IK_Identifier, the parsed identifier, or when
     /// Kind == IK_UserLiteralId, the identifier suffix.
-    IdentifierInfo *Identifier;
+    const IdentifierInfo *Identifier;
 
     /// When Kind == IK_OperatorFunctionId, the overloaded operator
     /// that we parsed.
@@ -1111,7 +1115,7 @@ public:
   /// \param IdLoc the location of the parsed identifier.
   void setIdentifier(const IdentifierInfo *Id, SourceLocation IdLoc) {
     Kind = UnqualifiedIdKind::IK_Identifier;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = EndLocation = IdLoc;
   }
 
@@ -1154,9 +1158,9 @@ public:
   ///
   /// \param IdLoc the location of the identifier.
   void setLiteralOperatorId(const IdentifierInfo *Id, SourceLocation OpLoc,
-                              SourceLocation IdLoc) {
+                            SourceLocation IdLoc) {
     Kind = UnqualifiedIdKind::IK_LiteralOperatorId;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = OpLoc;
     EndLocation = IdLoc;
   }
@@ -1225,7 +1229,7 @@ public:
   /// \param Id the identifier.
   void setImplicitSelfParam(const IdentifierInfo *Id) {
     Kind = UnqualifiedIdKind::IK_ImplicitSelfParam;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = EndLocation = SourceLocation();
   }
 
@@ -1327,7 +1331,7 @@ struct DeclaratorChunk {
   /// Parameter type lists will have type info (if the actions module provides
   /// it), but may have null identifier info: e.g. for 'void foo(int X, int)'.
   struct ParamInfo {
-    IdentifierInfo *Ident;
+    const IdentifierInfo *Ident;
     SourceLocation IdentLoc;
     Decl *Param;
 
@@ -1339,11 +1343,10 @@ struct DeclaratorChunk {
     std::unique_ptr<CachedTokens> DefaultArgTokens;
 
     ParamInfo() = default;
-    ParamInfo(IdentifierInfo *ident, SourceLocation iloc,
-              Decl *param,
+    ParamInfo(const IdentifierInfo *ident, SourceLocation iloc, Decl *param,
               std::unique_ptr<CachedTokens> DefArgTokens = nullptr)
-      : Ident(ident), IdentLoc(iloc), Param(param),
-        DefaultArgTokens(std::move(DefArgTokens)) {}
+        : Ident(ident), IdentLoc(iloc), Param(param),
+          DefaultArgTokens(std::move(DefArgTokens)) {}
   };
 
   struct TypeAndRange {
@@ -1791,6 +1794,7 @@ public:
   struct Binding {
     IdentifierInfo *Name;
     SourceLocation NameLoc;
+    std::optional<ParsedAttributes> Attrs;
   };
 
 private:
@@ -1810,15 +1814,15 @@ public:
       : Bindings(nullptr), NumBindings(0), DeleteBindings(false) {}
   DecompositionDeclarator(const DecompositionDeclarator &G) = delete;
   DecompositionDeclarator &operator=(const DecompositionDeclarator &G) = delete;
-  ~DecompositionDeclarator() {
-    if (DeleteBindings)
-      delete[] Bindings;
-  }
+  ~DecompositionDeclarator() { clear(); }
 
   void clear() {
     LSquareLoc = RSquareLoc = SourceLocation();
     if (DeleteBindings)
       delete[] Bindings;
+    else
+      llvm::for_each(llvm::MutableArrayRef(Bindings, NumBindings),
+                     [](Binding &B) { B.Attrs.reset(); });
     Bindings = nullptr;
     NumBindings = 0;
     DeleteBindings = false;
@@ -2326,7 +2330,7 @@ public:
     return BindingGroup.isSet();
   }
 
-  IdentifierInfo *getIdentifier() const {
+  const IdentifierInfo *getIdentifier() const {
     if (Name.getKind() == UnqualifiedIdKind::IK_Identifier)
       return Name.Identifier;
 
@@ -2335,15 +2339,15 @@ public:
   SourceLocation getIdentifierLoc() const { return Name.StartLocation; }
 
   /// Set the name of this declarator to be the given identifier.
-  void SetIdentifier(IdentifierInfo *Id, SourceLocation IdLoc) {
+  void SetIdentifier(const IdentifierInfo *Id, SourceLocation IdLoc) {
     Name.setIdentifier(Id, IdLoc);
   }
 
   /// Set the decomposition bindings for this declarator.
-  void
-  setDecompositionBindings(SourceLocation LSquareLoc,
-                           ArrayRef<DecompositionDeclarator::Binding> Bindings,
-                           SourceLocation RSquareLoc);
+  void setDecompositionBindings(
+      SourceLocation LSquareLoc,
+      MutableArrayRef<DecompositionDeclarator::Binding> Bindings,
+      SourceLocation RSquareLoc);
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
   /// EndLoc, which should be the last token of the chunk.

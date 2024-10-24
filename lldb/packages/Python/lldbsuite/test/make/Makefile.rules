@@ -13,6 +13,13 @@
 # the building of the a.out executable program.  For example,
 # DYLIB_ONLY := YES
 #
+# When specifying one of the DYLIB_*_SOURCES variables, DYLIB_NAME
+# controls the (platform-dependent) name of the produced dylib. E.g.,
+# on Darwin, if "DYLIB_NAME := foo", the generated dylib will be called
+# "libfoo.dylib".
+#
+# DYLIB_NAME := foo
+#
 # Specifying FRAMEWORK and its variants has the effect of building a NeXT-style
 # framework.
 # FRAMEWORK := "Foo"
@@ -47,28 +54,6 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 .DEFAULT_GOAL := all
 
 #----------------------------------------------------------------------
-# If OS is not defined, use 'uname -s' to determine the OS name.
-#
-# GNUWin32 uname gives "windows32" or "server version windows32" while
-# some versions of MSYS uname return "MSYS_NT*", but most environments
-# standardize on "Windows_NT", so we'll make it consistent here. 
-# When running tests from Visual Studio, the environment variable isn't
-# inherited all the way down to the process spawned for make.
-#----------------------------------------------------------------------
-HOST_OS := $(shell uname -s)
-ifneq (,$(findstring windows32,$(HOST_OS)))
-	HOST_OS := Windows_NT
-endif
-
-ifneq (,$(findstring MSYS_NT,$(HOST_OS)))
-	HOST_OS := Windows_NT
-endif
-
-ifeq "$(OS)" ""
-	OS := $(HOST_OS)
-endif
-
-#----------------------------------------------------------------------
 # If OS is Windows, force SHELL to be cmd
 #
 # Some versions of make on Windows will search for other shells such as
@@ -77,8 +62,10 @@ endif
 # Also reset BUILDDIR value because "pwd" returns cygwin or msys path
 # which needs to be converted to windows path.
 #----------------------------------------------------------------------
-ifeq "$(OS)" "Windows_NT"
-	SHELL = $(WINDIR)\system32\cmd.exe
+ifeq "$(HOST_OS)" "Windows_NT"
+	# MinGW make gets $(windir) variable if launched from cmd.exe
+	# and $(WINDIR) if launched from MSYS2.
+	SHELL := $(or $(windir),$(WINDIR),C:\WINDOWS)\system32\cmd.exe
 	BUILDDIR := $(shell echo %cd%)
 endif
 
@@ -122,23 +109,42 @@ endif
 # If you change the defaults of CC, be sure to also change it in the file
 # test/builders/builder_base.py, which provides a Python way to return the
 # value of the make variable CC -- getCompiler().
-#
-# See also these functions:
-#   o cxx_compiler
-#   o cxx_linker
 #----------------------------------------------------------------------
 ifeq "$(CC)" ""
 $(error "C compiler is not specified. Please run tests through lldb-dotest or lit")
 endif
 
+# Always override the linker. Assign already normalized CC.
+override LD := $(CC)
+# A kind of linker. It always gets retrieved from CC.
+override LDC := $(CC_TYPE)
+
+ifeq "$(HOST_OS)" "Windows_NT"
+       # This function enframes the full path with the platform specific quotes. This is necessary to run the c++ executable
+       # properly under 'sh' on Windows host (prevent the path breakage because of Windows style path separators).
+       override CXX := $(QUOTE)$(CXX)$(QUOTE)
+endif
+
 #----------------------------------------------------------------------
-# Handle SDKROOT on Darwin
+# Handle SDKROOT for the cross platform builds.
 #----------------------------------------------------------------------
 
 ifeq "$(OS)" "Darwin"
     ifeq "$(SDKROOT)" ""
 	# We haven't otherwise set the SDKROOT, so set it now to macosx
 	SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+    endif
+    SYSROOT_FLAGS := -isysroot "$(SDKROOT)"
+    GCC_TOOLCHAIN_FLAGS :=
+else
+    ifneq "$(SDKROOT)" ""
+        SYSROOT_FLAGS := --sysroot "$(SDKROOT)"
+        GCC_TOOLCHAIN_FLAGS := --gcc-toolchain="$(SDKROOT)/usr"
+    else
+        # Do not set up these options if SDKROOT was not specified.
+        # This is a regular build in that case (or Android).
+        SYSROOT_FLAGS :=
+        GCC_TOOLCHAIN_FLAGS :=
     endif
 endif
 
@@ -155,10 +161,8 @@ ifeq "$(OS)" "Darwin"
 	DS := $(DSYMUTIL)
 	DSFLAGS := $(DSFLAGS_EXTRAS)
 	DSYM = $(EXE).dSYM
-	AR := $(CROSS_COMPILE)libtool
 	ARFLAGS := -static -o
 else
-	AR := $(CROSS_COMPILE)ar
 	# On non-Apple platforms, -arch becomes -m
 	ARCHFLAG := -m
 
@@ -210,12 +214,18 @@ else
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 		DSYM = $(EXE).debug
 	endif
+
+	ifeq "$(MAKE_DWP)" "YES"
+		MAKE_DWO := YES
+		DWP_NAME = $(EXE).dwp
+		DYLIB_DWP_NAME = $(DYLIB_NAME).dwp
+	endif
 endif
 
 LIMIT_DEBUG_INFO_FLAGS =
 NO_LIMIT_DEBUG_INFO_FLAGS =
 MODULE_DEBUG_INFO_FLAGS =
-ifneq (,$(findstring clang,$(CC)))
+ifeq ($(CC_TYPE), clang)
    LIMIT_DEBUG_INFO_FLAGS += -flimit-debug-info
    NO_LIMIT_DEBUG_INFO_FLAGS += -fno-limit-debug-info
    MODULE_DEBUG_INFO_FLAGS += -gmodules
@@ -230,19 +240,15 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
+CFLAGS += $(SYSROOT_FLAGS)
 
 ifeq "$(OS)" "Darwin"
-	ifneq "$(SDKROOT)" ""
-		CFLAGS += -isysroot "$(SDKROOT)"
-	endif
-endif
-
-ifeq "$(OS)" "Darwin"
-	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
+	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES)
 else
-	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
+	CFLAGS += $(ARCHFLAG)$(ARCH)
 endif
 
+CFLAGS += -I$(LLDB_BASE_DIR)/include -I$(LLDB_OBJ_ROOT)/include
 CFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
 
 ifndef NO_TEST_COMMON_H
@@ -253,9 +259,9 @@ CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) -isysroot "$(SDKROOT)"
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) $(SYSROOT_FLAGS)
 else
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) $(SYSROOT_FLAGS)
 endif
 
 ifeq "$(MAKE_DWO)" "YES"
@@ -285,8 +291,9 @@ endif
 
 CFLAGS += $(CFLAGS_EXTRAS)
 CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
-LD = $(CC)
-LDFLAGS ?= $(CFLAGS)
+# Copy common options to the linker flags (dwarf, arch. & etc).
+# Note: we get some 'garbage' options for linker here (such as -I, --isystem & etc).
+LDFLAGS += $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
 ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
@@ -316,50 +323,6 @@ ifneq "$(DYLIB_NAME)" ""
 	endif
 endif
 
-# Function that returns the counterpart C++ compiler, given $(CC) as arg.
-cxx_compiler_notdir = $(if $(findstring icc,$(1)), \
-			$(subst icc,icpc,$(1)), \
-			$(if $(findstring llvm-gcc,$(1)), \
-				$(subst llvm-gcc,llvm-g++,$(1)), \
-				$(if $(findstring gcc,$(1)), \
-					$(subst gcc,g++,$(1)), \
-					$(subst cc,c++,$(1)))))
-cxx_compiler = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_compiler_notdir,$(notdir $(1)))),$(call cxx_compiler_notdir,$(1)))
-
-# Function that returns the C++ linker, given $(CC) as arg.
-cxx_linker_notdir = $(if $(findstring icc,$(1)), \
-			$(subst icc,icpc,$(1)), \
-			$(if $(findstring llvm-gcc,$(1)), \
-				$(subst llvm-gcc,llvm-g++,$(1)), \
-				$(if $(findstring gcc,$(1)), \
-					$(subst gcc,g++,$(1)), \
-					$(subst cc,c++,$(1)))))
-cxx_linker = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_linker_notdir,$(notdir $(1)))),$(call cxx_linker_notdir,$(1)))
-
-ifneq "$(OS)" "Darwin"
-	CLANG_OR_GCC := $(strip $(if $(findstring clang,$(CC)), \
-				$(findstring clang,$(CC)), \
-				$(if $(findstring gcc,$(CC)), \
-					$(findstring gcc,$(CC)), \
-					cc)))
-
-	CC_LASTWORD := $(strip $(lastword $(subst -, ,$(CC))))
-
-	replace_with = $(strip $(if $(findstring $(3),$(CC_LASTWORD)), \
-			$(subst $(3),$(1),$(2)), \
-			$(subst $(3),$(1),$(subst -$(CC_LASTWORD),,$(2)))))
-
-	ifeq "$(notdir $(CC))" "$(CC)"
-		replace_cc_with = $(call replace_with,$(1),$(CC),$(CLANG_OR_GCC))
-	else
-		replace_cc_with = $(join $(dir $(CC)),$(call replace_with,$(1),$(notdir $(CC)),$(CLANG_OR_GCC)))
-	endif
-
-	OBJCOPY ?= $(call replace_cc_with,objcopy)
-	ARCHIVER ?= $(call replace_cc_with,ar)
-	override AR = $(ARCHIVER)
-endif
-
 ifdef PIE
 	LDFLAGS += -pie
 endif
@@ -368,7 +331,7 @@ endif
 # Windows specific options
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Windows_NT"
-	ifneq (,$(findstring clang,$(CC)))
+	ifeq ($(CC_TYPE), clang)
 		# Clang for Windows doesn't support C++ Exceptions
 		CXXFLAGS += -fno-exceptions
 		CXXFLAGS += -D_HAS_EXCEPTIONS=0
@@ -397,11 +360,26 @@ ifeq (1, $(USE_SYSTEM_STDLIB))
 	endif
 endif
 
+ifeq (,$(filter 1, $(USE_LIBSTDCPP) $(USE_LIBCPP) $(USE_SYSTEM_STDLIB)))
+  # If no explicit C++ library request was made, but we have paths to a custom libcxx, use
+  # them.  Otherwise, use the system library by default.
+  ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
+    CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
+    ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
+      CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
+    endif
+    LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+  else
+    USE_SYSTEM_STDLIB := 1
+  endif
+endif
+
 ifeq (1,$(USE_LIBSTDCPP))
 	# Clang requires an extra flag: -stdlib=libstdc++
-	ifneq (,$(findstring clang,$(CC)))
-		CXXFLAGS += -stdlib=libstdc++
-		LDFLAGS += -stdlib=libstdc++
+	ifeq ($(CC_TYPE), clang)
+		# Force clang looking for the gcc's headers at specific rootfs folder.
+		CXXFLAGS += -stdlib=libstdc++ $(GCC_TOOLCHAIN_FLAGS)
+		LDFLAGS += -stdlib=libstdc++ $(GCC_TOOLCHAIN_FLAGS)
 	endif
 endif
 
@@ -435,19 +413,13 @@ ifeq (1, $(USE_SYSTEM_STDLIB))
         endif
         CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(SDKROOT)/usr/include/c++/v1
         LDFLAGS += -L$(SDKROOT)/usr/lib -Wl,-rpath,$(SDKROOT)/usr/lib -lc++
+    else
+        ifeq ($(CC_TYPE),clang)
+            # Force clang looking for the gcc's headers at specific rootfs folder.
+            CXXFLAGS += $(GCC_TOOLCHAIN_FLAGS)
+            LDFLAGS += $(GCC_TOOLCHAIN_FLAGS)
+        endif
     endif
-endif
-
-# If no explicit request was made, but we have paths to a custom libcxx, use
-# them.
-ifeq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP), $(USE_SYSTEM_STDLIB)),)
-	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
-		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
-		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
-				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
-		endif
-		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
-	endif
 endif
 
 #----------------------------------------------------------------------
@@ -469,8 +441,6 @@ DYLIB_OBJECTS +=$(strip $(DYLIB_C_SOURCES:.c=.o))
 DYLIB_OBJECTS +=$(strip $(DYLIB_OBJC_SOURCES:.m=.o))
 ifneq "$(strip $(DYLIB_CXX_SOURCES))" ""
 	DYLIB_OBJECTS +=$(strip $(patsubst %.mm, %.o, $(DYLIB_CXX_SOURCES:.cpp=.o)))
-	CXX = $(call cxx_compiler,$(CC))
-	LD = $(call cxx_linker,$(CC))
 endif
 
 #----------------------------------------------------------------------
@@ -493,8 +463,6 @@ endif
 #----------------------------------------------------------------------
 ifneq "$(strip $(CXX_SOURCES))" ""
 	OBJECTS +=$(strip $(CXX_SOURCES:.cpp=.o))
-	CXX = $(call cxx_compiler,$(CC))
-	LD = $(call cxx_linker,$(CC))
 endif
 
 #----------------------------------------------------------------------
@@ -510,21 +478,24 @@ endif
 #----------------------------------------------------------------------
 ifneq "$(strip $(OBJCXX_SOURCES))" ""
 	OBJECTS +=$(strip $(OBJCXX_SOURCES:.mm=.o))
-	CXX = $(call cxx_compiler,$(CC))
-	LD = $(call cxx_linker,$(CC))
 	ifeq "$(findstring lobjc,$(LDFLAGS))" ""
 		LDFLAGS +=-lobjc
 	endif
 endif
 
-ifeq ($(findstring clang, $(CXX)), clang)
+ifeq ($(CC_TYPE), clang)
 	CXXFLAGS += --driver-mode=g++
 endif
 
 ifneq "$(CXX)" ""
-	ifeq ($(findstring clang, $(LD)), clang)
+	# Specify the driver mode parameter if we use clang as the linker.
+	ifeq ($(LDC), clang)
 		LDFLAGS += --driver-mode=g++
 	endif
+endif
+
+ifeq "$(GEN_GNU_BUILD_ID)" "YES"
+	LDFLAGS += -Wl,--build-id
 endif
 
 #----------------------------------------------------------------------
@@ -565,10 +536,17 @@ else
 endif
 else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
+ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
+	cp "$(EXE)" "$(EXE).unstripped"
+endif
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
 endif
+ifeq "$(MAKE_DWP)" "YES"
+	$(DWP) -o "$(DWP_NAME)" $(DWOS)
 endif
+endif
+
 
 #----------------------------------------------------------------------
 # Make the dylib
@@ -610,8 +588,14 @@ endif
 else
 	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -shared -o "$(DYLIB_FILENAME)"
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
+ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
+	cp "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).unstripped"
+endif
 	$(OBJCOPY) --only-keep-debug "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).debug"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DYLIB_FILENAME).debug" "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME)"
+endif
+ifeq "$(MAKE_DWP)" "YES"
+	$(DWP) -o $(DYLIB_DWP_FILE) $(DYLIB_DWOS)
 endif
 endif
 

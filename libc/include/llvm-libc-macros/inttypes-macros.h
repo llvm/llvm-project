@@ -9,11 +9,9 @@
 #define LLVM_LIBC_MACROS_INTTYPES_MACROS_H
 
 // fprintf/scanf format macros.
-// POSIX.1-2008, Technical Corrigendum 1, XBD/TC1-2008/0050 [211] is applied.
+#define __STDC_VERSION_INTTYPES_H__ 202311L
 
 // clang provides these macros, so we don't need to define them.
-// TODO: ISO C23 will provide binary notations.
-
 #ifndef __clang__
 #if __UINTPTR_MAX__ == __UINT64_MAX__
 #define __PRI64 "l"
@@ -117,6 +115,94 @@
 #define __UINTPTR_FMTX__ __PRIPTR "X"
 #endif
 
+// only recent clang provides these macros, so we need to check if they are
+// available.
+#ifndef __UINT8_FMTb__
+#define __UINT8_FMTb__ "hhb"
+#endif
+#ifndef __UINT16_FMTb__
+#define __UINT16_FMTb__ "hb"
+#endif
+#ifndef __UINT32_FMTb__
+#define __UINT32_FMTb__ "b"
+#endif
+#ifndef __UINT64_FMTb__
+#define __UINT64_FMTb__ __PRI64 "b"
+#endif
+#ifndef __UINT_LEAST8_FMTb__
+#define __UINT_LEAST8_FMTb__ "hhb"
+#endif
+#ifndef __UINT_LEAST16_FMTb__
+#define __UINT_LEAST16_FMTb__ "hb"
+#endif
+#ifndef __UINT_LEAST32_FMTb__
+#define __UINT_LEAST32_FMTb__ "b"
+#endif
+#ifndef __UINT_LEAST64_FMTb__
+#define __UINT_LEAST64_FMTb__ __PRI64 "b"
+#endif
+#ifndef __UINT_FAST8_FMTb__
+#define __UINT_FAST8_FMTb__ "hhb"
+#endif
+#ifndef __UINT_FAST16_FMTb__
+#define __UINT_FAST16_FMTb__ "hb"
+#endif
+#ifndef __UINT_FAST32_FMTb__
+#define __UINT_FAST32_FMTb__ "b"
+#endif
+#ifndef __UINT_FAST64_FMTb__
+#define __UINT_FAST64_FMTb__ __PRI64 "b"
+#endif
+#ifndef __UINTMAX_FMTb__
+#define __UINTMAX_FMTb__ __PRI64 "b"
+#endif
+#ifndef __UINTPTR_FMTb__
+#define __UINTPTR_FMTb__ __PRIPTR "b"
+#endif
+
+#ifndef __UINT8_FMTB__
+#define __UINT8_FMTB__ "hhB"
+#endif
+#ifndef __UINT16_FMTB__
+#define __UINT16_FMTB__ "hB"
+#endif
+#ifndef __UINT32_FMTB__
+#define __UINT32_FMTB__ "B"
+#endif
+#ifndef __UINT64_FMTB__
+#define __UINT64_FMTB__ __PRI64 "B"
+#endif
+#ifndef __UINT_LEAST8_FMTB__
+#define __UINT_LEAST8_FMTB__ "hhB"
+#endif
+#ifndef __UINT_LEAST16_FMTB__
+#define __UINT_LEAST16_FMTB__ "hB"
+#endif
+#ifndef __UINT_LEAST32_FMTB__
+#define __UINT_LEAST32_FMTB__ "B"
+#endif
+#ifndef __UINT_LEAST64_FMTB__
+#define __UINT_LEAST64_FMTB__ __PRI64 "B"
+#endif
+#ifndef __UINT_FAST8_FMTB__
+#define __UINT_FAST8_FMTB__ "hhB"
+#endif
+#ifndef __UINT_FAST16_FMTB__
+#define __UINT_FAST16_FMTB__ "hB"
+#endif
+#ifndef __UINT_FAST32_FMTB__
+#define __UINT_FAST32_FMTB__ "B"
+#endif
+#ifndef __UINT_FAST64_FMTB__
+#define __UINT_FAST64_FMTB__ __PRI64 "B"
+#endif
+#ifndef __UINTMAX_FMTB__
+#define __UINTMAX_FMTB__ __PRI64 "B"
+#endif
+#ifndef __UINTPTR_FMTB__
+#define __UINTPTR_FMTB__ __PRIPTR "B"
+#endif
+
 // The fprintf() macros for signed integers.
 #define PRId8 __INT8_FMTd__
 #define PRId16 __INT16_FMTd__
@@ -209,6 +295,36 @@
 #define PRIXMAX __UINTMAX_FMTX__
 #define PRIXPTR __UINTPTR_FMTX__
 
+#define PRIb8 __UINT8_FMTb__
+#define PRIb16 __UINT16_FMTb__
+#define PRIb32 __UINT32_FMTb__
+#define PRIb64 __UINT64_FMTb__
+#define PRIbLEAST8 __UINT_LEAST8_FMTb__
+#define PRIbLEAST16 __UINT_LEAST16_FMTb__
+#define PRIbLEAST32 __UINT_LEAST32_FMTb__
+#define PRIbLEAST64 __UINT_LEAST64_FMTb__
+#define PRIbFAST8 __UINT_FAST8_FMTb__
+#define PRIbFAST16 __UINT_FAST16_FMTb__
+#define PRIbFAST32 __UINT_FAST32_FMTb__
+#define PRIbFAST64 __UINT_FAST64_FMTb__
+#define PRIbMAX __UINTMAX_FMTb__
+#define PRIbPTR __UINTPTR_FMTb__
+
+#define PRIB8 __UINT8_FMTB__
+#define PRIB16 __UINT16_FMTB__
+#define PRIB32 __UINT32_FMTB__
+#define PRIB64 __UINT64_FMTB__
+#define PRIBLEAST8 __UINT_LEAST8_FMTB__
+#define PRIBLEAST16 __UINT_LEAST16_FMTB__
+#define PRIBLEAST32 __UINT_LEAST32_FMTB__
+#define PRIBLEAST64 __UINT_LEAST64_FMTB__
+#define PRIBFAST8 __UINT_FAST8_FMTB__
+#define PRIBFAST16 __UINT_FAST16_FMTB__
+#define PRIBFAST32 __UINT_FAST32_FMTB__
+#define PRIBFAST64 __UINT_FAST64_FMTB__
+#define PRIBMAX __UINTMAX_FMTB__
+#define PRIBPTR __UINTPTR_FMTB__
+
 // The fscanf() macros for signed integers.
 #define SCNd8 __INT8_FMTd__
 #define SCNd16 __INT16_FMTd__
@@ -285,5 +401,20 @@
 #define SCNxFAST64 __UINT_FAST64_FMTx__
 #define SCNxMAX __UINTMAX_FMTx__
 #define SCNxPTR __UINTPTR_FMTx__
+
+#define SCNb8 __UINT8_FMTb__
+#define SCNb16 __UINT16_FMTb__
+#define SCNb32 __UINT32_FMTb__
+#define SCNb64 __UINT64_FMTb__
+#define SCNbLEAST8 __UINT_LEAST8_FMTb__
+#define SCNbLEAST16 __UINT_LEAST16_FMTb__
+#define SCNbLEAST32 __UINT_LEAST32_FMTb__
+#define SCNbLEAST64 __UINT_LEAST64_FMTb__
+#define SCNbFAST8 __UINT_FAST8_FMTb__
+#define SCNbFAST16 __UINT_FAST16_FMTb__
+#define SCNbFAST32 __UINT_FAST32_FMTb__
+#define SCNbFAST64 __UINT_FAST64_FMTb__
+#define SCNbMAX __UINTMAX_FMTb__
+#define SCNbPTR __UINTPTR_FMTb__
 
 #endif // LLVM_LIBC_MACROS_INTTYPES_MACROS_H

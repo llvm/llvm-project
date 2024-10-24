@@ -3,14 +3,18 @@
 
 target triple = "dxil-pc-shadermodel6.7-library"
 
-; CHECK: ; Shader Flags Value: 0x00000001
+; CHECK: ; Shader Flags Value: 0x00000004
 ; CHECK: ; Note: shader requires additional functionality:
 ; CHECK-NEXT: ;       Double-precision floating point
+; CHECK-NEXT: ; Note: extra DXIL module flags:
 ; CHECK-NEXT: {{^;$}}
-define double @add(double %a, double %b) {
+
+define double @add(double %a, double %b) #0 {
   %sum = fadd double %a, %b
   ret double %sum
 }
+
+attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 
 ; DXC: - Name:            SFI0
 ; DXC-NEXT:     Size:            8

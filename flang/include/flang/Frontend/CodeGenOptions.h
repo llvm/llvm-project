@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
-#define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
+#ifndef FORTRAN_FRONTEND_CODEGENOPTIONS_H
+#define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -56,8 +56,15 @@ public:
   /// are offloading binaries containing device images and metadata.
   std::vector<std::string> OffloadObjects;
 
+  /// List of filenames passed in using the -mlink-builtin-bitcode. These
+  /// are bc libraries that should be linked in and internalized;
+  std::vector<std::string> BuiltinBCLibs;
+
   /// The directory where temp files are stored if specified by -save-temps
   std::optional<std::string> SaveTempsDir;
+
+  /// The string containing the commandline for the llvm.commandline metadata.
+  std::optional<std::string> RecordCommandLine;
 
   /// The name of the file to which the backend should save YAML optimization
   /// records.
@@ -87,7 +94,7 @@ public:
 
   /// \brief Code object version for AMDGPU.
   llvm::CodeObjectVersionKind CodeObjectVersion =
-      llvm::CodeObjectVersionKind::COV_4;
+      llvm::CodeObjectVersionKind::COV_5;
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
@@ -129,6 +136,13 @@ public:
   /// transformation.
   OptRemark OptimizationRemarkAnalysis;
 
+  /// The code model to use (-mcmodel).
+  std::string CodeModel;
+
+  /// The code model-specific large data threshold to use
+  /// (-mlarge-data-threshold).
+  uint64_t LargeDataThreshold;
+
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \
@@ -139,6 +153,8 @@ public:
   CodeGenOptions();
 };
 
+std::optional<llvm::CodeModel::Model> getCodeModel(llvm::StringRef string);
+
 } // end namespace Fortran::frontend
 
-#endif
+#endif // FORTRAN_FRONTEND_CODEGENOPTIONS_H

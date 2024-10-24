@@ -1,6 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -analyzer-output text \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream -analyzer-output text \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
 
 #include "Inputs/system-header-simulator.h"
@@ -226,10 +228,48 @@ void check_indeterminate_fseek(void) {
     return;
   int Ret = fseek(F, 1, SEEK_SET);  // expected-note {{Assuming this stream operation fails}}
   if (Ret) {                        // expected-note {{Taking true branch}} \
-                                    // expected-note {{'Ret' is not equal to 0}}
+                                    // expected-note {{'Ret' is -1}}
     char Buf[2];
     fwrite(Buf, 1, 2, F);           // expected-warning {{might be 'indeterminate'}} \
                                     // expected-note {{might be 'indeterminate'}}
   }
   fclose(F);
+}
+
+void error_fseek_ftell(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)                 // expected-note {{Taking false branch}} \
+                          // expected-note {{'F' is non-null}}
+    return;
+  fseek(F, 0, SEEK_END);  // expected-note {{Assuming this stream operation fails}}
+  long size = ftell(F);   // expected-warning {{might be 'indeterminate'}} \
+                          // expected-note {{might be 'indeterminate'}}
+  if (size == -1) {
+    fclose(F);
+    return;
+  }
+  if (size == 1)
+    fprintf(F, "abcd");
+  fclose(F);
+}
+
+void error_fseek_read_eof(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)
+    return;
+  if (fseek(F, 22, SEEK_SET) == -1) {
+    fclose(F);
+    return;
+  }
+  fgetc(F); // no warning
+  fclose(F);
+}
+
+void check_note_at_use_after_close(void) {
+  FILE *F = tmpfile();
+  if (!F) // expected-note {{'F' is non-null}} expected-note {{Taking false branch}}
+    return;
+  fclose(F); // expected-note {{Stream is closed here}}
+  rewind(F); // expected-warning {{Use of a stream that might be already closed}}
+  // expected-note@-1 {{Use of a stream that might be already closed}}
 }

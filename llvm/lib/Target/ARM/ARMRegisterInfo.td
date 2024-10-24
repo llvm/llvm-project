@@ -200,9 +200,9 @@ def FPEXC   : ARMReg<8,  "fpexc">;
 def FPINST  : ARMReg<9,  "fpinst">;
 def FPINST2 : ARMReg<10, "fpinst2">;
 // These encodings aren't actual instruction encodings, their encoding depends
-// on the instruction they are used in and for VPR 32 was chosen such that it
+// on the instruction they are used in and for VPR 64 was chosen such that it
 // always comes last in spr_reglist_with_vpr.
-def VPR     : ARMReg<32, "vpr">;
+def VPR     : ARMReg<64, "vpr">;
 def FPSCR_NZCVQC
             : ARMReg<2, "fpscr_nzcvqc">;
 def P0      : ARMReg<13, "p0">;
@@ -372,6 +372,16 @@ def tcGPR : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3, R12)> {
       return MF.getSubtarget<ARMSubtarget>().isThumb1Only();
   }];
 }
+
+// Some pointer authentication instructions require the use of R12. When return
+// address signing is enabled, authentication of the caller's return address
+// must be performed before a tail call is made. Therefore, indirect tail call
+// jump cannot be from R12.
+// FIXME: All PACBTI instruction currently implemented in the compiler
+// implicitly use R12. When instructions that allow PAC to be placed in a
+// specific register are implemented the restriction needs to be updated to
+// make sure that PACBTI signature and indirect tail call both use a different register.
+def tcGPRnotr12 : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3)>;
 
 def tGPROdd : RegisterClass<"ARM", [i32], 32, (add R1, R3, R5, R7, R9, R11)> {
   let AltOrders = [(and tGPROdd, tGPR)];

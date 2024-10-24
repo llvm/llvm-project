@@ -145,6 +145,9 @@ int main(int argc, const char **argv) {
                          cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<bool> Verbose("verbose", cl::desc("Print debug information.\n"),
                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<int> CompressionLevel(
+      "compression-level", cl::desc("Specify the compression level (integer)"),
+      cl::value_desc("n"), cl::Optional, cl::cat(ClangOffloadBundlerCategory));
 
   // Process commandline options and report errors
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -178,6 +181,8 @@ int main(int argc, const char **argv) {
     BundlerConfig.Compress = Compress;
   if (Verbose.getNumOccurrences() > 0)
     BundlerConfig.Verbose = Verbose;
+  if (CompressionLevel.getNumOccurrences() > 0)
+    BundlerConfig.CompressionLevel = CompressionLevel;
 
   BundlerConfig.TargetNames = TargetNames;
   BundlerConfig.InputFileNames = InputFileNames;
@@ -344,11 +349,10 @@ int main(int argc, const char **argv) {
   // Standardize target names to include env field
   std::vector<std::string> StandardizedTargetNames;
   for (StringRef Target : TargetNames) {
-    if (ParsedTargets.contains(Target)) {
+    if (!ParsedTargets.insert(Target).second) {
       reportError(createStringError(errc::invalid_argument,
                                     "Duplicate targets are not allowed"));
     }
-    ParsedTargets.insert(Target);
 
     auto OffloadInfo = OffloadTargetInfo(Target, BundlerConfig);
     bool KindIsValid = OffloadInfo.isOffloadKindValid();

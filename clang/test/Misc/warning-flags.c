@@ -18,15 +18,13 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (67):
+CHECK: Warnings without flags (62):
 
 CHECK-NEXT:   ext_expected_semi_decl_list
-CHECK-NEXT:   ext_explicit_specialization_storage_class
 CHECK-NEXT:   ext_missing_whitespace_after_macro_name
 CHECK-NEXT:   ext_new_paren_array_nonconst
 CHECK-NEXT:   ext_plain_complex
 CHECK-NEXT:   ext_template_arg_extra_parens
-CHECK-NEXT:   ext_template_spec_extra_headers
 CHECK-NEXT:   ext_typecheck_cond_incompatible_operands
 CHECK-NEXT:   ext_typecheck_ordered_comparison_of_pointer_integer
 CHECK-NEXT:   ext_using_undefined_std
@@ -48,7 +46,6 @@ CHECK-NEXT:   warn_drv_amdgpu_cov6
 CHECK-NEXT:   warn_drv_assuming_mfloat_abi_is
 CHECK-NEXT:   warn_drv_clang_unsupported
 CHECK-NEXT:   warn_drv_pch_not_first_include
-CHECK-NEXT:   warn_enum_value_overflow
 CHECK-NEXT:   warn_expected_qualified_after_typename
 CHECK-NEXT:   warn_fe_backend_unsupported
 CHECK-NEXT:   warn_fe_cc_log_diagnostics_failure
@@ -57,7 +54,6 @@ CHECK-NEXT:   warn_fe_macro_contains_embedded_newline
 CHECK-NEXT:   warn_ignoring_ftabstop_value
 CHECK-NEXT:   warn_implements_nscopying
 CHECK-NEXT:   warn_incompatible_qualified_id
-CHECK-NEXT:   warn_invalid_asm_cast_lvalue
 CHECK-NEXT:   warn_invalid_cpu_supports
 CHECK-NEXT:   warn_maynot_respond
 CHECK-NEXT:   warn_method_param_redefinition
@@ -80,7 +76,6 @@ CHECK-NEXT:   warn_register_objc_catch_parm
 CHECK-NEXT:   warn_related_result_type_compatibility_class
 CHECK-NEXT:   warn_related_result_type_compatibility_protocol
 CHECK-NEXT:   warn_template_export_unsupported
-CHECK-NEXT:   warn_tentative_incomplete_array
 CHECK-NEXT:   warn_typecheck_function_qualifiers
 CHECK-NEXT:   warn_undef_interface
 CHECK-NEXT:   warn_undef_interface_suggest
@@ -90,4 +85,4 @@ CHECK-NEXT:   warn_weak_import
 
 The list of warnings in -Wpedantic should NEVER grow.
 
-CHECK: Number in -Wpedantic (not covered by other -W flags): 26
+CHECK: Number in -Wpedantic (not covered by other -W flags): 24

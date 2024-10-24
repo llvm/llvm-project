@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -28,6 +29,7 @@ namespace {
 struct TestSCFParallelLoopCollapsing
     : public impl::TestSCFParallelLoopCollapsingBase<
           TestSCFParallelLoopCollapsing> {
+
   void runOnOperation() override {
     Operation *module = getOperation();
 
@@ -88,6 +90,7 @@ struct TestSCFParallelLoopCollapsing
     // Only apply the transformation on parallel loops where the specified
     // transformation is valid, but do NOT early abort in the case of invalid
     // loops.
+    IRRewriter rewriter(&getContext());
     module->walk([&](scf::ParallelOp op) {
       if (flattenedCombinedLoops.size() != op.getNumLoops()) {
         op.emitOpError("has ")
@@ -97,7 +100,7 @@ struct TestSCFParallelLoopCollapsing
             << flattenedCombinedLoops.size() << " iter args.";
         return;
       }
-      collapseParallelLoops(op, combinedLoops);
+      collapseParallelLoops(rewriter, op, combinedLoops);
     });
   }
 };

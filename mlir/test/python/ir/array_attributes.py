@@ -51,6 +51,87 @@ def testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided():
 
 
 ################################################################################
+# Tests of the list of attributes .get() factory method
+################################################################################
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromList
+@run
+def testGetDenseElementsFromList():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        attr = DenseElementsAttr.get(attrs)
+
+        # CHECK: dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+        print(attr)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListWithExplicitType
+@run
+def testGetDenseElementsFromListWithExplicitType():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        shaped_type = ShapedType(Type.parse("tensor<2xf64>"))
+        attr = DenseElementsAttr.get(attrs, shaped_type)
+
+        # CHECK: dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+        print(attr)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListEmptyList
+@run
+def testGetDenseElementsFromListEmptyList():
+    with Context(), Location.unknown():
+        attrs = []
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except ValueError as e:
+            # CHECK: Attributes list must be non-empty
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListNonAttributeType
+@run
+def testGetDenseElementsFromListNonAttributeType():
+    with Context(), Location.unknown():
+        attrs = [1.0]
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except RuntimeError as e:
+            # CHECK: Invalid attribute when attempting to create an ArrayAttribute
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListMismatchedType
+@run
+def testGetDenseElementsFromListMismatchedType():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        shaped_type = ShapedType(Type.parse("tensor<2xf32>"))
+
+        try:
+            attr = DenseElementsAttr.get(attrs, shaped_type)
+        except ValueError as e:
+            # CHECK: All attributes must be of the same type and match the type parameter
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListMixedTypes
+@run
+def testGetDenseElementsFromListMixedTypes():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F32Type.get(), 2.0)]
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except ValueError as e:
+            # CHECK: All attributes must be of the same type and match the type parameter
+            print(e)
+
+
+################################################################################
 # Splats.
 ################################################################################
 
@@ -204,6 +285,7 @@ def testGetDenseElementsBoolSplat():
 
 
 ### float and double arrays.
+
 
 # CHECK-LABEL: TEST: testGetDenseElementsF16
 @run

@@ -32,8 +32,8 @@ int *aa(int i) __attribute__((alloc_align(1)));
 void ownt(int *, int *) __attribute__((ownership_takes(foo, 1, 2)));
 // CHECK: void ownh(int *, int *) __attribute__((ownership_holds(foo, 1, 2)));
 void ownh(int *, int *) __attribute__((ownership_holds(foo, 1, 2)));
-// CHECK: void ownr(int) __attribute__((ownership_returns(foo, 1)));
-void ownr(int) __attribute__((ownership_returns(foo, 1)));
+// CHECK: void *ownr(int) __attribute__((ownership_returns(foo, 1)));
+void *ownr(int) __attribute__((ownership_returns(foo, 1)));
 
 // CHECK: void awtt(int, int, ...) __attribute__((argument_with_type_tag(foo, 3, 2)));
 void awtt(int, int, ...) __attribute__((argument_with_type_tag(foo, 3, 2)));
@@ -65,11 +65,29 @@ class C {
   void ownt(int *, int *) __attribute__((ownership_takes(foo, 2, 3)));
   // CHECK: void ownh(int *, int *) __attribute__((ownership_holds(foo, 2, 3)));
   void ownh(int *, int *) __attribute__((ownership_holds(foo, 2, 3)));
-  // CHECK: void ownr(int) __attribute__((ownership_returns(foo, 2)));
-  void ownr(int) __attribute__((ownership_returns(foo, 2)));
+  // CHECK: void *ownr(int) __attribute__((ownership_returns(foo, 2)));
+  void *ownr(int) __attribute__((ownership_returns(foo, 2)));
 
   // CHECK: void awtt(int, int, ...) __attribute__((argument_with_type_tag(foo, 4, 3)));
   void awtt(int, int, ...) __attribute__((argument_with_type_tag(foo, 4, 3)));
   // CHECK: void pwtt(void *, int) __attribute__((pointer_with_type_tag(foo, 2, 3)));
   void pwtt(void *, int) __attribute__((pointer_with_type_tag(foo, 2, 3)));
 };
+
+#define ANNOTATE_ATTR __attribute__((annotate("Annotated")))
+ANNOTATE_ATTR int annotated_attr ANNOTATE_ATTR = 0;
+// CHECK: __attribute__((annotate("Annotated"))) int annotated_attr __attribute__((annotate("Annotated"))) = 0;
+
+void increment() { [[clang::annotate("Annotated")]] annotated_attr++; }
+// CHECK: {{\[\[}}clang::annotate("Annotated")]] annotated_attr++;
+
+// FIXME: We do not print the attribute as written after the type specifier.
+int ANNOTATE_ATTR annotated_attr_fixme = 0;
+// CHECK: __attribute__((annotate("Annotated"))) int annotated_attr_fixme = 0;
+
+#define NONNULL_ATTR  __attribute__((nonnull(1)))
+ANNOTATE_ATTR NONNULL_ATTR void fn_non_null_annotated_attr(int *) __attribute__((annotate("AnnotatedRHS")));
+// CHECK:__attribute__((annotate("Annotated"))) __attribute__((nonnull(1))) void fn_non_null_annotated_attr(int *) __attribute__((annotate("AnnotatedRHS")));
+
+[[gnu::nonnull(1)]] [[gnu::always_inline]] void cxx11_attr(int*) ANNOTATE_ATTR;
+// CHECK: {{\[\[}}gnu::nonnull(1)]] {{\[\[}}gnu::always_inline]] void cxx11_attr(int *) __attribute__((annotate("Annotated")));

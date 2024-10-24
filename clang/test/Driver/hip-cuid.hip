@@ -1,10 +1,8 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // Check invalid -fuse-cuid= option.
 
 // RUN: not %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -fuse-cuid=invalid \
@@ -16,6 +14,7 @@
 
 // RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -fuse-cuid=random \
@@ -27,6 +26,7 @@
 
 // RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -cuid=xyz_123 \
@@ -38,6 +38,7 @@
 
 // RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -fuse-cuid=random -cuid=xyz_123 \
@@ -49,12 +50,35 @@
 
 // RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -fuse-cuid=hash \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=COMMON,HEX %s
+
+// Check that cuid is propagated to the host-only compilation.
+// RUN: %clang -### -x hip \
+// RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
+// RUN:   --offload-arch=gfx900 \
+// RUN:   --offload-host-only \
+// RUN:   -c -nogpuinc -nogpulib -cuid=xyz_123 \
+// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck -check-prefixes=HOST %s
+
+// Check that cuid is propagated to the device-only compilation.
+// RUN: %clang -### -x hip \
+// RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
+// RUN:   --offload-arch=gfx900 \
+// RUN:   --offload-device-only \
+// RUN:   -c -nogpuinc -nogpulib -cuid=xyz_123 \
+// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck -check-prefixes=DEVICE %s
 
 // INVALID: invalid value 'invalid' in '-fuse-cuid=invalid'
 
@@ -90,3 +114,21 @@
 // HEX-NOT: "-cuid=[[CUID]]"
 // COMMON-SAME: "-cuid=[[CUID2]]"
 // COMMON-SAME: "{{.*}}b.hip"
+
+// HOST: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu"
+// HOST-SAME: "-cuid=[[CUID:xyz_123]]"
+// HOST-SAME: "{{.*}}a.cu"
+
+// HOST: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu"
+// HOST-SAME: "-cuid=[[CUID]]"
+// HOST-SAME: "{{.*}}b.hip"
+
+// DEVICE: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa"
+// DEVICE-SAME: "-target-cpu" "gfx900"
+// DEVICE-SAME: "-cuid=[[CUID:xyz_123]]"
+// DEVICE-SAME: "{{.*}}a.cu"
+
+// DEVICE: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa"
+// DEVICE-SAME: "-target-cpu" "gfx900"
+// DEVICE-SAME: "-cuid=[[CUID]]"
+// DEVICE-SAME: "{{.*}}b.hip"

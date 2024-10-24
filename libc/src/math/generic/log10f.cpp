@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
 
@@ -54,7 +55,7 @@
 // Dept. of Comp. Sci., Rutgets U., Technical Report DCS-TR-758, Nov. 2021.
 // https://arxiv.org/pdf/2111.12852.pdf.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Lookup table for -log10(r) where r is defined in common_constants.cpp.
 static constexpr double LOG10_R[128] = {
@@ -106,7 +107,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   constexpr double LOG10_2 = 0x1.34413509f79ffp-2;
 
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
@@ -215,4 +216,4 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

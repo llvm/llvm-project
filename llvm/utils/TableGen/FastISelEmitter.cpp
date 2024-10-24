@@ -16,11 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "InfoByHwMode.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -236,7 +236,7 @@ struct OperandsSignature {
           // not needed and just bloat the fast instruction selector.  For
           // example, X86 doesn't need to generate code to match ADD16ri8 since
           // ADD16ri will do just fine.
-          Record *Rec = PredFn.getOrigPatFragRecord()->getRecord();
+          const Record *Rec = PredFn.getOrigPatFragRecord()->getRecord();
           if (Rec->getValueAsBit("FastIselShouldIgnore"))
             return false;
 
@@ -269,10 +269,10 @@ struct OperandsSignature {
       if (Op.getSimpleType(0) != VT)
         return false;
 
-      DefInit *OpDI = dyn_cast<DefInit>(Op.getLeafValue());
+      const DefInit *OpDI = dyn_cast<DefInit>(Op.getLeafValue());
       if (!OpDI)
         return false;
-      Record *OpLeafRec = OpDI->getDef();
+      const Record *OpLeafRec = OpDI->getDef();
 
       // For now, the only other thing we accept is register operands.
       const CodeGenRegisterClass *RC = nullptr;
@@ -407,7 +407,7 @@ class FastISelMap {
 public:
   explicit FastISelMap(StringRef InstNS);
 
-  void collectPatterns(CodeGenDAGPatterns &CGP);
+  void collectPatterns(const CodeGenDAGPatterns &CGP);
   void printImmediatePredicates(raw_ostream &OS);
   void printFunctionDefinitions(raw_ostream &OS);
 
@@ -417,7 +417,8 @@ private:
 };
 } // End anonymous namespace
 
-static std::string getOpcodeName(Record *Op, CodeGenDAGPatterns &CGP) {
+static std::string getOpcodeName(const Record *Op,
+                                 const CodeGenDAGPatterns &CGP) {
   return std::string(CGP.getSDNodeInfo(Op).getEnumName());
 }
 
@@ -437,7 +438,7 @@ static std::string PhyRegForNode(TreePatternNode &Op,
   if (!Op.isLeaf())
     return PhysReg;
 
-  Record *OpLeafRec = cast<DefInit>(Op.getLeafValue())->getDef();
+  const Record *OpLeafRec = cast<DefInit>(Op.getLeafValue())->getDef();
   if (!OpLeafRec->isSubClassOf("Register"))
     return PhysReg;
 
@@ -448,7 +449,7 @@ static std::string PhyRegForNode(TreePatternNode &Op,
   return PhysReg;
 }
 
-void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
+void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
   const CodeGenTarget &Target = CGP.getTargetInfo();
 
   // Scan through all the patterns and record the simple ones.
@@ -461,7 +462,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     TreePatternNode &Dst = Pattern.getDstPattern();
     if (Dst.isLeaf())
       continue;
-    Record *Op = Dst.getOperator();
+    const Record *Op = Dst.getOperator();
     if (!Op->isSubClassOf("Instruction"))
       continue;
     CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
@@ -494,7 +495,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     const CodeGenRegisterClass *DstRC = nullptr;
     std::string SubRegNo;
     if (Op->getName() != "EXTRACT_SUBREG") {
-      Record *Op0Rec = II.Operands[0].Rec;
+      const Record *Op0Rec = II.Operands[0].Rec;
       if (Op0Rec->isSubClassOf("RegisterOperand"))
         Op0Rec = Op0Rec->getValueAsDef("RegClass");
       if (!Op0Rec->isSubClassOf("RegisterClass"))
@@ -508,7 +509,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
       if (!Dst.getChild(1).isLeaf())
         continue;
 
-      DefInit *SR = dyn_cast<DefInit>(Dst.getChild(1).getLeafValue());
+      const DefInit *SR = dyn_cast<DefInit>(Dst.getChild(1).getLeafValue());
       if (SR)
         SubRegNo = getQualifiedName(SR->getDef());
       else
@@ -524,7 +525,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     if (InstPatNode.getNumTypes() > 1)
       continue;
 
-    Record *InstPatOp = InstPatNode.getOperator();
+    const Record *InstPatOp = InstPatNode.getOperator();
     std::string OpcodeName = getOpcodeName(InstPatOp, CGP);
     MVT::SimpleValueType RetVT = MVT::isVoid;
     if (InstPatNode.getNumTypes())
@@ -821,8 +822,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
     if (MI != SignaturesWithConstantForms.end()) {
       // Unique any duplicates out of the list.
       llvm::sort(MI->second);
-      MI->second.erase(std::unique(MI->second.begin(), MI->second.end()),
-                       MI->second.end());
+      MI->second.erase(llvm::unique(MI->second), MI->second.end());
 
       // Check each in order it was seen.  It would be nice to have a good
       // relative ordering between them, but we're not going for optimality
@@ -865,8 +865,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
   // TODO: SignaturesWithConstantForms should be empty here.
 }
 
-static void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
-  CodeGenDAGPatterns CGP(RK);
+static void EmitFastISel(const RecordKeeper &RK, raw_ostream &OS) {
+  const CodeGenDAGPatterns CGP(RK);
   const CodeGenTarget &Target = CGP.getTargetInfo();
   emitSourceFileHeader("\"Fast\" Instruction Selector for the " +
                            Target.getName().str() + " target",

@@ -574,16 +574,16 @@ void Value::replaceUsesWithIf(Value *New,
 /// with New.
 static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
   SmallVector<DbgVariableIntrinsic *> DbgUsers;
-  SmallVector<DPValue *> DPUsers;
+  SmallVector<DbgVariableRecord *> DPUsers;
   findDbgUsers(DbgUsers, V, &DPUsers);
   for (auto *DVI : DbgUsers) {
     if (DVI->getParent() != BB)
       DVI->replaceVariableLocationOp(V, New);
   }
-  for (auto *DPV : DPUsers) {
-    DPMarker *Marker = DPV->getMarker();
+  for (auto *DVR : DPUsers) {
+    DbgMarker *Marker = DVR->getMarker();
     if (Marker->getParent() != BB)
-      DPV->replaceVariableLocationOp(V, New);
+      DVR->replaceVariableLocationOp(V, New);
   }
 }
 
@@ -652,9 +652,10 @@ static const Value *stripPointerCastsAndOffsets(
       }
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast) {
-      V = cast<Operator>(V)->getOperand(0);
-      if (!V->getType()->isPointerTy())
+      Value *NewV = cast<Operator>(V)->getOperand(0);
+      if (!NewV->getType()->isPointerTy())
         return V;
+      V = NewV;
     } else if (StripKind != PSK_ZeroIndicesSameRepresentation &&
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       // TODO: If we know an address space cast will not change the

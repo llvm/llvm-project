@@ -27,7 +27,9 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 
@@ -37,18 +39,15 @@ static_assert((UINTPTR_MAX == 4294967295U) ||
                   (UINTPTR_MAX == 18446744073709551615UL),
               "We currently only support 32- or 64-bit platforms");
 
-#if defined(UINT64_MAX)
-#define LLVM_LIBC_HAS_UINT64
-#endif
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 // Compiler types using the vector attributes.
 using generic_v128 = uint8_t __attribute__((__vector_size__(16)));
 using generic_v256 = uint8_t __attribute__((__vector_size__(32)));
 using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
-namespace LIBC_NAMESPACE::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 // We accept three types of values as elements for generic operations:
 // - scalar : unsigned integral types,
@@ -60,9 +59,9 @@ template <typename T> struct is_scalar : cpp::false_type {};
 template <> struct is_scalar<uint8_t> : cpp::true_type {};
 template <> struct is_scalar<uint16_t> : cpp::true_type {};
 template <> struct is_scalar<uint32_t> : cpp::true_type {};
-#ifdef LLVM_LIBC_HAS_UINT64
+#ifdef LIBC_TYPES_HAS_INT64
 template <> struct is_scalar<uint64_t> : cpp::true_type {};
-#endif // LLVM_LIBC_HAS_UINT64
+#endif // LIBC_TYPES_HAS_INT64
 // Meant to match std::numeric_limits interface.
 // NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr bool is_scalar_v = is_scalar<T>::value;
@@ -581,6 +580,7 @@ LIBC_INLINE MemcmpReturnType cmp<uint8_t>(CPtr p1, CPtr p2, size_t offset) {
 template <>
 LIBC_INLINE MemcmpReturnType cmp_neq<uint8_t>(CPtr p1, CPtr p2, size_t offset);
 
-} // namespace LIBC_NAMESPACE::generic
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_GENERIC_H

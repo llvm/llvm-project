@@ -17,6 +17,10 @@ on:
         description: 'Release Version'
         required: true
         type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
 
 jobs:
   release-lit:
@@ -36,8 +40,9 @@ jobs:
       - name: Check Permissions
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
         run: |
-          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} check-permissions
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
 
       - name: Setup Cpp
         uses: aminya/setup-cpp@v1
@@ -58,7 +63,7 @@ jobs:
           cd llvm/utils/lit
           # Remove 'dev' suffix from lit version.
           sed -i 's/ + "dev"//g' lit/__init__.py
-          python3 setup.py sdist
+          python3 setup.py sdist bdist_wheel
 
       - name: Upload lit to test.pypi.org
         uses: pypa/gh-action-pypi-publish@release/v1

@@ -106,8 +106,18 @@ static uptr GetHighMemEnd() {
 }
 
 static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
-  if (flags()->fixed_shadow_base != (uptr)-1) {
+  // FIXME: Android should init flags before shadow.
+  if (!SANITIZER_ANDROID && flags()->fixed_shadow_base != (uptr)-1) {
     __hwasan_shadow_memory_dynamic_address = flags()->fixed_shadow_base;
+    uptr beg = __hwasan_shadow_memory_dynamic_address;
+    uptr end = beg + shadow_size_bytes;
+    if (!MemoryRangeIsAvailable(beg, end)) {
+      Report(
+          "FATAL: HWAddressSanitizer: Shadow range %p-%p is not available.\n",
+          (void *)beg, (void *)end);
+      DumpProcessMap();
+      CHECK(MemoryRangeIsAvailable(beg, end));
+    }
   } else {
     __hwasan_shadow_memory_dynamic_address =
         FindDynamicShadowStart(shadow_size_bytes);
@@ -250,9 +260,6 @@ bool InitShadow() {
   CHECK_GT(kLowShadowEnd, kLowShadowStart);
   CHECK_GT(kLowShadowStart, kLowMemEnd);
 
-  if (Verbosity())
-    PrintAddressSpaceLayout();
-
   // Reserve shadow memory.
   ReserveShadowMemoryRange(kLowShadowStart, kLowShadowEnd, "low shadow");
   ReserveShadowMemoryRange(kHighShadowStart, kHighShadowEnd, "high shadow");
@@ -265,6 +272,9 @@ bool InitShadow() {
     ProtectGap(kLowShadowEnd + 1, kHighShadowStart - kLowShadowEnd - 1);
   if (kHighShadowEnd + 1 < kHighMemStart)
     ProtectGap(kHighShadowEnd + 1, kHighMemStart - kHighShadowEnd - 1);
+
+  if (Verbosity())
+    PrintAddressSpaceLayout();
 
   return true;
 }
@@ -489,12 +499,8 @@ void HwasanOnDeadlySignal(int signo, void *info, void *context) {
 }
 
 void Thread::InitStackAndTls(const InitState *) {
-  uptr tls_size;
-  uptr stack_size;
-  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,
-                       &tls_size);
-  stack_top_ = stack_bottom_ + stack_size;
-  tls_end_ = tls_begin_ + tls_size;
+  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_top_, &tls_begin_,
+                       &tls_end_);
 }
 
 uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
@@ -522,6 +528,7 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
 }
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   if (CAN_SANITIZE_LEAKS) {
     __lsan::LockGlobal();
   }
@@ -541,6 +548,7 @@ static void AfterFork(bool fork_child) {
   if (CAN_SANITIZE_LEAKS) {
     __lsan::UnlockGlobal();
   }
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void HwasanInstallAtForkHandler() {

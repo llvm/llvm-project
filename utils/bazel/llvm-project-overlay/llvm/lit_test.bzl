@@ -4,12 +4,14 @@
 """Rules for running lit tests."""
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@rules_python//python:defs.bzl", "py_test")
 
 def lit_test(
         name,
         srcs,
         args = None,
         data = None,
+        deps = None,
         **kwargs):
     """Runs a single test file with LLVM's lit tool.
 
@@ -27,14 +29,15 @@ def lit_test(
 
     args = args or []
     data = data or []
-
-    native.py_test(
+    deps = deps or []
+    py_test(
         name = name,
         srcs = [Label("//llvm:lit")],
         main = Label("//llvm:utils/lit/lit.py"),
         args = args + ["-v"] + ["$(execpath %s)" % src for src in srcs],
         data = data + srcs,
         legacy_create_init = False,
+        deps = deps + [Label("//llvm:lit")],
         **kwargs
     )
 

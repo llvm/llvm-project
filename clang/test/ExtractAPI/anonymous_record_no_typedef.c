@@ -1,416 +1,194 @@
 // RUN: rm -rf %t
-// RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
-// RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang_cc1 -extract-api -triple arm64-apple-macosx \
-// RUN:   -x c-header %t/input.h -o %t/output.json -verify
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   -triple arm64-apple-macosx -isystem %S -fretain-comments-from-system-headers \
+// RUN:   -x c-header %s -o %t/output-c.symbols.json -verify
+//
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   -triple arm64-apple-macosx -isystem %S -fretain-comments-from-system-headers \
+// RUN:   -x c++-header %s -o %t/output-cxx.symbols.json -verify
 
-// Generator version is not consistent across test runs, normalize it.
-// RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
-// RUN: %t/output.json >> %t/output-normalized.json
-// RUN: diff %t/reference.output.json %t/output-normalized.json
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix GLOBAL
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix PREFIX
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix CONTENT
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix GLOBAL
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix PREFIX
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix CONTENT
+/// A global variable with an anonymous struct type.
+struct { char *prefix; char *content; } global;
+// GLOBAL-LABEL: "!testLabel": "c:@global"
+// GLOBAL:      "declarationFragments": [
+// GLOBAL-NEXT:   {
+// GLOBAL-NEXT:     "kind": "keyword",
+// GLOBAL-NEXT:     "spelling": "struct"
+// GLOBAL-NEXT:   },
+// GLOBAL-NEXT:   {
+// GLOBAL-NEXT:     "kind": "text",
+// GLOBAL-NEXT:     "spelling": " { ... } "
+// GLOBAL-NEXT:   },
+// GLOBAL-NEXT:   {
+// GLOBAL-NEXT:     "kind": "identifier",
+// GLOBAL-NEXT:     "spelling": "global"
+// GLOBAL-NEXT:   },
+// GLOBAL-NEXT:   {
+// GLOBAL-NEXT:     "kind": "text",
+// GLOBAL-NEXT:     "spelling": ";"
+// GLOBAL-NEXT:   }
+// GLOBAL-NEXT: ],
+// GLOBAL: "text": "A global variable with an anonymous struct type."
+// GLOBAL:     "kind": {
+// GLOBAL-NEXT:  "displayName": "Global Variable",
+// GLOBAL-NEXT:  "identifier": "c{{(\+\+)?}}.var"
+// GLOBAL:       "title": "global"
+// GLOBAL:     "pathComponents": [
+// GLOBAL-NEXT:  "global"
+// GLOBAL-NEXT:]
 
-//--- input.h
+// PREFIX: "!testRelLabel": "memberOf $ c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@prefix $ c:@global"
+// PREFIX-LABEL: "!testLabel": "c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@prefix"
+// PREFIX: "title": "prefix"
+// PREFIX:      "pathComponents": [
+// PREFIX-NEXT:   "global",
+// PREFIX-NEXT:   "prefix"
+// PREFIX-NEXT: ]
+
+// CONTENT: "!testRelLabel": "memberOf $ c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@content $ c:@global"
+// CONTENT-LABEL: "!testLabel": "c:@S@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@content"
+// CONTENT: "title": "content"
+// CONTENT:      "pathComponents": [
+// CONTENT-NEXT:   "global",
+// CONTENT-NEXT:   "content"
+// CONTENT-NEXT: ]
+
 /// A Vehicle
 struct Vehicle {
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix TYPE
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix BICYCLE
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix CAR
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix TYPE
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix BICYCLE
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix CAR
     /// The type of vehicle.
     enum {
         Bicycle,
         Car
     } type;
+    // TYPE-LABEL: "!testLabel": "c:@S@Vehicle@FI@type"
+    // TYPE:      "declarationFragments": [
+    // TYPE-NEXT:   {
+    // TYPE-NEXT:     "kind": "keyword",
+    // TYPE-NEXT:     "spelling": "enum"
+    // TYPE-NEXT:   },
+    // TYPE-NEXT:   {
+    // TYPE-NEXT:     "kind": "text",
+    // TYPE-NEXT:     "spelling": " { ... } "
+    // TYPE-NEXT:   },
+    // TYPE-NEXT:   {
+    // TYPE-NEXT:     "kind": "identifier",
+    // TYPE-NEXT:     "spelling": "type"
+    // TYPE-NEXT:   },
+    // TYPE-NEXT:   {
+    // TYPE-NEXT:     "kind": "text",
+    // TYPE-NEXT:     "spelling": ";"
+    // TYPE-NEXT:   }
+    // TYPE-NEXT: ],
+    // TYPE: "text": "The type of vehicle."
+    // TYPE: "title": "type"
 
+    // BICYCLE-LABEL: "!testLabel": "c:@S@Vehicle@E@anonymous_record_no_typedef.c@{{[0-9]+}}@Bicycle"
+    // BICYCLE: "title": "Bicycle"
+    // BICYCLE:      "pathComponents": [
+    // BICYCLE-NEXT:   "Bicycle"
+    // BICYCLE-NEXT: ]
+
+    // CAR-LABEL: "!testLabel": "c:@S@Vehicle@E@anonymous_record_no_typedef.c@{{[0-9]+}}@Car"
+    // CAR: "title": "Car"
+    // CAR:      "pathComponents": [
+    // CAR-NEXT:   "Car"
+    // CAR-NEXT: ]
+
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix INFORMATION
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix WHEELS
+    // RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix NAME
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix INFORMATION
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix WHEELS
+    // RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix NAME
     /// The information about the vehicle.
-    struct {
+    union {
         int wheels;
         char *name;
     } information;
-};
-// expected-no-diagnostics
+    // INFORMATION-LABEL: "!testLabel": "c:@S@Vehicle@FI@information"
+    // INFORMATION:      "declarationFragments": [
+    // INFORMATION-NEXT:   {
+    // INFORMATION-NEXT:     "kind": "keyword",
+    // INFORMATION-NEXT:     "spelling": "union"
+    // INFORMATION-NEXT:   },
+    // INFORMATION-NEXT:   {
+    // INFORMATION-NEXT:     "kind": "text",
+    // INFORMATION-NEXT:     "spelling": " { ... } "
+    // INFORMATION-NEXT:   },
+    // INFORMATION-NEXT:   {
+    // INFORMATION-NEXT:     "kind": "identifier",
+    // INFORMATION-NEXT:     "spelling": "information"
+    // INFORMATION-NEXT:   },
+    // INFORMATION-NEXT:   {
+    // INFORMATION-NEXT:     "kind": "text",
+    // INFORMATION-NEXT:     "spelling": ";"
+    // INFORMATION-NEXT:   }
+    // INFORMATION-NEXT: ],
+    // INFORMATION: "text": "The information about the vehicle."
+    // INFORMATION: "title": "information"
 
-//--- reference.output.json.in
-{
-  "metadata": {
-    "formatVersion": {
-      "major": 0,
-      "minor": 5,
-      "patch": 3
-    },
-    "generator": "?"
-  },
-  "module": {
-    "name": "",
-    "platform": {
-      "architecture": "arm64",
-      "operatingSystem": {
-        "minimumVersion": {
-          "major": 11,
-          "minor": 0,
-          "patch": 0
-        },
-        "name": "macosx"
-      },
-      "vendor": "apple"
-    }
-  },
-  "relationships": [
-    {
-      "kind": "memberOf",
-      "source": "c:@S@Vehicle@E@input.h@64@Bicycle",
-      "target": "c:@S@Vehicle@E@input.h@64",
-      "targetFallback": "Vehicle::enum (unnamed)"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:@S@Vehicle@E@input.h@64@Car",
-      "target": "c:@S@Vehicle@E@input.h@64",
-      "targetFallback": "Vehicle::enum (unnamed)"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:@S@Vehicle@FI@type",
-      "target": "c:@S@Vehicle",
-      "targetFallback": "Vehicle"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:@S@Vehicle@FI@information",
-      "target": "c:@S@Vehicle",
-      "targetFallback": "Vehicle"
-    }
-  ],
-  "symbols": [
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "enum"
-        },
-        {
-          "kind": "text",
-          "spelling": ": "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:i",
-          "spelling": "unsigned int"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "docComment": {
-        "lines": [
-          {
-            "range": {
-              "end": {
-                "character": 28,
-                "line": 2
-              },
-              "start": {
-                "character": 8,
-                "line": 2
-              }
-            },
-            "text": "The type of vehicle."
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@S@Vehicle@E@input.h@64"
-      },
-      "kind": {
-        "displayName": "Enumeration",
-        "identifier": "c.enum"
-      },
-      "location": {
-        "position": {
-          "character": 4,
-          "line": 3
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Vehicle::enum (unnamed)"
-          }
-        ],
-        "title": "Vehicle::enum (unnamed)"
-      },
-      "pathComponents": [
-        "Vehicle::enum (unnamed)"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "identifier",
-          "spelling": "Bicycle"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@S@Vehicle@E@input.h@64@Bicycle"
-      },
-      "kind": {
-        "displayName": "Enumeration Case",
-        "identifier": "c.enum.case"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 4
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Bicycle"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Bicycle"
-          }
-        ],
-        "title": "Bicycle"
-      },
-      "pathComponents": [
-        "Vehicle::enum (unnamed)",
-        "Bicycle"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "identifier",
-          "spelling": "Car"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@S@Vehicle@E@input.h@64@Car"
-      },
-      "kind": {
-        "displayName": "Enumeration Case",
-        "identifier": "c.enum.case"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 5
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Car"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Car"
-          }
-        ],
-        "title": "Car"
-      },
-      "pathComponents": [
-        "Vehicle::enum (unnamed)",
-        "Car"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "struct"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "Vehicle"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "docComment": {
-        "lines": [
-          {
-            "range": {
-              "end": {
-                "character": 13,
-                "line": 0
-              },
-              "start": {
-                "character": 4,
-                "line": 0
-              }
-            },
-            "text": "A Vehicle"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@S@Vehicle"
-      },
-      "kind": {
-        "displayName": "Structure",
-        "identifier": "c.struct"
-      },
-      "location": {
-        "position": {
-          "character": 7,
-          "line": 1
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Vehicle"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Vehicle"
-          }
-        ],
-        "title": "Vehicle"
-      },
-      "pathComponents": [
-        "Vehicle"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "enum"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "type"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@S@Vehicle@FI@type"
-      },
-      "kind": {
-        "displayName": "Instance Property",
-        "identifier": "c.property"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 6
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "type"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "type"
-          }
-        ],
-        "title": "type"
-      },
-      "pathComponents": [
-        "Vehicle",
-        "type"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "struct"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "information"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@S@Vehicle@FI@information"
-      },
-      "kind": {
-        "displayName": "Instance Property",
-        "identifier": "c.property"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 12
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "information"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "information"
-          }
-        ],
-        "title": "information"
-      },
-      "pathComponents": [
-        "Vehicle",
-        "information"
-      ]
-    }
-  ]
-}
+    // WHEELS: "!testRelLabel": "memberOf $ c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@wheels $ c:@S@Vehicle@FI@information"
+    // WHEELS-LABEL: "!testLabel": "c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@wheels"
+    // WHEELS: "title": "wheels"
+    // WHEELS:      "pathComponents": [
+    // WHEELS-NEXT:   "Vehicle",
+    // WHEELS-NEXT:   "information",
+    // WHEELS-NEXT:   "wheels"
+    // WHEELS-NEXT: ]
+
+    // NAME: "!testRelLabel": "memberOf $ c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@name $ c:@S@Vehicle@FI@information"
+    // NAME-LABEL: "!testLabel": "c:@S@Vehicle@U@anonymous_record_no_typedef.c@{{[0-9]+}}@FI@name"
+    // NAME: "title": "name"
+    // NAME:      "pathComponents": [
+    // NAME-NEXT:   "Vehicle",
+    // NAME-NEXT:   "information",
+    // NAME-NEXT:   "name"
+    // NAME-NEXT: ]
+};
+
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix GLOBALCASE
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix GLOBALOTHERCASE
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix GLOBALCASE
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix GLOBALOTHERCASE
+enum {
+  GlobalCase,
+  GlobalOtherCase
+};
+// GLOBALCASE-LABEL: "!testLabel": "c:@Ea@GlobalCase@GlobalCase"
+// GLOBALCASE: "title": "GlobalCase"
+// GLOBALCASE:      "pathComponents": [
+// GLOBALCASE-NEXT:   "GlobalCase"
+// GLOBALCASE-NEXT: ]
+
+// GLOBALOTHERCASE-LABEL: "!testLabel": "c:@Ea@GlobalCase@GlobalOtherCase"
+// GLOBALOTHERCASE: "title": "GlobalOtherCase"
+// GLOBALOTHERCASE:      "pathComponents": [
+// GLOBALOTHERCASE-NEXT:   "GlobalOtherCase"
+// GLOBALOTHERCASE-NEXT: ]
+
+// RUN: FileCheck %s --input-file %t/output-c.symbols.json --check-prefix VEC
+// RUN: FileCheck %s --input-file %t/output-cxx.symbols.json --check-prefix VEC
+union Vector {
+  struct {
+    float X;
+    float Y;
+  };
+  float Data[2];
+};
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@FI@Data $ c:@U@Vector"
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@X $ c:@U@Vector"
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@Y $ c:@U@Vector"
+
+// expected-no-diagnostics

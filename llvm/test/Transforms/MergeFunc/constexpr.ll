@@ -8,20 +8,6 @@
 ; CHECK: @g1 = external unnamed_addr global i8
 ; CHECK: @g2 = external unnamed_addr global i8
 ;.
-define i1 @f1() unnamed_addr {
-; CHECK-LABEL: define i1 @f1() unnamed_addr {
-; CHECK-NEXT:    ret i1 icmp eq (ptr @g1, ptr @g2)
-;
-  ret i1 icmp eq (ptr @g1, ptr @g2)
-}
-
-define i1 @f2() unnamed_addr {
-; CHECK-LABEL: define i1 @f2() unnamed_addr {
-; CHECK-NEXT:    ret i1 icmp ne (ptr @g1, ptr @g2)
-;
-  ret i1 icmp ne (ptr @g1, ptr @g2)
-}
-
 define ptr @f3() unnamed_addr {
 ; CHECK-LABEL: define ptr @f3() unnamed_addr {
 ; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g1, i64 2)
@@ -66,9 +52,9 @@ define i64 @f8() unnamed_addr {
 
 define ptr @f10() unnamed_addr {
 ; CHECK-LABEL: define ptr @f10() unnamed_addr {
-; CHECK-NEXT:    ret ptr getelementptr ([4 x i32], ptr @g1, i64 0, inrange i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inrange(0, 4) ([4 x i32], ptr @g1, i64 0, i64 1)
 ;
-  ret ptr getelementptr ([4 x i32], ptr @g1, i64 0, inrange i64 1)
+  ret ptr getelementptr inrange(0, 4) ([4 x i32], ptr @g1, i64 0, i64 1)
 }
 
 define ptr @f11() unnamed_addr {
@@ -80,7 +66,7 @@ define ptr @f11() unnamed_addr {
 
 define ptr @f12() unnamed_addr {
 ; CHECK-LABEL: define ptr @f12() unnamed_addr {
-; CHECK-NEXT:    ret ptr getelementptr ([4 x i32], ptr @g1, inrange i64 0, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inrange(-4, 12) ([4 x i32], ptr @g1, i64 0, i64 1)
 ;
-  ret ptr getelementptr ([4 x i32], ptr @g1, inrange i64 0, i64 1)
+  ret ptr getelementptr inrange(-4, 12) ([4 x i32], ptr @g1, i64 0, i64 1)
 }

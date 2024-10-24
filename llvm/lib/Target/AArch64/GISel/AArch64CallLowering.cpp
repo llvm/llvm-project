@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64CallLowering.h"
+#include "AArch64GlobalISelUtils.h"
 #include "AArch64ISelLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
@@ -50,6 +51,9 @@
 #define DEBUG_TYPE "aarch64-call-lowering"
 
 using namespace llvm;
+using namespace AArch64GISelUtils;
+
+extern cl::opt<bool> EnableSVEGISel;
 
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
@@ -113,7 +117,9 @@ struct AArch64OutgoingValueAssigner
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    bool IsCalleeWin = Subtarget.isCallingConvWin64(State.getCallingConv());
+    const Function &F = State.getMachineFunction().getFunction();
+    bool IsCalleeWin =
+        Subtarget.isCallingConvWin64(State.getCallingConv(), F.isVarArg());
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
 
     bool Res;
@@ -368,7 +374,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     MachineRegisterInfo &MRI = MF.getRegInfo();
     const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
     CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
-    auto &DL = F.getParent()->getDataLayout();
+    auto &DL = F.getDataLayout();
     LLVMContext &Ctx = Val->getType()->getContext();
 
     SmallVector<EVT, 4> SplitEVTs;
@@ -402,14 +408,13 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
             ExtendOp = TargetOpcode::G_ZEXT;
 
           LLT NewLLT(NewVT);
-          LLT OldLLT(MVT::getVT(CurArgInfo.Ty));
+          LLT OldLLT = getLLTForType(*CurArgInfo.Ty, DL);
           CurArgInfo.Ty = EVT(NewVT).getTypeForEVT(Ctx);
           // Instead of an extend, we might have a vector type which needs
           // padding with more elements, e.g. <2 x half> -> <4 x half>.
           if (NewVT.isVector()) {
             if (OldLLT.isVector()) {
               if (NewLLT.getNumElements() > OldLLT.getNumElements()) {
-
                 CurVReg =
                     MIRBuilder.buildPadVectorWithUndefElements(NewLLT, CurVReg)
                         .getReg(0);
@@ -523,10 +528,10 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
 
 bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
-  if (F.getReturnType()->isScalableTy() ||
-      llvm::any_of(F.args(), [](const Argument &A) {
-        return A.getType()->isScalableTy();
-      }))
+  if (!EnableSVEGISel && (F.getReturnType()->isScalableTy() ||
+                          llvm::any_of(F.args(), [](const Argument &A) {
+                            return A.getType()->isScalableTy();
+                          })))
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (!ST.hasNEON() || !ST.hasFPARMv8()) {
@@ -554,8 +559,8 @@ void AArch64CallLowering::saveVarArgRegisters(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  bool IsWin64CC =
-      Subtarget.isCallingConvWin64(CCInfo.getCallingConv());
+  bool IsWin64CC = Subtarget.isCallingConvWin64(CCInfo.getCallingConv(),
+                                                MF.getFunction().isVarArg());
   const LLT p0 = LLT::pointer(0, 64);
   const LLT s64 = LLT::scalar(64);
 
@@ -636,7 +641,7 @@ bool AArch64CallLowering::lowerFormalArguments(
   MachineFunction &MF = MIRBuilder.getMF();
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
   // Arm64EC has extra requirements for varargs calls which are only implemented
@@ -650,7 +655,9 @@ bool AArch64CallLowering::lowerFormalArguments(
       F.getCallingConv() == CallingConv::ARM64EC_Thunk_X64)
     return false;
 
-  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv()) && !Subtarget.isWindowsArm64EC();
+  bool IsWin64 =
+      Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg()) &&
+      !Subtarget.isWindowsArm64EC();
 
   SmallVector<ArgInfo, 8> SplitArgs;
   SmallVector<std::pair<Register, Register>> BoolArgs;
@@ -782,6 +789,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::C:
   case CallingConv::PreserveMost:
   case CallingConv::PreserveAll:
+  case CallingConv::PreserveNone:
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
@@ -1012,11 +1020,20 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
 }
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
-                              bool IsTailCall) {
+                              bool IsTailCall,
+                              std::optional<CallLowering::PtrAuthInfo> &PAI,
+                              MachineRegisterInfo &MRI) {
   const AArch64FunctionInfo *FuncInfo = CallerF.getInfo<AArch64FunctionInfo>();
 
-  if (!IsTailCall)
-    return IsIndirect ? getBLRCallOpcode(CallerF) : (unsigned)AArch64::BL;
+  if (!IsTailCall) {
+    if (!PAI)
+      return IsIndirect ? getBLRCallOpcode(CallerF) : (unsigned)AArch64::BL;
+
+    assert(IsIndirect && "Direct call should not be authenticated");
+    assert((PAI->Key == AArch64PACKey::IA || PAI->Key == AArch64PACKey::IB) &&
+           "Invalid auth call key");
+    return AArch64::BLRA;
+  }
 
   if (!IsIndirect)
     return AArch64::TCRETURNdi;
@@ -1024,13 +1041,22 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
   // When BTI or PAuthLR are enabled, there are restrictions on using x16 and
   // x17 to hold the function pointer.
   if (FuncInfo->branchTargetEnforcement()) {
-    if (FuncInfo->branchProtectionPAuthLR())
+    if (FuncInfo->branchProtectionPAuthLR()) {
+      assert(!PAI && "ptrauth tail-calls not yet supported with PAuthLR");
       return AArch64::TCRETURNrix17;
-    else
-      return AArch64::TCRETURNrix16x17;
-  } else if (FuncInfo->branchProtectionPAuthLR())
-    return AArch64::TCRETURNrinotx16;
+    }
+    if (PAI)
+      return AArch64::AUTH_TCRETURN_BTI;
+    return AArch64::TCRETURNrix16x17;
+  }
 
+  if (FuncInfo->branchProtectionPAuthLR()) {
+    assert(!PAI && "ptrauth tail-calls not yet supported with PAuthLR");
+    return AArch64::TCRETURNrinotx16;
+  }
+
+  if (PAI)
+    return AArch64::AUTH_TCRETURN;
   return AArch64::TCRETURNri;
 }
 
@@ -1066,14 +1092,6 @@ bool AArch64CallLowering::lowerTailCall(
                    Info.CallConv != CallingConv::Tail &&
                    Info.CallConv != CallingConv::SwiftTail;
 
-  // TODO: Right now, regbankselect doesn't know how to handle the rtcGPR64
-  // register class. Until we can do that, we should fall back here.
-  if (MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement()) {
-    LLVM_DEBUG(
-        dbgs() << "Cannot lower indirect tail calls with BTI enabled yet.\n");
-    return false;
-  }
-
   // Find out which ABI gets to decide where things go.
   CallingConv::ID CalleeCC = Info.CallConv;
   CCAssignFn *AssignFnFixed;
@@ -1084,17 +1102,41 @@ bool AArch64CallLowering::lowerTailCall(
   if (!IsSibCall)
     CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
 
-  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true);
+  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true, Info.PAI, MRI);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.add(Info.Callee);
+
+  // Tell the call which registers are clobbered.
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  auto TRI = Subtarget.getRegisterInfo();
 
   // Byte offset for the tail call. When we are sibcalling, this will always
   // be 0.
   MIB.addImm(0);
 
+  // Authenticated tail calls always take key/discriminator arguments.
+  if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI) {
+    assert((Info.PAI->Key == AArch64PACKey::IA ||
+            Info.PAI->Key == AArch64PACKey::IB) &&
+           "Invalid auth call key");
+    MIB.addImm(Info.PAI->Key);
+
+    Register AddrDisc = 0;
+    uint16_t IntDisc = 0;
+    std::tie(IntDisc, AddrDisc) =
+        extractPtrauthBlendDiscriminators(Info.PAI->Discriminator, MRI);
+
+    MIB.addImm(IntDisc);
+    MIB.addUse(AddrDisc);
+    if (AddrDisc != AArch64::NoRegister) {
+      MIB->getOperand(4).setReg(constrainOperandRegClass(
+          MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
+          *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(),
+          MIB->getOperand(4), 4));
+    }
+  }
+
   // Tell the call which registers are clobbered.
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  auto TRI = Subtarget.getRegisterInfo();
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CalleeCC);
   if (Subtarget.hasCustomCallingConv())
     TRI->UpdateCustomCallPreservedMask(MF, &Mask);
@@ -1219,7 +1261,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
@@ -1294,7 +1336,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // be expanded to the call, directly followed by a special marker sequence and
   // a call to an ObjC library function.
   if (Info.CB && objcarc::hasAttachedCallOpBundle(Info.CB))
-    Opc = AArch64::BLR_RVMARKER;
+    Opc = Info.PAI ? AArch64::BLRA_RVMARKER : AArch64::BLR_RVMARKER;
   // A call to a returns twice function like setjmp must be followed by a bti
   // instruction.
   else if (Info.CB && Info.CB->hasFnAttr(Attribute::ReturnsTwice) &&
@@ -1310,13 +1352,13 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       MIB.addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
       Info.Callee = MachineOperand::CreateReg(MIB.getReg(0), false);
     }
-    Opc = getCallOpcode(MF, Info.Callee.isReg(), false);
+    Opc = getCallOpcode(MF, Info.Callee.isReg(), false, Info.PAI, MRI);
   }
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   unsigned CalleeOpNo = 0;
 
-  if (Opc == AArch64::BLR_RVMARKER) {
+  if (Opc == AArch64::BLR_RVMARKER || Opc == AArch64::BLRA_RVMARKER) {
     // Add a target global address for the retainRV/claimRV runtime function
     // just before the call target.
     Function *ARCFn = *objcarc::getAttachedARCFunction(Info.CB);
@@ -1342,6 +1384,28 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   Mask = getMaskForArgs(OutArgs, Info, *TRI, MF);
 
+  if (Opc == AArch64::BLRA || Opc == AArch64::BLRA_RVMARKER) {
+    assert((Info.PAI->Key == AArch64PACKey::IA ||
+            Info.PAI->Key == AArch64PACKey::IB) &&
+           "Invalid auth call key");
+    MIB.addImm(Info.PAI->Key);
+
+    Register AddrDisc = 0;
+    uint16_t IntDisc = 0;
+    std::tie(IntDisc, AddrDisc) =
+        extractPtrauthBlendDiscriminators(Info.PAI->Discriminator, MRI);
+
+    MIB.addImm(IntDisc);
+    MIB.addUse(AddrDisc);
+    if (AddrDisc != AArch64::NoRegister) {
+      constrainOperandRegClass(MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
+                               *MF.getSubtarget().getRegBankInfo(), *MIB,
+                               MIB->getDesc(), MIB->getOperand(CalleeOpNo + 3),
+                               CalleeOpNo + 3);
+    }
+  }
+
+  // Tell the call which registers are clobbered.
   if (MF.getSubtarget<AArch64Subtarget>().hasCustomCallingConv())
     TRI->UpdateCustomCallPreservedMask(MF, &Mask);
   MIB.addRegMask(Mask);
@@ -1386,7 +1450,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!determineAndHandleAssignments(
             UsingReturnedArg ? ReturnedArgHandler : Handler, Assigner, InArgs,
             MIRBuilder, Info.CallConv, Info.IsVarArg,
-            UsingReturnedArg ? ArrayRef(OutArgs[0].Regs) : std::nullopt))
+            UsingReturnedArg ? ArrayRef(OutArgs[0].Regs)
+                             : ArrayRef<Register>()))
       return false;
   }
 

@@ -10,7 +10,9 @@ import unittest
 from clang.cindex import CursorKind
 from clang.cindex import TranslationUnit
 from clang.cindex import TypeKind
+from clang.cindex import RefQualifierKind
 from .util import get_cursor
+from .util import get_cursors
 from .util import get_tu
 
 
@@ -308,10 +310,10 @@ class TestType(unittest.TestCase):
     def test_invalid_element_type(self):
         """Ensure Type.element_type raises if type doesn't have elements."""
         tu = get_tu("int i;")
-        i = get_cursor(tu, "i")
-        self.assertIsNotNone(i)
-        with self.assertRaises(Exception):
-            i.element_type
+        ty = get_cursor(tu, "i").type
+        with self.assertRaises(Exception) as ctx:
+            ty.element_type
+        self.assertEqual(str(ctx.exception), "Element type not available on this type.")
 
     def test_element_count(self):
         """Ensure Type.element_count works."""
@@ -356,6 +358,49 @@ class TestType(unittest.TestCase):
         self.assertIsInstance(i.type.is_restrict_qualified(), bool)
         self.assertTrue(i.type.is_restrict_qualified())
         self.assertFalse(j.type.is_restrict_qualified())
+
+    def test_get_result(self):
+        tu = get_tu("void foo(); int bar(char, short);")
+        foo = get_cursor(tu, "foo")
+        bar = get_cursor(tu, "bar")
+        self.assertEqual(foo.type.get_result().spelling, "void")
+        self.assertEqual(bar.type.get_result().spelling, "int")
+
+    def test_get_class_type(self):
+        tu = get_tu(
+            """
+class myClass
+{
+   char *myAttr;
+};
+
+char *myClass::*pMyAttr = &myClass::myAttr;
+""",
+            lang="cpp",
+        )
+        cur = get_cursor(tu, "pMyAttr")
+        self.assertEqual(cur.type.get_class_type().spelling, "myClass")
+
+    def test_get_named_type(self):
+        tu = get_tu("using char_alias = char; char_alias xyz;", lang="cpp")
+        cur = get_cursor(tu, "xyz")
+        self.assertEqual(cur.type.get_named_type().spelling, "char_alias")
+
+    def test_get_ref_qualifier(self):
+        tu = get_tu(
+            """
+class A
+{
+	const int& getAttr() const &;
+	int getAttr() const &&;
+};
+""",
+            lang="cpp",
+        )
+        getters = get_cursors(tu, "getAttr")
+        self.assertEqual(len(getters), 2)
+        self.assertEqual(getters[0].type.get_ref_qualifier(), RefQualifierKind.LVALUE)
+        self.assertEqual(getters[1].type.get_ref_qualifier(), RefQualifierKind.RVALUE)
 
     def test_record_layout(self):
         """Ensure Cursor.type.get_size, Cursor.type.get_align and

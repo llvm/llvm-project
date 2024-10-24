@@ -36,6 +36,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/GuardUtils.h"
@@ -55,8 +56,8 @@ static void turnToExplicitForm(CallInst *Guard, Function *DeoptIntrinsic) {
 static bool explicifyGuards(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
   // do.
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_guard);
   if (!GuardDecl || GuardDecl->use_empty())
     return false;
 
@@ -68,7 +69,7 @@ static bool explicifyGuards(Function &F) {
   if (GuardIntrinsics.empty())
     return false;
 
-  auto *DeoptIntrinsic = Intrinsic::getDeclaration(
+  auto *DeoptIntrinsic = Intrinsic::getOrInsertDeclaration(
       F.getParent(), Intrinsic::experimental_deoptimize, {F.getReturnType()});
   DeoptIntrinsic->setCallingConv(GuardDecl->getCallingConv());
 

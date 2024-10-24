@@ -6,35 +6,41 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/bit.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+template <typename OutType, typename InType>
+class SqrtTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
-template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
+  DECLARE_SPECIAL_CONSTANTS(OutType)
 
-  DECLARE_SPECIAL_CONSTANTS(T)
+  struct InConstants {
+    DECLARE_SPECIAL_CONSTANTS(InType)
+  };
 
-  static constexpr StorageType HIDDEN_BIT =
-      StorageType(1) << LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN;
+  InConstants in;
 
 public:
-  typedef T (*SqrtFunc)(T);
+  typedef OutType (*SqrtFunc)(InType);
 
   void test_special_numbers(SqrtFunc func) {
-    ASSERT_FP_EQ(aNaN, func(aNaN));
-    ASSERT_FP_EQ(inf, func(inf));
-    ASSERT_FP_EQ(aNaN, func(neg_inf));
-    ASSERT_FP_EQ(0.0, func(0.0));
-    ASSERT_FP_EQ(-0.0, func(-0.0));
-    ASSERT_FP_EQ(aNaN, func(T(-1.0)));
-    ASSERT_FP_EQ(T(1.0), func(T(1.0)));
-    ASSERT_FP_EQ(T(2.0), func(T(4.0)));
-    ASSERT_FP_EQ(T(3.0), func(T(9.0)));
+    ASSERT_FP_EQ(aNaN, func(in.aNaN));
+    ASSERT_FP_EQ(inf, func(in.inf));
+    ASSERT_FP_EQ(aNaN, func(in.neg_inf));
+    ASSERT_FP_EQ(zero, func(in.zero));
+    ASSERT_FP_EQ(neg_zero, func(in.neg_zero));
+    ASSERT_FP_EQ(aNaN, func(InType(-1.0)));
+    ASSERT_FP_EQ(OutType(1.0), func(InType(1.0)));
+    ASSERT_FP_EQ(OutType(2.0), func(InType(4.0)));
+    ASSERT_FP_EQ(OutType(3.0), func(InType(9.0)));
   }
 };
 
 #define LIST_SQRT_TESTS(T, func)                                               \
-  using LlvmLibcSqrtTest = SqrtTest<T>;                                        \
+  using LlvmLibcSqrtTest = SqrtTest<T, T>;                                     \
+  TEST_F(LlvmLibcSqrtTest, SpecialNumbers) { test_special_numbers(&func); }
+
+#define LIST_NARROWING_SQRT_TESTS(OutType, InType, func)                       \
+  using LlvmLibcSqrtTest = SqrtTest<OutType, InType>;                          \
   TEST_F(LlvmLibcSqrtTest, SpecialNumbers) { test_special_numbers(&func); }

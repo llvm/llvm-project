@@ -1,3 +1,5 @@
+.. _printf_behavior:
+
 ====================================
 Printf Behavior Under All Conditions
 ====================================
@@ -158,7 +160,7 @@ If a conversion specification is provided an invalid type modifier, that type
 modifier will be ignored, and the default type for that conversion will be used.
 In the case of the length modifier "L" and integer conversions, it will be
 treated as if it was "ll" (lowercase LL). For this purpose the list of integer
-conversions is d, i, u, o, x, X, n.
+conversions is d, i, u, o, x, X, b, B, n.
 
 If a conversion specification ending in % has any options that consume arguments
 (e.g. "%*.*%") those arguments will be consumed as normal, but their values will
@@ -167,9 +169,17 @@ be ignored.
 If a conversion specification ends in a null byte ('\0') then it shall be
 treated as an invalid conversion followed by a null byte.
 
-If a number passed as a min width or precision value is out of range for an int,
-then it will be treated as the largest or smallest value in the int range
-(e.g. "%-999999999999.999999999999s" is the same as "%-2147483648.2147483647s").
+If a number passed as a field width or precision value is out of range for an
+int, then it will be treated as the largest value in the int range
+(e.g. "%-999999999999.999999999999s" is the same as "%-2147483647.2147483647s").
+
+If the field width is set to INT_MIN by using the '*' form, 
+e.g. printf("%*d", INT_MIN, 1), it will be treated as INT_MAX, since -INT_MIN is
+not representable as an int.
+
+If a number passed as a bit width is less than or equal to zero, the conversion
+is considered invalid. If the provided bit width is larger than the width of
+uintmax_t, it will be clamped to the width of uintmax_t.
 
 ----------
 Conversion
@@ -203,3 +213,15 @@ The %r, %R, %k, and %K fixed point number format specifiers are accepted as
 defined in ISO/IEC TR 18037 (the fixed point number extension). These are
 available when the compiler is detected as having support for fixed point
 numbers and the LIBC_COPT_PRINTF_DISABLE_FIXED_POINT flag is not set.
+
+The %m conversion will behave as specified by POSIX for syslog: It takes no
+arguments, and outputs the result of strerror(errno). Additionally, to match
+existing printf behaviors, it will behave as if it is a %s string conversion for
+the purpose of all options, except for the alt form flag. If the alt form flag
+is specified, %m will instead output a string matching the macro name of the
+value of errno (e.g. "ERANGE" for errno = ERANGE), again treating it as a string
+conversion. If there is no corresponding macro, then alt form %m will print the
+value of errno as an integer with the %d format, including all options. If
+errno = 0 and alt form is specified, the conversion will be a string conversion
+on "0" for simplicity of implementation. This matches what other libcs
+implementing this feature have done.

@@ -17,7 +17,7 @@ int check_all_feature() {
     return 7;
   else if (__builtin_cpu_supports("sve2-bitperm+sve2-sha3+sve2-sm4"))
     return 8;
-  else if (__builtin_cpu_supports("sme+memtag+memtag2+memtag3+sb"))
+  else if (__builtin_cpu_supports("sme+memtag+memtag3+sb"))
     return 9;
   else if (__builtin_cpu_supports("predres+ssbs+ssbs2+bti+ls64+ls64_v"))
     return 10;
@@ -48,5 +48,5 @@ int test_versions() {
     return code();
 }
 // CHECK: attributes #0 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #1 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+neon" }
-// CHECK: attributes #2 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
+// CHECK: attributes #1 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
+// CHECK: attributes #2 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }

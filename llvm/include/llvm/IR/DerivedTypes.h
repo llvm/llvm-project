@@ -32,6 +32,7 @@ namespace llvm {
 class Value;
 class APInt;
 class LLVMContext;
+template <typename T> class Expected;
 
 /// Class to represent integer types. Note that this class is also used to
 /// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
@@ -300,6 +301,10 @@ public:
   ///  {<vscale x 2 x i32>, <vscale x 4 x i64>}}
   bool containsHomogeneousScalableVectorTypes() const;
 
+  /// Return true if this struct is non-empty and all element types are the
+  /// same.
+  bool containsHomogeneousTypes() const;
+
   /// Return true if this is a named struct that has a non-empty name.
   bool hasName() const { return SymbolTableEntry != nullptr; }
 
@@ -491,9 +496,9 @@ public:
     return VectorType::get(EltTy, VTy->getElementCount());
   }
 
-  // This static method returns a VectorType with a smaller number of elements
-  // of a larger type than the input element type. For example, a <16 x i8>
-  // subdivided twice would return <4 x i32>
+  // This static method returns a VectorType with a larger number of elements
+  // of a smaller type than the input element type. For example, a <4 x i64>
+  // subdivided twice would return <16 x i16>
   static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs) {
     for (int i = 0; i < NumSubdivs; ++i) {
       VTy = VectorType::getDoubleElementsVectorType(VTy);
@@ -631,7 +636,7 @@ public:
 
   /// Get the minimum number of elements in this vector. The actual number of
   /// elements in the vector is an integer multiple of this value.
-  uint64_t getMinNumElements() const { return ElementQuantity; }
+  unsigned getMinNumElements() const { return ElementQuantity; }
 
   static bool classof(const Type *T) {
     return T->getTypeID() == ScalableVectorTyID;
@@ -732,8 +737,21 @@ public:
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters.
   static TargetExtType *get(LLVMContext &Context, StringRef Name,
-                            ArrayRef<Type *> Types = std::nullopt,
-                            ArrayRef<unsigned> Ints = std::nullopt);
+                            ArrayRef<Type *> Types = {},
+                            ArrayRef<unsigned> Ints = {});
+
+  /// Return a target extension type having the specified name and optional
+  /// type and integer parameters, or an appropriate Error if it fails the
+  /// parameters check.
+  static Expected<TargetExtType *> getOrError(LLVMContext &Context,
+                                              StringRef Name,
+                                              ArrayRef<Type *> Types = {},
+                                              ArrayRef<unsigned> Ints = {});
+
+  /// Check that a newly created target extension type has the expected number
+  /// of type parameters and integer parameters, returning the type itself if OK
+  /// or an appropriate Error if not.
+  static Expected<TargetExtType *> checkParams(TargetExtType *TTy);
 
   /// Return the name for this target extension type. Two distinct target
   /// extension types may have the same name if their type or integer parameters

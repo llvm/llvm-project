@@ -98,6 +98,9 @@ namespace clang {
 #define GENERIC_IMAGE_TYPE(ImgType, Id)                                      \
     TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                          \
+    TST_##Name, // HLSL Intangible Types
+#include "clang/Basic/HLSLIntangibleTypes.def"
     TST_error // erroneous type
   };
 
@@ -273,29 +276,30 @@ namespace clang {
 
   /// CallingConv - Specifies the calling convention that a function uses.
   enum CallingConv {
-    CC_C,           // __attribute__((cdecl))
-    CC_X86StdCall,  // __attribute__((stdcall))
-    CC_X86FastCall, // __attribute__((fastcall))
-    CC_X86ThisCall, // __attribute__((thiscall))
-    CC_X86VectorCall, // __attribute__((vectorcall))
-    CC_X86Pascal,   // __attribute__((pascal))
-    CC_Win64,       // __attribute__((ms_abi))
-    CC_X86_64SysV,  // __attribute__((sysv_abi))
-    CC_X86RegCall, // __attribute__((regcall))
-    CC_AAPCS,       // __attribute__((pcs("aapcs")))
-    CC_AAPCS_VFP,   // __attribute__((pcs("aapcs-vfp")))
-    CC_IntelOclBicc, // __attribute__((intel_ocl_bicc))
-    CC_SpirFunction, // default for OpenCL functions on SPIR target
-    CC_OpenCLKernel, // inferred for OpenCL kernels
-    CC_Swift,        // __attribute__((swiftcall))
+    CC_C,                 // __attribute__((cdecl))
+    CC_X86StdCall,        // __attribute__((stdcall))
+    CC_X86FastCall,       // __attribute__((fastcall))
+    CC_X86ThisCall,       // __attribute__((thiscall))
+    CC_X86VectorCall,     // __attribute__((vectorcall))
+    CC_X86Pascal,         // __attribute__((pascal))
+    CC_Win64,             // __attribute__((ms_abi))
+    CC_X86_64SysV,        // __attribute__((sysv_abi))
+    CC_X86RegCall,        // __attribute__((regcall))
+    CC_AAPCS,             // __attribute__((pcs("aapcs")))
+    CC_AAPCS_VFP,         // __attribute__((pcs("aapcs-vfp")))
+    CC_IntelOclBicc,      // __attribute__((intel_ocl_bicc))
+    CC_SpirFunction,      // default for OpenCL functions on SPIR target
+    CC_OpenCLKernel,      // inferred for OpenCL kernels
+    CC_Swift,             // __attribute__((swiftcall))
     CC_SwiftAsync,        // __attribute__((swiftasynccall))
-    CC_PreserveMost, // __attribute__((preserve_most))
-    CC_PreserveAll,  // __attribute__((preserve_all))
+    CC_PreserveMost,      // __attribute__((preserve_most))
+    CC_PreserveAll,       // __attribute__((preserve_all))
     CC_AArch64VectorCall, // __attribute__((aarch64_vector_pcs))
-    CC_AArch64SVEPCS, // __attribute__((aarch64_sve_pcs))
-    CC_AMDGPUKernelCall, // __attribute__((amdgpu_kernel))
-    CC_M68kRTD,       // __attribute__((m68k_rtd))
-    CC_PreserveNone,  // __attribute__((preserve_none))
+    CC_AArch64SVEPCS,     // __attribute__((aarch64_sve_pcs))
+    CC_AMDGPUKernelCall,  // __attribute__((amdgpu_kernel))
+    CC_M68kRTD,           // __attribute__((m68k_rtd))
+    CC_PreserveNone,      // __attribute__((preserve_none))
+    CC_RISCVVectorCall,   // __attribute__((riscv_vector_cc))
   };
 
   /// Checks whether the given calling convention supports variadic
@@ -381,6 +385,12 @@ namespace clang {
     /// Swift asynchronous context-pointer ABI treatment.  There can be at
     /// most one parameter on a given function that uses this treatment.
     SwiftAsyncContext,
+
+    // This parameter is a copy-out HLSL parameter.
+    HLSLOut,
+
+    // This parameter is a copy-in/copy-out HLSL parameter.
+    HLSLInOut,
   };
 
   /// Assigned inheritance model for a class in the MS C++ ABI. Must match order

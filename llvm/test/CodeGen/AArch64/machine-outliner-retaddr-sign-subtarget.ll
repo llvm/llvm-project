@@ -10,7 +10,8 @@ define void @a() #0 {
 ; CHECK:            // %bb.0:
 ; CHECK-NEXT:               .cfi_b_key_frame
 ; CHECK-NEXT:               pacibsp
-; CHECK-NEXT:               .cfi_negate_ra_state
+; CHECK:                    .cfi_negate_ra_state
+; CHECK-NEXT:               .cfi_def_cfa_offset
 ; CHECK-NOT:                OUTLINED_FUNCTION_
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -24,8 +25,8 @@ define void @a() #0 {
   store i32 4, ptr %4, align 4
   store i32 5, ptr %5, align 4
   store i32 6, ptr %6, align 4
+; CHECK-NOT:              auti{{[a,b]}}sp
 ; CHECK:                  retab
-; CHECK-NOT:              auti[a,b]sp
   ret void
 }
 
@@ -34,7 +35,8 @@ define void @b() #0 {
 ; CHECK:            // %bb.0:
 ; CHECK-NEXT:               .cfi_b_key_frame
 ; CHECK-NEXT:               pacibsp
-; CHECK-NEXT:               .cfi_negate_ra_state
+; CHECK:                    .cfi_negate_ra_state
+; CHECK-NEXT:               .cfi_def_cfa_offset
 ; CHECK-NOT:                OUTLINED_FUNCTION_
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -48,8 +50,8 @@ define void @b() #0 {
   store i32 4, ptr %4, align 4
   store i32 5, ptr %5, align 4
   store i32 6, ptr %6, align 4
+; CHECK-NOT:              auti{{[a,b]}}sp
 ; CHECK:                  retab
-; CHECK-NOT:              auti[a,b]sp
   ret void
 }
 
@@ -58,7 +60,8 @@ define void @c() #1 {
 ; CHECK:            // %bb.0:
 ; CHECK-NEXT:               .cfi_b_key_frame
 ; CHECK-NEXT:               hint #27
-; CHECK-NEXT:               .cfi_negate_ra_state
+; CHECK:                    .cfi_negate_ra_state
+; CHECK-NEXT:               .cfi_def_cfa_offset
 ; CHECK-NOT:                OUTLINED_FUNCTION_
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4

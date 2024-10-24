@@ -703,18 +703,26 @@ func.func @distance_1_use(%A: memref<?xf32>, %result: memref<?xf32>) {
 // -----
 
 // NOEPILOGUE-LABEL: stage_0_value_escape(
-func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>) {
+func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>, %ub: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %c4 = arith.constant 4 : index
   %cf = arith.constant 1.0 : f32
-// NOEPILOGUE: %[[C3:.+]] = arith.constant 3 : index
-// NOEPILOGUE: %[[A:.+]] = arith.addf
-// NOEPILOGUE: scf.for %[[IV:.+]] = {{.*}} iter_args(%[[ARG:.+]] = %[[A]],
-// NOEPILOGUE:   %[[C:.+]] = arith.cmpi slt, %[[IV]], %[[C3]] : index
-// NOEPILOGUE:   %[[S:.+]] = arith.select %[[C]], %{{.+}}, %[[ARG]] : f32
-// NOEPILOGUE:   scf.yield %[[S]]
-  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
+// NOEPILOGUE: %[[UB:[^,]+]]: index)
+// NOEPILOGUE-DAG: %[[C0:.+]] = arith.constant 0 : index
+// NOEPILOGUE-DAG: %[[C1:.+]] = arith.constant 1 : index
+// NOEPILOGUE-DAG: %[[CF:.+]] = arith.constant 1.000000e+00
+// NOEPILOGUE: %[[CND0:.+]] = arith.cmpi sgt, %[[UB]], %[[C0]]
+// NOEPILOGUE: scf.if
+// NOEPILOGUE: %[[IF:.+]] = scf.if %[[CND0]]
+// NOEPILOGUE:   %[[A:.+]] = arith.addf
+// NOEPILOGUE:   scf.yield %[[A]]
+// NOEPILOGUE: %[[S0:.+]] = arith.select %[[CND0]], %[[IF]], %[[CF]]
+// NOEPILOGUE: scf.for %[[IV:.+]] = {{.*}} iter_args(%[[ARG:.+]] = %[[S0]],
+// NOEPILOGUE:   %[[UB_1:.+]] = arith.subi %[[UB]], %[[C1]] : index
+// NOEPILOGUE:   %[[CND1:.+]] = arith.cmpi slt, %[[IV]], %[[UB_1]] : index
+// NOEPILOGUE:   %[[S1:.+]] = arith.select %[[CND1]], %{{.+}}, %[[ARG]] : f32
+// NOEPILOGUE:   scf.yield %[[S1]]
+  %r = scf.for %i0 = %c0 to %ub step %c1 iter_args(%arg0 = %cf) -> (f32) {
     %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 1 } : memref<?xf32>
     %A1_elem = arith.addf %A_elem, %arg0 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : f32
     memref.store %A1_elem, %result[%c0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
@@ -756,11 +764,51 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>) {
 //      NOEPILOGUE:     memref.load %[[A]][%[[IV3]]] : memref<?xf32>
 //      NOEPILOGUE:   scf.yield %[[V2]], %[[L3]] : f32, f32
 
-// In case dynamic loop pipelining is off check that the transformation didn't
-// apply.
+// Check for predicated epilogue for dynamic loop.
 // CHECK-LABEL: dynamic_loop(
-//   CHECK-NOT:   memref.load
-//       CHECK:   scf.for
+//    CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//    CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//    CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//    CHECK-DAG:   %[[CM1:.*]] = arith.constant -1 : index
+//        CHECK:   %[[UBM:.*]] = arith.subi %[[UB:.*]], %{{.*}}
+//        CHECK:   %{{.*}}:2 = scf.for %[[ARG5:.*]] = %[[LB:.*]] to %[[UBM]] step %[[STEP:.*]] iter_args(%[[ARG6:.*]] = %{{.*}}, %[[ARG7:.*]] = %{{.*}})
+//        CHECK:       memref.store %[[ARG6]], %{{.*}}[%[[ARG5]]]
+//        CHECK:       %[[ADDF_24:.*]] = arith.addf %[[ARG7]], %{{.*}}
+//        CHECK:       %[[MULI_25:.*]] = arith.muli %{{.*}}, %{{.*}}
+//        CHECK:       %[[ADDI_26:.*]] = arith.addi %[[ARG5]], %[[MULI_25]]
+//        CHECK:       %[[LOAD_27:.*]] = memref.load %{{.*}}[%[[ADDI_26]]]
+//        CHECK:       scf.yield %[[ADDF_24]], %[[LOAD_27]]
+//        CHECK:   }
+//        CHECK:   %[[CMPI_10:.*]] = arith.cmpi slt, %[[STEP]], %[[C0]]
+//        CHECK:   %[[SELECT_11:.*]] = arith.select %[[CMPI_10]], %[[C1]], %[[CM1]]
+//        CHECK:   %[[SUBI_12:.*]] = arith.subi %[[UB]], %[[LB]]
+//        CHECK:   %[[ADDI_13:.*]] = arith.addi %[[SUBI_12]], %[[STEP]]
+//        CHECK:   %[[ADDI_14:.*]] = arith.addi %[[ADDI_13]], %[[SELECT_11]]
+//        CHECK:   %[[DIVSI_15:.*]] = arith.divsi %[[ADDI_14]], %[[STEP]]
+//        CHECK:   %[[SUBI_17:.*]] = arith.subi %[[DIVSI_15]], %[[C2]]
+//        CHECK:   %[[MAXSI_18:.*]] = arith.maxsi %[[SUBI_17]], %[[C0]]
+//        CHECK:   %[[MULI_19:.*]] = arith.muli %[[STEP]], %[[MAXSI_18]]
+//        CHECK:   %[[ADDI_20:.*]] = arith.addi %[[LB]], %[[MULI_19]]
+//        CHECK:   %[[ADDI_21:.*]] = arith.addi %[[MAXSI_18]], %[[C1]]
+//        CHECK:   %[[CMPI_22:.*]] = arith.cmpi sge, %[[DIVSI_15]], %[[C1]]
+//        CHECK:   %[[MULI_23:.*]] = arith.muli %[[STEP]], %[[ADDI_21]]
+//        CHECK:   %[[ADDI_24:.*]] = arith.addi %[[LB]], %[[MULI_23]]
+//        CHECK:   %[[CMPI_25:.*]] = arith.cmpi sge, %[[DIVSI_15]], %[[C2]]
+//        CHECK:   scf.if %[[CMPI_22]] {
+//        CHECK:     memref.store %{{.*}}#0, %{{.*}}[%[[ADDI_20]]]
+//        CHECK:   } else {
+//        CHECK:   }
+//        CHECK:   %[[IF_26:.*]] = scf.if %[[CMPI_25]]
+//        CHECK:     %[[ADDF_27:.*]] = arith.addf %{{.*}}#1, %{{.*}}
+//        CHECK:     scf.yield %[[ADDF_27]]
+//        CHECK:   } else {
+//        CHECK:     scf.yield %{{.*}}
+//        CHECK:   }
+//        CHECK:   scf.if %[[CMPI_25]] {
+//        CHECK:     memref.store %[[IF_26]], %{{.*}}[%[[ADDI_24]]]
+//        CHECK:   } else {
+//        CHECK:   }
+//        CHECK:   return
 func.func @dynamic_loop(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %ub: index, %step: index) {
   %cf = arith.constant 1.0 : f32
   scf.for %i0 = %lb to %ub step %step {
@@ -768,6 +816,74 @@ func.func @dynamic_loop(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %
     %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
     memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 0 } : memref<?xf32>
   } { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+// NOEPILOGUE-LABEL:   func.func @dynamic_loop_result
+//       NOEPILOGUE:     %{{.*}}:2 = scf.for %[[ARG5:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG6:.*]] = %{{.*}}, %[[ARG7:.*]] = %{{.*}})
+//       NOEPILOGUE:       %[[SUBI_3:.*]] = arith.subi %{{.*}}, %{{.*}}
+//       NOEPILOGUE:       %[[CMPI_4:.*]] = arith.cmpi slt, %[[ARG5]], %[[SUBI_3]]
+//       NOEPILOGUE:       %[[ADDF_5:.*]] = arith.addf %[[ARG7]], %[[ARG6]]
+//       NOEPILOGUE:       %[[MULF_6:.*]] = arith.mulf %[[ADDF_5]], %{{.*}}
+//       NOEPILOGUE:       %[[ADDI_7:.*]] = arith.addi %[[ARG5]], %{{.*}}
+//       NOEPILOGUE:       %[[IF_8:.*]] = scf.if %[[CMPI_4]]
+//       NOEPILOGUE:         %[[LOAD_9:.*]] = memref.load %{{.*}}[%[[ADDI_7]]]
+//       NOEPILOGUE:         scf.yield %[[LOAD_9]]
+//       NOEPILOGUE:       } else {
+//       NOEPILOGUE:         scf.yield %{{.*}}
+//       NOEPILOGUE:       }
+//       NOEPILOGUE:       scf.yield %[[MULF_6]], %[[IF_8]]
+//       NOEPILOGUE:     }
+//       NOEPILOGUE:     memref.store %{{.*}}#0, %{{.*}}[%{{.*}}]
+
+// Check for predicated epilogue for dynamic loop.
+// CHECK-LABEL:   func.func @dynamic_loop_result
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[CM1:.*]] = arith.constant -1 : index
+//   CHECK-DAG:   %[[CF0:.*]] = arith.constant 0.000000e+00
+//       CHECK:   %[[UBM:.*]] = arith.subi %[[UB:.*]], %{{.*}}
+//       CHECK:   %{{.*}}:2 = scf.for %[[ARG5:.*]] = %[[LB:.*]] to %[[UBM]] step %[[STEP:.*]] iter_args(%[[ARG6:.*]] = %{{.*}}, %[[ARG7:.*]] = %{{.*}})
+//       CHECK:       %[[ADDF_13:.*]] = arith.addf %[[ARG7]], %[[ARG6]]
+//       CHECK:       %[[MULF_14:.*]] = arith.mulf %[[ADDF_13]], %{{.*}}
+//       CHECK:       %[[ADDI_15:.*]] = arith.addi %[[ARG5]], %{{.*}}
+//       CHECK:       %[[LOAD_16:.*]] = memref.load %{{.*}}[%[[ADDI_15]]]
+//       CHECK:       scf.yield %[[MULF_14]], %[[LOAD_16]]
+//       CHECK:     }
+//       CHECK:     %[[CMPI_4:.*]] = arith.cmpi slt, %[[STEP]], %[[C0]]
+//       CHECK:     %[[SELECT_5:.*]] = arith.select %[[CMPI_4]], %[[C1]], %[[CM1]]
+//       CHECK:     %[[SUBI_6:.*]] = arith.subi %[[UB]], %[[LB]]
+//       CHECK:     %[[ADDI_7:.*]] = arith.addi %[[SUBI_6]], %[[STEP]]
+//       CHECK:     %[[ADDI_8:.*]] = arith.addi %[[ADDI_7]], %[[SELECT_5]]
+//       CHECK:     %[[DIVSI_9:.*]] = arith.divsi %[[ADDI_8]], %[[STEP]]
+//       CHECK:     %[[CMPI_10:.*]] = arith.cmpi sge, %[[DIVSI_9]], %[[C1]]
+//       CHECK:     %[[IF_11:.*]] = scf.if %[[CMPI_10]]
+//       CHECK:       %[[ADDF_14:.*]] = arith.addf %{{.*}}#1, %{{.*}}#0
+//       CHECK:       scf.yield %[[ADDF_14]]
+//       CHECK:     } else {
+//       CHECK:       scf.yield %[[CF0]]
+//       CHECK:     }
+//       CHECK:     %[[IF_12:.*]] = scf.if %[[CMPI_10]]
+//       CHECK:       %[[MULF_14:.*]] = arith.mulf %[[IF_11]], %{{.*}}
+//       CHECK:       scf.yield %[[MULF_14]]
+//       CHECK:     } else {
+//       CHECK:       scf.yield %[[CF0]]
+//       CHECK:     }
+//       CHECK:     %[[SELECT_13:.*]] = arith.select %[[CMPI_10]], %[[IF_12]], %{{.*}}#0
+//       CHECK:     memref.store %[[SELECT_13]], %{{.*}}[%[[C0]]]
+func.func @dynamic_loop_result(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %ub: index, %step: index) {
+  %cf0 = arith.constant 1.0 : f32
+  %cf1 = arith.constant 33.0 : f32
+  %cst = arith.constant 0 : index
+  %res:1 = scf.for %i0 = %lb to %ub step %step iter_args (%arg0 = %cf0) -> (f32) {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %arg0 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : f32
+    %A2_elem = arith.mulf %A1_elem, %cf1 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    scf.yield %A2_elem : f32
+  } { __test_pipelining_loop__ }
+  memref.store %res#0, %result[%cst] : memref<?xf32>
   return
 }
 
@@ -843,6 +959,29 @@ func.func @invalid_schedule2(%A: memref<?xf32>, %result: memref<?xf32>) {
     %idx1 = arith.addi %idx, %c1 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : index
     memref.store %A_elem, %result[%idx] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
     scf.yield %idx1 : index
+  }  { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+func.func @invalid_schedule3(%A: memref<?xf32>, %result: memref<?xf32>, %ext: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%idx = %c0) -> (index) {
+    %cnd = arith.cmpi slt, %ext, %c4 { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 0 } : index
+    // expected-error@+1 {{operation scheduled before its operands}}
+    %idx1 = scf.if %cnd -> (index) {
+      %idxinc = arith.addi %idx, %c1 : index
+      scf.yield %idxinc : index
+    } else {
+      scf.yield %idx : index
+    } { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 1 }
+    %A_elem = memref.load %A[%idx1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %idx2 = arith.addi %idx1, %c1 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 3 } : index
+    memref.store %A_elem, %result[%idx1] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 4 } : memref<?xf32>
+    scf.yield %idx2 : index
   }  { __test_pipelining_loop__ }
   return
 }

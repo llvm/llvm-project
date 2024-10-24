@@ -19,11 +19,13 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
+#include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
 
@@ -56,7 +58,7 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 static bool isMetaInstrGET(unsigned Opcode) {
   return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_fID ||
          Opcode == SPIRV::GET_pID || Opcode == SPIRV::GET_vID ||
-         Opcode == SPIRV::GET_vfID;
+         Opcode == SPIRV::GET_vfID || Opcode == SPIRV::GET_vpID;
 }
 
 static bool mayBeInserted(unsigned Opcode) {
@@ -100,7 +102,7 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResType) {
             // There was no "assign type" actions, let's fix this now
             ResType = ScalarType;
-            MRI.setRegClass(ResVReg, &SPIRV::IDRegClass);
+            MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
             MRI.setType(ResVReg,
                         LLT::scalar(GR->getScalarOrVectorBitWidth(ResType)));
             GR->assignSPIRVTypeToVReg(ResType, ResVReg, *GR->CurMF);
@@ -122,9 +124,8 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResVType)
             continue;
           // Set type & class
-          MRI.setRegClass(ResVReg, &SPIRV::IDRegClass);
-          MRI.setType(ResVReg,
-                      LLT::scalar(GR->getScalarOrVectorBitWidth(ResVType)));
+          MRI.setRegClass(ResVReg, GR->getRegClass(ResVType));
+          MRI.setType(ResVReg, GR->getRegType(ResVType));
           GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
         }
         // If this is a simple operation that is to be reduced by TableGen
@@ -136,16 +137,42 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             continue;
           // Restore usual instructions pattern for the newly inserted
           // instruction
-          MRI.setRegClass(ResVReg, MRI.getType(ResVReg).isVector()
-                                       ? &SPIRV::IDRegClass
-                                       : &SPIRV::ANYIDRegClass);
-          MRI.setType(ResVReg, LLT::scalar(32));
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
           processInstr(I, MIB, MRI, GR);
         }
       }
     }
   }
+}
+
+// Do a preorder traversal of the CFG starting from the BB |Start|.
+// point. Calls |op| on each basic block encountered during the traversal.
+void visit(MachineFunction &MF, MachineBasicBlock &Start,
+           std::function<void(MachineBasicBlock *)> op) {
+  std::stack<MachineBasicBlock *> ToVisit;
+  SmallPtrSet<MachineBasicBlock *, 8> Seen;
+
+  ToVisit.push(&Start);
+  Seen.insert(ToVisit.top());
+  while (ToVisit.size() != 0) {
+    MachineBasicBlock *MBB = ToVisit.top();
+    ToVisit.pop();
+
+    op(MBB);
+
+    for (auto Succ : MBB->successors()) {
+      if (Seen.contains(Succ))
+        continue;
+      ToVisit.push(Succ);
+      Seen.insert(Succ);
+    }
+  }
+}
+
+// Do a preorder traversal of the CFG starting from the given function's entry
+// point. Calls |op| on each basic block encountered during the traversal.
+void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
+  visit(MF, *MF.begin(), op);
 }
 
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {

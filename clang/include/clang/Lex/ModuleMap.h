@@ -93,9 +93,12 @@ class ModuleMap {
   /// named LangOpts::CurrentModule, if we've loaded it).
   Module *SourceModule = nullptr;
 
+  /// The allocator for all (sub)modules.
+  llvm::SpecificBumpPtrAllocator<Module> ModulesAlloc;
+
   /// Submodules of the current module that have not yet been attached to it.
-  /// (Ownership is transferred if/when we create an enclosing module.)
-  llvm::SmallVector<std::unique_ptr<Module>, 8> PendingSubmodules;
+  /// (Relationship is set up if/when we create an enclosing module.)
+  llvm::SmallVector<Module *, 8> PendingSubmodules;
 
   /// The top-level modules that are known.
   llvm::StringMap<Module *> Modules;
@@ -263,8 +266,8 @@ private:
     Attributes Attrs;
 
     /// If \c InferModules is non-zero, the module map file that allowed
-    /// inferred modules.  Otherwise, nullopt.
-    OptionalFileEntryRef ModuleMapFile;
+    /// inferred modules.  Otherwise, invalid.
+    FileID ModuleMapFID;
 
     /// The names of modules that cannot be inferred within this
     /// directory.
@@ -279,8 +282,7 @@ private:
 
   /// A mapping from an inferred module to the module map that allowed the
   /// inference.
-  // FIXME: Consider making the values non-optional.
-  llvm::DenseMap<const Module *, OptionalFileEntryRef> InferredModuleAllowedBy;
+  llvm::DenseMap<const Module *, FileID> InferredModuleAllowedBy;
 
   llvm::DenseMap<const Module *, AdditionalModMapsSet> AdditionalModMaps;
 
@@ -503,6 +505,8 @@ public:
   /// \returns The named module, if known; otherwise, returns null.
   Module *findModule(StringRef Name) const;
 
+  Module *findOrInferSubmodule(Module *Parent, StringRef Name);
+
   /// Retrieve a module with the given name using lexical name lookup,
   /// starting at the given context.
   ///
@@ -618,8 +622,9 @@ public:
   ///
   /// \param Module The module whose module map file will be returned, if known.
   ///
-  /// \returns The file entry for the module map file containing the given
-  /// module, or nullptr if the module definition was inferred.
+  /// \returns The FileID for the module map file containing the given module,
+  /// invalid if the module definition was inferred.
+  FileID getContainingModuleMapFileID(const Module *Module) const;
   OptionalFileEntryRef getContainingModuleMapFile(const Module *Module) const;
 
   /// Get the module map file that (along with the module name) uniquely
@@ -631,9 +636,10 @@ public:
   /// of inferred modules, returns the module map that allowed the inference
   /// (e.g. contained 'module *'). Otherwise, returns
   /// getContainingModuleMapFile().
+  FileID getModuleMapFileIDForUniquing(const Module *M) const;
   OptionalFileEntryRef getModuleMapFileForUniquing(const Module *M) const;
 
-  void setInferredModuleAllowedBy(Module *M, OptionalFileEntryRef ModMap);
+  void setInferredModuleAllowedBy(Module *M, FileID ModMapFID);
 
   /// Canonicalize \p Path in a manner suitable for a module map file. In
   /// particular, this canonicalizes the parent directory separately from the

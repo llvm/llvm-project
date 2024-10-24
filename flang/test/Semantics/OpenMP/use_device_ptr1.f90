@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=50
 ! OpenMP Version 5.0
 ! 2.10.1 use_device_ptr clause
 ! List item in USE_DEVICE_PTR clause must not be structure element.
@@ -27,7 +27,7 @@ subroutine omp_target_data
       a = arrayB
    !$omp end target data
 
-   !ERROR: 'a' in USE_DEVICE_PTR clause must be of type C_PTR
+   !WARNING: Use of non-C_PTR type 'a' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead
    !$omp target data map(tofrom: a) use_device_ptr(a)
       a = 2
    !$omp end target data

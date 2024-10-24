@@ -25,21 +25,14 @@ using namespace llvm;
 static bool tryToImproveAlign(
     const DataLayout &DL, Instruction *I,
     function_ref<Align(Value *PtrOp, Align OldAlign, Align PrefAlign)> Fn) {
-  if (auto *LI = dyn_cast<LoadInst>(I)) {
-    Value *PtrOp = LI->getPointerOperand();
-    Align OldAlign = LI->getAlign();
-    Align NewAlign = Fn(PtrOp, OldAlign, DL.getPrefTypeAlign(LI->getType()));
+
+  if (auto *PtrOp = getLoadStorePointerOperand(I)) {
+    Align OldAlign = getLoadStoreAlignment(I);
+    Align PrefAlign = DL.getPrefTypeAlign(getLoadStoreType(I));
+
+    Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
     if (NewAlign > OldAlign) {
-      LI->setAlignment(NewAlign);
-      return true;
-    }
-  } else if (auto *SI = dyn_cast<StoreInst>(I)) {
-    Value *PtrOp = SI->getPointerOperand();
-    Value *ValOp = SI->getValueOperand();
-    Align OldAlign = SI->getAlign();
-    Align NewAlign = Fn(PtrOp, OldAlign, DL.getPrefTypeAlign(ValOp->getType()));
-    if (NewAlign > OldAlign) {
-      SI->setAlignment(NewAlign);
+      setLoadStoreAlignment(I, NewAlign);
       return true;
     }
   }
@@ -48,7 +41,7 @@ static bool tryToImproveAlign(
 }
 
 bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   bool Changed = false;
 
   // Enforce preferred type alignment if possible. We do this as a separate

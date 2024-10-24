@@ -144,9 +144,8 @@ static bool runIPSCCP(
     // Assume the function is called.
     Solver.markBlockExecutable(&F.front());
 
-    // Assume nothing about the incoming arguments.
     for (Argument &AI : F.args())
-      Solver.markOverdefined(&AI);
+      Solver.trackValueOfArgument(&AI);
   }
 
   // Determine if we can track any of the module's global variables. If so, add
@@ -278,40 +277,11 @@ static bool runIPSCCP(
   // whether other functions are optimizable.
   SmallVector<ReturnInst*, 8> ReturnsToZap;
 
-  for (const auto &I : Solver.getTrackedRetVals()) {
-    Function *F = I.first;
-    const ValueLatticeElement &ReturnValue = I.second;
-
-    // If there is a known constant range for the return value, add !range
-    // metadata to the function's call sites.
-    if (ReturnValue.isConstantRange() &&
-        !ReturnValue.getConstantRange().isSingleElement()) {
-      // Do not add range metadata if the return value may include undef.
-      if (ReturnValue.isConstantRangeIncludingUndef())
-        continue;
-
-      auto &CR = ReturnValue.getConstantRange();
-      for (User *User : F->users()) {
-        auto *CB = dyn_cast<CallBase>(User);
-        if (!CB || CB->getCalledFunction() != F)
-          continue;
-
-        // Do not touch existing metadata for now.
-        // TODO: We should be able to take the intersection of the existing
-        // metadata and the inferred range.
-        if (CB->getMetadata(LLVMContext::MD_range))
-          continue;
-
-        LLVMContext &Context = CB->getParent()->getContext();
-        Metadata *RangeMD[] = {
-            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getLower())),
-            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getUpper()))};
-        CB->setMetadata(LLVMContext::MD_range, MDNode::get(Context, RangeMD));
-      }
-      continue;
-    }
-    if (F->getReturnType()->isVoidTy())
-      continue;
+  Solver.inferReturnAttributes();
+  Solver.inferArgAttributes();
+  for (const auto &[F, ReturnValue] : Solver.getTrackedRetVals()) {
+    assert(!F->getReturnType()->isVoidTy() &&
+           "should not track void functions");
     if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
@@ -328,7 +298,7 @@ static bool runIPSCCP(
   SmallSetVector<Function *, 8> FuncZappedReturn;
   for (ReturnInst *RI : ReturnsToZap) {
     Function *F = RI->getParent()->getParent();
-    RI->setOperand(0, UndefValue::get(F->getReturnType()));
+    RI->setOperand(0, PoisonValue::get(F->getReturnType()));
     // Record all functions that are zapped.
     FuncZappedReturn.insert(F);
   }
@@ -368,9 +338,13 @@ static bool runIPSCCP(
       continue;
     LLVM_DEBUG(dbgs() << "Found that GV '" << GV->getName()
                       << "' is constant!\n");
-    while (!GV->use_empty()) {
-      StoreInst *SI = cast<StoreInst>(GV->user_back());
-      SI->eraseFromParent();
+    for (User *U : make_early_inc_range(GV->users())) {
+      // We can remove LoadInst here, because we already replaced its users
+      // with a constant.
+      assert((isa<StoreInst>(U) || isa<LoadInst>(U)) &&
+             "Only Store|Load Instruction can be user of GlobalVariable at "
+             "reaching here.");
+      cast<Instruction>(U)->eraseFromParent();
     }
 
     // Try to create a debug constant expression for the global variable

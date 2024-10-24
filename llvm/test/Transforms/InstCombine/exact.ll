@@ -120,7 +120,7 @@ define i1 @ashr_icmp1(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = ashr exact i64 %X, 2   ; X/4
+  %A = ashr exact i64 %X, 2  ; X/4
   %B = icmp eq i64 %A, 0
   ret i1 %B
 }
@@ -131,7 +131,7 @@ define i1 @ashr_icmp2(i64 %X) {
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %Y = ashr exact i64 %X, 2  ; x / 4
-  %Z = icmp slt i64 %Y, 4    ; x < 16
+  %Z = icmp slt i64 %Y, 4  ; x < 16
   ret i1 %Z
 }
 
@@ -181,7 +181,7 @@ define i1 @udiv_icmp1(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = udiv exact i64 %X, 5   ; X/5
+  %A = udiv exact i64 %X, 5  ; X/5
   %B = icmp ne i64 %A, 0
   ret i1 %B
 }
@@ -201,7 +201,7 @@ define i1 @udiv_icmp2(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = udiv exact i64 %X, 5   ; X/5 == 0 --> x == 0
+  %A = udiv exact i64 %X, 5  ; X/5 == 0 --> x == 0
   %B = icmp eq i64 %A, 0
   ret i1 %B
 }
@@ -221,7 +221,7 @@ define i1 @sdiv_icmp1(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = sdiv exact i64 %X, 5   ; X/5 == 0 --> x == 0
+  %A = sdiv exact i64 %X, 5  ; X/5 == 0 --> x == 0
   %B = icmp eq i64 %A, 0
   ret i1 %B
 }
@@ -241,7 +241,7 @@ define i1 @sdiv_icmp2(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = sdiv exact i64 %X, 5   ; X/5 == 1 --> x == 5
+  %A = sdiv exact i64 %X, 5  ; X/5 == 1 --> x == 5
   %B = icmp eq i64 %A, 1
   ret i1 %B
 }
@@ -261,7 +261,7 @@ define i1 @sdiv_icmp3(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X:%.*]], -5
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = sdiv exact i64 %X, 5   ; X/5 == -1 --> x == -5
+  %A = sdiv exact i64 %X, 5  ; X/5 == -1 --> x == -5
   %B = icmp eq i64 %A, -1
   ret i1 %B
 }
@@ -281,7 +281,7 @@ define i1 @sdiv_icmp4(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = sdiv exact i64 %X, -5   ; X/-5 == 0 --> x == 0
+  %A = sdiv exact i64 %X, -5  ; X/-5 == 0 --> x == 0
   %B = icmp eq i64 %A, 0
   ret i1 %B
 }
@@ -301,7 +301,7 @@ define i1 @sdiv_icmp5(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X:%.*]], -5
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = sdiv exact i64 %X, -5   ; X/-5 == 1 --> x == -5
+  %A = sdiv exact i64 %X, -5  ; X/-5 == 1 --> x == -5
   %B = icmp eq i64 %A, 1
   ret i1 %B
 }
@@ -321,7 +321,7 @@ define i1 @sdiv_icmp6(i64 %X) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %A = sdiv exact i64 %X, -5   ; X/-5 == -1 --> x == 5
+  %A = sdiv exact i64 %X, -5  ; X/-5 == -1 --> x == 5
   %B = icmp eq i64 %A, -1
   ret i1 %B
 }
@@ -336,3 +336,76 @@ define <2 x i1> @sdiv_icmp6_vec(<2 x i64> %X) {
   ret <2 x i1> %B
 }
 
+define i8 @mul_of_udiv(i8 %x) {
+; CHECK-LABEL: @mul_of_udiv(
+; CHECK-NEXT:    [[MUL1:%.*]] = lshr exact i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[MUL1]]
+;
+  %div = udiv exact i8 %x, 12
+  %mul = mul i8 %div, 6
+  ret i8 %mul
+}
+
+define i8 @mul_of_sdiv(i8 %x) {
+; CHECK-LABEL: @mul_of_sdiv(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = ashr exact i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = sub nsw i8 0, [[MUL_NEG]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %div = sdiv exact i8 %x, 12
+  %mul = mul i8 %div, -6
+  ret i8 %mul
+}
+
+define <2 x i8> @mul_of_sdiv_non_splat(<2 x i8> %x) {
+; CHECK-LABEL: @mul_of_sdiv_non_splat(
+; CHECK-NEXT:    [[MUL:%.*]] = sdiv exact <2 x i8> [[X:%.*]], <i8 1, i8 -2>
+; CHECK-NEXT:    ret <2 x i8> [[MUL]]
+;
+  %div = sdiv exact <2 x i8> %x, <i8 6, i8 -12>
+  %mul = mul <2 x i8> %div, <i8 6, i8 6>
+  ret <2 x i8> %mul
+}
+
+define i8 @mul_of_sdiv_fail_missing_exact(i8 %x) {
+; CHECK-LABEL: @mul_of_sdiv_fail_missing_exact(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[DIV]], -6
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %div = sdiv i8 %x, 12
+  %mul = mul i8 %div, -6
+  ret i8 %mul
+}
+
+define i8 @mul_of_udiv_fail_bad_remainder(i8 %x) {
+; CHECK-LABEL: @mul_of_udiv_fail_bad_remainder(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv exact i8 [[X:%.*]], 11
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[DIV]], 6
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %div = udiv exact i8 %x, 11
+  %mul = mul i8 %div, 6
+  ret i8 %mul
+}
+
+define i8 @mul_of_sdiv_fail_ub(i8 %x) {
+; CHECK-LABEL: @mul_of_sdiv_fail_ub(
+; CHECK-NEXT:    [[MUL:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %div = sdiv exact i8 %x, 6
+  %mul = mul i8 %div, -6
+  ret i8 %mul
+}
+
+define <2 x i8> @mul_of_sdiv_fail_ub_non_splat(<2 x i8> %x) {
+; CHECK-LABEL: @mul_of_sdiv_fail_ub_non_splat(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i8> [[X:%.*]], <i8 -6, i8 -12>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i8> [[DIV]], <i8 6, i8 6>
+; CHECK-NEXT:    ret <2 x i8> [[MUL]]
+;
+  %div = sdiv exact <2 x i8> %x, <i8 -6, i8 -12>
+  %mul = mul <2 x i8> %div, <i8 6, i8 6>
+  ret <2 x i8> %mul
+}

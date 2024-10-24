@@ -15,30 +15,25 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 
-namespace {
-void CreatUnsatisfiedConstraintRecord(
-    const ASTContext &C, const UnsatisfiedConstraintRecord &Detail,
-    UnsatisfiedConstraintRecord *TrailingObject) {
-  if (Detail.second.is<Expr *>())
-    new (TrailingObject) UnsatisfiedConstraintRecord{
-        Detail.first,
-        UnsatisfiedConstraintRecord::second_type(Detail.second.get<Expr *>())};
+static void
+CreateUnsatisfiedConstraintRecord(const ASTContext &C,
+                                  const UnsatisfiedConstraintRecord &Detail,
+                                  UnsatisfiedConstraintRecord *TrailingObject) {
+  if (Detail.is<Expr *>())
+    new (TrailingObject) UnsatisfiedConstraintRecord(Detail.get<Expr *>());
   else {
     auto &SubstitutionDiagnostic =
-        *Detail.second.get<std::pair<SourceLocation, StringRef> *>();
-    unsigned MessageSize = SubstitutionDiagnostic.second.size();
-    char *Mem = new (C) char[MessageSize];
-    memcpy(Mem, SubstitutionDiagnostic.second.data(), MessageSize);
+        *Detail.get<std::pair<SourceLocation, StringRef> *>();
+    StringRef Message = C.backupStr(SubstitutionDiagnostic.second);
     auto *NewSubstDiag = new (C) std::pair<SourceLocation, StringRef>(
-        SubstitutionDiagnostic.first, StringRef(Mem, MessageSize));
-    new (TrailingObject) UnsatisfiedConstraintRecord{
-        Detail.first, UnsatisfiedConstraintRecord::second_type(NewSubstDiag)};
+        SubstitutionDiagnostic.first, Message);
+    new (TrailingObject) UnsatisfiedConstraintRecord(NewSubstDiag);
   }
 }
-} // namespace
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(
     const ASTContext &C, const ConstraintSatisfaction &Satisfaction)
@@ -46,7 +41,7 @@ ASTConstraintSatisfaction::ASTConstraintSatisfaction(
       IsSatisfied{Satisfaction.IsSatisfied}, ContainsErrors{
                                                  Satisfaction.ContainsErrors} {
   for (unsigned I = 0; I < NumRecords; ++I)
-    CreatUnsatisfiedConstraintRecord(
+    CreateUnsatisfiedConstraintRecord(
         C, Satisfaction.Details[I],
         getTrailingObjects<UnsatisfiedConstraintRecord>() + I);
 }
@@ -57,7 +52,7 @@ ASTConstraintSatisfaction::ASTConstraintSatisfaction(
       IsSatisfied{Satisfaction.IsSatisfied},
       ContainsErrors{Satisfaction.ContainsErrors} {
   for (unsigned I = 0; I < NumRecords; ++I)
-    CreatUnsatisfiedConstraintRecord(
+    CreateUnsatisfiedConstraintRecord(
         C, *(Satisfaction.begin() + I),
         getTrailingObjects<UnsatisfiedConstraintRecord>() + I);
 }
@@ -106,9 +101,12 @@ void ConceptReference::print(llvm::raw_ostream &OS,
   ConceptName.printName(OS, Policy);
   if (hasExplicitTemplateArgs()) {
     OS << "<";
+    llvm::ListSeparator Sep(", ");
     // FIXME: Find corresponding parameter for argument
-    for (auto &ArgLoc : ArgsAsWritten->arguments())
+    for (auto &ArgLoc : ArgsAsWritten->arguments()) {
+      OS << Sep;
       ArgLoc.getArgument().print(Policy, OS, /*IncludeType*/ false);
+    }
     OS << ">";
   }
 }

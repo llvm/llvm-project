@@ -334,10 +334,10 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 }
 #    endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
-DEFINE_REAL(int, vfork)
-DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
+DEFINE_REAL(int, vfork,)
+DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork,)
 
 // Get and/or change the set of blocked signals.
 extern "C" int sigprocmask(int __how, const __hw_sigset_t *__restrict __set,
@@ -520,6 +520,7 @@ void InitializeInterceptors() {
   CHECK_EQ(inited, 0);
 
 #  if HWASAN_WITH_INTERCEPTORS
+  __interception::DoesNotSupportStaticLinking();
   InitializeCommonInterceptors();
 
   (void)(read_iovec);

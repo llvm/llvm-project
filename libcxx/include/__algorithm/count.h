@@ -16,9 +16,10 @@
 #include <__bit/popcount.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -79,7 +80,7 @@ __count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __l
 }
 
 template <class _InputIterator, class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_diff_t<_InputIterator>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_diff_t<_InputIterator>
 count(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   __identity __proj;
   return std::__count<_ClassicAlgPolicy>(__first, __last, __value, __proj);

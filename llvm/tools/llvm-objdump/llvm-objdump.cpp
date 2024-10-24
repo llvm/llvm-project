@@ -947,6 +947,55 @@ public:
 };
 AArch64PrettyPrinter AArch64PrettyPrinterInst;
 
+class RISCVPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
+                 LiveVariablePrinter &LVP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printBetweenInsts(OS, false);
+
+    size_t Start = OS.tell();
+    if (LeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+    if (ShowRawInsn) {
+      size_t Pos = 0, End = Bytes.size();
+      if (End % 4 == 0) {
+        // 32-bit and 64-bit instructions.
+        for (; Pos + 4 <= End; Pos += 4)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint32_t>(
+                        Bytes.data() + Pos, llvm::endianness::little),
+                    8);
+      } else if (End % 2 == 0) {
+        // 16-bit and 48-bits instructions.
+        for (; Pos + 2 <= End; Pos += 2)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint16_t>(
+                        Bytes.data() + Pos, llvm::endianness::little),
+                    4);
+      }
+      if (Pos < End) {
+        OS << ' ';
+        dumpBytes(Bytes.slice(Pos), OS);
+      }
+    }
+
+    AlignToInstStartColumn(Start, STI, OS);
+
+    if (MI) {
+      IP.printInst(MI, Address.Address, "", STI, OS);
+    } else
+      OS << "\t<unknown>";
+  }
+};
+RISCVPrettyPrinter RISCVPrettyPrinterInst;
+
 PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   switch(Triple.getArch()) {
   default:
@@ -967,6 +1016,9 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   case Triple::aarch64_be:
   case Triple::aarch64_32:
     return AArch64PrettyPrinterInst;
+  case Triple::riscv32:
+  case Triple::riscv64:
+    return RISCVPrettyPrinterInst;
   }
 }
 
@@ -1432,9 +1484,11 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                           const MCSubtargetInfo *STI, uint64_t SectionAddr,
                           uint64_t Start, uint64_t End,
                           std::unordered_map<uint64_t, std::string> &Labels) {
-  // So far only supports PowerPC and X86.
+  // Supported by certain targets.
   const bool isPPC = STI->getTargetTriple().isPPC();
-  if (!isPPC && !STI->getTargetTriple().isX86())
+  const bool isX86 = STI->getTargetTriple().isX86();
+  const bool isBPF = STI->getTargetTriple().isBPF();
+  if (!isPPC && !isX86 && !isBPF)
     return;
 
   if (MIA)
@@ -1518,8 +1572,7 @@ static void addSymbolizer(
   LabelAddrs.insert(LabelAddrs.end(), LabelAddrsRef.begin(),
                     LabelAddrsRef.end());
   llvm::sort(LabelAddrs);
-  LabelAddrs.resize(std::unique(LabelAddrs.begin(), LabelAddrs.end()) -
-                    LabelAddrs.begin());
+  LabelAddrs.resize(llvm::unique(LabelAddrs) - LabelAddrs.begin());
   // Add the labels.
   for (unsigned LabelNum = 0; LabelNum != LabelAddrs.size(); ++LabelNum) {
     auto Name = std::make_unique<std::string>();
@@ -2051,41 +2104,46 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       for (size_t SHI = 0; SHI < SymbolsHere.size(); ++SHI) {
         SymbolInfoTy Symbol = SymbolsHere[SHI];
 
-        auto Status = DT->DisAsm->onSymbolStart(
-            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start,
-            CommentStream);
+        Expected<bool> RespondedOrErr = DT->DisAsm->onSymbolStart(
+            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start);
 
-        if (!Status) {
-          // If onSymbolStart returns std::nullopt, that means it didn't trigger
-          // any interesting handling for this symbol. Try the other symbols
-          // defined at this address.
+        if (RespondedOrErr && !*RespondedOrErr) {
+          // This symbol didn't trigger any interesting handling. Try the other
+          // symbols defined at this address.
           continue;
         }
 
-        if (*Status == MCDisassembler::Fail) {
-          // If onSymbolStart returns Fail, that means it identified some kind
-          // of special data at this address, but wasn't able to disassemble it
-          // meaningfully. So we fall back to disassembling the failed region
-          // as bytes, assuming that the target detected the failure before
-          // printing anything.
-          //
-          // Return values Success or SoftFail (i.e no 'real' failure) are
-          // expected to mean that the target has emitted its own output.
-          //
-          // Either way, 'Size' will have been set to the amount of data
-          // covered by whatever prologue the target identified. So we advance
-          // our own position to beyond that. Sometimes that will be the entire
-          // distance to the next symbol, and sometimes it will be just a
-          // prologue and we should start disassembling instructions from where
-          // it left off.
-          outs() << DT->Context->getAsmInfo()->getCommentString()
-                 << " error in decoding " << SymNamesHere[SHI]
-                 << " : decoding failed region as bytes.\n";
-          for (uint64_t I = 0; I < Size; ++I) {
-            outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
-                   << "\n";
+        // If onSymbolStart returned an Error, that means it identified some
+        // kind of special data at this address, but wasn't able to disassemble
+        // it meaningfully. So we fall back to printing the error out and
+        // disassembling the failed region as bytes, assuming that the target
+        // detected the failure before printing anything.
+        if (!RespondedOrErr) {
+          std::string ErrMsgStr = toString(RespondedOrErr.takeError());
+          StringRef ErrMsg = ErrMsgStr;
+          do {
+            StringRef Line;
+            std::tie(Line, ErrMsg) = ErrMsg.split('\n');
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " error decoding " << SymNamesHere[SHI] << ": " << Line
+                   << '\n';
+          } while (!ErrMsg.empty());
+
+          if (Size) {
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " decoding failed region as bytes\n";
+            for (uint64_t I = 0; I < Size; ++I)
+              outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
+                     << '\n';
           }
         }
+
+        // Regardless of whether onSymbolStart returned an Error or true, 'Size'
+        // will have been set to the amount of data covered by whatever prologue
+        // the target identified. So we advance our own position to beyond that.
+        // Sometimes that will be the entire distance to the next symbol, and
+        // sometimes it will be just a prologue and we should start
+        // disassembling instructions from where it left off.
         Start += Size;
         break;
       }
@@ -2114,13 +2172,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           (*Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass == XCOFF::XMC_PR);
 
       formatted_raw_ostream FOS(outs());
-
-      // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
-      // are (incorrectly) written directly to the unbuffered raw_ostream
-      // wrapped by the formatted_raw_ostream.
-      if (DisassemblyColor == ColorOutput::Enable ||
-          DisassemblyColor == ColorOutput::Auto)
-        FOS.SetUnbuffered();
 
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
@@ -2193,27 +2244,28 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           return false;
         };
 
+        // When -z or --disassemble-zeroes are given we always dissasemble
+        // them. Otherwise we might want to skip zero bytes we see.
+        if (!DisassembleZeroes) {
+          uint64_t MaxOffset = End - Index;
+          // For --reloc: print zero blocks patched by relocations, so that
+          // relocations can be shown in the dump.
+          if (InlineRelocs && RelCur != RelEnd)
+            MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
+                                 MaxOffset);
+
+          if (size_t N =
+                  countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
+            FOS << "\t\t..." << '\n';
+            Index += N;
+            continue;
+          }
+        }
+
         if (DumpARMELFData) {
           Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
                                 MappingSymbols, *DT->SubtargetInfo, FOS);
         } else {
-          // When -z or --disassemble-zeroes are given we always dissasemble
-          // them. Otherwise we might want to skip zero bytes we see.
-          if (!DisassembleZeroes) {
-            uint64_t MaxOffset = End - Index;
-            // For --reloc: print zero blocks patched by relocations, so that
-            // relocations can be shown in the dump.
-            if (InlineRelocs && RelCur != RelEnd)
-              MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
-                                   MaxOffset);
-
-            if (size_t N =
-                    countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
-              FOS << "\t\t..." << '\n';
-              Index += N;
-              continue;
-            }
-          }
 
           if (DumpTracebackTableForXCOFFFunction &&
               doesXCOFFTracebackTableBegin(Bytes.slice(Index, 4))) {
@@ -2638,6 +2690,16 @@ void Dumper::printRelocations() {
            << "VALUE\n";
 
     for (SectionRef Section : P.second) {
+      // CREL sections require decoding, each section may have its own specific
+      // decode problems.
+      if (O.isELF() && ELFSectionRef(Section).getType() == ELF::SHT_CREL) {
+        StringRef Err =
+            cast<const ELFObjectFileBase>(O).getCrelDecodeProblem(Section);
+        if (!Err.empty()) {
+          reportUniqueWarning(Err);
+          continue;
+        }
+      }
       for (const RelocationRef &Reloc : Section.relocations()) {
         uint64_t Address = Reloc.getOffset();
         SmallString<32> RelocName;
@@ -2824,16 +2886,6 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
     reportUniqueWarning(AddrOrErr.takeError());
     return;
   }
-  uint64_t Address = *AddrOrErr;
-  section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
-  if (SecI != O.section_end() && shouldAdjustVA(*SecI))
-    Address += AdjustVMA;
-  if ((Address < StartAddress) || (Address > StopAddress))
-    return;
-  SymbolRef::Type Type =
-      unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
-  uint32_t Flags =
-      unwrapOrError(Symbol.getFlags(), FileName, ArchiveName, ArchitectureName);
 
   // Don't ask a Mach-O STAB symbol for its section unless you know that
   // STAB symbol's section field refers to a valid section index. Otherwise
@@ -2851,6 +2903,16 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
                                  ? O.section_end()
                                  : unwrapOrError(Symbol.getSection(), FileName,
                                                  ArchiveName, ArchitectureName);
+
+  uint64_t Address = *AddrOrErr;
+  if (Section != O.section_end() && shouldAdjustVA(*Section))
+    Address += AdjustVMA;
+  if ((Address < StartAddress) || (Address > StopAddress))
+    return;
+  SymbolRef::Type Type =
+      unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
+  uint32_t Flags =
+      unwrapOrError(Symbol.getFlags(), FileName, ArchiveName, ArchitectureName);
 
   StringRef Name;
   if (Type == SymbolRef::ST_Debug && Section != O.section_end()) {
@@ -3102,7 +3164,7 @@ void Dumper::printPrivateHeaders() {
 }
 
 static void printFileHeaders(const ObjectFile *O) {
-  if (!O->isELF() && !O->isCOFF())
+  if (!O->isELF() && !O->isCOFF() && !O->isXCOFF())
     reportError(O->getFileName(), "Invalid/Unsupported object file format");
 
   Triple::ArchType AT = O->getArch();

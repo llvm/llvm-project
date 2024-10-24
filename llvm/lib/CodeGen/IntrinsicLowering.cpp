@@ -243,6 +243,11 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     break;
   }
 
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    CI->replaceAllUsesWith(ConstantInt::getTrue(CI->getType()));
+    return;
+
   case Intrinsic::ctpop:
     CI->replaceAllUsesWith(LowerCTPOP(Context, CI->getArgOperand(0), CI));
     break;
@@ -444,7 +449,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
   case Intrinsic::invariant_start:
   case Intrinsic::lifetime_start:
     // Discard region information.
-    CI->replaceAllUsesWith(UndefValue::get(CI->getType()));
+    CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
     break;
   case Intrinsic::invariant_end:
   case Intrinsic::lifetime_end:
@@ -469,10 +474,10 @@ bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
 
   // Okay, we can do this xform, do so now.
   Module *M = CI->getModule();
-  Function *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
+  Function *Int = Intrinsic::getOrInsertDeclaration(M, Intrinsic::bswap, Ty);
 
   Value *Op = CI->getArgOperand(0);
-  Op = CallInst::Create(Int, Op, CI->getName(), CI);
+  Op = CallInst::Create(Int, Op, CI->getName(), CI->getIterator());
 
   CI->replaceAllUsesWith(Op);
   CI->eraseFromParent();

@@ -55,6 +55,7 @@ static_library("Scalar") {
     "LoopSimplifyCFG.cpp",
     "LoopSink.cpp",
     "LoopStrengthReduce.cpp",
+    "LoopTermFold.cpp",
     "LoopUnrollAndJamPass.cpp",
     "LoopUnrollPass.cpp",
     "LoopVersioningLICM.cpp",

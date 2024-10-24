@@ -1,7 +1,5 @@
-; RUN: opt -S %loadPolly -polly-print-dependences \
+; RUN: opt -S %loadNPMPolly '-passes=print<polly-dependences>' \
 ; RUN:                   -disable-output < %s | FileCheck %s
-; RUN: opt -S %loadPolly -polly-print-function-dependences \
-; RUN:                   -disable-output < %s | FileCheck %s -check-prefix=FUNC
 
 ; CHECK: RAW dependences:
 ; CHECK:   { Stmt_bb9[0] -> Stmt_bb10[0] }

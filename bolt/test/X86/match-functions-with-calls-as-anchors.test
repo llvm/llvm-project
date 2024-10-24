@@ -1,0 +1,162 @@
+## Tests blocks matching by called function names in inferStaleProfile.
+
+# REQUIRES: system-linux, asserts
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
+# RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml --profile-ignore-hash -v=1 \
+# RUN:   --dyno-stats --print-cfg --infer-stale-profile=1 --debug 2>&1 | FileCheck %s
+
+# CHECK: BOLT-INFO: applying profile inference for "qux"
+# CHECK: Matched yaml block (bid = 1) with hash 4 to BB (index = 0) with hash 314e1bc10000
+# CHECK:  loose match
+
+# CHECK: BOLT-INFO: applying profile inference for "fred"
+# CHECK: Matched yaml block (bid = 1) with hash 5 to BB (index = 0) with hash 7541bc10000
+# CHECK:  loose match
+
+#--- main.s
+.globl  foo                         # -- Begin function foo
+  .p2align        4, 0x90
+  .type   foo,@function
+foo:                                # @foo
+# %bb.0:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  popq    %rbp
+  retq
+.Lfunc_end0:
+  .size   foo, .Lfunc_end0-foo
+                                      # -- End function
+  .globl  bar                         # -- Begin function bar
+  .p2align        4, 0x90
+  .type   bar,@function
+bar:                                # @bar
+# %bb.0:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  popq    %rbp
+  retq
+.Lfunc_end1:
+  .size   bar, .Lfunc_end1-bar
+                                      # -- End function
+  .globl  qux                         # -- Begin function qux
+  .p2align        4, 0x90
+  .type   qux,@function
+qux:                                # @qux
+# %bb.0:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  callq   foo
+  callq   bar
+  popq    %rbp
+  retq
+.Lfunc_end2:
+  .size   qux, .Lfunc_end2-qux
+                                      # -- End function
+  .globl  fred                        # -- Begin function fred
+  .p2align        4, 0x90
+  .type   fred,@function
+fred:                               # @fred
+# %bb.0:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  callq   foo
+  callq   qux
+  callq   bar
+  callq   bar
+  callq   foo
+  popq    %rbp
+  retq
+.Lfunc_end3:
+  .size   fred, .Lfunc_end3-fred
+                                          # -- End function
+  .globl  main                            # -- Begin function main
+  .p2align        4, 0x90
+  .type   main,@function
+main:                                   # @main
+# %bb.0:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  xorl    %eax, %eax
+  popq    %rbp
+  retq
+.Lfunc_end4:
+  .size   main, .Lfunc_end4-main
+                                  # -- End function
+  .addrsig
+  .addrsig_sym foo
+  .addrsig_sym bar
+  .addrsig_sym qux
+
+#--- yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'match-functions-with-calls-as-anchors.s.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+  hash-func:       xxh3
+functions:
+  - name:            main
+    fid:             0
+    hash:            0x0000000000000001
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000001
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+  - name:            foo
+    fid:             1
+    hash:            0x0000000000000002
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000002
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+
+  - name:            bar
+    fid:             2
+    hash:            0x0000000000000003
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000003
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+  - name:            qux
+    fid:             3
+    hash:            0x0000000000000004
+    exec:            4
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000004
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+        calls:           [ { off : 0, fid : 1, cnt : 0},
+                           { off : 0, fid : 2, cnt : 0} ]
+  - name:            fred
+    fid:             4
+    hash:            0x0000000000000005
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000005
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+        calls:           [ { off : 0, fid : 3, cnt : 0},
+                           { off : 0, fid : 1, cnt : 0},
+                           { off : 0, fid : 2, cnt : 0},
+                           { off : 0, fid : 1, cnt : 0},
+                           { off : 0, fid : 2, cnt : 0} ]
+...

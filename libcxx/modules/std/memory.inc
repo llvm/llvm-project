@@ -154,9 +154,9 @@ export namespace std {
   using std::reinterpret_pointer_cast;
   using std::static_pointer_cast;
 
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
   using std::get_deleter;
-#endif // _LIBCPP_HAS_NO_RTTI
+#endif // _LIBCPP_HAS_RTTI
 
   // [util.smartptr.shared.io], shared_ptr I/O
 
@@ -177,17 +177,19 @@ export namespace std {
   // [util.smartptr.atomic], atomic smart pointers
   // using std::atomic;
 
+#if _LIBCPP_STD_VER >= 23
   // [out.ptr.t], class template out_ptr_t
-  //  using std::out_ptr_t;
+  using std::out_ptr_t;
 
   // [out.ptr], function template out_ptr
-  //  using std::out_ptr;
+  using std::out_ptr;
 
   // [inout.ptr.t], class template inout_ptr_t
-  //  using std::inout_ptr_t;
+  using std::inout_ptr_t;
 
   // [inout.ptr], function template inout_ptr
-  //  using std::inout_ptr;
+  using std::inout_ptr;
+#endif // _LIBCPP_STD_VER >= 23
 
 #ifndef _LIBCPP_HAS_NO_THREADS
   // [depr.util.smartptr.shared.atomic]

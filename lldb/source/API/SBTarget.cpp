@@ -85,8 +85,9 @@ static Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
       // listener, so if a valid listener is supplied, we need to error out to
       // let the client know.
       if (attach_info.GetListener())
-        return Status("process is connected and already has a listener, pass "
-                      "empty listener");
+        return Status::FromErrorString(
+            "process is connected and already has a listener, pass "
+            "empty listener");
     }
   }
 
@@ -147,7 +148,7 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return Target::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Target::GetStaticBroadcasterClass()).AsCString();
 }
 
 bool SBTarget::IsValid() const {
@@ -452,7 +453,7 @@ lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
         if (platform_sp->GetProcessInfo(attach_pid, instance_info)) {
           attach_info.SetUserID(instance_info.GetEffectiveUserID());
         } else {
-          error.ref().SetErrorStringWithFormat(
+          error.ref() = Status::FromErrorStringWithFormat(
               "no process found with process ID %" PRIu64, attach_pid);
           return sb_process;
         }
@@ -661,15 +662,14 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
                             lldb::SBError &error) {
   LLDB_INSTRUMENT_VA(this, addr, buf, size, error);
 
-  SBError sb_error;
   size_t bytes_read = 0;
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     bytes_read =
-        target_sp->ReadMemory(addr.ref(), buf, size, sb_error.ref(), true);
+        target_sp->ReadMemory(addr.ref(), buf, size, error.ref(), true);
   } else {
-    sb_error.SetErrorString("invalid target");
+    error.SetErrorString("invalid target");
   }
 
   return bytes_read;
@@ -1147,7 +1147,7 @@ void SBTarget::GetBreakpointNames(SBStringList &names) {
 
     std::vector<std::string> name_vec;
     target_sp->GetBreakpointNames(name_vec);
-    for (auto name : name_vec)
+    for (const auto &name : name_vec)
       names.AppendString(name.c_str());
   }
 }
@@ -1368,7 +1368,7 @@ SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
     CompilerType *type = nullptr;
     watchpoint_sp =
         target_sp->CreateWatchpoint(addr, size, type, watch_type, cw_error);
-    error.SetError(cw_error);
+    error.SetError(std::move(cw_error));
     sb_watchpoint.SetSP(watchpoint_sp);
   }
 
@@ -1655,9 +1655,9 @@ SBError SBTarget::SetLabel(const char *label) {
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
-    return Status("Couldn't get internal target object.");
+    return Status::FromErrorString("Couldn't get internal target object.");
 
-  return Status(target_sp->SetLabel(label));
+  return Status::FromError(target_sp->SetLabel(label));
 }
 
 uint32_t SBTarget::GetDataByteSize() {
@@ -1788,6 +1788,11 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
       case eMatchTypeRegex:
         target_sp->GetImages().FindFunctions(RegularExpression(name_ref),
                                              function_options, *sb_sc_list);
+        break;
+      case eMatchTypeRegexInsensitive:
+        target_sp->GetImages().FindFunctions(
+            RegularExpression(name_ref, llvm::Regex::RegexFlags::IgnoreCase),
+            function_options, *sb_sc_list);
         break;
       case eMatchTypeStartsWith:
         regexstr = llvm::Regex::escape(name) + ".*";
@@ -1936,6 +1941,11 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
       target_sp->GetImages().FindGlobalVariables(RegularExpression(name_ref),
                                                  max_matches, variable_list);
       break;
+    case eMatchTypeRegexInsensitive:
+      target_sp->GetImages().FindGlobalVariables(
+          RegularExpression(name_ref, llvm::Regex::IgnoreCase), max_matches,
+          variable_list);
+      break;
     case eMatchTypeStartsWith:
       regexstr = "^" + llvm::Regex::escape(name) + ".*";
       target_sp->GetImages().FindGlobalVariables(RegularExpression(regexstr),
@@ -2008,6 +2018,30 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
     }
   }
 
+  return sb_instructions;
+}
+
+lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress start_addr,
+                                                   lldb::SBAddress end_addr,
+                                                   const char *flavor_string) {
+  LLDB_INSTRUMENT_VA(this, start_addr, end_addr, flavor_string);
+
+  SBInstructionList sb_instructions;
+
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    lldb::addr_t start_load_addr = start_addr.GetLoadAddress(*this);
+    lldb::addr_t end_load_addr = end_addr.GetLoadAddress(*this);
+    if (end_load_addr > start_load_addr) {
+      lldb::addr_t size = end_load_addr - start_load_addr;
+
+      AddressRange range(start_load_addr, size);
+      const bool force_live_memory = true;
+      sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
+          target_sp->GetArchitecture(), nullptr, flavor_string, *target_sp,
+          range, force_live_memory));
+    }
+  }
   return sb_instructions;
 }
 
@@ -2289,9 +2323,10 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
           target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
         } else {
           Status error;
-          error.SetErrorString("can't evaluate expressions when the "
-                               "process is running.");
-          expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+          error = Status::FromErrorString("can't evaluate expressions when the "
+                                          "process is running.");
+          expr_value_sp =
+              ValueObjectConstResult::Create(nullptr, std::move(error));
         }
       } else {
         target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());

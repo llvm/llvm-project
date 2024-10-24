@@ -40,6 +40,12 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "isFramework": true,
+// CHECK-NEXT:           "link-name": "FW"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "FW_Private"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -56,8 +62,7 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "command-line": [
 // CHECK:                ],
-// CHECK-NEXT:           "executable": "clang",
-// CHECK-NEXT:           "file-deps": [
+// CHECK:                "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.m",
 // CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/Missed.h",
 // CHECK-NEXT:             "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"

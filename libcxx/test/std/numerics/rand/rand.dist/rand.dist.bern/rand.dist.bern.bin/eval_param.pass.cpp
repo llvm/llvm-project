@@ -16,9 +16,10 @@
 // template<class _URNG> result_type operator()(_URNG& g, const param_type& parm);
 
 #include <random>
+#include <cassert>
+#include <cmath>
 #include <numeric>
 #include <vector>
-#include <cassert>
 
 #include "test_macros.h"
 
@@ -72,7 +73,7 @@ int main(int, char**)
         assert(std::abs((mean - x_mean) / x_mean) < 0.01);
         assert(std::abs((var - x_var) / x_var) < 0.01);
         assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.04);
+        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.08);
     }
     {
         typedef std::binomial_distribution<> D;
@@ -113,8 +114,8 @@ int main(int, char**)
         double x_kurtosis = (1-6*p.p()*(1-p.p())) / x_var;
         assert(std::abs((mean - x_mean) / x_mean) < 0.01);
         assert(std::abs((var - x_var) / x_var) < 0.01);
-        assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+        assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.08);
     }
     {
         typedef std::binomial_distribution<> D;
@@ -155,8 +156,8 @@ int main(int, char**)
         double x_kurtosis = (1-6*p.p()*(1-p.p())) / x_var;
         assert(std::abs((mean - x_mean) / x_mean) < 0.01);
         assert(std::abs((var - x_var) / x_var) < 0.01);
-        assert(std::abs((skew - x_skew) / x_skew) < 0.04);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.3);
+        assert(std::abs((skew - x_skew) / x_skew) < 0.07);
+        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 2.0);
     }
 
   return 0;

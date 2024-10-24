@@ -170,7 +170,7 @@ void g30(void) {
     int : 1;
     int x;
   } a = {};
-  // CHECK: @g30.a = internal global %struct.anon.1 <{ i8 undef, i32 0 }>, align 1
+  // CHECK: @g30.a = internal global %struct.anon.1 zeroinitializer, align 1
 #pragma pack()
 }
 
@@ -182,7 +182,7 @@ void g31(void) {
     short z;
   } a = {23122, -12312731, -312};
 #pragma pack()
-  // CHECK: @g31.a = internal global %struct.anon.2 { i16 23122, i32 -12312731, i16 -312 }, align 4
+  // CHECK: @g31.a = internal global { i16, [2 x i8], i32, i16, [2 x i8] } { i16 23122, [2 x i8] zeroinitializer, i32 -12312731, i16 -312, [2 x i8] zeroinitializer }, align 4
 }
 
 // Clang should evaluate this in constant context, so floating point mode should
@@ -216,3 +216,6 @@ int PR4517_x2 = PR4517_arrc[PR4517_idx];
 // CHECK: @PR4517_x = global i32 42, align 4
 // CHECK: @PR4517_idx = constant i32 1, align 4
 // CHECK: @PR4517_x2 = global i32 42, align 4
+
+// CHECK: @GH84784_inf = constant i8 1
+_Bool const GH84784_inf = (1.0/0.0);

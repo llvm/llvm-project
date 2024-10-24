@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/errno/libc_errno.h"
+#include "src/string/string_utils.h"
 #include "src/unistd/readlinkat.h"
 #include "src/unistd/symlink.h"
 #include "src/unistd/unlink.h"
@@ -20,9 +21,9 @@ namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcReadlinkatTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *FILENAME = "readlinkat_test_value";
+  constexpr const char *FILENAME = "readlinkat_test_file";
   auto LINK_VAL = libc_make_test_file_path(FILENAME);
-  constexpr const char *FILENAME2 = "readlinkat.test.link";
+  constexpr const char *FILENAME2 = "readlinkat_test_file.link";
   auto LINK = libc_make_test_file_path(FILENAME2);
   LIBC_NAMESPACE::libc_errno = 0;
 
@@ -32,8 +33,9 @@ TEST(LlvmLibcReadlinkatTest, CreateAndUnlink) {
   //   3. Cleanup the symlink created in step #1.
   ASSERT_THAT(LIBC_NAMESPACE::symlink(LINK_VAL, LINK), Succeeds(0));
 
-  char buf[sizeof(LINK_VAL)];
-  ssize_t len = LIBC_NAMESPACE::readlinkat(AT_FDCWD, LINK, buf, sizeof(buf));
+  char buf[256];
+  ssize_t len = LIBC_NAMESPACE::readlinkat(
+      AT_FDCWD, LINK, buf, LIBC_NAMESPACE::internal::string_length(FILENAME));
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(cpp::string_view(buf, len), cpp::string_view(LINK_VAL));
 
@@ -42,8 +44,9 @@ TEST(LlvmLibcReadlinkatTest, CreateAndUnlink) {
 
 TEST(LlvmLibcReadlinkatTest, ReadlinkInNonExistentPath) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  char buf[8];
-  ASSERT_THAT(LIBC_NAMESPACE::readlinkat(AT_FDCWD, "non-existent-link", buf,
-                                         sizeof(buf)),
-              Fails(ENOENT));
+  constexpr auto LEN = 8;
+  char buf[LEN];
+  ASSERT_THAT(
+      LIBC_NAMESPACE::readlinkat(AT_FDCWD, "non-existent-link", buf, LEN),
+      Fails(ENOENT));
 }

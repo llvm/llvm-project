@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_STDCKDINT_H
 #define LLVM_LIBC_STDCKDINT_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
 %%public_api()
 
-#include <llvm-libc-macros/stdckdint-macros.h>
+#include "llvm-libc-macros/stdckdint-macros.h"
 
 #endif // LLVM_LIBC_STDCKDINT_H

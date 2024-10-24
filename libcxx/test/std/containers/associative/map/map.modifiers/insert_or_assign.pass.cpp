@@ -23,6 +23,7 @@
 
 #include <map>
 #include <cassert>
+#include <iterator>
 #include <tuple>
 
 #include "test_macros.h"

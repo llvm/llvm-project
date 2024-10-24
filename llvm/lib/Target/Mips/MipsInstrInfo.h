@@ -89,6 +89,8 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
+  bool SafeAfterMflo(const MachineInstr &MI) const;
+
   /// Predicate to determine if an instruction can go in a forbidden slot.
   bool SafeInForbiddenSlot(const MachineInstr &MI) const;
 
@@ -99,6 +101,8 @@ public:
   /// Predicate to determine if an instruction can go in a load delay slot.
   bool SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
                            const MachineInstr &LoadMI) const;
+
+  bool IsMfloOrMfhi(const MachineInstr &MI) const;
 
   /// Predicate to determine if an instruction has a forbidden slot.
   bool HasForbiddenSlot(const MachineInstr &MI) const;
@@ -212,6 +216,23 @@ private:
 /// Create MipsInstrInfo objects.
 const MipsInstrInfo *createMips16InstrInfo(const MipsSubtarget &STI);
 const MipsInstrInfo *createMipsSEInstrInfo(const MipsSubtarget &STI);
+
+namespace Mips {
+// Mask assignments for floating-point.
+enum FClassMask {
+  FClassMaskSignalingNaN = 1 << 0,
+  FClassMaskQuietNaN = 1 << 1,
+  FClassMaskNegativeInfinity = 1 << 2,
+  FClassMaskNegativeNormal = 1 << 3,
+  FClassMaskNegativeSubnormal = 1 << 4,
+  FClassMaskNegativeZero = 1 << 5,
+  FClassMaskPositiveInfinity = 1 << 6,
+  FClassMaskPositiveNormal = 1 << 7,
+  FClassMaskPositiveSubnormal = 1 << 8,
+  FClassMaskPositiveZero = 1 << 9
+};
+
+} // namespace Mips
 
 } // end namespace llvm
 

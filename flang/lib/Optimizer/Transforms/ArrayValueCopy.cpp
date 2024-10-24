@@ -187,7 +187,7 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "popset: " << *op << '\n');
     auto popFn = [&](auto rop) {
       assert(val && "op must have a result value");
-      auto resNum = val.cast<mlir::OpResult>().getResultNumber();
+      auto resNum = mlir::cast<mlir::OpResult>(val).getResultNumber();
       llvm::SmallVector<mlir::Value> results;
       rop.resultToSourceOps(results, resNum);
       for (auto u : results)
@@ -296,7 +296,7 @@ public:
     visited.insert(val);
 
     // Process a block argument.
-    if (auto ba = val.dyn_cast<mlir::BlockArgument>()) {
+    if (auto ba = mlir::dyn_cast<mlir::BlockArgument>(val)) {
       collectArrayMentionFrom(ba);
       return;
     }
@@ -461,9 +461,9 @@ void ArrayCopyAnalysisBase::arrayMentions(
 }
 
 static bool hasPointerType(mlir::Type type) {
-  if (auto boxTy = type.dyn_cast<BoxType>())
+  if (auto boxTy = mlir::dyn_cast<BoxType>(type))
     type = boxTy.getEleTy();
-  return type.isa<fir::PointerType>();
+  return mlir::isa<fir::PointerType>(type);
 }
 
 // This is a NF performance hack. It makes a simple test that the slices of the
@@ -512,7 +512,7 @@ static bool mutuallyExclusiveSliceRange(ArrayLoadOp ld, ArrayMergeStoreOp st) {
     auto isPositiveConstant = [](mlir::Value v) -> bool {
       if (auto conOp =
               mlir::dyn_cast<mlir::arith::ConstantOp>(v.getDefiningOp()))
-        if (auto iattr = conOp.getValue().dyn_cast<mlir::IntegerAttr>())
+        if (auto iattr = mlir::dyn_cast<mlir::IntegerAttr>(conOp.getValue()))
           return iattr.getInt() > 0;
       return false;
     };
@@ -725,10 +725,10 @@ static bool
 conservativeCallConflict(llvm::ArrayRef<mlir::Operation *> reaches) {
   return llvm::any_of(reaches, [](mlir::Operation *op) {
     if (auto call = mlir::dyn_cast<fir::CallOp>(op))
-      if (auto callee =
-              call.getCallableForCallee().dyn_cast<mlir::SymbolRefAttr>()) {
+      if (auto callee = mlir::dyn_cast<mlir::SymbolRefAttr>(
+              call.getCallableForCallee())) {
         auto module = op->getParentOfType<mlir::ModuleOp>();
-        return isInternalPorcedure(
+        return isInternalProcedure(
             module.lookupSymbol<mlir::func::FuncOp>(callee));
       }
     return false;
@@ -796,7 +796,7 @@ class ArrayLoadConversion : public mlir::OpRewritePattern<ArrayLoadOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayLoadOp load,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "replace load " << load << " with undef.\n");
@@ -810,7 +810,7 @@ class ArrayMergeStoreConversion
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayMergeStoreOp store,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "marking store " << store << " as dead.\n");
@@ -891,9 +891,9 @@ static mlir::Value getOrReadExtentsAndShapeOp(
   if (arrLoad->hasAttr(fir::getOptionalAttrName()))
     fir::emitFatalError(
         loc, "shapes from array load of OPTIONAL arrays must not be used");
-  if (auto boxTy = arrLoad.getMemref().getType().dyn_cast<BoxType>()) {
+  if (auto boxTy = mlir::dyn_cast<BoxType>(arrLoad.getMemref().getType())) {
     auto rank =
-        dyn_cast_ptrOrBoxEleTy(boxTy).cast<SequenceType>().getDimension();
+        mlir::cast<SequenceType>(dyn_cast_ptrOrBoxEleTy(boxTy)).getDimension();
     auto idxTy = rewriter.getIndexType();
     for (decltype(rank) dim = 0; dim < rank; ++dim) {
       auto dimVal = rewriter.create<mlir::arith::ConstantIndexOp>(loc, dim);
@@ -929,7 +929,7 @@ static mlir::Type toRefType(mlir::Type ty) {
 static llvm::SmallVector<mlir::Value>
 getTypeParamsIfRawData(mlir::Location loc, FirOpBuilder &builder,
                        ArrayLoadOp arrLoad, mlir::Type ty) {
-  if (ty.isa<BoxType>())
+  if (mlir::isa<BoxType>(ty))
     return {};
   return fir::factory::getTypeParams(loc, builder, arrLoad);
 }
@@ -947,8 +947,8 @@ static mlir::Value genCoorOp(mlir::PatternRewriter &rewriter,
     originated = factory::originateIndices(loc, rewriter, alloc.getType(),
                                            shape, indices);
   auto seqTy = dyn_cast_ptrOrBoxEleTy(alloc.getType());
-  assert(seqTy && seqTy.isa<SequenceType>());
-  const auto dimension = seqTy.cast<SequenceType>().getDimension();
+  assert(seqTy && mlir::isa<SequenceType>(seqTy));
+  const auto dimension = mlir::cast<SequenceType>(seqTy).getDimension();
   auto module = load->getParentOfType<mlir::ModuleOp>();
   FirOpBuilder builder(rewriter, module);
   auto typeparams = getTypeParamsIfRawData(loc, builder, load, alloc.getType());
@@ -967,7 +967,7 @@ static mlir::Value getCharacterLen(mlir::Location loc, FirOpBuilder &builder,
                                    ArrayLoadOp load, CharacterType charTy) {
   auto charLenTy = builder.getCharacterLengthType();
   if (charTy.hasDynamicLen()) {
-    if (load.getMemref().getType().isa<BoxType>()) {
+    if (mlir::isa<BoxType>(load.getMemref().getType())) {
       // The loaded array is an emboxed value. Get the CHARACTER length from
       // the box value.
       auto eleSzInBytes =
@@ -1027,7 +1027,7 @@ void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
       getTypeParamsIfRawData(loc, builder, arrLoad, dst.getType()));
   auto eleTy = unwrapSequenceType(unwrapPassByRefType(dst.getType()));
   // Copy from (to) object to (from) temp copy of same object.
-  if (auto charTy = eleTy.dyn_cast<CharacterType>()) {
+  if (auto charTy = mlir::dyn_cast<CharacterType>(eleTy)) {
     auto len = getCharacterLen(loc, builder, arrLoad, charTy);
     CharBoxValue toChar(toAddr, len);
     CharBoxValue fromChar(fromAddr, len);
@@ -1049,8 +1049,8 @@ genArrayLoadTypeParameters(mlir::Location loc, mlir::PatternRewriter &rewriter,
     auto eleTy =
         unwrapSequenceType(unwrapPassByRefType(load.getMemref().getType()));
     if (hasDynamicSize(eleTy)) {
-      if (auto charTy = eleTy.dyn_cast<CharacterType>()) {
-        assert(load.getMemref().getType().isa<BoxType>());
+      if (auto charTy = mlir::dyn_cast<CharacterType>(eleTy)) {
+        assert(mlir::isa<BoxType>(load.getMemref().getType()));
         auto module = load->getParentOfType<mlir::ModuleOp>();
         FirOpBuilder builder(rewriter, module);
         return {getCharacterLen(loc, builder, load, charTy)};
@@ -1067,7 +1067,7 @@ findNonconstantExtents(mlir::Type memrefTy,
                        llvm::ArrayRef<mlir::Value> extents) {
   llvm::SmallVector<mlir::Value> nce;
   auto arrTy = unwrapPassByRefType(memrefTy);
-  auto seqTy = arrTy.cast<SequenceType>();
+  auto seqTy = mlir::cast<SequenceType>(arrTy);
   for (auto [s, x] : llvm::zip(seqTy.getShape(), extents))
     if (s == SequenceType::getUnknownExtent())
       nce.emplace_back(x);
@@ -1248,7 +1248,7 @@ public:
                                  const OperationUseMapT &m)
       : ArrayUpdateConversionBase{ctx, a, m} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayUpdateOp update,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = update.getLoc();
@@ -1276,7 +1276,7 @@ public:
                                  const OperationUseMapT &m)
       : ArrayUpdateConversionBase{ctx, a, m} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayModifyOp modify,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = modify.getLoc();
@@ -1298,7 +1298,7 @@ public:
                                 const OperationUseMapT &m)
       : OpRewritePattern{ctx}, useMap{m} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayFetchOp fetch,
                   mlir::PatternRewriter &rewriter) const override {
     auto *op = fetch.getOperation();
@@ -1329,7 +1329,7 @@ public:
                                  const OperationUseMapT &m)
       : ArrayUpdateConversionBase{ctx, a, m} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayAccessOp access,
                   mlir::PatternRewriter &rewriter) const override {
     auto *op = access.getOperation();
@@ -1362,7 +1362,7 @@ public:
   explicit ArrayAmendConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayAmendOp amend,
                   mlir::PatternRewriter &rewriter) const override {
     auto *op = amend.getOperation();

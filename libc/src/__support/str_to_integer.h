@@ -6,17 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/CPP/type_traits/make_unsigned.h"
+#include "src/__support/big_int.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_num_result.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // Returns a pointer to the first character in src that is not a whitespace
@@ -69,14 +79,21 @@ LIBC_INLINE int infer_base(const char *__restrict src, size_t src_len) {
   return 10;
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // Takes a pointer to a string and the base to convert to. This function is used
 // as the backend for all of the string to int functions.
 template <class T>
 LIBC_INLINE StrToNumResult<T>
 strtointeger(const char *__restrict src, int base,
              const size_t src_len = cpp::numeric_limits<size_t>::max()) {
-  // TODO: Rewrite to support numbers longer than long long
-  unsigned long long result = 0;
+  using ResultType = make_integral_or_big_int_unsigned_t<T>;
+
+  ResultType result = 0;
+
   bool is_number = false;
   size_t src_cur = 0;
   int error_val = 0;
@@ -101,15 +118,17 @@ strtointeger(const char *__restrict src, int base,
   if (base == 16 && is_hex_start(src + src_cur, src_len - src_cur))
     src_cur = src_cur + 2;
 
-  constexpr bool IS_UNSIGNED = (cpp::numeric_limits<T>::min() == 0);
+  constexpr bool IS_UNSIGNED = cpp::is_unsigned_v<T>;
   const bool is_positive = (result_sign == '+');
-  unsigned long long constexpr NEGATIVE_MAX =
-      !IS_UNSIGNED
-          ? static_cast<unsigned long long>(cpp::numeric_limits<T>::max()) + 1
-          : cpp::numeric_limits<T>::max();
-  unsigned long long const abs_max =
+
+  ResultType constexpr NEGATIVE_MAX =
+      !IS_UNSIGNED ? static_cast<ResultType>(cpp::numeric_limits<T>::max()) + 1
+                   : cpp::numeric_limits<T>::max();
+  ResultType const abs_max =
       (is_positive ? cpp::numeric_limits<T>::max() : NEGATIVE_MAX);
-  unsigned long long const abs_max_div_by_base = abs_max / base;
+  ResultType const abs_max_div_by_base =
+      static_cast<ResultType>(abs_max / base);
+
   while (src_cur < src_len && isalnum(src[src_cur])) {
     int cur_digit = b36_char_to_int(src[src_cur]);
     if (cur_digit >= base)
@@ -130,13 +149,13 @@ strtointeger(const char *__restrict src, int base,
       result = abs_max;
       error_val = ERANGE;
     } else {
-      result = result * base;
+      result = static_cast<ResultType>(result * base);
     }
     if (result > abs_max - cur_digit) {
       result = abs_max;
       error_val = ERANGE;
     } else {
-      result = result + cur_digit;
+      result = static_cast<ResultType>(result + cur_digit);
     }
   }
 
@@ -149,13 +168,10 @@ strtointeger(const char *__restrict src, int base,
       return {cpp::numeric_limits<T>::min(), str_len, error_val};
   }
 
-  return {is_positive
-              ? static_cast<T>(result)
-              : static_cast<T>(-static_cast<cpp::make_unsigned_t<T>>(result)),
-          str_len, error_val};
+  return {static_cast<T>(is_positive ? result : -result), str_len, error_val};
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H

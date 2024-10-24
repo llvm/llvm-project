@@ -286,7 +286,7 @@ define i8 @t12(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[T1:%.*]] = sub i8 0, [[Z:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[T3:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
   %t0 = sub i8 0, %y
@@ -320,7 +320,7 @@ define i8 @n14(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[T2:%.*]] = sub i8 0, [[TMP1]]
 ; CHECK-NEXT:    call void @use8(i8 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
   %t0 = sub i8 0, %y
@@ -423,7 +423,7 @@ define i8 @n16(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @n16(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = mul i8 [[T0]], [[Z:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = mul i8 [[Z:%.*]], [[T0]]
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
 ; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i8 [[T2]]
@@ -559,7 +559,7 @@ define i8 @t20(i8 %x, i16 %y) {
 ; CHECK-LABEL: @t20(
 ; CHECK-NEXT:    [[T0_NEG:%.*]] = shl i16 42, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1_NEG:%.*]] = trunc i16 [[T0_NEG]] to i8
-; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add i8 [[X:%.*]], [[T1_NEG]]
 ; CHECK-NEXT:    ret i8 [[T2]]
 ;
   %t0 = shl i16 -42, %y
@@ -766,7 +766,7 @@ define i8 @negate_lshr_wrongshift(i8 %x, i8 %y) {
 define i8 @negate_sext(i8 %x, i1 %y) {
 ; CHECK-LABEL: @negate_sext(
 ; CHECK-NEXT:    [[T0_NEG:%.*]] = zext i1 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[T1:%.*]] = add i8 [[T0_NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = add i8 [[X:%.*]], [[T0_NEG]]
 ; CHECK-NEXT:    ret i8 [[T1]]
 ;
   %t0 = sext i1 %y to i8
@@ -776,7 +776,7 @@ define i8 @negate_sext(i8 %x, i1 %y) {
 define i8 @negate_zext(i8 %x, i1 %y) {
 ; CHECK-LABEL: @negate_zext(
 ; CHECK-NEXT:    [[T0_NEG:%.*]] = sext i1 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[T1:%.*]] = add i8 [[T0_NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = add i8 [[X:%.*]], [[T0_NEG]]
 ; CHECK-NEXT:    ret i8 [[T1]]
 ;
   %t0 = zext i1 %y to i8
@@ -1033,7 +1033,7 @@ define i8 @negation_of_increment_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negation_of_increment_via_or_with_no_common_bits_set(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[T1_NEG:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add i8 [[X:%.*]], [[T1_NEG]]
 ; CHECK-NEXT:    ret i8 [[T2]]
 ;
   %t0 = shl i8 %y, 1
@@ -1071,7 +1071,7 @@ define i8 @negation_of_increment_via_or_common_bits_set(i8 %x, i8 %y) {
 define i8 @negation_of_increment_via_or_disjoint(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negation_of_increment_via_or_disjoint(
 ; CHECK-NEXT:    [[T1_NEG:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add i8 [[X:%.*]], [[T1_NEG]]
 ; CHECK-NEXT:    ret i8 [[T2]]
 ;
   %t1 = or disjoint i8 %y, 1
@@ -1347,7 +1347,7 @@ define i8 @negate_nabs(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    [[T3:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
   %t0 = sub i8 0, %x
@@ -1383,6 +1383,19 @@ define i8 @dont_negate_ordinary_select(i8 %x, i8 %y, i8 %z, i1 %c) {
   %t0 = select i1 %c, i8 %x, i8 %y
   %t1 = sub i8 %z, %t0
   ret i8 %t1
+}
+
+define <2 x i32> @negate_select_of_negation_poison(<2 x i1> %c, <2 x i32> %x) {
+; CHECK-LABEL: @negate_select_of_negation_poison(
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i32> <i32 0, i32 poison>, [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i32> [[NEG]], <2 x i32> [[X]]
+; CHECK-NEXT:    [[NEG2:%.*]] = sub <2 x i32> zeroinitializer, [[SEL]]
+; CHECK-NEXT:    ret <2 x i32> [[NEG2]]
+;
+  %neg = sub <2 x i32> <i32 0, i32 poison>, %x
+  %sel = select <2 x i1> %c, <2 x i32> %neg, <2 x i32> %x
+  %neg2 = sub <2 x i32> zeroinitializer, %sel
+  ret <2 x i32> %neg2
 }
 
 ; Freeze is transparent as far as negation is concerned

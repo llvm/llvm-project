@@ -223,6 +223,42 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier) {
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+  const char *str = "%w32d";
+  long long arg1 = 12345;
+  evaluate(format_arr, str, arg1);
+
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = {str, 5};
+  expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::w;
+  expected.bit_width = 32;
+  expected.conv_val_raw = arg1;
+  expected.conv_name = 'd';
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
+}
+
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier) {
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+  const char *str = "%wf32d";
+  long long arg1 = 12345;
+  evaluate(format_arr, str, arg1);
+
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = {str, 6};
+  expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::wf;
+  expected.bit_width = 32;
+  expected.conv_val_raw = arg1;
+  expected.conv_name = 'd';
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
+}
+
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
   LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "% -056.78jd";
@@ -278,6 +314,47 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected2.conv_name = 's';
 
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
+}
+
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithOverflowingWidthAndPrecision) {
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+  const char *str = "%-999999999999.999999999999d";
+  int arg1 = 12345;
+  evaluate(format_arr, str, arg1);
+
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = {str, 28};
+  expected.flags = LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED;
+  expected.min_width = INT_MAX;
+  expected.precision = INT_MAX;
+  expected.conv_val_raw = arg1;
+  expected.conv_name = 'd';
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
+}
+
+TEST(LlvmLibcPrintfParserTest,
+     EvalOneArgWithOverflowingWidthAndPrecisionAsArgs) {
+  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+  const char *str = "%*.*d";
+  int arg1 = INT_MIN; // INT_MIN = -2147483648 if int is 32 bits.
+  int arg2 = INT_MIN;
+  int arg3 = 12345;
+  evaluate(format_arr, str, arg1, arg2, arg3);
+
+  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  expected.has_conv = true;
+
+  expected.raw_string = {str, 5};
+  expected.flags = LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED;
+  expected.min_width = INT_MAX;
+  expected.precision = arg2;
+  expected.conv_val_raw = arg3;
+  expected.conv_name = 'd';
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE

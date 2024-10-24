@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -41,6 +42,20 @@
 #include <utility>
 
 using namespace llvm;
+
+/// Query value using AddLinkageNamesToDeclCallOriginsForTuning.
+cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
+    "add-linkage-names-to-declaration-call-origins", cl::Hidden,
+    cl::desc("Add DW_AT_linkage_name to function declaration DIEs "
+             "referenced by DW_AT_call_origin attributes. Enabled by default "
+             "for -gsce debugger tuning."));
+
+static bool AddLinkageNamesToDeclCallOriginsForTuning(const DwarfDebug *DD) {
+  bool EnabledByDefault = DD->tuneForSCE();
+  if (EnabledByDefault)
+    return AddLinkageNamesToDeclCallOrigins != cl::boolOrDefault::BOU_FALSE;
+  return AddLinkageNamesToDeclCallOrigins == cl::boolOrDefault::BOU_TRUE;
+}
 
 static dwarf::Tag GetCompileUnitType(UnitKind Kind, DwarfDebug *DW) {
 
@@ -332,8 +347,9 @@ void DwarfCompileUnit::addLocationAttribute(
                 Asm->getObjFileLowering().getIndirectSymViaRWPI(Sym));
         // Base register
         Register BaseReg = Asm->getObjFileLowering().getStaticBase();
-        BaseReg = Asm->TM.getMCRegisterInfo()->getDwarfRegNum(BaseReg, false);
-        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_breg0 + BaseReg);
+        unsigned DwarfBaseReg =
+            Asm->TM.getMCRegisterInfo()->getDwarfRegNum(BaseReg, false);
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_breg0 + DwarfBaseReg);
         // Offset from base register
         addSInt(*Loc, dwarf::DW_FORM_sdata, 0);
         // Operation
@@ -669,7 +685,7 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
     // the order of blocks will be frozen beyond this point.
     do {
       if (MBB->sameSection(EndMBB) || MBB->isEndSection()) {
-        auto MBBSectionRange = Asm->MBBSectionRanges[MBB->getSectionIDNum()];
+        auto MBBSectionRange = Asm->MBBSectionRanges[MBB->getSectionID()];
         List.push_back(
             {MBB->sameSection(BeginMBB) ? BeginLabel
                                         : MBBSectionRange.BeginLabel,
@@ -763,6 +779,13 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     const Loc::Single &Single, const DbgVariable &DV, DIE &VariableDie) {
   const DbgValueLoc *DVal = &Single.getValueLoc();
+  if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
+      !Single.getExpr()) {
+    // Lack of expression means it is a register.  Registers for PTX need to
+    // be marked with DW_AT_address_class = 2.  See
+    // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
+    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1, 2);
+  }
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
     if (Entry->isLocation()) {
@@ -1193,7 +1216,7 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
 }
 
 bool DwarfCompileUnit::useGNUAnalogForDwarf5Feature() const {
-  return DD->getDwarfVersion() == 4 && !DD->tuneForLLDB();
+  return DD->getDwarfVersion() <= 4 && !DD->tuneForLLDB();
 }
 
 dwarf::Tag DwarfCompileUnit::getDwarf5OrGNUTag(dwarf::Tag Tag) const {
@@ -1260,6 +1283,12 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
   } else {
     DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
+    if (AddLinkageNamesToDeclCallOriginsForTuning(DD) &&
+        !CalleeSP->isDefinition() &&
+        !CalleeDIE->findAttribute(dwarf::DW_AT_linkage_name)) {
+      addLinkageName(*CalleeDIE, CalleeSP->getLinkageName());
+    }
+
     addDIEEntry(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_origin),
                 *CalleeDIE);
   }
@@ -1518,8 +1547,8 @@ void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
 }
 
 /// Add a new global type to the unit.
-void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
-                                     const DIScope *Context) {
+void DwarfCompileUnit::addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                                         const DIScope *Context) {
   if (!hasDwarfPubSections())
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();

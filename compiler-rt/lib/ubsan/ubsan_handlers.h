@@ -147,6 +147,7 @@ struct ImplicitConversionData {
   const TypeDescriptor &FromType;
   const TypeDescriptor &ToType;
   /* ImplicitConversionCheckKind */ unsigned char Kind;
+  unsigned int BitfieldBits;
 };
 
 /// \brief Implict conversion that changed the value.
@@ -158,6 +159,7 @@ RECOVERABLE(implicit_conversion, ImplicitConversionData *Data, ValueHandle Src,
 enum BuiltinCheckKind : unsigned char {
   BCK_CTZPassedZero,
   BCK_CLZPassedZero,
+  BCK_AssumePassedFalse,
 };
 
 struct InvalidBuiltinData {

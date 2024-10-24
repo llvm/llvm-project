@@ -51,16 +51,11 @@ define i8 @ext1_ext1_shl(<16 x i8> %x, <16 x i8> %y) {
 ; Negative test - eliminating extract is profitable, but vector multiply is expensive.
 
 define i8 @ext13_ext13_mul(<16 x i8> %x, <16 x i8> %y) {
-; SSE-LABEL: @ext13_ext13_mul(
-; SSE-NEXT:    [[TMP1:%.*]] = mul <16 x i8> [[X:%.*]], [[Y:%.*]]
-; SSE-NEXT:    [[R:%.*]] = extractelement <16 x i8> [[TMP1]], i32 13
-; SSE-NEXT:    ret i8 [[R]]
-;
-; AVX-LABEL: @ext13_ext13_mul(
-; AVX-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 13
-; AVX-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 13
-; AVX-NEXT:    [[R:%.*]] = mul i8 [[E0]], [[E1]]
-; AVX-NEXT:    ret i8 [[R]]
+; CHECK-LABEL: @ext13_ext13_mul(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 13
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 13
+; CHECK-NEXT:    [[R:%.*]] = mul i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 13
   %e1 = extractelement <16 x i8> %y, i32 13

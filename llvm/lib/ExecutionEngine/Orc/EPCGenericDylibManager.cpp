@@ -41,17 +41,17 @@ public:
 
 template <>
 class SPSSerializationTraits<SPSRemoteSymbolLookup,
-                             ExecutorProcessControl::LookupRequest> {
+                             DylibManager::LookupRequest> {
   using MemberSerialization =
       SPSArgList<SPSExecutorAddr, SPSRemoteSymbolLookupSet>;
 
 public:
-  static size_t size(const ExecutorProcessControl::LookupRequest &LR) {
+  static size_t size(const DylibManager::LookupRequest &LR) {
     return MemberSerialization::size(ExecutorAddr(LR.Handle), LR.Symbols);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
-                        const ExecutorProcessControl::LookupRequest &LR) {
+                        const DylibManager::LookupRequest &LR) {
     return MemberSerialization::serialize(OB, ExecutorAddr(LR.Handle),
                                           LR.Symbols);
   }
@@ -92,6 +92,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
+          return;
         }
         Complete(std::move(Result));
       },
@@ -109,6 +110,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
+          return;
         }
         Complete(std::move(Result));
       },

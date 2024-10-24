@@ -51,7 +51,7 @@ define i32 @_Z2f1i(i32 %c) local_unnamed_addr #0 {
 ; HOIST0-NEXT:    rex64
 ; HOIST0-NEXT:    callq __tls_get_addr@PLT
 ; HOIST0-NEXT:    movq %rax, %r15
-; HOIST0-NEXT:    .p2align 4, 0x90
+; HOIST0-NEXT:    .p2align 4
 ; HOIST0-NEXT:  .LBB0_2: # %while.body
 ; HOIST0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; HOIST0-NEXT:    movl (%r15), %edi
@@ -86,7 +86,7 @@ define i32 @_Z2f1i(i32 %c) local_unnamed_addr #0 {
 ; HOIST2-NEXT:    je .LBB0_4
 ; HOIST2-NEXT:  # %bb.1:
 ; HOIST2-NEXT:    movl %edi, %ebx
-; HOIST2-NEXT:    .p2align 4, 0x90
+; HOIST2-NEXT:    .p2align 4
 ; HOIST2-NEXT:  .LBB0_2: # %while.body
 ; HOIST2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; HOIST2-NEXT:    data16
@@ -183,10 +183,9 @@ define i32 @_Z2f2i(i32 %c) local_unnamed_addr #0 {
 ; HOIST0-NEXT:  # %bb.1: # %while.body.preheader
 ; HOIST0-NEXT:    leaq _ZZ2f2iE2st.0@TLSLD(%rip), %rdi
 ; HOIST0-NEXT:    callq __tls_get_addr@PLT
-; HOIST0-NEXT:    movq %rax, %rcx
 ; HOIST0-NEXT:    leaq _ZZ2f2iE2st.0@DTPOFF(%rax), %r15
 ; HOIST0-NEXT:    leaq _ZZ2f2iE2st.1@DTPOFF(%rax), %r12
-; HOIST0-NEXT:    .p2align 4, 0x90
+; HOIST0-NEXT:    .p2align 4
 ; HOIST0-NEXT:  .LBB1_2: # %while.body
 ; HOIST0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; HOIST0-NEXT:    callq _Z5gfuncv@PLT
@@ -226,7 +225,7 @@ define i32 @_Z2f2i(i32 %c) local_unnamed_addr #0 {
 ; HOIST2-NEXT:    je .LBB1_3
 ; HOIST2-NEXT:  # %bb.1: # %while.body.preheader
 ; HOIST2-NEXT:    movl %edi, %ebx
-; HOIST2-NEXT:    .p2align 4, 0x90
+; HOIST2-NEXT:    .p2align 4
 ; HOIST2-NEXT:  .LBB1_2: # %while.body
 ; HOIST2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; HOIST2-NEXT:    callq _Z5gfuncv@PLT
@@ -245,9 +244,7 @@ define i32 @_Z2f2i(i32 %c) local_unnamed_addr #0 {
 ; HOIST2-NEXT:    movq %rax, %r14
 ; HOIST2-NEXT:    addb %bpl, _ZZ2f2iE2st.0@DTPOFF(%rax)
 ; HOIST2-NEXT:    callq _Z5gfuncv@PLT
-; HOIST2-NEXT:    movl %eax, %ecx
-; HOIST2-NEXT:    movq %r14, %rax
-; HOIST2-NEXT:    addl %ecx, _ZZ2f2iE2st.1@DTPOFF(%r14)
+; HOIST2-NEXT:    addl %eax, _ZZ2f2iE2st.1@DTPOFF(%r14)
 ; HOIST2-NEXT:    decl %ebx
 ; HOIST2-NEXT:    jne .LBB1_2
 ; HOIST2-NEXT:  .LBB1_3: # %while.end

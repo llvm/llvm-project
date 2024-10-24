@@ -1,4 +1,5 @@
 add_flang_unittest(FlangRuntimeTests
+  AccessTest.cpp
   Allocatable.cpp
   ArrayConstructor.cpp
   BufferTest.cpp
@@ -24,6 +25,7 @@ add_flang_unittest(FlangRuntimeTests
   Reduction.cpp
   RuntimeCrashTest.cpp
   Stop.cpp
+  Support.cpp
   Time.cpp
   TemporaryStack.cpp
   Transformational.cpp
@@ -33,3 +35,5 @@ target_link_libraries(FlangRuntimeTests
   PRIVATE
   FortranRuntime
 )
+
+add_subdirectory(CUDA)

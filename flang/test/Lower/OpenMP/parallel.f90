@@ -1,4 +1,6 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! REQUIRES: openmp_runtime
+
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPparallel_simple
 subroutine parallel_simple()
@@ -22,63 +24,63 @@ subroutine parallel_if(alpha, beta, gamma)
    logical(4) :: logical4
    logical(8) :: logical8
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(alpha .le. 0)
    !CHECK: fir.call
    call f1()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(.false.)
    !CHECK: fir.call
    call f2()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(alpha .ge. 0)
    !CHECK: fir.call
    call f3()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(.true.)
    !CHECK: fir.call
    call f4()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(beta)
    !CHECK: fir.call
    call f1()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(logical1)
    !CHECK: fir.call
    call f1()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(logical2)
    !CHECK: fir.call
    call f1()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(logical4)
    !CHECK: fir.call
    call f1()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if(%{{.*}} : i1) {
+   !CHECK: omp.parallel if(%{{.*}}) {
    !$omp parallel if(logical8)
    !CHECK: fir.call
    call f1()
@@ -152,7 +154,7 @@ subroutine parallel_allocate()
    use omp_lib
    integer :: x
    !CHECK: omp.parallel allocate(
-   !CHECK: %{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>
+   !CHECK: %{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>
    !CHECK: ) {
    !$omp parallel allocate(omp_high_bw_mem_alloc: x) private(x)
    !CHECK: arith.addi
@@ -171,7 +173,7 @@ subroutine parallel_multiple_clauses(alpha, num_threads)
    integer, intent(inout) :: alpha
    integer, intent(in) :: num_threads
 
-   !CHECK: omp.parallel if({{.*}} : i1) proc_bind(master) {
+   !CHECK: omp.parallel if({{.*}}) proc_bind(master) {
    !$omp parallel if(alpha .le. 0) proc_bind(master)
    !CHECK: fir.call
    call f1()
@@ -185,16 +187,16 @@ subroutine parallel_multiple_clauses(alpha, num_threads)
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if({{.*}} : i1) num_threads({{.*}} : i32) {
+   !CHECK: omp.parallel if({{.*}}) num_threads({{.*}} : i32) {
    !$omp parallel num_threads(num_threads) if(alpha .le. 0)
    !CHECK: fir.call
    call f3()
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if({{.*}} : i1) num_threads({{.*}} : i32) allocate(
-   !CHECK: %{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>
-   !CHECK: ) {
+   !CHECK: omp.parallel allocate(%{{.+}} : i64 -> %{{.+}}#1 : !fir.ref<i32>)
+   !CHECK: if({{.*}}) num_threads({{.*}} : i32)
+   !CHECK: private(@{{.+}} %{{.+}}#0 -> %{{.+}} : !fir.ref<i32>) {
    !$omp parallel num_threads(num_threads) if(alpha .le. 0) allocate(omp_high_bw_mem_alloc: alpha) private(alpha)
    !CHECK: fir.call
    call f3()

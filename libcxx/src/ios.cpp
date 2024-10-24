@@ -195,6 +195,10 @@ void ios_base::register_callback(event_callback fn, int index) {
 }
 
 ios_base::~ios_base() {
+  // Avoid UB when not properly initialized. See ios_base::ios_base for
+  // more information.
+  if (!__loc_)
+    return;
   __call_callbacks(erase_event);
   locale& loc_storage = *reinterpret_cast<locale*>(&__loc_);
   loc_storage.~locale();
@@ -357,18 +361,18 @@ void ios_base::swap(ios_base& rhs) noexcept {
 
 void ios_base::__set_badbit_and_consider_rethrow() {
   __rdstate_ |= badbit;
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   if (__exceptions_ & badbit)
     throw;
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 void ios_base::__set_failbit_and_consider_rethrow() {
   __rdstate_ |= failbit;
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   if (__exceptions_ & failbit)
     throw;
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 bool ios_base::sync_with_stdio(bool sync) {

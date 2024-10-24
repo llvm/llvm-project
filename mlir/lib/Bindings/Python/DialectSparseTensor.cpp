@@ -33,7 +33,8 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
   py::enum_<MlirSparseTensorLevelPropertyNondefault>(m, "LevelProperty",
                                                      py::module_local())
       .value("non_ordered", MLIR_SPARSE_PROPERTY_NON_ORDERED)
-      .value("non_unique", MLIR_SPARSE_PROPERTY_NON_UNIQUE);
+      .value("non_unique", MLIR_SPARSE_PROPERTY_NON_UNIQUE)
+      .value("soa", MLIR_SPARSE_PROPERTY_SOA);
 
   mlir_attribute_subclass(m, "EncodingAttr",
                           mlirAttributeIsASparseTensorEncodingAttr)
@@ -42,16 +43,19 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           [](py::object cls, std::vector<MlirSparseTensorLevelType> lvlTypes,
              std::optional<MlirAffineMap> dimToLvl,
              std::optional<MlirAffineMap> lvlToDim, int posWidth, int crdWidth,
-             MlirContext context) {
+             std::optional<MlirAttribute> explicitVal,
+             std::optional<MlirAttribute> implicitVal, MlirContext context) {
             return cls(mlirSparseTensorEncodingAttrGet(
                 context, lvlTypes.size(), lvlTypes.data(),
                 dimToLvl ? *dimToLvl : MlirAffineMap{nullptr},
                 lvlToDim ? *lvlToDim : MlirAffineMap{nullptr}, posWidth,
-                crdWidth));
+                crdWidth, explicitVal ? *explicitVal : MlirAttribute{nullptr},
+                implicitVal ? *implicitVal : MlirAttribute{nullptr}));
           },
           py::arg("cls"), py::arg("lvl_types"), py::arg("dim_to_lvl"),
           py::arg("lvl_to_dim"), py::arg("pos_width"), py::arg("crd_width"),
-          py::arg("context") = py::none(),
+          py::arg("explicit_val") = py::none(),
+          py::arg("implicit_val") = py::none(), py::arg("context") = py::none(),
           "Gets a sparse_tensor.encoding from parameters.")
       .def_classmethod(
           "build_level_type",
@@ -97,6 +101,24 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
                              mlirSparseTensorEncodingAttrGetPosWidth)
       .def_property_readonly("crd_width",
                              mlirSparseTensorEncodingAttrGetCrdWidth)
+      .def_property_readonly(
+          "explicit_val",
+          [](MlirAttribute self) -> std::optional<MlirAttribute> {
+            MlirAttribute ret =
+                mlirSparseTensorEncodingAttrGetExplicitVal(self);
+            if (mlirAttributeIsNull(ret))
+              return {};
+            return ret;
+          })
+      .def_property_readonly(
+          "implicit_val",
+          [](MlirAttribute self) -> std::optional<MlirAttribute> {
+            MlirAttribute ret =
+                mlirSparseTensorEncodingAttrGetImplicitVal(self);
+            if (mlirAttributeIsNull(ret))
+              return {};
+            return ret;
+          })
       .def_property_readonly(
           "structured_n",
           [](MlirAttribute self) -> unsigned {

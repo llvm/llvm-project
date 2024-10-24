@@ -60,6 +60,8 @@ RUN: ld.lld -### foo.o -m i386pep --entry bar 2>&1 | FileCheck -check-prefix=ENT
 RUN: ld.lld -### foo.o -m i386pep -entry=bar 2>&1 | FileCheck -check-prefix=ENTRY %s
 RUN: ld.lld -### foo.o -m i386pep --entry=bar 2>&1 | FileCheck -check-prefix=ENTRY %s
 ENTRY: -entry:bar
+RUN: ld.lld -### foo.o -m i386pep -e bar -entry= 2>&1 | FileCheck -check-prefix=NOENTRY --implicit-check-not=-entry %s
+NOENTRY: -noentry
 
 RUN: ld.lld -### foo.o -m i386pep -mllvm bar -mllvm baz 2>&1 | FileCheck -check-prefix=MLLVM %s
 MLLVM: -mllvm:bar -mllvm:baz
@@ -247,6 +249,9 @@ REQUIRE-DEFINED: -include:_foo -include:_bar -include:_baz -include:_foo2
 RUN: ld.lld -### foo.o -m i386pe -u _foo --undefined _bar -undefined=_baz --undefined=_foo2 -u_foo3 2>&1 | FileCheck -check-prefix=UNDEFINED %s
 UNDEFINED: -includeoptional:_foo -includeoptional:_bar -includeoptional:_baz -includeoptional:_foo2 -includeoptional:_foo3
 
+RUN: ld.lld -### foo.o -m i386pe --undefined-glob="_foo*" 2>&1 | FileCheck -check-prefix=UNDEFINED-GLOB %s
+UNDEFINED-GLOB: -includeglob:_foo*
+
 RUN: ld.lld -### -m i386pep foo.o -Llibpath 2>&1 | FileCheck -check-prefix LIBPATH %s
 LIBPATH: -libpath:libpath
 
@@ -266,6 +271,8 @@ APPCONTAINER: -appcontainer
 RUN: ld.lld -m i386pep --version 2>&1 | FileCheck -check-prefix=VERSION %s
 RUN: ld.lld -m i386pep -v 2>&1 | FileCheck -check-prefix=VERSION %s
 RUN: not ld.lld -m i386pep -v xyz 2>&1 | FileCheck -check-prefix=VERSION %s
+# This literal string is required for compatibility with older Meson versions,
+# see https://github.com/mesonbuild/meson/pull/13383.
 VERSION: LLD {{.*}} (compatible with GNU linkers)
 
 RUN: ld.lld -m i386pep --help 2>&1 | FileCheck -check-prefix=HELP %s
@@ -422,6 +429,9 @@ LTO_EMIT_ASM: -lldemit:asm
 RUN: ld.lld -### foo.o -m i386pe -plugin-opt=emit-llvm 2>&1 | FileCheck -check-prefix=LTO_EMIT_LLVM %s
 LTO_EMIT_LLVM: -lldemit:llvm
 
+RUN: ld.lld -### foo.o -m i386pep --lto-sample-profile=foo 2>&1 | FileCheck -check-prefix=LTO_SAMPLE_PROFILE %s
+LTO_SAMPLE_PROFILE: -lto-sample-profile:foo
+
 Test GCC specific LTO options that GCC passes unconditionally, that we ignore.
 
 RUN: ld.lld -### foo.o -m i386pep -plugin /usr/lib/gcc/x86_64-w64-mingw32/10-posix/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-w64-mingw32/10-posix/lto-wrapper -plugin-opt=-fresolution=/tmp/ccM9d4fP.res -plugin-opt=-pass-through=-lmingw32 2> /dev/null
@@ -439,3 +449,9 @@ RUN: ld.lld -### foo.o -m i386pep --build-id=none 2>&1 | FileCheck -check-prefix
 RUN: ld.lld -### foo.o -m i386pep -s 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
 RUN: ld.lld -### foo.o -m i386pep -S 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
 NO_BUILD_ID: -build-id:no
+
+RUN: ld.lld -### foo.o -m i386pep -rpath foo 2>&1 | FileCheck -check-prefix=WARN_RPATH %s
+RUN: ld.lld -### foo.o -m i386pep --rpath foo 2>&1 | FileCheck -check-prefix=WARN_RPATH %s
+RUN: ld.lld -### foo.o -m i386pep -rpath=foo 2>&1 | FileCheck -check-prefix=WARN_RPATH %s
+RUN: ld.lld -### foo.o -m i386pep --rpath=foo 2>&1 | FileCheck -check-prefix=WARN_RPATH %s
+WARN_RPATH: warning: parameter -{{-?}}rpath has no effect on PE/COFF targets

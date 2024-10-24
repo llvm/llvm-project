@@ -182,8 +182,8 @@ public:
     raw_storage_iterator  operator++(int);
 };
 
-template <class T> pair<T*,ptrdiff_t> get_temporary_buffer(ptrdiff_t n) noexcept;
-template <class T> void               return_temporary_buffer(T* p) noexcept;
+template <class T> pair<T*,ptrdiff_t> get_temporary_buffer(ptrdiff_t n) noexcept; // deprecated in C++17, removed in C++20
+template <class T> void               return_temporary_buffer(T* p) noexcept;     // deprecated in C++17, removed in C++20
 
 template <class T> T* addressof(T& r) noexcept;
 template <class T> T* addressof(const T&& r) noexcept = delete;
@@ -451,7 +451,8 @@ public:
     constexpr unique_ptr& operator=(nullptr_t) noexcept;                              // constexpr since C++23
 
     // observers
-    typename constexpr add_lvalue_reference<T>::type operator*() const;               // constexpr since C++23
+    constexpr
+    add_lvalue_reference<T>::type operator*() const noexcept(see below);              // constexpr since C++23
     constexpr pointer operator->() const noexcept;                                    // constexpr since C++23
     constexpr pointer get() const noexcept;                                           // constexpr since C++23
     constexpr deleter_type& get_deleter() noexcept;                                   // constexpr since C++23
@@ -911,6 +912,22 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 template<size_t N, class T>
 [[nodiscard]] constexpr T* assume_aligned(T* ptr); // since C++20
 
+// [out.ptr.t], class template out_ptr_t
+template<class Smart, class Pointer, class... Args>
+  class out_ptr_t;                                          // since c++23
+
+// [out.ptr], function template out_ptr
+template<class Pointer = void, class Smart, class... Args>
+  auto out_ptr(Smart& s, Args&&... args);                   // since c++23
+
+// [inout.ptr.t], class template inout_ptr_t
+template<class Smart, class Pointer, class... Args>
+  class inout_ptr_t;                                        // since c++23
+
+// [inout.ptr], function template inout_ptr
+template<class Pointer = void, class Smart, class... Args>
+  auto inout_ptr(Smart& s, Args&&... args);                 // since c++23
+
 }  // std
 
 */
@@ -920,29 +937,39 @@ template<size_t N, class T>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory/align.h>
-#include <__memory/allocate_at_least.h>
-#include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
-#include <__memory/assume_aligned.h>
 #include <__memory/auto_ptr.h>
-#include <__memory/compressed_pair.h>
-#include <__memory/concepts.h>
-#include <__memory/construct_at.h>
+#include <__memory/inout_ptr.h>
+#include <__memory/out_ptr.h>
 #include <__memory/pointer_traits.h>
-#include <__memory/ranges_construct_at.h>
-#include <__memory/ranges_uninitialized_algorithms.h>
 #include <__memory/raw_storage_iterator.h>
 #include <__memory/shared_ptr.h>
 #include <__memory/temporary_buffer.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__memory/uses_allocator.h>
-#include <__memory/uses_allocator_construction.h>
-#include <version>
 
 // standard-mandated includes
+
+#if _LIBCPP_STD_VER >= 17
+#  include <__memory/construct_at.h>
+#endif
+
+#if _LIBCPP_STD_VER >= 20
+#  include <__memory/assume_aligned.h>
+#  include <__memory/concepts.h>
+#  include <__memory/ranges_construct_at.h>
+#  include <__memory/ranges_uninitialized_algorithms.h>
+#  include <__memory/uses_allocator_construction.h>
+#endif
+
+#if _LIBCPP_STD_VER >= 23
+#  include <__memory/allocate_at_least.h>
+#endif
+
+#include <version>
 
 // [memory.syn]
 #include <compare>

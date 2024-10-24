@@ -203,12 +203,12 @@ static Status EnsureFDFlags(int fd, int flags) {
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -829,8 +829,11 @@ void NativeProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
   thread.SetStoppedByBreakpoint();
   FixupBreakpointPCAsNeeded(thread);
 
-  if (m_threads_stepping_with_breakpoint.find(thread.GetID()) !=
-      m_threads_stepping_with_breakpoint.end())
+  NativeRegisterContextLinux &reg_ctx = thread.GetRegisterContext();
+  auto stepping_with_bp_it =
+      m_threads_stepping_with_breakpoint.find(thread.GetID());
+  if (stepping_with_bp_it != m_threads_stepping_with_breakpoint.end() &&
+      stepping_with_bp_it->second == reg_ctx.GetPC())
     thread.SetStoppedByTrace();
 
   StopRunningThreads(thread.GetID());
@@ -1050,10 +1053,10 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
       Status error = ResumeThread(static_cast<NativeThreadLinux &>(*thread),
                                   action->state, signo);
       if (error.Fail())
-        return Status("NativeProcessLinux::%s: failed to resume thread "
-                      "for pid %" PRIu64 ", tid %" PRIu64 ", error = %s",
-                      __FUNCTION__, GetID(), thread->GetID(),
-                      error.AsCString());
+        return Status::FromErrorStringWithFormat(
+            "NativeProcessLinux::%s: failed to resume thread "
+            "for pid %" PRIu64 ", tid %" PRIu64 ", error = %s",
+            __FUNCTION__, GetID(), thread->GetID(), error.AsCString());
 
       break;
     }
@@ -1063,10 +1066,11 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
       break;
 
     default:
-      return Status("NativeProcessLinux::%s (): unexpected state %s specified "
-                    "for pid %" PRIu64 ", tid %" PRIu64,
-                    __FUNCTION__, StateAsCString(action->state), GetID(),
-                    thread->GetID());
+      return Status::FromErrorStringWithFormat(
+          "NativeProcessLinux::%s (): unexpected state %s specified "
+          "for pid %" PRIu64 ", tid %" PRIu64,
+          __FUNCTION__, StateAsCString(action->state), GetID(),
+          thread->GetID());
     }
   }
 
@@ -1077,7 +1081,7 @@ Status NativeProcessLinux::Halt() {
   Status error;
 
   if (kill(GetID(), SIGSTOP) != 0)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -1089,11 +1093,15 @@ Status NativeProcessLinux::Detach() {
   if (GetID() == LLDB_INVALID_PROCESS_ID)
     return error;
 
+  // Cancel out any SIGSTOPs we may have sent while stopping the process.
+  // Otherwise, the process may stop as soon as we detach from it.
+  kill(GetID(), SIGCONT);
+
   for (const auto &thread : m_threads) {
     Status e = Detach(thread->GetID());
+     // Save the error, but still attempt to detach from other threads.
     if (e.Fail())
-      error =
-          e; // Save the error, but still attempt to detach from other threads.
+      error = e.Clone();
   }
 
   m_intel_pt_collector.Clear();
@@ -1109,7 +1117,7 @@ Status NativeProcessLinux::Signal(int signo) {
            Host::GetSignalAsCString(signo), GetID());
 
   if (kill(GetID(), signo))
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -1186,7 +1194,7 @@ Status NativeProcessLinux::Kill() {
   }
 
   if (kill(GetID(), SIGKILL) != 0) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -1205,7 +1213,7 @@ Status NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
 
   if (m_supports_mem_region == LazyBool::eLazyBoolNo) {
     // We're done.
-    return Status("unsupported");
+    return Status::FromErrorString("unsupported");
   }
 
   Status error = PopulateMemoryRegionCache();
@@ -1282,7 +1290,7 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
       return true;
     }
 
-    Result = Info.takeError();
+    Result = Status::FromError(Info.takeError());
     m_supports_mem_region = LazyBool::eLazyBoolNo;
     LLDB_LOG(log, "failed to parse proc maps: {0}", Result);
     return false;
@@ -1314,7 +1322,7 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
     LLDB_LOG(log,
              "failed to find any procfs maps entries, assuming no support "
              "for memory region metadata retrieval");
-    return Status("not supported");
+    return Status::FromErrorString("not supported");
   }
 
   LLDB_LOG(log, "read {0} memory region entries from /proc/{1}/maps",
@@ -1470,7 +1478,7 @@ Status NativeProcessLinux::ReadMemoryTags(int32_t type, lldb::addr_t addr,
   llvm::Expected<NativeRegisterContextLinux::MemoryTaggingDetails> details =
       GetCurrentThread()->GetRegisterContext().GetMemoryTaggingDetails(type);
   if (!details)
-    return Status(details.takeError());
+    return Status::FromError(details.takeError());
 
   // Ignore 0 length read
   if (!len)
@@ -1525,7 +1533,7 @@ Status NativeProcessLinux::WriteMemoryTags(int32_t type, lldb::addr_t addr,
   llvm::Expected<NativeRegisterContextLinux::MemoryTaggingDetails> details =
       GetCurrentThread()->GetRegisterContext().GetMemoryTaggingDetails(type);
   if (!details)
-    return Status(details.takeError());
+    return Status::FromError(details.takeError());
 
   // Ignore 0 length write
   if (!len)
@@ -1542,18 +1550,18 @@ Status NativeProcessLinux::WriteMemoryTags(int32_t type, lldb::addr_t addr,
   llvm::Expected<std::vector<lldb::addr_t>> unpacked_tags_or_err =
       details->manager->UnpackTagsData(tags);
   if (!unpacked_tags_or_err)
-    return Status(unpacked_tags_or_err.takeError());
+    return Status::FromError(unpacked_tags_or_err.takeError());
 
   llvm::Expected<std::vector<lldb::addr_t>> repeated_tags_or_err =
       details->manager->RepeatTagsForRange(*unpacked_tags_or_err, range);
   if (!repeated_tags_or_err)
-    return Status(repeated_tags_or_err.takeError());
+    return Status::FromError(repeated_tags_or_err.takeError());
 
   // Repack them for ptrace to use
   llvm::Expected<std::vector<uint8_t>> final_tag_data =
       details->manager->PackTags(*repeated_tags_or_err);
   if (!final_tag_data)
-    return Status(final_tag_data.takeError());
+    return Status::FromError(final_tag_data.takeError());
 
   struct iovec tags_vec;
   uint8_t *src = final_tag_data->data();
@@ -1636,6 +1644,10 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 
 Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                       size_t &bytes_read) {
+  Log *log = GetLog(POSIXLog::Memory);
+  LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
+
+  bytes_read = 0;
   if (ProcessVmReadvSupported()) {
     // The process_vm_readv path is about 50 times faster than ptrace api. We
     // want to use this syscall if it is supported.
@@ -1646,32 +1658,29 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
     remote_iov.iov_base = reinterpret_cast<void *>(addr);
     remote_iov.iov_len = size;
 
-    bytes_read = process_vm_readv(GetCurrentThreadID(), &local_iov, 1,
-                                  &remote_iov, 1, 0);
-    const bool success = bytes_read == size;
+    ssize_t read_result = process_vm_readv(GetCurrentThreadID(), &local_iov, 1,
+                                           &remote_iov, 1, 0);
+    int error = 0;
+    if (read_result < 0)
+      error = errno;
+    else
+      bytes_read = read_result;
 
-    Log *log = GetLog(POSIXLog::Process);
     LLDB_LOG(log,
-             "using process_vm_readv to read {0} bytes from inferior "
-             "address {1:x}: {2}",
-             size, addr, success ? "Success" : llvm::sys::StrError(errno));
-
-    if (success)
-      return Status();
-    // else the call failed for some reason, let's retry the read using ptrace
-    // api.
+             "process_vm_readv({0}, [iovec({1}, {2})], [iovec({3:x}, {2})], 1, "
+             "0) => {4} ({5})",
+             GetCurrentThreadID(), buf, size, addr, read_result,
+             error > 0 ? llvm::sys::StrError(errno) : "sucesss");
   }
 
   unsigned char *dst = static_cast<unsigned char *>(buf);
   size_t remainder;
   long data;
 
-  Log *log = GetLog(POSIXLog::Memory);
-  LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
-
-  for (bytes_read = 0; bytes_read < size; bytes_read += remainder) {
+  for (; bytes_read < size; bytes_read += remainder) {
     Status error = NativeProcessLinux::PtraceWrapper(
-        PTRACE_PEEKDATA, GetCurrentThreadID(), (void *)addr, nullptr, 0, &data);
+        PTRACE_PEEKDATA, GetCurrentThreadID(),
+        reinterpret_cast<void *>(addr + bytes_read), nullptr, 0, &data);
     if (error.Fail())
       return error;
 
@@ -1679,11 +1688,7 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
     remainder = remainder > k_ptrace_word_size ? k_ptrace_word_size : remainder;
 
     // Copy the data into our buffer
-    memcpy(dst, &data, remainder);
-
-    LLDB_LOG(log, "[{0:x}]:{1:x}", addr, data);
-    addr += k_ptrace_word_size;
-    dst += k_ptrace_word_size;
+    memcpy(dst + bytes_read, &data, remainder);
   }
   return Status();
 }
@@ -1788,7 +1793,7 @@ void NativeProcessLinux::NotifyTracersProcessWillResume() {
 
 Status NativeProcessLinux::NotifyTracersOfNewThread(lldb::tid_t tid) {
   Log *log = GetLog(POSIXLog::Thread);
-  Status error(m_intel_pt_collector.OnThreadCreated(tid));
+  Status error = Status::FromError(m_intel_pt_collector.OnThreadCreated(tid));
   if (error.Fail())
     LLDB_LOG(log, "Failed to trace a new thread with intel-pt, tid = {0}. {1}",
              tid, error.AsCString());
@@ -1797,7 +1802,7 @@ Status NativeProcessLinux::NotifyTracersOfNewThread(lldb::tid_t tid) {
 
 Status NativeProcessLinux::NotifyTracersOfThreadDestroyed(lldb::tid_t tid) {
   Log *log = GetLog(POSIXLog::Thread);
-  Status error(m_intel_pt_collector.OnThreadDestroyed(tid));
+  Status error = Status::FromError(m_intel_pt_collector.OnThreadDestroyed(tid));
   if (error.Fail())
     LLDB_LOG(log,
              "Failed to stop a destroyed thread with intel-pt, tid = {0}. {1}",
@@ -1849,8 +1854,9 @@ Status NativeProcessLinux::GetLoadedModuleFileSpec(const char *module_path,
       return Status();
     }
   }
-  return Status("Module file (%s) not found in /proc/%" PRIu64 "/maps file!",
-                module_file_spec.GetFilename().AsCString(), GetID());
+  return Status::FromErrorStringWithFormat(
+      "Module file (%s) not found in /proc/%" PRIu64 "/maps file!",
+      module_file_spec.GetFilename().AsCString(), GetID());
 }
 
 Status NativeProcessLinux::GetFileLoadAddress(const llvm::StringRef &file_name,
@@ -1867,7 +1873,7 @@ Status NativeProcessLinux::GetFileLoadAddress(const llvm::StringRef &file_name,
       return Status();
     }
   }
-  return Status("No load address found for specified file.");
+  return Status::FromErrorString("No load address found for specified file.");
 }
 
 NativeThreadLinux *NativeProcessLinux::GetThreadByID(lldb::tid_t tid) {
@@ -1902,13 +1908,13 @@ Status NativeProcessLinux::ResumeThread(NativeThreadLinux &thread,
   // reflect it is running after this completes.
   switch (state) {
   case eStateRunning: {
-    const auto resume_result = thread.Resume(signo);
+    Status resume_result = thread.Resume(signo);
     if (resume_result.Success())
       SetState(eStateRunning, true);
     return resume_result;
   }
   case eStateStepping: {
-    const auto step_result = thread.SingleStep(signo);
+    Status step_result = thread.SingleStep(signo);
     if (step_result.Success())
       SetState(eStateRunning, true);
     return step_result;
@@ -2000,7 +2006,7 @@ Status NativeProcessLinux::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
                  addr, data);
 
   if (ret == -1)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   if (result)
     *result = ret;

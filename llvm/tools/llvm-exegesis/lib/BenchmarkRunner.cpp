@@ -6,21 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cmath>
-#include <memory>
-#include <string>
-
-#include "Assembler.h"
 #include "BenchmarkRunner.h"
+#include "Assembler.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "MmapUtils.h"
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -28,6 +26,9 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
+#include <cmath>
+#include <memory>
+#include <string>
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM
@@ -97,7 +98,8 @@ class InProcessFunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
 public:
   static Expected<std::unique_ptr<InProcessFunctionExecutorImpl>>
   create(const LLVMState &State, object::OwningBinary<object::ObjectFile> Obj,
-         BenchmarkRunner::ScratchSpace *Scratch) {
+         BenchmarkRunner::ScratchSpace *Scratch,
+         std::optional<int> BenchmarkProcessCPU) {
     Expected<ExecutableFunction> EF =
         ExecutableFunction::create(State.createTargetMachine(), std::move(Obj));
 
@@ -189,27 +191,31 @@ class SubProcessFunctionExecutorImpl
 public:
   static Expected<std::unique_ptr<SubProcessFunctionExecutorImpl>>
   create(const LLVMState &State, object::OwningBinary<object::ObjectFile> Obj,
-         const BenchmarkKey &Key) {
+         const BenchmarkKey &Key, std::optional<int> BenchmarkProcessCPU) {
     Expected<ExecutableFunction> EF =
         ExecutableFunction::create(State.createTargetMachine(), std::move(Obj));
     if (!EF)
       return EF.takeError();
 
     return std::unique_ptr<SubProcessFunctionExecutorImpl>(
-        new SubProcessFunctionExecutorImpl(State, std::move(*EF), Key));
+        new SubProcessFunctionExecutorImpl(State, std::move(*EF), Key,
+                                           BenchmarkProcessCPU));
   }
 
 private:
   SubProcessFunctionExecutorImpl(const LLVMState &State,
                                  ExecutableFunction Function,
-                                 const BenchmarkKey &Key)
-      : State(State), Function(std::move(Function)), Key(Key) {}
+                                 const BenchmarkKey &Key,
+                                 std::optional<int> BenchmarkCPU)
+      : State(State), Function(std::move(Function)), Key(Key),
+        BenchmarkProcessCPU(BenchmarkCPU) {}
 
   enum ChildProcessExitCodeE {
     CounterFDReadFailed = 1,
     RSeqDisableFailed,
     FunctionDataMappingFailed,
-    AuxiliaryMemorySetupFailed
+    AuxiliaryMemorySetupFailed,
+    SetCPUAffinityFailed
   };
 
   StringRef childProcessExitCodeToString(int ExitCode) const {
@@ -222,6 +228,8 @@ private:
       return "Failed to map memory for assembled snippet";
     case ChildProcessExitCodeE::AuxiliaryMemorySetupFailed:
       return "Failed to setup auxiliary memory";
+    case ChildProcessExitCodeE::SetCPUAffinityFailed:
+      return "Failed to set CPU affinity of the benchmarking process";
     default:
       return "Child process returned with unknown exit code";
     }
@@ -278,58 +286,20 @@ private:
     return FD;
   }
 
-  Error createSubProcessAndRunBenchmark(
-      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues,
-      ArrayRef<const char *> ValidationCounters,
-      SmallVectorImpl<int64_t> &ValidationCounterValues) const {
-    int PipeFiles[2];
-    int PipeSuccessOrErr = socketpair(AF_UNIX, SOCK_DGRAM, 0, PipeFiles);
-    if (PipeSuccessOrErr != 0) {
-      return make_error<Failure>(
-          "Failed to create a pipe for interprocess communication between "
-          "llvm-exegesis and the benchmarking subprocess: " +
-          Twine(strerror(errno)));
-    }
-
-    SubprocessMemory SPMemory;
-    Error MemoryInitError = SPMemory.initializeSubprocessMemory(getpid());
-    if (MemoryInitError)
-      return MemoryInitError;
-
-    Error AddMemDefError =
-        SPMemory.addMemoryDefinition(Key.MemoryValues, getpid());
-    if (AddMemDefError)
-      return AddMemDefError;
-
-    pid_t ParentOrChildPID = fork();
-
-    if (ParentOrChildPID == -1) {
-      return make_error<Failure>("Failed to create child process: " +
-                                 Twine(strerror(errno)));
-    }
-
-    if (ParentOrChildPID == 0) {
-      // We are in the child process, close the write end of the pipe.
-      close(PipeFiles[1]);
-      // Unregister handlers, signal handling is now handled through ptrace in
-      // the host process.
-      sys::unregisterHandlers();
-      prepareAndRunBenchmark(PipeFiles[0], Key);
-      // The child process terminates in the above function, so we should never
-      // get to this point.
-      llvm_unreachable("Child process didn't exit when expected.");
-    }
-
+  Error
+  runParentProcess(pid_t ChildPID, int WriteFD, StringRef CounterName,
+                   SmallVectorImpl<int64_t> &CounterValues,
+                   ArrayRef<const char *> ValidationCounters,
+                   SmallVectorImpl<int64_t> &ValidationCounterValues) const {
+    auto WriteFDClose = make_scope_exit([WriteFD]() { close(WriteFD); });
     const ExegesisTarget &ET = State.getExegesisTarget();
-    auto CounterOrError = ET.createCounter(
-        CounterName, State, ValidationCounters, ParentOrChildPID);
+    auto CounterOrError =
+        ET.createCounter(CounterName, State, ValidationCounters, ChildPID);
 
     if (!CounterOrError)
       return CounterOrError.takeError();
 
     pfm::CounterGroup *Counter = CounterOrError.get().get();
-
-    close(PipeFiles[0]);
 
     // Make sure to attach to the process (and wait for the sigstop to be
     // delivered and for the process to continue) before we write to the counter
@@ -338,30 +308,30 @@ private:
     // attach afterwards, the subprocess might exit before we get to the attach
     // call due to effects like scheduler contention, introducing transient
     // failures.
-    if (ptrace(PTRACE_ATTACH, ParentOrChildPID, NULL, NULL) != 0)
+    if (ptrace(PTRACE_ATTACH, ChildPID, NULL, NULL) != 0)
       return make_error<Failure>("Failed to attach to the child process: " +
                                  Twine(strerror(errno)));
 
-    if (wait(NULL) == -1) {
+    if (waitpid(ChildPID, NULL, 0) == -1) {
       return make_error<Failure>(
           "Failed to wait for child process to stop after attaching: " +
           Twine(strerror(errno)));
     }
 
-    if (ptrace(PTRACE_CONT, ParentOrChildPID, NULL, NULL) != 0)
+    if (ptrace(PTRACE_CONT, ChildPID, NULL, NULL) != 0)
       return make_error<Failure>(
           "Failed to continue execution of the child process: " +
           Twine(strerror(errno)));
 
     int CounterFileDescriptor = Counter->getFileDescriptor();
     Error SendError =
-        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
+        sendFileDescriptorThroughSocket(WriteFD, CounterFileDescriptor);
 
     if (SendError)
       return SendError;
 
     int ChildStatus;
-    if (wait(&ChildStatus) == -1) {
+    if (waitpid(ChildPID, &ChildStatus, 0) == -1) {
       return make_error<Failure>(
           "Waiting for the child process to complete failed: " +
           Twine(strerror(errno)));
@@ -395,17 +365,120 @@ private:
 
     // An error was encountered running the snippet, process it
     siginfo_t ChildSignalInfo;
-    if (ptrace(PTRACE_GETSIGINFO, ParentOrChildPID, NULL, &ChildSignalInfo) ==
-        -1) {
+    if (ptrace(PTRACE_GETSIGINFO, ChildPID, NULL, &ChildSignalInfo) == -1) {
       return make_error<Failure>("Getting signal info from the child failed: " +
                                  Twine(strerror(errno)));
     }
 
+    // Send SIGKILL rather than SIGTERM as the child process has no SIGTERM
+    // handlers to run, and calling SIGTERM would mean that ptrace will force
+    // it to block in the signal-delivery-stop for the SIGSEGV/other signals,
+    // and upon exit.
+    if (kill(ChildPID, SIGKILL) == -1)
+      return make_error<Failure>("Failed to kill child benchmarking proces: " +
+                                 Twine(strerror(errno)));
+
+    // Wait for the process to exit so that there are no zombie processes left
+    // around.
+    if (waitpid(ChildPID, NULL, 0) == -1)
+      return make_error<Failure>("Failed to wait for process to die: " +
+                                 Twine(strerror(errno)));
+
     if (ChildSignalInfo.si_signo == SIGSEGV)
       return make_error<SnippetSegmentationFault>(
-          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
+          reinterpret_cast<uintptr_t>(ChildSignalInfo.si_addr));
 
     return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
+  }
+
+  static void setCPUAffinityIfRequested(int CPUToUse) {
+// Special case this function for x86_64 for now as certain more esoteric
+// platforms have different definitions for some of the libc functions that
+// cause buildtime failures. Additionally, the subprocess executor mode (the
+// sole mode where this is supported) currently only supports x86_64.
+
+// Also check that we have the SYS_getcpu macro defined, meaning the syscall
+// actually exists within the build environment. We manually use the syscall
+// rather than the libc wrapper given the wrapper for getcpu is only available
+// in glibc 2.29 and later.
+#if defined(__x86_64__) && defined(SYS_getcpu)
+    // Set the CPU affinity for the child process, so that we ensure that if
+    // the user specified a CPU the process should run on, the benchmarking
+    // process is running on that CPU.
+    cpu_set_t CPUMask;
+    CPU_ZERO(&CPUMask);
+    CPU_SET(CPUToUse, &CPUMask);
+    // TODO(boomanaiden154): Rewrite this to use LLVM primitives once they
+    // are available.
+    int SetAffinityReturn = sched_setaffinity(0, sizeof(CPUMask), &CPUMask);
+    if (SetAffinityReturn == -1) {
+      exit(ChildProcessExitCodeE::SetCPUAffinityFailed);
+    }
+
+    // Check (if assertions are enabled) that we are actually running on the
+    // CPU that was specified by the user.
+    [[maybe_unused]] unsigned int CurrentCPU;
+    assert(syscall(SYS_getcpu, &CurrentCPU, nullptr) == 0 &&
+           "Expected getcpu call to succeed.");
+    assert(static_cast<int>(CurrentCPU) == CPUToUse &&
+           "Expected current CPU to equal the CPU requested by the user");
+#endif // defined(__x86_64__) && defined(SYS_getcpu)
+    exit(ChildProcessExitCodeE::SetCPUAffinityFailed);
+  }
+
+  Error createSubProcessAndRunBenchmark(
+      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues,
+      ArrayRef<const char *> ValidationCounters,
+      SmallVectorImpl<int64_t> &ValidationCounterValues) const {
+    int PipeFiles[2];
+    int PipeSuccessOrErr = socketpair(AF_UNIX, SOCK_DGRAM, 0, PipeFiles);
+    if (PipeSuccessOrErr != 0) {
+      return make_error<Failure>(
+          "Failed to create a pipe for interprocess communication between "
+          "llvm-exegesis and the benchmarking subprocess: " +
+          Twine(strerror(errno)));
+    }
+
+    SubprocessMemory SPMemory;
+    Error MemoryInitError = SPMemory.initializeSubprocessMemory(getpid());
+    if (MemoryInitError)
+      return MemoryInitError;
+
+    Error AddMemDefError =
+        SPMemory.addMemoryDefinition(Key.MemoryValues, getpid());
+    if (AddMemDefError)
+      return AddMemDefError;
+
+    long ParentTID = SubprocessMemory::getCurrentTID();
+    pid_t ParentOrChildPID = fork();
+
+    if (ParentOrChildPID == -1) {
+      return make_error<Failure>("Failed to create child process: " +
+                                 Twine(strerror(errno)));
+    }
+
+    if (ParentOrChildPID == 0) {
+      if (BenchmarkProcessCPU.has_value()) {
+        setCPUAffinityIfRequested(*BenchmarkProcessCPU);
+      }
+
+      // We are in the child process, close the write end of the pipe.
+      close(PipeFiles[1]);
+      // Unregister handlers, signal handling is now handled through ptrace in
+      // the host process.
+      sys::unregisterHandlers();
+      runChildSubprocess(PipeFiles[0], Key, ParentTID);
+      // The child process terminates in the above function, so we should never
+      // get to this point.
+      llvm_unreachable("Child process didn't exit when expected.");
+    }
+
+    // Close the read end of the pipe as we only need to write to the subprocess
+    // from the parent process.
+    close(PipeFiles[0]);
+    return runParentProcess(ParentOrChildPID, PipeFiles[1], CounterName,
+                            CounterValues, ValidationCounters,
+                            ValidationCounterValues);
   }
 
   void disableCoreDumps() const {
@@ -415,8 +488,8 @@ private:
     setrlimit(RLIMIT_CORE, &rlim);
   }
 
-  [[noreturn]] void prepareAndRunBenchmark(int Pipe,
-                                           const BenchmarkKey &Key) const {
+  [[noreturn]] void runChildSubprocess(int Pipe, const BenchmarkKey &Key,
+                                       long ParentTID) const {
     // Disable core dumps in the child process as otherwise everytime we
     // encounter an execution failure like a segmentation fault, we will create
     // a core dump. We report the information directly rather than require the
@@ -439,9 +512,21 @@ private:
 // segfaults in the program. Unregister the rseq region so that we can safely
 // unmap it later
 #ifdef GLIBC_INITS_RSEQ
-    long RseqDisableOutput =
-        syscall(SYS_rseq, (intptr_t)__builtin_thread_pointer() + __rseq_offset,
-                __rseq_size, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
+    unsigned int RseqStructSize = __rseq_size;
+
+    // Glibc v2.40 (the change is also expected to be backported to v2.35)
+    // changes the definition of __rseq_size to be the usable area of the struct
+    // rather than the actual size of the struct. v2.35 uses only 20 bytes of
+    // the 32 byte struct. For now, it should be safe to assume that if the
+    // usable size is less than 32, the actual size of the struct will be 32
+    // bytes given alignment requirements.
+    if (__rseq_size < 32)
+      RseqStructSize = 32;
+
+    long RseqDisableOutput = syscall(
+        SYS_rseq,
+        reinterpret_cast<uintptr_t>(__builtin_thread_pointer()) + __rseq_offset,
+        RseqStructSize, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
     if (RseqDisableOutput != 0)
       exit(ChildProcessExitCodeE::RSeqDisableFailed);
 #endif // GLIBC_INITS_RSEQ
@@ -464,7 +549,7 @@ private:
     char *FunctionDataCopy =
         (char *)mmap(MapAddress, FunctionDataCopySize, PROT_READ | PROT_WRITE,
                      MapFlags, 0, 0);
-    if ((intptr_t)FunctionDataCopy == -1)
+    if (reinterpret_cast<intptr_t>(FunctionDataCopy) == -1)
       exit(ChildProcessExitCodeE::FunctionDataMappingFailed);
 
     memcpy(FunctionDataCopy, this->Function.FunctionBytes.data(),
@@ -473,12 +558,12 @@ private:
 
     Expected<int> AuxMemFDOrError =
         SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
-            Key.MemoryValues, ParentPID, CounterFileDescriptor);
+            Key.MemoryValues, ParentPID, ParentTID, CounterFileDescriptor);
     if (!AuxMemFDOrError)
       exit(ChildProcessExitCodeE::AuxiliaryMemorySetupFailed);
 
-    ((void (*)(size_t, int))(intptr_t)FunctionDataCopy)(FunctionDataCopySize,
-                                                        *AuxMemFDOrError);
+    ((void (*)(size_t, int))(uintptr_t)FunctionDataCopy)(FunctionDataCopySize,
+                                                         *AuxMemFDOrError);
 
     exit(0);
   }
@@ -499,6 +584,7 @@ private:
   const LLVMState &State;
   const ExecutableFunction Function;
   const BenchmarkKey &Key;
+  const std::optional<int> BenchmarkProcessCPU;
 };
 #endif // __linux__
 } // namespace
@@ -576,11 +662,15 @@ BenchmarkRunner::getRunnableConfiguration(
 Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>>
 BenchmarkRunner::createFunctionExecutor(
     object::OwningBinary<object::ObjectFile> ObjectFile,
-    const BenchmarkKey &Key) const {
+    const BenchmarkKey &Key, std::optional<int> BenchmarkProcessCPU) const {
   switch (ExecutionMode) {
   case ExecutionModeE::InProcess: {
+    if (BenchmarkProcessCPU.has_value())
+      return make_error<Failure>("The inprocess execution mode does not "
+                                 "support benchmark core pinning.");
+
     auto InProcessExecutorOrErr = InProcessFunctionExecutorImpl::create(
-        State, std::move(ObjectFile), Scratch.get());
+        State, std::move(ObjectFile), Scratch.get(), BenchmarkProcessCPU);
     if (!InProcessExecutorOrErr)
       return InProcessExecutorOrErr.takeError();
 
@@ -589,7 +679,7 @@ BenchmarkRunner::createFunctionExecutor(
   case ExecutionModeE::SubProcess: {
 #ifdef __linux__
     auto SubProcessExecutorOrErr = SubProcessFunctionExecutorImpl::create(
-        State, std::move(ObjectFile), Key);
+        State, std::move(ObjectFile), Key, BenchmarkProcessCPU);
     if (!SubProcessExecutorOrErr)
       return SubProcessExecutorOrErr.takeError();
 
@@ -604,8 +694,8 @@ BenchmarkRunner::createFunctionExecutor(
 }
 
 std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
-    RunnableConfiguration &&RC,
-    const std::optional<StringRef> &DumpFile) const {
+    RunnableConfiguration &&RC, const std::optional<StringRef> &DumpFile,
+    std::optional<int> BenchmarkProcessCPU) const {
   Benchmark &BenchmarkResult = RC.BenchmarkResult;
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 
@@ -626,7 +716,8 @@ std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
   }
 
   Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>> Executor =
-      createFunctionExecutor(std::move(ObjectFile), RC.BenchmarkResult.Key);
+      createFunctionExecutor(std::move(ObjectFile), RC.BenchmarkResult.Key,
+                             BenchmarkProcessCPU);
   if (!Executor)
     return {Executor.takeError(), std::move(BenchmarkResult)};
   auto NewMeasurements = runMeasurements(**Executor);

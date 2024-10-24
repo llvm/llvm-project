@@ -1,10 +1,10 @@
 # MLIR Bytecode Format
 
-This documents describes the MLIR bytecode format and its encoding.
+This document describes the MLIR bytecode format and its encoding.
 This format is versioned and stable: we don't plan to ever break
-compatibility, that is a dialect should be able to deserialize and
-older bytecode. Similarly, we support back-deployment we an older
-version of the format can be targetted.
+compatibility, that is a dialect should be able to deserialize any
+older bytecode. Similarly, we support back-deployment so that an
+older version of the format can be targetted.
 
 That said, it is important to realize that the promises of the
 bytecode format are made assuming immutable dialects: the format
@@ -19,7 +19,7 @@ information while decoding the input IR, and gives an opportunity
 to each dialect for which a version is present to perform IR
 upgrades post-parsing through the `upgradeFromVersion` method.
 There is no restriction on what kind of information a dialect
-is allowed to encode to model its versioning
+is allowed to encode to model its versioning.
 
 [TOC]
 
@@ -172,16 +172,13 @@ dialects that were also referenced.
 ```
 dialect_section {
   numDialects: varint,
-  dialectNames: varint[],
-  numTotalOpNames: varint,
-  opNames: op_name_group[]
+  dialectNames: dialect_name_group[],
+  opNames: dialect_ops_group[]  // ops grouped by dialect
 }
 
-op_name_group {
-  dialect: varint // (dialectID << 1) | (hasVersion),
-  version : dialect_version_section
-  numOpNames: varint,
-  opNames: varint[]
+dialect_name_group {
+  nameAndIsVersioned: varint  // (dialectID << 1) | (hasVersion),
+  version: dialect_version_section  // only if versioned
 }
 
 dialect_version_section {
@@ -189,6 +186,15 @@ dialect_version_section {
   version: byte[]
 }
 
+dialect_ops_group {
+  dialect: varint,
+  numOpNames: varint,
+  opNames: op_name_group[]
+}
+
+op_name_group {
+  nameAndIsRegistered: varint  // (nameID << 1) | (isRegisteredOp)
+}
 ```
 
 Dialects are encoded as a `varint` containing the index to the name string
@@ -196,7 +202,7 @@ within the string section, plus a flag indicating whether the dialect is
 versioned. Operation names are encoded in groups by dialect, with each group
 containing the dialect, the number of operation names, and the array of indexes
 to each name within the string section. The version is encoded as a nested
-section.
+section for each dialect.
 
 ### Attribute/Type Sections
 
@@ -249,9 +255,9 @@ its assembly format, or via a custom dialect defined encoding.
 
 In the case where a dialect does not define a method for encoding the attribute
 or type, the textual assembly format of that attribute or type is used as a
-fallback. For example, a type of `!bytecode.type` would be encoded as the null
-terminated string "!bytecode.type". This ensures that every attribute and type
-may be encoded, even if the owning dialect has not yet opted in to a more
+fallback. For example, a type `!bytecode.type<42>` would be encoded as the null
+terminated string "!bytecode.type<42>". This ensures that every attribute and
+type can be encoded, even if the owning dialect has not yet opted in to a more
 efficient serialization.
 
 TODO: We shouldn't redundantly encode the dialect name here, we should use a
@@ -259,9 +265,9 @@ reference to the parent dialect instead.
 
 ##### Dialect Defined Encoding
 
-In addition to the assembly format fallback, dialects may also provide a custom
-encoding for their attributes and types. Custom encodings are very beneficial in
-that they are significantly smaller and faster to read and write.
+As an alternative to the assembly format fallback, dialects may also provide a
+custom encoding for their attributes and types. Custom encodings are very
+beneficial in that they are significantly smaller and faster to read and write.
 
 Dialects can opt-in to providing custom encodings by implementing the
 `BytecodeDialectInterface`. This interface provides hooks, namely
@@ -377,7 +383,7 @@ uselist {
 
 The encoding of an operation is important because this is generally the most
 commonly appearing structure in the bytecode. A single encoding is used for
-every type of operation. Given this prevelance, many of the fields of an
+every type of operation. Given this prevalence, many of the fields of an
 operation are optional. The `encodingMask` field is a bitmask which indicates
 which of the components of the operation are present.
 

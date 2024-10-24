@@ -444,12 +444,10 @@ define i64 @ashr_add_neg_shl_i32(i64 %r) nounwind {
 define i64 @ashr_add_neg_shl_i8(i64 %r) nounwind {
 ; X86-LABEL: ashr_add_neg_shl_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $24, %eax
-; X86-NEXT:    movl $33554432, %edx # imm = 0x2000000
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    sarl $24, %eax
+; X86-NEXT:    movb $2, %al
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movsbl %al, %eax
+; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    retl
 ;
@@ -786,4 +784,39 @@ define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32
   %or.cd = or <4 x i32> %c.shifted, %d
   %r = or <4 x i32> %or.ab, %or.cd
   ret <4 x i32> %r
+}
+
+; Reproducer for a DAGCombiner::combineShiftOfShiftedLogic bug. DAGCombiner
+; need to check that the sum of the shift amounts fits in i8, which is the
+; legal type used to described X86 shift amounts. Verify that we do not try to
+; create a shift with 130+160 as shift amount, and verify that the stored
+; value do not depend on %a1.
+define void @combineShiftOfShiftedLogic(i128 %a1, i32 %a2, ptr %p) {
+; X86-LABEL: combineShiftOfShiftedLogic:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, 20(%ecx)
+; X86-NEXT:    movl $0, 16(%ecx)
+; X86-NEXT:    movl $0, 12(%ecx)
+; X86-NEXT:    movl $0, 8(%ecx)
+; X86-NEXT:    movl $0, 4(%ecx)
+; X86-NEXT:    movl $0, (%ecx)
+; X86-NEXT:    retl
+;
+; X64-LABEL: combineShiftOfShiftedLogic:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X64-NEXT:    shlq $32, %rdx
+; X64-NEXT:    movq %rdx, 16(%rcx)
+; X64-NEXT:    movq $0, 8(%rcx)
+; X64-NEXT:    movq $0, (%rcx)
+; X64-NEXT:    retq
+  %zext1 = zext i128 %a1 to i192
+  %zext2 = zext i32 %a2 to i192
+  %shl = shl i192 %zext1, 130
+  %or = or i192 %shl, %zext2
+  %res = shl i192 %or, 160
+  store i192 %res, ptr %p, align 8
+  ret void
 }

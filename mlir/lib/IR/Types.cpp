@@ -34,7 +34,11 @@ Type AbstractType::replaceImmediateSubElements(Type type,
 
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
+bool Type::isFloat4E2M1FN() const { return llvm::isa<Float4E2M1FNType>(*this); }
+bool Type::isFloat6E2M3FN() const { return llvm::isa<Float6E2M3FNType>(*this); }
+bool Type::isFloat6E3M2FN() const { return llvm::isa<Float6E3M2FNType>(*this); }
 bool Type::isFloat8E5M2() const { return llvm::isa<Float8E5M2Type>(*this); }
+bool Type::isFloat8E4M3() const { return llvm::isa<Float8E4M3Type>(*this); }
 bool Type::isFloat8E4M3FN() const { return llvm::isa<Float8E4M3FNType>(*this); }
 bool Type::isFloat8E5M2FNUZ() const {
   return llvm::isa<Float8E5M2FNUZType>(*this);
@@ -45,6 +49,10 @@ bool Type::isFloat8E4M3FNUZ() const {
 bool Type::isFloat8E4M3B11FNUZ() const {
   return llvm::isa<Float8E4M3B11FNUZType>(*this);
 }
+bool Type::isFloat8E8M0FNU() const {
+  return llvm::isa<Float8E8M0FNUType>(*this);
+}
+bool Type::isFloat8E3M4() const { return llvm::isa<Float8E3M4Type>(*this); }
 bool Type::isBF16() const { return llvm::isa<BFloat16Type>(*this); }
 bool Type::isF16() const { return llvm::isa<Float16Type>(*this); }
 bool Type::isTF32() const { return llvm::isa<FloatTF32Type>(*this); }
@@ -54,6 +62,8 @@ bool Type::isF80() const { return llvm::isa<Float80Type>(*this); }
 bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
 
 bool Type::isIndex() const { return llvm::isa<IndexType>(*this); }
+
+bool Type::isInteger() const { return llvm::isa<IntegerType>(*this); }
 
 /// Return true if this is an integer type with the specified width.
 bool Type::isInteger(unsigned width) const {

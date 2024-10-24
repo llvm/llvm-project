@@ -725,7 +725,7 @@ define i32 @fsh_orconst_rotate(i32 %a) {
 define i32 @fsh_rotate_5(i8 %x, i32 %y) {
 ; CHECK-LABEL: @fsh_rotate_5(
 ; CHECK-NEXT:    [[T1:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[T1]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[T1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[OR1]], i32 5)
 ; CHECK-NEXT:    ret i32 [[OR2]]
 ;
@@ -741,7 +741,7 @@ define i32 @fsh_rotate_5(i8 %x, i32 %y) {
 define i32 @fsh_rotate_18(i8 %x, i32 %y) {
 ; CHECK-LABEL: @fsh_rotate_18(
 ; CHECK-NEXT:    [[T1:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[T1]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[T1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[OR1]], i32 18)
 ; CHECK-NEXT:    ret i32 [[OR2]]
 ;
@@ -1000,4 +1000,13 @@ define <2 x i32> @fsh_unary_shuffle_ops_partial_widening(<3 x i32> %x, <2 x i32>
   %c = shufflevector <2 x i32> %z, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
   %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
   ret <2 x i32> %r
+}
+
+define <2 x i32> @fshr_vec_zero_elem(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fshr_vec_zero_elem(
+; CHECK-NEXT:    [[FSH:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 2, i32 0>)
+; CHECK-NEXT:    ret <2 x i32> [[FSH]]
+;
+  %fsh = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 2, i32 0>)
+  ret <2 x i32> %fsh
 }

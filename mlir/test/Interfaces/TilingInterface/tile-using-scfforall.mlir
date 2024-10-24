@@ -17,8 +17,8 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0)[s0] -> (20, -d0 + s0)>
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 10)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 20)>
 //      CHECK: func.func @simple_matmul(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>
@@ -65,8 +65,8 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
-//  CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0)[s0] -> (20, -d0 + s0)>
+//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 10)>
+//  CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 20)>
 //      CHECK-LABEL: func.func @simple_matmul_memref(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: memref<?x?xf32>
@@ -117,7 +117,7 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0) -> (10, -d0 + 128)>
+//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0) -> (-d0 + 128, 10)>
 //      CHECK-LABEL: func.func @multi_result(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<128x200x300xf32>)
 //  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty()
@@ -161,9 +161,9 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
-//  CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0)[s0] -> (20, -d0 + s0)>
-//  CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0)[s0] -> (30, -d0 + s0)>
+//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 10)>
+//  CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 20)>
+//  CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 30)>
 //  CHECK-DAG: #[[$MAP3:.+]] = affine_map<(d0)[s0] -> (d0 + s0 * 2 - 2)>
 //  CHECK-DAG: #[[$MAP4:.+]] = affine_map<(d0)[s0] -> (d0 + s0 * 3 - 3)>
 //      CHECK-LABEL: func.func @conv2D(
@@ -264,8 +264,8 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (20, -d0 + s0)>
-//  CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
+//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 20)>
+//  CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 10)>
 //      CHECK-LABEL: func.func @interchange_matmul(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>

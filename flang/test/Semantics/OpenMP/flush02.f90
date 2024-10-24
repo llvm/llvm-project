@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 
 ! Check OpenMP 5.0 - 2.17.8 flush Construct
 ! Restriction -
@@ -78,6 +80,7 @@ use omp_lib
 
   !$omp parallel num_threads(4)
     array = (/1, 2, 3, 4, 5, 6, 7, 8, 9, 10/)
+    !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
     !$omp master
       !$omp flush (array)
     !$omp end master

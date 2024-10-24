@@ -56,6 +56,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
@@ -375,8 +376,8 @@ void ASTUnit::CacheCodeCompletionResults() {
   SmallVector<Result, 8> Results;
   CachedCompletionAllocator = std::make_shared<GlobalCodeCompletionAllocator>();
   CodeCompletionTUInfo CCTUInfo(CachedCompletionAllocator);
-  TheSema->GatherGlobalCodeCompletions(*CachedCompletionAllocator,
-                                       CCTUInfo, Results);
+  TheSema->CodeCompletion().GatherGlobalCodeCompletions(
+      *CachedCompletionAllocator, CCTUInfo, Results);
 
   // Translate global code completions into cached completions.
   llvm::DenseMap<CanQualType, unsigned> CompletionTypes;
@@ -535,7 +536,8 @@ public:
         LangOpt(LangOpt), TargetOpts(TargetOpts), Target(Target),
         Counter(Counter) {}
 
-  bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
     if (InitializedLanguage)
       return false;
@@ -558,6 +560,7 @@ public:
   }
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                               StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override {
     // llvm::SaveAndRestore doesn't support bit field.
@@ -596,13 +599,15 @@ public:
   }
 
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool ReadMacros, bool Complain,
+                               StringRef ModuleFilename, bool ReadMacros,
+                               bool Complain,
                                std::string &SuggestedPredefines) override {
     this->PPOpts = PPOpts;
     return false;
   }
 
-  bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+  bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                         StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override {
     // If we've already initialized the target, don't do it again.
     if (Target)
@@ -797,7 +802,7 @@ void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
 }
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
-    const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
+    StringRef Filename, const PCHContainerReader &PCHContainerRdr,
     WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts,
     std::shared_ptr<HeaderSearchOptions> HSOpts,
@@ -1067,7 +1072,7 @@ public:
 
   std::vector<Decl *> takeTopLevelDecls() { return std::move(TopLevelDecls); }
 
-  std::vector<serialization::DeclID> takeTopLevelDeclIDs() {
+  std::vector<LocalDeclID> takeTopLevelDeclIDs() {
     return std::move(TopLevelDeclIDs);
   }
 
@@ -1101,7 +1106,7 @@ public:
 private:
   unsigned Hash = 0;
   std::vector<Decl *> TopLevelDecls;
-  std::vector<serialization::DeclID> TopLevelDeclIDs;
+  std::vector<LocalDeclID> TopLevelDeclIDs;
   llvm::SmallVector<ASTUnit::StandaloneDiagnostic, 4> PreambleDiags;
 };
 
@@ -1467,11 +1472,12 @@ void ASTUnit::RealizeTopLevelDeclsFromPreamble() {
 
   std::vector<Decl *> Resolved;
   Resolved.reserve(TopLevelDeclsInPreamble.size());
-  ExternalASTSource &Source = *getASTContext().getExternalSource();
+  // The module file of the preamble.
+  serialization::ModuleFile &MF = Reader->getModuleManager().getPrimaryModule();
   for (const auto TopLevelDecl : TopLevelDeclsInPreamble) {
     // Resolve the declaration ID to an actual declaration, possibly
     // deserializing the declaration in the process.
-    if (Decl *D = Source.GetExternalDecl(TopLevelDecl))
+    if (Decl *D = Reader->GetLocalDecl(MF, TopLevelDecl))
       Resolved.push_back(D);
   }
   TopLevelDeclsInPreamble.clear();
@@ -2373,8 +2379,6 @@ bool ASTUnit::serialize(raw_ostream &OS) {
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }
 
-using SLocRemap = ContinuousRangeMap<unsigned, int, 2>;
-
 void ASTUnit::TranslateStoredDiagnostics(
                           FileManager &FileMgr,
                           SourceManager &SrcMgr,
@@ -2391,7 +2395,7 @@ void ASTUnit::TranslateStoredDiagnostics(
     // Rebuild the StoredDiagnostic.
     if (SD.Filename.empty())
       continue;
-    auto FE = FileMgr.getFile(SD.Filename);
+    auto FE = FileMgr.getOptionalFileRef(SD.Filename);
     if (!FE)
       continue;
     SourceLocation FileLoc;

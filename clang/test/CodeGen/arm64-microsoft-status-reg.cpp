@@ -1,9 +1,9 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple arm64-windows -fms-compatibility -emit-llvm -S \
+// RUN: %clang_cc1 -triple arm64-windows -fms-compatibility -S \
 // RUN: -o - %s | FileCheck %s -check-prefix CHECK-ASM
 
-// RUN: %clang_cc1 -triple arm64-darwin -fms-compatibility -emit-llvm -S \
+// RUN: %clang_cc1 -triple arm64-darwin -fms-compatibility -S \
 // RUN: -o - %s | FileCheck %s -check-prefix CHECK-ASM
 
 // RUN: %clang_cc1 -triple arm64-windows -fms-compatibility -emit-llvm \

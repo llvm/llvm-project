@@ -69,11 +69,21 @@ enum {
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info infoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
-  {PREFIX,      NAME,        HELPTEXT,                                         \
-   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
-   PARAM,       FLAGS,       VISIBILITY,                                       \
-   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
+               VALUES)                                                         \
+  {PREFIX,                                                                     \
+   NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   HELPTEXTSFORVARIANTS,                                                       \
+   METAVAR,                                                                    \
+   OPT_##ID,                                                                   \
+   opt::Option::KIND##Class,                                                   \
+   PARAM,                                                                      \
+   FLAGS,                                                                      \
+   VISIBILITY,                                                                 \
+   OPT_##GROUP,                                                                \
+   OPT_##ALIAS,                                                                \
+   ALIASARGS,                                                                  \
    VALUES},
 #include "Options.inc"
 #undef OPTION
@@ -213,8 +223,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef s = a->getValue();
     if (args.getLastArgValue(OPT_m) == "i386pe" && s.starts_with("_"))
       add("-entry:" + s.substr(1));
-    else
+    else if (!s.empty())
       add("-entry:" + s);
+    else
+      add("-noentry");
   }
 
   if (args.hasArg(OPT_major_os_version, OPT_minor_os_version,
@@ -436,6 +448,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-errorlimit:" + s);
   }
 
+  if (auto *a = args.getLastArg(OPT_rpath))
+    warn("parameter " + a->getSpelling() + " has no effect on PE/COFF targets");
+
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
 
@@ -455,6 +470,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lldemit:llvm");
   if (args.hasArg(OPT_lto_emit_asm))
     add("-lldemit:asm");
+  if (auto *arg = args.getLastArg(OPT_lto_sample_profile))
+    add("-lto-sample-profile:" + StringRef(arg->getValue()));
 
   if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
     add("-lldltocache:" + StringRef(a->getValue()));
@@ -497,6 +514,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   for (auto *a : args.filtered(OPT_require_defined))
     add("-include:" + StringRef(a->getValue()));
+  for (auto *a : args.filtered(OPT_undefined_glob))
+    add("-includeglob:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_undefined))
     add("-includeoptional:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_delayload))

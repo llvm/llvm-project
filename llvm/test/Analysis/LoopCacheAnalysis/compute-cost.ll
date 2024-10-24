@@ -8,6 +8,9 @@
 ; Check IndexedReference::computeRefCost can handle type differences between
 ; Stride and TripCount
 
+; Round costs up to the nearest whole number i.e. in 'for.cond5' cost is calculated 12.5 and
+; it makes more sense to say 13 cache lines are used rather than 12 cache lines.
+
 ; SMALLER-CACHELINE: Loop 'for.cond' has cost = 256
 ; LARGER-CACHELINE: Loop 'for.cond' has cost = 32
 %struct._Handleitem = type { ptr }
@@ -40,10 +43,10 @@ for.end:                                          ; preds = %for.cond
 
 ; SMALLER-CACHELINE: Loop 'for.cond' has cost = 100000000
 ; SMALLER-CACHELINE: Loop 'for.cond1' has cost = 1000000
-; SMALLER-CACHELINE: Loop 'for.cond5' has cost = 120000
+; SMALLER-CACHELINE: Loop 'for.cond5' has cost = 130000
 ; LARGER-CACHELINE: Loop 'for.cond' has cost = 100000000
 ; LARGER-CACHELINE: Loop 'for.cond1' has cost = 1000000
-; LARGER-CACHELINE: Loop 'for.cond5' has cost = 10000
+; LARGER-CACHELINE: Loop 'for.cond5' has cost = 20000
 @data = external dso_local global [2 x [4 x [18 x i32]]], align 1
 
 define dso_local void @handle_to_ptr_2(i1 %b0, i1 %b1, i1 %b2) {
@@ -122,8 +125,8 @@ for.neg.end:                                          ; preds = %for.neg.cond
 ; access functions. When this is fixed this testcase should have a cost
 ; approximately 2x higher.
 
-; SMALLER-CACHELINE: Loop 'for.cond2' has cost = 10240
-; LARGER-CACHELINE: Loop 'for.cond2' has cost = 1280
+; SMALLER-CACHELINE: Loop 'for.cond2' has cost = 10241
+; LARGER-CACHELINE: Loop 'for.cond2' has cost = 1281
 define void @Test2(ptr %B) {
 entry:
   br label %for.cond2
@@ -153,8 +156,8 @@ for.end:                                          ; preds = %for.cond
 ;   for (i = 40960; i > 0; i--)
 ;     C[i] = C[i];
 
-; SMALLER-CACHELINE: Loop 'for.cond3' has cost = 10240
-; LARGER-CACHELINE: Loop 'for.cond3' has cost = 1280
+; SMALLER-CACHELINE: Loop 'for.cond3' has cost = 10241
+; LARGER-CACHELINE: Loop 'for.cond3' has cost = 1281
 define void @Test3(ptr %C) {
 entry:
   br label %for.cond3
@@ -183,8 +186,8 @@ for.end:                                          ; preds = %for.cond
 ;  for (i = 0; i < 40960; i++)
 ;     D[i] = D[i];
 
-; SMALLER-CACHELINE: Loop 'for.cond4' has cost = 10240
-; LARGER-CACHELINE: Loop 'for.cond4' has cost = 1280
+; SMALLER-CACHELINE: Loop 'for.cond4' has cost = 10241
+; LARGER-CACHELINE: Loop 'for.cond4' has cost = 1281
 define void @Test4(ptr %D) {
 entry:
   br label %for.cond4

@@ -276,7 +276,7 @@ std::error_code Process::FixupStandardFileDescriptors() {
 
 std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   if (::close(FD) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
@@ -482,7 +482,8 @@ static RTL_OSVERSIONINFOEXW GetWindowsVer() {
     HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
     assert(hMod);
 
-    auto getVer = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+    auto getVer =
+        (RtlGetVersionPtr)(void *)::GetProcAddress(hMod, "RtlGetVersion");
     assert(getVer);
 
     RTL_OSVERSIONINFOEXW info{};

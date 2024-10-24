@@ -24,17 +24,7 @@ define i32 @fcmp_oeq(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_oeq:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_oeq:
@@ -78,27 +68,18 @@ define i32 @fcmp_ogt(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_ogt:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a1, fflags
-; RV32IZFINXZDINX-NEXT:    flt.d a0, a2, a4
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a4
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a5
+; RV32IZFINXZDINX-NEXT:    flt.d a4, a2, a0
+; RV32IZFINXZDINX-NEXT:    fsflags a5
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a0
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_ogt:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a3, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a3
 ; RV64IZFINXZDINX-NEXT:    flt.d a2, a1, a0
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a3
+; RV64IZFINXZDINX-NEXT:    fsflags a3
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a1, a0
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
 ; RV64IZFINXZDINX-NEXT:    ret
@@ -138,27 +119,18 @@ define i32 @fcmp_oge(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_oge:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a1, fflags
-; RV32IZFINXZDINX-NEXT:    fle.d a0, a2, a4
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a4
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a5
+; RV32IZFINXZDINX-NEXT:    fle.d a4, a2, a0
+; RV32IZFINXZDINX-NEXT:    fsflags a5
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a0
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_oge:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a3, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a3
 ; RV64IZFINXZDINX-NEXT:    fle.d a2, a1, a0
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a3
+; RV64IZFINXZDINX-NEXT:    fsflags a3
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a1, a0
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
 ; RV64IZFINXZDINX-NEXT:    ret
@@ -200,27 +172,18 @@ define i32 @fcmp_olt(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_olt:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a1, fflags
-; RV32IZFINXZDINX-NEXT:    flt.d a0, a4, a2
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a4, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a5
+; RV32IZFINXZDINX-NEXT:    flt.d a4, a0, a2
+; RV32IZFINXZDINX-NEXT:    fsflags a5
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a0, a2
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_olt:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a3, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a3
 ; RV64IZFINXZDINX-NEXT:    flt.d a2, a0, a1
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a3
+; RV64IZFINXZDINX-NEXT:    fsflags a3
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a0, a1
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
 ; RV64IZFINXZDINX-NEXT:    ret
@@ -260,27 +223,18 @@ define i32 @fcmp_ole(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_ole:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a1, fflags
-; RV32IZFINXZDINX-NEXT:    fle.d a0, a4, a2
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a4, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a5
+; RV32IZFINXZDINX-NEXT:    fle.d a4, a0, a2
+; RV32IZFINXZDINX-NEXT:    fsflags a5
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a0, a2
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_ole:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a3, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a3
 ; RV64IZFINXZDINX-NEXT:    fle.d a2, a0, a1
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a3
+; RV64IZFINXZDINX-NEXT:    fsflags a3
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a0, a1
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
 ; RV64IZFINXZDINX-NEXT:    ret
@@ -327,36 +281,27 @@ define i32 @fcmp_one(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_one:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a0, fflags
-; RV32IZFINXZDINX-NEXT:    flt.d a1, a4, a2
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a0
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a4, a2
-; RV32IZFINXZDINX-NEXT:    csrr a0, fflags
-; RV32IZFINXZDINX-NEXT:    flt.d a6, a2, a4
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a0
-; RV32IZFINXZDINX-NEXT:    or a0, a6, a1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a4
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a4
+; RV32IZFINXZDINX-NEXT:    flt.d a5, a0, a2
+; RV32IZFINXZDINX-NEXT:    fsflags a4
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a0, a2
+; RV32IZFINXZDINX-NEXT:    frflags a4
+; RV32IZFINXZDINX-NEXT:    flt.d a6, a2, a0
+; RV32IZFINXZDINX-NEXT:    fsflags a4
+; RV32IZFINXZDINX-NEXT:    or a4, a6, a5
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a0
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_one:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a2, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a2
 ; RV64IZFINXZDINX-NEXT:    flt.d a3, a0, a1
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a2
+; RV64IZFINXZDINX-NEXT:    fsflags a2
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a0, a1
-; RV64IZFINXZDINX-NEXT:    csrr a2, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a2
 ; RV64IZFINXZDINX-NEXT:    flt.d a4, a1, a0
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a2
+; RV64IZFINXZDINX-NEXT:    fsflags a2
 ; RV64IZFINXZDINX-NEXT:    or a2, a4, a3
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a1, a0
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
@@ -430,19 +375,9 @@ define i32 @fcmp_ord(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_ord:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    feq.d a2, a2, a2
 ; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_ord:
@@ -495,37 +430,28 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_ueq:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a0, fflags
-; RV32IZFINXZDINX-NEXT:    flt.d a1, a4, a2
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a0
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a4, a2
-; RV32IZFINXZDINX-NEXT:    csrr a0, fflags
-; RV32IZFINXZDINX-NEXT:    flt.d a6, a2, a4
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a0
-; RV32IZFINXZDINX-NEXT:    or a0, a6, a1
-; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a4
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a4
+; RV32IZFINXZDINX-NEXT:    flt.d a5, a0, a2
+; RV32IZFINXZDINX-NEXT:    fsflags a4
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a0, a2
+; RV32IZFINXZDINX-NEXT:    frflags a4
+; RV32IZFINXZDINX-NEXT:    flt.d a6, a2, a0
+; RV32IZFINXZDINX-NEXT:    fsflags a4
+; RV32IZFINXZDINX-NEXT:    or a4, a6, a5
+; RV32IZFINXZDINX-NEXT:    xori a4, a4, 1
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a0
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_ueq:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a2, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a2
 ; RV64IZFINXZDINX-NEXT:    flt.d a3, a0, a1
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a2
+; RV64IZFINXZDINX-NEXT:    fsflags a2
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a0, a1
-; RV64IZFINXZDINX-NEXT:    csrr a2, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a2
 ; RV64IZFINXZDINX-NEXT:    flt.d a4, a1, a0
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a2
+; RV64IZFINXZDINX-NEXT:    fsflags a2
 ; RV64IZFINXZDINX-NEXT:    or a3, a4, a3
 ; RV64IZFINXZDINX-NEXT:    xori a2, a3, 1
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a1, a0
@@ -602,28 +528,19 @@ define i32 @fcmp_ugt(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_ugt:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a0, fflags
-; RV32IZFINXZDINX-NEXT:    fle.d a1, a4, a2
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a0
-; RV32IZFINXZDINX-NEXT:    xori a0, a1, 1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a4, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a4
+; RV32IZFINXZDINX-NEXT:    fle.d a5, a0, a2
+; RV32IZFINXZDINX-NEXT:    fsflags a4
+; RV32IZFINXZDINX-NEXT:    xori a4, a5, 1
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a0, a2
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_ugt:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a2, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a2
 ; RV64IZFINXZDINX-NEXT:    fle.d a3, a0, a1
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a2
+; RV64IZFINXZDINX-NEXT:    fsflags a2
 ; RV64IZFINXZDINX-NEXT:    xori a2, a3, 1
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a0, a1
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
@@ -665,28 +582,19 @@ define i32 @fcmp_uge(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_uge:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a0, fflags
-; RV32IZFINXZDINX-NEXT:    flt.d a1, a4, a2
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a0
-; RV32IZFINXZDINX-NEXT:    xori a0, a1, 1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a4, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a4
+; RV32IZFINXZDINX-NEXT:    flt.d a5, a0, a2
+; RV32IZFINXZDINX-NEXT:    fsflags a4
+; RV32IZFINXZDINX-NEXT:    xori a4, a5, 1
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a0, a2
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_uge:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a2, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a2
 ; RV64IZFINXZDINX-NEXT:    flt.d a3, a0, a1
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a2
+; RV64IZFINXZDINX-NEXT:    fsflags a2
 ; RV64IZFINXZDINX-NEXT:    xori a2, a3, 1
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a0, a1
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
@@ -730,28 +638,19 @@ define i32 @fcmp_ult(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_ult:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a0, fflags
-; RV32IZFINXZDINX-NEXT:    fle.d a1, a2, a4
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a0
-; RV32IZFINXZDINX-NEXT:    xori a0, a1, 1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a4
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a4
+; RV32IZFINXZDINX-NEXT:    fle.d a5, a2, a0
+; RV32IZFINXZDINX-NEXT:    fsflags a4
+; RV32IZFINXZDINX-NEXT:    xori a4, a5, 1
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a0
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_ult:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a2, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a2
 ; RV64IZFINXZDINX-NEXT:    fle.d a3, a1, a0
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a2
+; RV64IZFINXZDINX-NEXT:    fsflags a2
 ; RV64IZFINXZDINX-NEXT:    xori a2, a3, 1
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a1, a0
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
@@ -793,28 +692,19 @@ define i32 @fcmp_ule(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_ule:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a5, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    csrr a0, fflags
-; RV32IZFINXZDINX-NEXT:    flt.d a1, a2, a4
-; RV32IZFINXZDINX-NEXT:    csrw fflags, a0
-; RV32IZFINXZDINX-NEXT:    xori a0, a1, 1
-; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a4
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    frflags a4
+; RV32IZFINXZDINX-NEXT:    flt.d a5, a2, a0
+; RV32IZFINXZDINX-NEXT:    fsflags a4
+; RV32IZFINXZDINX-NEXT:    xori a4, a5, 1
+; RV32IZFINXZDINX-NEXT:    feq.d zero, a2, a0
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_ule:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    csrr a2, fflags
+; RV64IZFINXZDINX-NEXT:    frflags a2
 ; RV64IZFINXZDINX-NEXT:    flt.d a3, a1, a0
-; RV64IZFINXZDINX-NEXT:    csrw fflags, a2
+; RV64IZFINXZDINX-NEXT:    fsflags a2
 ; RV64IZFINXZDINX-NEXT:    xori a2, a3, 1
 ; RV64IZFINXZDINX-NEXT:    feq.d zero, a1, a0
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
@@ -853,18 +743,8 @@ define i32 @fcmp_une(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_une:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_une:
@@ -908,20 +788,10 @@ define i32 @fcmp_uno(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmp_uno:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    feq.d a2, a2, a2
 ; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmp_uno:
@@ -966,19 +836,9 @@ define i32 @fcmps_oeq(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_oeq:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fle.d a4, a2, a0
 ; RV32IZFINXZDINX-NEXT:    fle.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a4
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_oeq:
@@ -1021,17 +881,7 @@ define i32 @fcmps_ogt(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_ogt:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    flt.d a0, a2, a0
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_ogt:
@@ -1071,17 +921,7 @@ define i32 @fcmps_oge(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_oge:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fle.d a0, a2, a0
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_oge:
@@ -1123,17 +963,7 @@ define i32 @fcmps_olt(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_olt:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    flt.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_olt:
@@ -1173,17 +1003,7 @@ define i32 @fcmps_ole(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_ole:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fle.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_ole:
@@ -1225,19 +1045,9 @@ define i32 @fcmps_one(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_one:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    flt.d a4, a0, a2
 ; RV32IZFINXZDINX-NEXT:    flt.d a0, a2, a0
 ; RV32IZFINXZDINX-NEXT:    or a0, a0, a4
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_one:
@@ -1315,19 +1125,9 @@ define i32 @fcmps_ord(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_ord:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fle.d a2, a2, a2
 ; RV32IZFINXZDINX-NEXT:    fle.d a0, a0, a0
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_ord:
@@ -1372,20 +1172,10 @@ define i32 @fcmps_ueq(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_ueq:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    flt.d a4, a0, a2
 ; RV32IZFINXZDINX-NEXT:    flt.d a0, a2, a0
 ; RV32IZFINXZDINX-NEXT:    or a0, a0, a4
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_ueq:
@@ -1463,18 +1253,8 @@ define i32 @fcmps_ugt(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_ugt:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fle.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_ugt:
@@ -1516,18 +1296,8 @@ define i32 @fcmps_uge(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_uge:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    flt.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_uge:
@@ -1571,18 +1341,8 @@ define i32 @fcmps_ult(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_ult:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fle.d a0, a2, a0
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_ult:
@@ -1624,18 +1384,8 @@ define i32 @fcmps_ule(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_ule:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    flt.d a0, a2, a0
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_ule:
@@ -1679,20 +1429,10 @@ define i32 @fcmps_une(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_une:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fle.d a4, a2, a0
 ; RV32IZFINXZDINX-NEXT:    fle.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a4
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_une:
@@ -1738,20 +1478,10 @@ define i32 @fcmps_uno(double %a, double %b) nounwind strictfp {
 ;
 ; RV32IZFINXZDINX-LABEL: fcmps_uno:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fle.d a2, a2, a2
 ; RV32IZFINXZDINX-NEXT:    fle.d a0, a0, a0
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    xori a0, a0, 1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcmps_uno:

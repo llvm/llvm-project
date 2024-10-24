@@ -1,4 +1,4 @@
-﻿"""Test that lldb picks the correct DWARF location list entry with a return-pc out of bounds."""
+"""Test that lldb picks the correct DWARF location list entry with a return-pc out of bounds."""
 
 import lldb
 from lldbsuite.test.decorators import *

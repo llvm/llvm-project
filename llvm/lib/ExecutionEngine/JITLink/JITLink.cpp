@@ -167,84 +167,103 @@ Section::~Section() {
     B->~Block();
 }
 
-Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
-                             SplitBlockCache *Cache) {
+std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
+                                               SplitBlockCache *Cache) {
+  assert(!Blocks.empty() && "Blocks must at least contain the original block");
 
-  assert(SplitIndex > 0 && "splitBlock can not be called with SplitIndex == 0");
-
-  // If the split point covers all of B then just return B.
-  if (SplitIndex == B.getSize())
-    return B;
-
-  assert(SplitIndex < B.getSize() && "SplitIndex out of range");
-
-  // Create the new block covering [ 0, SplitIndex ).
-  auto &NewBlock =
-      B.isZeroFill()
-          ? createZeroFillBlock(B.getSection(), SplitIndex, B.getAddress(),
-                                B.getAlignment(), B.getAlignmentOffset())
-          : createContentBlock(
-                B.getSection(), B.getContent().slice(0, SplitIndex),
-                B.getAddress(), B.getAlignment(), B.getAlignmentOffset());
-
-  // Modify B to cover [ SplitIndex, B.size() ).
-  B.setAddress(B.getAddress() + SplitIndex);
-  B.setContent(B.getContent().slice(SplitIndex));
-  B.setAlignmentOffset((B.getAlignmentOffset() + SplitIndex) %
-                       B.getAlignment());
-
-  // Handle edge transfer/update.
-  {
-    // Copy edges to NewBlock (recording their iterators so that we can remove
-    // them from B), and update of Edges remaining on B.
-    std::vector<Block::edge_iterator> EdgesToRemove;
-    for (auto I = B.edges().begin(); I != B.edges().end();) {
-      if (I->getOffset() < SplitIndex) {
-        NewBlock.addEdge(*I);
-        I = B.removeEdge(I);
-      } else {
-        I->setOffset(I->getOffset() - SplitIndex);
-        ++I;
-      }
-    }
+  // Fix up content of all blocks.
+  ArrayRef<char> Content = Blocks.front()->getContent();
+  for (size_t I = 0; I != Blocks.size() - 1; ++I) {
+    Blocks[I]->setContent(
+        Content.slice(Blocks[I]->getAddress() - Blocks[0]->getAddress(),
+                      Blocks[I + 1]->getAddress() - Blocks[I]->getAddress()));
   }
+  Blocks.back()->setContent(
+      Content.slice(Blocks.back()->getAddress() - Blocks[0]->getAddress()));
+  bool IsMutable = Blocks[0]->ContentMutable;
+  for (auto *B : Blocks)
+    B->ContentMutable = IsMutable;
 
-  // Handle symbol transfer/update.
+  // Transfer symbols.
   {
-    // Initialize the symbols cache if necessary.
     SplitBlockCache LocalBlockSymbolsCache;
     if (!Cache)
       Cache = &LocalBlockSymbolsCache;
+
+    // Build cache if required.
     if (*Cache == std::nullopt) {
       *Cache = SplitBlockCache::value_type();
-      for (auto *Sym : B.getSection().symbols())
-        if (&Sym->getBlock() == &B)
-          (*Cache)->push_back(Sym);
 
+      for (auto *Sym : Blocks[0]->getSection().symbols())
+        if (&Sym->getBlock() == Blocks[0])
+          (*Cache)->push_back(Sym);
       llvm::sort(**Cache, [](const Symbol *LHS, const Symbol *RHS) {
-        return LHS->getOffset() > RHS->getOffset();
+        return LHS->getAddress() > RHS->getAddress();
       });
     }
-    auto &BlockSymbols = **Cache;
 
-    // Transfer all symbols with offset less than SplitIndex to NewBlock.
-    while (!BlockSymbols.empty() &&
-           BlockSymbols.back()->getOffset() < SplitIndex) {
-      auto *Sym = BlockSymbols.back();
-      // If the symbol extends beyond the split, update the size to be within
-      // the new block.
-      if (Sym->getOffset() + Sym->getSize() > SplitIndex)
-        Sym->setSize(SplitIndex - Sym->getOffset());
-      Sym->setBlock(NewBlock);
-      BlockSymbols.pop_back();
+    auto TransferSymbol = [](Symbol &Sym, Block &B) {
+      Sym.setOffset(Sym.getAddress() - B.getAddress());
+      if (Sym.getSize() > B.getSize())
+        Sym.setSize(B.getSize() - Sym.getOffset());
+      Sym.setBlock(B);
+    };
+
+    // Transfer symbols to all blocks except the last one.
+    for (size_t I = 0; I != Blocks.size() - 1; ++I) {
+      if ((*Cache)->empty())
+        break;
+      while (!(*Cache)->empty() &&
+             (*Cache)->back()->getAddress() < Blocks[I + 1]->getAddress()) {
+        TransferSymbol(*(*Cache)->back(), *Blocks[I]);
+        (*Cache)->pop_back();
+      }
     }
-
-    // Update offsets for all remaining symbols in B.
-    for (auto *Sym : BlockSymbols)
-      Sym->setOffset(Sym->getOffset() - SplitIndex);
+    // Transfer symbols to the last block, checking that all are in-range.
+    while (!(*Cache)->empty()) {
+      auto &Sym = *(*Cache)->back();
+      (*Cache)->pop_back();
+      assert(Sym.getAddress() >= Blocks.back()->getAddress() &&
+             "Symbol address preceeds block");
+      assert(Sym.getAddress() <= Blocks.back()->getRange().End &&
+             "Symbol address starts past end of block");
+      TransferSymbol(Sym, *Blocks.back());
+    }
   }
 
-  return NewBlock;
+  // Transfer edges.
+  auto &Edges = Blocks[0]->Edges;
+  llvm::sort(Edges, [](const Edge &LHS, const Edge &RHS) {
+    return LHS.getOffset() < RHS.getOffset();
+  });
+
+  for (size_t I = Blocks.size() - 1; I != 0; --I) {
+
+    // If all edges have been transferred then bail out.
+    if (Edges.empty())
+      break;
+
+    Edge::OffsetT Delta = Blocks[I]->getAddress() - Blocks[0]->getAddress();
+
+    // If no edges to move for this block then move to the next one.
+    if (Edges.back().getOffset() < Delta)
+      continue;
+
+    size_t EI = Edges.size() - 1;
+    while (EI != 0 && Edges[EI - 1].getOffset() >= Delta)
+      --EI;
+
+    for (size_t J = EI; J != Edges.size(); ++J) {
+      Blocks[I]->Edges.push_back(std::move(Edges[J]));
+      Blocks[I]->Edges.back().setOffset(Blocks[I]->Edges.back().getOffset() -
+                                        Delta);
+    }
+
+    while (Edges.size() > EI)
+      Edges.pop_back();
+  }
+
+  return Blocks;
 }
 
 void LinkGraph::dump(raw_ostream &OS) {
@@ -338,7 +357,8 @@ void LinkGraph::dump(raw_ostream &OS) {
   OS << "\nExternal symbols:\n";
   if (!external_symbols().empty()) {
     for (auto *Sym : external_symbols())
-      OS << "  " << Sym->getAddress() << ": " << *Sym << "\n";
+      OS << "  " << Sym->getAddress() << ": " << *Sym
+         << (Sym->isWeaklyReferenced() ? " (weakly referenced)" : "") << "\n";
   } else
     OS << "  none\n";
 }

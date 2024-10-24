@@ -4,10 +4,12 @@ add_header_library(
     sqrt.h
     sqrt_80_bit_long_double.h
   DEPENDS
-    libc.include.fenv
+    libc.hdr.fenv_macros
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
@@ -19,9 +21,15 @@ add_header_library(
   HDRS
     FMA.h
   DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
@@ -41,5 +49,58 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
-    libc.src.math.generic.math_utils
+)
+
+add_header_library(
+  add_sub
+  HDRS
+    add_sub.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  div
+  HDRS
+    div.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  mul
+  HDRS
+    mul.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )

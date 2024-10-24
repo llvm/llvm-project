@@ -8,10 +8,10 @@
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Analysis/CallGraph.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/IR/Utils.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SCCIterator.h"
 
@@ -111,7 +111,6 @@ void transform::TransformDialect::reportDuplicateTypeRegistration(
   llvm::raw_string_ostream msg(buffer);
   msg << "extensible dialect type '" << mnemonic
       << "' is already registered with a different implementation";
-  msg.flush();
   llvm::report_fatal_error(StringRef(buffer));
 }
 
@@ -121,7 +120,6 @@ void transform::TransformDialect::reportDuplicateOpRegistration(
   llvm::raw_string_ostream msg(buffer);
   msg << "extensible dialect operation '" << opName
       << "' is already registered with a mismatching TypeID";
-  msg.flush();
   llvm::report_fatal_error(StringRef(buffer));
 }
 
@@ -178,7 +176,8 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
     }
     return success();
   }
-  if (attribute.getName().getValue() == kSilenceTrackingFailuresAttrName) {
+  if (attribute.getName().getValue() ==
+      FindPayloadReplacementOpInterface::kSilenceTrackingFailuresAttrName) {
     if (!llvm::isa<UnitAttr>(attribute.getValue())) {
       return op->emitError()
              << attribute.getName() << " must be a unit attribute";

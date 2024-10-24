@@ -62,7 +62,25 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
   return std::make_pair(Bucket, true);
 }
 
-const void * const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
+const void *const *SmallPtrSetImplBase::doFind(const void *Ptr) const {
+  unsigned BucketNo =
+      DenseMapInfo<void *>::getHashValue(Ptr) & (CurArraySize - 1);
+  unsigned ProbeAmt = 1;
+  while (true) {
+    const void *const *Bucket = CurArray + BucketNo;
+    if (LLVM_LIKELY(*Bucket == Ptr))
+      return Bucket;
+    if (LLVM_LIKELY(*Bucket == getEmptyMarker()))
+      return nullptr;
+
+    // Otherwise, it's a hash collision or a tombstone, continue quadratic
+    // probing.
+    BucketNo += ProbeAmt++;
+    BucketNo &= CurArraySize - 1;
+  }
+}
+
+const void *const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
   unsigned Bucket = DenseMapInfo<void *>::getHashValue(Ptr) & (CurArraySize-1);
   unsigned ArraySize = CurArraySize;
   unsigned ProbeAmt = 1;

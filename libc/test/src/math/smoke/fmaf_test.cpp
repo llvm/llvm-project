@@ -10,8 +10,4 @@
 
 #include "src/math/fmaf.h"
 
-using LlvmLibcFmafTest = FmaTestTemplate<float>;
-
-TEST_F(LlvmLibcFmafTest, SpecialNumbers) {
-  test_special_numbers(&LIBC_NAMESPACE::fmaf);
-}
+LIST_FMA_TESTS(float, LIBC_NAMESPACE::fmaf)

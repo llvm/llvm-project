@@ -23,9 +23,9 @@ public:
   void AddDependence(
       std::string &&name, bool intrinsic, ModuleCheckSumType hash) {
     if (intrinsic) {
-      intrinsicMap_.emplace(std::move(name), hash);
+      intrinsicMap_.insert_or_assign(std::move(name), hash);
     } else {
-      nonIntrinsicMap_.emplace(std::move(name), hash);
+      nonIntrinsicMap_.insert_or_assign(std::move(name), hash);
     }
   }
   std::optional<ModuleCheckSumType> GetRequiredHash(

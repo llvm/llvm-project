@@ -333,7 +333,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 }
 #    endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 #endif  // ASAN_INTERCEPT_PTHREAD_CREATE
 
 #if ASAN_INTERCEPT_SWAPCONTEXT
@@ -570,6 +570,17 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   return REAL(strcpy)(to, from);
 }
 
+// Windows doesn't always define the strdup identifier,
+// and when it does it's a macro defined to either _strdup
+// or _strdup_dbg, _strdup_dbg ends up calling _strdup, so
+// we want to intercept that. push/pop_macro are used to avoid problems
+// if this file ends up including <string.h> in the future.
+#  if SANITIZER_WINDOWS
+#    pragma push_macro("strdup")
+#    undef strdup
+#    define strdup _strdup
+#  endif
+
 INTERCEPTOR(char*, strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
@@ -587,7 +598,7 @@ INTERCEPTOR(char*, strdup, const char *s) {
   return reinterpret_cast<char*>(new_mem);
 }
 
-#if ASAN_INTERCEPT___STRDUP
+#  if ASAN_INTERCEPT___STRDUP
 INTERCEPTOR(char*, __strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
@@ -639,8 +650,33 @@ static ALWAYS_INLINE auto StrtolImpl(void *ctx, Fn real, const char *nptr,
       return StrtolImpl(ctx, REAL(func), nptr, endptr, base);                \
     }
 
-INTERCEPTOR_STRTO_BASE(long, strtol)
 INTERCEPTOR_STRTO_BASE(long long, strtoll)
+
+#  if SANITIZER_WINDOWS
+INTERCEPTOR(long, strtol, const char *nptr, char **endptr, int base) {
+  // REAL(strtol) may be ntdll!strtol, which doesn't set errno. Instead,
+  // call REAL(strtoll) and do the range check ourselves.
+  COMPILER_CHECK(sizeof(long) == sizeof(u32));
+
+  void *ctx;
+  ASAN_INTERCEPTOR_ENTER(ctx, strtol);
+  AsanInitFromRtl();
+
+  long long result = StrtolImpl(ctx, REAL(strtoll), nptr, endptr, base);
+
+  if (result > INT32_MAX) {
+    errno = errno_ERANGE;
+    return INT32_MAX;
+  }
+  if (result < INT32_MIN) {
+    errno = errno_ERANGE;
+    return INT32_MIN;
+  }
+  return (long)result;
+}
+#  else
+INTERCEPTOR_STRTO_BASE(long, strtol)
+#  endif
 
 #  if SANITIZER_GLIBC
 INTERCEPTOR_STRTO_BASE(long, __isoc23_strtol)
@@ -736,7 +772,7 @@ INTERCEPTOR(int, atexit, void (*func)()) {
 extern "C" {
 extern int _pthread_atfork(void (*prepare)(), void (*parent)(),
                            void (*child)());
-};
+}
 
 INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
             void (*child)()) {
@@ -750,8 +786,8 @@ INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
 #endif
 
 #if ASAN_INTERCEPT_VFORK
-DEFINE_REAL(int, vfork)
-DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
+DEFINE_REAL(int, vfork,)
+DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork,)
 #endif
 
 // ---------------------- InitializeAsanInterceptors ---------------- {{{1
@@ -770,7 +806,7 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(strncat);
   ASAN_INTERCEPT_FUNC(strncpy);
   ASAN_INTERCEPT_FUNC(strdup);
-#if ASAN_INTERCEPT___STRDUP
+#  if ASAN_INTERCEPT___STRDUP
   ASAN_INTERCEPT_FUNC(__strdup);
 #endif
 #if ASAN_INTERCEPT_INDEX && ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX
@@ -865,6 +901,10 @@ void InitializeAsanInterceptors() {
 
   VReport(1, "AddressSanitizer: libc interceptors initialized\n");
 }
+
+#  if SANITIZER_WINDOWS
+#    pragma pop_macro("strdup")
+#  endif
 
 } // namespace __asan
 

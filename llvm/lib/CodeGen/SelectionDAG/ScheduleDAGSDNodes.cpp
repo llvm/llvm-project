@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -142,7 +143,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
 // Helper for AddGlue to clone node operands.
 static void CloneNodeWithValues(SDNode *N, SelectionDAG *DAG, ArrayRef<EVT> VTs,
                                 SDValue ExtraOper = SDValue()) {
-  SmallVector<SDValue, 8> Ops(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 8> Ops(N->ops());
   if (ExtraOper.getNode())
     Ops.push_back(ExtraOper);
 
@@ -512,7 +513,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         Dep.setLatency(OpLatency);
         if (!isChain && !UnitLatencies) {
           computeOperandLatency(OpN, N, i, Dep);
-          ST.adjustSchedDependency(OpSU, DefIdx, &SU, i, Dep);
+          ST.adjustSchedDependency(OpSU, DefIdx, &SU, i, Dep, nullptr);
         }
 
         if (!SU.addPred(Dep) && !Dep.isCtrl() && OpSU->NumRegDefsLeft > 1) {
@@ -736,7 +737,7 @@ void ScheduleDAGSDNodes::VerifyScheduledSequence(bool isBottomUp) {
 static void
 ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
                    SmallVectorImpl<std::pair<unsigned, MachineInstr*> > &Orders,
-                   DenseMap<SDValue, Register> &VRBaseMap, unsigned Order) {
+                   InstrEmitter::VRBaseMapType &VRBaseMap, unsigned Order) {
   if (!N->getHasDebugValue())
     return;
 
@@ -781,7 +782,7 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
 // instructions in the right order.
 static void
 ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
-                  DenseMap<SDValue, Register> &VRBaseMap,
+                  InstrEmitter::VRBaseMapType &VRBaseMap,
                   SmallVectorImpl<std::pair<unsigned, MachineInstr *>> &Orders,
                   SmallSet<Register, 8> &Seen, MachineInstr *NewInsn) {
   unsigned Order = N->getIROrder();
@@ -807,7 +808,7 @@ ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
 }
 
 void ScheduleDAGSDNodes::
-EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
+EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
                 MachineBasicBlock::iterator InsertPos) {
   for (const SDep &Pred : SU->Preds) {
     if (Pred.isCtrl())
@@ -850,8 +851,8 @@ EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
 MachineBasicBlock *ScheduleDAGSDNodes::
 EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
-  DenseMap<SDValue, Register> VRBaseMap;
-  DenseMap<SUnit*, Register> CopyVRBaseMap;
+  InstrEmitter::VRBaseMapType VRBaseMap;
+  SmallDenseMap<SUnit *, Register, 16> CopyVRBaseMap;
   SmallVector<std::pair<unsigned, MachineInstr*>, 32> Orders;
   SmallSet<Register, 8> Seen;
   bool HasDbg = DAG->hasDebugValues();
@@ -860,7 +861,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   // Zero, one, or multiple instructions can be created when emitting a node.
   auto EmitNode =
       [&](SDNode *Node, bool IsClone, bool IsCloned,
-          DenseMap<SDValue, Register> &VRBaseMap) -> MachineInstr * {
+          InstrEmitter::VRBaseMapType &VRBaseMap) -> MachineInstr * {
     // Fetch instruction prior to this, or end() if nonexistant.
     auto GetPrevInsn = [&](MachineBasicBlock::iterator I) {
       if (I == BB->begin())
@@ -888,8 +889,9 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForCallSiteEntry() &&
-        DAG->getTarget().Options.EmitCallSiteInfo)
-      MF.addCallArgsForwardingRegs(MI, DAG->getCallSiteInfo(Node));
+        DAG->getTarget().Options.EmitCallSiteInfo) {
+      MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+    }
 
     if (DAG->getNoMergeSiteInfo(Node)) {
       MI->setFlag(MachineInstr::MIFlag::NoMerge);
@@ -897,6 +899,14 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
 
     if (MDNode *MD = DAG->getPCSections(Node))
       MI->setPCSections(MF, MD);
+
+    // Set MMRAs on _all_ added instructions.
+    if (MDNode *MMRA = DAG->getMMRAMetadata(Node)) {
+      for (MachineBasicBlock::iterator It = MI->getIterator(),
+                                       End = std::next(After);
+           It != End; ++It)
+        It->setMMRAMetadata(MF, MMRA);
+    }
 
     return MI;
   };

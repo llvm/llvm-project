@@ -11,7 +11,7 @@
 
 #include <__config>
 #include <__thread/support.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,7 +30,7 @@ public:
   mutex(const mutex&)            = delete;
   mutex& operator=(const mutex&) = delete;
 
-#  if defined(_LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION)
+#  if _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION
   _LIBCPP_HIDE_FROM_ABI ~mutex() = default;
 #  else
   ~mutex() _NOEXCEPT;

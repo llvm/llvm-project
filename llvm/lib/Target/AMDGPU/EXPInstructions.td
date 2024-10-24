@@ -117,11 +117,14 @@ multiclass EXP_Real_gfx11 {
 multiclass VEXPORT_Real_gfx12 {
   defvar ps = !cast<EXP_Pseudo>(NAME);
   def _gfx12 : EXP_Real_Row<ps, SIEncodingFamily.GFX12, "export">,
-    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX12Plus, HasExportInsts]> {
+    EXPe_Row {
     let AssemblerPredicate = isGFX12Only;
     let DecoderNamespace = "GFX12";
     let row = ps.row;
     let done = ps.done;
+  }
+  def : AMDGPUMnemonicAlias<"exp", "export"> {
+    let AssemblerPredicate = isGFX12Plus;
   }
 }
 

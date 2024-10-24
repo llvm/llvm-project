@@ -34,7 +34,7 @@ class AsmState;
 /// Derived type classes are expected to implement several required
 /// implementation hooks:
 ///  * Optional:
-///    - static LogicalResult verify(
+///    - static LogicalResult verifyInvariants(
 ///                                function_ref<InFlightDiagnostic()> emitError,
 ///                                Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'
@@ -97,14 +97,19 @@ public:
   bool operator!() const { return impl == nullptr; }
 
   template <typename... Tys>
+  [[deprecated("Use mlir::isa<U>() instead")]]
   bool isa() const;
   template <typename... Tys>
+  [[deprecated("Use mlir::isa_and_nonnull<U>() instead")]]
   bool isa_and_nonnull() const;
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
   U dyn_cast() const;
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
   U dyn_cast_or_null() const;
   template <typename U>
+  [[deprecated("Use mlir::cast<U>() instead")]]
   U cast() const;
 
   /// Return a unique identifier for the concrete type. This is used to support
@@ -120,11 +125,17 @@ public:
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
   bool isIndex() const;
+  bool isFloat4E2M1FN() const;
+  bool isFloat6E2M3FN() const;
+  bool isFloat6E3M2FN() const;
   bool isFloat8E5M2() const;
+  bool isFloat8E4M3() const;
   bool isFloat8E4M3FN() const;
   bool isFloat8E5M2FNUZ() const;
   bool isFloat8E4M3FNUZ() const;
   bool isFloat8E4M3B11FNUZ() const;
+  bool isFloat8E3M4() const;
+  bool isFloat8E8M0FNU() const;
   bool isBF16() const;
   bool isF16() const;
   bool isTF32() const;
@@ -133,7 +144,8 @@ public:
   bool isF80() const;
   bool isF128() const;
 
-  /// Return true if this is an integer type with the specified width.
+  /// Return true if this is an integer type (with the specified width).
+  bool isInteger() const;
   bool isInteger(unsigned width) const;
   /// Return true if this is a signless integer type (with the specified width).
   bool isSignlessInteger() const;

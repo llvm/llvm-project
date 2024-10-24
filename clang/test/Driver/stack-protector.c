@@ -43,15 +43,15 @@
 // RUN: %clang -target arm64-apple-ios8.0.0 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_IOS
 // RUN: %clang -ffreestanding -target arm64-apple-ios8.0.0 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_IOS
 // SSP_IOS: "-stack-protector" "1"
-// RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.6 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX
-// RUN: %clang -ffreestanding -target x86_64-apple-darwin10 -mmacosx-version-min=10.6 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX
+// RUN: %clang -target x86_64-apple-darwin10 -mmacos-version-min=10.6 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX
+// RUN: %clang -ffreestanding -target x86_64-apple-darwin10 -mmacos-version-min=10.6 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX
 // SSP_MACOSX: "-stack-protector" "1"
-// RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.5 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_10_5
-// RUN: %clang -ffreestanding -target x86_64-apple-darwin10 -mmacosx-version-min=10.5 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_10_5
+// RUN: %clang -target x86_64-apple-darwin10 -mmacos-version-min=10.5 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_10_5
+// RUN: %clang -ffreestanding -target x86_64-apple-darwin10 -mmacos-version-min=10.5 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_10_5
 // SSP_MACOSX_10_5: "-stack-protector" "1"
-// RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.5 -mkernel -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_KERNEL
+// RUN: %clang -target x86_64-apple-darwin10 -mmacos-version-min=10.5 -mkernel -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_KERNEL
 // SSP_MACOSX_KERNEL-NOT: "-stack-protector"
-// RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.6 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_10_6_KERNEL
-// RUN: %clang -ffreestanding -target x86_64-apple-darwin10 -mmacosx-version-min=10.6 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_10_6_KERNEL
+// RUN: %clang -target x86_64-apple-darwin10 -mmacos-version-min=10.6 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_10_6_KERNEL
+// RUN: %clang -ffreestanding -target x86_64-apple-darwin10 -mmacos-version-min=10.6 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_MACOSX_10_6_KERNEL
 // SSP_MACOSX_10_6_KERNEL: "-stack-protector" "1"
 

@@ -692,12 +692,12 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
                            uint64_t default_value = LLDB_INVALID_ADDRESS,
                            SymbolType sym_type = lldb::eSymbolTypeData) {
   if (!process) {
-    error.SetErrorString("no process");
+    error = Status::FromErrorString("no process");
     return default_value;
   }
 
   if (!module_sp) {
-    error.SetErrorString("no module");
+    error = Status::FromErrorString("no module");
     return default_value;
   }
 
@@ -707,14 +707,14 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
       module_sp->FindFirstSymbolWithNameAndType(name, lldb::eSymbolTypeData);
 
   if (!symbol || !symbol->ValueIsAddress()) {
-    error.SetErrorString("no symbol");
+    error = Status::FromErrorString("no symbol");
     return default_value;
   }
 
   lldb::addr_t symbol_load_addr =
       symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
   if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
-    error.SetErrorString("symbol address invalid");
+    error = Status::FromErrorString("symbol address invalid");
     return default_value;
   }
 
@@ -869,8 +869,8 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
+        error = Status::FromErrorStringWithFormat(
+            "unrecognized short option '%c'", short_option);
         break;
       }
 
@@ -1869,15 +1869,15 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper(
       if (loader->IsFullyInitialized()) {
         switch (exe_ctx.GetTargetRef().GetDynamicClassInfoHelper()) {
         case eDynamicClassInfoHelperAuto:
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case eDynamicClassInfoHelperGetRealizedClassList:
           if (m_runtime.m_has_objc_getRealizedClassList_trylock)
             return DynamicClassInfoExtractor::objc_getRealizedClassList_trylock;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case eDynamicClassInfoHelperCopyRealizedClassList:
           if (m_runtime.m_has_objc_copyRealizedClassList)
             return DynamicClassInfoExtractor::objc_copyRealizedClassList;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case eDynamicClassInfoHelperRealizedClassesStruct:
           return DynamicClassInfoExtractor::gdb_objc_realized_classes;
         }
@@ -2685,7 +2685,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   }
   os << ". This will likely reduce debugging performance.\n";
 
-  Debugger::ReportWarning(os.str(), debugger.GetID(),
+  Debugger::ReportWarning(buffer, debugger.GetID(),
                           &m_no_expanded_cache_warning);
 }
 
@@ -3154,7 +3154,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
                             << m_objc_debug_taggedpointer_ext_payload_lshift) >>
                            m_objc_debug_taggedpointer_ext_payload_rshift);
   int64_t data_payload_signed =
-      ((int64_t)((int64_t)unobfuscated
+      ((int64_t)((uint64_t)unobfuscated
                  << m_objc_debug_taggedpointer_ext_payload_lshift) >>
        m_objc_debug_taggedpointer_ext_payload_rshift);
 
@@ -3465,6 +3465,6 @@ static void RegisterObjCExceptionRecognizer(Process *process) {
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-      module.GetFilename(), symbols,
+      module.GetFilename(), symbols, Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ true);
 }

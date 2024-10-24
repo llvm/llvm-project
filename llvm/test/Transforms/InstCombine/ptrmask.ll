@@ -155,7 +155,7 @@ define i64 @ptrtoint_of_ptrmask(ptr %p, i64 %m) {
 ; CHECK-LABEL: define i64 @ptrtoint_of_ptrmask
 ; CHECK-SAME: (ptr [[P:%.*]], i64 [[M:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[R:%.*]] = and i64 [[TMP1]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = and i64 [[M]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %pm = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m)
@@ -168,7 +168,7 @@ define i32 @ptrtoint_of_ptrmask2(ptr %p, i64 %m) {
 ; CHECK-LABEL: define i32 @ptrtoint_of_ptrmask2
 ; CHECK-SAME: (ptr [[P:%.*]], i64 [[M:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[M]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -181,7 +181,7 @@ define <2 x i64> @ptrtoint_of_ptrmask_vec(<2 x ptr> %p, <2 x i64> %m) {
 ; CHECK-LABEL: define <2 x i64> @ptrtoint_of_ptrmask_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]], <2 x i64> [[M:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[P]] to <2 x i64>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i64> [[TMP1]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i64> [[M]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %pm = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p, <2 x i64> %m)
@@ -193,7 +193,7 @@ define <2 x i32> @ptrtoint_of_ptrmask_vec2(<2 x ptr> %p, <2 x i64> %m) {
 ; CHECK-LABEL: define <2 x i32> @ptrtoint_of_ptrmask_vec2
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]], <2 x i64> [[M:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[P]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[TMP1]], [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[M]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -374,10 +374,10 @@ define ptr @ptrmask_to_modified_gep6(ptr align 16 %p) {
 define ptr @ptrmask_to_modified_gep_indirect0(ptr align 16 %p) {
 ; CHECK-LABEL: define ptr @ptrmask_to_modified_gep_indirect0
 ; CHECK-SAME: (ptr align 16 [[P:%.*]]) {
-; 44 from 4*sizeof(i32) + (31 & -4)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P]], i64 44
-; CHECK-NEXT:    ret ptr [[GEP1]]
+; CHECK-NEXT:    [[GEP11:%.*]] = getelementptr i8, ptr [[P]], i64 44
+; CHECK-NEXT:    ret ptr [[GEP11]]
 ;
+; 44 from 4*sizeof(i32) + (31 & -4)
   %gep0 = getelementptr i32, ptr %p, i32 4
   %gep1 = getelementptr i8, ptr %gep0, i32 31
   %pm = call ptr @llvm.ptrmask.p0.i64(ptr %gep1, i64 -4)
@@ -387,11 +387,11 @@ define ptr @ptrmask_to_modified_gep_indirect0(ptr align 16 %p) {
 define ptr @ptrmask_to_modified_gep_indirect1(ptr %p) {
 ; CHECK-LABEL: define ptr @ptrmask_to_modified_gep_indirect1
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-
-; CHECK-NEXT:    [[R:%.*]] = call align 16 ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -16)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[R]], i64 32
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[PM0:%.*]] = call align 16 ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -16)
+; CHECK-NEXT:    [[PGEP1:%.*]] = getelementptr i8, ptr [[PM0]], i64 32
+; CHECK-NEXT:    ret ptr [[PGEP1]]
 ;
+
   %pm0 = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 -16)
   %pgep = getelementptr i8, ptr %pm0, i64 33
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %pgep, i64 -16)

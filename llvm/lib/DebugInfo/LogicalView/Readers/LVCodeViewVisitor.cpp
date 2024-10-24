@@ -173,10 +173,11 @@ class LVForwardReferences {
 
   // Update a previously recorded forward reference with its definition.
   void update(StringRef Name, TypeIndex TIReference) {
-    if (ForwardTypesNames.find(Name) != ForwardTypesNames.end()) {
+    auto It = ForwardTypesNames.find(Name);
+    if (It != ForwardTypesNames.end()) {
       // Update the recorded forward reference with its definition.
-      ForwardTypesNames[Name].second = TIReference;
-      add(ForwardTypesNames[Name].first, TIReference);
+      It->second.second = TIReference;
+      add(It->second.first, TIReference);
     } else {
       // We have not seen the forward reference. Insert the definition.
       ForwardTypesNames.emplace(
@@ -196,15 +197,14 @@ public:
   }
 
   TypeIndex find(TypeIndex TIForward) {
-    return (ForwardTypes.find(TIForward) != ForwardTypes.end())
-               ? ForwardTypes[TIForward]
-               : TypeIndex::None();
+    auto It = ForwardTypes.find(TIForward);
+    return It != ForwardTypes.end() ? It->second : TypeIndex::None();
   }
 
   TypeIndex find(StringRef Name) {
-    return (ForwardTypesNames.find(Name) != ForwardTypesNames.end())
-               ? ForwardTypesNames[Name].second
-               : TypeIndex::None();
+    auto It = ForwardTypesNames.find(Name);
+    return It != ForwardTypesNames.end() ? It->second.second
+                                         : TypeIndex::None();
   }
 
   // If the given TI corresponds to a reference, return the reference.
@@ -242,9 +242,8 @@ public:
 
   // Find the logical namespace for the 'Name' component.
   LVScope *find(StringRef Name) {
-    LVScope *Namespace = (NamespaceNames.find(Name) != NamespaceNames.end())
-                             ? NamespaceNames[Name]
-                             : nullptr;
+    auto It = NamespaceNames.find(Name);
+    LVScope *Namespace = It != NamespaceNames.end() ? It->second : nullptr;
     return Namespace;
   }
 
@@ -834,7 +833,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     // Symbol was created as 'variable'; determine its real kind.
     Symbol->resetIsVariable();
 
-    if (Local.Name.equals("this")) {
+    if (Local.Name == "this") {
       Symbol->setIsParameter();
       Symbol->setIsArtificial();
     } else {
@@ -885,7 +884,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Symbol->resetIsVariable();
 
     // Check for the 'this' symbol.
-    if (Local.Name.equals("this")) {
+    if (Local.Name == "this") {
       Symbol->setIsArtificial();
       Symbol->setIsParameter();
     } else {
@@ -1429,7 +1428,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, LocalSym &Local) {
 
     // Be sure the 'this' symbol is marked as 'compiler generated'.
     if (bool(Local.Flags & LocalSymFlags::IsCompilerGenerated) ||
-        Local.Name.equals("this")) {
+        Local.Name == "this") {
       Symbol->setIsArtificial();
       Symbol->setIsParameter();
     } else {
@@ -1669,7 +1668,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, UDTSym &UDT) {
       Type->resetIncludeInPrint();
     else {
       StringRef RecordName = getRecordName(Types, UDT.Type);
-      if (UDT.Name.equals(RecordName))
+      if (UDT.Name == RecordName)
         Type->resetIncludeInPrint();
       Type->setType(LogicalVisitor->getElement(StreamTPI, UDT.Type));
     }
@@ -2740,7 +2739,7 @@ Error LVLogicalVisitor::visitKnownMember(CVMemberRecord &Record,
             getInnerComponent(NestedTypeName);
         // We have an already created nested type. Add it to the current scope
         // and update all its children if any.
-        if (OuterComponent.size() && OuterComponent.equals(RecordName)) {
+        if (OuterComponent.size() && OuterComponent == RecordName) {
           if (!NestedType->getIsScopedAlready()) {
             Scope->addElement(NestedType);
             NestedType->setIsScopedAlready();

@@ -68,7 +68,7 @@ subroutine foo3(x, y)
   call bar2(x(1:8:2, 5, y))
 end subroutine
 ! CHECK-LABEL:   func.func @_QPfoo3(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFfoo3Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>)
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFfoo3Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>)
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 20 : index
 ! CHECK:  %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_4:[a-z0-9]*]])  {{.*}}Ey
@@ -112,7 +112,7 @@ end subroutine
 ! CHECK:  %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_6:[a-z0-9]*]]  {{.*}}Estep
 ! CHECK:  %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]]  {{.*}}Evector
 ! CHECK:  %[[VAL_14:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i64>
-! CHECK:  %[[VAL_15:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_14]])  : (!fir.box<!fir.array<?x!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>}>>>, i64) -> !fir.ref<!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>}>>
+! CHECK:  %[[VAL_15:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_14]])  : (!fir.box<!fir.array<?x!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>}>>>, i64) -> !fir.ref<!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>}>>
 ! CHECK:  %[[VAL_16:.*]] = arith.constant 30 : index
 ! CHECK:  %[[VAL_17:.*]] = arith.constant 40 : index
 ! CHECK:  %[[VAL_18:.*]] = arith.constant 50 : index
@@ -144,8 +144,8 @@ end subroutine
 ! CHECK:    %[[VAL_45:.*]] = arith.addi %[[VAL_20]], %[[VAL_44]] : index
 ! CHECK:    %[[VAL_46:.*]] = hlfir.designate %[[VAL_13]]#0 (%[[VAL_41]])  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
 ! CHECK:    %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.ref<i64>
-! CHECK:    %[[VAL_48:.*]] = hlfir.designate %[[VAL_15]]{"at0"} <%[[VAL_19]]> (%[[VAL_45]], %[[VAL_30]], %[[VAL_47]])  : (!fir.ref<!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>}>>, !fir.shape<3>, index, i64, i64) -> !fir.ref<!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>
-! CHECK:    %[[VAL_49:.*]] = hlfir.designate %[[VAL_48]]{"x"} <%[[VAL_36]]> (%[[VAL_37]], %[[VAL_38]]) imag : (!fir.ref<!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>, !fir.shape<2>, i64, i64) -> !fir.ref<f32>
+! CHECK:    %[[VAL_48:.*]] = hlfir.designate %[[VAL_15]]{"at0"} <%[[VAL_19]]> (%[[VAL_45]], %[[VAL_30]], %[[VAL_47]])  : (!fir.ref<!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>}>>, !fir.shape<3>, index, i64, i64) -> !fir.ref<!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>
+! CHECK:    %[[VAL_49:.*]] = hlfir.designate %[[VAL_48]]{"x"} <%[[VAL_36]]> (%[[VAL_37]], %[[VAL_38]]) imag : (!fir.ref<!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>, !fir.shape<2>, i64, i64) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_50:.*]] = fir.load %[[VAL_49]] : !fir.ref<f32>
 ! CHECK:    hlfir.yield_element %[[VAL_50]] : f32
 ! CHECK:  }
@@ -182,3 +182,37 @@ end subroutine
 ! CHECK:    %[[VAL_27:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_26]]) substr %[[VAL_15]], %[[VAL_16]]  typeparams %[[VAL_22]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, i64, index, index, index) -> !fir.boxchar<1>
 ! CHECK:    hlfir.yield_element %[[VAL_27]] : !fir.boxchar<1>
 ! CHECK:  }
+
+subroutine test_passing_subscripted_poly(x, vector)
+  interface
+    subroutine do_something(x)
+      class(*) :: x(:)
+    end subroutine
+  end interface
+  class(*) :: x(:, :)
+  integer(8) :: vector(:)
+  call do_something(x(314, vector))
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_passing_subscripted_poly(
+! CHECK-SAME:                                                %[[VAL_0:.*]]: !fir.class<!fir.array<?x?xnone>>
+! CHECK-SAME:                                                %[[VAL_1:.*]]: !fir.box<!fir.array<?xi64>>
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_passing_subscripted_polyEvector"} : (!fir.box<!fir.array<?xi64>>, !fir.dscope) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_passing_subscripted_polyEx"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
+! CHECK:           %[[VAL_4:.*]] = arith.constant 314 : index
+! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_2]]#0, %[[VAL_5]] : (!fir.box<!fir.array<?xi64>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_6]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_8:.*]] = hlfir.elemental %[[VAL_7]] mold %[[VAL_3]]#0 unordered : (!fir.shape<1>, !fir.class<!fir.array<?x?xnone>>) -> !hlfir.expr<?xnone?> {
+! CHECK:           ^bb0(%[[VAL_9:.*]]: index):
+! CHECK:             %[[VAL_10:.*]] = hlfir.designate %[[VAL_2]]#0 (%[[VAL_9]])  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
+! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<i64>
+! CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_4]], %[[VAL_11]])  : (!fir.class<!fir.array<?x?xnone>>, index, i64) -> !fir.class<none>
+! CHECK:             hlfir.yield_element %[[VAL_12]] : !fir.class<none>
+! CHECK:           }
+! CHECK:           %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_8]](%[[VAL_7]]) {adapt.valuebyref} : (!hlfir.expr<?xnone?>, !fir.shape<1>) -> (!fir.class<!fir.heap<!fir.array<?xnone>>>, !fir.class<!fir.heap<!fir.array<?xnone>>>, i1)
+! CHECK:           %[[VAL_14:.*]] = fir.rebox %[[VAL_13]]#0 : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.class<!fir.array<?xnone>>
+! CHECK:           fir.call @_QPdo_something(%[[VAL_14]]) fastmath<contract> : (!fir.class<!fir.array<?xnone>>) -> ()
+! CHECK:           hlfir.end_associate %[[VAL_13]]#0, %[[VAL_13]]#2 : !fir.class<!fir.heap<!fir.array<?xnone>>>, i1
+! CHECK:           hlfir.destroy %[[VAL_8]] : !hlfir.expr<?xnone?>
+! CHECK:           return
+! CHECK:         }

@@ -4,14 +4,14 @@
 module m
 contains
 ! CHECK-LABEL:   func.func @handler(
-! CHECK-SAME:                       %[[VAL_0:.*]]: i32 {fir.bindc_name = "signum"}) attributes {fir.bindc_name = "handler"} {
+! CHECK-SAME:                       %[[VAL_0:.*]]: i32
   subroutine handler(signum) bind(C)
     use iso_c_binding, only: c_int
     integer(c_int), value :: signum
   end subroutine
 
 ! CHECK-LABEL:   func.func @_QMmPsetup_signals(
-! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "optional_status", fir.optional}) {
+! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i32>
   subroutine setup_signals(optional_status)
     ! not portable accross systems
     integer, parameter :: SIGFPE = 8
@@ -23,7 +23,7 @@ contains
     integer, optional, intent(out) :: optional_status
 
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca i32
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<intent_out, optional>, uniq_name = "_QMmFsetup_signalsEoptional_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_out, optional>, uniq_name = "_QMmFsetup_signalsEoptional_status"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMmFsetup_signalsEstat"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     call signal(SIGFPE, handler)

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir --polymorphic-type -I nowhere %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -I nowhere %s -o - | FileCheck %s
 
 ! Test allocatable return.
 ! Allocatable arrays must have default runtime lbounds after the return.

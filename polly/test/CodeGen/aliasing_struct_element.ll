@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 ;
 ; We should only access (or compute the address of) "the first element" of %S
 ; as it is a single struct not a struct array. The maximal access to S, thus

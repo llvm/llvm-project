@@ -97,6 +97,12 @@ public:
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
+  /// Should skip sanitize options.
+  bool shouldSkipSanitizeOption(const ToolChain &TC,
+                                const llvm::opt::ArgList &DriverArgs,
+                                StringRef TargetID,
+                                const llvm::opt::Arg *A) const;
+
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
   virtual Expected<SmallVector<std::string>>
@@ -140,6 +146,9 @@ public:
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                           const std::string &GPUArch,
                           bool isOpenMP = false) const;
+  SanitizerMask getSupportedSanitizers() const override {
+    return SanitizerKind::Address;
+  }
 };
 
 } // end namespace toolchains

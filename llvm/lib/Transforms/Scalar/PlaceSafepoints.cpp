@@ -60,6 +60,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -288,6 +289,8 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
     // with for the moment.
     legacy::FunctionPassManager FPM(F.getParent());
     bool CanAssumeCallSafepoints = enableCallSafepoints(F);
+
+    FPM.add(new TargetLibraryInfoWrapperPass(TLI));
     auto *PBS = new PlaceBackedgeSafepointsLegacyPass(CanAssumeCallSafepoints);
     FPM.add(PBS);
     FPM.run(F);
@@ -308,8 +311,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
     // We can sometimes end up with duplicate poll locations.  This happens if
     // a single loop is visited more than once.   The fact this happens seems
     // wrong, but it does happen for the split-backedge.ll test case.
-    PollLocations.erase(std::unique(PollLocations.begin(), PollLocations.end()),
-                        PollLocations.end());
+    PollLocations.erase(llvm::unique(PollLocations), PollLocations.end());
 
     // Insert a poll at each point the analysis pass identified
     // The poll location must be the terminator of a loop latch block.
@@ -329,18 +331,14 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
         // and b) edges to distinct loop headers.  We need to insert pools on
         // each.
         SetVector<BasicBlock *> Headers;
-        for (unsigned i = 0; i < Term->getNumSuccessors(); i++) {
-          BasicBlock *Succ = Term->getSuccessor(i);
-          if (DT.dominates(Succ, Term->getParent())) {
+        for (BasicBlock *Succ : successors(Term->getParent()))
+          if (DT.dominates(Succ, Term->getParent()))
             Headers.insert(Succ);
-          }
-        }
         assert(!Headers.empty() && "poll location is not a loop latch?");
 
         // The split loop structure here is so that we only need to recalculate
         // the dominator tree once.  Alternatively, we could just keep it up to
         // date and use a more natural merged loop.
-        SetVector<BasicBlock *> SplitBackedges;
         for (BasicBlock *Header : Headers) {
           BasicBlock *NewBB = SplitEdge(Term->getParent(), Header, &DT);
           PollsNeeded.push_back(NewBB->getTerminator());
@@ -517,7 +515,7 @@ static bool doesNotRequireEntrySafepointBefore(CallBase *Call) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::experimental_gc_statepoint:
     case Intrinsic::experimental_patchpoint_void:
-    case Intrinsic::experimental_patchpoint_i64:
+    case Intrinsic::experimental_patchpoint:
       // The can wrap an actual call which may grow the stack by an unbounded
       // amount or run forever.
       return false;
@@ -591,7 +589,7 @@ static Instruction *findLocationForEntrySafepoint(Function &F,
 const char GCSafepointPollName[] = "gc.safepoint_poll";
 
 static bool isGCSafepointPoll(Function &F) {
-  return F.getName().equals(GCSafepointPollName);
+  return F.getName() == GCSafepointPollName;
 }
 
 /// Returns true if this function should be rewritten to include safepoint

@@ -57,8 +57,7 @@ void MCTargetStreamer::finish() {}
 void MCTargetStreamer::emitConstantPools() {}
 
 void MCTargetStreamer::changeSection(const MCSection *CurSection,
-                                     MCSection *Section,
-                                     const MCExpr *Subsection,
+                                     MCSection *Section, uint32_t Subsection,
                                      raw_ostream &OS) {
   Section->printSwitchToSection(*Streamer.getContext().getAsmInfo(),
                                 Streamer.getContext().getTargetTriple(), OS,
@@ -93,7 +92,7 @@ void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)
     : Context(Ctx), CurrentWinFrameInfo(nullptr),
-      CurrentProcWinFrameInfoStartIndex(0), UseAssemblerInfoForParsing(false) {
+      CurrentProcWinFrameInfoStartIndex(0) {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
@@ -103,9 +102,9 @@ void MCStreamer::reset() {
   DwarfFrameInfos.clear();
   CurrentWinFrameInfo = nullptr;
   WinFrameInfos.clear();
-  SymbolOrdering.clear();
   SectionStack.clear();
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
+  CurFrag = nullptr;
 }
 
 raw_ostream &MCStreamer::getCommentOS() {
@@ -141,7 +140,7 @@ void MCStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   unsigned Index = IsLittleEndian ? 0 : 8 - Size;
   emitBytes(StringRef(reinterpret_cast<char *>(&Swapped) + Index, Size));
 }
-void MCStreamer::emitIntValue(APInt Value) {
+void MCStreamer::emitIntValue(const APInt &Value) {
   if (Value.getNumWords() == 1) {
     emitIntValue(Value.getLimitedValue(), Value.getBitWidth() / 8);
     return;
@@ -266,6 +265,12 @@ void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        StringRef FileName) {
   getContext().setCurrentDwarfLoc(FileNo, Line, Column, Flags, Isa,
                                   Discriminator);
+}
+
+void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
+  getContext()
+      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
+      .endCurrentSeqAndEmitLineStreamLabel(this, Loc, Name);
 }
 
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
@@ -410,15 +415,6 @@ void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 
 void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   switchSection(getContext().getObjectFileInfo()->getTextSection());
-}
-
-void MCStreamer::assignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
-  assert(Fragment);
-  Symbol->setFragment(Fragment);
-
-  // As we emit symbols into a section, track the order so that they can
-  // be sorted upon later. Zero is reserved to mean 'unemitted'.
-  SymbolOrdering[Symbol] = 1 + SymbolOrdering.size();
 }
 
 void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -699,6 +695,13 @@ void MCStreamer::emitCFIReturnColumn(int64_t Register) {
   CurFrame->RAReg = Register;
 }
 
+void MCStreamer::emitCFILabelDirective(SMLoc Loc, StringRef Name) {
+  MCSymbol *Label = emitCFILabel();
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+  if (MCDwarfFrameInfo *F = getCurrentDwarfFrameInfo())
+    F->Instructions.push_back(MCCFIInstruction::createLabel(Label, Sym, Loc));
+}
+
 WinEH::FrameInfo *MCStreamer::EnsureValidWinFrameInfo(SMLoc Loc) {
   const MCAsmInfo *MAI = Context.getAsmInfo();
   if (!MAI->usesWindowsCFI()) {
@@ -841,10 +844,10 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
       std::string SectionName = (MainCFISecCOFF->getName() + "$" +
                                  TextSecCOFF->getName().split('$').second)
                                     .str();
-      return Context.getCOFFSection(
-          SectionName,
-          MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
-          MainCFISecCOFF->getKind(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
+      return Context.getCOFFSection(SectionName,
+                                    MainCFISecCOFF->getCharacteristics() |
+                                        COFF::IMAGE_SCN_LNK_COMDAT,
+                                    "", COFF::IMAGE_COMDAT_SELECT_ANY);
     }
   }
 
@@ -1218,7 +1221,9 @@ void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
-void MCStreamer::changeSection(MCSection *, const MCExpr *) {}
+void MCStreamer::changeSection(MCSection *Section, uint32_t) {
+  CurFrag = &Section->getDummyFragment();
+}
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
 void MCStreamer::emitBinaryData(StringRef Data) { emitBytes(Data); }
@@ -1242,7 +1247,22 @@ void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::finishImpl() {}
 void MCStreamer::emitBundleUnlock() {}
 
-void MCStreamer::switchSection(MCSection *Section, const MCExpr *Subsection) {
+bool MCStreamer::popSection() {
+  if (SectionStack.size() <= 1)
+    return false;
+  auto I = SectionStack.end();
+  --I;
+  MCSectionSubPair OldSec = I->first;
+  --I;
+  MCSectionSubPair NewSec = I->first;
+
+  if (NewSec.first && OldSec != NewSec)
+    changeSection(NewSec.first, NewSec.second);
+  SectionStack.pop_back();
+  return true;
+}
+
+void MCStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   MCSectionSubPair curSection = SectionStack.back().first;
   SectionStack.back().second = curSection;
@@ -1254,6 +1274,31 @@ void MCStreamer::switchSection(MCSection *Section, const MCExpr *Subsection) {
     if (Sym && !Sym->isInSection())
       emitLabel(Sym);
   }
+}
+
+bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
+  int64_t Subsec = 0;
+  if (SubsecExpr) {
+    if (!SubsecExpr->evaluateAsAbsolute(Subsec, getAssemblerPtr())) {
+      getContext().reportError(SubsecExpr->getLoc(),
+                               "cannot evaluate subsection number");
+      return true;
+    }
+    if (!isUInt<31>(Subsec)) {
+      getContext().reportError(SubsecExpr->getLoc(),
+                               "subsection number " + Twine(Subsec) +
+                                   " is not within [0,2147483647]");
+      return true;
+    }
+  }
+  switchSection(Section, Subsec);
+  return false;
+}
+
+void MCStreamer::switchSectionNoPrint(MCSection *Section) {
+  SectionStack.back().second = SectionStack.back().first;
+  SectionStack.back().first = MCSectionSubPair(Section, 0);
+  CurFrag = &Section->getDummyFragment();
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {

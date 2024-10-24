@@ -20,6 +20,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
@@ -45,6 +46,13 @@
 using namespace clang;
 using namespace SrcMgr;
 using llvm::MemoryBuffer;
+
+#define DEBUG_TYPE "source-manager"
+
+// Reaching a limit of 2^31 results in a hard error. This metric allows to track
+// if particular invocation of the compiler is close to it.
+STATISTIC(MaxUsedSLocBytes, "Maximum number of bytes used by source locations "
+                            "(both loaded and local).");
 
 //===----------------------------------------------------------------------===//
 // SourceManager Helper Classes
@@ -122,13 +130,8 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // the file could also have been removed during processing. Since we can't
   // really deal with this situation, just create an empty buffer.
   if (!BufferOrError) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_cannot_open_file,
-                                ContentsEntry->getName(),
-                                BufferOrError.getError().message());
-    else
-      Diag.Report(Loc, diag::err_cannot_open_file)
-          << ContentsEntry->getName() << BufferOrError.getError().message();
+    Diag.Report(Loc, diag::err_cannot_open_file)
+        << ContentsEntry->getName() << BufferOrError.getError().message();
 
     return std::nullopt;
   }
@@ -145,12 +148,7 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // ContentsEntry::getSize() could have the wrong size. Use
   // MemoryBuffer::getBufferSize() instead.
   if (Buffer->getBufferSize() >= std::numeric_limits<unsigned>::max()) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_file_too_large,
-                                ContentsEntry->getName());
-    else
-      Diag.Report(Loc, diag::err_file_too_large)
-        << ContentsEntry->getName();
+    Diag.Report(Loc, diag::err_file_too_large) << ContentsEntry->getName();
 
     return std::nullopt;
   }
@@ -160,12 +158,7 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // have come from a stat cache).
   if (!ContentsEntry->isNamedPipe() &&
       Buffer->getBufferSize() != (size_t)ContentsEntry->getSize()) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_file_modified,
-                                ContentsEntry->getName());
-    else
-      Diag.Report(Loc, diag::err_file_modified)
-        << ContentsEntry->getName();
+    Diag.Report(Loc, diag::err_file_modified) << ContentsEntry->getName();
 
     return std::nullopt;
   }
@@ -276,14 +269,14 @@ void SourceManager::AddLineNote(SourceLocation Loc, unsigned LineNo,
   std::pair<FileID, unsigned> LocInfo = getDecomposedExpansionLoc(Loc);
 
   bool Invalid = false;
-  const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
+  SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
   if (!Entry.isFile() || Invalid)
     return;
 
-  const SrcMgr::FileInfo &FileInfo = Entry.getFile();
+  SrcMgr::FileInfo &FileInfo = Entry.getFile();
 
   // Remember that this file has #line directives now if it doesn't already.
-  const_cast<SrcMgr::FileInfo&>(FileInfo).setHasLineDirectives();
+  FileInfo.setHasLineDirectives();
 
   (void) getLineTable();
 
@@ -342,6 +335,7 @@ void SourceManager::clearIDTables() {
   LastLineNoContentCache = nullptr;
   LastFileIDLookup = FileID();
 
+  IncludedLocMap.clear();
   if (LineTable)
     LineTable->clear();
 
@@ -431,6 +425,10 @@ ContentCache &SourceManager::createMemBufferContentCache(
 
 const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
                                                       bool *Invalid) const {
+  return const_cast<SourceManager *>(this)->loadSLocEntry(Index, Invalid);
+}
+
+SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index, bool *Invalid) {
   assert(!SLocEntryLoaded[Index]);
   if (ExternalSLocEntries->ReadSLocEntry(-(static_cast<int>(Index) + 2))) {
     if (Invalid)
@@ -462,6 +460,7 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
   SLocEntryLoaded.resize(LoadedSLocEntryTable.size());
   SLocEntryOffsetLoaded.resize(LoadedSLocEntryTable.size());
   CurrentLoadedOffset -= TotalSize;
+  updateSlocUsageStats();
   int BaseID = -int(LoadedSLocEntryTable.size()) - 1;
   LoadedSLocEntryAllocBegin.push_back(FileID::get(BaseID));
   return std::make_pair(BaseID, CurrentLoadedOffset);
@@ -615,6 +614,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   // We do a +1 here because we want a SourceLocation that means "the end of the
   // file", e.g. for the "no newline at the end of the file" diagnostic.
   NextLocalOffset += FileSize + 1;
+  updateSlocUsageStats();
 
   // Set LastFileIDLookup to the newly created file.  The next getFileID call is
   // almost guaranteed to be from that file.
@@ -675,6 +675,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   }
   // See createFileID for that +1.
   NextLocalOffset += Length + 1;
+  updateSlocUsageStats();
   return SourceLocation::getMacroLoc(NextLocalOffset - (Length + 1));
 }
 
@@ -1839,6 +1840,12 @@ void SourceManager::associateFileChunkWithMacroArgExp(
   MacroArgsCache[EndOffs] = EndOffsMappedLoc;
 }
 
+void SourceManager::updateSlocUsageStats() const {
+  SourceLocation::UIntTy UsedBytes =
+      NextLocalOffset + (MaxLoadedOffset - CurrentLoadedOffset);
+  MaxUsedSLocBytes.updateMax(UsedBytes);
+}
+
 /// If \arg Loc points inside a function macro argument, the returned
 /// location will be the macro location in which the argument was expanded.
 /// If a macro argument is used multiple times, the expanded location will
@@ -1909,6 +1916,24 @@ SourceManager::getDecomposedIncludedLoc(FileID FID) const {
     DecompLoc = getDecomposedLoc(UpperLoc);
 
   return DecompLoc;
+}
+
+FileID SourceManager::getUniqueLoadedASTFileID(SourceLocation Loc) const {
+  assert(isLoadedSourceLocation(Loc) &&
+         "Must be a source location in a loaded PCH/Module file");
+
+  auto [FID, Ignore] = getDecomposedLoc(Loc);
+  // `LoadedSLocEntryAllocBegin` stores the sorted lowest FID of each loaded
+  // allocation. Later allocations have lower FileIDs. The call below is to find
+  // the lowest FID of a loaded allocation from any FID in the same allocation.
+  // The lowest FID is used to identify a loaded allocation.
+  const FileID *FirstFID =
+      llvm::lower_bound(LoadedSLocEntryAllocBegin, FID, std::greater<FileID>{});
+
+  assert(FirstFID &&
+         "The failure to find the first FileID of a "
+         "loaded AST from a loaded source location was unexpected.");
+  return *FirstFID;
 }
 
 bool SourceManager::isInTheSameTranslationUnitImpl(
@@ -1999,8 +2024,7 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   std::pair<bool, bool> InSameTU = isInTheSameTranslationUnit(LOffs, ROffs);
   if (InSameTU.first)
     return InSameTU.second;
-  // TODO: This should be unreachable, but some clients are calling this
-  //       function before making sure LHS and RHS are in the same TU.
+  // This case is used by libclang: clang_isBeforeInTranslationUnit
   return LOffs.first < ROffs.first;
 }
 

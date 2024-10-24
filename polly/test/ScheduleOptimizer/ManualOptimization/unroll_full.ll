@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadNPMPolly '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --match-full-lines
 ;
 ; Full unroll of a loop with 5 iterations.
 ;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64 -S -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 void f(const char* C, const wchar_t *WC) {
   int x1 = __builtin_strncmp(C, "b", 0xffffffffffffffff);

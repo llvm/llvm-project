@@ -125,7 +125,7 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
 
       std::multimap<llvm::StringRef, const Symbol *> name_map;
       for (const Symbol &symbol : m_symbols)
-        name_map.emplace(llvm::StringRef(symbol.GetName()), &symbol);
+        name_map.emplace(symbol.GetName().GetStringRef(), &symbol);
 
       for (const auto &name_to_symbol : name_map) {
         const Symbol *symbol = name_to_symbol.second;
@@ -1179,7 +1179,7 @@ std::string Symtab::GetCacheKey() {
   // another object file in a separate symbol file.
   strm << m_objfile->GetModule()->GetCacheKey() << "-symtab-"
       << llvm::format_hex(m_objfile->GetCacheHash(), 10);
-  return strm.str();
+  return key;
 }
 
 void Symtab::SaveToCache() {

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 \
-// RUN: -S -disable-O0-optnone \
+// RUN: -disable-O0-optnone \
 // RUN: -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 \
-// RUN: -S -disable-O0-optnone \
+// RUN: -disable-O0-optnone \
 // RUN: -ffp-exception-behavior=strict -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,CONSTRAINED %s
 

@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/Transform/Transforms/Passes.h"
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SetOperations.h"
@@ -39,11 +39,11 @@ template <typename FnTy>
 const llvm::SmallPtrSet<Block *, 4> &
 getReachableImpl(Block *block, FnTy getNextNodes,
                  DenseMap<Block *, llvm::SmallPtrSet<Block *, 4>> &cache) {
-  auto it = cache.find(block);
-  if (it != cache.end())
+  auto [it, inserted] = cache.try_emplace(block);
+  if (!inserted)
     return it->getSecond();
 
-  llvm::SmallPtrSet<Block *, 4> &reachable = cache[block];
+  llvm::SmallPtrSet<Block *, 4> &reachable = it->second;
   SmallVector<Block *> worklist;
   worklist.push_back(block);
   while (!worklist.empty()) {

@@ -118,8 +118,8 @@ define i32 @icmp_div(i16 %a, i16 %c) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[C:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[C:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP_NOT]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[TMP0]], [[THEN]] ]
@@ -173,8 +173,8 @@ define i32 @icmp_div3(i16 %a, i16 %c) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[C:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[C:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP_NOT]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[TMP0]], [[THEN]] ]
@@ -373,5 +373,189 @@ define i1 @sdiv_eq_smin_use(i32 %x, i32 %y) {
   %d = sdiv i32 %x, %y
   call void @use(i32 %d)
   %r = icmp eq i32 %d, -2147483648
+  ret i1 %r
+}
+
+; Fold (X / C) cmp X into X ~cmp 0 (~cmp is the inverse predicate of cmp), for some C != 1
+; Alternative form of this fold is when division is replaced with logic right shift
+
+define i1 @sdiv_x_by_const_cmp_x(i32 %x) {
+; CHECK-LABEL: @sdiv_x_by_const_cmp_x(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v = sdiv i32 %x, 13
+  %r = icmp eq i32 %v, %x
+  ret i1 %r
+}
+
+define i1 @udiv_x_by_const_cmp_x(i32 %x) {
+; CHECK-LABEL: @udiv_x_by_const_cmp_x(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = udiv i32 %x, 123
+  %2 = icmp slt i32 %1, %x
+  ret i1 %2
+}
+
+define <2 x i1> @udiv_x_by_const_cmp_x_non_splat(<2 x i32> %x) {
+; CHECK-LABEL: @udiv_x_by_const_cmp_x_non_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+  %1 = udiv <2 x i32> %x, <i32 123, i32 -123>
+  %2 = icmp slt <2 x i32> %1, %x
+  ret <2 x i1> %2
+}
+
+
+define <2 x i1> @sdiv_x_by_const_cmp_x_non_splat(<2 x i32> %x) {
+; CHECK-LABEL: @sdiv_x_by_const_cmp_x_non_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+  %1 = sdiv <2 x i32> %x, <i32 2, i32 3>
+  %2 = icmp eq <2 x i32> %1, %x
+  ret <2 x i1> %2
+}
+
+; Same as above but with right shift instead of division (C != 0)
+
+define i1 @lshr_x_by_const_cmp_x(i32 %x) {
+; CHECK-LABEL: @lshr_x_by_const_cmp_x(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v = lshr i32 %x, 1
+  %r = icmp eq i32 %v, %x
+  ret i1 %r
+}
+
+define <4 x i1> @lshr_by_const_cmp_sle_value(<4 x i32> %x) {
+; CHECK-LABEL: @lshr_by_const_cmp_sle_value(
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %v = lshr <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
+  %r = icmp sle <4 x i32> %v, %x
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @lshr_by_const_cmp_sle_value_non_splat(<4 x i32> %x) {
+; CHECK-LABEL: @lshr_by_const_cmp_sle_value_non_splat(
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %v = lshr <4 x i32> %x, <i32 3, i32 3, i32 3, i32 5>
+  %r = icmp sle <4 x i32> %v, %x
+  ret <4 x i1> %r
+}
+
+
+define <4 x i1> @ashr_by_const_cmp_sge_value_non_splat(<4 x i32> %x) {
+; CHECK-LABEL: @ashr_by_const_cmp_sge_value_non_splat(
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <4 x i32> [[X:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %v = ashr <4 x i32> %x, <i32 1, i32 2, i32 3, i32 4>
+  %r = icmp sge <4 x i32> %v, %x
+  ret <4 x i1> %r
+}
+
+
+define i1 @lshr_by_const_cmp_sge_value(i32 %x) {
+; CHECK-LABEL: @lshr_by_const_cmp_sge_value(
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v = lshr i32 %x, 3
+  %r = icmp sge i32 %v, %x
+  ret i1 %r
+}
+
+define i1 @ashr_x_by_const_cmp_sge_x(i32 %x) {
+; CHECK-LABEL: @ashr_x_by_const_cmp_sge_x(
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v = ashr i32 %x, 5
+  %r = icmp sge i32 %v, %x
+  ret i1 %r
+}
+
+; Negative test - constant is 1
+
+define <2 x i1> @udiv_x_by_const_cmp_eq_value_neg(<2 x i32> %x) {
+; CHECK-LABEL: @udiv_x_by_const_cmp_eq_value_neg(
+; CHECK-NEXT:    [[V:%.*]] = udiv <2 x i32> [[X:%.*]], <i32 1, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[V]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %v = udiv <2 x i32> %x, <i32 1, i32 3>
+  %r = icmp eq <2 x i32> %v, %x
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @sdiv_x_by_const_cmp_eq_value_neg(<2 x i32> %x) {
+; CHECK-LABEL: @sdiv_x_by_const_cmp_eq_value_neg(
+; CHECK-NEXT:    [[V:%.*]] = sdiv <2 x i32> [[X:%.*]], <i32 1, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[V]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %v = sdiv <2 x i32> %x, <i32 1, i32 3>
+  %r = icmp eq <2 x i32> %v, %x
+  ret <2 x i1> %r
+}
+
+; Negative test - constant is 0
+
+define <2 x i1> @lshr_x_by_const_cmp_slt_value_neg(<2 x i32> %x) {
+; CHECK-LABEL: @lshr_x_by_const_cmp_slt_value_neg(
+; CHECK-NEXT:    [[V:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 0, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i32> [[V]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %v = lshr <2 x i32> %x, <i32 0, i32 2>
+  %r = icmp slt <2 x i32> %v, %x
+  ret <2 x i1> %r
+}
+
+; Negative test - unsigned predicate with sdiv
+
+define i1 @sdiv_x_by_const_cmp_ult_value_neg(i32 %x) {
+; CHECK-LABEL: @sdiv_x_by_const_cmp_ult_value_neg(
+; CHECK-NEXT:    [[V:%.*]] = sdiv i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[V]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v = sdiv i32 %x, 3
+  %r = icmp ult i32 %v, %x
+  ret i1 %r
+}
+
+; Negative case - one of the components of a vector is 1
+
+define <4 x i1> @sdiv_x_by_const_cmp_sgt_value_neg(<4 x i32> %x) {
+; CHECK-LABEL: @sdiv_x_by_const_cmp_sgt_value_neg(
+; CHECK-NEXT:    [[V:%.*]] = sdiv <4 x i32> [[X:%.*]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[V]], [[X]]
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %v = sdiv <4 x i32> %x, <i32 1, i32 2, i32 3, i32 4>
+  %r = icmp sgt <4 x i32> %v, %x
+  ret <4 x i1> %r
+}
+
+; Negative case - ashr only allows sge/slt predicates
+
+define i1 @ashr_x_by_const_cmp_sle_value_neg(i32 %x) {
+; CHECK-LABEL: @ashr_x_by_const_cmp_sle_value_neg(
+; CHECK-NEXT:    [[V:%.*]] = ashr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i32 [[V]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v = ashr i32 %x, 3
+  %r = icmp sle i32 %v, %x
   ret i1 %r
 }

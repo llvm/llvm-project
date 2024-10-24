@@ -9,7 +9,6 @@
 // RUN:   -target-feature +zvknhb \
 // RUN:   -target-feature +zvksed \
 // RUN:   -target-feature +zvksh \
-// RUN:   -target-feature +experimental \
 // RUN:   -disable-O0-optnone \
 // RUN:   -emit-llvm %s -o - | opt -S -passes=mem2reg | \
 // RUN:   FileCheck --check-prefix=CHECK-RV64 %s
@@ -204,15 +203,5 @@ vuint32m8_t test_vaesef_vs_u32m4_u32m8_tu(vuint32m8_t vd, vuint32m4_t vs2, size_
 //
 vuint32m8_t test_vaesef_vv_u32m8_tu(vuint32m8_t vd, vuint32m8_t vs2, size_t vl) {
   return __riscv_vaesef_vv_u32m8_tu(vd, vs2, vl);
-}
-
-// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i32> @test_vaesef_vs_u32m8_u32m8_tu
-// CHECK-RV64-SAME: (<vscale x 16 x i32> [[VD:%.*]], <vscale x 16 x i32> [[VS2:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vaesef.vs.nxv16i32.nxv16i32.i64(<vscale x 16 x i32> [[VD]], <vscale x 16 x i32> [[VS2]], i64 [[VL]], i64 2)
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
-//
-vuint32m8_t test_vaesef_vs_u32m8_u32m8_tu(vuint32m8_t vd, vuint32m8_t vs2, size_t vl) {
-  return __riscv_vaesef_vs_u32m8_u32m8_tu(vd, vs2, vl);
 }
 

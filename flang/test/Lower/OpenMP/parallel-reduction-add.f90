@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
-!CHECK-LABEL: omp.reduction.declare
+!CHECK-LABEL: omp.declare_reduction
 !CHECK-SAME: @[[RED_F32_NAME:.*]] : f32 init {
 !CHECK: ^bb0(%{{.*}}: f32):
 !CHECK:  %[[C0_1:.*]] = arith.constant 0.000000e+00 : f32
@@ -12,7 +12,7 @@
 !CHECK:  omp.yield(%[[RES]] : f32)
 !CHECK: }
 
-!CHECK-LABEL: omp.reduction.declare
+!CHECK-LABEL: omp.declare_reduction
 !CHECK-SAME: @[[RED_I32_NAME:.*]] : i32 init {
 !CHECK: ^bb0(%{{.*}}: i32):
 !CHECK:  %[[C0_1:.*]] = arith.constant 0 : i32
@@ -82,7 +82,7 @@ end subroutine
 !CHECK:  hlfir.assign %[[R_START]] to %[[R_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:  %[[I_START:.*]] = arith.constant 0 : i32
 !CHECK:  hlfir.assign %[[I_START]] to %[[I_DECL]]#0 : i32, !fir.ref<i32>
-!CHECK:  omp.parallel reduction(@[[RED_I32_NAME]] %[[I_DECL]]#0 -> %[[IPRV:.+]] : !fir.ref<i32>, @[[RED_F32_NAME]] %[[R_DECL]]#0 -> %[[RPRV:.+]] : !fir.ref<f32>) {
+!CHECK:  omp.parallel reduction(@[[RED_I32_NAME]] %[[I_DECL]]#0 -> %[[IPRV:.+]], @[[RED_F32_NAME]] %[[R_DECL]]#0 -> %[[RPRV:.+]] : !fir.ref<i32>, !fir.ref<f32>) {
 !CHECK:    %[[IP_DECL:.+]]:2 = hlfir.declare %[[IPRV]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[RP_DECL:.+]]:2 = hlfir.declare %[[RPRV]] {{.*}} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:    %[[R_INCR:.*]] = arith.constant 1.500000e+00 : f32

@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-output=text        \
-// RUN:     -analyzer-checker=core,alpha.security.ArrayBoundV2,unix.Malloc,alpha.security.taint -verify %s
+// RUN:     -analyzer-checker=core,alpha.security.ArrayBoundV2,unix.Malloc,optin.taint -verify %s
 
 int TenElements[10];
 
@@ -17,6 +17,27 @@ int underflowWithDeref(void) {
   // expected-note@-2 {{Access of 'TenElements' at negative byte offset -4}}
 }
 
+int rng(void);
+int getIndex(void) {
+  switch (rng()) {
+    case 1: return -152;
+    case 2: return -160;
+    case 3: return -168;
+    default: return -172;
+  }
+}
+
+void gh86959(void) {
+  // Previously code like this produced many almost-identical bug reports that
+  // only differed in the offset value. Verify that now we only see one report.
+
+  // expected-note@+1 {{Entering loop body}}
+  while (rng())
+    TenElements[getIndex()] = 10;
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -688}}
+}
+
 int scanf(const char *restrict fmt, ...);
 
 void taintedIndex(void) {
@@ -24,6 +45,33 @@ void taintedIndex(void) {
   scanf("%d", &index);
   // expected-note@-1 {{Taint originated here}}
   // expected-note@-2 {{Taint propagated to the 2nd argument}}
+  TenElements[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be negative or too large}}
+}
+
+void taintedIndexNonneg(void) {
+  int index;
+  scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
+
+  // expected-note@+2 {{Assuming 'index' is >= 0}}
+  // expected-note@+1 {{Taking false branch}}
+  if (index < 0)
+    return;
+
+  TenElements[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be too large}}
+}
+
+void taintedIndexUnsigned(void) {
+  unsigned index;
+  scanf("%u", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
+
   TenElements[index] = 5;
   // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
   // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be too large}}
@@ -59,7 +107,7 @@ void taintedOffset(void) {
   int *p = TenElements + index;
   p[0] = 5;
   // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted offset}}
-  // expected-note@-2 {{Access of 'TenElements' with a tainted offset that may be too large}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted offset that may be negative or too large}}
 }
 
 void arrayOverflow(void) {
@@ -107,6 +155,33 @@ int *potentialAfterTheEndPtr(int idx) {
   // the idiomatic `&TenElements[size]` expressions. If the report is FP, the
   // developer can easily silence it by writing TenElements+idx instead of
   // &TenElements[idx].
+}
+
+int overflowOrUnderflow(int arg) {
+  // expected-note@+2 {{Assuming 'arg' is < 0}}
+  // expected-note@+1 {{Taking false branch}}
+  if (arg >= 0)
+    return 0;
+
+  return TenElements[arg - 1];
+  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+}
+
+char TwoElements[2] = {11, 22};
+char overflowOrUnderflowConcrete(int arg) {
+  // expected-note@#cond {{Assuming 'arg' is < 3}}
+  // expected-note@#cond {{Left side of '||' is false}}
+  // expected-note@#cond {{Assuming 'arg' is not equal to 0}}
+  // expected-note@#cond {{Left side of '||' is false}}
+  // expected-note@#cond {{Assuming 'arg' is not equal to 1}}
+  // expected-note@#cond {{Taking false branch}}
+  if (arg >= 3 || arg == 0 || arg == 1) // #cond
+    return 0;
+
+  return TwoElements[arg];
+  // expected-warning@-1 {{Out of bound access to memory around 'TwoElements'}}
+  // expected-note@-2 {{Access of 'TwoElements' at a negative or overflowing index, while it holds only 2 'char' elements}}
 }
 
 int scalar;
@@ -200,6 +275,21 @@ int *mallocRegion(void) {
   mem[3] = -2;
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of the heap area at index 3, while it holds only 2 'int' elements}}
+  return mem;
+}
+
+int *custom_calloc(size_t a, size_t b) {
+  size_t res;
+
+  return __builtin_mul_overflow(a, b, &res) ? 0 : malloc(res);
+}
+
+int *mallocRegionOverflow(void) {
+  int *mem = (int*)custom_calloc(10, sizeof(int));
+
+  mem[20] = 10;
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of the heap area at index 20, while it holds only 10 'int' elements}}
   return mem;
 }
 

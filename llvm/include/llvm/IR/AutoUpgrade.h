@@ -36,7 +36,8 @@ namespace llvm {
   /// for upgrading, and returns true if it requires upgrading. It may return
   /// null in NewFn if the all calls to the original intrinsic function
   /// should be transformed to non-function-call instructions.
-  bool UpgradeIntrinsicFunction(Function *F, Function *&NewFn);
+  bool UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
+                                bool CanUpgradeDebugIntrinsicsToRecords = true);
 
   /// This is the complement to the above, replacing a specific call to an
   /// intrinsic function with a call to the specified new function.
@@ -87,9 +88,6 @@ namespace llvm {
   /// Check the debug info version number, if it is out-dated, drop the debug
   /// info. Return true if module is modified.
   bool UpgradeDebugInfo(Module &M);
-
-  /// Copies module attributes to the functions in the module.
-  void CopyModuleAttrToFunctions(Module &M);
 
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {

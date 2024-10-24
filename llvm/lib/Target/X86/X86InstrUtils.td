@@ -119,6 +119,8 @@ class NDD<bit ndd> {
 class NF: T_MAP4, EVEX, EVEX_NF;
 // PL - Helper for promoted legacy instructions
 class PL: T_MAP4, EVEX, ExplicitEVEXPrefix;
+// ZU - Helper for Zero Upper instructions
+class ZU: T_MAP4, EVEX, EVEX_B;
 
 //===----------------------------------------------------------------------===//
 // X86 Type infomation definitions
@@ -311,7 +313,7 @@ def v32i16_info : X86VectorVTInfo<32, i16, VR512, "w">;
 def v16i32_info : X86VectorVTInfo<16, i32, VR512, "d">;
 def v8i64_info  : X86VectorVTInfo<8,  i64, VR512, "q">;
 def v32f16_info : X86VectorVTInfo<32, f16, VR512, "ph">;
-def v32bf16_info: X86VectorVTInfo<32, bf16, VR512, "pbf">;
+def v32bf16_info: X86VectorVTInfo<32, bf16, VR512, "pbf16">;
 def v16f32_info : X86VectorVTInfo<16, f32, VR512, "ps">;
 def v8f64_info  : X86VectorVTInfo<8,  f64, VR512, "pd">;
 
@@ -321,7 +323,7 @@ def v16i16x_info : X86VectorVTInfo<16, i16, VR256X, "w">;
 def v8i32x_info  : X86VectorVTInfo<8,  i32, VR256X, "d">;
 def v4i64x_info  : X86VectorVTInfo<4,  i64, VR256X, "q">;
 def v16f16x_info : X86VectorVTInfo<16, f16, VR256X, "ph">;
-def v16bf16x_info: X86VectorVTInfo<16, bf16, VR256X, "pbf">;
+def v16bf16x_info: X86VectorVTInfo<16, bf16, VR256X, "pbf16">;
 def v8f32x_info  : X86VectorVTInfo<8,  f32, VR256X, "ps">;
 def v4f64x_info  : X86VectorVTInfo<4,  f64, VR256X, "pd">;
 
@@ -330,7 +332,7 @@ def v8i16x_info  : X86VectorVTInfo<8,  i16, VR128X, "w">;
 def v4i32x_info  : X86VectorVTInfo<4,  i32, VR128X, "d">;
 def v2i64x_info  : X86VectorVTInfo<2,  i64, VR128X, "q">;
 def v8f16x_info  : X86VectorVTInfo<8,  f16, VR128X, "ph">;
-def v8bf16x_info : X86VectorVTInfo<8,  bf16, VR128X, "pbf">;
+def v8bf16x_info : X86VectorVTInfo<8,  bf16, VR128X, "pbf16">;
 def v4f32x_info  : X86VectorVTInfo<4,  f32, VR128X, "ps">;
 def v2f64x_info  : X86VectorVTInfo<2,  f64, VR128X, "pd">;
 

@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.cppm \
 // RUN:      -emit-module-interface -fmodule-file=a=%t/a.pcm -o %t/m.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.pcm  \
-// RUN:      -fmodule-file=a=%t/a.pcm -S -emit-llvm -o - | FileCheck %t/m.cppm
+// RUN:      -fmodule-file=a=%t/a.pcm -emit-llvm -o - | FileCheck %t/m.cppm
 
 // Test again with reduced BMI.
 // Note that we can't use reduced BMI here for m.cppm since it is required
@@ -18,7 +18,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.cppm \
 // RUN:      -emit-module-interface -fmodule-file=a=%t/a.pcm -o %t/m.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.pcm  \
-// RUN:      -fmodule-file=a=%t/a.pcm -S -emit-llvm -o - | FileCheck %t/m.cppm
+// RUN:      -fmodule-file=a=%t/a.pcm -emit-llvm -o - | FileCheck %t/m.cppm
 
 //--- a.cppm
 export module a;

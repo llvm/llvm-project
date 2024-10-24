@@ -32,8 +32,8 @@ public:
   ABIArgInfo classifyArgumentType(QualType Ty) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
   bool isUnsupportedType(QualType T) const;
   ABIArgInfo coerceToIntArrayWithLimit(QualType Ty, unsigned MaxSize) const;
 };
@@ -85,7 +85,7 @@ private:
                                            LValue Src) {
     llvm::Value *Handle = nullptr;
     llvm::Constant *C =
-        llvm::dyn_cast<llvm::Constant>(Src.getAddress(CGF).getPointer());
+        llvm::dyn_cast<llvm::Constant>(Src.getAddress().emitRawPointer(CGF));
     // Lookup `addrspacecast` through the constant pointer if any.
     if (auto *ASC = llvm::dyn_cast_or_null<llvm::AddrSpaceCastOperator>(C))
       C = llvm::cast<llvm::Constant>(ASC->getPointerOperand());
@@ -203,8 +203,11 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
 void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
-  for (auto &I : FI.arguments())
-    I.info = classifyArgumentType(I.type);
+
+  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
+    I.info = ArgumentsCount < FI.getNumRequiredArgs()
+                 ? classifyArgumentType(I.type)
+                 : ABIArgInfo::getDirect();
 
   // Always honor user-specified calling convention.
   if (FI.getCallingConvention() != llvm::CallingConv::C)
@@ -213,9 +216,12 @@ void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
   FI.setEffectiveCallingConvention(getRuntimeCC());
 }
 
-Address NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                QualType Ty) const {
-  llvm_unreachable("NVPTX does not support varargs");
+RValue NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                               QualType Ty, AggValueSlot Slot) const {
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*IsIndirect=*/false,
+                          getContext().getTypeInfoInChars(Ty),
+                          CharUnits::fromQuantity(1),
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 void NVPTXTargetCodeGenInfo::setTargetAttributes(

@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
+#include "Common/CodeGenTarget.h"
 #include "TableGenBackends.h"
 #include "WebAssemblyDisassemblerEmitter.h"
 #include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -94,19 +95,17 @@ using namespace llvm::X86Disassembler;
 /// X86RecognizableInstr.cpp contains the implementation for a single
 ///   instruction.
 
-static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
-  CodeGenTarget Target(Records);
+static void EmitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
+  const CodeGenTarget Target(Records);
   emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
 
   // X86 uses a custom disassembler.
   if (Target.getName() == "X86") {
     DisassemblerTables Tables;
 
-    ArrayRef<const CodeGenInstruction *> numberedInstructions =
-        Target.getInstructionsByEnumValue();
-
-    for (unsigned i = 0, e = numberedInstructions.size(); i != e; ++i)
-      RecognizableInstr::processInstr(Tables, *numberedInstructions[i], i);
+    for (const auto &[Idx, NumberedInst] :
+         enumerate(Target.getInstructionsByEnumValue()))
+      RecognizableInstr::processInstr(Tables, *NumberedInst, Idx);
 
     if (Tables.hasConflicts()) {
       PrintError(Target.getTargetRecord()->getLoc(), "Primary decode conflict");
@@ -125,7 +124,7 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
     return;
   }
 
-  std::string PredicateNamespace = std::string(Target.getName());
+  StringRef PredicateNamespace = Target.getName();
   if (PredicateNamespace == "Thumb")
     PredicateNamespace = "ARM";
   EmitDecoder(Records, OS, PredicateNamespace);

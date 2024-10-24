@@ -352,7 +352,7 @@ protected:
   /// Emits \p Callee function call with arguments \p Args with location \p Loc.
   void emitCall(CodeGenFunction &CGF, SourceLocation Loc,
                 llvm::FunctionCallee Callee,
-                ArrayRef<llvm::Value *> Args = std::nullopt) const;
+                ArrayRef<llvm::Value *> Args = {}) const;
 
   /// Emits address of the word in a memory where current thread id is
   /// stored.
@@ -946,6 +946,14 @@ public:
                                    unsigned IVSize, bool IVSigned, bool Ordered,
                                    const DispatchRTInput &DispatchValues);
 
+  /// This is used for non static scheduled types and when the ordered
+  /// clause is present on the loop construct.
+  ///
+  /// \param CGF Reference to current CodeGenFunction.
+  /// \param Loc Clang source location.
+  ///
+  virtual void emitForDispatchDeinit(CodeGenFunction &CGF, SourceLocation Loc);
+
   /// Struct with the values to be passed to the static runtime function
   struct StaticRTInput {
     /// Size of the iteration variable in bits.
@@ -1068,13 +1076,12 @@ public:
   /// \param Loc Location of the reference to threadprivate var.
   /// \return Address of the threadprivate variable for the current thread.
   virtual Address getAddrOfThreadPrivate(CodeGenFunction &CGF,
-                                         const VarDecl *VD,
-                                         Address VDAddr,
+                                         const VarDecl *VD, Address VDAddr,
                                          SourceLocation Loc);
 
   /// Returns the address of the variable marked as declare target with link
   /// clause OR as declare target with to clause and unified memory.
-  virtual Address getAddrOfDeclareTargetVar(const VarDecl *VD);
+  virtual ConstantAddress getAddrOfDeclareTargetVar(const VarDecl *VD);
 
   /// Emit a code for initialization of threadprivate variable. It emits
   /// a call to runtime library which adds initial value to the newly created
@@ -1536,7 +1543,7 @@ public:
   virtual void
   emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
                            llvm::FunctionCallee OutlinedFn,
-                           ArrayRef<llvm::Value *> Args = std::nullopt) const;
+                           ArrayRef<llvm::Value *> Args = {}) const;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
@@ -1829,6 +1836,14 @@ public:
                            const OpenMPScheduleTy &ScheduleKind,
                            unsigned IVSize, bool IVSigned, bool Ordered,
                            const DispatchRTInput &DispatchValues) override;
+
+  /// This is used for non static scheduled types and when the ordered
+  /// clause is present on the loop construct.
+  ///
+  /// \param CGF Reference to current CodeGenFunction.
+  /// \param Loc Clang source location.
+  ///
+  void emitForDispatchDeinit(CodeGenFunction &CGF, SourceLocation Loc) override;
 
   /// Call the appropriate runtime routine to initialize it before start
   /// of loop.

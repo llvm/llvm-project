@@ -16,13 +16,13 @@ define <vscale x 1 x double> @test(ptr %addr, i64 %vl) {
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrrs a2, vlenb, zero
-; CHECK-NEXT:    add a3, a0, a2
-; CHECK-NEXT:    vl1re64.v v8, (a3)
+; CHECK-NEXT:    vl1re64.v v8, (a0)
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    vl1re64.v v9, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    vs1r.v v8, (a2)
-; CHECK-NEXT:    vs1r.v v9, (a0)
+; CHECK-NEXT:    vs1r.v v9, (a2)
 ; CHECK-NEXT:    vl1re64.v v8, (a2)
 ; CHECK-NEXT:    vl1re64.v v9, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma

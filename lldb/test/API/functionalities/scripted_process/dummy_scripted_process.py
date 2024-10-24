@@ -7,6 +7,16 @@ from lldb.plugins.scripted_process import ScriptedProcess
 from lldb.plugins.scripted_process import ScriptedThread
 
 
+class DummyStopHook:
+    def __init__(self, target, args):
+        self.target = target
+        self.args = args
+
+    def handle_stop(self, exe_ctx, stream):
+        print("My DummyStopHook triggered. Printing args: \n%s" % self.args)
+        sp = exe_ctx.process.GetScriptedImplementation()
+        sp.handled_stop = True
+
 class DummyScriptedProcess(ScriptedProcess):
     memory = None
 
@@ -18,6 +28,7 @@ class DummyScriptedProcess(ScriptedProcess):
         debugger = self.target.GetDebugger()
         index = debugger.GetIndexOfTarget(self.target)
         self.memory[addr] = "Hello, target " + str(index)
+        self.handled_stop = False
 
     def read_memory_at_address(
         self, addr: int, size: int, error: lldb.SBError
@@ -99,7 +110,13 @@ class DummyScriptedThread(ScriptedThread):
 
 
 def __lldb_init_module(debugger, dict):
+    # This is used when loading the script in an interactive debug session to
+    # automatically, register the stop-hook and launch the scripted process.
     if not "SKIP_SCRIPTED_PROCESS_LAUNCH" in os.environ:
+        debugger.HandleCommand(
+            "target stop-hook add -k first -v 1 -k second -v 2 -P %s.%s"
+            % (__name__, DummyStopHook.__name__)
+        )
         debugger.HandleCommand(
             "process launch -C %s.%s" % (__name__, DummyScriptedProcess.__name__)
         )
@@ -107,4 +124,8 @@ def __lldb_init_module(debugger, dict):
         print(
             "Name of the class that will manage the scripted process: '%s.%s'"
             % (__name__, DummyScriptedProcess.__name__)
+        )
+        print(
+            "Name of the class that will manage the stop-hook: '%s.%s'"
+            % (__name__, DummyStopHook.__name__)
         )

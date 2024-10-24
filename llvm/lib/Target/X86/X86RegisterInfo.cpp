@@ -31,6 +31,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -44,6 +45,12 @@ using namespace llvm;
 static cl::opt<bool>
 EnableBasePointer("x86-use-base-pointer", cl::Hidden, cl::init(true),
           cl::desc("Enable use of a base pointer for complex stack frames"));
+
+static cl::opt<bool>
+    DisableRegAllocNDDHints("x86-disable-regalloc-hints-for-ndd", cl::Hidden,
+                            cl::init(false),
+                            cl::desc("Disable two address hints for register "
+                                     "allocation"));
 
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
@@ -74,11 +81,6 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     FramePtr = X86::EBP;
     BasePtr = X86::ESI;
   }
-}
-
-int
-X86RegisterInfo::getSEHRegNum(unsigned i) const {
-  return getEncodingValue(i);
 }
 
 const TargetRegisterClass *
@@ -408,6 +410,11 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CallsEHReturn ? CSR_32EHRet_SaveList : CSR_32_SaveList;
 }
 
+const MCPhysReg *
+X86RegisterInfo::getIPRACSRegs(const MachineFunction *MF) const {
+  return Is64Bit ? CSR_IPRA_64_SaveList : CSR_IPRA_32_SaveList;
+}
+
 const MCPhysReg *X86RegisterInfo::getCalleeSavedRegsViaCopy(
     const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
@@ -559,18 +566,22 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Set the frame-pointer register and its aliases as reserved if needed.
   if (TFI->hasFP(MF)) {
+    if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
+      MF.getContext().reportError(
+          SMLoc(),
+          "Frame pointer clobbered by function invoke is not supported.");
+
     for (const MCPhysReg &SubReg : subregs_inclusive(X86::RBP))
       Reserved.set(SubReg);
   }
 
   // Set the base-pointer register and its aliases as reserved if needed.
   if (hasBasePointer(MF)) {
-    CallingConv::ID CC = MF.getFunction().getCallingConv();
-    const uint32_t *RegMask = getCallPreservedMask(MF, CC);
-    if (MachineOperand::clobbersPhysReg(RegMask, getBaseRegister()))
-      report_fatal_error(
-        "Stack realignment in presence of dynamic allocas is not supported with"
-        "this calling convention.");
+    if (MF.getInfo<X86MachineFunctionInfo>()->getBPClobberedByInvoke())
+      MF.getContext().reportError(SMLoc(),
+                                  "Stack realignment in presence of dynamic "
+                                  "allocas is not supported with "
+                                  "this calling convention.");
 
     Register BasePtr = getX86SubSuperRegister(getBaseRegister(), 64);
     for (const MCPhysReg &SubReg : subregs_inclusive(BasePtr))
@@ -649,10 +660,11 @@ unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
   // APX registers (R16-R31)
   //
   // and try to return the minimum number of registers supported by the target.
-  assert((X86::R15WH + 1 == X86 ::YMM0) && (X86::YMM15 + 1 == X86::K0) &&
-         (X86::K6_K7 + 1 == X86::TMMCFG) && (X86::TMM7 + 1 == X86::R16) &&
-         (X86::R31WH + 1 == X86::NUM_TARGET_REGS) &&
-         "Register number may be incorrect");
+  static_assert((X86::R15WH + 1 == X86::YMM0) && (X86::YMM15 + 1 == X86::K0) &&
+                    (X86::K6_K7 + 1 == X86::TMMCFG) &&
+                    (X86::TMM7 + 1 == X86::R16) &&
+                    (X86::R31WH + 1 == X86::NUM_TARGET_REGS),
+                "Register number may be incorrect");
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   if (ST.hasEGPR())
@@ -1079,10 +1091,57 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
 
   unsigned ID = RC.getID();
-  if (ID != X86::TILERegClassID)
+
+  if (!VRM)
     return BaseImplRetVal;
+
+  if (ID != X86::TILERegClassID) {
+    if (DisableRegAllocNDDHints || !ST.hasNDD() ||
+        !TRI.isGeneralPurposeRegisterClass(&RC))
+      return BaseImplRetVal;
+
+    // Add any two address hints after any copy hints.
+    SmallSet<unsigned, 4> TwoAddrHints;
+
+    auto TryAddNDDHint = [&](const MachineOperand &MO) {
+      Register Reg = MO.getReg();
+      Register PhysReg =
+          Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+      if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+        TwoAddrHints.insert(PhysReg);
+    };
+
+    // NDD instructions is compressible when Op0 is allocated to the same
+    // physic register as Op1 (or Op2 if it's commutable).
+    for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
+      const MachineInstr &MI = *MO.getParent();
+      if (!X86::getNonNDVariant(MI.getOpcode()))
+        continue;
+      unsigned OpIdx = MI.getOperandNo(&MO);
+      if (OpIdx == 0) {
+        assert(MI.getOperand(1).isReg());
+        TryAddNDDHint(MI.getOperand(1));
+        if (MI.isCommutable()) {
+          assert(MI.getOperand(2).isReg());
+          TryAddNDDHint(MI.getOperand(2));
+        }
+      } else if (OpIdx == 1) {
+        TryAddNDDHint(MI.getOperand(0));
+      } else if (MI.isCommutable() && OpIdx == 2) {
+        TryAddNDDHint(MI.getOperand(0));
+      }
+    }
+
+    for (MCPhysReg OrderReg : Order)
+      if (TwoAddrHints.count(OrderReg))
+        Hints.push_back(OrderReg);
+
+    return BaseImplRetVal;
+  }
 
   ShapeT VirtShape = getTileShape(VirtReg, const_cast<VirtRegMap *>(VRM), MRI);
   auto AddHint = [&](MCPhysReg PhysReg) {

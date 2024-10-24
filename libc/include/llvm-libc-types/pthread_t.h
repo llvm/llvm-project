@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_PTHREAD_T_H
 #define LLVM_LIBC_TYPES_PTHREAD_T_H
 
-#include <llvm-libc-types/__thread_type.h>
+#include "llvm-libc-types/__thread_type.h"
 
 typedef __thread_type pthread_t;
 

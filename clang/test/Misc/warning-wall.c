@@ -44,6 +44,7 @@ CHECK-NEXT:      -Wreorder-ctor
 CHECK-NEXT:      -Wreorder-init-list
 CHECK-NEXT:    -Wreturn-type
 CHECK-NEXT:      -Wreturn-type-c-linkage
+CHECK-NEXT:      -Wreturn-mismatch
 CHECK-NEXT:    -Wself-assign
 CHECK-NEXT:      -Wself-assign-overloaded
 CHECK-NEXT:      -Wself-assign-field
@@ -107,5 +108,6 @@ CHECK-NEXT:  -Wmisleading-indentation
 CHECK-NEXT:  -Wpacked-non-pod
 CHECK-NEXT:  -Wvla-cxx-extension
 CHECK-NEXT:    -Wvla-extension-static-assert
+CHECK-NEXT:  -Wperf-constraint-implies-noexcept
 
 CHECK-NOT:-W

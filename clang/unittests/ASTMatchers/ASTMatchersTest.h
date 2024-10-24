@@ -28,7 +28,6 @@ using clang::tooling::runToolOnCodeWithArgs;
 class BoundNodesCallback {
 public:
   virtual ~BoundNodesCallback() {}
-  virtual bool run(const BoundNodes *BoundNodes) = 0;
   virtual bool run(const BoundNodes *BoundNodes, ASTContext *Context) = 0;
   virtual void onEndOfTranslationUnit() {}
 };
@@ -62,22 +61,28 @@ private:
 
 inline ArrayRef<TestLanguage> langCxx11OrLater() {
   static const TestLanguage Result[] = {Lang_CXX11, Lang_CXX14, Lang_CXX17,
-                                        Lang_CXX20};
+                                        Lang_CXX20, Lang_CXX23};
   return ArrayRef<TestLanguage>(Result);
 }
 
 inline ArrayRef<TestLanguage> langCxx14OrLater() {
-  static const TestLanguage Result[] = {Lang_CXX14, Lang_CXX17, Lang_CXX20};
+  static const TestLanguage Result[] = {Lang_CXX14, Lang_CXX17, Lang_CXX20,
+                                        Lang_CXX23};
   return ArrayRef<TestLanguage>(Result);
 }
 
 inline ArrayRef<TestLanguage> langCxx17OrLater() {
-  static const TestLanguage Result[] = {Lang_CXX17, Lang_CXX20};
+  static const TestLanguage Result[] = {Lang_CXX17, Lang_CXX20, Lang_CXX23};
   return ArrayRef<TestLanguage>(Result);
 }
 
 inline ArrayRef<TestLanguage> langCxx20OrLater() {
-  static const TestLanguage Result[] = {Lang_CXX20};
+  static const TestLanguage Result[] = {Lang_CXX20, Lang_CXX23};
+  return ArrayRef<TestLanguage>(Result);
+}
+
+inline ArrayRef<TestLanguage> langCxx23OrLater() {
+  static const TestLanguage Result[] = {Lang_CXX23};
   return ArrayRef<TestLanguage>(Result);
 }
 
@@ -287,7 +292,8 @@ testing::AssertionResult notMatchesWithOpenMP51(const Twine &Code,
 template <typename T>
 testing::AssertionResult matchAndVerifyResultConditionally(
     const Twine &Code, const T &AMatcher,
-    std::unique_ptr<BoundNodesCallback> FindResultVerifier, bool ExpectResult) {
+    std::unique_ptr<BoundNodesCallback> FindResultVerifier, bool ExpectResult,
+    ArrayRef<std::string> Args = {}, StringRef Filename = "input.cc") {
   bool VerifiedResult = false;
   MatchFinder Finder;
   VerifyMatch VerifyVerifiedResult(std::move(FindResultVerifier),
@@ -298,9 +304,13 @@ testing::AssertionResult matchAndVerifyResultConditionally(
   // Some tests use typeof, which is a gnu extension.  Using an explicit
   // unknown-unknown triple is good for a large speedup, because it lets us
   // avoid constructing a full system triple.
-  std::vector<std::string> Args = {"-std=gnu++11", "-target",
-                                   "i386-unknown-unknown"};
-  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args)) {
+  std::vector<std::string> CompileArgs = {"-std=gnu++11", "-target",
+                                          "i386-unknown-unknown"};
+  // Append additional arguments at the end to allow overriding the default
+  // choices that we made above.
+  llvm::copy(Args, std::back_inserter(CompileArgs));
+
+  if (!runToolOnCodeWithArgs(Factory->create(), Code, CompileArgs, Filename)) {
     return testing::AssertionFailure() << "Parsing error in \"" << Code << "\"";
   }
   if (!VerifiedResult && ExpectResult) {
@@ -313,8 +323,8 @@ testing::AssertionResult matchAndVerifyResultConditionally(
 
   VerifiedResult = false;
   SmallString<256> Buffer;
-  std::unique_ptr<ASTUnit> AST(
-      buildASTFromCodeWithArgs(Code.toStringRef(Buffer), Args));
+  std::unique_ptr<ASTUnit> AST(buildASTFromCodeWithArgs(
+      Code.toStringRef(Buffer), CompileArgs, Filename));
   if (!AST.get())
     return testing::AssertionFailure()
            << "Parsing error in \"" << Code << "\" while building AST";
@@ -333,19 +343,24 @@ testing::AssertionResult matchAndVerifyResultConditionally(
 // FIXME: Find better names for these functions (or document what they
 // do more precisely).
 template <typename T>
-testing::AssertionResult matchAndVerifyResultTrue(
-    const Twine &Code, const T &AMatcher,
-    std::unique_ptr<BoundNodesCallback> FindResultVerifier) {
-  return matchAndVerifyResultConditionally(Code, AMatcher,
-                                           std::move(FindResultVerifier), true);
+testing::AssertionResult
+matchAndVerifyResultTrue(const Twine &Code, const T &AMatcher,
+                         std::unique_ptr<BoundNodesCallback> FindResultVerifier,
+                         ArrayRef<std::string> Args = {},
+                         StringRef Filename = "input.cc") {
+  return matchAndVerifyResultConditionally(
+      Code, AMatcher, std::move(FindResultVerifier),
+      /*ExpectResult=*/true, Args, Filename);
 }
 
 template <typename T>
 testing::AssertionResult matchAndVerifyResultFalse(
     const Twine &Code, const T &AMatcher,
-    std::unique_ptr<BoundNodesCallback> FindResultVerifier) {
+    std::unique_ptr<BoundNodesCallback> FindResultVerifier,
+    ArrayRef<std::string> Args = {}, StringRef Filename = "input.cc") {
   return matchAndVerifyResultConditionally(
-      Code, AMatcher, std::move(FindResultVerifier), false);
+      Code, AMatcher, std::move(FindResultVerifier),
+      /*ExpectResult=*/false, Args, Filename);
 }
 
 // Implements a run method that returns whether BoundNodes contains a
@@ -387,7 +402,7 @@ public:
     EXPECT_EQ("", Name);
   }
 
-  bool run(const BoundNodes *Nodes) override {
+  bool run(const BoundNodes *Nodes, ASTContext * /*Context*/) override {
     const BoundNodes::IDToNodeMap &M = Nodes->getMap();
     if (Nodes->getNodeAs<T>(Id)) {
       ++Count;
@@ -408,10 +423,6 @@ public:
     EXPECT_TRUE(M.count(Id) == 0 ||
                 M.find(Id)->second.template get<T>() == nullptr);
     return false;
-  }
-
-  bool run(const BoundNodes *Nodes, ASTContext *Context) override {
-    return run(Nodes);
   }
 
 private:

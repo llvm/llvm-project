@@ -52,13 +52,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __format_spec {
 
-_LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void
+[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void
 __throw_invalid_option_format_error(const char* __id, const char* __option) {
   std::__throw_format_error(
       (string("The format specifier for ") + __id + " does not allow the " + __option + " option").c_str());
 }
 
-_LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void __throw_invalid_type_format_error(const char* __id) {
+[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void __throw_invalid_type_format_error(const char* __id) {
   std::__throw_format_error(
       (string("The type option contains an invalid value for ") + __id + " formatting argument").c_str());
 }
@@ -129,8 +129,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr uint32_t __substitute_arg_id(basic_format_arg<_C
 ///
 /// They default to false so when a new field is added it needs to be opted in
 /// explicitly.
-// TODO FMT Use an ABI tag for this struct.
-struct __fields {
+struct _LIBCPP_HIDE_FROM_ABI __fields {
   uint16_t __sign_                 : 1 {false};
   uint16_t __alternate_form_       : 1 {false};
   uint16_t __zero_padding_         : 1 {false};
@@ -1156,15 +1155,15 @@ __estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __col
   // When Unicode isn't supported assume ASCII and every code unit is one code
   // point. In ASCII the estimated column width is always one. Thus there's no
   // need for rounding.
-  size_t __width_ = std::min(__str.size(), __maximum);
-  return {__width_, __str.begin() + __width_};
+  size_t __width = std::min(__str.size(), __maximum);
+  return {__width, __str.begin() + __width};
 }
 
 #  endif // !defined(_LIBCPP_HAS_NO_UNICODE)
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

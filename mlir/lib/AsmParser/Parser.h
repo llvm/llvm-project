@@ -130,10 +130,14 @@ public:
     consumeToken();
   }
 
-  /// Reset the parser to the given lexer position.
+  /// Reset the parser to the given lexer position. Resetting the parser/lexer
+  /// position does not update 'state.lastToken'. 'state.lastToken' is the
+  /// last parsed token, and is used to provide the scope end location for
+  /// OperationDefinitions. To ensure the correctness of the end location, the
+  /// last consumed token of an OperationDefinition needs to be the last token
+  /// belonging to it.
   void resetToken(const char *tokPos) {
     state.lex.resetPointer(tokPos);
-    state.lastToken = state.curToken;
     state.curToken = state.lex.lexToken();
   }
 
@@ -143,6 +147,9 @@ public:
 
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result);
+
+  /// Parse an optional integer value only in decimal format from the stream.
+  OptionalParseResult parseOptionalDecimalInteger(APInt &result);
 
   /// Parse a floating point value from an integer literal token.
   ParseResult parseFloatFromIntegerLiteral(std::optional<APFloat> &result,

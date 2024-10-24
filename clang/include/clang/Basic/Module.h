@@ -48,6 +48,7 @@ namespace clang {
 
 class FileManager;
 class LangOptions;
+class ModuleMap;
 class TargetInfo;
 
 /// Describes the name of a module.
@@ -97,6 +98,15 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
     std::copy(First, Last, Signature.begin());
     return Signature;
   }
+};
+
+/// Required to construct a Module.
+///
+/// This tag type is only constructible by ModuleMap, guaranteeing it ownership
+/// of all Module instances.
+class ModuleConstructorTag {
+  explicit ModuleConstructorTag() = default;
+  friend ModuleMap;
 };
 
 /// Describes a module or submodule.
@@ -284,9 +294,10 @@ public:
   /// found on the file system.
   SmallVector<UnresolvedHeaderDirective, 1> MissingHeaders;
 
-  /// An individual requirement: a feature name and a flag indicating
-  /// the required state of that feature.
-  using Requirement = std::pair<std::string, bool>;
+  struct Requirement {
+    std::string FeatureName;
+    bool RequiredState;
+  };
 
   /// The set of language features required to use this module.
   ///
@@ -496,8 +507,9 @@ public:
   std::vector<Conflict> Conflicts;
 
   /// Construct a new module or submodule.
-  Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
-         bool IsFramework, bool IsExplicit, unsigned VisibilityID);
+  Module(ModuleConstructorTag, StringRef Name, SourceLocation DefinitionLoc,
+         Module *Parent, bool IsFramework, bool IsExplicit,
+         unsigned VisibilityID);
 
   ~Module();
 
@@ -748,7 +760,6 @@ public:
   ///
   /// \returns The submodule if found, or NULL otherwise.
   Module *findSubmodule(StringRef Name) const;
-  Module *findOrInferSubmodule(StringRef Name);
 
   /// Get the Global Module Fragment (sub-module) for this module, it there is
   /// one.
@@ -866,32 +877,6 @@ private:
   /// Visibility generation, bumped every time the visibility state changes.
   unsigned Generation = 0;
 };
-
-/// Abstracts clang modules and precompiled header files and holds
-/// everything needed to generate debug info for an imported module
-/// or PCH.
-class ASTSourceDescriptor {
-  StringRef PCHModuleName;
-  StringRef Path;
-  StringRef ASTFile;
-  ASTFileSignature Signature;
-  Module *ClangModule = nullptr;
-
-public:
-  ASTSourceDescriptor() = default;
-  ASTSourceDescriptor(StringRef Name, StringRef Path, StringRef ASTFile,
-                      ASTFileSignature Signature)
-      : PCHModuleName(std::move(Name)), Path(std::move(Path)),
-        ASTFile(std::move(ASTFile)), Signature(Signature) {}
-  ASTSourceDescriptor(Module &M);
-
-  std::string getModuleName() const;
-  StringRef getPath() const { return Path; }
-  StringRef getASTFile() const { return ASTFile; }
-  ASTFileSignature getSignature() const { return Signature; }
-  Module *getModuleOrNull() const { return ClangModule; }
-};
-
 
 } // namespace clang
 

@@ -49,6 +49,7 @@ public:
 }
 */
 
+#include <__config>
 #include <__functional/hash.h>
 #include <__functional/operations.h>
 #include <__type_traits/add_lvalue_reference.h>
@@ -57,7 +58,6 @@ public:
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
 #include <cstddef>
-#include <experimental/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -190,5 +190,9 @@ struct hash<experimental::observer_ptr<_Tp>> {
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_ENABLE_EXPERIMENTAL
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <limits>
+#endif
 
 #endif /* _LIBCPP_EXPERIMENTAL_MEMORY */
