@@ -304,10 +304,14 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs) {
     const auto *A = II.getAction();
     auto ArchStr = llvm::StringRef(A->getOffloadingArch());
-    BundlerTargetArg +=
-        "," + OffloadKind + "-" + normalizeForBundler(TT, !ArchStr.empty());
+    BundlerTargetArg += ',' + OffloadKind + '-';
+    if (ArchStr == "amdgcnspirv")
+      BundlerTargetArg +=
+          normalizeForBundler(llvm::Triple("spirv64-amd-amdhsa"), true);
+    else
+      BundlerTargetArg += normalizeForBundler(TT, !ArchStr.empty());
     if (!ArchStr.empty())
-      BundlerTargetArg += "-" + ArchStr.str();
+      BundlerTargetArg += '-' + ArchStr.str();
   }
   BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
 
