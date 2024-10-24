@@ -1343,7 +1343,7 @@ private:
   /// with that type identifier's metadata. Produced by per module summary
   /// analysis and consumed by thin link. For more information, see description
   /// above where TypeIdCompatibleVtableInfo is defined.
-  std::map<std::string, TypeIdCompatibleVtableInfo, std::less<>>
+  std::map<StringRef, TypeIdCompatibleVtableInfo, std::less<>>
       TypeIdCompatibleVtableMap;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
@@ -1405,7 +1405,7 @@ private:
   // Used in cases where we want to record the name of a global, but
   // don't have the string owned elsewhere (e.g. the Strtab on a module).
   BumpPtrAllocator Alloc;
-  StringSaver Saver;
+  UniqueStringSaver Saver;
 
   // The total number of basic blocks in the module in the per-module summary or
   // the total number of basic blocks in the LTO unit in the combined index.
@@ -1835,7 +1835,7 @@ public:
   /// the ThinLTO backends.
   TypeIdCompatibleVtableInfo &
   getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
-    return TypeIdCompatibleVtableMap[std::string(TypeId)];
+    return TypeIdCompatibleVtableMap[saveString(TypeId)];
   }
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
