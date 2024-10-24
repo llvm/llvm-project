@@ -432,7 +432,8 @@ define void @callee() nounwind {
 ; RV32IZCMP-NEXT:    sw a0, %lo(var+4)(t0)
 ; RV32IZCMP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
 ; RV32IZCMP-NEXT:    sw a0, %lo(var)(t0)
-; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 96
+; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 96
+; RV32IZCMP-NEXT:    ret
 ;
 ; RV32IZCMP-WITH-FP-LABEL: callee:
 ; RV32IZCMP-WITH-FP:       # %bb.0:
@@ -941,7 +942,8 @@ define void @callee() nounwind {
 ; RV64IZCMP-NEXT:    sw a0, %lo(var+4)(t0)
 ; RV64IZCMP-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
 ; RV64IZCMP-NEXT:    sw a0, %lo(var)(t0)
-; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 160
+; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 160
+; RV64IZCMP-NEXT:    ret
 ;
 ; RV64IZCMP-WITH-FP-LABEL: callee:
 ; RV64IZCMP-WITH-FP:       # %bb.0:
@@ -1611,7 +1613,8 @@ define void @caller() nounwind {
 ; RV32IZCMP-NEXT:    lw a0, 92(sp) # 4-byte Folded Reload
 ; RV32IZCMP-NEXT:    sw a0, %lo(var)(s0)
 ; RV32IZCMP-NEXT:    addi sp, sp, 48
-; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 112
+; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 112
+; RV32IZCMP-NEXT:    ret
 ;
 ; RV32IZCMP-WITH-FP-LABEL: caller:
 ; RV32IZCMP-WITH-FP:       # %bb.0:
@@ -2306,7 +2309,8 @@ define void @caller() nounwind {
 ; RV64IZCMP-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
 ; RV64IZCMP-NEXT:    sw a0, %lo(var)(s0)
 ; RV64IZCMP-NEXT:    addi sp, sp, 128
-; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 160
+; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 160
+; RV64IZCMP-NEXT:    ret
 ;
 ; RV64IZCMP-WITH-FP-LABEL: caller:
 ; RV64IZCMP-WITH-FP:       # %bb.0:
@@ -2472,7 +2476,9 @@ define void @foo() {
 ; RV32I-NEXT:    li s4, 0
 ; RV32I-NEXT:    #NO_APP
 ; RV32I-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore s4
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-ILP32E-LABEL: foo:
@@ -2497,10 +2503,15 @@ define void @foo() {
 ; RV32I-WITH-FP-NEXT:    #APP
 ; RV32I-WITH-FP-NEXT:    li s4, 0
 ; RV32I-WITH-FP-NEXT:    #NO_APP
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32I-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    .cfi_restore ra
+; RV32I-WITH-FP-NEXT:    .cfi_restore s0
+; RV32I-WITH-FP-NEXT:    .cfi_restore s4
 ; RV32I-WITH-FP-NEXT:    addi sp, sp, 16
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-WITH-FP-NEXT:    ret
 ;
 ; RV32IZCMP-LABEL: foo:
@@ -2511,7 +2522,10 @@ define void @foo() {
 ; RV32IZCMP-NEXT:    #APP
 ; RV32IZCMP-NEXT:    li s4, 0
 ; RV32IZCMP-NEXT:    #NO_APP
-; RV32IZCMP-NEXT:    cm.popret {ra, s0-s4}, 32
+; RV32IZCMP-NEXT:    cm.pop {ra, s0-s4}, 32
+; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 0
+; RV32IZCMP-NEXT:    .cfi_restore s4
+; RV32IZCMP-NEXT:    ret
 ;
 ; RV32IZCMP-WITH-FP-LABEL: foo:
 ; RV32IZCMP-WITH-FP:       # %bb.0: # %entry
@@ -2528,10 +2542,15 @@ define void @foo() {
 ; RV32IZCMP-WITH-FP-NEXT:    #APP
 ; RV32IZCMP-WITH-FP-NEXT:    li s4, 0
 ; RV32IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore ra
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore s0
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore s4
 ; RV32IZCMP-WITH-FP-NEXT:    addi sp, sp, 16
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IZCMP-WITH-FP-NEXT:    ret
 ;
 ; RV64I-LABEL: foo:
@@ -2544,7 +2563,9 @@ define void @foo() {
 ; RV64I-NEXT:    li s4, 0
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore s4
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-LP64E-LABEL: foo:
@@ -2569,10 +2590,15 @@ define void @foo() {
 ; RV64I-WITH-FP-NEXT:    #APP
 ; RV64I-WITH-FP-NEXT:    li s4, 0
 ; RV64I-WITH-FP-NEXT:    #NO_APP
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64I-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    .cfi_restore ra
+; RV64I-WITH-FP-NEXT:    .cfi_restore s0
+; RV64I-WITH-FP-NEXT:    .cfi_restore s4
 ; RV64I-WITH-FP-NEXT:    addi sp, sp, 32
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-WITH-FP-NEXT:    ret
 ;
 ; RV64IZCMP-LABEL: foo:
@@ -2583,7 +2609,10 @@ define void @foo() {
 ; RV64IZCMP-NEXT:    #APP
 ; RV64IZCMP-NEXT:    li s4, 0
 ; RV64IZCMP-NEXT:    #NO_APP
-; RV64IZCMP-NEXT:    cm.popret {ra, s0-s4}, 48
+; RV64IZCMP-NEXT:    cm.pop {ra, s0-s4}, 48
+; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 0
+; RV64IZCMP-NEXT:    .cfi_restore s4
+; RV64IZCMP-NEXT:    ret
 ;
 ; RV64IZCMP-WITH-FP-LABEL: foo:
 ; RV64IZCMP-WITH-FP:       # %bb.0: # %entry
@@ -2600,10 +2629,15 @@ define void @foo() {
 ; RV64IZCMP-WITH-FP-NEXT:    #APP
 ; RV64IZCMP-WITH-FP-NEXT:    li s4, 0
 ; RV64IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore ra
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore s0
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore s4
 ; RV64IZCMP-WITH-FP-NEXT:    addi sp, sp, 32
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IZCMP-WITH-FP-NEXT:    ret
 entry:
   tail call void asm sideeffect "li s4, 0", "~{s4}"()
@@ -2622,7 +2656,9 @@ define void @bar() {
 ; RV32I-NEXT:    li s11, 0
 ; RV32I-NEXT:    #NO_APP
 ; RV32I-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore s11
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-ILP32E-LABEL: bar:
@@ -2647,10 +2683,15 @@ define void @bar() {
 ; RV32I-WITH-FP-NEXT:    #APP
 ; RV32I-WITH-FP-NEXT:    li s11, 0
 ; RV32I-WITH-FP-NEXT:    #NO_APP
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32I-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s11, 4(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    .cfi_restore ra
+; RV32I-WITH-FP-NEXT:    .cfi_restore s0
+; RV32I-WITH-FP-NEXT:    .cfi_restore s11
 ; RV32I-WITH-FP-NEXT:    addi sp, sp, 16
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-WITH-FP-NEXT:    ret
 ;
 ; RV32IZCMP-LABEL: bar:
@@ -2661,7 +2702,10 @@ define void @bar() {
 ; RV32IZCMP-NEXT:    #APP
 ; RV32IZCMP-NEXT:    li s11, 0
 ; RV32IZCMP-NEXT:    #NO_APP
-; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 64
+; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 64
+; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 0
+; RV32IZCMP-NEXT:    .cfi_restore s11
+; RV32IZCMP-NEXT:    ret
 ;
 ; RV32IZCMP-WITH-FP-LABEL: bar:
 ; RV32IZCMP-WITH-FP:       # %bb.0: # %entry
@@ -2678,10 +2722,15 @@ define void @bar() {
 ; RV32IZCMP-WITH-FP-NEXT:    #APP
 ; RV32IZCMP-WITH-FP-NEXT:    li s11, 0
 ; RV32IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s11, 4(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore ra
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore s0
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore s11
 ; RV32IZCMP-WITH-FP-NEXT:    addi sp, sp, 16
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IZCMP-WITH-FP-NEXT:    ret
 ;
 ; RV64I-LABEL: bar:
@@ -2694,7 +2743,9 @@ define void @bar() {
 ; RV64I-NEXT:    li s11, 0
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore s11
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-LP64E-LABEL: bar:
@@ -2719,10 +2770,15 @@ define void @bar() {
 ; RV64I-WITH-FP-NEXT:    #APP
 ; RV64I-WITH-FP-NEXT:    li s11, 0
 ; RV64I-WITH-FP-NEXT:    #NO_APP
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64I-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    .cfi_restore ra
+; RV64I-WITH-FP-NEXT:    .cfi_restore s0
+; RV64I-WITH-FP-NEXT:    .cfi_restore s11
 ; RV64I-WITH-FP-NEXT:    addi sp, sp, 32
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-WITH-FP-NEXT:    ret
 ;
 ; RV64IZCMP-LABEL: bar:
@@ -2733,7 +2789,10 @@ define void @bar() {
 ; RV64IZCMP-NEXT:    #APP
 ; RV64IZCMP-NEXT:    li s11, 0
 ; RV64IZCMP-NEXT:    #NO_APP
-; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 112
+; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 112
+; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 0
+; RV64IZCMP-NEXT:    .cfi_restore s11
+; RV64IZCMP-NEXT:    ret
 ;
 ; RV64IZCMP-WITH-FP-LABEL: bar:
 ; RV64IZCMP-WITH-FP:       # %bb.0: # %entry
@@ -2750,10 +2809,15 @@ define void @bar() {
 ; RV64IZCMP-WITH-FP-NEXT:    #APP
 ; RV64IZCMP-WITH-FP-NEXT:    li s11, 0
 ; RV64IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore ra
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore s0
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore s11
 ; RV64IZCMP-WITH-FP-NEXT:    addi sp, sp, 32
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IZCMP-WITH-FP-NEXT:    ret
 entry:
   tail call void asm sideeffect "li s11, 0", "~{s11}"()
@@ -2777,7 +2841,9 @@ define void @varargs(...) {
 ; RV32I-NEXT:    sw a3, 28(sp)
 ; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    addi sp, sp, 48
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-ILP32E-LABEL: varargs:
@@ -2794,7 +2860,9 @@ define void @varargs(...) {
 ; RV32I-ILP32E-NEXT:    sw a3, 16(sp)
 ; RV32I-ILP32E-NEXT:    call callee
 ; RV32I-ILP32E-NEXT:    lw ra, 0(sp) # 4-byte Folded Reload
+; RV32I-ILP32E-NEXT:    .cfi_restore ra
 ; RV32I-ILP32E-NEXT:    addi sp, sp, 28
+; RV32I-ILP32E-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-ILP32E-NEXT:    ret
 ;
 ; RV32I-WITH-FP-LABEL: varargs:
@@ -2816,9 +2884,13 @@ define void @varargs(...) {
 ; RV32I-WITH-FP-NEXT:    sw a2, 8(s0)
 ; RV32I-WITH-FP-NEXT:    sw a3, 12(s0)
 ; RV32I-WITH-FP-NEXT:    call callee
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa sp, 48
 ; RV32I-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    .cfi_restore ra
+; RV32I-WITH-FP-NEXT:    .cfi_restore s0
 ; RV32I-WITH-FP-NEXT:    addi sp, sp, 48
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-WITH-FP-NEXT:    ret
 ;
 ; RV32IZCMP-LABEL: varargs:
@@ -2837,7 +2909,9 @@ define void @varargs(...) {
 ; RV32IZCMP-NEXT:    sw a3, 28(sp)
 ; RV32IZCMP-NEXT:    call callee
 ; RV32IZCMP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZCMP-NEXT:    .cfi_restore ra
 ; RV32IZCMP-NEXT:    addi sp, sp, 48
+; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IZCMP-NEXT:    ret
 ;
 ; RV32IZCMP-WITH-FP-LABEL: varargs:
@@ -2859,9 +2933,13 @@ define void @varargs(...) {
 ; RV32IZCMP-WITH-FP-NEXT:    sw a2, 8(s0)
 ; RV32IZCMP-WITH-FP-NEXT:    sw a3, 12(s0)
 ; RV32IZCMP-WITH-FP-NEXT:    call callee
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 48
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore ra
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore s0
 ; RV32IZCMP-WITH-FP-NEXT:    addi sp, sp, 48
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IZCMP-WITH-FP-NEXT:    ret
 ;
 ; RV64I-LABEL: varargs:
@@ -2880,7 +2958,9 @@ define void @varargs(...) {
 ; RV64I-NEXT:    sd a3, 40(sp)
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    addi sp, sp, 80
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-LP64E-LABEL: varargs:
@@ -2897,7 +2977,9 @@ define void @varargs(...) {
 ; RV64I-LP64E-NEXT:    sd a3, 32(sp)
 ; RV64I-LP64E-NEXT:    call callee
 ; RV64I-LP64E-NEXT:    ld ra, 0(sp) # 8-byte Folded Reload
+; RV64I-LP64E-NEXT:    .cfi_restore ra
 ; RV64I-LP64E-NEXT:    addi sp, sp, 56
+; RV64I-LP64E-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-LP64E-NEXT:    ret
 ;
 ; RV64I-WITH-FP-LABEL: varargs:
@@ -2919,9 +3001,13 @@ define void @varargs(...) {
 ; RV64I-WITH-FP-NEXT:    sd a2, 16(s0)
 ; RV64I-WITH-FP-NEXT:    sd a3, 24(s0)
 ; RV64I-WITH-FP-NEXT:    call callee
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa sp, 80
 ; RV64I-WITH-FP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    .cfi_restore ra
+; RV64I-WITH-FP-NEXT:    .cfi_restore s0
 ; RV64I-WITH-FP-NEXT:    addi sp, sp, 80
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-WITH-FP-NEXT:    ret
 ;
 ; RV64IZCMP-LABEL: varargs:
@@ -2940,7 +3026,9 @@ define void @varargs(...) {
 ; RV64IZCMP-NEXT:    sd a3, 40(sp)
 ; RV64IZCMP-NEXT:    call callee
 ; RV64IZCMP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZCMP-NEXT:    .cfi_restore ra
 ; RV64IZCMP-NEXT:    addi sp, sp, 80
+; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IZCMP-NEXT:    ret
 ;
 ; RV64IZCMP-WITH-FP-LABEL: varargs:
@@ -2962,9 +3050,13 @@ define void @varargs(...) {
 ; RV64IZCMP-WITH-FP-NEXT:    sd a2, 16(s0)
 ; RV64IZCMP-WITH-FP-NEXT:    sd a3, 24(s0)
 ; RV64IZCMP-WITH-FP-NEXT:    call callee
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 80
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore ra
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore s0
 ; RV64IZCMP-WITH-FP-NEXT:    addi sp, sp, 80
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IZCMP-WITH-FP-NEXT:    ret
   call void @callee()
   ret void

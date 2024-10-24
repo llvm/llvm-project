@@ -761,11 +761,18 @@ void RISCVFrameLowering::deallocateStack(MachineFunction &MF,
                                          const DebugLoc &DL, uint64_t StackSize,
                                          int64_t CFAOffset) const {
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
 
   Register SPReg = getSPReg(STI);
 
   RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(StackSize),
                 MachineInstr::FrameDestroy, getStackAlign());
+
+  unsigned CFIIndex =
+      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, CFAOffset));
+  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlag(MachineInstr::FrameDestroy);
 }
 
 void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -773,6 +780,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
   Register FPReg = getFPReg(STI);
   Register SPReg = getSPReg(STI);
 
@@ -817,15 +825,25 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                                                 RVFI->getVarArgsSaveSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
 
-  bool RestoreFP = RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-                   !hasReservedCallFrame(MF);
-
+  bool RestoreSPFromFP = RI->hasStackRealignment(MF) ||
+                         MFI.hasVarSizedObjects() || !hasReservedCallFrame(MF);
   if (RVVStackSize) {
-    // If RestoreFP the stack pointer will be restored using the frame pointer
-    // value.
-    if (!RestoreFP)
+    // If RestoreSPFromFP the stack pointer will be restored using the frame
+    // pointer value.
+    if (!RestoreSPFromFP)
       adjustStackForRVV(MF, MBB, LastFrameDestroy, DL, RVVStackSize,
                         MachineInstr::FrameDestroy);
+
+    if (!hasFP(MF)) {
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+          nullptr, RI->getDwarfRegNum(SPReg, true), RealStackSize));
+      BuildMI(MBB, LastFrameDestroy, DL,
+              TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
+
+    emitCalleeSavedRVVEpilogCFI(MBB, LastFrameDestroy);
   }
 
   if (FirstSPAdjustAmount) {
@@ -834,12 +852,21 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
 
-    // If RestoreFP the stack pointer will be restored using the frame pointer
-    // value.
-    if (!RestoreFP)
+    // If RestoreSPFromFP the stack pointer will be restored using the frame
+    // pointer value.
+    if (!RestoreSPFromFP)
       RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg,
                     StackOffset::getFixed(SecondSPAdjustAmount),
                     MachineInstr::FrameDestroy, getStackAlign());
+
+    if (!hasFP(MF)) {
+      unsigned CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::cfiDefCfaOffset(nullptr, FirstSPAdjustAmount));
+      BuildMI(MBB, LastFrameDestroy, DL,
+              TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
   }
 
   // Restore the stack pointer using the value of the frame pointer. Only
@@ -852,12 +879,33 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // normally it's just checking the variable sized object is present or not
   // is enough, but we also don't preserve that at prologue/epilogue when
   // have vector objects in stack.
-  if (RestoreFP) {
+  if (RestoreSPFromFP) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
 
     RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, FPReg,
                   StackOffset::getFixed(-FPOffset), MachineInstr::FrameDestroy,
                   getStackAlign());
+  }
+
+  if (hasFP(MF)) {
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+        nullptr, RI->getDwarfRegNum(SPReg, true), RealStackSize));
+    BuildMI(MBB, LastFrameDestroy, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
+
+  if (getLibCallID(MF, CSI) + 1) {
+    // tail __riscv_restore_[0-12] instruction is considered as a terminator,
+    // therefor it is unnecessary to place any CFI instructions after it. Just
+    // deallocate stack if needed and return.
+    if (StackSize != 0)
+      deallocateStack(MF, MBB, MBBI, DL, StackSize,
+                      RVFI->getLibCallStackSize());
+
+    // Emit epilogue for shadow call stack.
+    emitSCSEpilogue(MF, MBB, MBBI, DL);
+    return;
   }
 
   bool ApplyPop = RVFI->isPushable(MF) && MBBI != MBB.end() &&
@@ -876,6 +924,23 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                       /*stack_adj of cm.pop instr*/ RealStackSize - StackSize);
 
     ++MBBI;
+    // Update CFA offset. After CM_POP SP should be equal to CFA, so CFA offset
+    // should be a zero.
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
+
+  // Recover callee-saved registers.
+  for (const auto &Entry : CSI) {
+    Register Reg = Entry.getReg();
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(
+        nullptr, RI->getDwarfRegNum(Reg, true)));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameDestroy);
   }
 
   // Deallocate stack if we didn't already do it during cm.pop handling and
@@ -1610,6 +1675,28 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
             .addCFIIndex(CFIIndex)
             .setMIFlag(MachineInstr::FrameSetup);
       }
+    }
+  }
+}
+
+void RISCVFrameLowering::emitCalleeSavedRVVEpilogCFI(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI) const {
+  MachineFunction *MF = MBB.getParent();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  const RISCVRegisterInfo *RI = STI.getRegisterInfo();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB.findDebugLoc(MI);
+
+  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
+  for (auto &CS : RVVCSI) {
+    int FI = CS.getFrameIdx();
+    if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+      Register Reg = CS.getReg();
+      unsigned CFIIndex = MF->addFrameInst(MCCFIInstruction::createRestore(
+          nullptr, RI->getDwarfRegNum(Reg, true)));
+      BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlag(MachineInstr::FrameDestroy);
     }
   }
 }

@@ -457,7 +457,11 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo6_xor_multi_use:
@@ -478,7 +482,10 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 ; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %x = xor i64 -1, %a
   %cmp = icmp ult i64 %x, %b
@@ -1117,7 +1124,16 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    .cfi_restore s2
+; RV32-NEXT:    .cfi_restore s3
+; RV32-NEXT:    .cfi_restore s4
+; RV32-NEXT:    .cfi_restore s5
+; RV32-NEXT:    .cfi_restore s6
 ; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: usubo_ult_cmp_dominates_i64:
@@ -1161,7 +1177,14 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV64-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    .cfi_restore s1
+; RV64-NEXT:    .cfi_restore s2
+; RV64-NEXT:    .cfi_restore s3
+; RV64-NEXT:    .cfi_restore s4
 ; RV64-NEXT:    addi sp, sp, 48
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 entry:
   br i1 %cond, label %t, label %f

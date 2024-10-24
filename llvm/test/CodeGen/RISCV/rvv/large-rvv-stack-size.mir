@@ -34,9 +34,13 @@
   ; CHECK-NEXT:    ld a0, 8(sp)
   ; CHECK-NEXT:    call spillslot
   ; CHECK-NEXT:    addi sp, s0, -2032
+  ; CHECK-NEXT:    .cfi_def_cfa sp, 2032
   ; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
+  ; CHECK-NEXT:    .cfi_restore ra
+  ; CHECK-NEXT:    .cfi_restore s0
   ; CHECK-NEXT:    addi sp, sp, 2032
+  ; CHECK-NEXT:    .cfi_def_cfa_offset 0
   ; CHECK-NEXT:    ret
     ret void
   }

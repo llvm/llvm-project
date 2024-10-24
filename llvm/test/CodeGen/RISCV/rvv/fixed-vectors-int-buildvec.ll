@@ -1175,7 +1175,9 @@ define <8 x i64> @v8xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i
 ; RV32-NEXT:    vslide1down.vx v11, v11, t1
 ; RV32-NEXT:    vslide1down.vx v11, v11, t0
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: v8xi64_exact:
@@ -1384,7 +1386,9 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV32-ONLY-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-ONLY-NEXT:    vslidedown.vi v8, v9, 8, v0.t
 ; RV32-ONLY-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-ONLY-NEXT:    .cfi_restore s0
 ; RV32-ONLY-NEXT:    addi sp, sp, 16
+; RV32-ONLY-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-ONLY-NEXT:    ret
 ;
 ; RV32VB-LABEL: buildvec_v16i8_loads_contigous:
@@ -1518,7 +1522,9 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64V-ONLY-NEXT:    vslidedown.vi v8, v9, 8, v0.t
 ; RV64V-ONLY-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64V-ONLY-NEXT:    .cfi_restore s0
 ; RV64V-ONLY-NEXT:    addi sp, sp, 16
+; RV64V-ONLY-NEXT:    .cfi_def_cfa_offset 0
 ; RV64V-ONLY-NEXT:    ret
 ;
 ; RVA22U64-LABEL: buildvec_v16i8_loads_contigous:
@@ -1654,7 +1660,9 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64ZVE32-NEXT:    vslidedown.vi v8, v9, 8, v0.t
 ; RV64ZVE32-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64ZVE32-NEXT:    .cfi_restore s0
 ; RV64ZVE32-NEXT:    addi sp, sp, 16
+; RV64ZVE32-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ZVE32-NEXT:    ret
   %p2 = getelementptr i8, ptr %p, i32 1
   %p3 = getelementptr i8, ptr %p, i32 2
@@ -1755,7 +1763,9 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV32-ONLY-NEXT:    vslide1down.vx v8, v8, t2
 ; RV32-ONLY-NEXT:    vslidedown.vi v8, v9, 8, v0.t
 ; RV32-ONLY-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-ONLY-NEXT:    .cfi_restore s0
 ; RV32-ONLY-NEXT:    addi sp, sp, 16
+; RV32-ONLY-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-ONLY-NEXT:    ret
 ;
 ; RV32VB-LABEL: buildvec_v16i8_loads_gather:
@@ -1889,7 +1899,9 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, t2
 ; RV64V-ONLY-NEXT:    vslidedown.vi v8, v9, 8, v0.t
 ; RV64V-ONLY-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64V-ONLY-NEXT:    .cfi_restore s0
 ; RV64V-ONLY-NEXT:    addi sp, sp, 16
+; RV64V-ONLY-NEXT:    .cfi_def_cfa_offset 0
 ; RV64V-ONLY-NEXT:    ret
 ;
 ; RVA22U64-LABEL: buildvec_v16i8_loads_gather:
@@ -2025,7 +2037,9 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, t2
 ; RV64ZVE32-NEXT:    vslidedown.vi v8, v9, 8, v0.t
 ; RV64ZVE32-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64ZVE32-NEXT:    .cfi_restore s0
 ; RV64ZVE32-NEXT:    addi sp, sp, 16
+; RV64ZVE32-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ZVE32-NEXT:    ret
   %p2 = getelementptr i8, ptr %p, i32 1
   %p3 = getelementptr i8, ptr %p, i32 22

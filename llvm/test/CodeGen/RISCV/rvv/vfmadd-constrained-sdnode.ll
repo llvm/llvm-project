@@ -189,7 +189,9 @@ define <vscale x 16 x bfloat> @vfmadd_vv_nxv16bf16(<vscale x 16 x bfloat> %va, <
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vd = call <vscale x 16 x bfloat> @llvm.experimental.constrained.fma.nxv16bf16(<vscale x 16 x bfloat> %vc, <vscale x 16 x bfloat> %va, <vscale x 16 x bfloat> %vb, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 16 x bfloat> %vd
@@ -220,7 +222,9 @@ define <vscale x 16 x bfloat> @vfmadd_vf_nxv16bf16(<vscale x 16 x bfloat> %va, <
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x bfloat> poison, bfloat %c, i32 0
   %splat = shufflevector <vscale x 16 x bfloat> %head, <vscale x 16 x bfloat> poison, <vscale x 16 x i32> zeroinitializer
@@ -318,7 +322,9 @@ define <vscale x 32 x bfloat> @vfmadd_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vd = call <vscale x 32 x bfloat> @llvm.experimental.constrained.fma.nxv32bf16(<vscale x 32 x bfloat> %vc, <vscale x 32 x bfloat> %vb, <vscale x 32 x bfloat> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 32 x bfloat> %vd
@@ -389,7 +395,9 @@ define <vscale x 32 x bfloat> @vfmadd_vf_nxv32bf16(<vscale x 32 x bfloat> %va, <
 ; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x bfloat> poison, bfloat %c, i32 0
   %splat = shufflevector <vscale x 32 x bfloat> %head, <vscale x 32 x bfloat> poison, <vscale x 32 x i32> zeroinitializer
@@ -629,7 +637,9 @@ define <vscale x 16 x half> @vfmadd_vv_nxv16f16(<vscale x 16 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 2
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFHMIN-NEXT:    ret
   %vd = call <vscale x 16 x half> @llvm.experimental.constrained.fma.nxv16f16(<vscale x 16 x half> %vc, <vscale x 16 x half> %va, <vscale x 16 x half> %vb, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 16 x half> %vd
@@ -666,7 +676,9 @@ define <vscale x 16 x half> @vfmadd_vf_nxv16f16(<vscale x 16 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 2
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 16 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> poison, <vscale x 16 x i32> zeroinitializer
@@ -772,7 +784,9 @@ define <vscale x 32 x half> @vfmadd_vv_nxv32f16(<vscale x 32 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 5
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFHMIN-NEXT:    ret
   %vd = call <vscale x 32 x half> @llvm.experimental.constrained.fma.nxv32f16(<vscale x 32 x half> %vc, <vscale x 32 x half> %vb, <vscale x 32 x half> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 32 x half> %vd
@@ -849,7 +863,9 @@ define <vscale x 32 x half> @vfmadd_vf_nxv32f16(<vscale x 32 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    li a1, 24
 ; ZVFHMIN-NEXT:    mul a0, a0, a1
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 32 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> poison, <vscale x 32 x i32> zeroinitializer

@@ -1699,6 +1699,7 @@ define <vscale x 1 x i64> @vxor_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <vsca
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vxor.vv v8, v8, v9, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vxor_vx_nxv1i64:
@@ -1725,6 +1726,7 @@ define <vscale x 1 x i64> @vxor_vx_nxv1i64_unmasked(<vscale x 1 x i64> %va, i64 
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vxor.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vxor_vx_nxv1i64_unmasked:
@@ -1813,6 +1815,7 @@ define <vscale x 2 x i64> @vxor_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b, <vsca
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vxor.vv v8, v8, v10, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vxor_vx_nxv2i64:
@@ -1839,6 +1842,7 @@ define <vscale x 2 x i64> @vxor_vx_nxv2i64_unmasked(<vscale x 2 x i64> %va, i64 
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vxor.vv v8, v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vxor_vx_nxv2i64_unmasked:
@@ -1927,6 +1931,7 @@ define <vscale x 4 x i64> @vxor_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b, <vsca
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vxor.vv v8, v8, v12, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vxor_vx_nxv4i64:
@@ -1953,6 +1958,7 @@ define <vscale x 4 x i64> @vxor_vx_nxv4i64_unmasked(<vscale x 4 x i64> %va, i64 
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vxor.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vxor_vx_nxv4i64_unmasked:
@@ -2041,6 +2047,7 @@ define <vscale x 8 x i64> @vxor_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <vsca
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vxor.vv v8, v8, v16, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vxor_vx_nxv8i64:
@@ -2067,6 +2074,7 @@ define <vscale x 8 x i64> @vxor_vx_nxv8i64_unmasked(<vscale x 8 x i64> %va, i64 
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vxor.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vxor_vx_nxv8i64_unmasked:

@@ -1581,7 +1581,9 @@ define i64 @vwreduce_add_v64i64(ptr %x) {
 ; RV32-NEXT:    csrr a2, vlenb
 ; RV32-NEXT:    slli a2, a2, 4
 ; RV32-NEXT:    add sp, sp, a2
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwreduce_add_v64i64:
@@ -1625,7 +1627,9 @@ define i64 @vwreduce_add_v64i64(ptr %x) {
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 4
 ; RV64-NEXT:    add sp, sp, a1
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v = load <64 x i32>, ptr %x
   %e = sext <64 x i32> %v to <64 x i64>
@@ -1678,7 +1682,9 @@ define i64 @vwreduce_uadd_v64i64(ptr %x) {
 ; RV32-NEXT:    csrr a2, vlenb
 ; RV32-NEXT:    slli a2, a2, 4
 ; RV32-NEXT:    add sp, sp, a2
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwreduce_uadd_v64i64:
@@ -1722,7 +1728,9 @@ define i64 @vwreduce_uadd_v64i64(ptr %x) {
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 4
 ; RV64-NEXT:    add sp, sp, a1
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v = load <64 x i32>, ptr %x
   %e = zext <64 x i32> %v to <64 x i64>
