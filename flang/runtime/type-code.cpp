@@ -33,6 +33,25 @@ RT_API_ATTRS TypeCode::TypeCode(TypeCategory f, int kind) {
       break;
     }
     break;
+  case TypeCategory::Unsigned:
+    switch (kind) {
+    case 1:
+      raw_ = CFI_type_uint8_t;
+      break;
+    case 2:
+      raw_ = CFI_type_uint16_t;
+      break;
+    case 4:
+      raw_ = CFI_type_uint32_t;
+      break;
+    case 8:
+      raw_ = CFI_type_uint64_t;
+      break;
+    case 16:
+      raw_ = CFI_type_uint128_t;
+      break;
+    }
+    break;
   case TypeCategory::Real:
     switch (kind) {
     case 2:
@@ -203,6 +222,16 @@ TypeCode::GetCategoryAndKind() const {
     return std::make_pair(TypeCategory::Character, 2);
   case CFI_type_char32_t:
     return std::make_pair(TypeCategory::Character, 4);
+  case CFI_type_uint8_t:
+    return std::make_pair(TypeCategory::Unsigned, 1);
+  case CFI_type_uint16_t:
+    return std::make_pair(TypeCategory::Unsigned, 2);
+  case CFI_type_uint32_t:
+    return std::make_pair(TypeCategory::Unsigned, 4);
+  case CFI_type_uint64_t:
+    return std::make_pair(TypeCategory::Unsigned, 8);
+  case CFI_type_uint128_t:
+    return std::make_pair(TypeCategory::Unsigned, 16);
   default:
     return Fortran::common::nullopt;
   }

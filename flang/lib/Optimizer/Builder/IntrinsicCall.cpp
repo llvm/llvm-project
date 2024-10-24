@@ -604,6 +604,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"range", asAddr, handleDynamicOptional},
        {"radix", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"selected_unsigned_kind",
+     &I::genSelectedIntKind, // same results as selected_int_kind
+     {{{"scalar", asAddr}}},
+     /*isElemental=*/false},
     {"set_exponent", &I::genSetExponent},
     {"shape",
      &I::genShape,

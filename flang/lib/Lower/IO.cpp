@@ -661,21 +661,23 @@ static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(OutputDescriptor)>(loc, builder);
   if (auto ty = mlir::dyn_cast<mlir::IntegerType>(type)) {
-    switch (ty.getWidth()) {
-    case 1:
-      return getIORuntimeFunc<mkIOKey(OutputLogical)>(loc, builder);
-    case 8:
-      return getIORuntimeFunc<mkIOKey(OutputInteger8)>(loc, builder);
-    case 16:
-      return getIORuntimeFunc<mkIOKey(OutputInteger16)>(loc, builder);
-    case 32:
-      return getIORuntimeFunc<mkIOKey(OutputInteger32)>(loc, builder);
-    case 64:
-      return getIORuntimeFunc<mkIOKey(OutputInteger64)>(loc, builder);
-    case 128:
-      return getIORuntimeFunc<mkIOKey(OutputInteger128)>(loc, builder);
+    if (!ty.isUnsigned()) {
+      switch (ty.getWidth()) {
+      case 1:
+        return getIORuntimeFunc<mkIOKey(OutputLogical)>(loc, builder);
+      case 8:
+        return getIORuntimeFunc<mkIOKey(OutputInteger8)>(loc, builder);
+      case 16:
+        return getIORuntimeFunc<mkIOKey(OutputInteger16)>(loc, builder);
+      case 32:
+        return getIORuntimeFunc<mkIOKey(OutputInteger32)>(loc, builder);
+      case 64:
+        return getIORuntimeFunc<mkIOKey(OutputInteger64)>(loc, builder);
+      case 128:
+        return getIORuntimeFunc<mkIOKey(OutputInteger128)>(loc, builder);
+      }
+      llvm_unreachable("unknown OutputInteger kind");
     }
-    llvm_unreachable("unknown OutputInteger kind");
   }
   if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
     if (auto width = ty.getWidth(); width == 32)

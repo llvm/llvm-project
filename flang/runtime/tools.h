@@ -303,7 +303,7 @@ inline RT_API_ATTRS RESULT ApplyIntegerKind(
     return FUNC<16>{}(std::forward<A>(x)...);
 #endif
   default:
-    terminator.Crash("not yet implemented: INTEGER(KIND=%d)", kind);
+    terminator.Crash("not yet implemented: INTEGER/UNSIGNED(KIND=%d)", kind);
   }
 }
 

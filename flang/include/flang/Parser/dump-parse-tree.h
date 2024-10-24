@@ -748,6 +748,7 @@ public:
   NODE(Union, EndUnionStmt)
   NODE(Union, UnionStmt)
   NODE(parser, UnlockStmt)
+  NODE(parser, UnsignedLiteralConstant)
   NODE(parser, UnsignedTypeSpec)
   NODE(parser, UseStmt)
   NODE_ENUM(UseStmt, ModuleNature)
@@ -870,7 +871,8 @@ protected:
         asFortran_->call(ss, *x.typedCall);
       }
     } else if constexpr (std::is_same_v<T, IntLiteralConstant> ||
-        std::is_same_v<T, SignedIntLiteralConstant>) {
+        std::is_same_v<T, SignedIntLiteralConstant> ||
+        std::is_same_v<T, UnsignedLiteralConstant>) {
       ss << std::get<CharBlock>(x.t);
     } else if constexpr (std::is_same_v<T, RealLiteralConstant::Real>) {
       ss << x.source;

@@ -1086,6 +1086,7 @@ template <typename T>
 Expr<T> FoldMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef, Ordering order) {
   static_assert(T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
   auto &args{funcRef.arguments()};
@@ -1191,6 +1192,10 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
 template <int KIND>
 Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     FoldingContext &context, FunctionRef<Type<TypeCategory::Logical, KIND>> &&);
+template <int KIND>
+Expr<Type<TypeCategory::Unsigned, KIND>> FoldIntrinsicFunction(
+    FoldingContext &context,
+    FunctionRef<Type<TypeCategory::Unsigned, KIND>> &&);
 
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
@@ -1869,6 +1874,8 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
             "INTEGER(%d) negation overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{std::move(negated.value)}};
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      return Expr<T>{Constant<T>{std::move(value->Negate().value)}};
     } else {
       // REAL & COMPLEX negation: no exceptions possible
       return Expr<T>{Constant<T>{value->Negate()}};
@@ -1911,6 +1918,9 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
             "INTEGER(%d) addition overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{sum.value}};
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      return Expr<T>{
+          Constant<T>{folded->first.AddUnsigned(folded->second).value}};
     } else {
       auto sum{folded->first.Add(
           folded->second, context.targetCharacteristics().roundingMode())};
@@ -1939,6 +1949,9 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
             "INTEGER(%d) subtraction overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{difference.value}};
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      return Expr<T>{
+          Constant<T>{folded->first.SubtractSigned(folded->second).value}};
     } else {
       auto difference{folded->first.Subtract(
           folded->second, context.targetCharacteristics().roundingMode())};
@@ -1967,6 +1980,9 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
             "INTEGER(%d) multiplication overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{product.lower}};
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      return Expr<T>{
+          Constant<T>{folded->first.MultiplyUnsigned(folded->second).lower}};
     } else {
       auto product{folded->first.Multiply(
           folded->second, context.targetCharacteristics().roundingMode())};
@@ -2019,6 +2035,17 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
               common::UsageWarning::FoldingException)) {
         context.messages().Say(common::UsageWarning::FoldingException,
             "INTEGER(%d) division overflowed"_warn_en_US, T::kind);
+      }
+      return Expr<T>{Constant<T>{quotAndRem.quotient}};
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      auto quotAndRem{folded->first.DivideUnsigned(folded->second)};
+      if (quotAndRem.divisionByZero) {
+        if (context.languageFeatures().ShouldWarn(
+                common::UsageWarning::FoldingException)) {
+          context.messages().Say(common::UsageWarning::FoldingException,
+              "UNSIGNED(%d) division by zero"_warn_en_US, T::kind);
+        }
+        return Expr<T>{std::move(x)};
       }
       return Expr<T>{Constant<T>{quotAndRem.quotient}};
     } else {
@@ -2121,6 +2148,10 @@ Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
       if (folded->first.CompareSigned(folded->second) == x.ordering) {
         return Expr<T>{Constant<T>{folded->first}};
       }
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      if (folded->first.CompareUnsigned(folded->second) == x.ordering) {
+        return Expr<T>{Constant<T>{folded->first}};
+      }
     } else if constexpr (T::category == TypeCategory::Real) {
       if (folded->first.IsNotANumber() ||
           (folded->first.Compare(folded->second) == Relation::Less) ==
@@ -2166,6 +2197,8 @@ Expr<Type<TypeCategory::Real, KIND>> ToReal(
             context.messages().Say(common::UsageWarning::FoldingValueChecks,
                 "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_warn_en_US);
           }
+        } else if constexpr (std::is_same_v<From, Expr<SomeUnsigned>>) {
+          common::die("ToReal: unsigned");
         } else if constexpr (IsNumericCategoryExpr<From>()) {
           result = Fold(context, ConvertToType<Result>(std::move(x)));
         } else {

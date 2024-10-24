@@ -162,15 +162,25 @@ mlirTypeToCategoryKind(mlir::Location loc, mlir::Type type) {
     if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
       return {Fortran::common::TypeCategory::Complex, *kind};
   } else if (type.isInteger(8))
-    return {Fortran::common::TypeCategory::Integer, 1};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            1};
   else if (type.isInteger(16))
-    return {Fortran::common::TypeCategory::Integer, 2};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            2};
   else if (type.isInteger(32))
-    return {Fortran::common::TypeCategory::Integer, 4};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            4};
   else if (type.isInteger(64))
-    return {Fortran::common::TypeCategory::Integer, 8};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            8};
   else if (type.isInteger(128))
-    return {Fortran::common::TypeCategory::Integer, 16};
+    return {type.isUnsignedInteger() ? Fortran::common::TypeCategory::Unsigned
+                                     : Fortran::common::TypeCategory::Integer,
+            16};
   else if (auto logicalType = mlir::dyn_cast<fir::LogicalType>(type))
     return {Fortran::common::TypeCategory::Logical, logicalType.getFKind()};
   else if (auto charType = mlir::dyn_cast<fir::CharacterType>(type))

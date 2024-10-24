@@ -143,7 +143,9 @@ Tristate IsDefinedAssignment(
     return Tristate::Yes;
   } else if (lhsCat != TypeCategory::Derived) {
     return ToTristate(lhsCat != rhsCat &&
-        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat)));
+        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat) ||
+            lhsCat == TypeCategory::Unsigned ||
+            rhsCat == TypeCategory::Unsigned));
   } else if (MightBeSameDerivedType(lhsType, rhsType)) {
     return Tristate::Maybe; // TYPE(t) = TYPE(t) can be defined or intrinsic
   } else {

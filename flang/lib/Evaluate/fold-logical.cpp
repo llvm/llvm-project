@@ -44,6 +44,7 @@ static Expr<T> FoldAllAnyParity(FoldingContext &context, FunctionRef<T> &&ref,
 // OUT_OF_RANGE(x,mold[,round]) references are entirely rewritten here into
 // expressions, which are then folded into constants when 'x' and 'round'
 // are constant.  It is guaranteed that 'x' is evaluated at most once.
+// TODO: unsigned
 
 template <int X_RKIND, int MOLD_IKIND>
 Expr<SomeReal> RealToIntBoundHelper(bool round, bool negate) {
@@ -912,6 +913,9 @@ Expr<LogicalResult> FoldOperation(
     if constexpr (T::category == TypeCategory::Integer) {
       result =
           Satisfies(relation.opr, folded->first.CompareSigned(folded->second));
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      result = Satisfies(
+          relation.opr, folded->first.CompareUnsigned(folded->second));
     } else if constexpr (T::category == TypeCategory::Real) {
       result = Satisfies(relation.opr, folded->first.Compare(folded->second));
     } else if constexpr (T::category == TypeCategory::Complex) {

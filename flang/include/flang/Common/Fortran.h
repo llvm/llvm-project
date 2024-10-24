@@ -21,12 +21,15 @@
 namespace Fortran::common {
 class LanguageFeatureControl;
 
-// Fortran has five kinds of intrinsic data types, plus the derived types.
-ENUM_CLASS(TypeCategory, Integer, Real, Complex, Character, Logical, Derived)
+// Fortran has five kinds of standard intrinsic data types, the Unsigned
+// extension, and derived types.
+ENUM_CLASS(
+    TypeCategory, Integer, Unsigned, Real, Complex, Character, Logical, Derived)
 ENUM_CLASS(VectorElementCategory, Integer, Unsigned, Real)
 
 constexpr bool IsNumericTypeCategory(TypeCategory category) {
-  return category == TypeCategory::Integer || category == TypeCategory::Real ||
+  return category == TypeCategory::Integer ||
+      category == TypeCategory::Unsigned || category == TypeCategory::Real ||
       category == TypeCategory::Complex;
 }
 

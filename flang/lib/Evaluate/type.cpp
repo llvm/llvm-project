@@ -181,6 +181,7 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     std::optional<std::int64_t> charLength) const {
   switch (category_) {
   case TypeCategory::Integer:
+  case TypeCategory::Unsigned:
   case TypeCategory::Real:
   case TypeCategory::Complex:
   case TypeCategory::Logical:
@@ -678,6 +679,14 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
     case TypeCategory::Real:
     case TypeCategory::Complex:
       return that;
+    default:
+      CRASH_NO_CASE;
+    }
+    break;
+  case TypeCategory::Unsigned:
+    switch (that.category_) {
+    case TypeCategory::Unsigned:
+      return DynamicType{TypeCategory::Unsigned, std::max(kind(), that.kind())};
     default:
       CRASH_NO_CASE;
     }
