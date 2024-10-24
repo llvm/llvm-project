@@ -302,6 +302,10 @@ Modified Compiler Flags
   the ``promoted`` algorithm for complex division when possible rather than the
   less basic (limited range) algorithm.
 
+- The ``-Wnontrivial-memaccess`` warning has been updated to also warn about
+  passing non-trivially-copyable parameter to ``memcpy``, ``memset`` and similar
+  functions for which it is a documented undefined behavior.
+
 Removed Compiler Flags
 -------------------------
 
