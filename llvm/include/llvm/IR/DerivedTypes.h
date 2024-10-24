@@ -787,6 +787,9 @@ public:
     HasZeroInit = 1U << 0,
     /// This type may be used as the value type of a global variable.
     CanBeGlobal = 1U << 1,
+    /// This type may be allocated on the stack, either as the allocated type
+    /// of an alloca instruction or as a byval function parameter.
+    CanBeLocal = 1U << 2,
   };
 
   /// Returns true if the target extension type contains the given property.

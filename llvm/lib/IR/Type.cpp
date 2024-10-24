@@ -857,15 +857,18 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
   if (Name == "spirv.Image")
-    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
-                          TargetExtType::CanBeGlobal);
+                          TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
-                          TargetExtType::HasZeroInit);
+                          TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeLocal);
 
   // RISC-V vector tuple type. The layout is represented as the type that needs
   // the same number of vector registers(VREGS) as this tuple type, represented
@@ -877,7 +880,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
                  RISCV::RVVBitsPerBlock / 8) *
         Ty->getIntParameter(0);
     return TargetTypeInfo(
-        ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
+        ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts),
+        TargetExtType::CanBeLocal);
   }
 
   // DirectX resources

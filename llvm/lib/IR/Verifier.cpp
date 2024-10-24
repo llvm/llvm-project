@@ -2032,6 +2032,12 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getByValType()->isSized(&Visited),
             "Attribute 'byval' does not support unsized types!", V);
+      // Check if it's a target extension type that disallows being used on the
+      // stack.
+      if (auto *TTy = dyn_cast<TargetExtType>(Attrs.getByValType())) {
+        Check(TTy->hasProperty(TargetExtType::CanBeLocal),
+              "'byval' argument has illegal target extension type", V);
+      }
       Check(DL.getTypeAllocSize(Attrs.getByValType()).getKnownMinValue() <
                 (1ULL << 32),
             "huge 'byval' arguments are unsupported", V);
@@ -4331,6 +4337,12 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
   SmallPtrSet<Type*, 4> Visited;
   Check(AI.getAllocatedType()->isSized(&Visited),
         "Cannot allocate unsized type", &AI);
+  // Check if it's a target extension type that disallows being used on the
+  // stack.
+  if (auto *TTy = dyn_cast<TargetExtType>(AI.getAllocatedType())) {
+    Check(TTy->hasProperty(TargetExtType::CanBeLocal),
+          "Alloca has illegal target extension type", &AI);
+  }
   Check(AI.getArraySize()->getType()->isIntegerTy(),
         "Alloca array size must have integer type", &AI);
   if (MaybeAlign A = AI.getAlign()) {
