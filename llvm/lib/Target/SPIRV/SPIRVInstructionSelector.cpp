@@ -1935,7 +1935,8 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
           .addDef(BallotReg)
           .addUse(GR.getSPIRVTypeID(BallotType))
           .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
-          .addUse(I.getOperand(2).getReg());
+          .addUse(I.getOperand(2).getReg())
+          .constrainAllUses(TII, TRI, RBI);
 
   Result |=
       BuildMI(BB, I, I.getDebugLoc(),
@@ -1943,7 +1944,7 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
           .addDef(ResVReg)
           .addUse(GR.getSPIRVTypeID(ResType))
           .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
-          .addImm(0)
+          .addImm(SPIRV::GroupOperation::Reduce)
           .addUse(BallotReg)
           .constrainAllUses(TII, TRI, RBI);
 
