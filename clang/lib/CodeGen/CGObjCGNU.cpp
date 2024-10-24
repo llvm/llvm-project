@@ -69,7 +69,7 @@ public:
       FTy = llvm::FunctionType::get(RetTy, ArgTys, false);
     }
     else {
-      FTy = llvm::FunctionType::get(RetTy, std::nullopt, false);
+      FTy = llvm::FunctionType::get(RetTy, {}, false);
     }
   }
 
