@@ -974,7 +974,8 @@ public:
        vfs::FileSystem &FS, ArrayRef<StringRef> Arches = {},
        StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       bool CheckBinaryIDs = false,
+       bool IgnoreEmptyHashMismatches = false);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
