@@ -1,4 +1,4 @@
-/*===-------- movrs_avx10_2_512intrin.h - AVX512MOVRS intrinsics -----------===
+/*===----- movrs_avx10_2_512intrin.h - AVX10.2-512-MOVRS intrinsics --------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
