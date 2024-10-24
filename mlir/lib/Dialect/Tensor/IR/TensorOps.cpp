@@ -433,8 +433,7 @@ struct ChainedTensorCast : public OpRewritePattern<CastOp> {
 
     // We can remove the intermediate cast if joining all three produces the
     // same result as just joining the source and result shapes.
-    auto firstJoin =
-        joinShapes(sourceType, intermediateType);
+    auto firstJoin = joinShapes(sourceType, intermediateType);
 
     // The join might not exist if the cast sequence would fail at runtime.
     if (!firstJoin)
