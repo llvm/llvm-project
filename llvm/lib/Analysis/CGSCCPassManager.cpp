@@ -578,6 +578,17 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
   return PA;
 }
 
+void CGSCCToFunctionPassAdaptor::eraseIf(function_ref<bool(StringRef)> Pred) {
+  StringRef PassName = Pass->name();
+  if (PassName.contains("PassManager") || PassName.ends_with("PassAdaptor")) {
+    Pass->eraseIf(Pred);
+    if (Pass->isEmpty())
+      Pass.reset();
+  } else if (Pred(PassName)) {
+    Pass.reset();
+  }
+}
+
 bool CGSCCAnalysisManagerModuleProxy::Result::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &Inv) {
@@ -751,6 +762,18 @@ bool FunctionAnalysisManagerCGSCCProxy::Result::invalidate(
 
   // Return false to indicate that this result is still a valid proxy.
   return false;
+}
+
+void ModuleToPostOrderCGSCCPassAdaptor::eraseIf(
+    function_ref<bool(StringRef)> Pred) {
+  StringRef PassName = Pass->name();
+  if (PassName.contains("PassManager") || PassName.ends_with("PassAdaptor")) {
+    Pass->eraseIf(Pred);
+    if (Pass->isEmpty())
+      Pass.reset();
+  } else if (Pred(PassName)) {
+    Pass.reset();
+  }
 }
 
 } // end namespace llvm

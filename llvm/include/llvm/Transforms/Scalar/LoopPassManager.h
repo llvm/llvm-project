@@ -134,6 +134,10 @@ public:
 
   static bool isRequired() { return true; }
 
+  /// Erase all passes that satisfy the predicate \p Pred.
+  /// For internal use only!
+  void eraseIf(function_ref<bool(StringRef)> Pred);
+
   size_t getNumLoopPasses() const { return LoopPasses.size(); }
   size_t getNumLoopNestPasses() const { return LoopNestPasses.size(); }
 
@@ -424,6 +428,10 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
+
+  bool isEmpty() const { return Pass == nullptr; }
+
+  void eraseIf(function_ref<bool(StringRef)> Pred);
 
   bool isLoopNestMode() const { return LoopNestMode; }
 

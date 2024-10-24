@@ -105,6 +105,18 @@ bool MachineFunctionAnalysisManagerFunctionProxy::Result::invalidate(
   return false;
 }
 
+void FunctionToMachineFunctionPassAdaptor::eraseIf(
+    function_ref<bool(StringRef)> Pred) {
+  StringRef PassName = Pass->name();
+  if (PassName.contains("PassManager") || PassName.ends_with("PassAdaptor")) {
+    Pass->eraseIf(Pred);
+    if (Pass->isEmpty())
+      Pass.reset();
+  } else if (Pred(PassName)) {
+    Pass.reset();
+  }
+}
+
 PreservedAnalyses
 FunctionToMachineFunctionPassAdaptor::run(Function &F,
                                           FunctionAnalysisManager &FAM) {

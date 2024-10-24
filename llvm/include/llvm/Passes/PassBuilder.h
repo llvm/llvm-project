@@ -15,14 +15,17 @@
 #ifndef LLVM_PASSES_PASSBUILDER_H
 #define LLVM_PASSES_PASSBUILDER_H
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/ModuleInliner.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -34,6 +37,7 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
+class MCContext;
 template <typename T> class IntrusiveRefCntPtr;
 namespace vfs {
 class FileSystem;
@@ -106,6 +110,7 @@ class PassBuilder {
   TargetMachine *TM;
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
+  CGPassBuilderOption CGPBO;
   PassInstrumentationCallbacks *PIC;
 
 public:
@@ -305,6 +310,24 @@ public:
   /// This also adds target-specific alias analyses registered via
   /// TargetMachine::registerDefaultAliasAnalyses().
   AAManager buildDefaultAAPipeline();
+
+  /// Build CodeGen pass pipeline.
+  ///
+  /// {{@
+  Expected<ModulePassManager>
+  buildDefaultCodeGenPipeline(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                              CodeGenFileType FileType, MCContext &Ctx);
+  Error buildDefaultCodeGenPipeline(ModulePassManager &MPM,
+                                    raw_pwrite_stream &Out,
+                                    raw_pwrite_stream *DwoOut,
+                                    CodeGenFileType FileType, MCContext &Ctx);
+  Error addRegAllocPass(MachineFunctionPassManager &MFPM,
+                        StringRef Filter = "all");
+  // TODO: Add method to build MC emission pipeline.
+  template <typename... PassTs> void disablePass() {
+    (DisabledPasses.insert(PassTs::name()), ...);
+  }
+  /// @}}
 
   /// Parse a textual pass pipeline description into a \c
   /// ModulePassManager.
@@ -518,6 +541,133 @@ public:
     FullLinkTimeOptimizationLastEPCallbacks.push_back(C);
   }
 
+  /// Register target specific callbacks to extend codegen pipeline.
+  /// {{@
+
+  /// If target want its own pipeline, use this callback.
+  void setCustomCodeGenPipelineBuilderCallback(
+      const std::function<Error(ModulePassManager &, raw_pwrite_stream &,
+                                raw_pwrite_stream *, CodeGenFileType,
+                                MCContext &)>
+          C) {
+    CustomCodeGenPipelineBuilderCallback = C;
+  }
+
+  void registerCodeGenIREarlyEPCallback(
+      const std::function<void(ModulePassManager &)> C) {
+    CodeGenIREarlyEPCallbacks.push_back(C);
+  }
+
+  void registerGCLoweringEPCallback(
+      const std::function<void(FunctionPassManager &)> C) {
+    GCLoweringEPCallbacks.push_back(C);
+  }
+
+  void registerISelPrepareEPCallback(
+      const std::function<void(ModulePassManager &)> &C) {
+    ISelPrepareEPCallbacks.push_back(C);
+  }
+
+  void registerMachineSSAOptimizationEarlyEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    MachineSSAOptimizationEarlyEPCallbacks.push_back(C);
+  }
+
+  void registerILPOptsEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    ILPOptsEPCallbacks.push_back(C);
+  }
+
+  void registerMachineSSAOptimizationLastEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    MachineSSAOptimizationLastEPCallbacks.push_back(C);
+  }
+
+  void registerPreRegAllocEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PreRegAllocEPCallbacks.push_back(C);
+  }
+
+  void registerPostRegAllocEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PostRegAllocEPCallbacks.push_back(C);
+  }
+
+  void registerPreRegBankSelectEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PreRegBankSelectEPCallbacks.push_back(C);
+  }
+
+  void registerPreGlobalInstructionSelectEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PreGlobalInstructionSelectEPCallbacks.push_back(C);
+  }
+
+  void registerPostGlobalInstructionSelectEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PostGlobalInstructionSelectEPCallbacks.push_back(C);
+  }
+
+  void registerMachineLateOptimizationEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    MachineLateOptimizationEPCallbacks.push_back(C);
+  }
+
+  void registerPreSched2EPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PreSched2EPCallbacks.push_back(C);
+  }
+
+  void registerPostRewriteEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PostRewriteEPCallbacks.push_back(C);
+  }
+
+  void registerPreEmitEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PreEmitEPCallbacks.push_back(C);
+  }
+
+  void registerPostBBSectionsEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    PostBBSectionsEPCallbacks.push_back(C);
+  }
+
+  void registerMIEmitEPCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    MIEmitEPCallbacks.push_back(C);
+  }
+
+  void setAddInstSelectorCallback(
+      const std::function<void(MachineFunctionPassManager &)> &C) {
+    AddInstSelectorCallback = C;
+  }
+
+  void setCodeGenPreparePassesCallback(
+      const std::function<void(ModulePassManager &)> C) {
+    AddCodeGenPreparePassesCallback = C;
+  }
+
+  void setRegAllocFastCallback(
+      const std::function<Error(MachineFunctionPassManager &)> &C) {
+    AddRegAllocFastCallback = C;
+  }
+
+  void setRegAllocOptimizedCallback(
+      const std::function<Error(MachineFunctionPassManager &)> &C) {
+    AddRegAllocOptimizedCallback = C;
+  }
+  ///@}}
+
+  /// Building block callbacks for codegen pipeline.
+  void addDefaultCodeGenPreparePasses(ModulePassManager &MPM);
+  Error addDefaultRegAllocFastPasses(MachineFunctionPassManager &MFPM);
+  Error addDefaultRegAllocOptimizedPasses(MachineFunctionPassManager &MFPM);
+
+  // New pass manager migration methods, don't use them
+  // outside llvm!
+  CGPassBuilderOption &getCGPBO() { return CGPBO; }
+
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -639,6 +789,28 @@ public:
   void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
                                                     OptimizationLevel Level);
 
+  void invokeCodeGenIREarlyEPCallbacks(ModulePassManager &MPM);
+  void invokeGCLoweringEPCallbacks(FunctionPassManager &FPM);
+  void invokeISelPrepareEPCallbacks(ModulePassManager &MPM);
+  void invokeMachineSSAOptimizationEarlyEPCallbacks(
+      MachineFunctionPassManager &MFPM);
+  void
+  invokeMachineSSAOptimizationLastEPCallbacks(MachineFunctionPassManager &MFPM);
+  void invokePreRegAllocEPCallbacks(MachineFunctionPassManager &MFPM);
+  void invokePostRegAllocEPCallbacks(MachineFunctionPassManager &MFPM);
+  void invokePreRegBankSelectEPCallbacks(MachineFunctionPassManager &MFPM);
+  void
+  invokePreGlobalInstructionSelectEPCallbacks(MachineFunctionPassManager &MFPM);
+  void invokePostGlobalInstructionSelectEPCallbacks(
+      MachineFunctionPassManager &MFPM);
+  void invokeILPOptsEPCallbacks(MachineFunctionPassManager &MFPM);
+  void
+  invokeMachineLateOptimizationEPCallbacks(MachineFunctionPassManager &MFPM);
+  void invokePreEmitEPCallbacks(MachineFunctionPassManager &MFPM);
+  void invokePostBBSectionsEPCallbacks(MachineFunctionPassManager &MFPM);
+  void invokeMIEmitEPCallbacks(MachineFunctionPassManager &MFPM);
+  void invokePreSched2EPCallbacks(MachineFunctionPassManager &MFPM);
+
   static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
     if (!Name.consume_front(PassName))
       return false;
@@ -703,6 +875,21 @@ private:
   void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
                        bool IsFullLTO);
 
+  Error addExceptionHandlingPasses(FunctionPassManager &FPM);
+
+  Error addInstructionSelectorPasses(MachineFunctionPassManager &MFPM);
+
+  void addMachineSSAOptimizationPasses(MachineFunctionPassManager &MFPM);
+
+  Error addMachinePasses(ModulePassManager &MPM, FunctionPassManager &FPM,
+                         MachineFunctionPassManager &MFPM);
+
+  Error addRegisterAllocatorPasses(MachineFunctionPassManager &MFPM);
+
+  Error parseRegAllocOption(StringRef Text);
+
+  bool isOptimizedRegAlloc() const;
+
   static std::optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
@@ -764,6 +951,55 @@ private:
       PipelineStartEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineEarlySimplificationEPCallbacks;
+
+  // CodeGen extension point callbacks
+  std::function<Error(ModulePassManager &, raw_pwrite_stream &,
+                      raw_pwrite_stream *, CodeGenFileType, MCContext &)>
+      CustomCodeGenPipelineBuilderCallback;
+
+  SmallVector<std::function<void(ModulePassManager &)>, 2>
+      CodeGenIREarlyEPCallbacks;
+  SmallVector<std::function<void(FunctionPassManager &)>, 2>
+      GCLoweringEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &)>, 2>
+      ISelPrepareEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      MachineSSAOptimizationEarlyEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      MachineSSAOptimizationLastEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PreRegAllocEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PostRegAllocEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PreRegBankSelectEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PreGlobalInstructionSelectEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PostGlobalInstructionSelectEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      ILPOptsEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      MachineLateOptimizationEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PreSched2EPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PostRewriteEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PreEmitEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      PostBBSectionsEPCallbacks;
+  SmallVector<std::function<void(MachineFunctionPassManager &)>, 2>
+      MIEmitEPCallbacks;
+
+  std::function<void(ModulePassManager &)> AddCodeGenPreparePassesCallback;
+  std::function<void(MachineFunctionPassManager &)> AddInstSelectorCallback;
+  std::function<Error(MachineFunctionPassManager &)> AddRegAllocFastCallback;
+  std::function<Error(MachineFunctionPassManager &)>
+      AddRegAllocOptimizedCallback;
+  StringSet<> DisabledPasses;
+  StringMap<MachineFunctionPassManager> RegAllocPasses;
+  // TODO: Add methods in LLVMTargetMachine so we can get rid of it.
 
   SmallVector<std::function<void(ModuleAnalysisManager &)>, 2>
       ModuleAnalysisRegistrationCallbacks;

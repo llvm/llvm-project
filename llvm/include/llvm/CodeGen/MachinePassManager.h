@@ -207,6 +207,10 @@ public:
 
   static bool isRequired() { return true; }
 
+  bool isEmpty() const { return Pass == nullptr; }
+
+  void eraseIf(function_ref<bool(StringRef)> Pred);
+
 private:
   std::unique_ptr<PassConceptT> Pass;
 };
