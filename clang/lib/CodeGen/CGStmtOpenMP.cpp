@@ -2137,7 +2137,7 @@ void CodeGenFunction::EmitOMPCanonicalLoop(const OMPCanonicalLoop *S) {
 
   llvm::Expected<llvm::CanonicalLoopInfo *> Result =
       OMPBuilder.createCanonicalLoop(Builder, BodyGen, DistVal);
-  assert(Result && "unexpected error creating parallel");
+  assert(Result && "unexpected error creating canonical loop");
   llvm::CanonicalLoopInfo *CL = *Result;
 
   // Finish up the loop.
