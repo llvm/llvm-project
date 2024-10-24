@@ -1823,9 +1823,61 @@ extern "C" void *__libunwind_cet_get_jump_target() {
 #endif
 
 class _LIBUNWIND_HIDDEN Registers_arm64 {
+protected:
+  /// The program counter is used effectively as a return address
+  /// when the context is restored therefore protect it with PAC.
+  /// The base address of the context is used with the A key for
+  /// authentication and signing. Return address authentication is
+  /// still managed according to the unwind info.
+  inline uint64_t getAuthSalt() const {
+    return reinterpret_cast<uint64_t>(this);
+  }
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  // Authenticate the given pointer and return with the raw value
+  // if the authentication is succeeded.
+  inline uint64_t auth(uint64_t ptr, uint64_t salt) const {
+    register uint64_t x17 __asm("x17") = ptr;
+    register uint64_t x16 __asm("x16") = salt;
+    asm volatile ("hint  0xc" // autia1716
+                  : "+r"(x17)
+                  : "r"(x16)
+                  :);
+
+    uint64_t checkValue = ptr;
+    // Support for machines without FPAC.
+    // Strip the upper bits with `XPACLRI` and compare with the
+    // authenticated value.
+    asm volatile ("mov   x30, %[checkValue]     \r\n" \
+                  "hint  0x7                    \r\n" \
+                  "mov   %[checkValue], x30     \r\n" \
+        : [checkValue] "+r"(checkValue)
+        :
+        : "x30");
+    if (x17 != checkValue)
+      _LIBUNWIND_ABORT("IP PAC authentication failure");
+    return x17;
+  }
+
+  // Sign the PC with the A-KEY and the current salt.
+  inline void updatePC(uint64_t value) {
+    register uint64_t x17 __asm("x17") = value;
+    register uint64_t x16 __asm("x16") = getAuthSalt();
+    asm volatile("hint 0x8" : "+r"(x17) : "r"(x16)); // pacia1716
+    _registers.__pc = x17;
+  }
+#else //! defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  // Remote unwinding is not supported by this protection.
+  inline uint64_t auth(uint64_t ptr, uint64_t salt) const { return ptr; }
+  inline void updatePC(uint64_t value) { _registers.__pc = value; }
+#endif
+
 public:
   Registers_arm64();
   Registers_arm64(const void *registers);
+  Registers_arm64(const Registers_arm64 &other);
+  Registers_arm64(const Registers_arm64 &&other) = delete;
+  Registers_arm64 &operator=(const Registers_arm64 &other);
+  Registers_arm64 &operator=(Registers_arm64 &&other) = delete;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -1845,8 +1897,14 @@ public:
 
   uint64_t  getSP() const         { return _registers.__sp; }
   void      setSP(uint64_t value) { _registers.__sp = value; }
-  uint64_t  getIP() const         { return _registers.__pc; }
-  void      setIP(uint64_t value) { _registers.__pc = value; }
+  uint64_t getIP() const { return auth(_registers.__pc, getAuthSalt()); }
+  void setIP(uint64_t value) {
+    // First authenticate the current value of the IP to ensure the context
+    // is still valid. This also ensure the setIP can't be used for signing
+    // arbitrary values.
+    auth(_registers.__pc, getAuthSalt());
+    updatePC(value);
+  }
   uint64_t  getFP() const         { return _registers.__fp; }
   void      setFP(uint64_t value) { _registers.__fp = value; }
 
@@ -1862,8 +1920,8 @@ private:
 
   GPRs    _registers;
   double  _vectorHalfRegisters[32];
-  // Currently only the lower double in 128-bit vectore registers
-  // is perserved during unwinding.  We could define new register
+  // Currently only the lower double in 128-bit vector registers
+  // is preserved during unwinding.  We could define new register
   // numbers (> 96) which mean whole vector registers, then this
   // struct would need to change to contain whole vector registers.
 };
@@ -1874,6 +1932,8 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   memcpy(&_registers, registers, sizeof(_registers));
   static_assert(sizeof(GPRs) == 0x110,
                 "expected VFP registers to be at offset 272");
+  // getcontext signs the PC with the base address of the context.
+  updatePC(auth(_registers.__pc, reinterpret_cast<uint64_t>(registers)));
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
@@ -1882,6 +1942,25 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
 inline Registers_arm64::Registers_arm64() {
   memset(&_registers, 0, sizeof(_registers));
   memset(&_vectorHalfRegisters, 0, sizeof(_vectorHalfRegisters));
+  // We don't know the PC but let's sign to indicate we have a valid
+  // register set.
+  updatePC(0);
+}
+
+inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
+  memcpy(&_registers, &other._registers, sizeof(_registers));
+  memcpy(&_vectorHalfRegisters, &other._vectorHalfRegisters,
+         sizeof(_vectorHalfRegisters));
+  updatePC(other.getIP());
+}
+
+inline Registers_arm64 &
+Registers_arm64::operator=(const Registers_arm64 &other) {
+  memcpy(&_registers, &other._registers, sizeof(_registers));
+  memcpy(&_vectorHalfRegisters, &other._vectorHalfRegisters,
+         sizeof(_vectorHalfRegisters));
+  updatePC(other.getIP());
+  return *this;
 }
 
 inline bool Registers_arm64::validRegister(int regNum) const {
@@ -1902,7 +1981,7 @@ inline bool Registers_arm64::validRegister(int regNum) const {
 
 inline uint64_t Registers_arm64::getRegister(int regNum) const {
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
-    return _registers.__pc;
+    return getIP();
   if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     return _registers.__sp;
   if (regNum == UNW_AARCH64_RA_SIGN_STATE)
@@ -1918,7 +1997,7 @@ inline uint64_t Registers_arm64::getRegister(int regNum) const {
 
 inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
-    _registers.__pc = value;
+    setIP(value);
   else if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     _registers.__sp = value;
   else if (regNum == UNW_AARCH64_RA_SIGN_STATE)

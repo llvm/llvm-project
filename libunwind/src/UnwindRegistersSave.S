@@ -744,7 +744,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    x30,     [x0, #0x0F0]
   mov    x1,sp
   str    x1,      [x0, #0x0F8]
-  str    x30,     [x0, #0x100]    // store return address as pc
+  // Sign the return address as pc with the address of the context
+  mov    x17, x30
+  mov    x16, x0
+  hint 0x8 // pacia1716
+  str    x17,     [x0, #0x100]    // store return address as pc
+  mov    x17, xzr
+  mov    x16, xzr
   // skip cpsr
   stp    d0, d1,  [x0, #0x110]
   stp    d2, d3,  [x0, #0x120]

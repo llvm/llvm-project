@@ -676,7 +676,13 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    d28,d29, [x0, #0x1F0]
   ldr    d30,     [x0, #0x200]
   ldr    d31,     [x0, #0x208]
-
+  // Authenticate return address with the address of the context.
+  mov    x16,  x0
+  mov    x17, x30
+  hint 0xc // autia1716
+  mov    x30, x17
+  mov    x16, xzr
+  mov    x17, xzr
   // Finally, restore sp. This must be done after the last read from the
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been
