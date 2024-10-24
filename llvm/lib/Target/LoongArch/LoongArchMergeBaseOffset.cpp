@@ -183,7 +183,6 @@ void LoongArchMergeBaseOffsetOpt::foldOffset(
     MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
     MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &Tail,
     int64_t Offset) {
-  assert(isInt<32>(Offset) && "Unexpected offset");
   // Put the offset back in Hi and the Lo
   Hi20.getOperand(1).setOffset(Offset);
   Lo12.getOperand(2).setOffset(Offset);
@@ -209,22 +208,35 @@ void LoongArchMergeBaseOffsetOpt::foldOffset(
 // instructions and deletes TailAdd and the instructions that produced the
 // offset.
 //
-//                     Base address lowering is of the form:
-//                       Hi20:  pcalau12i vreg1, %pc_hi20(s)
-//                       Lo12:  addi.d vreg2, vreg1, %pc_lo12(s)
-//                       /                                  \
-//                      /                                    \
-//                     /                                      \
-//                    /  The large offset can be of two forms: \
-//  1) Offset that has non zero bits in lower      2) Offset that has non zero
-//     12 bits and upper 20 bits                      bits in upper 20 bits only
-//   OffsetHi: lu12i.w vreg3, 4
-//   OffsetLo: ori voff, vreg3, 188                 OffsetHi: lu12i.w voff, 128
-//                    \                                        /
-//                     \                                      /
-//                      \                                    /
-//                       \                                  /
-//                        TailAdd: add.d  vreg4, vreg2, voff
+//   (The instructions marked with "!" are not necessarily present)
+//
+//        Base address lowering is of the form:
+//           Hi20:  pcalau12i vreg1, %pc_hi20(s)
+//        +- Lo12:  addi.d vreg2, vreg1, %pc_lo12(s)
+//        |  Lo20:  lu32i.d vreg2, %pc64_lo20(s) !
+//        +- Hi12:  lu52i.d vreg2, vreg2, %pc64_hi12(s) !
+//        |
+//        | The large offset can be one of the forms:
+//        |
+//        +-> 1) Offset that has non zero bits in Hi20 and Lo12 bits:
+//        |     OffsetHi20: lu12i.w vreg3, 4
+//        |     OffsetLo12: ori voff, vreg3, 188    ------------------+
+//        |                                                           |
+//        +-> 2) Offset that has non zero bits in Hi20 bits only:     |
+//        |     OffsetHi20: lu12i.w voff, 128       ------------------+
+//        |                                                           |
+//        +-> 3) Offset that has non zero bits in Lo20 bits:          |
+//        |     OffsetHi20: lu12i.w vreg3, 121 !                      |
+//        |     OffsetLo12: ori voff, vreg3, 122 !                    |
+//        |     OffsetLo20: lu32i.d voff, 123       ------------------+
+//        +-> 4) Offset that has non zero bits in Hi12 bits:          |
+//              OffsetHi20: lu12i.w vreg3, 121 !                      |
+//              OffsetLo12: ori voff, vreg3, 122 !                    |
+//              OffsetLo20: lu32i.d vreg3, 123 !                      |
+//              OffsetHi12: lu52i.d voff, vrg3, 124 ------------------+
+//                                                                    |
+//        TailAdd: add.d  vreg4, vreg2, voff       <------------------+
+//
 bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
     MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
     MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &TailAdd,
@@ -235,55 +247,81 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
   Register Rs = TailAdd.getOperand(1).getReg();
   Register Rt = TailAdd.getOperand(2).getReg();
   Register Reg = Rs == GAReg ? Rt : Rs;
+  SmallVector<MachineInstr *, 4> Instrs;
+  int64_t Offset = 0;
+  int64_t Mask = -1;
 
-  // Can't fold if the register has more than one use.
-  if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
-    return false;
-  // This can point to an ORI or a LU12I.W:
-  MachineInstr &OffsetTail = *MRI->getVRegDef(Reg);
-  if (OffsetTail.getOpcode() == LoongArch::ORI) {
-    // The offset value has non zero bits in both %hi and %lo parts.
-    // Detect an ORI that feeds from a LU12I.W instruction.
-    MachineOperand &OriImmOp = OffsetTail.getOperand(2);
-    if (OriImmOp.getTargetFlags() != LoongArchII::MO_None)
+  // This can point to one of [ORI, LU12I.W, LU32I.D, LU52I.D]:
+  for (int i = 0; i < 4; i++) {
+    // Handle Reg is R0.
+    if (Reg == LoongArch::R0)
+      break;
+
+    // Can't fold if the register has more than one use.
+    if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
       return false;
-    Register OriReg = OffsetTail.getOperand(1).getReg();
-    int64_t OffLo = OriImmOp.getImm();
 
-    // Handle rs1 of ORI is R0.
-    if (OriReg == LoongArch::R0) {
-      LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
-      foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, OffLo);
-      OffsetTail.eraseFromParent();
-      return true;
+    MachineInstr *Curr = MRI->getVRegDef(Reg);
+    if (!Curr)
+      break;
+
+    switch (Curr->getOpcode()) {
+    default:
+      // Can't fold if the instruction opcode is unexpected.
+      return false;
+    case LoongArch::ORI: {
+      MachineOperand ImmOp = Curr->getOperand(2);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
+        return false;
+      Offset += ImmOp.getImm();
+      Reg = Curr->getOperand(1).getReg();
+      Instrs.push_back(Curr);
+      break;
     }
-
-    MachineInstr &OffsetLu12i = *MRI->getVRegDef(OriReg);
-    MachineOperand &Lu12iImmOp = OffsetLu12i.getOperand(1);
-    if (OffsetLu12i.getOpcode() != LoongArch::LU12I_W ||
-        Lu12iImmOp.getTargetFlags() != LoongArchII::MO_None ||
-        !MRI->hasOneUse(OffsetLu12i.getOperand(0).getReg()))
-      return false;
-    int64_t Offset = SignExtend64<32>(Lu12iImmOp.getImm() << 12);
-    Offset += OffLo;
-    // LU12I.W+ORI sign extends the result.
-    Offset = SignExtend64<32>(Offset);
-    LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail
-                      << "                 " << OffsetLu12i);
-    foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
-    OffsetTail.eraseFromParent();
-    OffsetLu12i.eraseFromParent();
-    return true;
-  } else if (OffsetTail.getOpcode() == LoongArch::LU12I_W) {
-    // The offset value has all zero bits in the lower 12 bits. Only LU12I.W
-    // exists.
-    LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
-    int64_t Offset = SignExtend64<32>(OffsetTail.getOperand(1).getImm() << 12);
-    foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
-    OffsetTail.eraseFromParent();
-    return true;
+    case LoongArch::LU12I_W: {
+      MachineOperand ImmOp = Curr->getOperand(1);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
+        return false;
+      Offset += SignExtend64<32>(ImmOp.getImm() << 12) & Mask;
+      Reg = LoongArch::R0;
+      Instrs.push_back(Curr);
+      break;
+    }
+    case LoongArch::LU32I_D: {
+      MachineOperand ImmOp = Curr->getOperand(2);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Lo20)
+        return false;
+      Offset += SignExtend64<52>(ImmOp.getImm() << 32) & Mask;
+      Mask ^= 0x000FFFFF00000000ULL;
+      Reg = Curr->getOperand(1).getReg();
+      Instrs.push_back(Curr);
+      break;
+    }
+    case LoongArch::LU52I_D: {
+      MachineOperand ImmOp = Curr->getOperand(2);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Hi12)
+        return false;
+      Offset += ImmOp.getImm() << 52;
+      Mask ^= 0xFFF0000000000000ULL;
+      Reg = Curr->getOperand(1).getReg();
+      Instrs.push_back(Curr);
+      break;
+    }
+    }
   }
-  return false;
+
+  // Can't fold if the offset is not extracted.
+  if (!Offset)
+    return false;
+
+  foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
+  LLVM_DEBUG(dbgs() << "  Offset Instrs:\n");
+  for (auto I : Instrs) {
+    LLVM_DEBUG(dbgs() << "                 " << *I);
+    I->eraseFromParent();
+  }
+
+  return true;
 }
 
 bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
@@ -344,13 +382,6 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
     [[fallthrough]];
   case LoongArch::ADD_D:
     // The offset is too large to fit in the immediate field of ADDI.
-    // This can be in two forms:
-    // 1) LU12I.W hi_offset followed by:
-    //    ORI lo_offset
-    //    This happens in case the offset has non zero bits in
-    //    both hi 20 and lo 12 bits.
-    // 2) LU12I.W (offset20)
-    //    This happens in case the lower 12 bits of the offset are zeros.
     return foldLargeOffset(Hi20, Lo12, Lo20, Hi12, Last, Tail, DestReg);
     break;
   }

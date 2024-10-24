@@ -180,6 +180,10 @@ Changes in existing checks
   avoid false positive when member initialization depends on a structured
   binding variable.
 
+- Fixed :doc:`cppcoreguidelines-pro-type-union-access
+  <clang-tidy/checks/cppcoreguidelines/pro-type-union-access>` check to
+  report a location even when the member location is not valid.
+
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
@@ -234,7 +238,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on
-  any class that has a ``contains`` method.
+  any class that has a ``contains`` method. Fix some false negatives in the
+  ``find()`` case.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by only issuing
