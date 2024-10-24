@@ -72,15 +72,20 @@ class DstOp {
     LLT LLTTy;
     Register Reg;
     const TargetRegisterClass *RC;
+    MachineRegisterInfo::VRegAttrs Attrs;
   };
 
 public:
-  enum class DstType { Ty_LLT, Ty_Reg, Ty_RC };
+  enum class DstType { Ty_LLT, Ty_Reg, Ty_RC, Ty_VRegAttrs };
   DstOp(unsigned R) : Reg(R), Ty(DstType::Ty_Reg) {}
   DstOp(Register R) : Reg(R), Ty(DstType::Ty_Reg) {}
   DstOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(DstType::Ty_Reg) {}
   DstOp(const LLT T) : LLTTy(T), Ty(DstType::Ty_LLT) {}
   DstOp(const TargetRegisterClass *TRC) : RC(TRC), Ty(DstType::Ty_RC) {}
+  DstOp(MachineRegisterInfo::VRegAttrs Attrs)
+      : Attrs(Attrs), Ty(DstType::Ty_VRegAttrs) {}
+  DstOp(RegClassOrRegBank RCOrRB, LLT Ty)
+      : Attrs({RCOrRB, Ty}), Ty(DstType::Ty_VRegAttrs) {}
 
   void addDefToMIB(MachineRegisterInfo &MRI, MachineInstrBuilder &MIB) const {
     switch (Ty) {
@@ -93,6 +98,9 @@ public:
     case DstType::Ty_RC:
       MIB.addDef(MRI.createVirtualRegister(RC));
       break;
+    case DstType::Ty_VRegAttrs:
+      MIB.addDef(MRI.createVirtualRegister(Attrs));
+      break;
     }
   }
 
@@ -104,6 +112,8 @@ public:
       return LLTTy;
     case DstType::Ty_Reg:
       return MRI.getType(Reg);
+    case DstType::Ty_VRegAttrs:
+      return Attrs.Ty;
     }
     llvm_unreachable("Unrecognised DstOp::DstType enum");
   }
@@ -119,6 +129,15 @@ public:
       return RC;
     default:
       llvm_unreachable("Not a RC Operand");
+    }
+  }
+
+  MachineRegisterInfo::VRegAttrs getVRegAttrs() const {
+    switch (Ty) {
+    case DstType::Ty_VRegAttrs:
+      return Attrs;
+    default:
+      llvm_unreachable("Not a VRegAttrs Operand");
     }
   }
 
