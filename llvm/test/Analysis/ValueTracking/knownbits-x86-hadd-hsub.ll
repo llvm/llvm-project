@@ -240,7 +240,7 @@ define <4 x i1> @hadd_shuffle_4th_negative_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i32> [[X]], <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[Y]], <i32 3, i32 3, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ne <4 x i32> [[TMP3]], <i32 8, i32 8, i32 8, i32 8>
 ; CHECK-NEXT:    ret <4 x i1> [[RET]]
 ;

@@ -1351,7 +1351,7 @@ define <2 x float> @frem_splat_constant1(<2 x float> %x) {
 
 define <2 x i1> @PR40734(<1 x i1> %x, <4 x i1> %y) {
 ; CHECK-LABEL: @PR40734(
-; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <1 x i1> zeroinitializer, <1 x i1> [[X:%.*]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <1 x i1> [[X:%.*]], <1 x i1> zeroinitializer, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[NARROW:%.*]] = shufflevector <4 x i1> [[Y:%.*]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[WIDEN]], [[NARROW]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -2335,7 +2335,7 @@ define <2 x float> @uitofp_shuf_narrow(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i16> @blend_elements_from_load(ptr align 8 %_0) {
 ; CHECK-LABEL: @blend_elements_from_load(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <3 x i16>, ptr [[_0:%.*]], align 8
-; CHECK-NEXT:    [[RV:%.*]] = shufflevector <3 x i16> <i16 0, i16 undef, i16 poison>, <3 x i16> [[LOAD]], <4 x i32> <i32 0, i32 1, i32 3, i32 5>
+; CHECK-NEXT:    [[RV:%.*]] = shufflevector <3 x i16> [[LOAD]], <3 x i16> <i16 0, i16 undef, i16 poison>, <4 x i32> <i32 3, i32 4, i32 0, i32 2>
 ; CHECK-NEXT:    ret <4 x i16> [[RV]]
 ;
   %load = load <3 x i16>, ptr %_0, align 8
@@ -2375,5 +2375,44 @@ define <2 x i32> @not_splat_shuffle2(i32 %x) {
 ;
   %vec = insertelement <2 x i32> poison, i32 %x, i32 1
   %shuf = shufflevector <2 x i32> %vec, <2 x i32> undef, <2 x i32> <i32 1, i32 3>
+  ret <2 x i32> %shuf
+}
+
+define <2 x i32> @commutative0(<2 x i32> %x) {
+; CHECK-LABEL: @commutative0(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <2 x i32> <i32 poison, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[SHUF]]
+;
+  %shuf = shufflevector <2 x i32> poison, <2 x i32> %x, <2 x i32> <i32 0, i32 3>
+  ret <2 x i32> %shuf
+}
+
+define <2 x i32> @commutative1(<2 x i32> %x) {
+; CHECK-LABEL: @commutative1(
+; CHECK-NEXT:    [[SHUF1:%.*]] = insertelement <2 x i32> [[X:%.*]], i32 undef, i64 0
+; CHECK-NEXT:    ret <2 x i32> [[SHUF1]]
+;
+  %shuf = shufflevector <2 x i32> undef, <2 x i32> %x, <2 x i32> <i32 0, i32 3>
+  ret <2 x i32> %shuf
+}
+
+define <4 x i32> @commutative2(<4 x i32> %x) {
+; CHECK-LABEL: @commutative2(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> <i32 7, i32 poison, i32 -1, i32 poison>, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[SHUF]]
+;
+  %shuf = shufflevector <4 x i32> <i32 7, i32 42, i32 -1, i32 3>, <4 x i32> %x, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i32> %shuf
+}
+
+define <2 x i32> @commutative3(<2 x i32> %x, <2 x i16> %y) {
+; CHECK-LABEL: @commutative3(
+; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i16> [[Y:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> [[ZX]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[SHUF]]
+;
+
+  %zx = zext <2 x i16> %y to <2 x i32>
+  %shuf = shufflevector <2 x i32> %zx, <2 x i32> %x, <2 x i32> <i32 0, i32 3>
   ret <2 x i32> %shuf
 }

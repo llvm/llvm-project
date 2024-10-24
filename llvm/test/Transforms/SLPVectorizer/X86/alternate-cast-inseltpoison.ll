@@ -78,7 +78,7 @@ define <8 x float> @fneg_fabs(<8 x float> %a) {
 ; CHECK-LABEL: @fneg_fabs(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <8 x float> [[A:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.fabs.v8f32(<8 x float> [[A]])
-; CHECK-NEXT:    [[DOTUNCASTED:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[DOTUNCASTED:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> [[TMP1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x float> [[DOTUNCASTED]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
