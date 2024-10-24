@@ -3119,6 +3119,9 @@ public:
     return makeSpecIterator(getSpecializations(), true);
   }
 
+  /// Merge \p Prev with our RedeclarableTemplateDecl::Common.
+  void mergePrevDecl(VarTemplateDecl *Prev);
+
   // Implement isa/cast/dyncast support
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == VarTemplate; }

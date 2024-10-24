@@ -1293,6 +1293,39 @@ VarTemplateDecl::newCommon(ASTContext &C) const {
   return CommonPtr;
 }
 
+void VarTemplateDecl::mergePrevDecl(VarTemplateDecl *Prev) {
+  // If we haven't created a common pointer yet, then it can just be created
+  // with the usual method.
+  if (!getCommonPtrInternal())
+    return;
+
+  Common *ThisCommon = static_cast<Common *>(getCommonPtrInternal());
+  Common *PrevCommon = nullptr;
+  SmallVector<VarTemplateDecl *, 8> PreviousDecls;
+  for (; Prev; Prev = Prev->getPreviousDecl()) {
+    if (CommonBase *C = Prev->getCommonPtrInternal()) {
+      PrevCommon = static_cast<Common *>(C);
+      break;
+    }
+    PreviousDecls.push_back(Prev);
+  }
+
+  // If the previous redecl chain hasn't created a common pointer yet, then just
+  // use this common pointer.
+  if (!PrevCommon) {
+    for (auto *D : PreviousDecls)
+      D->setCommonPtr(ThisCommon);
+    return;
+  }
+
+  // Ensure we don't leak any important state.
+  assert(ThisCommon->Specializations.empty() &&
+         ThisCommon->PartialSpecializations.empty() &&
+         "Can't merge incompatible declarations!");
+
+  setCommonPtr(PrevCommon);
+}
+
 VarTemplateSpecializationDecl *
 VarTemplateDecl::findSpecialization(ArrayRef<TemplateArgument> Args,
                                     void *&InsertPos) {
