@@ -1561,7 +1561,10 @@ void SymbolFilePDB::FindTypes(const lldb_private::TypeQuery &query,
     if (iter == m_types.end())
       continue;
     // We resolved a type. Get the fully qualified name to ensure it matches.
-    ConstString name = iter->second->GetQualifiedName();
+    ConstString name =
+        query.GetSearchByMangledName()
+            ? iter->second->GetForwardCompilerType().GetMangledTypeName()
+            : iter->second->GetQualifiedName();
     TypeQuery type_match(name.GetStringRef(), TypeQueryOptions::e_exact_match);
     if (query.ContextMatches(type_match.GetContextRef())) {
       type_results.InsertUnique(iter->second);
