@@ -177,6 +177,11 @@ TYPE_PARSER(construct<OmpIteratorSpecifier>(
 TYPE_PARSER(construct<OmpIteratorModifier>("ITERATOR" >>
     parenthesized(nonemptyList(sourced(Parser<OmpIteratorSpecifier>{})))))
 
+// [5.0] 2.10.1 affinity([aff-modifier:] locator-list)
+//              aff-modifier: interator-modifier
+TYPE_PARSER(construct<OmpAffinityClause>(
+    maybe(Parser<OmpIteratorModifier>{} / ":"), Parser<OmpObjectList>{}))
+
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause>(
     "PRIVATE" >> pure(OmpDefaultClause::Type::Private) ||
@@ -415,6 +420,8 @@ TYPE_PARSER(construct<OmpLastprivateClause>(
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
+    "AFFINITY" >> construct<OmpClause>(construct<OmpClause::Affinity>(
+                      parenthesized(Parser<OmpAffinityClause>{}))) ||
     "ALIGNED" >> construct<OmpClause>(construct<OmpClause::Aligned>(
                      parenthesized(Parser<OmpAlignedClause>{}))) ||
     "ALLOCATE" >> construct<OmpClause>(construct<OmpClause::Allocate>(

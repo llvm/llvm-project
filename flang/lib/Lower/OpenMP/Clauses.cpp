@@ -352,8 +352,15 @@ Absent make(const parser::OmpClause::Absent &inp,
 
 Affinity make(const parser::OmpClause::Affinity &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: affinity");
+  // inp.v -> parser::OmpAffinityClause
+  auto &t0 = std::get<std::optional<parser::OmpIteratorModifier>>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto &&maybeIter =
+      maybeApply([&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
+
+  return Affinity{{/*Iterator=*/std::move(maybeIter),
+                   /*LocatorList=*/makeObjects(t1, semaCtx)}};
 }
 
 Align make(const parser::OmpClause::Align &inp,
