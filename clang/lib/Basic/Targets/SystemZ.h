@@ -105,7 +105,7 @@ public:
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     // No aliases.
-    return std::nullopt;
+    return {};
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;

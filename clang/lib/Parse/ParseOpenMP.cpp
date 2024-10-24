@@ -2561,7 +2561,7 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
              DKind == OMPD_target_exit_data) {
     Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());
     AssociatedStmt = (Sema::CompoundScopeRAII(Actions),
-                      Actions.ActOnCompoundStmt(Loc, Loc, std::nullopt,
+                      Actions.ActOnCompoundStmt(Loc, Loc, {},
                                                 /*isStmtExpr=*/false));
     AssociatedStmt =
         Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);

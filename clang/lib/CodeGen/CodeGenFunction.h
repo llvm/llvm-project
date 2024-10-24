@@ -3524,7 +3524,7 @@ public:
   /// This function may clear the current insertion point; callers should use
   /// EnsureInsertPoint if they wish to subsequently generate code without first
   /// calling EmitBlock, EmitBranch, or EmitStmt.
-  void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = std::nullopt);
+  void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = {});
 
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
@@ -3551,11 +3551,9 @@ public:
   void EmitIndirectGotoStmt(const IndirectGotoStmt &S);
   void EmitIfStmt(const IfStmt &S);
 
-  void EmitWhileStmt(const WhileStmt &S,
-                     ArrayRef<const Attr *> Attrs = std::nullopt);
-  void EmitDoStmt(const DoStmt &S, ArrayRef<const Attr *> Attrs = std::nullopt);
-  void EmitForStmt(const ForStmt &S,
-                   ArrayRef<const Attr *> Attrs = std::nullopt);
+  void EmitWhileStmt(const WhileStmt &S, ArrayRef<const Attr *> Attrs = {});
+  void EmitDoStmt(const DoStmt &S, ArrayRef<const Attr *> Attrs = {});
+  void EmitForStmt(const ForStmt &S, ArrayRef<const Attr *> Attrs = {});
   void EmitReturnStmt(const ReturnStmt &S);
   void EmitDeclStmt(const DeclStmt &S);
   void EmitBreakStmt(const BreakStmt &S);
@@ -3632,7 +3630,7 @@ public:
                                     llvm::Value *ParentFP);
 
   void EmitCXXForRangeStmt(const CXXForRangeStmt &S,
-                           ArrayRef<const Attr *> Attrs = std::nullopt);
+                           ArrayRef<const Attr *> Attrs = {});
 
   /// Controls insertion of cancellation exit blocks in worksharing constructs.
   class OMPCancelStackRAII {
