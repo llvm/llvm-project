@@ -11,24 +11,24 @@
 
 define i64 @main() {
 entry:
-  %binop1 = call ptr @select_binop(ptr @global_true)
-  %binop2 = call ptr @select_binop(ptr @global_false)
+  %op1 = call ptr @select_op(ptr @global_true)
+  %op2 = call ptr @select_op(ptr @global_false)
 
-  %c1 = call i64 @compute(ptr %binop1)
-  %c2 = call i64 @compute(ptr %binop2)
+  %c1 = call i64 @compute(ptr %op1)
+  %c2 = call i64 @compute(ptr %op2)
   %add = add i64 %c1, %c2
   ret i64 %add
 }
 
-define ptr @select_binop(ptr %flag) {
+define ptr @select_op(ptr %flag) {
   %flag.val = load i1, ptr %flag
-  %binop = select i1 %flag.val, ptr @plus, ptr @minus
-  ret ptr %binop
+  %op = select i1 %flag.val, ptr @plus, ptr @minus
+  ret ptr %op
 }
 
-define internal i64 @compute(ptr %binop) {
+define internal i64 @compute(ptr %op) {
 entry:
-  %res = call i64 %binop(i64 1, i64 1)
+  %res = call i64 %op(i64 1)
   ret i64 %res
 }
 
@@ -45,19 +45,19 @@ entry:
 }
 ; CHECK-LABEL: define i64 @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BINOP1:%.*]] = call ptr @select_binop.specialized.1(ptr @global_true)
-; CHECK-NEXT:    [[BINOP2:%.*]] = call ptr @select_binop.specialized.2(ptr @global_false)
+; CHECK-NEXT:    [[OP1:%.*]] = call ptr @select_op.specialized.1(ptr @global_true)
+; CHECK-NEXT:    [[OP2:%.*]] = call ptr @select_op.specialized.2(ptr @global_false)
 ; CHECK-NEXT:    [[C1:%.*]] = call i64 @compute.specialized.3(ptr @plus)
 ; CHECK-NEXT:    [[C2:%.*]] = call i64 @compute.specialized.4(ptr @minus)
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[C1]], [[C2]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
 ;
-; CHECK-LABEL: define ptr @select_binop(
+; CHECK-LABEL: define ptr @select_op(
 ; CHECK-SAME: ptr [[FLAG:%.*]]) {
 ; CHECK-NEXT:    [[FLAG_VAL:%.*]] = load i1, ptr [[FLAG]], align 1
-; CHECK-NEXT:    [[BINOP:%.*]] = select i1 [[FLAG_VAL]], ptr @plus, ptr @minus
-; CHECK-NEXT:    ret ptr [[BINOP]]
+; CHECK-NEXT:    [[OP:%.*]] = select i1 [[FLAG_VAL]], ptr @plus, ptr @minus
+; CHECK-NEXT:    ret ptr [[OP]]
 ;
 ;
 ; CHECK-LABEL: define internal i64 @plus(
@@ -74,51 +74,51 @@ entry:
 ; CHECK-NEXT:    ret i64 [[DIFF]]
 ;
 ;
-; CHECK-LABEL: define internal ptr @select_binop.specialized.1(
+; CHECK-LABEL: define internal ptr @select_op.specialized.1(
 ; CHECK-SAME: ptr [[FLAG:%.*]]) {
 ; CHECK-NEXT:    ret ptr poison
 ;
 ;
-; CHECK-LABEL: define internal ptr @select_binop.specialized.2(
+; CHECK-LABEL: define internal ptr @select_op.specialized.2(
 ; CHECK-SAME: ptr [[FLAG:%.*]]) {
 ; CHECK-NEXT:    ret ptr poison
 ;
 ;
 ; CHECK-LABEL: define internal i64 @compute.specialized.3(
-; CHECK-SAME: ptr [[BINOP:%.*]]) {
+; CHECK-SAME: ptr [[OP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @plus(i64 1, i64 1)
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @plus(i64 1)
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 ;
 ; CHECK-LABEL: define internal i64 @compute.specialized.4(
-; CHECK-SAME: ptr [[BINOP:%.*]]) {
+; CHECK-SAME: ptr [[OP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @minus(i64 1, i64 1)
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @minus(i64 1)
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 ;
 ; NOLIT-LABEL: define i64 @main() {
 ; NOLIT-NEXT:  [[ENTRY:.*:]]
-; NOLIT-NEXT:    [[BINOP1:%.*]] = call ptr @select_binop.specialized.1(ptr @global_true)
-; NOLIT-NEXT:    [[BINOP2:%.*]] = call ptr @select_binop.specialized.2(ptr @global_false)
+; NOLIT-NEXT:    [[OP1:%.*]] = call ptr @select_op.specialized.1(ptr @global_true)
+; NOLIT-NEXT:    [[OP2:%.*]] = call ptr @select_op.specialized.2(ptr @global_false)
 ; NOLIT-NEXT:    [[C1:%.*]] = call i64 @compute(ptr @plus)
 ; NOLIT-NEXT:    [[C2:%.*]] = call i64 @compute(ptr @minus)
 ; NOLIT-NEXT:    [[ADD:%.*]] = add i64 [[C1]], [[C2]]
 ; NOLIT-NEXT:    ret i64 [[ADD]]
 ;
 ;
-; NOLIT-LABEL: define ptr @select_binop(
+; NOLIT-LABEL: define ptr @select_op(
 ; NOLIT-SAME: ptr [[FLAG:%.*]]) {
 ; NOLIT-NEXT:    [[FLAG_VAL:%.*]] = load i1, ptr [[FLAG]], align 1
-; NOLIT-NEXT:    [[BINOP:%.*]] = select i1 [[FLAG_VAL]], ptr @plus, ptr @minus
-; NOLIT-NEXT:    ret ptr [[BINOP]]
+; NOLIT-NEXT:    [[OP:%.*]] = select i1 [[FLAG_VAL]], ptr @plus, ptr @minus
+; NOLIT-NEXT:    ret ptr [[OP]]
 ;
 ;
 ; NOLIT-LABEL: define internal i64 @compute(
-; NOLIT-SAME: ptr [[BINOP:%.*]]) {
+; NOLIT-SAME: ptr [[OP:%.*]]) {
 ; NOLIT-NEXT:  [[ENTRY:.*:]]
-; NOLIT-NEXT:    [[RES:%.*]] = call i64 [[BINOP]](i64 1, i64 1)
+; NOLIT-NEXT:    [[RES:%.*]] = call i64 [[OP]](i64 1)
 ; NOLIT-NEXT:    ret i64 [[RES]]
 ;
 ;
@@ -136,12 +136,12 @@ entry:
 ; NOLIT-NEXT:    ret i64 [[DIFF]]
 ;
 ;
-; NOLIT-LABEL: define internal ptr @select_binop.specialized.1(
+; NOLIT-LABEL: define internal ptr @select_op.specialized.1(
 ; NOLIT-SAME: ptr [[FLAG:%.*]]) {
 ; NOLIT-NEXT:    ret ptr poison
 ;
 ;
-; NOLIT-LABEL: define internal ptr @select_binop.specialized.2(
+; NOLIT-LABEL: define internal ptr @select_op.specialized.2(
 ; NOLIT-SAME: ptr [[FLAG:%.*]]) {
 ; NOLIT-NEXT:    ret ptr poison
 ;
