@@ -449,6 +449,15 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
   return Res;
 }
 
+Register SPIRVGlobalRegistry::getOrCreateConstScalarOrVector(
+    uint64_t Val, MachineInstr &I, SPIRVType *SpvType,
+    const SPIRVInstrInfo &TII, bool ZeroAsNull) {
+  if (SpvType->getOpcode() == SPIRV::OpTypeVector)
+    return getOrCreateConstVector(Val, I, SpvType, TII, ZeroAsNull);
+  else
+    return getOrCreateConstInt(Val, I, SpvType, TII, ZeroAsNull);
+}
+
 Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
                                                      MachineInstr &I,
                                                      SPIRVType *SpvType,
