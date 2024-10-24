@@ -390,7 +390,7 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   // type of the left operand could be used for SFINAE, so technically it is
   // *used*.
   if (DiagID != diag::warn_unused_comma_left_operand || !isSFINAEContext())
-    DiagIfReachable(Loc, S ? llvm::ArrayRef(S) : std::nullopt,
+    DiagIfReachable(Loc, S ? llvm::ArrayRef(S) : llvm::ArrayRef<Stmt *>(),
                     PDiag(DiagID) << R1 << R2);
 }
 

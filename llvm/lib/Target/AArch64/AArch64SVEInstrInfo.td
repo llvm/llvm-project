@@ -3917,6 +3917,19 @@ let Predicates = [HasSVE2BitPerm] in {
   defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
 } // End HasSVE2BitPerm
 
+let Predicates = [HasSVEAES2, HasSVE2p1orSSVE_AES] in {
+  // SVE_AES2 multi-vector instructions (x2)
+  def AESE_2ZZI_B    : sve_crypto_binary_multi2<0b000, "aese">;
+  def AESD_2ZZI_B    : sve_crypto_binary_multi2<0b010, "aesd">;
+  def AESEMC_2ZZI_B  : sve_crypto_binary_multi2<0b100, "aesemc">;
+  def AESDMIC_2ZZI_B : sve_crypto_binary_multi2<0b110, "aesdimc">;
+  // SVE_AES2 multi-vector instructions (x4)
+  def AESE_4ZZI_B    : sve_crypto_binary_multi4<0b0000, "aese">;
+  def AESD_4ZZI_B    : sve_crypto_binary_multi4<0b0100, "aesd">;
+  def AESEMC_4ZZI_B  : sve_crypto_binary_multi4<0b1000, "aesemc">;
+  def AESDMIC_4ZZI_B : sve_crypto_binary_multi4<0b1100, "aesdimc">;
+} // End HasSVEAES2, HasSVE2p1orSSVE_AES
+
 //===----------------------------------------------------------------------===//
 // SME or SVE2.1 instructions
 //===----------------------------------------------------------------------===//

@@ -803,7 +803,7 @@ static void maybeSynthesizeBlockSignature(TypeProcessingState &state,
       /*NumExceptions=*/0,
       /*NoexceptExpr=*/nullptr,
       /*ExceptionSpecTokens=*/nullptr,
-      /*DeclsInPrototype=*/std::nullopt, loc, loc, declarator));
+      /*DeclsInPrototype=*/{}, loc, loc, declarator));
 
   // For consistency, make sure the state still has us as processing
   // the decl spec.
