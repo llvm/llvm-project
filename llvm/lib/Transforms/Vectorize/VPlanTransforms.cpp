@@ -1073,9 +1073,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
 static void licm(VPlan &Plan) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *Preheader =
-      cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
+  VPBasicBlock *Preheader = Plan.getVectorPreheader();
 
   // Return true if we do not know how to (mechanically) hoist a given recipe
   // out of a loop region. Does not address legality concerns such as aliasing
@@ -1089,6 +1087,7 @@ static void licm(VPlan &Plan) {
   // Hoist any loop invariant recipes from the vector loop region to the
   // preheader. Preform a shallow traversal of the vector loop region, to
   // exclude recipes in replicate regions.
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -1133,7 +1132,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
-  VPBasicBlock *PH = Plan.getEntry();
+  VPBasicBlock *PH = Plan.getVectorPreheader();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -1317,7 +1316,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
   // we have to take unrolling into account. Each part needs to start at
   //   Part * VF
-  auto *VecPreheader = cast<VPBasicBlock>(TopRegion->getSinglePredecessor());
+  auto *VecPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VecPreheader);
 
   // Create the ActiveLaneMask instruction using the correct start values.

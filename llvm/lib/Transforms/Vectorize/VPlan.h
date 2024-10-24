@@ -3812,6 +3812,11 @@ public:
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
 
+  /// Returns the preheader of the vector loop region.
+  VPBasicBlock *getVectorPreheader() {
+    return cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
+  }
+
   /// Returns the canonical induction recipe of the vector loop.
   VPCanonicalIVPHIRecipe *getCanonicalIV() {
     VPBasicBlock *EntryVPBB = getVectorLoopRegion()->getEntryBasicBlock();
