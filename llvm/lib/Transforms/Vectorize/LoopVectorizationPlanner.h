@@ -418,7 +418,13 @@ public:
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
-  void plan(ElementCount UserVF, unsigned UserIC);
+  /// RTChecks is a list of pointer pairs that should be checked for aliasing,
+  /// setting HasAliasMask to true in the case that an alias mask is generated
+  /// and the vector loop should be entered even if the pointers alias across a
+  /// loop iteration.
+  void plan(ElementCount UserVF, unsigned UserIC,
+            std::optional<ArrayRef<PointerDiffInfo>> DiffChecks,
+            bool &HasAliasMask);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.
@@ -495,12 +501,22 @@ private:
   /// returned VPlan is valid for. If no VPlan can be built for the input range,
   /// set the largest included VF to the maximum VF for which no plan could be
   /// built.
-  VPlanPtr tryToBuildVPlanWithVPRecipes(VFRange &Range);
+  /// RTChecks is a list of pointer pairs that should be checked for aliasing,
+  /// setting HasAliasMask to true in the case that an alias mask is generated
+  /// and the vector loop should be entered even if the pointers alias across a
+  /// loop iteration.
+  VPlanPtr tryToBuildVPlanWithVPRecipes(VFRange &Range,
+                                        ArrayRef<PointerDiffInfo> RTChecks,
+                                        bool &HasAliasMask);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
-  void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
+  /// RTChecks contains a list of pointer pairs that an alias mask should be
+  /// generated for.
+  void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF,
+                                ArrayRef<PointerDiffInfo> RTChecks,
+                                bool &HasAliasMask);
 
   // Adjust the recipes for reductions. For in-loop reductions the chain of
   // instructions leading from the loop exit instr to the phi need to be
