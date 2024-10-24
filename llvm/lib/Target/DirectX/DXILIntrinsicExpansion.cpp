@@ -53,9 +53,10 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::pow:
   case Intrinsic::dx_all:
   case Intrinsic::dx_any:
-  case Intrinsic::dx_clamp:
   case Intrinsic::dx_cross:
   case Intrinsic::dx_uclamp:
+  case Intrinsic::dx_sclamp:
+  case Intrinsic::dx_nclamp:
   case Intrinsic::dx_degrees:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_length:
@@ -452,43 +453,35 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
-static Intrinsic::ID getMaxForClamp(Type *ElemTy,
-                                    Intrinsic::ID ClampIntrinsic) {
+static Intrinsic::ID getMaxForClamp(Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umax;
-  assert(ClampIntrinsic == Intrinsic::dx_clamp);
-  if (ElemTy->isVectorTy())
-    ElemTy = ElemTy->getScalarType();
-  if (ElemTy->isIntegerTy())
+  if (ClampIntrinsic == Intrinsic::dx_sclamp)
     return Intrinsic::smax;
-  assert(ElemTy->isFloatingPointTy());
+  assert(ClampIntrinsic == Intrinsic::dx_nclamp);
   return Intrinsic::maxnum;
 }
 
-static Intrinsic::ID getMinForClamp(Type *ElemTy,
-                                    Intrinsic::ID ClampIntrinsic) {
+static Intrinsic::ID getMinForClamp(Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umin;
-  assert(ClampIntrinsic == Intrinsic::dx_clamp);
-  if (ElemTy->isVectorTy())
-    ElemTy = ElemTy->getScalarType();
-  if (ElemTy->isIntegerTy())
+  if (ClampIntrinsic == Intrinsic::dx_sclamp)
     return Intrinsic::smin;
-  assert(ElemTy->isFloatingPointTy());
+  assert(ClampIntrinsic == Intrinsic::dx_nclamp);
   return Intrinsic::minnum;
 }
 
-static Value *expandClampIntrinsic(CallInst *Orig,
-                                   Intrinsic::ID ClampIntrinsic) {
-  Value *X = Orig->getOperand(0);
-  Value *Min = Orig->getOperand(1);
-  Value *Max = Orig->getOperand(2);
-  Type *Ty = X->getType();
+static Value* expandClampIntrinsic(CallInst* Orig,
+  Intrinsic::ID ClampIntrinsic) {
+  Value* X = Orig->getOperand(0);
+  Value* Min = Orig->getOperand(1);
+  Value* Max = Orig->getOperand(2);
+  Type* Ty = X->getType();
   IRBuilder<> Builder(Orig);
-  auto *MaxCall = Builder.CreateIntrinsic(
-      Ty, getMaxForClamp(Ty, ClampIntrinsic), {X, Min}, nullptr, "dx.max");
-  return Builder.CreateIntrinsic(Ty, getMinForClamp(Ty, ClampIntrinsic),
-                                 {MaxCall, Max}, nullptr, "dx.min");
+  auto* MaxCall = Builder.CreateIntrinsic(
+    Ty, getMaxForClamp(ClampIntrinsic), { X, Min }, nullptr, "dx.max");
+  return Builder.CreateIntrinsic(Ty, getMinForClamp(ClampIntrinsic),
+    { MaxCall, Max }, nullptr, "dx.min");
 }
 
 static Value *expandDegreesIntrinsic(CallInst *Orig) {
@@ -555,7 +548,8 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandCrossIntrinsic(Orig);
     break;
   case Intrinsic::dx_uclamp:
-  case Intrinsic::dx_clamp:
+  case Intrinsic::dx_sclamp:
+  case Intrinsic::dx_nclamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_degrees:

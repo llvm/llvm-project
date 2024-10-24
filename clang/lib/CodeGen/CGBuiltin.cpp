@@ -18804,35 +18804,29 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         "hlsl.any");
   }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
-    Value *OpX = EmitScalarExpr(E->getArg(0));
-    Value *OpMin = EmitScalarExpr(E->getArg(1));
-    Value *OpMax = EmitScalarExpr(E->getArg(2));
+    Value* OpX = EmitScalarExpr(E->getArg(0));
+    Value* OpMin = EmitScalarExpr(E->getArg(1));
+    Value* OpMax = EmitScalarExpr(E->getArg(2));
 
     QualType Ty = E->getArg(0)->getType();
-    if (auto *VecTy = Ty->getAs<VectorType>())
+    if (auto* VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
-    bool IsUnsigned = Ty->isUnsignedIntegerType();
-    switch (CGM.getTarget().getTriple().getArch()) {
-    case llvm::Triple::dxil: {
-      return Builder.CreateIntrinsic(
-          /*ReturnType=*/OpX->getType(),
-          IsUnsigned ? Intrinsic::dx_uclamp : Intrinsic::dx_clamp,
-          ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "dx.clamp");
-    } break;
-    case llvm::Triple::spirv: {
-      Intrinsic::ID Intr = Intrinsic::spv_sclamp;
-      if (Ty->isFloatingType()) {
-        Intr = Intrinsic::spv_fclamp;
-      } else if (IsUnsigned) {
-        Intr = Intrinsic::spv_uclamp;
-      }
-      return Builder.CreateIntrinsic(OpX->getType(), Intr,
-                                     ArrayRef<Value *>{OpX, OpMin, OpMax},
-                                     nullptr, "spv.clamp");
-    } break;
-    default:
-      llvm_unreachable("Intrinsic clamp not supported by target architecture");
+
+    Intrinsic::ID Intr;
+    if (Ty->isFloatingType()) {
+      Intr = CGM.getHLSLRuntime().getNClampIntrinsic();
     }
+    else if (Ty->isUnsignedIntegerType()) {
+      Intr = CGM.getHLSLRuntime().getUClampIntrinsic();
+    }
+    else {
+      assert(Ty->isSignedIntegerType());
+      Intr = CGM.getHLSLRuntime().getSClampIntrinsic();
+    }
+    return Builder.CreateIntrinsic(
+      /*ReturnType=*/OpX->getType(),
+      Intr,
+      ArrayRef<Value*>{OpX, OpMin, OpMax}, nullptr, "hlsl.clamp");
   }
   case Builtin::BI__builtin_hlsl_cross: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

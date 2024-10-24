@@ -44,36 +44,36 @@ entry:
   ret i64 %0
 }
 
-; CHECK-LABEL: Begin function test_fclamp_half
-define noundef half @test_fclamp_half(half noundef %a, half noundef %b, half noundef %c) {
+; CHECK-LABEL: Begin function test_nclamp_half
+define noundef half @test_nclamp_half(half noundef %a, half noundef %b, half noundef %c) {
 entry:
   ; CHECK: %[[#f16_arg0:]] = OpFunctionParameter %[[#float_16]]
   ; CHECK: %[[#f16_arg1:]] = OpFunctionParameter %[[#float_16]]
   ; CHECK: %[[#f16_arg2:]] = OpFunctionParameter %[[#float_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_16]] %[[#op_ext]] FClamp %[[#f16_arg0]] %[[#f16_arg1]] %[[#f16_arg2]]
-  %0 = call half @llvm.spv.fclamp.f16(half %a, half %b, half %c)
+  ; CHECK: %[[#]] = OpExtInst %[[#float_16]] %[[#op_ext]] NClamp %[[#f16_arg0]] %[[#f16_arg1]] %[[#f16_arg2]]
+  %0 = call half @llvm.spv.nclamp.f16(half %a, half %b, half %c)
   ret half %0
 }
 
-; CHECK-LABEL: Begin function test_fclamp_float
-define noundef float @test_fclamp_float(float noundef %a, float noundef %b, float noundef %c) {
+; CHECK-LABEL: Begin function test_nclamp_float
+define noundef float @test_nclamp_float(float noundef %a, float noundef %b, float noundef %c) {
 entry:
   ; CHECK: %[[#f32_arg0:]] = OpFunctionParameter %[[#float_32]]
   ; CHECK: %[[#f32_arg1:]] = OpFunctionParameter %[[#float_32]]
   ; CHECK: %[[#f32_arg2:]] = OpFunctionParameter %[[#float_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext]] FClamp %[[#f32_arg0]] %[[#f32_arg1]] %[[#f32_arg2]]
-  %0 = call float @llvm.spv.fclamp.f32(float %a, float %b, float %c)
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext]] NClamp %[[#f32_arg0]] %[[#f32_arg1]] %[[#f32_arg2]]
+  %0 = call float @llvm.spv.nclamp.f32(float %a, float %b, float %c)
   ret float %0
 }
 
-; CHECK-LABEL: Begin function test_fclamp_double
-define noundef double @test_fclamp_double(double noundef %a, double noundef %b, double noundef %c) {
+; CHECK-LABEL: Begin function test_nclamp_double
+define noundef double @test_nclamp_double(double noundef %a, double noundef %b, double noundef %c) {
 entry:
   ; CHECK: %[[#f64_arg0:]] = OpFunctionParameter %[[#float_64]]
   ; CHECK: %[[#f64_arg1:]] = OpFunctionParameter %[[#float_64]]
   ; CHECK: %[[#f64_arg2:]] = OpFunctionParameter %[[#float_64]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_64]] %[[#op_ext]] FClamp %[[#f64_arg0]] %[[#f64_arg1]] %[[#f64_arg2]]
-  %0 = call double @llvm.spv.fclamp.f64(double %a, double %b, double %c)
+  ; CHECK: %[[#]] = OpExtInst %[[#float_64]] %[[#op_ext]] NClamp %[[#f64_arg0]] %[[#f64_arg1]] %[[#f64_arg2]]
+  %0 = call double @llvm.spv.nclamp.f64(double %a, double %b, double %c)
   ret double %0
 }
 
@@ -110,9 +110,9 @@ entry:
   ret i64 %0
 }
 
-declare half @llvm.spv.fclamp.f16(half, half, half)
-declare float @llvm.spv.fclamp.f32(float, float, float)
-declare double @llvm.spv.fclamp.f64(double, double, double)
+declare half @llvm.spv.nclamp.f16(half, half, half)
+declare float @llvm.spv.nclamp.f32(float, float, float)
+declare double @llvm.spv.nclamp.f64(double, double, double)
 declare i16 @llvm.spv.sclamp.i16(i16, i16, i16)
 declare i32 @llvm.spv.sclamp.i32(i32, i32, i32)
 declare i64 @llvm.spv.sclamp.i64(i64, i64, i64)

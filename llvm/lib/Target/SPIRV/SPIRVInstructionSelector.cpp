@@ -2739,8 +2739,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   } break;
   case Intrinsic::spv_saturate:
     return selectSaturate(ResVReg, ResType, I);
-  case Intrinsic::spv_fclamp:
-    return selectExtInst(ResVReg, ResType, I, CL::fclamp, GL::FClamp);
+  case Intrinsic::spv_nclamp:
+    return selectExtInst(ResVReg, ResType, I, CL::fclamp, GL::NClamp);
   case Intrinsic::spv_uclamp:
     return selectExtInst(ResVReg, ResType, I, CL::u_clamp, GL::UClamp);
   case Intrinsic::spv_sclamp:

@@ -95,6 +95,9 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(NClamp, nclamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SClamp, sclamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(UClamp, uclamp)
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding, handle_fromBinding)
 
