@@ -379,7 +379,7 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
     // Don't fold the exit block of the Plan into its single predecessor for
     // now.
     // TODO: Remove restriction once more of the skeleton is modeled in VPlan.
-    if (VPBB->getNumSuccessors() == 0 && !VPBB->getParent())
+    if (!VPBB->getParent())
       continue;
     auto *PredVPBB =
         dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
@@ -534,7 +534,8 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = CanonicalIV;
   if (!CanonicalIV->isCanonical(Kind, StartV, Step)) {
-    BaseIV = Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step);
+    BaseIV = Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx"
+                                     );
   }
 
   // Truncate base induction if needed.

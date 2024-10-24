@@ -456,10 +456,17 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
   State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
   executeRecipes(State, getIRBasicBlock());
   if (getSingleSuccessor()) {
-    assert(isa<UnreachableInst>(getIRBasicBlock()->getTerminator()));
-    auto *Br = State->Builder.CreateBr(getIRBasicBlock());
-    Br->setOperand(0, nullptr);
-    getIRBasicBlock()->getTerminator()->eraseFromParent();
+    auto *SuccVPIRBB = dyn_cast<VPIRBasicBlock>(getSingleSuccessor());
+    if (SuccVPIRBB && SuccVPIRBB->getIRBasicBlock() ==
+                          getIRBasicBlock()->getSingleSuccessor()) {
+      cast<BranchInst>(getIRBasicBlock()->getTerminator())
+          ->setOperand(0, nullptr);
+    } else {
+      assert(isa<UnreachableInst>(getIRBasicBlock()->getTerminator()));
+      auto *Br = State->Builder.CreateBr(getIRBasicBlock());
+      Br->setOperand(0, nullptr);
+      getIRBasicBlock()->getTerminator()->eraseFromParent();
+    }
   }
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
@@ -663,14 +670,16 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
+static std::tuple<VPBlockBase *, VPBlockBase *, VPIRBasicBlock *>
+cloneFrom(VPBlockBase *Entry, VPIRBasicBlock *ScalarHeader = nullptr);
 
 // Clone the CFG for all nodes reachable from \p Entry, this includes cloning
 // the blocks and their recipes. Operands of cloned recipes will NOT be updated.
 // Remapping of operands must be done separately. Returns a pair with the new
 // entry and exiting blocks of the cloned region. If \p Entry isn't part of a
 // region, return nullptr for the exiting block.
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
+static std::tuple<VPBlockBase *, VPBlockBase *, VPIRBasicBlock *>
+cloneFrom(VPBlockBase *Entry, VPIRBasicBlock *ScalarHeader) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   VPBlockBase *Exiting = nullptr;
   bool InRegion = Entry->getParent();
@@ -716,12 +725,14 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
   }
 #endif
 
-  return std::make_pair(Old2NewVPBlocks[Entry],
-                        Exiting ? Old2NewVPBlocks[Exiting] : nullptr);
+  return std::tuple(
+      Old2NewVPBlocks[Entry], Exiting ? Old2NewVPBlocks[Exiting] : nullptr,
+      ScalarHeader ? cast<VPIRBasicBlock>(Old2NewVPBlocks[ScalarHeader])
+                   : nullptr);
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
-  const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
+  const auto &[NewEntry, NewExiting, _] = cloneFrom(getEntry());
   auto *NewRegion =
       new VPRegionBlock(NewEntry, NewExiting, getName(), isReplicator());
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
@@ -843,10 +854,6 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 VPlan::~VPlan() {
-  for (auto &KV : LiveOuts)
-    delete KV.second;
-  LiveOuts.clear();
-
   if (Entry) {
     VPValue DummyValue;
     for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
@@ -878,7 +885,9 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPIRBasicBlock *Entry =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
-  auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
+  VPIRBasicBlock *ScalarHeader =
+      VPIRBasicBlock::fromBasicBlock(TheLoop->getHeader());
+  auto Plan = std::make_unique<VPlan>(Entry, VecPreheader, ScalarHeader);
 
   // Create SCEV and VPValue for the trip count.
 
@@ -909,6 +918,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
   VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
+  VPBlockUtils::connectBlocks(ScalarPH, ScalarHeader);
   if (!RequiresScalarEpilogueCheck) {
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
     return Plan;
@@ -1054,6 +1064,8 @@ void VPlan::execute(VPTransformState *State) {
   BrInst->insertBefore(MiddleBB->getTerminator());
   MiddleBB->getTerminator()->eraseFromParent();
   State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
+  State->CFG.DTU.applyUpdates(
+      {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
 
   // Generate code in the loop pre-header and body.
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
@@ -1172,12 +1184,6 @@ void VPlan::print(raw_ostream &O) const {
     Block->print(O, "", SlotTracker);
   }
 
-  if (!LiveOuts.empty())
-    O << "\n";
-  for (const auto &KV : LiveOuts) {
-    KV.second->print(O, SlotTracker);
-  }
-
   O << "}\n";
 }
 
@@ -1213,11 +1219,6 @@ void VPlan::printDOT(raw_ostream &O) const {
 LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
 #endif
-
-void VPlan::addLiveOut(PHINode *PN, VPValue *V) {
-  assert(LiveOuts.count(PN) == 0 && "an exit value for PN already exists");
-  LiveOuts.insert({PN, new VPLiveOut(PN, V)});
-}
 
 static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
                           DenseMap<VPValue *, VPValue *> &Old2NewVPValues) {
@@ -1260,10 +1261,12 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 VPlan *VPlan::duplicate() {
   // Clone blocks.
   VPBasicBlock *NewPreheader = Preheader->clone();
-  const auto &[NewEntry, __] = cloneFrom(Entry);
+  const auto &[NewEntry, __, NewScalarHeader] =
+      cloneFrom(Entry, getScalarHeader());
 
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
-  auto *NewPlan = new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry));
+  auto *NewPlan =
+      new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
     Old2NewVPValues[OldLiveIn] =
@@ -1285,10 +1288,6 @@ VPlan *VPlan::duplicate() {
 
   remapOperands(Preheader, NewPreheader, Old2NewVPValues);
   remapOperands(Entry, NewEntry, Old2NewVPValues);
-
-  // Clone live-outs.
-  for (const auto &[_, LO] : LiveOuts)
-    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)]);
 
   // Initialize remaining fields of cloned VPlan.
   NewPlan->VFs = VFs;

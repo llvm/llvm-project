@@ -512,9 +512,9 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 4
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-UNORDERED-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; CHECK-UNORDERED-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float -0.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), float [[A2]], i32 0
 ; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = insertelement <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float -0.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), float [[A1]], i32 0
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -583,9 +583,9 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 4
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-ORDERED-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; CHECK-ORDERED-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -649,9 +649,9 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-TF-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP2]], [[TMP5]]
 ; CHECK-ORDERED-TF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
 ; CHECK-ORDERED-TF-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-ORDERED-TF-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-ORDERED-TF-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
+; CHECK-ORDERED-TF-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-ORDERED-TF-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 4
 ; CHECK-ORDERED-TF-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP2]], [[TMP9]]

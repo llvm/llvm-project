@@ -65,6 +65,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     case VPInstruction::FirstOrderRecurrenceSplice:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
+    case VPInstruction::ResumePhi:
       return false;
     default:
       return true;
@@ -212,35 +213,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return true;
   }
 }
-
-void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
-  VPValue *ExitValue = getOperand(0);
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  VPRecipeBase *ExitingRecipe = ExitValue->getDefiningRecipe();
-  auto *ExitingVPBB = ExitingRecipe ? ExitingRecipe->getParent() : nullptr;
-  // Values leaving the vector loop reach live out phi's in the exiting block
-  // via middle block.
-  auto *PredVPBB = !ExitingVPBB || ExitingVPBB->getEnclosingLoopRegion()
-                       ? MiddleVPBB
-                       : ExitingVPBB;
-  BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
-  Value *V = State.get(ExitValue, VPLane(0));
-  if (Phi->getBasicBlockIndex(PredBB) != -1)
-    Phi->setIncomingValueForBlock(PredBB, V);
-  else
-    Phi->addIncoming(V, PredBB);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPLiveOut::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
-  O << "Live-out ";
-  getPhi()->printAsOperand(O);
-  O << " = ";
-  getOperand(0)->printAsOperand(O, SlotTracker);
-  O << "\n";
-}
-#endif
 
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
@@ -670,7 +642,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getSinglePredecessor())];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
+    for (auto *OtherPred :
+         reverse(to_vector(predecessors(Builder.GetInsertBlock())))) {
       assert(OtherPred != VPlanPred &&
              "VPlan predecessors should not be connected yet");
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
@@ -872,7 +845,10 @@ void VPIRInstruction::execute(VPTransformState &State) {
     State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
     Value *V = State.get(ExitValue, VPLane(Lane));
     auto *Phi = cast<PHINode>(&I);
-    Phi->addIncoming(V, PredBB);
+    if (Phi->getBasicBlockIndex(PredBB) == -1)
+      Phi->addIncoming(V, PredBB);
+    else
+      Phi->setIncomingValueForBlock(PredBB, V);
   }
 
   // Advance the insert point after the wrapped IR instruction. This allows

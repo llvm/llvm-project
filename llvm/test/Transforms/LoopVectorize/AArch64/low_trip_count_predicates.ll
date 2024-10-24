@@ -101,9 +101,9 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-NEXT:    [[TMP35:%.*]] = mul i64 [[TMP34]], 4
 ; CHECK-NEXT:    [[N_MOD_VF3:%.*]] = urem i64 [[TMP3]], [[TMP35]]
 ; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF3]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[TMP0]], [[N_VEC4]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP36]], 4
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[TMP0]], [[N_VEC4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT8]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -123,7 +123,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N12]], label %[[WHILE_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[TMP0]], %[[ITER_CHECK]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[WHILE_BODY]] ]
@@ -316,9 +316,9 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 16
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP1]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer

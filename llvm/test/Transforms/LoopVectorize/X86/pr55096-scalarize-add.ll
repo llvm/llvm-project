@@ -28,18 +28,18 @@ define void @test_pr55096(i64 %c, ptr %p) {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
-; CHECK:       pred.store.if2:
+; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[OFFSET_IDX]], 2008
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[TMP10]], 2008
 ; CHECK-NEXT:    [[TMP12:%.*]] = udiv i16 4943, [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[P]], i16 [[TMP12]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP13]], align 2
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
-; CHECK:       pred.store.continue3:
+; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 340
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
