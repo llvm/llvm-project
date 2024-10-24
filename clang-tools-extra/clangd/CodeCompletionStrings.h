@@ -19,6 +19,11 @@
 namespace clang {
 class ASTContext;
 
+namespace comments {
+class CommandTraits;
+class FullComment;
+} // namespace comments
+
 namespace clangd {
 
 /// Gets a minimally formatted documentation comment of \p Result, with comment
@@ -66,6 +71,12 @@ std::string formatDocumentation(const CodeCompletionString &CCS,
 /// Gets detail to be used as the detail field in an LSP completion item. This
 /// is usually the return type of a function.
 std::string getReturnType(const CodeCompletionString &CCS);
+
+/// Parse the \p Comment, storing the result in \p Allocator, assuming
+/// that comment markers have already been stripped (e.g. via getDocComment())
+comments::FullComment *parseComment(llvm::StringRef Comment,
+                                    llvm::BumpPtrAllocator &Allocator,
+                                    comments::CommandTraits &Traits);
 
 } // namespace clangd
 } // namespace clang
