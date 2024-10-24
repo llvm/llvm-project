@@ -26,11 +26,16 @@ public:
   /// Create redirection manager that uses JITLink based implementaion.
   static Expected<std::unique_ptr<RedirectableSymbolManager>>
   Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &JD) {
-    Error Err = Error::success();
+    auto AnonymousPtrCreator(jitlink::getAnonymousPointerCreator(
+        ObjLinkingLayer.getExecutionSession().getTargetTriple()));
+    auto PtrJumpStubCreator(jitlink::getPointerJumpStubCreator(
+        ObjLinkingLayer.getExecutionSession().getTargetTriple()));
+    if (!AnonymousPtrCreator || !PtrJumpStubCreator)
+      return make_error<StringError>("Architecture not supported",
+                                     inconvertibleErrorCode());
     auto RM = std::unique_ptr<RedirectableSymbolManager>(
-        new JITLinkRedirectableSymbolManager(ObjLinkingLayer, JD, Err));
-    if (Err)
-      return Err;
+        new JITLinkRedirectableSymbolManager(
+            ObjLinkingLayer, JD, AnonymousPtrCreator, PtrJumpStubCreator));
     return std::move(RM);
   }
 
@@ -52,18 +57,14 @@ private:
   constexpr static StringRef JumpStubTableName = "$IND_JUMP_";
   constexpr static StringRef StubPtrTableName = "$__IND_JUMP_PTRS";
 
-  JITLinkRedirectableSymbolManager(ObjectLinkingLayer &ObjLinkingLayer,
-                                   JITDylib &JD, Error &Err)
+  JITLinkRedirectableSymbolManager(
+      ObjectLinkingLayer &ObjLinkingLayer, JITDylib &JD,
+      jitlink::AnonymousPointerCreator &AnonymousPtrCreator,
+      jitlink::PointerJumpStubCreator &PtrJumpStubCreator)
       : ObjLinkingLayer(ObjLinkingLayer), JD(JD),
-        AnonymousPtrCreator(jitlink::getAnonymousPointerCreator(
-            ObjLinkingLayer.getExecutionSession().getTargetTriple())),
-        PtrJumpStubCreator(jitlink::getPointerJumpStubCreator(
-            ObjLinkingLayer.getExecutionSession().getTargetTriple())) {
-    ErrorAsOutParameter _(&Err);
+        AnonymousPtrCreator(std::move(AnonymousPtrCreator)),
+        PtrJumpStubCreator(std::move(PtrJumpStubCreator)) {
     ObjLinkingLayer.getExecutionSession().registerResourceManager(*this);
-    if (!AnonymousPtrCreator || !PtrJumpStubCreator)
-      Err = make_error<StringError>("Architecture not supported",
-                                    inconvertibleErrorCode());
   }
 
   ~JITLinkRedirectableSymbolManager() {
