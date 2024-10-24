@@ -392,9 +392,11 @@ ANALYZER_OPTION(
 
 ANALYZER_OPTION(
     unsigned, GraphTrimInterval, "graph-trim-interval",
-    "How often nodes in the ExplodedGraph should be recycled to save memory. "
-    "To disable node reclamation, set the option to 0.",
-    1000)
+    "[DEPRECATED] When set to a number N > 0, this enables reclamation of "
+    "'unimportant' nodes in the ExplodedGraph once per N node creation steps. "
+    "This reduces the memory usage, but can cause use-after-free errors or "
+    "crashes, so will be phased out.",
+    0)
 
 ANALYZER_OPTION(
     unsigned, MinCFGSizeTreatFunctionsAsLarge,
