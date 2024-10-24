@@ -1582,9 +1582,8 @@ multiclass avx10_com_ef_int<bits<8> Opc, X86VectorVTInfo _, SDNode OpNode,
 }
 
 let Defs = [EFLAGS], Uses = [MXCSR], Predicates = [HasAVX10_2] in {
-
   defm VUCOMXSDZ  :  avx10_com_ef<0x2e, FR64X, f64, X86ucomi512,
-                                  "vucomxsd", f64mem, loadf64, SSEPackedSingle>,
+                                  "vucomxsd", f64mem, loadf64, SSEPackedDouble>,
                                   TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
   defm VUCOMXSHZ  :  avx10_com_ef<0x2e, FR16X, f16, X86ucomi512,
                                   "vucomxsh", f16mem, loadf16, SSEPackedSingle>,

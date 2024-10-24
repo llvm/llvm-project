@@ -218,15 +218,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
   // SETOEQ and SETUNE require checking two conditions.
-  for (auto VT : {MVT::f32, MVT::f64}) {
-    setCondCodeAction(ISD::SETOEQ, VT,
-                      Subtarget.hasAVX10_2() ? Custom : Expand);
-    setCondCodeAction(ISD::SETUNE, VT,
-                      Subtarget.hasAVX10_2() ? Custom : Expand);
+  for (auto VT : {MVT::f32, MVT::f64, MVT::f80}) {
+    setCondCodeAction(ISD::SETOEQ, VT, Expand);
+    setCondCodeAction(ISD::SETUNE, VT, Expand);
   }
-  setCondCodeAction(ISD::SETOEQ, MVT::f80, Expand);
-  setCondCodeAction(ISD::SETUNE, MVT::f80, Expand);
 
+  if (Subtarget.hasAVX10_2()) {
+    for (auto VT : {MVT::f32, MVT::f64}) {
+      setCondCodeAction(ISD::SETOEQ, VT, Custom);
+      setCondCodeAction(ISD::SETUNE, VT, Custom);
+    }
+  }
   // Integer absolute.
   if (Subtarget.canUseCMOV()) {
     setOperationAction(ISD::ABS            , MVT::i16  , Custom);
@@ -24078,7 +24080,7 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
   }
 
-  if (Subtarget.hasAVX10_2_512()) {
+  if (Subtarget.hasAVX10_2()) {
     if (CC == ISD::SETOEQ || CC == ISD::SETUNE) {
       auto NewCC = (CC == ISD::SETOEQ) ? X86::COND_E : (X86::COND_NE);
       return getSETCC(NewCC, DAG.getNode(X86ISD::UCOMX, dl, MVT::i32, Op0, Op1),
