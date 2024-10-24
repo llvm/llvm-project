@@ -2935,8 +2935,11 @@ void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI,
 
 void CombinerHelper::replaceInstWithUndef(MachineInstr &MI) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
-  Builder.buildUndef(MI.getOperand(0));
-  MI.eraseFromParent();
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF,
+                                {MRI.getType(MI.getOperand(0).getReg())}})) {
+    Builder.buildUndef(MI.getOperand(0));
+    MI.eraseFromParent();
+  }
 }
 
 bool CombinerHelper::matchSimplifyAddToSub(

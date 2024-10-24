@@ -10,9 +10,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)
@@ -30,11 +29,9 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_3ops
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
-    ; CHECK-NEXT: $w2 = COPY [[DEF2]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: $w2 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %5:_(s32) = G_IMPLICIT_DEF
@@ -115,9 +112,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_bitcast_merge
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)
@@ -135,14 +131,11 @@ name:            test_combine_unmerge_merge_incompatible_types
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_incompatible_types
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[DEF]](s32), [[DEF1]](s32)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[MV]](s64)
-    ; CHECK-NEXT: $h0 = COPY [[UV]](s16)
-    ; CHECK-NEXT: $h1 = COPY [[UV1]](s16)
-    ; CHECK-NEXT: $h2 = COPY [[UV2]](s16)
-    ; CHECK-NEXT: $h3 = COPY [[UV3]](s16)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $h0 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h1 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h2 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h3 = COPY [[DEF]](s16)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)

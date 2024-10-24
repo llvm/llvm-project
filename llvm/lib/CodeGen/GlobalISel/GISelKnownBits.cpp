@@ -159,16 +159,17 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
 #endif
 
+  unsigned BitWidth = DstTy.getScalarSizeInBits();
+
   // Handle the case where this is called on a register that does not have a
   // type constraint (i.e. it has a register class constraint instead). This is
   // unlikely to occur except by looking through copies but it is possible for
   // the initial register being queried to be in this state.
   if (!DstTy.isValid()) {
-    Known = KnownBits();
+    Known = KnownBits(BitWidth); // Don't know anything
     return;
   }
 
-  unsigned BitWidth = DstTy.getScalarSizeInBits();
   auto CacheEntry = ComputeKnownBitsCache.find(R);
   if (CacheEntry != ComputeKnownBitsCache.end()) {
     Known = CacheEntry->second;
@@ -199,6 +200,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   default:
     TL.computeKnownBitsForTargetInstr(*this, R, Known, DemandedElts, MRI,
                                       Depth);
+    break;
+  case TargetOpcode::G_IMPLICIT_DEF:
     break;
   case TargetOpcode::G_BUILD_VECTOR: {
     // Collect the known bits that are shared by every demanded vector element.
@@ -579,6 +582,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_SBFX: {
+    // FIXME: the three parameters do not have the same types and bitwidths.
+    break;
     KnownBits SrcOpKnown, OffsetKnown, WidthKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
@@ -586,6 +591,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
+
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
@@ -626,6 +632,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   }
+
+  assert(Known.getBitWidth() == BitWidth && "Bit widths must be the same");
 
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
 

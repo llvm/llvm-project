@@ -56,13 +56,8 @@ define i128 @bswap_i16_to_i128_anyext(i16 %a) {
 ;
 ; CHECK-GI-LABEL: bswap_i16_to_i128_anyext:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    mov x0, xzr
-; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    bfi x8, x8, #32, #32
-; CHECK-GI-NEXT:    and x8, x8, #0xffff
-; CHECK-GI-NEXT:    lsl x1, x8, #48
+; CHECK-GI-NEXT:    mov x1, xzr
 ; CHECK-GI-NEXT:    ret
     %3 = call i16 @llvm.bswap.i16(i16 %a)
     %4 = zext i16 %3 to i128
