@@ -1921,7 +1921,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nosme2p1", "sme2p2"}, {"sme2p2", "sme2p1"}, {}},
         {AArch64::ARMV9_6A, {"sme2p2", "nosme2p1"}, {}, {"sme2p1", "sme2p2"}},
 
-        // fp8 -> {sme-f8f16, sme-f8f32}
+        // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm}
         {AArch64::ARMV8A, {"nofp8", "sme-f8f16"}, {"fp8", "sme-f8f16"}, {}},
         {AArch64::ARMV8A, {"sme-f8f16", "nofp8"}, {}, {"fp8", "sme-f8f16"}},
         {AArch64::ARMV8A, {"nofp8", "sme-f8f32"}, {"fp8", "sme-f8f32"}, {}},
