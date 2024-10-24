@@ -326,8 +326,9 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   if (LangOpts.IEEE128)
     AddKeyword("__ieee128", tok::kw___float128, KEYALL, LangOpts, *this);
 
-  // Add the 'import' contextual keyword.
+  // Add the 'import' and 'module' contextual keyword.
   get("import").setModulesImport(true);
+  get("module").setModulesDeclaration(true);
 }
 
 /// Checks if the specified token kind represents a keyword in the
@@ -459,6 +460,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 6, 'd', 'f', define);
   CASE( 6, 'i', 'n', ifndef);
   CASE( 6, 'i', 'p', import);
+  CASE( 6, 'm', 'd', module);
   CASE( 6, 'p', 'a', pragma);
 
   CASE( 7, 'd', 'f', defined);

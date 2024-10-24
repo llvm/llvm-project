@@ -514,8 +514,6 @@ void Parser::Initialize() {
   Ident_abstract = nullptr;
   Ident_override = nullptr;
   Ident_GNU_final = nullptr;
-  Ident_import = nullptr;
-  Ident_module = nullptr;
 
   Ident_super = &PP.getIdentifierTable().get("super");
 
@@ -569,11 +567,6 @@ void Parser::Initialize() {
     PP.SetPoisonReason(Ident__abnormal_termination,diag::err_seh___finally_block);
     PP.SetPoisonReason(Ident___abnormal_termination,diag::err_seh___finally_block);
     PP.SetPoisonReason(Ident_AbnormalTermination,diag::err_seh___finally_block);
-  }
-
-  if (getLangOpts().CPlusPlusModules) {
-    Ident_import = PP.getIdentifierInfo("import");
-    Ident_module = PP.getIdentifierInfo("module");
   }
 
   Actions.Initialize();
@@ -639,30 +632,12 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     switch (NextToken().getKind()) {
     case tok::kw_module:
       goto module_decl;
-
-    // Note: no need to handle kw_import here. We only form kw_import under
-    // the Standard C++ Modules, and in that case 'export import' is parsed as
-    // an export-declaration containing an import-declaration.
-
-    // Recognize context-sensitive C++20 'export module' and 'export import'
-    // declarations.
-    case tok::identifier: {
-      IdentifierInfo *II = NextToken().getIdentifierInfo();
-      if ((II == Ident_module || II == Ident_import) &&
-          GetLookAheadToken(2).isNot(tok::coloncolon)) {
-        if (II == Ident_module)
-          goto module_decl;
-        else
-          goto import_decl;
-      }
-      break;
-    }
-
+    case tok::kw_import:
+      goto import_decl;
     default:
       break;
     }
     break;
-
   case tok::kw_module:
   module_decl:
     Result = ParseModuleDecl(ImportState);
@@ -725,22 +700,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
-
-  case tok::identifier:
-    // C++2a [basic.link]p3:
-    //   A token sequence beginning with 'export[opt] module' or
-    //   'export[opt] import' and not immediately followed by '::'
-    //   is never interpreted as the declaration of a top-level-declaration.
-    if ((Tok.getIdentifierInfo() == Ident_module ||
-         Tok.getIdentifierInfo() == Ident_import) &&
-        NextToken().isNot(tok::coloncolon)) {
-      if (Tok.getIdentifierInfo() == Ident_module)
-        goto module_decl;
-      else
-        goto import_decl;
-    }
-    break;
-
   default:
     break;
   }
@@ -956,14 +915,6 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     };
     Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), PCC);
     return nullptr;
-  case tok::kw_import: {
-    Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
-    if (getLangOpts().CPlusPlusModules) {
-      llvm_unreachable("not expecting a c++20 import here");
-      ProhibitAttributes(Attrs);
-    }
-    SingleDecl = ParseModuleImport(SourceLocation(), IS);
-  } break;
   case tok::kw_export:
     if (getLangOpts().CPlusPlusModules || getLangOpts().HLSL) {
       ProhibitAttributes(Attrs);
@@ -1048,9 +999,10 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::kw___if_not_exists:
     ParseMicrosoftIfExistsExternalDeclaration();
     return nullptr;
-
+  case tok::kw_import:
   case tok::kw_module:
-    Diag(Tok, diag::err_unexpected_module_decl);
+    Diag(Tok, diag::err_unexpected_module_or_import_decl)
+        << Tok.is(tok::kw_import);
     SkipUntil(tok::semi);
     return nullptr;
 
@@ -2462,10 +2414,7 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                                  ? Sema::ModuleDeclKind::Interface
                                  : Sema::ModuleDeclKind::Implementation;
 
-  assert(
-      (Tok.is(tok::kw_module) ||
-       (Tok.is(tok::identifier) && Tok.getIdentifierInfo() == Ident_module)) &&
-      "not a module declaration");
+  assert(Tok.is(tok::kw_module) && "not a module declaration");
   SourceLocation ModuleLoc = ConsumeToken();
 
   // Attributes appear after the module name, not before.
@@ -2557,7 +2506,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   SourceLocation ExportLoc;
   TryConsumeToken(tok::kw_export, ExportLoc);
 
-  assert((AtLoc.isInvalid() ? Tok.isOneOf(tok::kw_import, tok::identifier)
+  assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
   bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);
