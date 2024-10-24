@@ -184,7 +184,7 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 // that when written to will cause poll to return. Typically CancelFD is the
 // read end of a unidirectional pipe.
 //
-// Timeout should be -1 to block indefinitly
+// Timeout should be -1 to block indefinitely
 //
 // getActiveFD is a callback to handle ActiveFD's of std::atomic<int> and int
 static std::error_code
@@ -207,7 +207,7 @@ manageTimeout(const std::chrono::milliseconds &Timeout,
   }
 
   // Keep track of how much time has passed in case ::poll or WSAPoll are
-  // interupted by a signal and need to be recalled
+  // interrupted by a signal and need to be recalled
   auto Start = std::chrono::steady_clock::now();
   auto RemainingTimeout = Timeout;
   int PollStatus = 0;
