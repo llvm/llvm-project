@@ -1685,7 +1685,7 @@ Intrinsic::DagEmitter::emitDagShuffle(const DagInit *DI) {
                  std::make_unique<Rev>(Arg1.first.getElementSizeInBits()));
   ST.addExpander("MaskExpand",
                  std::make_unique<MaskExpander>(Arg1.first.getNumElements()));
-  ST.evaluate(DI->getArg(2), Elts, std::nullopt);
+  ST.evaluate(DI->getArg(2), Elts, {});
 
   std::string S = "__builtin_shufflevector(" + Arg1.second + ", " + Arg2.second;
   for (auto &E : Elts) {

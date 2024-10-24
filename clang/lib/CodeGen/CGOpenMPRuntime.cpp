@@ -5075,7 +5075,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
   };
   RegionCodeGenTy RCG(CodeGen);
   CommonActionTy Action(
-      nullptr, std::nullopt,
+      nullptr, {},
       OMPBuilder.getOrCreateRuntimeFunction(
           CGM.getModule(), WithNowait ? OMPRTL___kmpc_end_reduce_nowait
                                       : OMPRTL___kmpc_end_reduce),
@@ -5197,7 +5197,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
         ThreadId,  // i32 <gtid>
         Lock       // kmp_critical_name *&<lock>
     };
-    CommonActionTy Action(nullptr, std::nullopt,
+    CommonActionTy Action(nullptr, {},
                           OMPBuilder.getOrCreateRuntimeFunction(
                               CGM.getModule(), OMPRTL___kmpc_end_reduce),
                           EndArgs);
@@ -6819,7 +6819,7 @@ private:
       const ValueDecl *Mapper = nullptr, bool ForDeviceAddr = false,
       const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
-          OverlappedElements = std::nullopt,
+          OverlappedElements = {},
       bool AreBothBasePtrAndPteeMapped = false) const {
     // The following summarizes what has to be generated for each map and the
     // types below. The generated information is expressed in this order:
@@ -7693,7 +7693,7 @@ private:
       // for map(to: lambda): using user specified map type.
       return getMapTypeBits(
           I->getSecond()->getMapType(), I->getSecond()->getMapTypeModifiers(),
-          /*MotionModifiers=*/std::nullopt, I->getSecond()->isImplicit(),
+          /*MotionModifiers=*/{}, I->getSecond()->isImplicit(),
           /*AddPtrFlag=*/false,
           /*AddIsTargetParamFlag=*/false,
           /*isNonContiguous=*/false);
@@ -7818,7 +7818,7 @@ private:
       for (const auto L : C->component_lists()) {
         const Expr *E = (C->getMapLoc().isValid()) ? *EI : nullptr;
         InfoGen(std::get<0>(L), Kind, std::get<1>(L), C->getMapType(),
-                C->getMapTypeModifiers(), std::nullopt,
+                C->getMapTypeModifiers(), {},
                 /*ReturnDevicePointer=*/false, C->isImplicit(), std::get<2>(L),
                 E);
         ++EI;
@@ -7834,7 +7834,7 @@ private:
         Kind = Present;
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
-        InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_to, std::nullopt,
+        InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_to, {},
                 C->getMotionModifiers(), /*ReturnDevicePointer=*/false,
                 C->isImplicit(), std::get<2>(L), *EI);
         ++EI;
@@ -7850,8 +7850,8 @@ private:
         Kind = Present;
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
-        InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_from,
-                std::nullopt, C->getMotionModifiers(),
+        InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_from, {},
+                C->getMotionModifiers(),
                 /*ReturnDevicePointer=*/false, C->isImplicit(), std::get<2>(L),
                 *EI);
         ++EI;
@@ -7903,9 +7903,9 @@ private:
             // processed. Nonetheless, generateInfoForComponentList must be
             // called to take the pointer into account for the calculation of
             // the range of the partial struct.
-            InfoGen(nullptr, Other, Components, OMPC_MAP_unknown, std::nullopt,
-                    std::nullopt, /*ReturnDevicePointer=*/false, IsImplicit,
-                    nullptr, nullptr, IsDevAddr);
+            InfoGen(nullptr, Other, Components, OMPC_MAP_unknown, {}, {},
+                    /*ReturnDevicePointer=*/false, IsImplicit, nullptr, nullptr,
+                    IsDevAddr);
             DeferredInfo[nullptr].emplace_back(IE, VD, IsDevAddr);
           } else {
             llvm::Value *Ptr;
@@ -8056,7 +8056,7 @@ private:
               CurInfo, StructBaseCurInfo, PartialStruct,
               /*IsFirstComponentList=*/false, L.IsImplicit,
               /*GenerateAllInfoForClauses*/ true, L.Mapper, L.ForDeviceAddr, VD,
-              L.VarRef, /*OverlappedElements*/ std::nullopt,
+              L.VarRef, /*OverlappedElements*/ {},
               HasMapBasePtr && HasMapArraySec);
 
           // If this entry relates to a device pointer, set the relevant
@@ -8692,7 +8692,7 @@ public:
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedComponents = Pair.getSecond();
       generateInfoForComponentList(
-          MapType, MapModifiers, std::nullopt, Components, CombinedInfo,
+          MapType, MapModifiers, {}, Components, CombinedInfo,
           StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
           IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
           /*ForDeviceAddr=*/false, VD, VarRef, OverlappedComponents);
@@ -8711,12 +8711,11 @@ public:
       auto It = OverlappedData.find(&L);
       if (It == OverlappedData.end())
         generateInfoForComponentList(
-            MapType, MapModifiers, std::nullopt, Components, CombinedInfo,
+            MapType, MapModifiers, {}, Components, CombinedInfo,
             StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
             IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
             /*ForDeviceAddr=*/false, VD, VarRef,
-            /*OverlappedElements*/ std::nullopt,
-            HasMapBasePtr && HasMapArraySec);
+            /*OverlappedElements*/ {}, HasMapBasePtr && HasMapArraySec);
       IsFirstComponentList = false;
     }
   }

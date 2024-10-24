@@ -1371,9 +1371,9 @@ protected:
                   new DiagnosticOptions());
               TextDiagnostic TD(llvm::errs(), AO.ASTCtx.getLangOpts(),
                                 DiagOpts.get());
-              TD.emitDiagnostic(
-                  FullSourceLoc(Loc, SrcMgr), DiagnosticsEngine::Error,
-                  "unexpected diagnostic", std::nullopt, std::nullopt);
+              TD.emitDiagnostic(FullSourceLoc(Loc, SrcMgr),
+                                DiagnosticsEngine::Error,
+                                "unexpected diagnostic", {}, {});
             }
           }
 

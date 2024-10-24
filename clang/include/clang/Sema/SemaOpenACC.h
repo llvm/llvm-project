@@ -274,7 +274,7 @@ public:
              "Parsed clause kind does not have a queue id expr list");
 
       if (std::holds_alternative<std::monostate>(Details))
-        return ArrayRef<Expr *>{std::nullopt};
+        return ArrayRef<Expr *>();
 
       return std::get<WaitDetails>(Details).QueueIdExprs;
     }
