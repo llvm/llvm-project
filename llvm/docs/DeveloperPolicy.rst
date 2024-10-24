@@ -166,38 +166,88 @@ awareness of. For such changes, the following should be done:
   Discourse, and add the label to one of the watch categories under
   ``Notifications->Tags``.
 
-.. _code owners:
+.. _maintainers:
 
-Code Owners
+Maintainers
 -----------
 
-The LLVM Project relies on two features of its process to maintain rapid
-development in addition to the high quality of its source base: the combination
-of code review plus post-commit review for trusted maintainers.  Having both is
-a great way for the project to take advantage of the fact that most people do
-the right thing most of the time, and only commit patches without pre-commit
-review when they are confident they are right.
+The LLVM Project aims to evolve features quickly while continually being in a
+release-ready state. In order to accomplish this, the project needs volunteers
+willing to do the less glamorous work to ensure we produce robust, high-quality
+products.
 
-The trick to this is that the project has to guarantee that all patches that are
-committed are reviewed after they go in: you don't want everyone to assume
-someone else will review it, allowing the patch to go unreviewed.  To solve this
-problem, we have a notion of an 'owner' for a piece of the code.  The sole
-responsibility of a code owner is to ensure that a commit to their area of the
-code is appropriately reviewed, either by themself or by someone else.  The list
-of current code owners can be found in the file `CODE_OWNERS.TXT
-<https://github.com/llvm/llvm-project/blob/main/llvm/CODE_OWNERS.TXT>`_ in the
-root of the LLVM source tree.
+Maintainers are those volunteers; they are regular contributors who volunteer
+to take on additional community responsibilities beyond code contributions.
+Community members can find active and inactive maintainers for a project in the
+``Maintainers.rst`` file at the root directory of the individual project.
 
-Note that code ownership is completely different than reviewers: anyone can
-review a piece of code, and we welcome code review from anyone who is
-interested.  Code owners are the "last line of defense" to guarantee that all
-patches that are committed are actually reviewed.
+Maintainers are volunteering to take on the following shared responsibilities
+within an area of a project:
 
-Being a code owner is a somewhat unglamorous position, but it is incredibly
-important for the ongoing success of the project.  Because people get busy,
-interests change, and unexpected things happen, code ownership is purely opt-in,
-and anyone can choose to resign their "title" at any time. For now, we do not
-have an official policy on how one gets elected to be a code owner.
+    * ensure that commits receive high-quality review, either by the maintainer
+      or by someone else,
+    * help to confirm and comment on issues,
+    * mediate code review disagreements through collaboration with other
+      maintainers (and other reviewers) to come to a consensus on how best to
+      proceed with disputed changes,
+    * actively engage with relevant RFCs,
+    * aid release managers with backporting and other release-related
+      activities,
+    * be a point of contact for contributors who need help (answering questions
+      on Discord/Discourse/IRC or holding office hours).
+
+Each top-level project in the monorepo will specify one or more
+lead maintainers who are responsible for ensuring community needs are
+met for that project. This role is like any other maintainer role,
+except the responsibilities span the project rather than a limited area
+within the project. If you cannot reach a maintainer or don't know which
+maintainer to reach out to, a lead maintainer is always a good choice
+to reach out to. If a project has no active lead maintainers, it may be a
+reasonable candidate for removal from the monorepo. A discussion should be
+started on Discourse to find a new, active lead maintainer or whether the
+project should be discontinued.
+
+All contributors with commit access to the LLVM Project are eligible to be a
+maintainer. However, we are looking for people who can commit to:
+
+    * engaging in their responsibilities the majority of the days in a month,
+    * ensuring that they, and the community members they interact with, abide by
+      the LLVM Community Code of Conduct, and
+    * performing these duties for at least three months.
+
+We recognize that priorities shift, job changes happen, burnout is real,
+extended vacations are a blessing, and people's lives are generally complex.
+Therefore, we want as little friction as possible for someone to become a
+maintainer or to step down as a maintainer.
+
+*To become a new maintainer*, you can volunteer yourself by posting a PR which
+adds yourself to the area(s) you are volunteering for. Alternatively, an
+existing maintainer can nominate you by posting a PR, but the nominee must
+explicitly accept the PR so that it's clear they agree to volunteer within the
+proposed area(s). The PR will be accepted so long as at least one maintainer in
+the same project vouches for their ability to perform the responsibilities and
+there are no explicit objections raised by the community.
+
+*To step down as a maintainer*, you can move your name to the "inactive
+maintainers" section of the ``Maintainers.rst`` file for the project, or remove
+your name entirely; no PR review is necessary. Additionally, any maintainer who
+has not been actively performing their responsibilities over an extended period
+of time can be moved to the "inactive maintainers" section by another active
+maintainer within that project with agreement from one other active maintainer
+within that project. If there is only one active maintainer for a project,
+please post on Discourse to solicit wider community feedback about the removal
+and future direction for the project. However, please discuss the situation
+with the inactive maintainer before such removal to avoid accidental
+miscommunications. If the inactive maintainer is unreachable, no discussion
+with them is required. Stepping down or being removed as a maintainer is normal
+and does not prevent someone from resuming their activities as a maintainer in
+the future.
+
+*To resume activities as a maintainer*, you can post a PR moving your name from
+the "inactive maintainers" section of the ``Maintainers.rst`` file to the
+active maintainers list. Because the volunteer was already previously accepted,
+they will be re-accepted so long as at least one maintainer in the same project
+approves the PR and there are no explicit objections raised by the community.
 
 .. _include a testcase:
 
@@ -849,9 +899,10 @@ The differences between both classes are:
 
 The basic rules for a back-end to be upstreamed in **experimental** mode are:
 
-* Every target must have a :ref:`code owner<code owners>`. The `CODE_OWNERS.TXT`
-  file has to be updated as part of the first merge. The code owner makes sure
-  that changes to the target get reviewed and steers the overall effort.
+* Every target must have at least one :ref:`maintainer<maintainers>`. The
+  `Maintainers.rst` file has to be updated as part of the first merge. These
+  maintainers make sure that changes to the target get reviewed and steers the
+  overall effort.
 
 * There must be an active community behind the target. This community
   will help maintain the target by providing buildbots, fixing
@@ -926,7 +977,7 @@ Those wishing to add a new target to LLVM must follow the procedure below:
    actual patches (but they can be prepared before, to support the RFC). Create
    a sequence of N patches, numbered '1/N' to 'N/N' (make sure N is an actual
    number, not the letter 'N'), that completes the basic structure of the target.
-4. The initial patch should add documentation, code owners and triple support in
+4. The initial patch should add documentation, maintainers, and triple support in
    clang and LLVM. The following patches add TableGen infrastructure to describe
    the target and lower instructions to assembly. The final patch must show that
    the target can lower correctly with extensive LIT tests (IR to MIR, MIR to
@@ -938,7 +989,7 @@ Those wishing to add a new target to LLVM must follow the procedure below:
    start working asynchronously on the target to complete support. They should
    still seek review from those who helped them in the initial phase, to make
    sure the progress is still consistent.
-7. Once all official requirements have been fulfilled (as above), the code owner
+7. Once all official requirements have been fulfilled (as above), the maintainers
    should request the target to be enabled by default by sending another RFC to
    the `LLVM Discourse forums`_.
 
@@ -963,7 +1014,7 @@ components to a high bar similar to "official targets", they:
  * Must conform to all of the policies laid out in this developer policy
    document, including license, patent, coding standards, and code of conduct.
  * Must have an active community that maintains the code, including established
-   code owners.
+   maintainers.
  * Should have reasonable documentation about how it works, including a high
    quality README file.
  * Should have CI to catch breakage within the project itself or due to

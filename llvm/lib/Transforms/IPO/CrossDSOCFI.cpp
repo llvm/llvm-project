@@ -125,7 +125,8 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
     ConstantInt *CaseTypeId = ConstantInt::get(Type::getInt64Ty(Ctx), TypeId);
     BasicBlock *TestBB = BasicBlock::Create(Ctx, "test", F);
     IRBuilder<> IRBTest(TestBB);
-    Function *BitsetTestFn = Intrinsic::getDeclaration(&M, Intrinsic::type_test);
+    Function *BitsetTestFn =
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::type_test);
 
     Value *Test = IRBTest.CreateCall(
         BitsetTestFn, {&Addr, MetadataAsValue::get(

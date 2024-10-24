@@ -50,18 +50,18 @@ define bfloat @caller(<32 x bfloat> %A) nounwind {
 ; CHECK-NEXT:    fmv.h.x fa5, a5
 ; CHECK-NEXT:    fmv.h.x fa6, a6
 ; CHECK-NEXT:    fmv.h.x fa7, a7
-; CHECK-NEXT:    fsh fs11, 22(sp)
-; CHECK-NEXT:    fsh fs10, 20(sp)
-; CHECK-NEXT:    fsh fs9, 18(sp)
 ; CHECK-NEXT:    fsh fs8, 16(sp)
-; CHECK-NEXT:    fsh fs7, 14(sp)
-; CHECK-NEXT:    fsh fs6, 12(sp)
-; CHECK-NEXT:    fsh fs5, 10(sp)
+; CHECK-NEXT:    fsh fs9, 18(sp)
+; CHECK-NEXT:    fsh fs10, 20(sp)
+; CHECK-NEXT:    fsh fs11, 22(sp)
 ; CHECK-NEXT:    fsh fs4, 8(sp)
-; CHECK-NEXT:    fsh fs3, 6(sp)
-; CHECK-NEXT:    fsh fs2, 4(sp)
-; CHECK-NEXT:    fsh fs1, 2(sp)
+; CHECK-NEXT:    fsh fs5, 10(sp)
+; CHECK-NEXT:    fsh fs6, 12(sp)
+; CHECK-NEXT:    fsh fs7, 14(sp)
 ; CHECK-NEXT:    fsh fs0, 0(sp)
+; CHECK-NEXT:    fsh fs1, 2(sp)
+; CHECK-NEXT:    fsh fs2, 4(sp)
+; CHECK-NEXT:    fsh fs3, 6(sp)
 ; CHECK-NEXT:    call callee
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32

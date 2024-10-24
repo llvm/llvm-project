@@ -1,4 +1,10 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate=strict-op-spec-alignment
+//--------------------------------------------------------------------------------------------------
+// Test expected errors in terms of the shape and type of tensor, and the argument type of
+// operation. Excludes the profile compilance checking since it is performed earlier in the
+// validation flow.
+//--------------------------------------------------------------------------------------------------
+
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=bi,mi,mt strict-op-spec-alignment"
 
 
 func.func @test_const() -> tensor<1xf32> {
@@ -355,6 +361,22 @@ func.func @test_reshape_inconsistent_result_type(%arg0 : tensor<?xf32>) -> () {
 func.func @test_reshape_invalid_size(%arg0 : tensor<2x4xf32>) -> () {
   // expected-error@+1 {{'tosa.reshape' op cannot reshape 8 elements into 15}}
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 3, 5>} : (tensor<2x4xf32>) -> tensor<3x5xf32>
+  return
+}
+
+// -----
+
+func.func @test_reshape_invalid_newshape(%arg0 : tensor<1xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op cannot reshape 1 elements into 4}}
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1, 4>} : (tensor<1xf32>) -> tensor<?x4xf32>
+  return
+}
+
+// -----
+
+func.func @test_reshape_invalid_newshape(%arg0 : tensor<8xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op cannot reshape 8 elements into 4}}
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 1, 4>} : (tensor<8xf32>) -> tensor<?x4xf32>
   return
 }
 

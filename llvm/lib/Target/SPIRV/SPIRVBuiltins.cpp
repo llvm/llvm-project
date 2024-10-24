@@ -2678,8 +2678,19 @@ getImageType(const TargetExtType *ExtensionType,
          "SPIR-V image builtin type must have sampled type parameter!");
   const SPIRVType *SampledType =
       GR->getOrCreateSPIRVType(ExtensionType->getTypeParameter(0), MIRBuilder);
-  assert(ExtensionType->getNumIntParameters() == 7 &&
+  assert((ExtensionType->getNumIntParameters() == 7 ||
+          ExtensionType->getNumIntParameters() == 6) &&
          "Invalid number of parameters for SPIR-V image builtin!");
+
+  SPIRV::AccessQualifier::AccessQualifier accessQualifier =
+      SPIRV::AccessQualifier::None;
+  if (ExtensionType->getNumIntParameters() == 7) {
+    accessQualifier = Qualifier == SPIRV::AccessQualifier::WriteOnly
+                          ? SPIRV::AccessQualifier::WriteOnly
+                          : SPIRV::AccessQualifier::AccessQualifier(
+                                ExtensionType->getIntParameter(6));
+  }
+
   // Create or get an existing type from GlobalRegistry.
   return GR->getOrCreateOpTypeImage(
       MIRBuilder, SampledType,
@@ -2687,10 +2698,7 @@ getImageType(const TargetExtType *ExtensionType,
       ExtensionType->getIntParameter(1), ExtensionType->getIntParameter(2),
       ExtensionType->getIntParameter(3), ExtensionType->getIntParameter(4),
       SPIRV::ImageFormat::ImageFormat(ExtensionType->getIntParameter(5)),
-      Qualifier == SPIRV::AccessQualifier::WriteOnly
-          ? SPIRV::AccessQualifier::WriteOnly
-          : SPIRV::AccessQualifier::AccessQualifier(
-                ExtensionType->getIntParameter(6)));
+      accessQualifier);
 }
 
 static SPIRVType *getSampledImageType(const TargetExtType *OpaqueType,

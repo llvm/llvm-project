@@ -8,12 +8,20 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Constant.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 
 using namespace llvm;
 
 #define SV_NAME "sandbox-vectorizer"
 #define DEBUG_TYPE SV_NAME
+
+SandboxVectorizerPass::SandboxVectorizerPass() = default;
+
+SandboxVectorizerPass::SandboxVectorizerPass(SandboxVectorizerPass &&) =
+    default;
+
+SandboxVectorizerPass::~SandboxVectorizerPass() = default;
 
 PreservedAnalyses SandboxVectorizerPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
@@ -41,11 +49,8 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
     return false;
   }
 
+  // Create SandboxIR for LLVMF and run BottomUpVec on it.
   sandboxir::Context Ctx(LLVMF.getContext());
-  // Create SandboxIR for `LLVMF`.
   sandboxir::Function &F = *Ctx.createFunction(&LLVMF);
-  // TODO: Initialize SBVec Pass Manager
-  (void)F;
-
-  return false;
+  return BottomUpVecPass.runOnFunction(F);
 }

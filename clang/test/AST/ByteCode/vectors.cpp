@@ -101,3 +101,27 @@ namespace bigint {
   static_assert(A[3] == -1, "");
 }
 #endif
+
+using VI __attribute__((ext_vector_type(4))) = int;
+
+constexpr int a1() {
+    VI a = {0, 0, 0, 0};
+    VI b = {1,1,1,1};
+
+    VI C = (a += b);
+
+    return 0;
+}
+
+static_assert(a1() == 0);
+
+constexpr int a2() {
+    VI a = {0, 0, 0, 0};
+    VI b = {1,1,1,1};
+
+    VI C = (a + b);
+
+    return 0;
+}
+
+static_assert(a2() == 0);

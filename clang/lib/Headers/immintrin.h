@@ -651,6 +651,7 @@ _storebe_i64(void * __P, long long __D) {
 #if !defined(__SCE__) || __has_feature(modules) || defined(__AVX10_2__)
 #include <avx10_2bf16intrin.h>
 #include <avx10_2convertintrin.h>
+#include <avx10_2copyintrin.h>
 #include <avx10_2minmaxintrin.h>
 #include <avx10_2niintrin.h>
 #include <avx10_2satcvtdsintrin.h>

@@ -85,7 +85,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_5: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    incq %r14
 ; CHECK-NEXT:    addl %edx, %ebx
@@ -96,7 +96,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    jmp .LBB1_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_2 Depth=2
 ; CHECK-NEXT:    tilestored %tmm1, (%r15,%rax)
 ; CHECK-NEXT:    incq %r13

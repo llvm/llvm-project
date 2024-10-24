@@ -220,10 +220,10 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC1:      vector.ph:
 ; CHECK-VF4IC1:        [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
 ; CHECK-VF4IC1-NEXT:   [[SPLAT_OF_A:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-VF4IC1-NOT:   [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 %b, i64 0
+; CHECK-VF4IC1-NOT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 %b, i64 0
+; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp eq <4 x i32> [[SPLAT_OF_A]], <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-VF4IC1:      vector.body:
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
-; CHECK-VF4IC1:        [[VEC_ICMP:%.*]] = icmp eq <4 x i32> [[SPLAT_OF_A]], <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-VF4IC1-NEXT:   [[NOT:%.*]] = xor <4 x i1> [[VEC_ICMP]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:

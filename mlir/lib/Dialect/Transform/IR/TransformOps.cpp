@@ -1967,7 +1967,7 @@ transform::MatchParamCmpIOp::apply(transform::TransformRewriter &rewriter,
     std::string str;
     llvm::raw_string_ostream os(str);
     value.print(os, /*isSigned=*/true);
-    return os.str();
+    return str;
   };
 
   ArrayRef<Attribute> params = state.getParams(getParam());

@@ -52,8 +52,8 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
-  // LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-  // "BasicBlock::iterator")
+  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
+                  "BasicBlock::iterator")
   InsertPosition(Instruction *InsertBefore);
   InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
@@ -433,7 +433,7 @@ public:
   /// convenience method for passes to do so.
   /// dropUBImplyingAttrsAndUnknownMetadata should be used instead of
   /// this API if the Instruction being modified is a call.
-  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs = std::nullopt);
+  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs = {});
   /// @}
 
   /// Adds an !annotation metadata node with \p Annotation to this instruction.
@@ -881,16 +881,20 @@ public:
   /// This is like isIdenticalTo, except that it ignores the
   /// SubclassOptionalData flags, which may specify conditions under which the
   /// instruction's result is undefined.
-  bool isIdenticalToWhenDefined(const Instruction *I) const LLVM_READONLY;
+  bool
+  isIdenticalToWhenDefined(const Instruction *I,
+                           bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// When checking for operation equivalence (using isSameOperationAs) it is
   /// sometimes useful to ignore certain attributes.
   enum OperationEquivalenceFlags {
     /// Check for equivalence ignoring load/store alignment.
-    CompareIgnoringAlignment = 1<<0,
+    CompareIgnoringAlignment = 1 << 0,
     /// Check for equivalence treating a type and a vector of that type
     /// as equivalent.
-    CompareUsingScalarTypes = 1<<1
+    CompareUsingScalarTypes = 1 << 1,
+    /// Check for equivalence with intersected callbase attrs.
+    CompareUsingIntersectedAttrs = 1 << 2,
   };
 
   /// This function determines if the specified instruction executes the same
@@ -911,8 +915,8 @@ public:
   /// @returns true if the specific instruction has the same opcde specific
   /// characteristics as the current one. Determine if one instruction has the
   /// same state as another.
-  bool hasSameSpecialState(const Instruction *I2,
-                           bool IgnoreAlignment = false) const LLVM_READONLY;
+  bool hasSameSpecialState(const Instruction *I2, bool IgnoreAlignment = false,
+                           bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// Return true if there are any uses of this instruction in blocks other than
   /// the specified block. Note that PHI nodes are considered to evaluate their

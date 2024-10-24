@@ -1780,14 +1780,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (exe_ctx) {
         if (frame) {
           Scalar value;
-          Status fb_err;
-          if (frame->GetFrameBaseValue(value, &fb_err)) {
-            int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
-            value += fbreg_offset;
-            stack.push_back(value);
-            stack.back().SetValueType(Value::ValueType::LoadAddress);
-          } else
-            return fb_err.ToError();
+          if (llvm::Error err = frame->GetFrameBaseValue(value))
+            return err;
+          int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
+          value += fbreg_offset;
+          stack.push_back(value);
+          stack.back().SetValueType(Value::ValueType::LoadAddress);
         } else {
           return llvm::createStringError(
               "invalid stack frame in context for DW_OP_fbreg opcode");

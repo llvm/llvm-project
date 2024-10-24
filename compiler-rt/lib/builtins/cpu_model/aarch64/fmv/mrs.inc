@@ -35,8 +35,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_RDM);
   if (hwcap & HWCAP_AES)
     setCPUFeature(FEAT_AES);
-  if (hwcap & HWCAP_SHA1)
-    setCPUFeature(FEAT_SHA1);
   if (hwcap & HWCAP_SHA2)
     setCPUFeature(FEAT_SHA2);
   if (hwcap & HWCAP_JSCVT)
@@ -45,10 +43,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_FCMA);
   if (hwcap & HWCAP_SB)
     setCPUFeature(FEAT_SB);
-  if (hwcap & HWCAP_SSBS) {
-    setCPUFeature(FEAT_SSBS);
+  if (hwcap & HWCAP_SSBS)
     setCPUFeature(FEAT_SSBS2);
-  }
   if (hwcap2 & HWCAP2_MTE) {
     setCPUFeature(FEAT_MEMTAG);
     setCPUFeature(FEAT_MEMTAG2);
@@ -110,12 +106,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     /* ID_AA64ISAR1_EL1.SPECRES >= 0b0001  */
     if (extractBits(ftr, 40, 4) >= 0x1)
       setCPUFeature(FEAT_PREDRES);
-    /* ID_AA64ISAR1_EL1.LS64 >= 0b0001  */
-    if (extractBits(ftr, 60, 4) >= 0x1)
-      setCPUFeature(FEAT_LS64);
-    /* ID_AA64ISAR1_EL1.LS64 >= 0b0010  */
-    if (extractBits(ftr, 60, 4) >= 0x2)
-      setCPUFeature(FEAT_LS64_V);
     /* ID_AA64ISAR1_EL1.LS64 >= 0b0011  */
     if (extractBits(ftr, 60, 4) >= 0x3)
       setCPUFeature(FEAT_LS64_ACCDATA);

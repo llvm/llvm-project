@@ -398,6 +398,10 @@ void setLock(omp_lock_t *Lock) {
   } // wait for 0 to be the read value
 }
 
+void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
+
+void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
+
 #pragma omp end declare variant
 ///}
 

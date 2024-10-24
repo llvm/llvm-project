@@ -280,6 +280,40 @@ entry:
 }
 declare <4 x i64> @llvm.abs.v4i64(<4 x i64>, i1)
 
+define <2 x i128> @abs_v4i128(<2 x i128> %a){
+; CHECK-SD-LABEL: abs_v4i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    asr x8, x1, #63
+; CHECK-SD-NEXT:    asr x9, x3, #63
+; CHECK-SD-NEXT:    eor x10, x0, x8
+; CHECK-SD-NEXT:    eor x11, x1, x8
+; CHECK-SD-NEXT:    subs x0, x10, x8
+; CHECK-SD-NEXT:    eor x10, x2, x9
+; CHECK-SD-NEXT:    sbc x1, x11, x8
+; CHECK-SD-NEXT:    eor x8, x3, x9
+; CHECK-SD-NEXT:    subs x2, x10, x9
+; CHECK-SD-NEXT:    sbc x3, x8, x9
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abs_v4i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    asr x8, x1, #63
+; CHECK-GI-NEXT:    asr x9, x3, #63
+; CHECK-GI-NEXT:    adds x10, x0, x8
+; CHECK-GI-NEXT:    adc x11, x1, x8
+; CHECK-GI-NEXT:    adds x12, x2, x9
+; CHECK-GI-NEXT:    eor x0, x10, x8
+; CHECK-GI-NEXT:    adc x13, x3, x9
+; CHECK-GI-NEXT:    eor x1, x11, x8
+; CHECK-GI-NEXT:    eor x2, x12, x9
+; CHECK-GI-NEXT:    eor x3, x13, x9
+; CHECK-GI-NEXT:    ret
+entry:
+  %res = call <2 x i128> @llvm.abs.v2i128(<2 x i128> %a, i1 0)
+  ret <2 x i128> %res
+}
+declare <2 x i128> @llvm.abs.v2i128(<2 x i128>, i1)
+
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <3 x i8> @abs_v3i8(<3 x i8> %a){

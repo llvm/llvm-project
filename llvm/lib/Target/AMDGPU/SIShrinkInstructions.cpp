@@ -752,13 +752,13 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     MachineBasicBlock &MBB = *MovT.getParent();
     SmallVector<MachineInstr *, 4> Swaps;
     if (Size == 2) {
-      auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
-                         TII->get(AMDGPU::V_SWAP_B16))
-                     .addDef(X)
-                     .addDef(Y)
-                     .addReg(Y)
-                     .addReg(X)
-                     .getInstr();
+      auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                          TII->get(AMDGPU::V_SWAP_B16))
+                      .addDef(X)
+                      .addDef(Y)
+                      .addReg(Y)
+                      .addReg(X)
+                      .getInstr();
       Swaps.push_back(MIB);
     } else {
       assert(Size > 0 && Size % 4 == 0);
@@ -766,13 +766,13 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         TargetInstrInfo::RegSubRegPair X1, Y1;
         X1 = getSubRegForIndex(X, Xsub, I);
         Y1 = getSubRegForIndex(Y, Ysub, I);
-        auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
-                           TII->get(AMDGPU::V_SWAP_B32))
-                       .addDef(X1.Reg, 0, X1.SubReg)
-                       .addDef(Y1.Reg, 0, Y1.SubReg)
-                       .addReg(Y1.Reg, 0, Y1.SubReg)
-                       .addReg(X1.Reg, 0, X1.SubReg)
-                       .getInstr();
+        auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                            TII->get(AMDGPU::V_SWAP_B32))
+                        .addDef(X1.Reg, 0, X1.SubReg)
+                        .addDef(Y1.Reg, 0, Y1.SubReg)
+                        .addReg(Y1.Reg, 0, Y1.SubReg)
+                        .addReg(X1.Reg, 0, X1.SubReg)
+                        .getInstr();
         Swaps.push_back(MIB);
       }
     }

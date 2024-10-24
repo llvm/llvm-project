@@ -29,3 +29,9 @@ endif()
 if(POLICY CMP0144)
   cmake_policy(SET CMP0144 NEW)
 endif()
+
+# CMP0147: Visual Studio Generators build custom commands in parallel.
+# New in CMake 3.27: https://cmake.org/cmake/help/latest/policy/CMP0147.html
+if(POLICY CMP0147)
+  cmake_policy(SET CMP0147 NEW)
+endif()

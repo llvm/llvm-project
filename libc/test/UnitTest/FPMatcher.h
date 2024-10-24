@@ -21,6 +21,8 @@
 
 #include "hdr/math_macros.h"
 
+using LIBC_NAMESPACE::Sign;
+
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 

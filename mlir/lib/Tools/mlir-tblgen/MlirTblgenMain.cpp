@@ -126,7 +126,7 @@ static const mlir::GenInfo *generator;
 
 // TableGenMain requires a function pointer so this function is passed in which
 // simply wraps the call to the generator.
-static bool mlirTableGenMain(raw_ostream &os, RecordKeeper &records) {
+static bool mlirTableGenMain(raw_ostream &os, const RecordKeeper &records) {
   if (actionOnDeprecatedValue != DeprecatedAction::None)
     warnOfDeprecatedUses(records);
 

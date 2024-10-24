@@ -956,7 +956,7 @@ namespace shufflevector {
   static_assert(vectorShuffle6[7] == 7, "");
 
   constexpr vector4char  vectorShuffleFail1 = __builtin_shufflevector( // both-error {{must be initialized by a constant expression}}\
-                                                                       // ref-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}
+                                                                       // both-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}
           vector4charConst1,
           vector4charConst2, -1, -1, -1, -1);
 }
@@ -966,7 +966,8 @@ namespace shufflevector {
 namespace FunctionStart {
   void a(void) {}
   static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
-                                                       // both-note {{comparison of addresses of literals has unspecified value}}
+                                                       // ref-note {{comparison against opaque constant address '&__builtin_function_start(a)'}} \
+                                                       // expected-note {{comparison of addresses of literals has unspecified value}}
 }
 
 namespace BuiltinInImplicitCtor {

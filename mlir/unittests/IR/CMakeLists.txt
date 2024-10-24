@@ -8,6 +8,7 @@ add_mlir_unittest(MLIRIRTests
   InterfaceTest.cpp
   IRMapping.cpp
   InterfaceAttachmentTest.cpp
+  LocationTest.cpp
   OperationSupportTest.cpp
   PatternMatchTest.cpp
   ShapedTypeTest.cpp

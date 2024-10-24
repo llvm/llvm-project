@@ -2927,7 +2927,6 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
   VFSWriter.write(OS);
-  OS.flush();
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   Lower->addDirectory("//root/");
@@ -2978,7 +2977,6 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest2) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
   VFSWriter.write(OS);
-  OS.flush();
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
@@ -3011,7 +3009,6 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest3) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
   VFSWriter.write(OS);
-  OS.flush();
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
@@ -3032,7 +3029,6 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
   VFSWriter.write(OS);
-  OS.flush();
 
   // We didn't add a single file - only directories.
   EXPECT_EQ(Buffer.find("'type': 'file'"), std::string::npos);

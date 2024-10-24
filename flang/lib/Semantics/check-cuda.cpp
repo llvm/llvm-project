@@ -296,10 +296,8 @@ private:
     return false;
   }
   void WarnOnIoStmt(const parser::CharBlock &source) {
-    if (context_.ShouldWarn(common::UsageWarning::CUDAUsage)) {
-      context_.Say(
-          source, "I/O statement might not be supported on device"_warn_en_US);
-    }
+    context_.Warn(common::UsageWarning::CUDAUsage, source,
+        "I/O statement might not be supported on device"_warn_en_US);
   }
   template <typename A>
   void WarnIfNotInternal(const A &stmt, const parser::CharBlock &source) {

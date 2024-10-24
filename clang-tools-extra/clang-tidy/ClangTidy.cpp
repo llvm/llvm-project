@@ -672,6 +672,18 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
     Buffer.append(AnalyzerCheck);
     Result.Names.insert(Buffer);
   }
+  for (std::string OptionName : {
+#define GET_CHECKER_OPTIONS
+#define CHECKER_OPTION(TYPE, CHECKER, OPTION_NAME, DESCRIPTION, DEFAULT,       \
+                       RELEASE, HIDDEN)                                        \
+  Twine(AnalyzerCheckNamePrefix).concat(CHECKER ":" OPTION_NAME).str(),
+
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER_OPTION
+#undef GET_CHECKER_OPTIONS
+       }) {
+    Result.Options.insert(OptionName);
+  }
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
   Context.setOptionsCollector(&Result.Options);

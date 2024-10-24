@@ -963,6 +963,7 @@ private:
   SDValue SplitVecOp_VP_REDUCE(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_UnaryOp(SDNode *N);
   SDValue SplitVecOp_TruncateHelper(SDNode *N);
+  SDValue SplitVecOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo);
 
   SDValue SplitVecOp_BITCAST(SDNode *N);
   SDValue SplitVecOp_INSERT_SUBVECTOR(SDNode *N, unsigned OpNo);

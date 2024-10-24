@@ -26,7 +26,6 @@ exports_files([
     "tools/clang-format/clang-format.el",
     "tools/clang-format/clang-format-test.el",
     "tools/clang-format/clang-format.py",
-    "tools/clang-rename/clang-rename.el",
     "tools/extra/clang-include-fixer/tool/clang-include-fixer.el",
     "tools/extra/clang-include-fixer/tool/clang-include-fixer-test.el",
 ])
@@ -172,7 +171,6 @@ gentbl(
         "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
-
 
 gentbl(
     name = "basic_arm_sve_typeflags_gen",
@@ -360,6 +358,7 @@ gentbl(
     td_file = "include/clang/Basic/BuiltinsRISCV.td",
     td_srcs = [
         "include/clang/Basic/BuiltinsRISCV.td",
+        "include/clang/Basic/BuiltinsRISCVXCV.td",
         "include/clang/Basic/BuiltinsBase.td",
     ],
 )
@@ -997,12 +996,12 @@ cc_library(
     ],
     deps = [
         ":ast_attr_gen",
+        ":ast_bytecode_opcodes_gen",
         ":ast_comment_command_info_gen",
         ":ast_comment_html_named_character_references_gen",
         ":ast_comment_html_tags_gen",
         ":ast_comment_html_tags_properties_gen",
         ":ast_comment_nodes_gen",
-        ":ast_bytecode_opcodes_gen",
         ":ast_decl_nodes_gen",
         ":ast_properties_base_gen",
         ":ast_stmt_data_collectors_gen",
@@ -1279,6 +1278,9 @@ cc_library(
     ]),
     hdrs = glob(["include/clang/Testing/*.h"]),
     includes = ["include"],
+    textual_hdrs = [
+        "include/clang/Testing/TestLanguage.def",
+    ],
     deps = [
         ":basic",
         ":frontend",
@@ -2583,20 +2585,6 @@ cc_binary(
         ":format",
         ":frontend",
         ":lex",
-        ":rewrite",
-        ":tooling",
-        ":tooling_refactoring",
-        "//llvm:Support",
-    ],
-)
-
-cc_binary(
-    name = "clang-rename",
-    srcs = glob(["tools/clang-rename/*.cpp"]),
-    stamp = 0,
-    deps = [
-        ":basic",
-        ":frontend",
         ":rewrite",
         ":tooling",
         ":tooling_refactoring",

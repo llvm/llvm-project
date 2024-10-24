@@ -640,13 +640,13 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
       addUsedGlobal(COMDATKey);
     }
 
-    // If comdats are in use and supported, place the initializer function into
-    // the comdat group of the global. In the MS ABI, initializers are mangled
-    // and have their own comdat, so we don't include them in the group for
-    // consistency with MSVC.
+    // If we used a COMDAT key for the global ctor, the init function can be
+    // discarded if the global ctor entry is discarded.
+    // FIXME: Do we need to restrict this to ELF and Wasm?
     llvm::Comdat *C = Addr->getComdat();
-    if (COMDATKey && C && getTriple().supportsCOMDAT() &&
-        !getTarget().getCXXABI().isMicrosoft()) {
+    if (COMDATKey && C &&
+        (getTarget().getTriple().isOSBinFormatELF() ||
+         getTarget().getTriple().isOSBinFormatWasm())) {
       Fn->setComdat(C);
     }
   } else {

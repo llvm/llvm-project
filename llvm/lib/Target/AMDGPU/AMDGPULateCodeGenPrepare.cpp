@@ -111,7 +111,7 @@ public:
     if (!VTy)
       return false;
 
-    auto TLI = ST->getTargetLowering();
+    const auto *TLI = ST->getTargetLowering();
 
     Type *EltTy = VTy->getElementType();
     // If the element size is not less than the convert to scalar size, then we
@@ -296,9 +296,8 @@ bool LiveRegOptimizer::optimizeLiveType(
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
-        if (!Defs.count(II) && !isa<PHINode>(II)) {
+        if (!isa<PHINode>(II))
           Defs.insert(II);
-        }
       }
     }
   }
@@ -455,7 +454,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   IRB.SetCurrentDebugLocation(LI.getDebugLoc());
 
   unsigned LdBits = DL->getTypeStoreSizeInBits(LI.getType());
-  auto IntNTy = Type::getIntNTy(LI.getContext(), LdBits);
+  auto *IntNTy = Type::getIntNTy(LI.getContext(), LdBits);
 
   auto *NewPtr = IRB.CreateConstGEP1_64(
       IRB.getInt8Ty(),

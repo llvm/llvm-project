@@ -2581,7 +2581,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
                        SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation())) {
+      (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
+       S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }

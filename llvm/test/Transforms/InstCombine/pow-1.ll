@@ -863,16 +863,28 @@ define double @pow_libcall_half_no_FMF(double %x) {
 }
 
 define double @pow_libcall_half_fromdomcondition(double %x) {
-; CHECK-LABEL: define double @pow_libcall_half_fromdomcondition(
-; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call double @llvm.fabs.f64(double [[X]])
-; CHECK-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], 0x7FF0000000000000
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
-; CHECK:       then:
-; CHECK-NEXT:    ret double 0.000000e+00
-; CHECK:       else:
-; CHECK-NEXT:    [[RETVAL:%.*]] = call double @pow(double [[X]], double 5.000000e-01)
-; CHECK-NEXT:    ret double [[RETVAL]]
+; LIB-LABEL: define double @pow_libcall_half_fromdomcondition(
+; LIB-SAME: double [[X:%.*]]) {
+; LIB-NEXT:    [[A:%.*]] = call double @llvm.fabs.f64(double [[X]])
+; LIB-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], 0x7FF0000000000000
+; LIB-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; LIB:       then:
+; LIB-NEXT:    ret double 0.000000e+00
+; LIB:       else:
+; LIB-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[X]])
+; LIB-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
+; LIB-NEXT:    ret double [[ABS]]
+;
+; NOLIB-LABEL: define double @pow_libcall_half_fromdomcondition(
+; NOLIB-SAME: double [[X:%.*]]) {
+; NOLIB-NEXT:    [[A:%.*]] = call double @llvm.fabs.f64(double [[X]])
+; NOLIB-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], 0x7FF0000000000000
+; NOLIB-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; NOLIB:       then:
+; NOLIB-NEXT:    ret double 0.000000e+00
+; NOLIB:       else:
+; NOLIB-NEXT:    [[RETVAL:%.*]] = call double @pow(double [[X]], double 5.000000e-01)
+; NOLIB-NEXT:    ret double [[RETVAL]]
 ;
   %a = call double @llvm.fabs.f64(double %x)
   %c = fcmp oeq double %a, 0x7FF0000000000000
