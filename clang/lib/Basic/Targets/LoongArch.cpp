@@ -205,7 +205,7 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
       // TODO: As more features of the V1.1 ISA are supported, a unified "v1.1"
       // arch feature set will be used to include all sub-features belonging to
       // the V1.1 ISA version.
-      if (HasFeatureFrecipe)
+      if (HasFeatureFrecipe && HasFeatureLAM_BH)
         Builder.defineMacro("__loongarch_arch",
                             Twine('"') + "la64v1.1" + Twine('"'));
       else
@@ -235,6 +235,9 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
   if (HasFeatureFrecipe)
     Builder.defineMacro("__loongarch_frecipe", Twine(1));
+
+  if (HasFeatureLAM_BH)
+    Builder.defineMacro("__loongarch_lam_bh", Twine(1));
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
@@ -312,6 +315,8 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       HasUnalignedAccess = false;
     else if (Feature == "+frecipe")
       HasFeatureFrecipe = true;
+    else if (Feature == "+lam-bh")
+      HasFeatureLAM_BH = true;
   }
   return true;
 }
