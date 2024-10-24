@@ -20,7 +20,7 @@ entry:
 define void @test() nounwind {
 entry:
 ; 16: 	.frame	$sp,8,$ra
-; 16: 	save 	8 # 16 bit inst
+; 16: 	save 	8
 ; 16: 	move	$16, $sp
 ; 16:	move	${{[0-9]+}}, $sp
 ; 16:	subu	$[[REGISTER:[0-9]+]], ${{[0-9]+}}, ${{[0-9]+}}

@@ -51,7 +51,7 @@ entry:
 ; STATIC32MMR6: balc
 ; N64: jalr $25
 ; N64R6: jalr $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 @callee1(i32 1, i32 1, i32 1, i32 %a0) nounwind
   ret i32 %call
@@ -70,7 +70,7 @@ entry:
 ; STATIC32MMR6: balc
 ; N64: jalr $25
 ; N64R6: jalr $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 @callee2(i32 1, i32 %a0, i32 %a1, i32 %a2, i32 %a3) nounwind
   ret i32 %call
@@ -89,7 +89,7 @@ entry:
 ; STATIC32MMR6: balc
 ; N64: jalr $25
 ; N64R6: jalr $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 @callee3(i32 1, i32 1, i32 1, i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4) nounwind
   ret i32 %call
@@ -109,7 +109,7 @@ entry:
 ; PIC64: jalr $25
 ; STATIC64: jal
 ; N64R6: jalr $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 @callee4(i32 1, i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7) nounwind
   ret i32 %call
@@ -128,7 +128,7 @@ entry:
 ; STATIC32MMR6: bc
 ; PIC64: jr $25
 ; STATIC64: j
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %0 = load i32, ptr @g0, align 4
   %1 = load i32, ptr @g1, align 4
@@ -172,7 +172,7 @@ entry:
 ; PIC64: jr $25
 ; PIC64R6: jrc $25
 ; STATIC64: j
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call fastcc i32 @caller8_1()
   ret i32 %call
@@ -189,7 +189,7 @@ entry:
 ; STATIC32MMR6: balc
 ; PIC64: jalr $25
 ; STATIC64: jal
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 (i32, ...) @callee8(i32 2, i32 1) nounwind
   ret i32 %call
@@ -213,7 +213,7 @@ entry:
 ; PIC64: jr $25
 ; STATIC64: j
 ; PIC64R6: jrc $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
   %call = tail call fastcc i32 @caller9_1()
   ret i32 %call
 }
@@ -230,7 +230,7 @@ entry:
 ; STATIC64: jal
 ; PIC64: jalr $25
 ; PIC64R6: jalrc $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 @callee9(ptr byval(%struct.S) @gs1) nounwind
   ret i32 %call
@@ -250,7 +250,7 @@ entry:
 ; STATIC64: jal
 ; PIC64: jalr $25
 ; PIC64R6: jalr $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 @callee10(i32 %a8, i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7) nounwind
   ret i32 %call
@@ -270,7 +270,7 @@ entry:
 ; STATIC64: jal
 ; PIC64: jalr $25
 ; PIC64R6: jalrc $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 @callee11(ptr byval(%struct.S) @gs1) nounwind
   ret i32 %call
@@ -292,7 +292,7 @@ entry:
 ; STATIC64: jal
 ; PIC64: jalr $25
 ; PIC64R6: jalrc $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 @gs1, ptr align 4 %a0, i32 8, i1 false)
   %call = tail call i32 @callee12() nounwind
@@ -313,7 +313,7 @@ entry:
 ; STATIC64: jal
 ; PIC64R6: jalr $25
 ; PIC64: jalr $25
-; PIC16: jalrc
+; PIC16: jalrc $ra
 
   %call = tail call i32 (i32, ...) @callee13(i32 1, i32 2) nounwind
   ret i32 %call

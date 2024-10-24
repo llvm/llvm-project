@@ -589,6 +589,7 @@ bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   }
 }
 
+// FIXME: Is something similar needed for MIPS16?
 bool MipsAsmBackend::isMicroMips(const MCSymbol *Sym) const {
   if (const auto *ElfSym = dyn_cast<const MCSymbolELF>(Sym)) {
     if (ElfSym->getOther() & ELF::STO_MIPS_MICROMIPS)

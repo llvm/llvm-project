@@ -10,8 +10,8 @@ entry:
   %0 = load i32, ptr @iiii, align 4
   %1 = load i32, ptr @jjjj, align 4
   %rem = srem i32 %0, %1
-; 16:	div	$zero, ${{[0-9]+}}, ${{[0-9]+}}
-; 16: 	mfhi	${{[0-9]+}}
+; 16:	div	$[[#]], $[[#]]
+; 16: 	mfhi	$[[#]]
   store i32 %rem, ptr @kkkk, align 4
   ret void
 }

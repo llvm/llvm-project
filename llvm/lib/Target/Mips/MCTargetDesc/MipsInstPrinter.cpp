@@ -88,26 +88,6 @@ void MipsInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     O << "\t.set\tpush\n";
     O << "\t.set\tmips32r2\n";
     break;
-  case Mips::Save16:
-    O << "\tsave\t";
-    printSaveRestore(MI, STI, O);
-    O << " # 16 bit inst\n";
-    return;
-  case Mips::SaveX16:
-    O << "\tsave\t";
-    printSaveRestore(MI, STI, O);
-    O << "\n";
-    return;
-  case Mips::Restore16:
-    O << "\trestore\t";
-    printSaveRestore(MI, STI, O);
-    O << " # 16 bit inst\n";
-    return;
-  case Mips::RestoreX16:
-    O << "\trestore\t";
-    printSaveRestore(MI, STI, O);
-    O << "\n";
-    return;
   }
 
   // Try to print any aliases first.
@@ -230,6 +210,27 @@ void MipsInstPrinter::printMemOperandEA(const MCInst *MI, int opNum,
   printOperand(MI, opNum + 1, STI, O);
 }
 
+void MipsInstPrinter::printPCPseudoReg(const MCInst *MI, int opNum,
+                                       const MCSubtargetInfo & /* STI */,
+                                       raw_ostream &O) {
+  // Not a real operand; instead indicates a PC-realtive MIPS16 instruction.
+  O << "$pc";
+}
+
+void MipsInstPrinter::printSPPseudoReg(const MCInst *MI, int opNum,
+                                       const MCSubtargetInfo & /* STI */,
+                                       raw_ostream &O) {
+  // Not a real operand; instead indicates an SP-realtive MIPS16 instruction.
+  O << "$sp";
+}
+
+void MipsInstPrinter::printRAPseudoReg(const MCInst *MI, int opNum,
+                                       const MCSubtargetInfo & /* STI */,
+                                       raw_ostream &O) {
+  // Not a real operand; instead indicates the MIPS16 instruction accesses RA.
+  O << "$ra";
+}
+
 void MipsInstPrinter::printFCCOperand(const MCInst *MI, int opNum,
                                       const MCSubtargetInfo & /* STI */,
                                       raw_ostream &O) {
@@ -338,15 +339,14 @@ bool MipsInstPrinter::printAlias(const MCInst &MI, uint64_t Address,
   }
 }
 
-void MipsInstPrinter::printSaveRestore(const MCInst *MI,
+void MipsInstPrinter::printSaveRestore(const MCInst *MI, int opNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    if (i != 0) O << ", ";
-    if (MI->getOperand(i).isReg())
-      printRegName(O, MI->getOperand(i).getReg());
-    else
-      printUImm<16>(MI, i, STI, O);
+  for (int i = opNum, e = MI->getNumOperands(); i != e; ++i) {
+    if (i != opNum)
+      O << ", ";
+
+    printOperand(MI, i, STI, O);
   }
 }
 

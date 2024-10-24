@@ -1,6 +1,8 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true   < %s | FileCheck %s -check-prefix=lcb
-
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true   < %s | FileCheck %s -check-prefix=lcbn
+; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 \
+; RUN:     -mattr=+soft-float -mips16-hard-float -relocation-model=static \
+; RUN:     -mips16-constant-islands=true   < %s \
+; RUN:     | llvm-mc -arch=mipsel -mattr=+mips16 -show-inst \
+; RUN:     | FileCheck %s -check-prefix=lcb
 
 @i = global i32 0, align 4
 @j = common global i32 0, align 4
@@ -22,11 +24,8 @@ if.end:                                           ; preds = %if.then, %entry
   ret i32 0
 }
 ; lcb: 	.ent	bnez
-; lcbn:	.ent	bnez
-; lcb:	bnez	${{[0-9]+}}, $BB{{[0-9]+}}_{{[0-9]+}}
-; lcbn-NOT: bnez	${{[0-9]+}}, $BB{{[0-9]+}}_{{[0-9]+}}  # 16 bit inst
+; lcb:	bnez	$[[#]], $BB[[#]]_[[#]]       # <MCInst #[[#]] BnezRxImmX16
 ; lcb: 	.end	bnez
-; lcbn:	.end	bnez
 
 ; Function Attrs: nounwind optsize
 define i32 @beqz() #0 {
@@ -50,11 +49,8 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ; lcb: 	.ent	beqz
-; lcbn:	.ent	beqz
-; lcb:	beqz	${{[0-9]+}}, $BB{{[0-9]+}}_{{[0-9]+}}
-; lcbn-NOT: beqz	${{[0-9]+}}, $BB{{[0-9]+}}_{{[0-9]+}}  # 16 bit inst
+; lcb:	beqz	$[[#]], $BB[[#]]_[[#]]       # <MCInst #[[#]] BeqzRxImmX16
 ; lcb: 	.end	beqz
-; lcbn:	.end	beqz
 
 
 ; Function Attrs: nounwind optsize
@@ -80,11 +76,8 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ; lcb: 	.ent	bteqz
-; lcbn:	.ent	bteqz
-; lcb:	btnez	$BB{{[0-9]+}}_{{[0-9]+}}
-; lcbn-NOT: btnez	$BB{{[0-9]+}}_{{[0-9]+}} # 16 bit inst
+; lcb:	btnez	$BB[[#]]_[[#]]                  # <MCInst #[[#]] BtnezX16
 ; lcb: 	.end	bteqz
-; lcbn:	.end	bteqz
 
 
 ; Function Attrs: nounwind optsize
@@ -107,13 +100,9 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; lcb: 	.ent	btz
-; lcbn:	.ent	btz
-; lcb:	bteqz	$BB{{[0-9]+}}_{{[0-9]+}}
-; lcbn-NOT: bteqz	$BB{{[0-9]+}}_{{[0-9]+}} # 16 bit inst
-; lcb:	btnez	$BB{{[0-9]+}}_{{[0-9]+}}
-; lcbn-NOT: btnez	$BB{{[0-9]+}}_{{[0-9]+}} # 16 bit inst
+; lcb:	bteqz	$BB[[#]]_[[#]]                  # <MCInst #[[#]] BteqzX16
+; lcb:	btnez	$BB[[#]]_[[#]]                  # <MCInst #[[#]] BtnezX16
 ; lcb: 	.end	btz
-; lcbn:	.end	btz
 
 attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }

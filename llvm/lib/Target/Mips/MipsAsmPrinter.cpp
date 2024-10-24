@@ -240,7 +240,11 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  if (EmitJalrReloc &&
+  // FIXME: This is disabled for MIPS16 because otherwise some MIPS16 tests
+  // crash. Can this be made usable for MIPS16, maybe when MIPS16 relocations
+  // are supported? There is no "R_MIPS16_JALR" reloc, so maybe not.
+  // If this is updated, also update MipsAsmParser::isJalrRelocAvailable().
+  if (EmitJalrReloc && !Subtarget->inMips16Mode() &&
       (MI->isReturn() || MI->isCall() || MI->isIndirectBranch())) {
     emitDirectiveRelocJalr(*MI, OutContext, TM, *OutStreamer, *Subtarget);
   }
@@ -714,11 +718,39 @@ printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O) {
   printOperand(MI, opNum+1, O);
 }
 
+void MipsAsmPrinter::printPCPseudoReg(const MachineInstr *MI, int opNum,
+                                      raw_ostream &O) {
+  // Not a real operand; instead indicates a PC-realtive MIPS16 instruction.
+  O << "$pc";
+}
+
+void MipsAsmPrinter::printSPPseudoReg(const MachineInstr *MI, int opNum,
+                                      raw_ostream &O) {
+  // Not a real operand; instead indicates an SP-realtive MIPS16 instruction.
+  O << "$sp";
+}
+
+void MipsAsmPrinter::printRAPseudoReg(const MachineInstr *MI, int opNum,
+                                      raw_ostream &O) {
+  // Not a real operand; instead indicates the MIPS16 instruction accesses RA.
+  O << "$ra";
+}
+
 void MipsAsmPrinter::
 printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
                 const char *Modifier) {
   const MachineOperand &MO = MI->getOperand(opNum);
   O << Mips::MipsFCCToString((Mips::CondCode)MO.getImm());
+}
+
+void MipsAsmPrinter::printSaveRestore(const MachineInstr *MI, int opNum,
+                                      raw_ostream &O) {
+  for (int i = opNum, e = MI->getNumOperands(); i != e; ++i) {
+    if (i != opNum)
+      O << ", ";
+
+    printOperand(MI, i, O);
+  }
 }
 
 void MipsAsmPrinter::
