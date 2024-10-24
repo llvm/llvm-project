@@ -1451,8 +1451,11 @@ void VPlanTransforms::addActiveLaneMask(
 
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
+  using namespace llvm::VPlanPatternMatch;
+  Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
+  LLVMContext &Ctx = CanonicalIVType->getContext();
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
@@ -1491,7 +1494,23 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                                                   TypeInfo.inferScalarType(Sel),
                                                   false, false, false);
               })
-
+              .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
+                VPValue *LHS, *RHS;
+                // Transform predicated reduction select
+                //   select(header_mask, LHS, RHS)
+                // into vector predication merge.
+                //   vp.merge(all-true, LHS, RHS, EVL)
+                if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
+                                         m_VPValue(RHS))))
+                  return nullptr;
+                // Use all true as the condition because this transformation is
+                // limited to selects whose condition is a header mask.
+                VPValue *AllTrue =
+                    Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+                return new VPWidenIntrinsicRecipe(
+                    Intrinsic::vp_merge, {AllTrue, LHS, RHS, &EVL},
+                    TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
+              })
               .Default([&](VPRecipeBase *R) { return nullptr; });
 
       if (!NewRecipe)
@@ -1564,14 +1583,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     return isa<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
         &Phi);
   });
-  // FIXME: Remove this once we can transform (select header_mask, true_value,
-  // false_value) into vp.merge.
-  bool ContainsOutloopReductions =
-      any_of(Header->phis(), [&](VPRecipeBase &Phi) {
-        auto *R = dyn_cast<VPReductionPHIRecipe>(&Phi);
-        return R && !R->isInLoop();
-      });
-  if (ContainsWidenInductions || ContainsOutloopReductions)
+  if (ContainsWidenInductions)
     return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();

@@ -55,6 +55,17 @@ template <typename Class> struct bind_ty {
   }
 };
 
+/// Match a specified VPValue.
+struct specificval_ty {
+  const VPValue *Val;
+
+  specificval_ty(const VPValue *V) : Val(V) {}
+
+  bool match(VPValue *VPV) const { return VPV == Val; }
+};
+
+inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
+
 /// Match a specified integer value or vector of all elements of that
 /// value. \p BitWidth optionally specifies the bitwidth the matched constant
 /// must have. If it is 0, the matched constant can have any bitwidth.
@@ -371,6 +382,7 @@ inline VPScalarIVSteps_match<Op0_t, Op1_t> m_ScalarIVSteps(const Op0_t &Op0,
                                                            const Op1_t &Op1) {
   return VPScalarIVSteps_match<Op0_t, Op1_t>(Op0, Op1);
 }
+
 } // namespace VPlanPatternMatch
 } // namespace llvm
 
