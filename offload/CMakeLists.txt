@@ -19,6 +19,10 @@ else()
   set(OPENMP_STANDALONE_BUILD FALSE)
 endif()
 
+if(LIBOMPTARGET_NO_SANITIZER_AMDGPU)
+  set(SANITIZER_AMDGPU FALSE)
+endif()
+
 # Check that the library can actually be built.
 if(APPLE OR WIN32 OR WASM)
   message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
