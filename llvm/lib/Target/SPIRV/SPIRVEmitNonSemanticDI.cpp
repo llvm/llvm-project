@@ -37,7 +37,7 @@ struct SPIRVEmitNonSemanticDI : MachineFunctionPass {
 private:
   bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF, const Module *M) const;
-  //bool emitLineDI(MachineFunction &MF);
+  bool emitLineDI(MachineFunction &MF);
 };
 } // namespace llvm
 
@@ -187,6 +187,19 @@ struct DebugLine {
   size_t LineEndId;
   size_t ColumnStartId;
   size_t ColumnEndId;
+
+  DebugLine(const ArrayRef<size_t> AR)
+      : DebugSourceId(AR[0]), LineStartId(AR[1]),
+        LineEndId(AR[2]), ColumnStartId(AR[3]),
+        ColumnEndId(AR[4]) {}
+
+  friend bool operator==(const DebugLine &Lhs, const DebugLine &Rhs) {
+    return Lhs.DebugSourceId == Rhs.DebugSourceId &&
+           Lhs.LineStartId == Rhs.LineStartId &&
+           Lhs.LineEndId == Rhs.LineEndId &&
+           Lhs.ColumnStartId == Rhs.ColumnStartId &&
+           Lhs.ColumnEndId == Rhs.ColumnEndId;
+  }
 };
 
 struct DebugInfoNone;
@@ -243,6 +256,14 @@ template <> struct DebugTypeContainer<DebugInfoNone> {
       SPIRV::NonSemanticExtInst::DebugInfoNone;
 };
 
+template <> struct DebugTypeContainer<DebugLine> {
+  static constexpr TypesMapping TM = DebugLineArray;
+  static constexpr SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst =
+      SPIRV::NonSemanticExtInst::DebugLine;
+  static SmallVector<DebugLine> Value;
+  static SmallVector<size_t> Back;
+};
+
 SmallVector<int64_t> DebugTypeContainer<int64_t>::Value;
 SmallVector<StringRef> DebugTypeContainer<StringRef>::Value;
 SmallVector<DebugSource> DebugTypeContainer<DebugSource>::Value;
@@ -250,6 +271,7 @@ SmallVector<DebugCompilationUnit>
     DebugTypeContainer<DebugCompilationUnit>::Value;
 SmallVector<DebugTypeBasic> DebugTypeContainer<DebugTypeBasic>::Value;
 SmallVector<DebugTypePointer> DebugTypeContainer<DebugTypePointer>::Value;
+SmallVector<DebugLine> DebugTypeContainer<DebugLine>::Value;
 
 SmallVector<size_t> DebugTypeContainer<int64_t>::Back;
 SmallVector<size_t> DebugTypeContainer<StringRef>::Back;
@@ -257,6 +279,7 @@ SmallVector<size_t> DebugTypeContainer<DebugSource>::Back;
 SmallVector<size_t> DebugTypeContainer<DebugCompilationUnit>::Back;
 SmallVector<size_t> DebugTypeContainer<DebugTypeBasic>::Back;
 SmallVector<size_t> DebugTypeContainer<DebugTypePointer>::Back;
+SmallVector<size_t> DebugTypeContainer<DebugLine>::Back;
 
 SmallVector<Register> Registers;
 SmallVector<std::pair<TypesMapping, unsigned>> Instructions;
@@ -365,9 +388,33 @@ size_t push<DebugInfoNone>(ArrayRef<size_t>, MachineIRBuilder &MIRBuilder,
   return DebugInfoNoneIdx.value();
 }
 
+void cleanup() {
+  DebugTypeContainer<int64_t>::Value.clear();
+  DebugTypeContainer<StringRef>::Value.clear();
+  DebugTypeContainer<DebugSource>::Value.clear();
+  DebugTypeContainer<DebugCompilationUnit>::Value.clear();
+  DebugTypeContainer<DebugTypeBasic>::Value.clear();
+  DebugTypeContainer<DebugTypePointer>::Value.clear();
+  DebugTypeContainer<DebugLine>::Value.clear();
+
+  DebugTypeContainer<int64_t>::Back.clear();
+  DebugTypeContainer<StringRef>::Back.clear();
+  DebugTypeContainer<DebugSource>::Back.clear();
+  DebugTypeContainer<DebugCompilationUnit>::Back.clear();
+  DebugTypeContainer<DebugTypeBasic>::Back.clear();
+  DebugTypeContainer<DebugTypePointer>::Back.clear();
+  DebugTypeContainer<DebugLine>::Back.clear();
+}
+
+size_t emitDebugSource(const DIFile *File, MachineIRBuilder &MIRBuilder, SPIRVTargetMachine *TM) {
+  SmallString<128> FilePath;
+  sys::path::append(FilePath, File->getDirectory(), File->getFilename());
+  const size_t FilePathId = push(StringRef(FilePath.c_str()), MIRBuilder);
+  return push<DebugSource>({FilePathId}, MIRBuilder, TM);
+}
+
 size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
                                  const SPIRVTargetMachine *TM) {
-  // TODO: Initialize assholes
   std::optional<size_t> DwarfVersionId = std::nullopt;
   std::optional<size_t> DebugInfoVersionId = std::nullopt;
   const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
@@ -563,16 +610,22 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF,
   return true;
 }
 
-// bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF) {
-//   for (auto &MBB : MF) {
-//     for (auto &MI : MBB) {
-//       if (MI.isDebugValue()) {
-//         DebugLoc DL = MI.getDebugLoc();
-//       }
-//     }
-//   }
-//   return false;
-// }
+bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF) {
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.isDebugValue()) {
+        MachineIRBuilder MIRBuilder(MBB, MI);
+        DebugLoc DL = MI.getDebugLoc();
+        const auto *File = cast<DISubprogram>(DL.getScope())->getFile();
+        const size_t ScopeIdx = emitDebugSource(File, MIRBuilder, TM);
+        const size_t LineIdx = push(DL.getLine(), MIRBuilder, TM);
+        const size_t ColIdx = push(DL.getLine(), MIRBuilder, TM);
+        push<DebugLine>({ScopeIdx, LineIdx, LineIdx, ColIdx, ColIdx}, MIRBuilder, TM);
+      }
+    }
+  }
+  return false;
+}
 
 bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
   bool Res = false;
@@ -591,6 +644,7 @@ bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
       return false;
     Res = emitGlobalDI(MF, M);
   }
-  // Res |= emitLineDI(MF);
+  Res |= emitLineDI(MF);
+  cleanup();
   return Res;
 }
