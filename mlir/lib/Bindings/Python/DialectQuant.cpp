@@ -307,7 +307,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
   });
 }
 
-PYBIND11_MODULE(_mlirDialectsQuant, m) {
+PYBIND11_MODULE(_mlirDialectsQuant, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR Quantization dialect";
 
   populateDialectQuantSubmodule(m);

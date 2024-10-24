@@ -10,11 +10,13 @@
 
 #include <pybind11/pybind11.h>
 
+namespace py = pybind11;
+
 // -----------------------------------------------------------------------------
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-PYBIND11_MODULE(_mlirSparseTensorPasses, m) {
+PYBIND11_MODULE(_mlirSparseTensorPasses, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR SparseTensor Dialect Passes";
 
   // Register all SparseTensor passes on load.

@@ -134,7 +134,7 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
       });
 }
 
-PYBIND11_MODULE(_mlirDialectsLLVM, m) {
+PYBIND11_MODULE(_mlirDialectsLLVM, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR LLVM Dialect";
 
   populateDialectLLVMSubmodule(m);

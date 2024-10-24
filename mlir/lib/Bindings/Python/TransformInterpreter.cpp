@@ -99,7 +99,7 @@ static void populateTransformInterpreterSubmodule(py::module &m) {
       py::arg("target"), py::arg("other"));
 }
 
-PYBIND11_MODULE(_mlirTransformInterpreter, m) {
+PYBIND11_MODULE(_mlirTransformInterpreter, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR Transform dialect interpreter functionality.";
   populateTransformInterpreterSubmodule(m);
 }

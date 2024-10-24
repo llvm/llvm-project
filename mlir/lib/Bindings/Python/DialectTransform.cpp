@@ -117,7 +117,7 @@ void populateDialectTransformSubmodule(const pybind11::module &m) {
       "Get the type this ParamType is associated with.");
 }
 
-PYBIND11_MODULE(_mlirDialectsTransform, m) {
+PYBIND11_MODULE(_mlirDialectsTransform, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR Transform dialect.";
   populateDialectTransformSubmodule(m);
 }

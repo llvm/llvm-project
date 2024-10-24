@@ -11,11 +11,13 @@
 #include <pybind11/detail/common.h>
 #include <pybind11/pybind11.h>
 
+namespace py = pybind11;
+
 // -----------------------------------------------------------------------------
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-PYBIND11_MODULE(_mlirGPUPasses, m) {
+PYBIND11_MODULE(_mlirGPUPasses, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR GPU Dialect Passes";
 
   // Register all GPU passes on load.

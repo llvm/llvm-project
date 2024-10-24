@@ -23,7 +23,7 @@ using namespace mlir::python::adaptors;
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-PYBIND11_MODULE(_mlirDialectsGPU, m) {
+PYBIND11_MODULE(_mlirDialectsGPU, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR GPU Dialect";
   //===-------------------------------------------------------------------===//
   // AsyncTokenType
