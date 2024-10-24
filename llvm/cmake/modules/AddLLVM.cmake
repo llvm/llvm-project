@@ -2436,10 +2436,28 @@ function(llvm_externalize_debuginfo name)
       ${strip_command}
       )
   else()
+    if(LLVM_EXTERNALIZE_DEBUGINFO_EXTENSION)
+      set(file_ext ${LLVM_EXTERNALIZE_DEBUGINFO_EXTENSION})
+    else()
+      set(file_ext debug)
+    endif()
+    set(output_name "$<TARGET_FILE_NAME:${name}>.${file_ext}")
+    if(LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR)
+      set(output_path "${LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR}/${output_name}")
+      # If an output dir is specified, it must be manually mkdir'd on Linux,
+      # as that directory needs to exist before we can pipe to a file in it.
+      add_custom_command(TARGET ${name} POST_BUILD
+        WORKING_DIRECTORY ${LLVM_RUNTIME_OUTPUT_INTDIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR}
+        )
+    else()
+      set(output_path "${output_name}")
+    endif()
     add_custom_command(TARGET ${name} POST_BUILD
-      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:${name}> $<TARGET_FILE:${name}>.debug
+      WORKING_DIRECTORY ${LLVM_RUNTIME_OUTPUT_INTDIR}
+      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:${name}> ${output_path}
       ${strip_command} -R .gnu_debuglink
-      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:${name}>.debug $<TARGET_FILE:${name}>
+      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=${output_path} $<TARGET_FILE:${name}>
       )
   endif()
 endfunction()
