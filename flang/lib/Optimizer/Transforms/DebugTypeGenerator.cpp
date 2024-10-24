@@ -15,6 +15,7 @@
 #include "DebugTypeGenerator.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -298,6 +299,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
   unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
+  mlir::OpBuilder builder(context);
+  mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
     mlir::Type llvmTy;
@@ -307,11 +310,38 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     else
       llvmTy = llvmTypeConverter.convertType(fieldTy);
 
-    // FIXME: Handle non defaults array bound in derived types
     uint64_t byteSize = dataLayout->getTypeSize(llvmTy);
     unsigned short byteAlign = dataLayout->getTypeABIAlignment(llvmTy);
-    mlir::LLVM::DITypeAttr elemTy =
-        convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
+    std::optional<llvm::ArrayRef<int64_t>> lowerBounds =
+        fir::getComponentLowerBoundsIfNonDefault(Ty, fieldName, module,
+                                                 symbolTable);
+    auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(fieldTy);
+
+    // For members of the derived types, the information about the shift in
+    // lower bounds is not part of the declOp but has to be extracted from the
+    // TypeInfoOp (using getComponentLowerBoundsIfNonDefault).
+    mlir::LLVM::DITypeAttr elemTy;
+    if (lowerBounds && seqTy &&
+        lowerBounds->size() == seqTy.getShape().size()) {
+      llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
+      for (auto [bound, dim] :
+           llvm::zip_equal(*lowerBounds, seqTy.getShape())) {
+        auto countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
+        auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, bound));
+        auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
+            context, countAttr, lowerAttr, /*upperBound=*/nullptr,
+            /*stride=*/nullptr);
+        elements.push_back(subrangeTy);
+      }
+      elemTy = mlir::LLVM::DICompositeTypeAttr::get(
+          context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
+          /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr,
+          convertType(seqTy.getEleTy(), fileAttr, scope, declOp),
+          mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
+          elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
+          /*allocated=*/nullptr, /*associated=*/nullptr);
+    } else
+      elemTy = convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
     offset = llvm::alignTo(offset, byteAlign);
     mlir::LLVM::DIDerivedTypeAttr tyAttr = mlir::LLVM::DIDerivedTypeAttr::get(
         context, llvm::dwarf::DW_TAG_member,
