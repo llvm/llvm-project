@@ -149,20 +149,20 @@ function(add_llvm_symbol_exports target_name export_file)
     set(export_file_linker_flag "${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}")
     if(MSVC)
       # cl.exe or clang-cl, i.e. MSVC style command line interface
-      set(export_file_linker_flag "/DEF:\"${export_file_linker_flag}\"")
+      set(export_file_linker_flag "LINKER:/DEF:${export_file_linker_flag}")
     elseif(CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
       # clang in msvc mode, calling a link.exe/lld-link style linker
-      set(export_file_linker_flag "-Wl,/DEF:\"${export_file_linker_flag}\"")
+      set(export_file_linker_flag "-Wl,/DEF:${export_file_linker_flag}")
     elseif(MINGW)
       # ${export_file_linker_flag}, which is the plain file name, works as is
       # when passed to the compiler driver, which then passes it on to the
       # linker as an input file.
-      set(export_file_linker_flag "\"${export_file_linker_flag}\"")
+      set(export_file_linker_flag "${export_file_linker_flag}")
     else()
       message(FATAL_ERROR "Unsupported Windows toolchain")
     endif()
-    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                 LINK_FLAGS " ${export_file_linker_flag}")
+    set_property(TARGET ${target_name} APPEND PROPERTY
+                 LINK_OPTIONS "${export_file_linker_flag}")
   endif()
 
   add_custom_target(${target_name}_exports DEPENDS ${native_export_file})
