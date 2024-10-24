@@ -33,10 +33,9 @@ public:
     if (!AnonymousPtrCreator || !PtrJumpStubCreator)
       return make_error<StringError>("Architecture not supported",
                                      inconvertibleErrorCode());
-    auto RM = std::unique_ptr<RedirectableSymbolManager>(
+    return std::unique_ptr<RedirectableSymbolManager>(
         new JITLinkRedirectableSymbolManager(
             ObjLinkingLayer, JD, AnonymousPtrCreator, PtrJumpStubCreator));
-    return std::move(RM);
   }
 
   void emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> R,
