@@ -2329,6 +2329,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ldnt1_gather_index:
   case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
+  case Intrinsic::aarch64_sve_match:
+  case Intrinsic::aarch64_sve_nmatch:
     return instCombineSVENoActiveZero(IC, II);
   case Intrinsic::aarch64_sve_prf:
   case Intrinsic::aarch64_sve_prfb_gather_index:
