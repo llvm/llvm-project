@@ -70,7 +70,7 @@ namespace llvm {
     /*implicit*/ ArrayRef(std::nullopt_t) {}
 
     /// Construct an ArrayRef from a single element.
-    /*implicit*/ ArrayRef(const T &OneElt)
+    /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
       : Data(&OneElt), Length(1) {}
 
     /// Construct an ArrayRef from a pointer and length.
@@ -103,7 +103,8 @@ namespace llvm {
 
     /// Construct an ArrayRef from a C array.
     template <size_t N>
-    /*implicit*/ constexpr ArrayRef(const T (&Arr)[N]) : Data(Arr), Length(N) {}
+    /*implicit*/ constexpr ArrayRef(const T (&Arr LLVM_LIFETIME_BOUND)[N])
+        : Data(Arr), Length(N) {}
 
     /// Construct an ArrayRef from a std::initializer_list.
 #if LLVM_GNUC_PREREQ(9, 0, 0)
