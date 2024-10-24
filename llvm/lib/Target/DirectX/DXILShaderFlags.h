@@ -14,6 +14,8 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 #define LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
@@ -60,9 +62,18 @@ struct ComputedShaderFlags {
     return FeatureFlags;
   }
 
-  static ComputedShaderFlags computeFlags(Module &M);
   void print(raw_ostream &OS = dbgs()) const;
   LLVM_DUMP_METHOD void dump() const { print(); }
+};
+
+using FunctionShaderFlagsMap =
+    SmallDenseMap<Function const *, ComputedShaderFlags>;
+struct DXILModuleShaderFlagsInfo {
+  // Shader Flag mask representing module-level properties
+  ComputedShaderFlags ModuleFlags;
+  // Map representing shader flag mask representing properties of each of the
+  // functions in the module
+  FunctionShaderFlagsMap FuncShaderFlagsMap;
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {
@@ -72,9 +83,9 @@ class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {
 public:
   ShaderFlagsAnalysis() = default;
 
-  using Result = ComputedShaderFlags;
+  using Result = DXILModuleShaderFlagsInfo;
 
-  ComputedShaderFlags run(Module &M, ModuleAnalysisManager &AM);
+  DXILModuleShaderFlagsInfo run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Printer pass for ShaderFlagsAnalysis results.
@@ -92,19 +103,16 @@ public:
 /// This is required because the passes that will depend on this are codegen
 /// passes which run through the legacy pass manager.
 class ShaderFlagsAnalysisWrapper : public ModulePass {
-  ComputedShaderFlags Flags;
+  DXILModuleShaderFlagsInfo MSFI;
 
 public:
   static char ID;
 
   ShaderFlagsAnalysisWrapper() : ModulePass(ID) {}
 
-  const ComputedShaderFlags &getShaderFlags() { return Flags; }
+  const DXILModuleShaderFlagsInfo &getShaderFlags() { return MSFI; }
 
-  bool runOnModule(Module &M) override {
-    Flags = ComputedShaderFlags::computeFlags(M);
-    return false;
-  }
+  bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
