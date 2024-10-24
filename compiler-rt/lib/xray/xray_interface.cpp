@@ -165,7 +165,8 @@ bool patchSled(const XRaySledEntry &Sled, bool Enable, int32_t FuncId,
   bool Success = false;
   switch (Sled.Kind) {
   case XRayEntryType::ENTRY:
-    Success = patchFunctionEntry(Enable, FuncId, Sled, Trampolines, /*LogArgs=*/false);
+    Success = patchFunctionEntry(Enable, FuncId, Sled, Trampolines,
+                                 /*LogArgs=*/false);
     break;
   case XRayEntryType::EXIT:
     Success = patchFunctionExit(Enable, FuncId, Sled, Trampolines);
@@ -174,7 +175,8 @@ bool patchSled(const XRaySledEntry &Sled, bool Enable, int32_t FuncId,
     Success = patchFunctionTailExit(Enable, FuncId, Sled, Trampolines);
     break;
   case XRayEntryType::LOG_ARGS_ENTRY:
-    Success = patchFunctionEntry(Enable, FuncId, Sled, Trampolines, /*LogArgs=*/true);
+    Success =
+        patchFunctionEntry(Enable, FuncId, Sled, Trampolines, /*LogArgs=*/true);
     break;
   case XRayEntryType::CUSTOM_EVENT:
     Success = patchCustomEvent(Enable, FuncId, Sled);
