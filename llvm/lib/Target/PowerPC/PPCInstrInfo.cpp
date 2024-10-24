@@ -5325,12 +5325,18 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     break;
   }
 
-  bool HasNonSignedExtInstrPromoted = false;
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+  if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
+    return;
+
+  const PPCInstrInfo *TII =
+      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
+
   int NewOpcode = -1;
 
-  // Map the opcode of instructions (which are not sign- or zero-extended
-  // themselves,but have operands that are destination registers of sign- or
-  // zero-extended instructions) to their 64-bit equivalents.
+  // Map the 32bit to 64bit opcodes for instructions that are not signed or zero
+  // extended themselves, but may have operands who's destination registers of
+  // signed or zero extended instructions.
   std::unordered_map<unsigned, unsigned> OpcodeMap = {
       {PPC::OR, PPC::OR8},     {PPC::ISEL, PPC::ISEL8},
       {PPC::ORI, PPC::ORI8},   {PPC::XORI, PPC::XORI8},
@@ -5341,23 +5347,15 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   if (It != OpcodeMap.end()) {
     // Set the new opcode to the mapped 64-bit version.
     NewOpcode = It->second;
-    HasNonSignedExtInstrPromoted = true;
-  }
+  } else {
+    if (!TII->isSExt32To64(Opcode))
+      return;
 
-  const PPCInstrInfo *TII =
-      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
-  if (!TII->isSExt32To64(Opcode) && !HasNonSignedExtInstrPromoted)
-    return;
-
-  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-  if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
-    return;
-
-  // The TableGen function `get64BitInstrFromSignedExt32BitInstr` is used to
-  // map the 32-bit instruction with the `SExt32To64` flag to the 64-bit
-  // instruction with the same opcode.
-  if (!HasNonSignedExtInstrPromoted)
+    // The TableGen function `get64BitInstrFromSignedExt32BitInstr` is used to
+    // map the 32-bit instruction with the `SExt32To64` flag to the 64-bit
+    // instruction with the same opcode.
     NewOpcode = PPC::get64BitInstrFromSignedExt32BitInstr(Opcode);
+  }
 
   assert(NewOpcode != -1 &&
          "Must have a 64-bit opcode to map the 32-bit opcode!");
