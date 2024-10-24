@@ -115,15 +115,17 @@ static int initialize(Lang Language) {
       NSLen = 0;
     }
 
-    if (SymIndex >= 0 &&
-        Mapping->SymbolNames[SymIndex].qualifiedName() == QName) {
-      // Not a new symbol, use the same index.
+    if (SymIndex > 0) {
       assert(llvm::none_of(llvm::ArrayRef(Mapping->SymbolNames, SymIndex),
                            [&QName](const SymbolHeaderMapping::SymbolName &S) {
                              return S.qualifiedName() == QName;
                            }) &&
              "The symbol has been added before, make sure entries in the .inc "
              "file are grouped by symbol name!");
+    }
+    if (SymIndex >= 0 &&
+        Mapping->SymbolNames[SymIndex].qualifiedName() == QName) {
+      // Not a new symbol, use the same index.
     } else {
       // First symbol or new symbol, increment next available index.
       ++SymIndex;
