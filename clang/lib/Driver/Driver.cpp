@@ -2324,9 +2324,7 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
   }
 
   if (C.getArgs().hasArg(options::OPT_print_multi_lib)) {
-    for (const Multilib &Multilib : TC.getMultilibs())
-      if (!Multilib.isError())
-        llvm::outs() << Multilib << "\n";
+    llvm::outs() << TC.getMultilibs();
     return false;
   }
 

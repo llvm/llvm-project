@@ -163,6 +163,9 @@ public:
   const_iterator begin() const { return Multilibs.begin(); }
   const_iterator end() const { return Multilibs.end(); }
 
+  Multilib::flags_list
+  processCustomFlags(const Driver &D, const Multilib::flags_list &Flags) const;
+
   /// Select compatible variants, \returns false if none are compatible
   bool select(const Driver &D, const Multilib::flags_list &Flags,
               llvm::SmallVectorImpl<Multilib> &) const;

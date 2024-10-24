@@ -12,6 +12,7 @@
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -95,9 +96,113 @@ MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
 
 void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
+static void WarnUnclaimedMultilibCustomFlags(
+    const Driver &D, const SmallVector<StringRef> &UnclaimedCustomFlagValues,
+    const SmallVector<custom_flag::CustomFlagDeclarationPtr> &CustomFlagDecls) {
+  struct EditDistanceInfo {
+    StringRef FlagValue;
+    unsigned EditDistance;
+  };
+  const unsigned MaxEditDistance = 5;
+
+  for (StringRef Unclaimed : UnclaimedCustomFlagValues) {
+    std::optional<EditDistanceInfo> BestCandidate;
+    for (const auto &Decl : CustomFlagDecls) {
+      for (const auto &Value : Decl->ValueList) {
+        const std::string &FlagValueName = Value.Name;
+        unsigned EditDistance =
+            Unclaimed.edit_distance(FlagValueName, /*AllowReplacements=*/true,
+                                    /*MaxEditDistance=*/MaxEditDistance);
+        if (!BestCandidate || (EditDistance <= MaxEditDistance &&
+                               EditDistance < BestCandidate->EditDistance)) {
+          BestCandidate = {FlagValueName, EditDistance};
+        }
+      }
+    }
+    if (!BestCandidate)
+      D.Diag(clang::diag::warn_drv_unsupported_opt)
+          << (custom_flag::Prefix + Unclaimed).str();
+    else
+      D.Diag(clang::diag::warn_drv_unsupported_opt_with_suggestion)
+          << (custom_flag::Prefix + Unclaimed).str()
+          << (custom_flag::Prefix + BestCandidate->FlagValue).str();
+  }
+}
+
+namespace clang::driver::custom_flag {
+class ValueNameToDetailMap {
+  SmallVector<std::pair<StringRef, const CustomFlagValueDetail *>> Mapping;
+
+public:
+  template <typename It>
+  ValueNameToDetailMap(It FlagDeclsBegin, It FlagDeclsEnd) {
+    for (auto DeclIt = FlagDeclsBegin; DeclIt != FlagDeclsEnd; ++DeclIt) {
+      const CustomFlagDeclarationPtr &Decl = *DeclIt;
+      for (const auto &Value : Decl->ValueList)
+        Mapping.emplace_back(Value.Name, &Value);
+    }
+  }
+
+  const CustomFlagValueDetail *get(StringRef Key) const {
+    auto Iter = llvm::find_if(
+        Mapping, [&](const auto &Pair) { return Pair.first == Key; });
+    return Iter != Mapping.end() ? Iter->second : nullptr;
+  }
+};
+} // namespace clang::driver::custom_flag
+
+Multilib::flags_list
+MultilibSet::processCustomFlags(const Driver &D,
+                                const Multilib::flags_list &Flags) const {
+  Multilib::flags_list Result;
+  SmallVector<const custom_flag::CustomFlagValueDetail *>
+      ClaimedCustomFlagValues;
+  SmallVector<StringRef> UnclaimedCustomFlagValueStrs;
+
+  const auto ValueNameToValueDetail = custom_flag::ValueNameToDetailMap(
+      CustomFlagDecls.begin(), CustomFlagDecls.end());
+
+  for (StringRef Flag : Flags) {
+    if (!Flag.starts_with(custom_flag::Prefix)) {
+      Result.push_back(Flag.str());
+      continue;
+    }
+
+    StringRef CustomFlagValueStr = Flag.substr(custom_flag::Prefix.size());
+    const custom_flag::CustomFlagValueDetail *Detail =
+        ValueNameToValueDetail.get(CustomFlagValueStr);
+    if (Detail)
+      ClaimedCustomFlagValues.push_back(Detail);
+    else
+      UnclaimedCustomFlagValueStrs.push_back(CustomFlagValueStr);
+  }
+
+  llvm::SmallSet<custom_flag::CustomFlagDeclarationPtr, 32>
+      TriggeredCustomFlagDecls;
+
+  for (auto *CustomFlagValue : llvm::reverse(ClaimedCustomFlagValues)) {
+    if (!TriggeredCustomFlagDecls.insert(CustomFlagValue->Decl).second)
+      continue;
+    Result.push_back(std::string(custom_flag::Prefix) + CustomFlagValue->Name);
+  }
+
+  for (const auto &Decl : CustomFlagDecls) {
+    if (TriggeredCustomFlagDecls.contains(Decl))
+      continue;
+    Result.push_back(std::string(custom_flag::Prefix) +
+                     Decl->ValueList[Decl->DefaultValueIdx].Name);
+  }
+
+  WarnUnclaimedMultilibCustomFlags(D, UnclaimedCustomFlagValueStrs,
+                                   CustomFlagDecls);
+
+  return Result;
+}
+
 bool MultilibSet::select(const Driver &D, const Multilib::flags_list &Flags,
                          llvm::SmallVectorImpl<Multilib> &Selected) const {
-  llvm::StringSet<> FlagSet(expandFlags(Flags));
+  Multilib::flags_list FlagsWithCustom = processCustomFlags(D, Flags);
+  llvm::StringSet<> FlagSet(expandFlags(FlagsWithCustom));
   Selected.clear();
   bool AnyErrors = false;
 
@@ -393,8 +498,34 @@ LLVM_DUMP_METHOD void MultilibSet::dump() const {
 }
 
 void MultilibSet::print(raw_ostream &OS) const {
-  for (const auto &M : *this)
-    OS << M << "\n";
+  const auto ValueNameToValueDetail = custom_flag::ValueNameToDetailMap(
+      CustomFlagDecls.begin(), CustomFlagDecls.end());
+
+  for (const auto &M : *this) {
+    if (M.isError())
+      continue;
+    llvm::SmallString<128> Buf;
+    llvm::raw_svector_ostream StrOS(Buf);
+
+    M.print(StrOS);
+
+    for (StringRef Flag : M.flags()) {
+      if (!Flag.starts_with(custom_flag::Prefix))
+        continue;
+
+      StringRef CustomFlagValueStr = Flag.substr(custom_flag::Prefix.size());
+      const custom_flag::CustomFlagValueDetail *Detail =
+          ValueNameToValueDetail.get(CustomFlagValueStr);
+
+      if (!Detail || !Detail->ExtraBuildArgs)
+        continue;
+
+      for (StringRef Arg : *Detail->ExtraBuildArgs)
+        StrOS << '@' << (Arg[0] == '-' ? Arg.substr(1) : Arg);
+    }
+
+    OS << StrOS.str() << '\n';
+  }
 }
 
 raw_ostream &clang::driver::operator<<(raw_ostream &OS, const MultilibSet &MS) {
