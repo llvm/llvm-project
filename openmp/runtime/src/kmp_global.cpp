@@ -352,6 +352,7 @@ omp_memspace_handle_t const llvm_omp_target_device_mem_space =
    be redefined to have exactly 32 bits. */
 KMP_BUILD_ASSERT(sizeof(kmp_tasking_flags_t) == 4);
 
+int __kmp_task_stealing = 1; /* Allow task stealing by default */
 int __kmp_task_stealing_constraint = 1; /* Constrain task stealing by default */
 int __kmp_enable_task_throttling = 1;
 
