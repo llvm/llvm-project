@@ -12068,8 +12068,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     auto It = MinBWs.find(Entry);
     if (It != MinBWs.end()) {
       auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
-      unsigned Extend =
-          It->second.second ? Instruction::SExt : Instruction::ZExt;
+      unsigned Extend = isKnownNonNegative(EU.Scalar, SimplifyQuery(*DL))
+                            ? Instruction::ZExt
+                            : Instruction::SExt;
       VecTy = getWidenedType(MinTy, BundleWidth);
       ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
                                                 VecTy, EU.Lane);
@@ -15784,8 +15785,9 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           // to the larger type.
           ExV = Ex;
           if (Scalar->getType() != Ex->getType())
-            ExV = Builder.CreateIntCast(Ex, Scalar->getType(),
-                                        MinBWs.find(E)->second.second);
+            ExV = Builder.CreateIntCast(
+                Ex, Scalar->getType(),
+                !isKnownNonNegative(Scalar, SimplifyQuery(*DL)));
           auto *I = dyn_cast<Instruction>(Ex);
           ScalarToEEs[Scalar].try_emplace(I ? I->getParent()
                                             : &F->getEntryBlock(),
