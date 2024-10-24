@@ -51,6 +51,13 @@ struct IdTyTemplate {
     return designator == other.designator;
   }
 
+  // Defining an "ordering" which allows types derived from this to be
+  // utilised in maps and other containers that require comparison
+  // operators for ordering
+  bool operator<(const IdTyTemplate &other) const {
+    return symbol < other.symbol;
+  }
+
   operator bool() const { return symbol != nullptr; }
 };
 
@@ -71,6 +78,10 @@ struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
   IdTy id() const { return identity; }
   Fortran::semantics::Symbol *sym() const { return identity.symbol; }
   const std::optional<ExprTy> &ref() const { return identity.designator; }
+
+  bool operator<(const ObjectT<IdTy, ExprTy> &other) const {
+    return identity < other.identity;
+  }
 
   IdTy identity;
 };
