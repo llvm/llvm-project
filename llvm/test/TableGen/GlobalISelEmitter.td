@@ -513,7 +513,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 1832 bytes
+// R00O-NEXT:  }; // Size: 1834 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,
@@ -534,7 +534,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // R01C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 1 //
 // R01C-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 //
-// R01O-NEXT:    GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::mytarget_nop),
+// R01O-NEXT:    GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode4(Intrinsic::mytarget_nop),
 // R01O-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
 // R01O-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
 // R01O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
@@ -544,7 +544,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // R01N-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
 // R01N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R01N-NEXT:    // MIs[0] Operand 1
-// R01N-NEXT:    GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::mytarget_nop),
+// R01N-NEXT:    GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode4(Intrinsic::mytarget_nop),
 // R01N-NEXT:    // MIs[0] src1
 // R01N-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
 //
@@ -1206,5 +1206,5 @@ def BR : I<(outs), (ins unknown:$target),
             [(br bb:$target)]>;
 
 // NOOPT-NEXT:    GIM_Reject,
-// NOOPT-NEXT:  }; // Size: 1459 bytes
+// NOOPT-NEXT:  }; // Size: 1461 bytes
 // NOOPT-NEXT:  return MatchTable0;

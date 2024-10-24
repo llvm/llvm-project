@@ -2458,7 +2458,8 @@ unsigned LLVMGetIntrinsicID(LLVMValueRef Fn) {
 }
 
 static Intrinsic::ID llvm_map_to_intrinsic_id(unsigned ID) {
-  assert(ID < llvm::Intrinsic::num_intrinsics && "Intrinsic ID out of range");
+  assert(llvm::Intrinsic::IsIntrinsicIDValid(ID) &&
+         "Intrinsic ID out of range");
   return llvm::Intrinsic::ID(ID);
 }
 

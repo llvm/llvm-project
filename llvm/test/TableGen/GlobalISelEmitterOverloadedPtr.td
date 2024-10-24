@@ -11,7 +11,7 @@ let TargetPrefix = "mytarget" in {
 // Ensure that llvm_anyptr_ty on an intrinsic results in a
 // GIM_CheckPointerToAny rather than a GIM_CheckType.
 //
-// CHECK: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::mytarget_anyptr),
+// CHECK: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode4(Intrinsic::mytarget_anyptr),
 // CHECK-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // MIs[0] src

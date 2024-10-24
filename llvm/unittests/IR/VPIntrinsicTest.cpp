@@ -370,27 +370,28 @@ TEST_F(VPIntrinsicTest, IntrinsicIDRoundTrip) {
 /// Check that going from intrinsic to VP intrinsic and back results in the same
 /// intrinsic.
 TEST_F(VPIntrinsicTest, IntrinsicToVPRoundTrip) {
+  using namespace Intrinsic;
   bool IsFullTrip = false;
-  Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic + 1;
-  for (; IntrinsicID < Intrinsic::num_intrinsics; IntrinsicID++) {
-    Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(IntrinsicID);
+  for (ID IID = GetNextValidIntrinsicID(not_intrinsic); IID != end_id;
+       IID = GetNextValidIntrinsicID(IID)) {
+    ID VPID = VPIntrinsic::getForIntrinsic(IID);
     // No equivalent VP intrinsic available.
     if (VPID == Intrinsic::not_intrinsic)
       continue;
 
     // Return itself if passed intrinsic ID is VP intrinsic.
-    if (VPIntrinsic::isVPIntrinsic(IntrinsicID)) {
-      ASSERT_EQ(IntrinsicID, VPID);
+    if (VPIntrinsic::isVPIntrinsic(IID)) {
+      ASSERT_EQ(IID, VPID);
       continue;
     }
 
-    std::optional<Intrinsic::ID> RoundTripIntrinsicID =
+    std::optional<ID> RoundTripIntrinsicID =
         VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
     // No equivalent non-predicated intrinsic available.
     if (!RoundTripIntrinsicID)
       continue;
 
-    ASSERT_EQ(*RoundTripIntrinsicID, IntrinsicID);
+    ASSERT_EQ(*RoundTripIntrinsicID, IID);
     IsFullTrip = true;
   }
   ASSERT_TRUE(IsFullTrip);

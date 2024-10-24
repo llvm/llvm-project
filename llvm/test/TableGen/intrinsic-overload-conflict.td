@@ -3,7 +3,7 @@
 
 
 include "llvm/IR/Intrinsics.td"
-// CHECK: foo = 1,
+// CHECK: foo = {{.+}},
 def int_foo : Intrinsic<[llvm_any_ty]>;
 
 // No conflicts, since .bar is not a vaid mangled type.

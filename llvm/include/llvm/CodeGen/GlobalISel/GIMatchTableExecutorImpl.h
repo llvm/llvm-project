@@ -889,7 +889,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIM_CheckIntrinsicID: {
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();
-      uint16_t Value = readU16();
+      uint32_t Value = readU32();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIM_CheckIntrinsicID(MIs["
                              << InsnID << "]->getOperand(" << OpIdx
@@ -1185,7 +1185,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     }
     case GIR_AddIntrinsicID: {
       uint64_t InsnID = readULEB();
-      uint16_t Value = readU16();
+      uint32_t Value = readU32();
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
       OutMIs[InsnID].addIntrinsicID((Intrinsic::ID)Value);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),

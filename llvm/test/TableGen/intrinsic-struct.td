@@ -7,7 +7,7 @@
 include "llvm/IR/Intrinsics.td"
 
 // Make sure we can return up to 9 values.
-// CHECK-ENUM: returns_9_results = {{[0-9]+}}, // llvm.returns.9.results
+// CHECK-ENUM: returns_9_results = {{.+}}, // llvm.returns.9.results
 def int_returns_9_results : Intrinsic<
                               !listsplat(llvm_anyint_ty, 9),
                               [], [], "llvm.returns.9.results">;
