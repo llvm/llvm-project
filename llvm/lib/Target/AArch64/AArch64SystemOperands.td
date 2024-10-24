@@ -2048,3 +2048,16 @@ let Requires = [{ {AArch64::FeaturePCDPHINT} }] in {
 
 // v9.6a Realm management extension enhancements
 def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;
+
+// v9.6a Statistical Profiling Extension exception registers (FEAT_SPE_EXC)
+//                                Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PMBMAR_EL1",      0b11, 0b000, 0b1001, 0b1010, 0b101>;
+def : RWSysReg<"PMBSR_EL12",      0b11, 0b101, 0b1001, 0b1010, 0b011>;
+def : RWSysReg<"PMBSR_EL2",       0b11, 0b100, 0b1001, 0b1010, 0b011>;
+def : RWSysReg<"PMBSR_EL3",       0b11, 0b110, 0b1001, 0b1010, 0b011>;
+
+// v9.6a Trace Buffer Management Events exception registers (FEAT_TRBE_EXC)
+//                                Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"TRBSR_EL12",      0b11, 0b101, 0b1001, 0b1011, 0b011>;
+def : RWSysReg<"TRBSR_EL2",       0b11, 0b100, 0b1001, 0b1011, 0b011>;
+def : RWSysReg<"TRBSR_EL3",       0b11, 0b110, 0b1001, 0b1011, 0b011>;
