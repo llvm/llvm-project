@@ -304,7 +304,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTI
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the list of layout entries.",
-      /*retTy=*/"llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>",
+      /*retTy=*/"llvm::ArrayRef<DataLayoutEntryInterface>",
       /*methodName=*/"getEntries",
       /*args=*/(ins)
     >,
