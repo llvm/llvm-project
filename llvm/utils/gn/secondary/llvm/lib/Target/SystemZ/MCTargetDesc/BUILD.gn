@@ -6,7 +6,7 @@ tablegen("SystemZGenGNUAsmWriter") {
   td_file = "../SystemZ.td"
 }
 
-tablegen("SystemZGenHLAsmWriter") {
+tablegen("SystemZGenHLASMAsmWriter") {
   visibility = [ ":MCTargetDesc" ]
   args = [
     "-gen-asm-writer",
@@ -52,7 +52,7 @@ static_library("MCTargetDesc") {
   ]
   deps = [
     ":SystemZGenGNUAsmWriter",
-    ":SystemZGenHLAsmWriter",
+    ":SystemZGenHLASMAsmWriter",
     ":SystemZGenMCCodeEmitter",
     "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
