@@ -1351,6 +1351,104 @@ static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
       ++BeginIt, End->getIterator(), InlinerAttributeWindow + 1);
 }
 
+template <typename RangeT> static bool ContainsSideEffects(RangeT Range) {
+  // Any instruction that may clear local scratch space CB stored
+  // into.
+  return any_of(Range, [](Instruction &I) { return I.mayHaveSideEffects(); });
+}
+
+template <typename RangeT> static bool ContainsScratchSpace(RangeT Range) {
+  return any_of(Range, [](Instruction &I) {
+    // Any instruction that may create local scratch space CB can store
+    // into.
+    return I.mayHaveSideEffects() || isa<AllocaInst>(&I);
+  });
+}
+
+template <typename NextFn, typename CheckFn>
+static bool CheckPathFromBBRecurse(DenseMap<BasicBlock *, bool> &CachedRes,
+                                   bool First, BasicBlock *BB, NextFn Next,
+                                   CheckFn Check) {
+  if (!First) {
+    // Initialize to true (okay to propagate) `nocapture`. This means that loops
+    // will be okay.
+    auto [Iter, Inserted] = CachedRes.try_emplace(BB, true);
+    // If we already have a result, return it.
+    if (!Inserted)
+      return Iter->second;
+
+    if (!Check(BB->instructionsWithoutDebug())) {
+      Iter->second = false;
+      return false;
+    }
+  }
+  auto NextBBs = Next(BB);
+  // Check all Succs/Preds
+  for (BasicBlock *NextBB : NextBBs) {
+    if (!CheckPathFromBBRecurse(CachedRes, /*First=*/false, NextBB, Next,
+                                Check)) {
+      CachedRes[BB] = false;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Assuming we have:
+// define @foo(ptr nocapture %p) {
+// entry:
+//	...
+//  bar (ptr %p)
+//	...
+// }
+//
+// Determine if we can propagate `nocapture` to the `%p` at the
+// `bar`.
+static bool
+CanPropagateNoCaptureAtCB(DenseMap<BasicBlock *, bool> &PureFromBB,
+                          DenseMap<BasicBlock *, bool> &NoLocalStateToBB,
+                          BasicBlock *BB, CallBase *CB) {
+  // If CB returns and its used by anything other than `ret`, assume it may be
+  // capturing.
+  // Potential TODO: We could allow many operations.
+  if (!CB->getType()->isVoidTy())
+    for (auto Use : CB->users())
+      if (!isa<ReturnInst>(Use))
+        return false;
+
+  // Can't capture via return, so if no side-effects we are set.
+  if (!CB->mayHaveSideEffects())
+    return true;
+
+  auto It = CB->getIterator();
+  ++It;
+
+  // Check that CB instruction with side-effects on all paths from
+  // `entry` that go through the CB and there are no `alloca`
+  // instructions. This accomplishes two things. 1) It ensures that
+  // after CB, there is no way a store/other could "clean up" any
+  // captures from CB. 2) There is no local state (i.e `alloca` or a
+  // local `malloc`) that could CB could have stored in params in.
+  if (ContainsSideEffects(make_range(It, BB->end())) ||
+      ContainsScratchSpace(make_range(BB->begin(), CB->getIterator())))
+    return false;
+
+  if (!CheckPathFromBBRecurse(
+          PureFromBB, /*First=*/true, BB,
+          [](BasicBlock *CheckedBB) { return successors(CheckedBB); },
+          [](const auto &Region) { return !ContainsSideEffects(Region); }))
+    return false;
+
+  if (!CheckPathFromBBRecurse(
+          PureFromBB, /*First=*/true, BB,
+          [](BasicBlock *CheckedBB) { return predecessors(CheckedBB); },
+          [](const auto &Region) { return !ContainsScratchSpace(Region); }))
+    return false;
+
+  return true;
+}
+
 // Add attributes from CB params and Fn attributes that can always be propagated
 // to the corresponding argument / inner callbases.
 static void AddParamAndFnBasicAttributes(const CallBase &CB,
@@ -1362,6 +1460,9 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   // Collect valid attributes for all params.
   SmallVector<AttrBuilder> ValidObjParamAttrs, ValidExactParamAttrs;
   bool HasAttrToPropagate = false;
+
+  DenseMap<BasicBlock *, bool> PureFromBB{};
+  DenseMap<BasicBlock *, bool> NoLocalStateToBB{};
 
   // Attributes we can only propagate if the exact parameter is forwarded.
   // We can propagate both poison generating and UB generating attributes
@@ -1381,6 +1482,8 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
       ValidObjParamAttrs.back().addAttribute(Attribute::ReadNone);
     if (CB.paramHasAttr(I, Attribute::ReadOnly))
       ValidObjParamAttrs.back().addAttribute(Attribute::ReadOnly);
+    if (CB.paramHasAttr(I, Attribute::NoCapture))
+      ValidObjParamAttrs.back().addAttribute(Attribute::NoCapture);
 
     for (Attribute::AttrKind AK : ExactAttrsToPropagate) {
       Attribute Attr = CB.getParamAttr(I, AK);
@@ -1463,8 +1566,16 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
           ArgNo = Arg->getArgNo();
         }
 
+        AttributeSet AS = AttributeSet::get(Context, ValidObjParamAttrs[ArgNo]);
+        // Check if we can propagate `nocapture`.
+        if (AS.hasAttribute(Attribute::NoCapture) &&
+            (NewInnerCB->paramHasAttr(I, Attribute::NoCapture) ||
+             !CanPropagateNoCaptureAtCB(PureFromBB, NoLocalStateToBB, &BB,
+                                        cast<CallBase>(&Ins))))
+          AS = AS.removeAttribute(Context, Attribute::NoCapture);
+
         // If so, propagate its access attributes.
-        AL = AL.addParamAttributes(Context, I, ValidObjParamAttrs[ArgNo]);
+        AL = AL.addParamAttributes(Context, I, AttrBuilder{Context, AS});
         // We can have conflicting attributes from the inner callsite and
         // to-be-inlined callsite. In that case, choose the most
         // restrictive.
