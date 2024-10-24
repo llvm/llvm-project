@@ -3928,7 +3928,8 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
        &AANoFree::ID, &AANoReturn::ID, &AAMemoryLocation::ID,
        &AAMemoryBehavior::ID, &AAUnderlyingObjects::ID, &AANoCapture::ID,
        &AAInterFnReachability::ID, &AAIntraFnReachability::ID, &AACallEdges::ID,
-       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID});
+       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID,
+       &AADenormalFPMath::ID});
   AC.Allowed = &Allowed;
   AC.UseLiveness = false;
 
