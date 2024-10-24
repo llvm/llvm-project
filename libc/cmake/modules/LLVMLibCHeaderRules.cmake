@@ -118,7 +118,7 @@ function(add_gen_header2 target_name)
             ${entry_points}
             --output_dir ${out_file}
     DEPENDS ${yaml_file} ${def_file} ${fq_data_files}
-    COMMENT "Generating header ${ADD_GEN_HDR2_GE2N_HDR} from ${yaml_file} and ${def_file}"
+    COMMENT "Generating header ${ADD_GEN_HDR2_GEN_HDR} from ${yaml_file} and ${def_file}"
   )
   if(LIBC_TARGET_OS_IS_GPU)
     file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
@@ -135,7 +135,7 @@ function(add_gen_header2 target_name)
       DEPENDS ${yaml_file} ${fq_data_files}
     )
   endif()
-  
+
   if(ADD_GEN_HDR2_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR2_DEPENDS})
     # Dependencies of a add_header target can only be another add_gen_header target

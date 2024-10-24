@@ -111,17 +111,16 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP3]], <2 x i1> [[TMP6]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP6]], <i1 true, i1 true>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP3]], <2 x i1> [[TMP8]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x i16> [[WIDE_LOAD]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP3]], <i1 true, i1 true>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP8]], <2 x i16> zeroinitializer, <2 x i16> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP7]], <2 x i16> <i16 1, i16 1>, <2 x i16> [[PREDPHI]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i32 0
-; CHECK-NEXT:    store <2 x i16> [[PREDPHI1]], ptr [[TMP11]], align 2
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP9]], i32 0
+; CHECK-NEXT:    store <2 x i16> [[PREDPHI1]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -304,17 +303,16 @@ define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i16> [ [[TMP8]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP13]], [[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp sgt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> [[TMP15]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP15]], <i1 true, i1 true>
-; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> [[TMP17]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP18]], <2 x i16> [[TMP14]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP2]], <i1 true, i1 true>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP17]], <2 x i16> zeroinitializer, <2 x i16> [[TMP14]]
 ; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP16]], <2 x i16> <i16 1, i16 1>, <2 x i16> [[PREDPHI]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i16, ptr [[TMP19]], i32 0
-; CHECK-NEXT:    store <2 x i16> [[PREDPHI3]], ptr [[TMP20]], align 2
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[TMP18]], i32 0
+; CHECK-NEXT:    store <2 x i16> [[PREDPHI3]], ptr [[TMP19]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
+; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

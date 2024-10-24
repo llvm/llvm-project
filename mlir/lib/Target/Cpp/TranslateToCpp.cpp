@@ -489,7 +489,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   if (failed(emitSwitchCase(emitter, os, switchOp.getDefaultRegion())))
     return failure();
 
-  os.unindent() << "}";
+  os.unindent() << "}\n}";
   return success();
 }
 
@@ -1258,6 +1258,12 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
       val.toString(strValue, 0, 0, false);
       os << strValue;
       switch (llvm::APFloatBase::SemanticsToEnum(val.getSemantics())) {
+      case llvm::APFloatBase::S_IEEEhalf:
+        os << "f16";
+        break;
+      case llvm::APFloatBase::S_BFloat:
+        os << "bf16";
+        break;
       case llvm::APFloatBase::S_IEEEsingle:
         os << "f";
         break;
@@ -1277,17 +1283,19 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
 
   // Print floating point attributes.
   if (auto fAttr = dyn_cast<FloatAttr>(attr)) {
-    if (!isa<Float32Type, Float64Type>(fAttr.getType())) {
-      return emitError(loc,
-                       "expected floating point attribute to be f32 or f64");
+    if (!isa<Float16Type, BFloat16Type, Float32Type, Float64Type>(
+            fAttr.getType())) {
+      return emitError(
+          loc, "expected floating point attribute to be f16, bf16, f32 or f64");
     }
     printFloat(fAttr.getValue());
     return success();
   }
   if (auto dense = dyn_cast<DenseFPElementsAttr>(attr)) {
-    if (!isa<Float32Type, Float64Type>(dense.getElementType())) {
-      return emitError(loc,
-                       "expected floating point attribute to be f32 or f64");
+    if (!isa<Float16Type, BFloat16Type, Float32Type, Float64Type>(
+            dense.getElementType())) {
+      return emitError(
+          loc, "expected floating point attribute to be f16, bf16, f32 or f64");
     }
     os << '{';
     interleaveComma(dense, os, [&](const APFloat &val) { printFloat(val); });
@@ -1640,6 +1648,14 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
   }
   if (auto fType = dyn_cast<FloatType>(type)) {
     switch (fType.getWidth()) {
+    case 16: {
+      if (llvm::isa<Float16Type>(type))
+        return (os << "_Float16"), success();
+      else if (llvm::isa<BFloat16Type>(type))
+        return (os << "__bf16"), success();
+      else
+        return emitError(loc, "cannot emit float type ") << type;
+    }
     case 32:
       return (os << "float"), success();
     case 64:

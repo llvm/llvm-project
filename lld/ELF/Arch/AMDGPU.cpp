@@ -28,7 +28,7 @@ private:
   uint32_t calcEFlagsV6() const;
 
 public:
-  AMDGPU();
+  AMDGPU(Ctx &);
   uint32_t calcEFlags() const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -39,7 +39,7 @@ public:
 };
 } // namespace
 
-AMDGPU::AMDGPU() {
+AMDGPU::AMDGPU(Ctx &ctx) : TargetInfo(ctx) {
   relativeRel = R_AMDGPU_RELATIVE64;
   gotRel = R_AMDGPU_ABS64;
   symbolicRel = R_AMDGPU_ABS64;
@@ -167,7 +167,7 @@ void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_AMDGPU_REL16: {
     int64_t simm = (static_cast<int64_t>(val) - 4) / 4;
-    checkInt(loc, simm, 16, rel);
+    checkInt(ctx, loc, simm, 16, rel);
     write16le(loc, simm);
     break;
   }
@@ -193,7 +193,7 @@ RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s,
   case R_AMDGPU_GOTPCREL32_HI:
     return R_GOT_PC;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -211,15 +211,12 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return 0;
   case R_AMDGPU_ABS64:
   case R_AMDGPU_RELATIVE64:
-    return read64(buf);
+    return read64(ctx, buf);
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
 }
 
-TargetInfo *elf::getAMDGPUTargetInfo() {
-  static AMDGPU target;
-  return &target;
-}
+void elf::setAMDGPUTargetInfo(Ctx &ctx) { ctx.target.reset(new AMDGPU(ctx)); }

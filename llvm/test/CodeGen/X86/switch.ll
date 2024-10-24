@@ -1304,7 +1304,7 @@ return: ret void
 define void @phi_node_trouble(ptr %s) {
 ; CHECK-LABEL: phi_node_trouble:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB13_1: # %header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testq %rdi, %rdi

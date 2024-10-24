@@ -78,10 +78,8 @@ config.substitutions.append(
 )
 
 # Ensure that we can use hwasan_symbolize from the expected location
-gitllvm_config.add_tool_substitutions(
-    [ToolSubst("hwasan_symbolize", unresolved="fatal")],
-    search_dirs=[config.compiler_rt_bindir],
-)
+llvm_config.add_tool_substitutions([ToolSubst("hwasan_symbolize", unresolved="fatal")],
+                                   search_dirs=[config.compiler_rt_bindir])
 
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]

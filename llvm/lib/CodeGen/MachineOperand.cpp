@@ -494,7 +494,7 @@ static void printCFIRegister(unsigned DwarfReg, raw_ostream &OS,
     return;
   }
 
-  if (std::optional<unsigned> Reg = TRI->getLLVMRegNum(DwarfReg, true))
+  if (std::optional<MCRegister> Reg = TRI->getLLVMRegNum(DwarfReg, true))
     OS << printReg(*Reg, TRI);
   else
     OS << "<badreg>";
@@ -1047,7 +1047,8 @@ bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
     return false;
 
   return isDereferenceableAndAlignedPointer(
-      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size), DL);
+      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size), DL,
+      dyn_cast<Instruction>(BasePtr));
 }
 
 /// getConstantPool - Return a MachinePointerInfo record that refers to the
@@ -1243,7 +1244,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   MachineOperand::printOperandOffset(OS, getOffset());
   if (!getSize().hasValue() ||
-      getAlign() != getSize().getValue().getKnownMinValue())
+      (!getSize().isZero() &&
+       getAlign() != getSize().getValue().getKnownMinValue()))
     OS << ", align " << getAlign().value();
   if (getAlign() != getBaseAlign())
     OS << ", basealign " << getBaseAlign().value();

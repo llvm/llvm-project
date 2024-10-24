@@ -21,10 +21,10 @@ if(LIBC_TARGET_TRIPLE)
   set(CMAKE_REQUIRED_FLAGS "--target=${LIBC_TARGET_TRIPLE}")
 endif()
 if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib -nostdlib")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
 elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument -nostdlib")
+      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.
@@ -51,7 +51,7 @@ if(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
    AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "AMDGPU backend is not available, tests will not be built")
-elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
+elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_NVPTX
        AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "NVPTX backend is not available, tests will not be built")

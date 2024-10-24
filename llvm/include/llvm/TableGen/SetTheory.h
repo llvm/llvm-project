@@ -64,8 +64,8 @@ class Record;
 
 class SetTheory {
 public:
-  using RecVec = std::vector<Record *>;
-  using RecSet = SmallSetVector<Record *, 16>;
+  using RecVec = std::vector<const Record *>;
+  using RecSet = SmallSetVector<const Record *, 16>;
 
   /// Operator - A callback representing a DAG operator.
   class Operator {

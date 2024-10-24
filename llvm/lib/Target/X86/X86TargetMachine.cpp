@@ -106,6 +106,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
+  initializeX86DynAllocaExpanderPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -241,7 +242,10 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
           OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
-  // the calling function, and TrapUnreachable is an easy way to get that.
+  // the calling function. Note that this also includes __stack_chk_fail,
+  // so there was some target-specific logic in the instruction selectors
+  // to handle that. That code has since been generalized, so the only thing
+  // needed is to set TrapUnreachable here.
   if (TT.isPS() || TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
     this->Options.NoTrapAfterNoreturn = TT.isOSBinFormatMachO();
@@ -532,7 +536,7 @@ bool X86PassConfig::addGlobalInstructionSelect() {
 }
 
 bool X86PassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConverterPass());

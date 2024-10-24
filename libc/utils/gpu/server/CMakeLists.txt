@@ -19,6 +19,7 @@ target_compile_definitions(llvmlibc_rpc_server PUBLIC
                            LIBC_COPT_ARRAY_ARG_LIST
                            LIBC_COPT_PRINTF_DISABLE_WRITE_INT
                            LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
+                           LIBC_COPT_PRINTF_DISABLE_STRERROR
                            LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Install the server and associated header.

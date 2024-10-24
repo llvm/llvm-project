@@ -64,7 +64,8 @@ public:
   const void *getNativePointer(unsigned Idx);
 
   /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S);
+  unsigned createGlobalString(const StringLiteral *S,
+                              const Expr *Base = nullptr);
 
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;
@@ -84,7 +85,7 @@ public:
                                             const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
-  std::optional<unsigned> getOrCreateDummy(const ValueDecl *VD);
+  unsigned getOrCreateDummy(const DeclTy &D);
 
   /// Creates a global and returns its index.
   std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *Init);
@@ -152,7 +153,7 @@ private:
 
   std::optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
                                        bool IsStatic, bool IsExtern,
-                                       const Expr *Init = nullptr);
+                                       bool IsWeak, const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;
@@ -209,7 +210,7 @@ private:
   llvm::DenseMap<const RecordDecl *, Record *> Records;
 
   /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const ValueDecl *, unsigned> DummyVariables;
+  llvm::DenseMap<const void *, unsigned> DummyVariables;
 
   /// Creates a new descriptor.
   template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {

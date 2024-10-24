@@ -1814,7 +1814,7 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
 }
 
 //===----------------------------------------------------------------------===//
-// PackOp
+// RelayoutOp
 //===----------------------------------------------------------------------===//
 
 class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
@@ -1851,10 +1851,26 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// a sentinel `kDynamic` is introduced at that position in
     /// the returned vector.
     SmallVector<int64_t> getStaticTiles();
+
+    /// Retrieve all outer dims for this Pack/UnPack Op, i.e. all the leading
+    /// dims excluding the trailing dims corresponding to `innerTiles`. Note
+    /// that this will include both tiled and non-tiled dimensions. The order
+    /// of the output dimensions is consistent with the shape of the packed
+    /// tensor.
+    ArrayRef<int64_t> getAllOuterDims();
+
+    /// Similar to `getAllOuterDims`, but only retrieve the outer dims that
+    /// have been tiled. Also, the order of the output dimensions is consistent
+    /// with `inner_dims_pos` rather than the packed tensor.
+    SmallVector<int64_t> getTiledOuterDims();
   }];
 
   let hasVerifier = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// PackOp
+//===----------------------------------------------------------------------===//
 
 def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     AttrSizedOperandSegments]> {

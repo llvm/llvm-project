@@ -90,6 +90,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
       TypeResults results;
       TypeQuery query(const_lookup_name.GetStringRef(),
                       TypeQueryOptions::e_exact_match |
+                          TypeQueryOptions::e_strict_namespaces |
                           TypeQueryOptions::e_find_one);
       if (module_sp) {
         module_sp->FindTypes(query, results);

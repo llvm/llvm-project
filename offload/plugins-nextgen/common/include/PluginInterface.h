@@ -232,7 +232,7 @@ public:
 
   /// Get the image size.
   size_t getSize() const {
-    return getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
+    return utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
   }
 
   /// Get a memory buffer reference to the whole image.
@@ -539,7 +539,7 @@ class PinnedAllocationMapTy {
     --It;
 
     // The buffer is not contained in the pinned allocation.
-    if (advanceVoidPtr(It->HstPtr, It->Size) > HstPtr)
+    if (utils::advancePtr(It->HstPtr, It->Size) > HstPtr)
       return &(*It);
 
     // None found.
@@ -566,15 +566,15 @@ class PinnedAllocationMapTy {
 
   /// Indicate whether the first range A fully contains the second range B.
   static bool contains(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrB >= PtrA && EndB <= EndA);
   }
 
   /// Indicate whether the first range A intersects with the second range B.
   static bool intersects(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrA < EndB && PtrB < EndA);
   }
 
@@ -656,8 +656,8 @@ public:
     if (!Entry)
       return nullptr;
 
-    return advanceVoidPtr(Entry->DevAccessiblePtr,
-                          getPtrDiff(HstPtr, Entry->HstPtr));
+    return utils::advancePtr(Entry->DevAccessiblePtr,
+                             utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
   /// Check whether a buffer belongs to a registered host pinned allocation.
@@ -944,7 +944,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
     for (auto &It : *AllocationTraceMap) {
       if (It.first <= DevicePtr &&
-          advanceVoidPtr(It.first, It.second->Size) > DevicePtr)
+          utils::advancePtr(It.first, It.second->Size) > DevicePtr)
         return It.second;
     }
     return nullptr;

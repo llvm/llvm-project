@@ -226,17 +226,17 @@ final:
 define i32 @dominating_values_select_not_same_block(i1 %c1, i1 %c2, ptr %p, ptr %p2) {
 ; CHECK-LABEL: @dominating_values_select_not_same_block(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
 ; CHECK:       delay:
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C2:%.*]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[USE2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[C2:%.*]], [[DELAY]] ]
+; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ [[B]], [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    [[VALUE:%.*]] = select i1 [[USE2]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i32 [[VALUE]]
+; CHECK-NEXT:    ret i32 [[USE2]]
 ;
 entry:
   %a = load i32, ptr %p

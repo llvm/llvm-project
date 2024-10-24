@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
@@ -847,8 +848,14 @@ static ICFLevel getICFLevel(const ArgList &args) {
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
                       .Cases("none", "", ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
+                      .Case("safe_thunks", ICFLevel::safe_thunks)
                       .Case("all", ICFLevel::all)
                       .Default(ICFLevel::unknown);
+
+  if ((icfLevel == ICFLevel::safe_thunks) && (config->arch() != AK_arm64)) {
+    error("--icf=safe_thunks is only supported on arm64 targets");
+  }
+
   if (icfLevel == ICFLevel::unknown) {
     warn(Twine("unknown --icf=OPTION `") + icfLevelStr +
          "', defaulting to `none'");
@@ -943,7 +950,6 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   const char *argv[] = {"lld", opt.data()};
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
-  os.flush();
   error(msg + ": " + StringRef(err).trim());
 }
 
@@ -1314,6 +1320,37 @@ static void gatherInputSections() {
     if (!file->objCImageInfo.empty())
       in.objCImageInfo->addFile(file);
   }
+}
+
+static void codegenDataGenerate() {
+  TimeTraceScope timeScope("Generating codegen data");
+
+  OutlinedHashTreeRecord globalOutlineRecord;
+  for (ConcatInputSection *isec : inputSections)
+    if (isec->getSegName() == segment_names::data &&
+        isec->getName() == section_names::outlinedHashTree) {
+      // Read outlined hash tree from each section.
+      OutlinedHashTreeRecord localOutlineRecord;
+      auto *data = isec->data.data();
+      localOutlineRecord.deserialize(data);
+
+      // Merge it to the global hash tree.
+      globalOutlineRecord.merge(localOutlineRecord);
+    }
+
+  CodeGenDataWriter Writer;
+  if (!globalOutlineRecord.empty())
+    Writer.addRecord(globalOutlineRecord);
+
+  std::error_code EC;
+  auto fileName = config->codegenDataGeneratePath;
+  assert(!fileName.empty());
+  raw_fd_ostream Output(fileName, EC, sys::fs::OF_None);
+  if (EC)
+    error("fail to create " + fileName + ": " + EC.message());
+
+  if (auto E = Writer.write(Output))
+    error("fail to write CGData: " + toString(std::move(E)));
 }
 
 static void foldIdenticalLiterals() {
@@ -1753,6 +1790,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->ignoreAutoLinkOptions.insert(arg->getValue());
   config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->codegenDataGeneratePath =
+      args.getLastArgValue(OPT_codegen_data_generate_path);
   config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
@@ -1772,6 +1811,13 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->irpgoProfileSortProfilePath = arg->getValue();
     IncompatWithCGSort(arg->getSpelling());
   }
+  config->compressionSortStartupFunctions =
+      args.hasFlag(OPT_compression_sort_startup_functions,
+                   OPT_no_compression_sort_startup_functions, false);
+  if (config->irpgoProfileSortProfilePath.empty() &&
+      config->compressionSortStartupFunctions)
+    error("--compression-sort-startup-functions must be used with "
+          "--irpgo-profile-sort");
   if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
@@ -1882,9 +1928,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef segName = arg->getValue(0);
     uint32_t maxProt = parseProtection(arg->getValue(1));
     uint32_t initProt = parseProtection(arg->getValue(2));
-    if (maxProt != initProt && config->arch() != AK_i386)
-      error("invalid argument '" + arg->getAsString(args) +
-            "': max and init must be the same for non-i386 archs");
+
+    // FIXME: Check if this works on more platforms.
+    bool allowsDifferentInitAndMaxProt =
+        config->platform() == PLATFORM_MACOS ||
+        config->platform() == PLATFORM_MACCATALYST;
+    if (allowsDifferentInitAndMaxProt) {
+      if (initProt > maxProt)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': init must not be more permissive than max");
+    } else {
+      if (maxProt != initProt && config->arch() != AK_i386)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': max and init must be the same for non-macOS non-i386 archs");
+    }
+
     if (segName == segment_names::linkEdit)
       error("-segprot cannot be used to change __LINKEDIT's protections");
     config->segmentProtections.push_back({segName, maxProt, initProt});
@@ -2078,6 +2136,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
 
     gatherInputSections();
+
+    if (!config->codegenDataGeneratePath.empty())
+      codegenDataGenerate();
+
     if (config->callGraphProfileSort)
       priorityBuilder.extractCallGraphProfile();
 
@@ -2104,7 +2166,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // foldIdenticalLiterals before foldIdenticalSections.
     foldIdenticalLiterals();
     if (config->icfLevel != ICFLevel::none) {
-      if (config->icfLevel == ICFLevel::safe)
+      if (config->icfLevel == ICFLevel::safe ||
+          config->icfLevel == ICFLevel::safe_thunks)
         markAddrSigSymbols();
       foldIdenticalSections(/*onlyCfStrings=*/false);
     } else if (config->dedupStrings) {

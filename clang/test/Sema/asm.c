@@ -191,8 +191,8 @@ void iOutputConstraint(int x){
 struct foo {
   int a;
 };
-register struct foo bar asm("esp"); // expected-error {{bad type for named register variable}}
-register float baz asm("esp"); // expected-error {{bad type for named register variable}}
+register struct foo bar asm("esp"); // expected-error {{unsupported type for named register variable}}
+register float baz asm("esp"); // expected-error {{unsupported type for named register variable}}
 
 register int r0 asm ("edi"); // expected-error {{register 'edi' unsuitable for global register variables on this target}}
 register long long r1 asm ("esp"); // expected-error {{size of register 'esp' does not match variable size}}

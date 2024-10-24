@@ -100,8 +100,8 @@ bool Block::hasPointer(const Pointer *P) const {
 #endif
 
 DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
-    : Root(Root),
-      B(~0u, Blk->Desc, Blk->IsStatic, Blk->IsExtern, /*isDead=*/true) {
+    : Root(Root), B(~0u, Blk->Desc, Blk->IsStatic, Blk->IsExtern, Blk->IsWeak,
+                    /*isDead=*/true) {
   // Add the block to the chain of dead blocks.
   if (Root)
     Root->Prev = this;
@@ -109,6 +109,8 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
   Next = Root;
   Prev = nullptr;
   Root = this;
+
+  B.IsDynamic = Blk->IsDynamic;
 
   // Transfer pointers.
   B.Pointers = Blk->Pointers;

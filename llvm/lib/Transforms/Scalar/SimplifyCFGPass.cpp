@@ -73,6 +73,11 @@ static cl::opt<bool> UserHoistCommonInsts(
     "hoist-common-insts", cl::Hidden, cl::init(false),
     cl::desc("hoist common instructions (default = false)"));
 
+static cl::opt<bool> UserHoistLoadsStoresWithCondFaulting(
+    "hoist-loads-stores-with-cond-faulting", cl::Hidden, cl::init(false),
+    cl::desc("Hoist loads/stores if the target supports conditional faulting "
+             "(default = false)"));
+
 static cl::opt<bool> UserSinkCommonInsts(
     "sink-common-insts", cl::Hidden, cl::init(false),
     cl::desc("Sink common instructions (default = false)"));
@@ -326,6 +331,9 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.NeedCanonicalLoop = UserKeepLoops;
   if (UserHoistCommonInsts.getNumOccurrences())
     Options.HoistCommonInsts = UserHoistCommonInsts;
+  if (UserHoistLoadsStoresWithCondFaulting.getNumOccurrences())
+    Options.HoistLoadsStoresWithCondFaulting =
+        UserHoistLoadsStoresWithCondFaulting;
   if (UserSinkCommonInsts.getNumOccurrences())
     Options.SinkCommonInsts = UserSinkCommonInsts;
   if (UserSpeculateUnpredictables.getNumOccurrences())
@@ -354,6 +362,8 @@ void SimplifyCFGPass::printPipeline(
      << "switch-to-lookup;";
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
   OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
+  OS << (Options.HoistLoadsStoresWithCondFaulting ? "" : "no-")
+     << "hoist-loads-stores-with-cond-faulting;";
   OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts;";
   OS << (Options.SpeculateBlocks ? "" : "no-") << "speculate-blocks;";
   OS << (Options.SimplifyCondBranch ? "" : "no-") << "simplify-cond-branch;";

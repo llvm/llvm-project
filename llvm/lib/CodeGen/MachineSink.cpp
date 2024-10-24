@@ -833,7 +833,7 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
     if (!ProcessedBegin)
       --I;
 
-    if (MI.isDebugOrPseudoInstr()) {
+    if (MI.isDebugOrPseudoInstr() || MI.isFakeUse()) {
       if (MI.isDebugValue())
         ProcessDbgInst(MI);
       continue;
@@ -2152,8 +2152,9 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     MachineBasicBlock::iterator InsertPos =
         SuccBB->SkipPHIsAndLabels(SuccBB->begin());
     if (blockPrologueInterferes(SuccBB, InsertPos, MI, TRI, TII, nullptr)) {
-      LLVM_DEBUG(
-          dbgs() << " *** Not sinking: prologue interference\n");
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
+      LLVM_DEBUG(dbgs() << " *** Not sinking: prologue interference\n");
       continue;
     }
 

@@ -16,7 +16,7 @@
 
 #else // Overlay mode
 
-#include <stdio.h>
+#include "stdio_overlay.h"
 
 #endif // LLVM_LIBC_FULL_BUILD
 

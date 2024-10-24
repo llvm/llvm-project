@@ -592,6 +592,29 @@ SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) const {
   return res;
 }
 
+size_t AffineMap::getNumOfZeroResults() const {
+  size_t res = 0;
+  for (auto expr : getResults()) {
+    auto constExpr = dyn_cast<AffineConstantExpr>(expr);
+    if (constExpr && constExpr.getValue() == 0)
+      res++;
+  }
+
+  return res;
+}
+
+AffineMap AffineMap::dropZeroResults() {
+  auto exprs = llvm::to_vector(getResults());
+  SmallVector<AffineExpr> newExprs;
+
+  for (auto expr : getResults()) {
+    auto constExpr = dyn_cast<AffineConstantExpr>(expr);
+    if (!constExpr || constExpr.getValue() != 0)
+      newExprs.push_back(expr);
+  }
+  return AffineMap::get(getNumDims(), getNumSymbols(), newExprs, getContext());
+}
+
 bool AffineMap::isProjectedPermutation(bool allowZeroInResults) const {
   if (getNumSymbols() > 0)
     return false;

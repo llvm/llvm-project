@@ -80,10 +80,10 @@ void emitEncodingMacrosUndef(raw_ostream &OS) {
      << "#undef " << EncodeMacroName << "8\n";
 }
 
-std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
+std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
                                     int HwModeIdx) {
   std::string Name = "GIFBS";
-  for (const auto &Feature : FeatureBitset)
+  for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
   if (HwModeIdx >= 0)
     Name += ("_HwMode" + std::to_string(HwModeIdx));
@@ -822,7 +822,7 @@ SaveAndRestore<GISelFlags> RuleMatcher::setGISelFlags(const Record *R) {
 }
 
 Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
-                                           Record *ComplexPattern,
+                                           const Record *ComplexPattern,
                                            unsigned RendererID,
                                            unsigned SubOperandID,
                                            StringRef ParentSymbolicName) {
@@ -861,14 +861,6 @@ const std::vector<std::string> &RuleMatcher::getRequiredSimplePredicates() {
   return RequiredSimplePredicates;
 }
 
-void RuleMatcher::addRequiredFeature(Record *Feature) {
-  RequiredFeatures.push_back(Feature);
-}
-
-const std::vector<Record *> &RuleMatcher::getRequiredFeatures() const {
-  return RequiredFeatures;
-}
-
 unsigned RuleMatcher::implicitlyDefineInsnVar(InstructionMatcher &Matcher) {
   unsigned NewInsnVarID = NextInsnVarID++;
   InsnVariableIDs[&Matcher] = NewInsnVarID;
@@ -896,11 +888,9 @@ void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
       RM.getGISelFlags());
 }
 
-void RuleMatcher::definePhysRegOperand(Record *Reg, OperandMatcher &OM) {
-  if (!PhysRegOperands.contains(Reg)) {
+void RuleMatcher::definePhysRegOperand(const Record *Reg, OperandMatcher &OM) {
+  if (!PhysRegOperands.contains(Reg))
     PhysRegOperands[Reg] = &OM;
-    return;
-  }
 }
 
 InstructionMatcher &
@@ -912,7 +902,8 @@ RuleMatcher::getInstructionMatcher(StringRef SymbolicName) const {
       ("Failed to lookup instruction " + SymbolicName).str().c_str());
 }
 
-const OperandMatcher &RuleMatcher::getPhysRegOperandMatcher(Record *Reg) const {
+const OperandMatcher &
+RuleMatcher::getPhysRegOperandMatcher(const Record *Reg) const {
   const auto &I = PhysRegOperands.find(Reg);
 
   if (I == PhysRegOperands.end()) {
@@ -1725,7 +1716,8 @@ OperandMatcher &InstructionMatcher::getOperand(unsigned OpIdx) {
   llvm_unreachable("Failed to lookup operand");
 }
 
-OperandMatcher &InstructionMatcher::addPhysRegInput(Record *Reg, unsigned OpIdx,
+OperandMatcher &InstructionMatcher::addPhysRegInput(const Record *Reg,
+                                                    unsigned OpIdx,
                                                     unsigned TempOpIdx) {
   assert(SymbolicName.empty());
   OperandMatcher *OM = new OperandMatcher(*this, OpIdx, "", TempOpIdx);

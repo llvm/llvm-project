@@ -110,6 +110,20 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   // Print any added annotation.
   printAnnotation(OS, Annot);
 
+  auto PrintBranchAnnotation = [&](const MCOperand &Op,
+                                   SmallSet<uint64_t, 8> &Printed) {
+    uint64_t Depth = Op.getImm();
+    if (!Printed.insert(Depth).second)
+      return;
+    if (Depth >= ControlFlowStack.size()) {
+      printAnnotation(OS, "Invalid depth argument!");
+    } else {
+      const auto &Pair = ControlFlowStack.rbegin()[Depth];
+      printAnnotation(OS, utostr(Depth) + ": " + (Pair.second ? "up" : "down") +
+                              " to label" + utostr(Pair.first));
+    }
+  };
+
   if (CommentStream) {
     // Observe any effects on the control flow stack, for use in annotating
     // control flow label references.
@@ -136,6 +150,23 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       EHInstStack.push_back(TRY);
       return;
 
+    case WebAssembly::TRY_TABLE:
+    case WebAssembly::TRY_TABLE_S: {
+      SmallSet<uint64_t, 8> Printed;
+      unsigned OpIdx = 1;
+      const MCOperand &Op = MI->getOperand(OpIdx++);
+      unsigned NumCatches = Op.getImm();
+      for (unsigned I = 0; I < NumCatches; I++) {
+        int64_t CatchOpcode = MI->getOperand(OpIdx++).getImm();
+        if (CatchOpcode == wasm::WASM_OPCODE_CATCH ||
+            CatchOpcode == wasm::WASM_OPCODE_CATCH_REF)
+          OpIdx++; // Skip tag
+        PrintBranchAnnotation(MI->getOperand(OpIdx++), Printed);
+      }
+      ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
+      return;
+    }
+
     case WebAssembly::END_LOOP:
     case WebAssembly::END_LOOP_S:
       if (ControlFlowStack.empty()) {
@@ -147,6 +178,8 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
     case WebAssembly::END_BLOCK:
     case WebAssembly::END_BLOCK_S:
+    case WebAssembly::END_TRY_TABLE:
+    case WebAssembly::END_TRY_TABLE_S:
       if (ControlFlowStack.empty()) {
         printAnnotation(OS, "End marker mismatch!");
       } else {
@@ -166,15 +199,15 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       }
       return;
 
-    case WebAssembly::CATCH:
-    case WebAssembly::CATCH_S:
-    case WebAssembly::CATCH_ALL:
-    case WebAssembly::CATCH_ALL_S:
+    case WebAssembly::CATCH_LEGACY:
+    case WebAssembly::CATCH_LEGACY_S:
+    case WebAssembly::CATCH_ALL_LEGACY:
+    case WebAssembly::CATCH_ALL_LEGACY_S:
       // There can be multiple catch instructions for one try instruction, so
       // we print a label only for the first 'catch' label.
       if (EHInstStack.empty()) {
         printAnnotation(OS, "try-catch mismatch!");
-      } else if (EHInstStack.back() == CATCH_ALL) {
+      } else if (EHInstStack.back() == CATCH_ALL_LEGACY) {
         printAnnotation(OS, "catch/catch_all cannot occur after catch_all");
       } else if (EHInstStack.back() == TRY) {
         if (TryStack.empty()) {
@@ -183,10 +216,11 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           printAnnotation(OS, "catch" + utostr(TryStack.pop_back_val()) + ':');
         }
         EHInstStack.pop_back();
-        if (Opc == WebAssembly::CATCH || Opc == WebAssembly::CATCH_S) {
-          EHInstStack.push_back(CATCH);
+        if (Opc == WebAssembly::CATCH_LEGACY ||
+            Opc == WebAssembly::CATCH_LEGACY_S) {
+          EHInstStack.push_back(CATCH_LEGACY);
         } else {
-          EHInstStack.push_back(CATCH_ALL);
+          EHInstStack.push_back(CATCH_ALL_LEGACY);
         }
       }
       return;
@@ -250,17 +284,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         if (!MI->getOperand(I).isImm())
           continue;
       }
-      uint64_t Depth = MI->getOperand(I).getImm();
-      if (!Printed.insert(Depth).second)
-        continue;
-      if (Depth >= ControlFlowStack.size()) {
-        printAnnotation(OS, "Invalid depth argument!");
-      } else {
-        const auto &Pair = ControlFlowStack.rbegin()[Depth];
-        printAnnotation(OS, utostr(Depth) + ": " +
-                                (Pair.second ? "up" : "down") + " to label" +
-                                utostr(Pair.first));
-      }
+      PrintBranchAnnotation(MI->getOperand(I), Printed);
     }
   }
 }
@@ -364,5 +388,51 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
       // Disassembler does not currently produce a signature
       O << "unknown_type";
     }
+  }
+}
+
+void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
+                                            raw_ostream &O) {
+  unsigned OpIdx = OpNo;
+  const MCOperand &Op = MI->getOperand(OpIdx++);
+  unsigned NumCatches = Op.getImm();
+
+  auto PrintTagOp = [&](const MCOperand &Op) {
+    const MCSymbolRefExpr *TagExpr = nullptr;
+    const MCSymbolWasm *TagSym = nullptr;
+    if (Op.isExpr()) {
+      TagExpr = cast<MCSymbolRefExpr>(Op.getExpr());
+      TagSym = cast<MCSymbolWasm>(&TagExpr->getSymbol());
+      O << TagSym->getName() << " ";
+    } else {
+      // When instructions are parsed from the disassembler, we have an
+      // immediate tag index and not a tag expr
+      O << Op.getImm() << " ";
+    }
+  };
+
+  for (unsigned I = 0; I < NumCatches; I++) {
+    const MCOperand &Op = MI->getOperand(OpIdx++);
+    O << "(";
+    switch (Op.getImm()) {
+    case wasm::WASM_OPCODE_CATCH:
+      O << "catch ";
+      PrintTagOp(MI->getOperand(OpIdx++));
+      break;
+    case wasm::WASM_OPCODE_CATCH_REF:
+      O << "catch_ref ";
+      PrintTagOp(MI->getOperand(OpIdx++));
+      break;
+    case wasm::WASM_OPCODE_CATCH_ALL:
+      O << "catch_all ";
+      break;
+    case wasm::WASM_OPCODE_CATCH_ALL_REF:
+      O << "catch_all_ref ";
+      break;
+    }
+    O << MI->getOperand(OpIdx++).getImm(); // destination
+    O << ")";
+    if (I < NumCatches - 1)
+      O << " ";
   }
 }
