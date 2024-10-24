@@ -756,11 +756,8 @@ const CXXRecordDecl *CXXInstanceCall::getDeclForDynamicType() const {
   if (!DynType.isValid())
     return nullptr;
 
-  QualType Ty = DynType.getType()->getPointeeType();
-  if (Ty.isNull())
-    return nullptr;
-
-  return Ty->getAsCXXRecordDecl();
+  assert(!DynType.getType()->getPointeeType().isNull());
+  return DynType.getType()->getPointeeCXXRecordDecl();
 }
 
 RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
