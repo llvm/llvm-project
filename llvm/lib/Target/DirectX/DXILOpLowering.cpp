@@ -532,33 +532,36 @@ public:
       }
 
       unsigned CastOp;
-      if (FRT->isIntOrIntVectorTy(16))
+      unsigned CastOp2;
+      if (FRT->isIntOrIntVectorTy(16)) {
         CastOp = Instruction::ZExt;
-      else { // must be 64 bits
+        CastOp2 = Instruction::SExt;
+      } else { // must be 64 bits
         assert(FRT->isIntOrIntVectorTy(64) &&
                "Currently only lowering 16, 32, or 64 bit ctpop to CountBits \
                 is supported.");
         CastOp = Instruction::Trunc;
+        CastOp2 = Instruction::Trunc;
       }
 
       // It is correct to replace the ctpop with the dxil op and
       // remove all casts to i32
-      bool nonCastInstr = false;
+      bool NeedsCast = false;
       for (User *User : make_early_inc_range(CI->users())) {
-        Instruction *I;
-        if ((I = dyn_cast<Instruction>(User)) != NULL &&
-            I->getOpcode() == CastOp && I->getType() == RetTy) {
+        Instruction *I = dyn_cast<Instruction>(User);
+        if (I && (I->getOpcode() == CastOp || I->getOpcode() == CastOp2) &&
+            I->getType() == RetTy) {
           I->replaceAllUsesWith(*OpCall);
           I->eraseFromParent();
         } else
-          nonCastInstr = true;
+          NeedsCast = true;
       }
 
       // It is correct to replace a ctpop with the dxil op and
       // a cast from i32 to the return type of the ctpop
       // the cast is emitted here if there is a non-cast to i32
       // instr which uses the ctpop
-      if (nonCastInstr) {
+      if (NeedsCast) {
         Value *Cast =
             IRB.CreateZExtOrTrunc(*OpCall, F.getReturnType(), "ctpop.cast");
         CI->replaceAllUsesWith(Cast);

@@ -20,6 +20,15 @@ entry:
   ret i32 %elt.zext
 }
 
+define noundef i32 @test_countbits_short3(i16 noundef %a) {
+entry:
+; CHECK: [[A:%.*]] = call i32 @dx.op.unaryBits.i16(i32 31, i16 %{{.*}})
+; CHECK-NEXT: ret i32 [[A]]
+  %elt.ctpop = call i16 @llvm.ctpop.i16(i16 %a)
+  %elt.sext = sext i16 %elt.ctpop to i32
+  ret i32 %elt.sext
+}
+
 define noundef i32 @test_countbits_int(i32 noundef %a) {
 entry:
 ; CHECK: [[A:%.*]] = call i32 @dx.op.unaryBits.i32(i32 31, i32 %{{.*}})

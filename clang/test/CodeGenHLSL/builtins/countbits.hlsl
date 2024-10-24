@@ -10,6 +10,13 @@ uint test_countbits_ushort(uint16_t p0)
 {
 	return countbits(p0);
 }
+// CHECK-LABEL: test_countbits_short
+// CHECK: [[A:%.*]] = call i16 @llvm.ctpop.i16
+// CHECK-NEXT: sext i16 [[A]] to i32
+uint test_countbits_short(int16_t p0)
+{
+	return countbits(p0);
+}
 // CHECK-LABEL: test_countbits_ushort2
 // CHECK: [[A:%.*]] = call <2 x i16> @llvm.ctpop.v2i16
 // CHECK-NEXT: zext <2 x i16> [[A]] to <2 x i32>
@@ -39,6 +46,12 @@ uint test_countbits_uint(uint p0)
 {
 	return countbits(p0);
 }
+// CHECK-LABEL: test_countbits_int
+// CHECK: call i32 @llvm.ctpop.i32
+uint test_countbits_int(int p0)
+{
+	return countbits(p0);
+}
 // CHECK-LABEL: test_countbits_uint2
 // CHECK: call <2 x i32> @llvm.ctpop.v2i32
 uint2 test_countbits_uint2(uint2 p0)
@@ -62,6 +75,13 @@ uint4 test_countbits_uint4(uint4 p0)
 // CHECK: [[A:%.*]] = call i64 @llvm.ctpop.i64
 // CHECK-NEXT: trunc i64 [[A]] to i32
 uint test_countbits_long(uint64_t p0)
+{
+	return countbits(p0);
+}
+// CHECK-LABEL: test_countbits_slong
+// CHECK: [[A:%.*]] = call i64 @llvm.ctpop.i64
+// CHECK-NEXT: trunc i64 [[A]] to i32
+uint test_countbits_slong(int64_t p0)
 {
 	return countbits(p0);
 }
