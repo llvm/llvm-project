@@ -2882,6 +2882,9 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
         ast, llvm::cast<clang::AttributedType>(qual_type)->getModifiedType(),
         allow_completion);
 
+  case clang::Type::MemberPointer:
+    return !qual_type.getTypePtr()->isIncompleteType();
+
   default:
     break;
   }
