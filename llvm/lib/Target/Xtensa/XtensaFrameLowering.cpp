@@ -12,6 +12,7 @@
 
 #include "XtensaFrameLowering.h"
 #include "XtensaInstrInfo.h"
+#include "XtensaMachineFunctionInfo.h"
 #include "XtensaSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -255,19 +256,42 @@ void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(FP);
 }
 
+static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
+                                            const XtensaInstrInfo &TII) {
+  unsigned FnSize = 0;
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      FnSize += TII.getInstSizeInBytes(MI);
+    }
+  }
+  return FnSize;
+}
+
 void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   // Set scavenging frame index if necessary.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   uint64_t MaxSPOffset = MFI.estimateStackSize(MF);
+  auto *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
+  unsigned ScavSlotsNum = 0;
 
-  if (isInt<12>(MaxSPOffset))
-    return;
+  if (!isInt<12>(MaxSPOffset))
+    ScavSlotsNum = 1;
+
+  // Far branches over 18-bit offset require a spill slot for scratch register.
+  bool IsLargeFunction = !isInt<18>(estimateFunctionSizeInBytes(MF, TII));
+  if (IsLargeFunction)
+    ScavSlotsNum = std::max(ScavSlotsNum, 1u);
 
   const TargetRegisterClass &RC = Xtensa::ARRegClass;
   unsigned Size = TRI->getSpillSize(RC);
   Align Alignment = TRI->getSpillAlign(RC);
-  int FI = MF.getFrameInfo().CreateStackObject(Size, Alignment, false);
+  for (unsigned I = 0; I < ScavSlotsNum; I++) {
+    int FI = MFI.CreateStackObject(Size, Alignment, false);
+    RS->addScavengingFrameIndex(FI);
 
-  RS->addScavengingFrameIndex(FI);
+    if (IsLargeFunction &&
+        XtensaFI->getBranchRelaxationScratchFrameIndex() == -1)
+      XtensaFI->setBranchRelaxationScratchFrameIndex(FI);
+  }
 }
