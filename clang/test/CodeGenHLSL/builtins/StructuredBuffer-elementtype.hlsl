@@ -31,12 +31,12 @@ StructuredBuffer< vector<int16_t, 4> > BufI16x4;
 StructuredBuffer< vector<uint, 3> > BufU32x3;
 StructuredBuffer<half2> BufF16x2;
 StructuredBuffer<float3> BufF32x3;
-// TODO: StructuredBuffer<snorm half> BufSNormF16; -> 11
-// TODO: StructuredBuffer<unorm half> BufUNormF16; -> 12
-// TODO: StructuredBuffer<snorm float> BufSNormF32; -> 13
-// TODO: StructuredBuffer<unorm float> BufUNormF32; -> 14
-// TODO: StructuredBuffer<snorm double> BufSNormF64; -> 15
-// TODO: StructuredBuffer<unorm double> BufUNormF64; -> 16
+// TODO: StructuredBuffer<snorm half> BufSNormF16;
+// TODO: StructuredBuffer<unorm half> BufUNormF16;
+// TODO: StructuredBuffer<snorm float> BufSNormF32;
+// TODO: StructuredBuffer<unorm float> BufUNormF32;
+// TODO: StructuredBuffer<snorm double> BufSNormF64;
+// TODO: StructuredBuffer<unorm double> BufUNormF64;
 
 [numthreads(1,1,1)]
 void main(int GI : SV_GroupIndex) {
