@@ -48,6 +48,9 @@
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+#if defined(_AIX)
+#include <sys/ldr.h>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -193,6 +196,8 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
                                 &GDBRemoteCommunicationServerLLGS::Handle_Z);
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_z,
                                 &GDBRemoteCommunicationServerLLGS::Handle_z);
+  RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_qLDXINFO,
+                                &GDBRemoteCommunicationServerLLGS::Handle_qLDXINFO);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QPassSignals,
       &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
@@ -2995,6 +3000,29 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
              m_current_process->GetID(), error);
     return SendErrorResponse(0x09);
   }
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qLDXINFO(StringExtractorGDBRemote &packet) {
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
+    Log *log = GetLog(LLDBLog::Process);
+    LLDB_LOG(log, "qLDXINFO failed, no process available");
+    return SendErrorResponse(0xff);
+  }
+
+#if defined(_AIX)
+  // FIXME: buffer size
+  struct ld_xinfo info[64];
+  if (ptrace64(PT_LDXINFO, m_current_process->GetID(), (long long)&(info[0]), sizeof(info), nullptr) != 0) {
+    return SendErrorResponse(0xff);
+  }
+  StreamGDBRemote response;
+  response.PutBytesAsRawHex8(&(info[0]), sizeof(info));
+  return SendPacketNoLock(response.GetString());
+#else
+  return SendErrorResponse(0xff);
+#endif
 }
 
 GDBRemoteCommunication::PacketResult

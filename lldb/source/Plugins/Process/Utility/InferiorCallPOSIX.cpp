@@ -46,8 +46,34 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
   function_options.include_inlines = false;
 
   SymbolContextList sc_list;
+#if !defined(_AIX)
   process->GetTarget().GetImages().FindFunctions(
       ConstString("mmap"), eFunctionNameTypeFull, function_options, sc_list);
+#else
+  process->GetTarget().GetImages().FindFunctions(
+      ConstString("mmap64"), eFunctionNameTypeFull, function_options, sc_list);
+  SymbolContextList toc_list;
+  process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+      ConstString("TOC"), lldb::eSymbolTypeAny, toc_list);
+
+  AddressRange toc_range;
+  if (sc_list.GetSize() > 0) {
+    SymbolContext sc;
+    if (sc_list.GetContextAtIndex(0, sc)) {
+      for (int i = 0; i < toc_list.GetSize(); ++i) {
+        SymbolContext tocSC;
+        if (toc_list.GetContextAtIndex(i, tocSC)) {
+          if (tocSC.module_sp == sc.module_sp) {
+            if (tocSC.GetAddressRange(eSymbolContextSymbol, 0, false,
+                                   toc_range)) {
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+#endif
   const uint32_t count = sc_list.GetSize();
   if (count > 0) {
     SymbolContext sc;
@@ -96,9 +122,16 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
         MmapArgList args =
             process->GetTarget().GetPlatform()->GetMmapArgumentList(
                 arch, addr, length, prot_arg, flags, fd, offset);
+#if defined(_AIX)
+        lldb::ThreadPlanSP call_plan_sp(
+            new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
+                                       toc_range.GetBaseAddress(),
+                                       void_ptr_type, args, options));
+#else
         lldb::ThreadPlanSP call_plan_sp(
             new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
                                        void_ptr_type, args, options));
+#endif
         if (call_plan_sp) {
           DiagnosticManager diagnostics;
 

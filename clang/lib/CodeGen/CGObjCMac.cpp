@@ -5052,10 +5052,14 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
   case llvm::Triple::COFF:
     assert(Section.starts_with("__") && "expected the name to begin with __");
     return ("." + Section.substr(2) + "$B").str();
+  case llvm::Triple::XCOFF:
+    // Hack to allow "p 10+1" on AIX for lldb
+    assert(Section.substr(0, 2) == "__" &&
+           "expected the name to begin with __");
+    return Section.substr(2).str();
   case llvm::Triple::Wasm:
   case llvm::Triple::GOFF:
   case llvm::Triple::SPIRV:
-  case llvm::Triple::XCOFF:
   case llvm::Triple::DXContainer:
     llvm::report_fatal_error(
         "Objective-C support is unimplemented for object file format");

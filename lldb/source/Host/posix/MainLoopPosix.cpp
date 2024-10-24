@@ -179,9 +179,21 @@ Status MainLoopPosix::RunImpl::Poll() {
     read_fds.push_back(pfd);
   }
 
+#if defined(_AIX)
+  sigset_t origmask;
+  int timeout;
+
+  timeout = -1;
+  pthread_sigmask(SIG_SETMASK, &sigmask, &origmask);
+  int ready = poll(read_fds.data(), read_fds.size(), timeout);
+  pthread_sigmask(SIG_SETMASK, &origmask, nullptr);
+  if (ready == -1 && errno != EINTR)
+    return Status(errno, eErrorTypePOSIX);
+#else
   if (ppoll(read_fds.data(), read_fds.size(), nullptr, &sigmask) == -1 &&
       errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
+#endif
 
   return Status();
 }
@@ -313,8 +325,13 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   // If we're using kqueue, the signal needs to be unblocked in order to
   // receive it. If using pselect/ppoll, we need to block it, and later unblock
   // it as a part of the system call.
+#if defined(_AIX)
+  //FIXME: where is signal unblocked?
+  ret = pthread_sigmask(SIG_UNBLOCK, &new_action.sa_mask, &old_set);
+#else
   ret = pthread_sigmask(HAVE_SYS_EVENT_H ? SIG_UNBLOCK : SIG_BLOCK,
                         &new_action.sa_mask, &old_set);
+#endif
   assert(ret == 0 && "pthread_sigmask failed");
   info.was_blocked = sigismember(&old_set, signo);
   auto insert_ret = m_signals.insert({signo, info});
