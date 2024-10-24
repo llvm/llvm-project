@@ -134,8 +134,9 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
     // For Non DXIL targets we generate the instructions.
     // TODO: This code accounts for known limitations in
     // SPIR-V and splitdouble. Such should be handled,
-    // in a later compilation stage. After [issue link here]
-    // is fixed, this shall be refactored.
+    // in a later compilation stage. After
+    // https://github.com/llvm/llvm-project/issues/113597 is fixed, this shall
+    // be refactored.
 
     // casts `<2 x double>` to `<4 x i32>`, then shuffles into high and low
     // `<2 x i32>` vectors.
