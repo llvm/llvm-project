@@ -1,8 +1,43 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DVARIANT -analyzer-checker=core,unix.cstring,alpha.unix.cstring,unix.Malloc,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -DVARIANT -analyzer-checker=core,unix.cstring,alpha.unix.cstring,unix.Malloc,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DSUPPRESS_OUT_OF_BOUND -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring.BufferOverlap,alpha.unix.cstring.NotNullTerminated,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+
+// RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+
+// RUN: %clang_analyze_cc1 -verify %s -DVARIANT \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+
+// RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS -DVARIANT \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+
+// RUN: %clang_analyze_cc1 -verify %s -DSUPPRESS_OUT_OF_BOUND \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=alpha.unix.cstring.BufferOverlap \
+// RUN:   -analyzer-checker=alpha.unix.cstring.NotNullTerminated \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
 
 #include "Inputs/system-header-simulator-cxx.h"
 #include "Inputs/system-header-simulator-for-malloc.h"
@@ -103,6 +138,8 @@ void memset1_inheritance() {
 #ifdef SUPPRESS_OUT_OF_BOUND
 void memset2_inheritance_field() {
   Derived d;
+  // FIXME: The analyzer should stop analysis after memset. The argument to
+  // sizeof should be Derived::d_mem.
   memset(&d.d_mem, 0, sizeof(Derived));
   clang_analyzer_eval(d.b_mem == 0); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(d.d_mem == 0); // expected-warning{{UNKNOWN}}
@@ -110,6 +147,8 @@ void memset2_inheritance_field() {
 
 void memset3_inheritance_field() {
   Derived d;
+  // FIXME: The analyzer should stop analysis after memset. The argument to
+  // sizeof should be Derived::b_mem.
   memset(&d.b_mem, 0, sizeof(Derived));
   clang_analyzer_eval(d.b_mem == 0); // expected-warning{{TRUE}}
   clang_analyzer_eval(d.d_mem == 0); // expected-warning{{TRUE}}
@@ -176,6 +215,8 @@ public:
 #ifdef SUPPRESS_OUT_OF_BOUND
 void memset8_virtual_inheritance_field() {
   DerivedVirtual d;
+  // FIXME: The analyzer should stop analysis after memset. The argument to
+  // sizeof should be Derived::b_mem.
   memset(&d.b_mem, 0, sizeof(Derived));
   clang_analyzer_eval(d.b_mem == 0); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(d.d_mem == 0); // expected-warning{{UNKNOWN}}
@@ -188,6 +229,10 @@ void memset1_new_array() {
   int *array = new int[10];
   memset(array, 0, 10 * sizeof(int));
   clang_analyzer_eval(array[2] == 0); // expected-warning{{TRUE}}
+  // FIXME: The analyzer should stop analysis after memset. Maybe the intent of
+  // this test was to test for this as a desired behaviour, but it shouldn't be,
+  // going out-of-bounds with memset is a fatal error, even if we decide not to
+  // report it.
   memset(array + 1, 'a', 10 * sizeof(9));
   clang_analyzer_eval(array[2] == 0); // expected-warning{{UNKNOWN}}
   delete[] array;
