@@ -4550,10 +4550,9 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   EVT VT = Op.getValueType();
 
   if (VT.isScalableVector()) {
-    unsigned Opc = Op.getOpcode();
-    bool IsSigned = Opc == ISD::FP_TO_SINT || Opc == ISD::STRICT_FP_TO_SINT;
-    unsigned Opcode = IsSigned ? AArch64ISD::FCVTZS_MERGE_PASSTHRU
-                               : AArch64ISD::FCVTZU_MERGE_PASSTHRU;
+    unsigned Opcode = Op.getOpcode() == ISD::FP_TO_UINT
+                          ? AArch64ISD::FCVTZU_MERGE_PASSTHRU
+                          : AArch64ISD::FCVTZS_MERGE_PASSTHRU;
     return LowerToPredicatedOp(Op, DAG, Opcode);
   }
 
@@ -4629,46 +4628,6 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   return Op;
 }
 
-static bool CanLowerToScalarSVEFPIntConversion(EVT VT) {
-  if (!VT.isSimple())
-    return false;
-  // There are SVE instructions that can convert to/from all pairs of these int
-  // and float types. Note: We don't bother with i8 or i16 as those are illegal
-  // types for scalars.
-  return is_contained({MVT::i32, MVT::i64, MVT::f16, MVT::f32, MVT::f64},
-                      VT.getSimpleVT().SimpleTy);
-}
-
-/// Lowers a scalar FP conversion (to/from) int to SVE.
-static SDValue LowerScalarFPConversionToSVE(SDValue Op, SelectionDAG &DAG) {
-  assert(!Op->isStrictFPOpcode() && "strict fp ops not supported");
-  SDValue SrcVal = Op.getOperand(0);
-  EVT SrcTy = SrcVal.getValueType();
-  EVT DestTy = Op.getValueType();
-  EVT SrcVecTy;
-  EVT DestVecTy;
-  // Use a packed vector for the larger type.
-  // Note: For conversions such as FCVTZS_ZPmZ_DtoS, and UCVTF_ZPmZ_StoD that
-  // notionally take or return a nxv2i32 type we must instead use a nxv4i32, as
-  // (unlike floats) nxv2i32 is an illegal unpacked type.
-  if (DestTy.bitsGT(SrcTy)) {
-    DestVecTy = getPackedSVEVectorVT(DestTy);
-    SrcVecTy = SrcTy == MVT::i32 ? getPackedSVEVectorVT(SrcTy)
-                                 : DestVecTy.changeVectorElementType(SrcTy);
-  } else {
-    SrcVecTy = getPackedSVEVectorVT(SrcTy);
-    DestVecTy = DestTy == MVT::i32 ? getPackedSVEVectorVT(DestTy)
-                                   : SrcVecTy.changeVectorElementType(DestTy);
-  }
-  SDLoc dl(Op);
-  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, dl);
-  SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, SrcVecTy,
-                            DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
-  Vec = DAG.getNode(Op.getOpcode(), dl, DestVecTy, Vec);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op.getValueType(), Vec,
-                     ZeroIdx);
-}
-
 SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
                                               SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
@@ -4676,12 +4635,6 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
 
   if (SrcVal.getValueType().isVector())
     return LowerVectorFP_TO_INT(Op, DAG);
-
-  if (!IsStrict && !Subtarget->isNeonAvailable() &&
-      Subtarget->isSVEorStreamingSVEAvailable() &&
-      CanLowerToScalarSVEFPIntConversion(SrcVal.getValueType()) &&
-      CanLowerToScalarSVEFPIntConversion(Op.getValueType()))
-    return LowerScalarFPConversionToSVE(Op, DAG);
 
   // f16 conversions are promoted to f32 when full fp16 is not supported.
   if ((SrcVal.getValueType() == MVT::f16 && !Subtarget->hasFullFP16()) ||
@@ -4985,12 +4938,6 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
 
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
-
-  if (!IsStrict && !Subtarget->isNeonAvailable() &&
-      Subtarget->isSVEorStreamingSVEAvailable() &&
-      CanLowerToScalarSVEFPIntConversion(SrcVal.getValueType()) &&
-      CanLowerToScalarSVEFPIntConversion(Op.getValueType()))
-    return LowerScalarFPConversionToSVE(Op, DAG);
 
   bool IsSigned = Op->getOpcode() == ISD::STRICT_SINT_TO_FP ||
                   Op->getOpcode() == ISD::SINT_TO_FP;
@@ -19014,12 +18961,66 @@ static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,
   return SDValue();
 }
 
+static bool
+shouldUseSVEForScalarFPConversion(SDNode *N,
+                                  const AArch64Subtarget *Subtarget) {
+  auto isSupportedType = [](EVT VT) {
+    if (!VT.isSimple())
+      return false;
+    // There are SVE instructions that can convert to/from all pairs of these
+    // int and float types. Note: We don't bother with i8 or i16 as those are
+    // illegal types for scalars.
+    return is_contained({MVT::i32, MVT::i64, MVT::f16, MVT::f32, MVT::f64},
+                        VT.getSimpleVT().SimpleTy);
+  };
+  // If we are in a streaming[-compatible] function, use SVE for scalar FP <->
+  // INT conversions as this can help avoid movs between GPRs and FPRs, which
+  // could be quite expensive.
+  return !N->isStrictFPOpcode() && Subtarget->isSVEorStreamingSVEAvailable() &&
+         (Subtarget->isStreaming() || Subtarget->isStreamingCompatible()) &&
+         isSupportedType(N->getValueType(0)) &&
+         isSupportedType(N->getOperand(0).getValueType());
+}
+
+/// Replaces a scalar FP <-> INT conversion with an SVE (scalable) one, wrapped
+/// with an insert and extract.
+static SDValue replaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG) {
+  assert(!N->isStrictFPOpcode() && "strict fp ops not supported");
+  SDValue SrcVal = N->getOperand(0);
+  EVT SrcTy = SrcVal.getValueType();
+  EVT DestTy = N->getValueType(0);
+  EVT SrcVecTy;
+  EVT DestVecTy;
+  // Use a packed vector for the larger type.
+  // Note: For conversions such as FCVTZS_ZPmZ_DtoS, and UCVTF_ZPmZ_StoD that
+  // notionally take or return a nxv2i32 type we must instead use a nxv4i32, as
+  // (unlike floats) nxv2i32 is an illegal unpacked type.
+  if (DestTy.bitsGT(SrcTy)) {
+    DestVecTy = getPackedSVEVectorVT(DestTy);
+    SrcVecTy = SrcTy == MVT::i32 ? getPackedSVEVectorVT(SrcTy)
+                                 : DestVecTy.changeVectorElementType(SrcTy);
+  } else {
+    SrcVecTy = getPackedSVEVectorVT(SrcTy);
+    DestVecTy = DestTy == MVT::i32 ? getPackedSVEVectorVT(DestTy)
+                                   : SrcVecTy.changeVectorElementType(DestTy);
+  }
+  SDLoc dl(N);
+  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, dl);
+  SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, SrcVecTy,
+                            DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
+  Vec = DAG.getNode(N->getOpcode(), dl, DestVecTy, Vec);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, DestTy, Vec, ZeroIdx);
+}
+
 static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
                                      const AArch64Subtarget *Subtarget) {
   // First try to optimize away the conversion when it's conditionally from
   // a constant. Vectors only.
   if (SDValue Res = performVectorCompareAndMaskUnaryOpCombine(N, DAG))
     return Res;
+
+  if (shouldUseSVEForScalarFPConversion(N, Subtarget))
+    return replaceScalarFPConversionWithSVE(N, DAG);
 
   EVT VT = N->getValueType(0);
   if (VT != MVT::f32 && VT != MVT::f64)
@@ -19059,6 +19060,9 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
+  if (shouldUseSVEForScalarFPConversion(N, Subtarget))
+    return replaceScalarFPConversionWithSVE(N, DAG);
+
   if (!Subtarget->isNeonAvailable())
     return SDValue();
 
