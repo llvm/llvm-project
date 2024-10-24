@@ -241,7 +241,8 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
       prependRetWithPatchableExit(MF, TII, op);
       break;
     }
-    case Triple::ArchType::ppc64le: {
+    case Triple::ArchType::ppc64le:
+    case Triple::ArchType::systemz: {
       // PPC has conditional returns. Turn them into branch and plain returns.
       InstrumentationOptions op;
       op.HandleTailcall = false;
