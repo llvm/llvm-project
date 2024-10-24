@@ -1230,10 +1230,8 @@ public:
     assert(MinTy.getElementType() == MaxTy.getElementType() &&
            "Expected element types to agree");
 
-    if (MinTy.isScalableVector())
-      return actionIf(LegalizeAction::Unsupported, always);
-    if (MaxTy.isScalableVector())
-      return actionIf(LegalizeAction::Unsupported, always);
+    assert((!MinTy.isScalableVector() && !MaxTy.isScalableVector())
+           && "Unexpected scalable vectors");
 
     const LLT EltTy = MinTy.getElementType();
     return clampMinNumElements(TypeIdx, EltTy, MinTy.getNumElements())
