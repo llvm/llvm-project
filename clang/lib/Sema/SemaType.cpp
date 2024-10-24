@@ -2259,6 +2259,17 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
              isSFINAEContext() ? diag::err_typecheck_zero_array_size
                                : diag::ext_typecheck_zero_array_size)
             << 0 << ArraySize->getSourceRange();
+
+        // zero sized static arrays are not allowed in HIP device functions
+        if (LangOpts.HIP && LangOpts.CUDAIsDevice) {
+          auto *FD = dyn_cast_or_null<FunctionDecl>(CurContext);
+          if (FD && (FD->hasAttr<CUDADeviceAttr>() ||
+                     FD->hasAttr<CUDAGlobalAttr>())) {
+            Diag(ArraySize->getBeginLoc(), diag::err_typecheck_zero_array_size)
+                << 2 << ArraySize->getSourceRange();
+            return QualType();
+          }
+        }
       }
 
       // Is the array too large?
