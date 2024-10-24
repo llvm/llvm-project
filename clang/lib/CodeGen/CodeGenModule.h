@@ -1252,6 +1252,12 @@ public:
                         llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
                         bool Local = false, bool AssumeConvergent = false);
 
+  llvm::FunctionCallee
+  CreateRuntimeFunction(QualType ReturnTy, ArrayRef<QualType> ArgTys,
+                        StringRef Name,
+                        llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
+                        bool Local = false, bool AssumeConvergent = false);
+
   /// Create a new runtime global variable with the specified type and name.
   llvm::Constant *CreateRuntimeVariable(llvm::Type *Ty,
                                         StringRef Name);
