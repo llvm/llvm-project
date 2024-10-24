@@ -1,0 +1,49 @@
+add_entrypoint_object(
+  creal
+  SRCS
+    creal.cpp
+  HDRS
+    ../creal.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  crealf
+  SRCS
+    crealf.cpp
+  HDRS
+    ../crealf.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  creall
+  SRCS
+    creall.cpp
+  HDRS
+    ../creall.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  crealf16
+  SRCS
+    crealf16.cpp
+  HDRS
+    ../crealf16.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  crealf128
+  SRCS
+    crealf128.cpp
+  HDRS
+    ../crealf128.h
+  COMPILE_OPTIONS
+    -O3
+)
