@@ -3207,6 +3207,13 @@ struct FormatStyle {
   /// \version 3.7
   // bool KeepEmptyLinesAtTheStartOfBlocks;
 
+  /// Keep the form feed character if it's immediately preceded and followed by
+  /// a newline. Multiple form feeds and newlines within a whitespace range are
+  /// replaced with a single newline and form feed followed by the remaining
+  /// newlines.
+  /// \version 20
+  bool KeepFormFeed;
+
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
     /// Align lambda body relative to the lambda signature. This is the default.
@@ -5222,7 +5229,8 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLines == R.KeepEmptyLines && Language == R.Language &&
+           KeepEmptyLines == R.KeepEmptyLines &&
+           KeepFormFeed == R.KeepFormFeed && Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
