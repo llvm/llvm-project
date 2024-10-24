@@ -474,6 +474,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Compute derived properties from the register classes
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
+  if (Subtarget->hasNEON() || Subtarget->hasSVE())
+    setHasMultipleVectorPredicateRegisters(true);
+
   // Provide all sorts of operation actions
   setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
   setOperationAction(ISD::GlobalTLSAddress, MVT::i64, Custom);

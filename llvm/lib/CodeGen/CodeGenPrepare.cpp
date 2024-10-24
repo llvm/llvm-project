@@ -1775,6 +1775,13 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
   if (TLI.hasMultipleConditionRegisters())
     return false;
 
+  // If this is a vector comparison the result may not depend upon setting a
+  // condition register, and if so it's probably better not to sink.
+  VectorType *VecType = dyn_cast<VectorType>(Cmp->getType());
+  if (VecType && VecType->getElementCount().isVector() &&
+      TLI.hasMultipleVectorPredicateRegisters())
+    return false;
+
   // Avoid sinking soft-FP comparisons, since this can move them into a loop.
   if (TLI.useSoftFloat() && isa<FCmpInst>(Cmp))
     return false;

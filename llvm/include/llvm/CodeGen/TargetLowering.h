@@ -502,6 +502,11 @@ public:
     return HasMultipleConditionRegisters;
   }
 
+  /// Return true if multiple vector predicate registers are available.
+  bool hasMultipleVectorPredicateRegisters() const {
+    return HasMultipleVectorPredicateRegisters;
+  }
+
   /// Return true if the target has BitExtract instructions.
   bool hasExtractBitsInsn() const { return HasExtractBitsInsn; }
 
@@ -2505,6 +2510,15 @@ protected:
     HasMultipleConditionRegisters = hasManyRegs;
   }
 
+  /// Tells the code generator that the target has multiple (allocatable)
+  /// vector predicate registers that can be used to store the results of
+  /// vector comparisons. With multiple predicate registers, the code
+  /// generator will not aggressively sink vector comparisons into the blocks
+  /// of their users.
+  void setHasMultipleVectorPredicateRegisters(bool hasManyRegs = true) {
+    HasMultipleVectorPredicateRegisters = hasManyRegs;
+  }
+
   /// Tells the code generator that the target has BitExtract instructions.
   /// The code generator will aggressively sink "shift"s into the blocks of
   /// their users if the users will generate "and" instructions which can be
@@ -3479,6 +3493,11 @@ private:
   /// registers, the code generator will not aggressively sink comparisons into
   /// the blocks of their users.
   bool HasMultipleConditionRegisters;
+
+  /// Tells the code generator that the target has multiple (allocatable)
+  /// vector predicate registers that can be used to store the results of
+  /// vector comparisons.
+  bool HasMultipleVectorPredicateRegisters;
 
   /// Tells the code generator that the target has BitExtract instructions.
   /// The code generator will aggressively sink "shift"s into the blocks of
