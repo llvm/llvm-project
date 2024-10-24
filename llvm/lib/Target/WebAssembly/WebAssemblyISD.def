@@ -54,7 +54,7 @@ HANDLE_MEM_NODETYPE(TABLE_GET)
 HANDLE_MEM_NODETYPE(TABLE_SET)
 
 // Bulk memory instructions. These follow LLVM's expected semantics of
-// supporting out-of-bounds pointers if the length is zero, by insertig
+// supporting out-of-bounds pointers if the length is zero, by inserting
 // a branch around Wasm's `memory.copy` and `memory.fill`, which would
 // otherwise trap.
 HANDLE_NODETYPE(MEMCPY)
