@@ -3473,9 +3473,10 @@ class OffloadingActionBuilder final {
       llvm::StringMap<bool> Features;
       // getHIPOffloadTargetTriple() is known to return valid value as it has
       // been called successfully in the CreateOffloadingDeviceToolChains().
-      auto T = (IdStr == "amdgcnspirv") ?
-          llvm::Triple("spirv64-amd-amdhsa") :
-          *getHIPOffloadTargetTriple(C.getDriver(), C.getInputArgs());
+      auto T =
+          (IdStr == "amdgcnspirv")
+              ? llvm::Triple("spirv64-amd-amdhsa")
+              : *getHIPOffloadTargetTriple(C.getDriver(), C.getInputArgs());
       auto ArchStr = parseTargetID(T, IdStr, &Features);
       if (!ArchStr) {
         C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << IdStr;
