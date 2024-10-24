@@ -87,6 +87,8 @@ set(s390x_SOURCES
   xray_s390x.cpp
   xray_trampoline_s390x.S
   )
+# Enable vector instructions in the assembly file.
+set_source_files_properties(xray_trampoline_s390x.S PROPERTIES COMPILE_FLAGS -mvx)
 
 set(XRAY_SOURCE_ARCHS
   arm
