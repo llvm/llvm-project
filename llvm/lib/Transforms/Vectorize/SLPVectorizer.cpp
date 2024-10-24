@@ -9076,14 +9076,14 @@ protected:
           continue;
         ExtMask[Idx] = SV->getMaskValue(I);
       }
-      bool IsOp1Undef =
-          isUndefVector(SV->getOperand(0),
-                        buildUseMask(LocalVF, ExtMask, UseMask::FirstArg))
-              .all();
-      bool IsOp2Undef =
-          isUndefVector(SV->getOperand(1),
-                        buildUseMask(LocalVF, ExtMask, UseMask::SecondArg))
-              .all();
+      bool IsOp1Undef = isUndefVector</*isPoisonOnly=*/true>(
+                            SV->getOperand(0),
+                            buildUseMask(LocalVF, ExtMask, UseMask::FirstArg))
+                            .all();
+      bool IsOp2Undef = isUndefVector</*isPoisonOnly=*/true>(
+                            SV->getOperand(1),
+                            buildUseMask(LocalVF, ExtMask, UseMask::SecondArg))
+                            .all();
       if (!IsOp1Undef && !IsOp2Undef) {
         // Update mask and mark undef elems.
         for (int &I : Mask) {
@@ -13305,8 +13305,17 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     return Vec;
   };
   auto *VecTy = getWidenedType(ScalarTy, VL.size());
-  Value *Vec = Root ? Root : PoisonValue::get(VecTy);
+  Value *Vec = PoisonValue::get(VecTy);
   SmallVector<int> NonConsts;
+  SmallVector<int> Mask(VL.size());
+  std::iota(Mask.begin(), Mask.end(), 0);
+  Value *OriginalRoot = Root;
+  if (auto *SV = dyn_cast_or_null<ShuffleVectorInst>(Root);
+      SV && isa<PoisonValue>(SV->getOperand(1)) &&
+      SV->getOperand(0)->getType() == VecTy) {
+    Root = SV->getOperand(0);
+    Mask.assign(SV->getShuffleMask().begin(), SV->getShuffleMask().end());
+  }
   // Insert constant values at first.
   for (int I = 0, E = VL.size(); I < E; ++I) {
     if (PostponedIndices.contains(I))
@@ -13315,19 +13324,20 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
       NonConsts.push_back(I);
       continue;
     }
-    if (Root) {
-      if (!isa<UndefValue>(VL[I])) {
-        NonConsts.push_back(I);
-        continue;
-      }
-      if (isa<PoisonValue>(VL[I]))
-        continue;
-      if (auto *SV = dyn_cast<ShuffleVectorInst>(Root)) {
-        if (SV->getMaskValue(I) == PoisonMaskElem)
-          continue;
-      }
-    }
+    if (isa<PoisonValue>(VL[I]))
+      continue;
     Vec = CreateInsertElement(Vec, VL[I], I, ScalarTy);
+    Mask[I] = I + E;
+  }
+  if (Root) {
+    if (isa<PoisonValue>(Vec)) {
+      Vec = OriginalRoot;
+    } else {
+      Vec = Builder.CreateShuffleVector(Root, Vec, Mask);
+      if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
+          OI && OI->hasNUses(0))
+        eraseInstruction(OI);
+    }
   }
   // Insert non-constant values.
   for (int I : NonConsts)
@@ -14041,7 +14051,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   if (!ReorderMask.empty())
     reorderScalars(GatheredScalars, ReorderMask);
   auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF,
-                             unsigned I, unsigned SliceSize) {
+                             unsigned I, unsigned SliceSize,
+                             bool IsNotPoisonous) {
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
@@ -14050,14 +14061,29 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     unsigned EdgeIdx = E->UserTreeIndices.back().EdgeIdx;
     if (UserTE->getNumOperands() != 2)
       return false;
-    auto *It =
-        find_if(VectorizableTree, [=](const std::unique_ptr<TreeEntry> &TE) {
-          return find_if(TE->UserTreeIndices, [=](const EdgeInfo &EI) {
-                   return EI.UserTE == UserTE && EI.EdgeIdx != EdgeIdx;
-                 }) != TE->UserTreeIndices.end();
-        });
-    if (It == VectorizableTree.end())
-      return false;
+    if (!IsNotPoisonous) {
+      auto *It =
+          find_if(VectorizableTree, [=](const std::unique_ptr<TreeEntry> &TE) {
+            return find_if(TE->UserTreeIndices, [=](const EdgeInfo &EI) {
+                     return EI.UserTE == UserTE && EI.EdgeIdx != EdgeIdx;
+                   }) != TE->UserTreeIndices.end();
+          });
+      if (It == VectorizableTree.end())
+        return false;
+      SmallVector<Value *> GS((*It)->Scalars.begin(), (*It)->Scalars.end());
+      if (!(*It)->ReorderIndices.empty()) {
+        inversePermutation((*It)->ReorderIndices, ReorderMask);
+        reorderScalars(GS, ReorderMask);
+      }
+      if (!all_of(zip(GatheredScalars, GS), [&](const auto &P) {
+            Value *V0 = std::get<0>(P);
+            Value *V1 = std::get<1>(P);
+            return !isa<UndefValue>(V0) || isa<PoisonValue>(V0) ||
+                   (isa<UndefValue>(V0) && !isa<PoisonValue>(V0) &&
+                    is_contained(E->Scalars, V1));
+          }))
+        return false;
+    }
     int Idx;
     if ((Mask.size() < InputVF &&
          ShuffleVectorInst::isExtractSubvectorMask(Mask, InputVF, Idx) &&
@@ -14330,12 +14356,13 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             isGuaranteedNotToBePoison(Vec1) && isGuaranteedNotToBePoison(Vec2);
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
+        bool IsNotPoisonedVec = isGuaranteedNotToBePoison(Vec1);
         IsUsedInExpr &= FindReusedSplat(
             ExtractMask,
             cast<FixedVectorType>(Vec1->getType())->getNumElements(), 0,
-            ExtractMask.size());
+            ExtractMask.size(), IsNotPoisonedVec);
         ShuffleBuilder.add(Vec1, ExtractMask, /*ForExtracts=*/true);
-        IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1);
+        IsNonPoisoned &= IsNotPoisonedVec;
       } else {
         IsUsedInExpr = false;
         ShuffleBuilder.add(PoisonValue::get(VecTy), ExtractMask,
@@ -14358,12 +14385,15 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         VecMask.assign(VecMask.size(), PoisonMaskElem);
         copy(SubMask, std::next(VecMask.begin(), I * SliceSize));
         if (TEs.size() == 1) {
-          IsUsedInExpr &= FindReusedSplat(
-              VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
+          bool IsNotPoisonedVec =
+              TEs.front()->VectorizedValue
+                  ? isGuaranteedNotToBePoison(TEs.front()->VectorizedValue)
+                  : true;
+          IsUsedInExpr &=
+              FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I,
+                              SliceSize, IsNotPoisonedVec);
           ShuffleBuilder.add(*TEs.front(), VecMask);
-          if (TEs.front()->VectorizedValue)
-            IsNonPoisoned &=
-                isGuaranteedNotToBePoison(TEs.front()->VectorizedValue);
+          IsNonPoisoned &= IsNotPoisonedVec;
         } else {
           IsUsedInExpr = false;
           ShuffleBuilder.add(*TEs.front(), *TEs.back(), VecMask);
