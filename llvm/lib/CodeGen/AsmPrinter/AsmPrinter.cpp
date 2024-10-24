@@ -162,6 +162,13 @@ static cl::opt<bool> EmitJumpTableSizesSection(
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
 
+// This isn't turned on by default, since several of the scheduling models are
+// not completely accurate, and we don't want to be misleading.
+static cl::opt<bool> PrintLatency(
+    "asm-print-latency",
+    cl::desc("Print instruction latencies as verbose asm comments."),
+    cl::Hidden, cl::init(false));
+
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
 char AsmPrinter::ID = 0;
@@ -1080,8 +1087,64 @@ void AsmPrinter::emitFunctionEntryLabel() {
   }
 }
 
+/// Gets latency information for \p Inst from the itinerary
+/// scheduling model.
+/// \return The maximum expected latency over all the operands or -1
+/// if no information is available.
+static std::optional<int> getItineraryLatency(const MachineInstr &MI,
+                                              const MachineFunction *MF,
+                                              const MCSubtargetInfo *STI) {
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+
+  // Check if we have a CPU to get the itinerary information.
+  if (STI->getCPU().empty())
+    return std::nullopt;
+
+  // Get itinerary information.
+  InstrItineraryData IID = STI->getInstrItineraryForCPU(STI->getCPU());
+  // Get the scheduling class of the requested instruction.
+  const MCInstrDesc &Desc = TII->get(MI.getOpcode());
+  unsigned SCClass = Desc.getSchedClass();
+
+  unsigned Latency = 0;
+
+  for (unsigned Idx = 0, IdxEnd = MI.getNumOperands(); Idx != IdxEnd; ++Idx)
+    if (std::optional<unsigned> OperCycle = IID.getOperandCycle(SCClass, Idx))
+      Latency = std::max(Latency, *OperCycle);
+
+  return int(Latency);
+}
+
+/// Gets latency information for \p Inst.
+/// \return The maximum expected latency over all the definitions or -1
+/// if no information is available.
+static std::optional<int> getLatency(const MachineInstr &MI,
+                                     const MCSubtargetInfo *STI) {
+  const MCSchedModel &SCModel = STI->getSchedModel();
+
+  const MachineFunction *MF = MI.getMF();
+  if (!MF)
+    return std::nullopt;
+
+  // Check if we have a scheduling model for instructions.
+  if (!SCModel.hasInstrSchedModel())
+    // Try to fall back to the itinerary model if the scheduling model doesn't
+    // have a scheduling table.  Note the default does not have a table.
+    return getItineraryLatency(MI, MF, STI);
+
+  // Get the scheduling class of the requested instruction.
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const MCInstrDesc &Desc = TII->get(MI.getOpcode());
+  unsigned SCClass = Desc.getSchedClass();
+  int Latency = SCModel.computeInstrLatency(*STI, SCClass);
+  if (Latency <= 0)
+    return std::nullopt;
+  return Latency;
+}
+
 /// emitComments - Pretty-print comments for instructions.
-static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
+static void emitComments(const MachineInstr &MI, const MCSubtargetInfo *STI,
+                         raw_ostream &CommentOS) {
   const MachineFunction *MF = MI.getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
@@ -1109,6 +1172,14 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   // Check for spill-induced copies
   if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse))
     CommentOS << " Reload Reuse\n";
+
+  if (PrintLatency) {
+    if (auto Latency = getLatency(MI, STI)) {
+      // Report only interesting latencies.
+      if (1 < *Latency)
+        CommentOS << " Latency: " << *Latency << "\n";
+    }
+  }
 }
 
 /// emitImplicitDef - This method emits the specified machine instruction
@@ -1750,6 +1821,12 @@ void AsmPrinter::emitFunctionBody() {
   int NumInstsInFunction = 0;
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
+  const MCSubtargetInfo *STI = nullptr;
+  if (this->MF)
+    STI = &getSubtargetInfo();
+  else
+    STI = TM.getMCSubtargetInfo();
+
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
@@ -1773,7 +1850,7 @@ void AsmPrinter::emitFunctionBody() {
         Handler->beginInstruction(&MI);
 
       if (isVerbose())
-        emitComments(MI, OutStreamer->getCommentOS());
+        emitComments(MI, STI, OutStreamer->getCommentOS());
 
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:
