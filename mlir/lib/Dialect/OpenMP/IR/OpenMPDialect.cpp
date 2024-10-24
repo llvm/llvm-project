@@ -1395,16 +1395,15 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
 }
 
 static ParseResult parseMembersIndex(OpAsmParser &parser,
-                                     DenseIntElementsAttr &membersIdx) {
-  SmallVector<APInt> values;
-  int64_t value;
-  int64_t shape[2] = {0, 0};
-  unsigned shapeTmp = 0;
+                                     ArrayAttr &membersIdx) {
+  SmallVector<Attribute> values, memberIdxs;
+
   auto parseIndices = [&]() -> ParseResult {
+    int64_t value;
     if (parser.parseInteger(value))
       return failure();
-    shapeTmp++;
-    values.push_back(APInt(32, value, /*isSigned=*/true));
+    values.push_back(IntegerAttr::get(parser.getBuilder().getIntegerType(64),
+                                      APInt(64, value, /*isSigned=*/false)));
     return success();
   };
 
@@ -1418,52 +1417,29 @@ static ParseResult parseMembersIndex(OpAsmParser &parser,
     if (failed(parser.parseRSquare()))
       return failure();
 
-    // Only set once, if any indices are not the same size
-    // we error out in the next check as that's unsupported
-    if (shape[1] == 0)
-      shape[1] = shapeTmp;
-
-    // Verify that the recently parsed list is equal to the
-    // first one we parsed, they must be equal lengths to
-    // keep the rectangular shape DenseIntElementsAttr
-    // requires
-    if (shapeTmp != shape[1])
-      return failure();
-
-    shapeTmp = 0;
-    shape[0]++;
+    memberIdxs.push_back(ArrayAttr::get(parser.getContext(), values));
+    values.clear();
   } while (succeeded(parser.parseOptionalComma()));
 
-  if (!values.empty()) {
-    ShapedType valueType =
-        VectorType::get(shape, IntegerType::get(parser.getContext(), 32));
-    membersIdx = DenseIntElementsAttr::get(valueType, values);
-  }
+  if (!memberIdxs.empty())
+    membersIdx = ArrayAttr::get(parser.getContext(), memberIdxs);
 
   return success();
 }
 
 static void printMembersIndex(OpAsmPrinter &p, MapInfoOp op,
-                              DenseIntElementsAttr membersIdx) {
-  llvm::ArrayRef<int64_t> shape = membersIdx.getShapedType().getShape();
-  assert(shape.size() <= 2);
-
+                              ArrayAttr membersIdx) {
   if (!membersIdx)
     return;
 
-  for (int i = 0; i < shape[0]; ++i) {
+  llvm::interleaveComma(membersIdx, p, [&p](Attribute v) {
     p << "[";
-    int rowOffset = i * shape[1];
-    for (int j = 0; j < shape[1]; ++j) {
-      p << membersIdx.getValues<int32_t>()[rowOffset + j];
-      if ((j + 1) < shape[1])
-        p << ",";
-    }
+    auto memberIdx = cast<ArrayAttr>(v);
+    llvm::interleaveComma(memberIdx.getValue(), p, [&p](Attribute v2) {
+      p << cast<IntegerAttr>(v2).getInt();
+    });
     p << "]";
-
-    if ((i + 1) < shape[0])
-      p << ", ";
-  }
+  });
 }
 
 static void printCaptureType(OpAsmPrinter &p, Operation *op,
