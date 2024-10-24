@@ -287,6 +287,10 @@ def HasSMEF16F16orSMEF8F16
 def HasNEONandIsStreamingSafe
     : Predicate<"Subtarget->hasNEON()">,
       AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
+// A subset of NEON instructions are legal in Streaming SVE mode only with +sme2p2.
+def HasNEONandIsSME2p2StreamingSafe
+    : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->hasSME2p2())">,
+    AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
@@ -6315,8 +6319,7 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
@@ -6326,8 +6329,7 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON, HasFullFP16] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
@@ -6350,8 +6352,7 @@ def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 
 // fp16: integer extraction from vector must be at least 32-bits to be legal.
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON, HasFullFP16] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract
                 (v8i16 FPR128:$Rn), (i64 0))), i16)))),
           (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
