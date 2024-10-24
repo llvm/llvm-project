@@ -38,9 +38,8 @@
 namespace clang {
 namespace clangd {
 
-std::vector<Fix>
-noLintFixes(const clang::tidy::ClangTidyContext &CTContext,
-                     const clang::Diagnostic &Info, const Diag &Diag) {
+std::vector<Fix> noLintFixes(const clang::tidy::ClangTidyContext &CTContext,
+                             const clang::Diagnostic &Info, const Diag &Diag) {
   auto RuleName = CTContext.getCheckName(Diag.ID);
   if (
       // If this isn't a clang-tidy diag
@@ -53,15 +52,15 @@ noLintFixes(const clang::tidy::ClangTidyContext &CTContext,
   }
 
   auto &SrcMgr = Info.getSourceManager();
-  auto &DiagLoc = Info.getLocation();
+  auto DiagLoc = SrcMgr.getSpellingLoc(Info.getLocation());
 
   auto F = Fix{};
   F.Message = llvm::formatv("ignore [{0}] for this line", RuleName);
   auto &E = F.Edits.emplace_back();
 
   auto File = SrcMgr.getFileID(DiagLoc);
-  auto CodeTilDiag = toSourceCode(
-      SrcMgr, SourceRange(SrcMgr.getLocForStartOfFile(File), DiagLoc));
+  auto FileLoc = SrcMgr.getLocForStartOfFile(File);
+  auto CodeTilDiag = toSourceCode(SrcMgr, SourceRange(FileLoc, DiagLoc));
 
   auto StartCurLine = CodeTilDiag.find_last_of('\n') + 1;
   auto CurLine = CodeTilDiag.substr(StartCurLine);
@@ -94,9 +93,7 @@ noLintFixes(const clang::tidy::ClangTidyContext &CTContext,
 }
 
 const auto Regex = std::regex(NoLintFixMsgRegexStr);
-bool isNoLintFixes(const Fix &F) {
-  return std::regex_match(F.Message, Regex);
-}
+bool isNoLintFixes(const Fix &F) { return std::regex_match(F.Message, Regex); }
 
 } // namespace clangd
 } // namespace clang
