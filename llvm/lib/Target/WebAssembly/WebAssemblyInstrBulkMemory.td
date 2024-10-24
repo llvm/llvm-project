@@ -83,12 +83,12 @@ multiclass BulkMemOps<WebAssemblyRegClass rc, string B> {
 
 let usesCustomInserter = 1, isCodeGenOnly = 1, mayLoad = 1, mayStore = 1 in
 defm CPY_A#B : I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
-                                 rc:$dst, rc:$src, rc:$len),
-                    (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
-                    [(wasm_memcpy (i32 imm:$src_idx), (i32 imm:$dst_idx),
-                      rc:$dst, rc:$src, rc:$len
-                    )],
-                    "", "", 0>,
+                              rc:$dst, rc:$src, rc:$len),
+                 (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
+                 [(wasm_memcpy (i32 imm:$src_idx), (i32 imm:$dst_idx),
+                   rc:$dst, rc:$src, rc:$len
+                 )],
+                 "", "", 0>,
                   Requires<[HasBulkMemory]>;
 
 let usesCustomInserter = 1, isCodeGenOnly = 1, mayStore = 1 in
