@@ -1056,6 +1056,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  if(Subtarget.hasAVX10_2_512()){
+    for (auto FVT : { MVT::f16, MVT::f32, MVT::f64 }) {
+      setOperationAction(ISD::SETCC, FVT, Custom);
+    }
+  }
   // FIXME: In order to prevent SSE instructions being expanded to MMX ones
   // with -msoft-float, disable use of MMX as well.
   if (!Subtarget.useSoftFloat() && Subtarget.hasMMX()) {
@@ -49520,6 +49525,14 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
           // FIXME: need symbolic constants for these magic numbers.
           // See X86ATTInstPrinter.cpp:printSSECC().
           unsigned x86cc = (cc0 == X86::COND_E) ? 0 : 4;
+          // VCOMXSS simplifies conditional code sequence into single setcc
+          // node. Earlier until COMI, it required upto 2 SETCC's to test CC.
+          if (Subtarget.hasAVX10_2()) {
+            return getSETCC(
+                ((cc0 == X86::COND_E) ? X86::COND_E : X86::COND_NE),
+                DAG.getNode(X86ISD::UCOMX, DL, MVT::i32, CMP00, CMP01), DL,
+                DAG);
+          }
           if (Subtarget.hasAVX512()) {
             SDValue FSetCC =
                 DAG.getNode(X86ISD::FSETCCM, DL, MVT::v1i1, CMP00, CMP01,
