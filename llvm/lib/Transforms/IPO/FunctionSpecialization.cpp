@@ -646,6 +646,18 @@ FunctionSpecializer::~FunctionSpecializer() {
   cleanUpSSA();
 }
 
+/// Get the unsigned Value of given Cost object. Assumes the Cost is always
+/// non-negative, which is true for both TCK_CodeSize and TCK_Latency, and
+/// always Valid.
+static unsigned getCostValue(const Cost &C) {
+  int64_t Value = *C.getValue();
+
+  assert(Value >= 0 && "CodeSize and Latency cannot be negative");
+  // It is safe to down cast since we know the arguments cannot be negative and
+  // Cost is of type int64_t.
+  return static_cast<unsigned>(Value);
+}
+
 /// Attempt to specialize functions in the module to enable constant
 /// propagation across function boundaries.
 ///
@@ -759,6 +771,14 @@ bool FunctionSpecializer::run() {
   SmallVector<Function *> Clones;
   for (unsigned I = 0; I < NSpecs; ++I) {
     Spec &S = AllSpecs[BestSpecs[I]];
+
+    // Check that creating this specialization doesn't exceed the maximum
+    // codesize growth.
+    unsigned FuncSize = getCostValue(FunctionMetrics[S.F].NumInsts);
+    if ((FunctionGrowth[S.F] + S.CodeSizeCost) / FuncSize > MaxCodeSizeGrowth)
+      continue;
+    FunctionGrowth[S.F] += S.CodeSizeCost;
+
     S.Clone = createSpecialization(S.F, S.Sig);
 
     // Update the known call sites to call the clone.
@@ -837,18 +857,6 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   return Clone;
 }
 
-/// Get the unsigned Value of given Cost object. Assumes the Cost is always
-/// non-negative, which is true for both TCK_CodeSize and TCK_Latency, and
-/// always Valid.
-static unsigned getCostValue(const Cost &C) {
-  int64_t Value = *C.getValue();
-
-  assert(Value >= 0 && "CodeSize and Latency cannot be negative");
-  // It is safe to down cast since we know the arguments cannot be negative and
-  // Cost is of type int64_t.
-  return static_cast<unsigned>(Value);
-}
-
 bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                                               SmallVectorImpl<Spec> &AllSpecs,
                                               SpecMap &SM) {
@@ -924,15 +932,13 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       }
       CodeSize += Visitor.getCodeSizeSavingsFromPendingPHIs();
 
+      unsigned CodeSizeSavings = getCostValue(CodeSize);
+      unsigned CodeSizeCost = FuncSize - CodeSizeSavings;
+
       auto IsProfitable = [&]() -> bool {
         // No check required.
         if (ForceSpecialization)
           return true;
-
-        unsigned CodeSizeSavings = getCostValue(CodeSize);
-        // TODO: We should only accumulate codesize increase of specializations
-        // that are actually created.
-        FunctionGrowth[F] += FuncSize - CodeSizeSavings;
 
         LLVM_DEBUG(
             dbgs() << "FnSpecialization: Specialization bonus {Inlining = "
@@ -964,7 +970,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
         if (LatencySavings < MinLatencySavings * FuncSize / 100)
           return false;
         // Maximum codesize growth.
-        if (FunctionGrowth[F] / FuncSize > MaxCodeSizeGrowth)
+        if ((FunctionGrowth[F] + CodeSizeCost) / FuncSize > MaxCodeSizeGrowth)
           return false;
 
         Score += std::max(CodeSizeSavings, LatencySavings);
@@ -976,7 +982,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
         continue;
 
       // Create a new specialisation entry.
-      auto &Spec = AllSpecs.emplace_back(F, S, Score);
+      auto &Spec = AllSpecs.emplace_back(F, S, Score, CodeSizeCost);
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);
       const unsigned Index = AllSpecs.size() - 1;
