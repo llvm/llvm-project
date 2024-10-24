@@ -11665,8 +11665,8 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   }
 
   // Check conditions due to any @llvm.experimental.guard intrinsics.
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_guard);
   if (GuardDecl)
     for (const auto *GU : GuardDecl->users())
       if (const auto *Guard = dyn_cast<IntrinsicInst>(GU))
@@ -13615,8 +13615,8 @@ ScalarEvolution::ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
   // ScalarEvolution to optimize based on those guards.  For now we prefer to be
   // efficient in lieu of being smart in that rather obscure case.
 
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_guard);
   HasGuards = GuardDecl && !GuardDecl->use_empty();
 }
 
@@ -15593,8 +15593,8 @@ ScalarEvolution::LoopGuards::collect(const Loop *L, ScalarEvolution &SE) {
   }
 
   // Second, collect information from llvm.experimental.guards dominating the loop.
-  auto *GuardDecl = SE.F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      SE.F.getParent(), Intrinsic::experimental_guard);
   if (GuardDecl)
     for (const auto *GU : GuardDecl->users())
       if (const auto *Guard = dyn_cast<IntrinsicInst>(GU))

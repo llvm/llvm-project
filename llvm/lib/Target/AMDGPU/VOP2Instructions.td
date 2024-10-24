@@ -1814,11 +1814,10 @@ multiclass VOP3Only_Realtriple_gfx11_gfx12_gfx13<
   VOP3Only_Realtriple<GFX12Gen, preGFX13Op>,
   VOP3Only_Realtriple<GFX13Gen, op>;
 
-multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<
-    bits<10> preGFX13Op, bits<10> op, string asmName, string OpName = NAME> :
-  VOP3Only_Realtriple_t16<GFX11Gen, preGFX13Op, asmName, OpName>,
-  VOP3Only_Realtriple_t16<GFX12Gen, preGFX13Op, asmName, OpName>,
-  VOP3Only_Realtriple_t16<GFX13Gen, op, asmName, OpName>;
+multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string OpName = NAME> :
+  VOP3_Realtriple_t16_gfx11<preGFX13Op, asmName, OpName, "", /*IsSingle*/1>,
+  VOP3_Realtriple_t16_gfx12<preGFX13Op, asmName, OpName, "", /*IsSingle*/1>,
+  VOP3_Realtriple_t16_gfx13<op, asmName, OpName, "", /*IsSingle*/1>;
 
 multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string OpName = NAME> {
   defm OpName#"_t16": VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<preGFX13Op, op, asmName, OpName#"_t16">;

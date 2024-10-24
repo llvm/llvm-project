@@ -1701,10 +1701,6 @@ class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
                                 bit isDual, bit isBVH8, list<RegisterClass> addr_types>
   : VIMAGE_IntersectRay<op.GFX12, opcode, num_addrs, (ins SReg_128:$rsrc), isGFX12Only, MIMGEncGfx12, isDual, isBVH8, addr_types, "GFX12">;
 
-class VIMAGE_IntersectRay_gfx13<mimgopc op, string opcode, int num_addrs,
-                                bit isDual, bit isBVH8, list<RegisterClass> addr_types>
-  : VIMAGE_IntersectRay<op.GFX13, opcode, num_addrs, (ins RsrcReg128Op:$rsrc), isGFX13Only, MIMGEncGfx13, isDual, isBVH8, addr_types, "GFX13">;
-
 multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
                              bit isDual, bit isBVH8 = 0> {
   defvar info = MIMG_IntersectRay_Helper<Is64, IsA16, isDual, isBVH8>;
@@ -1750,12 +1746,6 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
       let VDataDwords = !if(!or(isDual, isBVH8), 10, 4);
       let VAddrDwords = info.num_addrs;
     }
-    def _gfx13 : VIMAGE_IntersectRay_gfx13<op, opcode, info.GFX11PlusNSAAddrs,
-                                           isDual, isBVH8,
-                                           info.GFX11PlusAddrTypes> {
-      let VDataDwords = !if(!or(isDual, isBVH8), 10, 4);
-      let VAddrDwords = info.num_addrs;
-    }
   }
 }
 
@@ -1777,6 +1767,43 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
     let VDataDwords = 5 in
     defm _V5 : MIMG_NoSampler_Src_Helper<op, asm, VReg_160, 0, 0, 1>;
   }
+}
+
+class VIMAGE_RTS_Helper<bit HasVdst, bit IsTraceRay> {
+  list<RegisterClass> addr_types = !if(IsTraceRay, [VGPR_32, VReg_96, VGPR_32, VReg_96, VReg_96], [VGPR_32, VGPR_32, VGPR_32]);
+  int num_addrs = !size(addr_types);
+  int VAddrDwords = !if(IsTraceRay, 11, 3);
+  int VDataDwords = !if(HasVdst, !if(IsTraceRay, 1, 9), 0);
+}
+
+class VIMAGE_RTS<int op, string opcode, int num_addrs, dag RsrcIns, GFXGen gfxGen, MIMGEncoding encoding,
+                 list<RegisterClass> addr_types, bit HasVdst, bit IsTraceRay>
+    : VIMAGE<op, !if(HasVdst, !if(IsTraceRay, (outs VGPR_32:$vdata), (outs VReg_288:$vdata)), (outs)),
+             num_addrs, gfxGen.AssemblerPredicate, encoding, gfxGen.DecoderNamespace, addr_types>{
+  let InOperandList = !con(nsah.AddrIns, RsrcIns, (ins R128A16:$r128));
+  let AsmString = opcode#!if(HasVdst, " $vdata, ", " ")#nsah.AddrAsm#!if(IsTraceRay, ", $rsrc", ", null")#"$r128";
+}
+
+multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay>{
+  defvar info = VIMAGE_RTS_Helper<HasVdst, IsTraceRay>;
+  def "" : MIMGBaseOpcode {
+    let NoReturn = !not(HasVdst);
+    let BVH = 1;
+  }
+  let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
+      mayLoad = 0,
+      d16 = 0,
+      dmask = 0x0,
+      cpol = 0,
+      tfe = 0,
+      a16 = 0,
+      dim = {0,0,0},
+      rsrc = !if(IsTraceRay, ?, SGPR_NULL_gfx11plus.Index),
+      vdata = !if(HasVdst, ?, 0),
+      VDataDwords = info.VDataDwords,
+      VAddrDwords = info.VAddrDwords in
+        def _gfx13 : VIMAGE_RTS<op.GFX13, opcode, info.num_addrs, !if(IsTraceRay, (ins RsrcReg128Op:$rsrc), (ins)),
+                                GFX13Gen, MIMGEncGfx13, info.addr_types, HasVdst, IsTraceRay>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1829,6 +1856,10 @@ defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x84, MIMG.NOP
 def IMAGE_ATOMIC_MAX_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
+
+defm RTS_TRACE_RAY          : MIMG_RTS<mimgopc<0x0f2, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray", 0, 1>;
+defm RTS_TRACE_RAY_NONBLOCK : MIMG_RTS<mimgopc<0x0f3, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray_nonblock", 1, 1>;
+defm RTS_READ_VERTEX        : MIMG_RTS<mimgopc<0x0f4, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_vertex", 1, 0>;
 
 defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x1b, 0x20>, AMDGPUSample>;
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts] in {
@@ -1931,14 +1962,14 @@ defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0
 let OtherPredicates = [HasImageInsts, HasGFX10_AEncoding] in {
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, 0x18, 0x18, MIMG.NOP>, "image_msaa_load">;
 
-defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0, 0>;
-defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1, 0>;
-defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0, 0>;
-defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1, 0>;
+defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0, 0>;
+defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1, 0>;
+defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0, 0>;
+defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1, 0>;
 } // End OtherPredicates = [HasImageInsts, HasGFX10_AEncoding]
 
-defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<0x80, 0x80, MIMG.NOP, MIMG.NOP>, "image_bvh_dual_intersect_ray", 1, 0, 1>;
-defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<0x81, 0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;
+defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x80, MIMG.NOP, MIMG.NOP>, "image_bvh_dual_intersect_ray", 1, 0, 1>;
+defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;
 
 } // End let OtherPredicates = [HasImageInsts]
 

@@ -1190,12 +1190,14 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
 
-  assert(VDataIdx != -1);
   if (BaseOpcode->BVH) {
     // Add A16 operand for intersect_ray instructions
-    addOperand(MI, MCOperand::createImm(BaseOpcode->A16));
+    if (!isGFX13())
+      addOperand(MI, MCOperand::createImm(BaseOpcode->A16));
     return;
   }
+
+  assert(VDataIdx != -1);
 
   bool IsAtomic = (VDstIdx != -1);
   bool IsGather4 = TSFlags & SIInstrFlags::Gather4;

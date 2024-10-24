@@ -273,3 +273,15 @@ v_movrelsd_2_b32 v5, v1
 
 v_swaprel_b32 v5, v1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+image_bvh_intersect_ray v[4:7], [v9, v10, v[11:13], v[14:16], v[17:19]], s[4:7]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+image_bvh64_intersect_ray v[4:7], [v[9:10], v11, v[12:14], v[15:17], v[18:20]], s[4:7]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[11:12], v[3:5], v[6:8], v[9:10]], s[0:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+image_bvh8_intersect_ray v[0:9], [v[0:1], v[11:12], v[3:5], v[6:8], v9], s[0:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

@@ -68,7 +68,7 @@ body:             |
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=1 vsrc2_msb=0 vdst_msb=1
     ; GCN-NEXT: s_delay_alu instid0(VALU_DEP_1)
     ; GCN-NEXT: v_add_nc_u16_e64_dpp v0 /*v256*/, v1 /*v257*/, v2 /*v258*/ quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
-    $vgpr256 = V_ADD_NC_U16_e64_dpp $vgpr256, 0, $vgpr257, 0, undef $vgpr258, 0, 0, 1, 15, 15, 1, implicit $exec
+    $vgpr256 = V_ADD_NC_U16_fake16_e64_dpp $vgpr256, 0, $vgpr257, 0, undef $vgpr258, 0, 0, 1, 15, 15, 1, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_frames 0x1100
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=1 vdst_msb=0
