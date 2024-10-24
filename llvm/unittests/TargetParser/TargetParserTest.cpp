@@ -1953,7 +1953,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"norcpc", "rcpc3"}, {"rcpc", "rcpc3"}, {}},
         {AArch64::ARMV8A, {"rcpc3", "norcpc"}, {}, {"rcpc", "rcpc3"}},
 
-        // sve-aes -> ssve-aes
+        // sve2-aes -> ssve-aes
         {AArch64::ARMV9_6A,
          {"nosve2-aes", "ssve-aes"},
          {"sve2-aes", "ssve-aes"},
