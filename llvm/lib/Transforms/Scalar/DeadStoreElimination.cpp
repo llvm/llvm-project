@@ -847,8 +847,7 @@ struct MemoryDefWrapper {
 
 bool hasInitializesAttr(Instruction *I) {
   CallBase *CB = dyn_cast<CallBase>(I);
-  return CB != nullptr &&
-         CB->getArgOperandWithAttribute(Attribute::Initializes) != nullptr;
+  return CB && CB->getArgOperandWithAttribute(Attribute::Initializes);
 }
 
 struct ArgumentInitInfo {
@@ -1196,7 +1195,7 @@ struct DSEState {
     return MemoryLocation::getOrNone(I);
   }
 
-  // Returns a list of <MemoryLocation, bool> pairs wrote by I.
+  // Returns a list of <MemoryLocation, bool> pairs written by I.
   // The bool means whether the write is from Initializes attr.
   SmallVector<std::pair<MemoryLocation, bool>, 1>
   getLocForInst(Instruction *I, bool ConsiderInitializesAttr) {
@@ -1666,7 +1665,7 @@ struct DSEState {
       // Uses which may read the original MemoryDef mean we cannot eliminate the
       // original MD. Stop walk.
       // If KillingDef is a CallInst with "initializes" attribute, the reads in
-      // Callee would be dominated by initializations, so this should be safe.
+      // the callee would be dominated by initializations, so it should be safe.
       bool IsKillingDefFromInitAttr = false;
       if (IsInitializesAttrMemLoc) {
         if (KillingI == UseInst &&
@@ -2246,7 +2245,7 @@ struct DSEState {
   // Note that this function considers:
   // 1. Unwind edge: use "initializes" attribute only if the callee has
   //    "nounwind" attribute, or the argument has "dead_on_unwind" attribute,
-  //    or the argument is invisble to caller on unwind. That is, we don't
+  //    or the argument is invisible to caller on unwind. That is, we don't
   //    perform incorrect DSE on unwind edges in the current function.
   // 2. Argument alias: for aliasing arguments, the "initializes" attribute is
   //    the intersected range list of their "initializes" attributes.
@@ -2282,11 +2281,11 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
     // and use the "initializes" attribute to kill dead stores if:
     // - The call does not throw exceptions, "CB->doesNotThrow()".
     // - Or the callee parameter has "dead_on_unwind" attribute.
-    // - Or the argument is invisible to caller on unwind, and CB isa<CallInst>
-    // which means no unwind edges from this call in the current function.
+    // - Or the argument is invisible to caller on unwind, and there are no
+    //   unwind edges from this call in the current function (e.g. `CallInst`).
     bool IsDeadOrInvisibleOnUnwind =
         CB->paramHasAttr(Idx, Attribute::DeadOnUnwind) ||
-        (isInvisibleToCallerOnUnwind(CurArg) && isa<CallInst>(CB));
+        (isa<CallInst>(CB) && isInvisibleToCallerOnUnwind(CurArg));
     ArgumentInitInfo InitInfo{Idx, IsDeadOrInvisibleOnUnwind, Inits};
     bool FoundAliasing = false;
     for (auto &[Arg, AliasList] : Arguments) {
