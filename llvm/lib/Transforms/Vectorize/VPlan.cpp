@@ -633,7 +633,11 @@ const VPRecipeBase *VPBasicBlock::getTerminator() const {
 }
 
 bool VPBasicBlock::isExiting() const {
-  return getParent() && getParent()->getExitingBasicBlock() == this;
+  const VPRegionBlock *VPRB = getParent();
+  if (!VPRB)
+    return false;
+  return VPRB->getExitingBasicBlock() == this ||
+         VPRB->getEarlyExiting() == this;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1014,6 +1018,9 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
+  assert(!getVectorLoopRegion()->getEarlyExiting() &&
+         "Executing vplans with an early exit not yet supported");
+
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
@@ -1032,6 +1039,7 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+
   // Find the VPBB for the scalar preheader, relying on the current structure
   // when creating the middle block and its successrs: if there's a single
   // predecessor, it must be the scalar preheader. Otherwise, the second

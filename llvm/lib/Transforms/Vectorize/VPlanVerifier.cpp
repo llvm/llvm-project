@@ -273,7 +273,9 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
-  if (VPB->getNumSuccessors() > 1 ||
+  // NOTE: A VPRegionBlock can legally have multiple successors due to
+  // early exits from the loop.
+  if ((VPB->getNumSuccessors() > 1 && !isa<VPRegionBlock>(VPB)) ||
       (VPBB && VPBB->getParent() && VPBB->isExiting() &&
        !VPBB->getParent()->isReplicator())) {
     if (!VPBB || !VPBB->getTerminator()) {
@@ -294,6 +296,19 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   // TODO: This won't work for switch statements.
   if (hasDuplicates(Successors)) {
     errs() << "Multiple instances of the same successor.\n";
+    return false;
+  }
+
+  // If this is a loop region with multiple successors it must have as many
+  // exiting blocks as successors, even if the original scalar loop only had a
+  // single exit block. That's because in the vector loop we always create a
+  // middle block for the vector latch exit, which is distinct from the early
+  // exit.
+  auto *VPRB = dyn_cast<VPRegionBlock>(VPB);
+  if (VPRB && VPRB->getNumExitingBlocks() != VPB->getNumSuccessors()) {
+    errs() << "Number of exiting blocks (" << VPRB->getNumExitingBlocks()
+           << ") does not match number of successors ("
+           << VPB->getNumSuccessors() << ")!\n";
     return false;
   }
 
