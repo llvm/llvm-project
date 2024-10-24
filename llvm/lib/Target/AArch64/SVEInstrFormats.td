@@ -3104,6 +3104,11 @@ multiclass sve2_fp_convert_down_odd_rounding<string asm, string op, SDPatternOpe
   def : SVE_1_Op_Passthru_Pat<nxv2f32, ir_op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
+multiclass sve_fp_2op_p_zd_frint<bits<2> opc, string asm> {
+  def _S : sve_fp_2op_p_zd<{ 0b0010, opc{1}, 0, opc{0} }, asm, ZPR32, ZPR32, ElementSizeS>;
+  def _D : sve_fp_2op_p_zd<{ 0b0010, opc{1}, 1, opc{0} }, asm, ZPR64, ZPR64, ElementSizeD>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Floating Point Unary Operations - Unpredicated Group
 //===----------------------------------------------------------------------===//
