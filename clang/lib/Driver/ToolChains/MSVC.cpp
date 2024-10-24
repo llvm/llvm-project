@@ -636,6 +636,8 @@ void MSVCToolChain::AddSystemIncludeWithSubfolder(
 
 void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                               ArgStringList &CC1Args) const {
+  // FIXME: Options explicitly present in the command line should still be
+  // FIXME: processed. E.g., the /imsvc option handled below.
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
@@ -644,27 +646,15 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                   "include");
   }
 
+  // FIXME: According to commit fd3e1ad0ce073e67c21833e56b74105ce8339ce3, the
+  // FIXME: -imsvc option is intended to behave as though the specified path
+  // FIXME: was present in %INCLUDE%, but these paths are getting added earlier
+  // FIXME: than %INCLUDE% paths with the DIA SDK paths being added in between.
+  // FIXME: Is this the intended behavior? Support for adding the DIA SDK paths
+  // FIXME: was introduced later via commit 951f362e2560fe1c9c05f487107fd9882d45d867.
   // Add %INCLUDE%-like directories from the -imsvc flag.
   for (const auto &Path : DriverArgs.getAllArgValues(options::OPT__SLASH_imsvc))
     addSystemInclude(DriverArgs, CC1Args, Path);
-
-  auto AddSystemIncludesFromEnv = [&](StringRef Var) -> bool {
-    if (auto Val = llvm::sys::Process::GetEnv(Var)) {
-      SmallVector<StringRef, 8> Dirs;
-      StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-      if (!Dirs.empty()) {
-        addSystemIncludes(DriverArgs, CC1Args, Dirs);
-        return true;
-      }
-    }
-    return false;
-  };
-
-  // Add %INCLUDE%-like dirs via /external:env: flags.
-  for (const auto &Var :
-       DriverArgs.getAllArgValues(options::OPT__SLASH_external_env)) {
-    AddSystemIncludesFromEnv(Var);
-  }
 
   // Add DIA SDK include if requested.
   if (const Arg *A = DriverArgs.getLastArg(options::OPT__SLASH_diasdkdir,
@@ -682,12 +672,33 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
-  // paths set by vcvarsall.bat. Skip if the user expressly set a vctoolsdir.
+  auto AddExternalIncludesFromEnv = [&](StringRef Var) -> bool {
+    if (auto Val = llvm::sys::Process::GetEnv(Var)) {
+      SmallVector<StringRef, 8> Dirs;
+      StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+      if (!Dirs.empty()) {
+        addExternalIncludesFromEnv(DriverArgs, CC1Args, Var);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Add paths from the INCLUDE and EXTERNAL_INCLUDE environment variables if
+  // neither a vctoolsdir or winsysroot directory has been explicitly specified.
+  // If any paths are present in these environment variables, then skip adding
+  // additional system directories.
+  // FIXME: MSVC handles paths specified by the INCLUDE environment variable
+  // FIXME: as user paths unless an external include path specified by a
+  // FIXME: /external:I or /external:env option or the EXTERNAL_INCLUDE
+  // FIXME: environment variable is a prefix match in which case, warnings
+  // FIXME: are issued subject to the /external:Wn option. For now, all paths
+  // FIXME: specified in INCLUDE are handled as external paths which results
+  // FIXME: in them being handled as system paths.
   if (!DriverArgs.getLastArg(options::OPT__SLASH_vctoolsdir,
                              options::OPT__SLASH_winsysroot)) {
-    bool Found = AddSystemIncludesFromEnv("INCLUDE");
-    Found |= AddSystemIncludesFromEnv("EXTERNAL_INCLUDE");
+    bool Found = AddExternalIncludesFromEnv("INCLUDE");
+    Found |= AddExternalIncludesFromEnv("EXTERNAL_INCLUDE");
     if (Found)
       return;
   }

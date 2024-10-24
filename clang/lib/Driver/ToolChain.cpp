@@ -1265,6 +1265,29 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
   }
 }
 
+/// Utility function to add a list of directories to the end of the external
+/// include path list for CC1.
+/*static*/ void ToolChain::addExternalAfterIncludes(const ArgList &DriverArgs,
+                                                    ArgStringList &CC1Args,
+                                                    ArrayRef<StringRef> Paths) {
+  for (const auto &Path : Paths) {
+    CC1Args.push_back("-iexternal-after");
+    CC1Args.push_back(DriverArgs.MakeArgString(Path));
+  }
+}
+
+/// Utility function to add a list of directories specified in an environment
+/// variable to the end of the external include path list for CC1.
+/*static*/ void ToolChain::addExternalIncludesFromEnv(const ArgList &DriverArgs,
+                                                      ArgStringList &CC1Args,
+                                                      StringRef Var) {
+  if (auto Val = llvm::sys::Process::GetEnv(Var)) {
+    SmallVector<StringRef, 8> Dirs;
+    StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+    addExternalAfterIncludes(DriverArgs, CC1Args, Dirs);
+  }
+}
+
 /*static*/ std::string ToolChain::concat(StringRef Path, const Twine &A,
                                          const Twine &B, const Twine &C,
                                          const Twine &D) {

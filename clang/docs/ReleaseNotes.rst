@@ -646,6 +646,44 @@ Windows Support
   When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
   allowed as VS2013 and prior allow it.
 
+- Clang now matches MSVC behavior regarding the handling of duplicate header
+  search paths when running in Microsoft compatibility mode. Historically,
+  Clang has mimicked gcc behavior in which user search paths are ordered before
+  system search paths, user search paths that duplicate a (later) system search
+  path are ignored, and search paths that duplicate an earlier search path of
+  the same user/system kind are ignored. This ordering is not compatible with
+  the ordering that MSVC uses when paths are duplicate across ``/I`` options
+  and the ``%INCLUDE%`` environment variable.
+
+  The order that MSVC uses and that Clang now replicates when the
+  ``-fms-compatibility`` option is enabled follows.
+
+  - Paths specified by the ``/I`` and ``/external:I`` options are processed in
+    the order that they appear. Paths specified by ``/I`` that duplicate a path
+    specified by ``/external:I`` are ignored regardless of the order of the
+    options. Paths specified by ``/I`` that duplicate a path from a prior ``/I``
+    option are ignored. Paths specified by ``/external:I`` that duplicate a
+    path from a later ``/external:I`` option are ignored.
+
+  - Paths specified by ``/external:env`` are processed in the order that they
+    appear. Paths that duplicate a path from a ``/I`` or ``/external:I`` option
+    are ignored regardless of the order of the options. Paths that duplicate a
+    path from a prior ``/external:env`` option or an earlier path from the same
+    ``/external:env`` option are ignored.
+
+  - Paths specified by the ``%INCLUDE%`` environment variable are processed in
+    the order they appear. Paths that duplicate a path from a ``/I``,
+    ``/external:I``, or ``/external:env`` option are ignored. Paths that
+    duplicate an earlier path in the ``%INCLUDE%`` environment variable are
+    ignored.
+
+  - Paths specified by the ``%EXTERNAL_INCLUDE%`` environment variable are
+    processed in the order they appear. Paths that duplicate a path from a
+    ``/I``, ``/external:I``, or ``/external:env`` option are ignored. Paths that
+    duplicate a path from the ``%INCLUDE%`` environment variable are ignored.
+    Paths that duplicate an earlier path in the ``%EXTERNAL_INCLUDE%``
+    environment variable are ignored.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 

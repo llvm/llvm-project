@@ -239,6 +239,12 @@ protected:
   static void addSystemIncludes(const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
                                 ArrayRef<StringRef> Paths);
+  static void addExternalAfterIncludes(const llvm::opt::ArgList &DriverArgs,
+                                       llvm::opt::ArgStringList &CC1Args,
+                                       ArrayRef<StringRef> Paths);
+  static void addExternalIncludesFromEnv(const llvm::opt::ArgList &DriverArgs,
+                                         llvm::opt::ArgStringList &CC1Args,
+                                         StringRef Var);
 
   static std::string concat(StringRef Path, const Twine &A, const Twine &B = "",
                             const Twine &C = "", const Twine &D = "");

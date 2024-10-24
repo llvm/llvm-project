@@ -1112,6 +1112,11 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     if (HFI.DirInfo == SrcMgr::C_User && InUserSpecifiedSystemFramework)
       HFI.DirInfo = SrcMgr::C_System;
 
+    // FIXME: If /external:anglebrackets is enabled and the inclusion was
+    // FIXME: with angle brackets, then promote the characteristic.
+    // if (isAngled && <external:anglebrackets>)
+    //   HFI.DirInfo = SrcMgr::C_System; // Or C_External?
+
     // If the filename matches a known system header prefix, override
     // whether the file is a system header.
     for (unsigned j = SystemHeaderPrefixes.size(); j; --j) {
