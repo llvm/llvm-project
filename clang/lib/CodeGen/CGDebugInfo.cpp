@@ -910,11 +910,11 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
-  case BuiltinType::Id: {                                                       \
+  case BuiltinType::Id: {                                                      \
     if (!SingletonId)                                                          \
       SingletonId =                                                            \
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
-    return SingletonId;
+    return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::UChar:
