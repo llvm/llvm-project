@@ -668,16 +668,6 @@ static bool isWorthFoldingSHL(SDValue V) {
   unsigned ShiftVal = CSD->getZExtValue();
   if (ShiftVal > 3)
     return false;
-
-  // Check if this particular node is reused in any non-memory related
-  // operation.  If yes, do not try to fold this node into the address
-  // computation, since the computation will be kept.
-  const SDNode *Node = V.getNode();
-  for (SDNode *UI : Node->uses())
-    if (!isa<MemSDNode>(*UI))
-      for (SDNode *UII : UI->uses())
-        if (!isa<MemSDNode>(*UII))
-          return false;
   return true;
 }
 
@@ -1236,12 +1226,14 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
   if (isa<ConstantSDNode>(LHS) || isa<ConstantSDNode>(RHS))
     return false;
 
-  // Check if this particular node is reused in any non-memory related
-  // operation.  If yes, do not try to fold this node into the address
-  // computation, since the computation will be kept.
+  // Check if this particular node is reused in an add node that might make it
+  // better folded into a LDP/STP.
   const SDNode *Node = N.getNode();
   for (SDNode *UI : Node->uses()) {
-    if (!isa<MemSDNode>(*UI))
+    if (UI->getOpcode() == ISD::ADD ||
+        (UI->isMachineOpcode() &&
+         (TII->get(UI->getMachineOpcode()).mayLoad() ||
+          TII->get(UI->getMachineOpcode()).mayStore())))
       return false;
   }
 
@@ -1320,12 +1312,14 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   SDValue RHS = N.getOperand(1);
   SDLoc DL(N);
 
-  // Check if this particular node is reused in any non-memory related
-  // operation.  If yes, do not try to fold this node into the address
-  // computation, since the computation will be kept.
+  // Check if this particular node is reused in an add node that might make it
+  // better folded into a LDP/STP.
   const SDNode *Node = N.getNode();
   for (SDNode *UI : Node->uses()) {
-    if (!isa<MemSDNode>(*UI))
+    if (UI->getOpcode() == ISD::ADD ||
+        (UI->isMachineOpcode() &&
+         (TII->get(UI->getMachineOpcode()).mayLoad() ||
+          TII->get(UI->getMachineOpcode()).mayStore())))
       return false;
   }
 
@@ -1374,6 +1368,14 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
     Base = RHS;
     DoShift = CurDAG->getTargetConstant(true, DL, MVT::i32);
     return true;
+  }
+
+  // If we can create add(a, lsl y, C) from the add and it is quick, leave it as
+  // a separate operation.
+  if (isWorthFoldingALU(LHS, true) || isWorthFoldingALU(RHS, true)) {
+    for (SDNode *UI : Node->uses())
+      if (!isa<MemSDNode>(*UI))
+        return false;
   }
 
   // Match any non-shifted, non-extend, non-immediate add expression.
