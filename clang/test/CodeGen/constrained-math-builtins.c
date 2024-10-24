@@ -116,17 +116,17 @@ __builtin_atan(f);        __builtin_atanf(f);       __builtin_atanl(f); __builti
 
   __builtin_fmax(f,f);       __builtin_fmaxf(f,f);      __builtin_fmaxl(f,f); __builtin_fmaxf128(f,f);
 
-// CHECK: call double @llvm.experimental.constrained.maxnum.f64(double %{{.*}}, double %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call float @llvm.experimental.constrained.maxnum.f32(float %{{.*}}, float %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call x86_fp80 @llvm.experimental.constrained.maxnum.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call fp128 @llvm.experimental.constrained.maxnum.f128(fp128 %{{.*}}, fp128 %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call nsz double @llvm.experimental.constrained.maxnum.f64(double %{{.*}}, double %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call nsz float @llvm.experimental.constrained.maxnum.f32(float %{{.*}}, float %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call nsz x86_fp80 @llvm.experimental.constrained.maxnum.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call nsz fp128 @llvm.experimental.constrained.maxnum.f128(fp128 %{{.*}}, fp128 %{{.*}}, metadata !"fpexcept.strict")
 
   __builtin_fmin(f,f);       __builtin_fminf(f,f);      __builtin_fminl(f,f); __builtin_fminf128(f,f);
 
-// CHECK: call double @llvm.experimental.constrained.minnum.f64(double %{{.*}}, double %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call float @llvm.experimental.constrained.minnum.f32(float %{{.*}}, float %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call x86_fp80 @llvm.experimental.constrained.minnum.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call fp128 @llvm.experimental.constrained.minnum.f128(fp128 %{{.*}}, fp128 %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call nsz double @llvm.experimental.constrained.minnum.f64(double %{{.*}}, double %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call nsz float @llvm.experimental.constrained.minnum.f32(float %{{.*}}, float %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call nsz x86_fp80 @llvm.experimental.constrained.minnum.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call nsz fp128 @llvm.experimental.constrained.minnum.f128(fp128 %{{.*}}, fp128 %{{.*}}, metadata !"fpexcept.strict")
 
   __builtin_llrint(f);     __builtin_llrintf(f);    __builtin_llrintl(f); __builtin_llrintf128(f);
 
