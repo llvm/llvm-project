@@ -327,6 +327,8 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
   *bufLoc = val;
   return val;
 }
+
+const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
 } // namespace elf
 } // namespace lld
 
