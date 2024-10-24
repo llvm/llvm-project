@@ -113,7 +113,7 @@ namespace llvm {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winit-list-lifetime"
 #endif
-    constexpr /*implicit*/ ArrayRef(const std::initializer_list<T> &Vec)
+    constexpr /*implicit*/ ArrayRef(std::initializer_list<T> Vec)
         : Data(Vec.begin() == Vec.end() ? (T *)nullptr : Vec.begin()),
           Length(Vec.size()) {}
 #if LLVM_GNUC_PREREQ(9, 0, 0)
