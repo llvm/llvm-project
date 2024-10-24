@@ -118,6 +118,7 @@
 #define KMP_ARCH_PPC_XCOFF 0
 #define KMP_ARCH_MIPS 0
 #define KMP_ARCH_MIPS64 0
+#define KMP_ARCH_RISCV32 0
 #define KMP_ARCH_RISCV64 0
 #define KMP_ARCH_LOONGARCH64 0
 #define KMP_ARCH_VE 0
@@ -178,6 +179,9 @@
 #undef KMP_ARCH_MIPS
 #define KMP_ARCH_MIPS 1
 #endif
+#elif defined __riscv && __riscv_xlen == 32
+#undef KMP_ARCH_RISCV32
+#define KMP_ARCH_RISCV32 1
 #elif defined __riscv && __riscv_xlen == 64
 #undef KMP_ARCH_RISCV64
 #define KMP_ARCH_RISCV64 1
@@ -263,8 +267,8 @@
 // TODO: Fixme - This is clever, but really fugly
 #if (1 != KMP_ARCH_X86 + KMP_ARCH_X86_64 + KMP_ARCH_ARM + KMP_ARCH_PPC64 +     \
               KMP_ARCH_AARCH64 + KMP_ARCH_MIPS + KMP_ARCH_MIPS64 +             \
-              KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64 + KMP_ARCH_VE +          \
-              KMP_ARCH_S390X + KMP_ARCH_WASM + KMP_ARCH_PPC +                  \
+              KMP_ARCH_RISCV32 + KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64 +     \
+              KMP_ARCH_VE + KMP_ARCH_S390X + KMP_ARCH_WASM + KMP_ARCH_PPC +    \
               KMP_ARCH_AARCH64_32)
 #error Unknown or unsupported architecture
 #endif
