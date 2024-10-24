@@ -1343,7 +1343,13 @@ private:
   /// with that type identifier's metadata. Produced by per module summary
   /// analysis and consumed by thin link. For more information, see description
   /// above where TypeIdCompatibleVtableInfo is defined.
-  std::map<std::string, TypeIdCompatibleVtableInfo, std::less<>>
+  ///
+  /// The owner of StringRef has two situations:
+  /// 1. If the index is loaded from bitcode module, then the owner is the
+  /// string table of the bitcode module.
+  /// 2. If the index is parsed by LLParser, then the owner is the StringSaver
+  /// of the index.
+  std::map<StringRef, TypeIdCompatibleVtableInfo, std::less<>>
       TypeIdCompatibleVtableMap;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
@@ -1835,7 +1841,7 @@ public:
   /// the ThinLTO backends.
   TypeIdCompatibleVtableInfo &
   getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
-    return TypeIdCompatibleVtableMap[std::string(TypeId)];
+    return TypeIdCompatibleVtableMap[TypeId];
   }
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
