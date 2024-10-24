@@ -91,18 +91,18 @@
 // 3) Paths specified by the %INCLUDE% environment variable are processed in
 //    order. Paths that duplicate any other path are ignored.
 
-// XHECK:      ignoring duplicate directory "[[PWD]]/include/v"
-// XHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/x"
-// XHECK-NEXT:  as it is a non-system directory that duplicates a system directory
-// XHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/z"
-// XHECK-NEXT:  as it is a non-system directory that duplicates a system directory
-// XHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/t"
-// XHECK-NEXT:  as it is a non-system directory that duplicates a system directory
-// XHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/r"
-// XHECK-NEXT:  as it is a non-system directory that duplicates a system directory
-// XHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/y"
-// XHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/w"
-// CHECK:      #include <...> search starts here:
+// CHECK:      ignoring duplicate directory "[[PWD]]/include/z"
+// CHECK-NEXT:  as it is a non-system directory that duplicates a system directory
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/x"
+// CHECK-NEXT:  as it is a non-system directory that duplicates a system directory
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/y"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/v"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/w"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/t"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/r"
+// CHECK-NEXT: ignoring duplicate directory "[[PWD]]/include/o"
+// CHECK-NEXT: #include "..." search starts here:
+// CHECK-NEXT: #include <...> search starts here:
 // CHECK-NEXT: [[PWD]]/include/s
 // CHECK-NEXT: [[PWD]]/include/v
 // CHECK-NEXT: [[PWD]]/include/x
