@@ -206,6 +206,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: cospif16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: coshf16
     standards:
       - stdc
