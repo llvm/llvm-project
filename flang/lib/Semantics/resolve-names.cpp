@@ -7536,6 +7536,7 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
   switch (type.category()) {
     SWITCH_COVERS_ALL_CASES
   case common::TypeCategory::Integer:
+  case common::TypeCategory::Unsigned:
   case common::TypeCategory::Real:
   case common::TypeCategory::Complex:
     return context().MakeNumericType(type.category(), type.kind());

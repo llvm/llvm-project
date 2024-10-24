@@ -141,7 +141,6 @@ static constexpr TypePattern SubscriptInt{IntType, KindCode::subscript};
 
 // Match any kind of some intrinsic or derived types
 static constexpr TypePattern AnyInt{IntType, KindCode::any};
-static constexpr TypePattern AnyUnsigned{UnsignedType, KindCode::any};
 static constexpr TypePattern AnyIntOrUnsigned{IntOrUnsignedType, KindCode::any};
 static constexpr TypePattern AnyReal{RealType, KindCode::any};
 static constexpr TypePattern AnyIntOrReal{IntOrRealType, KindCode::any};
@@ -193,8 +192,6 @@ static constexpr TypePattern SameType{AnyType, KindCode::same};
 static constexpr TypePattern OperandReal{RealType, KindCode::operand};
 static constexpr TypePattern OperandInt{IntType, KindCode::operand};
 static constexpr TypePattern OperandUnsigned{UnsignedType, KindCode::operand};
-static constexpr TypePattern OperandIntOrUnsigned{
-    IntOrUnsignedType, KindCode::operand};
 static constexpr TypePattern OperandIntOrReal{IntOrRealType, KindCode::operand};
 static constexpr TypePattern OperandIntUnsignedOrReal{
     IntUnsignedOrRealType, KindCode::operand};

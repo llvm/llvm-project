@@ -402,23 +402,32 @@ constexpr TypeBuilderFunc getModel<bool &>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned short>() {
-  return getModel<short>();
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(
+        context, 8 * sizeof(unsigned short),
+        mlir::IntegerType::SignednessSemantics::Unsigned);
+  };
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned char *>() {
-  return getModel<char *>();
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::IntegerType::get(context, 8));
+  };
 }
 template <>
 constexpr TypeBuilderFunc getModel<const unsigned char *>() {
-  return getModel<char *>();
+  return getModel<unsigned char *>();
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned short *>() {
-  return getModel<short *>();
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(
+        mlir::IntegerType::get(context, 8 * sizeof(unsigned short)));
+  };
 }
 template <>
 constexpr TypeBuilderFunc getModel<const unsigned short *>() {
-  return getModel<short *>();
+  return getModel<unsigned short *>();
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned *>() {
@@ -426,23 +435,29 @@ constexpr TypeBuilderFunc getModel<unsigned *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<const unsigned *>() {
-  return getModel<int *>();
+  return getModel<unsigned *>();
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned long *>() {
-  return getModel<long *>();
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(
+        mlir::IntegerType::get(context, 8 * sizeof(unsigned long)));
+  };
 }
 template <>
 constexpr TypeBuilderFunc getModel<const unsigned long *>() {
-  return getModel<long *>();
+  return getModel<unsigned long *>();
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned long long *>() {
-  return getModel<long long *>();
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(
+        mlir::IntegerType::get(context, 8 * sizeof(unsigned long long)));
+  };
 }
 template <>
 constexpr TypeBuilderFunc getModel<const unsigned long long *>() {
-  return getModel<long long *>();
+  return getModel<unsigned long long *>();
 }
 template <>
 constexpr TypeBuilderFunc getModel<Fortran::common::uint128_t>() {
@@ -461,7 +476,7 @@ constexpr TypeBuilderFunc getModel<Fortran::common::uint128_t *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<const Fortran::common::uint128_t *>() {
-  return getModel<Fortran::common::int128_t *>();
+  return getModel<Fortran::common::uint128_t *>();
 }
 
 // getModel<std::complex<T>> are not implemented on purpose.
