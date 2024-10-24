@@ -207,6 +207,7 @@ void state::TeamStateTy::init(bool IsSPMD) {
   ICVState.RunSchedVar = omp_sched_static;
   ICVState.RunSchedChunkVar = 1;
   ParallelTeamSize = 1;
+  SimdLength = 1;
   HasThreadState = false;
   ParallelRegionFnVar = nullptr;
 }
@@ -214,12 +215,14 @@ void state::TeamStateTy::init(bool IsSPMD) {
 bool state::TeamStateTy::operator==(const TeamStateTy &Other) const {
   return (ICVState == Other.ICVState) &
          (HasThreadState == Other.HasThreadState) &
-         (ParallelTeamSize == Other.ParallelTeamSize);
+         (ParallelTeamSize == Other.ParallelTeamSize) &
+         (SimdLength == Other.SimdLength);
 }
 
 void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ICVState.assertEqual(Other.ICVState);
   ASSERT(ParallelTeamSize == Other.ParallelTeamSize, nullptr);
+  ASSERT(SimdLength == Other.SimdLength, nullptr);
   ASSERT(HasThreadState == Other.HasThreadState, nullptr);
 }
 
@@ -364,11 +367,15 @@ void omp_set_schedule(omp_sched_t ScheduleKind, int ChunkSize) {
 }
 
 int omp_get_ancestor_thread_num(int Level) {
-  return returnValIfLevelIsActive(Level, mapping::getThreadIdInBlock(), 0);
+  return returnValIfLevelIsActive(Level, mapping::getSimdGroup(), 0);
 }
 
 int omp_get_thread_num(void) {
   return omp_get_ancestor_thread_num(omp_get_level());
+}
+
+int omp_get_simd_lane(void) {
+  return mapping::getSimdLane();
 }
 
 int omp_get_team_size(int Level) {
