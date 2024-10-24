@@ -5409,38 +5409,38 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     }
   }
 
-    Register NewDefinedReg = MRI->createVirtualRegister(NewRC);
+  Register NewDefinedReg = MRI->createVirtualRegister(NewRC);
 
-    BuildMI(*MBB, MI, DL, TII->get(NewOpcode), NewDefinedReg);
-    MachineBasicBlock::instr_iterator Iter(MI);
-    --Iter;
-    MachineInstrBuilder  MIBuilder(*Iter->getMF(), Iter);
-    for (unsigned i = 1; i < MI->getNumOperands(); i++) {
-      if (PromoteRegs.find(i) != PromoteRegs.end())
-        MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
-      else
-        Iter->addOperand(MI->getOperand(i));
-    }
+  BuildMI(*MBB, MI, DL, TII->get(NewOpcode), NewDefinedReg);
+  MachineBasicBlock::instr_iterator Iter(MI);
+  --Iter;
+  MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
+  for (unsigned i = 1; i < MI->getNumOperands(); i++) {
+    if (PromoteRegs.find(i) != PromoteRegs.end())
+      MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
+    else
+      Iter->addOperand(MI->getOperand(i));
+  }
 
-    for (unsigned i = 1; i < Iter->getNumOperands(); i++) {
-      MachineOperand &Operand = Iter->getOperand(i);
-      if (!Operand.isReg())
-        continue;
-      Register OperandReg = Operand.getReg();
-      if (!OperandReg.isVirtual())
-        continue;
-      LV->recomputeForSingleDefVirtReg(OperandReg);
-    }
+  for (unsigned i = 1; i < Iter->getNumOperands(); i++) {
+    MachineOperand &Operand = Iter->getOperand(i);
+    if (!Operand.isReg())
+      continue;
+    Register OperandReg = Operand.getReg();
+    if (!OperandReg.isVirtual())
+      continue;
+    LV->recomputeForSingleDefVirtReg(OperandReg);
+  }
 
-    MI->eraseFromParent();
+  MI->eraseFromParent();
 
-    // A defined register may be used by other instructions that are 32-bit.
-    // After the defined register is promoted to 64-bit for the promoted
-    // instruction, we need to demote the 64-bit defined register back to a
-    // 32-bit register
-    BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
-        .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
-    LV->recomputeForSingleDefVirtReg(NewDefinedReg);
+  // A defined register may be used by other instructions that are 32-bit.
+  // After the defined register is promoted to 64-bit for the promoted
+  // instruction, we need to demote the 64-bit defined register back to a
+  // 32-bit register
+  BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
+      .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
+  LV->recomputeForSingleDefVirtReg(NewDefinedReg);
   return;
 }
 
