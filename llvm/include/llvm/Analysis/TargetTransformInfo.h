@@ -1819,6 +1819,21 @@ public:
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
 
+  /// Returns options for jump threading.
+  struct JumpThreadingOptions {
+    // Max block size to duplicate for jump threading.
+    unsigned BBDupThreshold = 6;
+
+    // The number of predecessors to search for a stronger condition to use to
+    // thread over a weaker condition.
+    unsigned PredecessorSearchThreshold = 3;
+
+    // Max PHIs in BB to duplicate for jump threading.
+    unsigned PhiDupThreshold = 76;
+  };
+
+  JumpThreadingOptions getJumpThreadingOptions(bool MinSize) const;
+
   /// @}
 
 private:
@@ -2225,6 +2240,7 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual JumpThreadingOptions getJumpThreadingOptions(bool MinSize) const = 0;
 };
 
 template <typename T>
@@ -3025,6 +3041,10 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  JumpThreadingOptions getJumpThreadingOptions(bool MinSize) const override {
+    return Impl.getJumpThreadingOptions(MinSize);
   }
 };
 

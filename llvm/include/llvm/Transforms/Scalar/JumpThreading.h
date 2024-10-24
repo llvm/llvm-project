@@ -95,11 +95,10 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
 #endif
 
   unsigned BBDupThreshold;
-  unsigned DefaultBBDupThreshold;
+  unsigned PredecessorSearchThreshold;
+  unsigned PhiDupThreshold;
 
 public:
-  JumpThreadingPass(int T = -1);
-
   // Glue for old PM.
   bool runImpl(Function &F, FunctionAnalysisManager *FAM,
                TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
