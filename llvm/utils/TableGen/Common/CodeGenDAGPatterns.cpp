@@ -2986,7 +2986,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
   // convert the intrinsic name to a number.
   if (Operator->isSubClassOf("Intrinsic")) {
     const CodeGenIntrinsic &Int = getDAGPatterns().getIntrinsic(Operator);
-    unsigned IID = getDAGPatterns().getIntrinsicID(Operator) + 1;
+    unsigned IID = getDAGPatterns().getIntrinsicID(Operator);
 
     // If this intrinsic returns void, it must have side-effects and thus a
     // chain.

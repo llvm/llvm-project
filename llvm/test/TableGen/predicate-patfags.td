@@ -55,12 +55,12 @@ def TGTmul24_oneuse : PatFrag<
 // SBUILTIN: if (!SDValue(N, 0).hasOneUse()) return false;
 
 // GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
-// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_mul24),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode4(Intrinsic::tgt_mul24),
 // GBUILTIN: GIM_CheckHasOneUse, /*MI*/1,
 // GCUSTOM: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_TGTmul24_oneuse),
 
 // GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
-// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_mul24),
+// GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode4(Intrinsic::tgt_mul24),
 // GBUILTIN: GIM_CheckHasOneUse, /*MI*/1,
 // GCUSTOM: GIM_CheckCxxInsnPredicate, /*MI*/1, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_TGTmul24_oneuse),
 

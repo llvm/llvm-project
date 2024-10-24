@@ -276,7 +276,7 @@ enum {
   /// Check the operand is a specific intrinsic ID
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index
-  /// - IID(2) - Expected Intrinsic ID
+  /// - IID(4) - Expected Intrinsic ID
   GIM_CheckIntrinsicID,
 
   /// Check the operand is a specific predicate
@@ -412,7 +412,7 @@ enum {
 
   /// Adds an intrinsic ID to the specified instruction.
   /// - InsnID(ULEB128) - Instruction ID to modify
-  /// - IID(2) - Intrinsic ID
+  /// - IID(4) - Intrinsic ID
   GIR_AddIntrinsicID,
 
   /// Marks the implicit def of a register as dead.

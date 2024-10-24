@@ -997,7 +997,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   case MachineOperand::MO_IntrinsicID: {
     Intrinsic::ID ID = getIntrinsicID();
-    if (ID < Intrinsic::num_intrinsics)
+    if (Intrinsic::IsIntrinsicIDValid(ID))
       OS << "intrinsic(@" << Intrinsic::getBaseName(ID) << ')';
     else if (IntrinsicInfo)
       OS << "intrinsic(@" << IntrinsicInfo->getName(ID) << ')';

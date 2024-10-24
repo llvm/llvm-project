@@ -47,7 +47,16 @@ namespace Intrinsic {
 #define GET_INTRINSIC_ENUM_VALUES
 #include "llvm/IR/IntrinsicEnums.inc"
 #undef GET_INTRINSIC_ENUM_VALUES
+    end_id = ~0U,
   };
+
+  // Returns if `id` is a valid intrinsic ID. Validity means that it value is
+  // one of the values defined for the Intrinsic::ID enum.
+  bool IsIntrinsicIDValid(ID id);
+
+  // Get the next valid ID. This is used in test cases that iterate over valid
+  // intrinsic ID enums.
+  ID GetNextValidIntrinsicID(ID id);
 
   /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx".
   /// Note, this version is for intrinsics with no overloads.  Use the other

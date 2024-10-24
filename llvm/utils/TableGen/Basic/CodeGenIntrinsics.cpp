@@ -13,8 +13,12 @@
 #include "CodeGenIntrinsics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IntrinsicID.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
@@ -44,35 +48,45 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   CodeGenIntrinsicContext Ctx(RC);
 
   ArrayRef<const Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
-  Intrinsics.reserve(Defs.size());
 
-  for (const Record *Def : Defs)
-    Intrinsics.emplace_back(CodeGenIntrinsic(Def, Ctx));
+  // Bucket each intrinsic into a per-target list of intrinsics. Use std::map
+  // so that the targets sorted by name when we iterate over the map.
+  std::map<StringRef, TargetSet> TargetMap;
 
-  llvm::sort(Intrinsics,
-             [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
-               // Order target independent intrinsics before target dependent
-               // ones.
-               bool LHSHasTarget = !LHS.TargetPrefix.empty();
-               bool RHSHasTarget = !RHS.TargetPrefix.empty();
+  // Always create entry for target independent intrinsics.
+  TargetMap[""].Name = "";
 
-               // To ensure deterministic sorted order when duplicates are
-               // present, use record ID as a tie-breaker similar to
-               // sortAndReportDuplicates in Utils.cpp.
-               unsigned LhsID = LHS.TheDef->getID();
-               unsigned RhsID = RHS.TheDef->getID();
+  for (const Record *Def : Defs) {
+    CodeGenIntrinsic Int(Def, Ctx);
+    TargetMap[Int.TargetPrefix].Intrinsics.push_back(Int);
+  }
 
-               return std::tie(LHSHasTarget, LHS.Name, LhsID) <
-                      std::tie(RHSHasTarget, RHS.Name, RhsID);
-             });
+  auto IntrinsicCmp = [](const CodeGenIntrinsic &LHS,
+                         const CodeGenIntrinsic &RHS) {
+    // To ensure deterministic sorted order when duplicates are present, use
+    // record ID as a tie-breaker similar to sortAndReportDuplicates in
+    // Utils.cpp.
+    unsigned LhsID = LHS.TheDef->getID();
+    unsigned RhsID = RHS.TheDef->getID();
 
-  Targets.push_back({"", 0, 0});
-  for (size_t I = 0, E = Intrinsics.size(); I < E; ++I)
-    if (Intrinsics[I].TargetPrefix != Targets.back().Name) {
-      Targets.back().Count = I - Targets.back().Offset;
-      Targets.push_back({Intrinsics[I].TargetPrefix, I, 0});
-    }
-  Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
+    return std::tie(LHS.Name, LhsID) < std::tie(RHS.Name, RhsID);
+  };
+
+  // Sort intrinsics by name within each target, and collect all targets
+  // (alreay sorted by target name). Also assign linear index to all of them.
+  // Linear index 0 is reserved for not_intrinsic.
+  unsigned LinearIndex = 1;
+  unsigned TargetIndex = 0;
+  for (auto &[TargetName, TSet] : TargetMap) {
+    Targets.push_back(std::move(TSet));
+    TargetSet &T = Targets.back();
+    T.Name = TargetName;
+    T.TargetIndex = TargetIndex++;
+    llvm::sort(T.Intrinsics, IntrinsicCmp);
+    T.FirstLinearIndex = LinearIndex;
+    LinearIndex += T.Intrinsics.size();
+  }
+  NumIntrinsics = LinearIndex - 1;
 
   CheckDuplicateIntrinsics();
   CheckTargetIndependentIntrinsics();
@@ -87,20 +101,23 @@ void CodeGenIntrinsicTable::CheckDuplicateIntrinsics() const {
   // there cannot be be duplicate as TableGen parser would have flagged that.
   // However, if the name was specified in the intrinsic definition, then its
   // possible to have duplicate names.
-  auto I = std::adjacent_find(
-      Intrinsics.begin(), Intrinsics.end(),
-      [](const CodeGenIntrinsic &Int1, const CodeGenIntrinsic &Int2) {
-        return Int1.Name == Int2.Name;
-      });
-  if (I == Intrinsics.end())
-    return;
+  for (const TargetSet &T : getAllTargets()) {
+    ArrayRef<CodeGenIntrinsic> Intrinsics = T.getIntrinsics();
+    auto I = std::adjacent_find(
+        Intrinsics.begin(), Intrinsics.end(),
+        [](const CodeGenIntrinsic &Int1, const CodeGenIntrinsic &Int2) {
+          return Int1.Name == Int2.Name;
+        });
+    if (I == Intrinsics.end())
+      return;
 
-  // Found a duplicate intrinsics.
-  const CodeGenIntrinsic &First = *I;
-  const CodeGenIntrinsic &Second = *(I + 1);
-  PrintError(Second.TheDef,
-             Twine("Intrinsic `") + First.Name + "` is already defined");
-  PrintFatalNote(First.TheDef, "Previous definition here");
+    // Found a duplicate intrinsics.
+    const CodeGenIntrinsic &First = *I;
+    const CodeGenIntrinsic &Second = *(I + 1);
+    PrintError(Second.TheDef,
+               Twine("Intrinsic `") + First.Name + "` is already defined");
+    PrintFatalNote(First.TheDef, "Previous definition here");
+  }
 }
 
 // For target independent intrinsics, check that their second dotted component
@@ -111,8 +128,7 @@ void CodeGenIntrinsicTable::CheckTargetIndependentIntrinsics() const {
     TargetNames.insert(Target.Name);
 
   // Set of target independent intrinsics.
-  const auto &Set = Targets[0];
-  for (const auto &Int : ArrayRef(&Intrinsics[Set.Offset], Set.Count)) {
+  for (const auto &Int : Targets[0].getIntrinsics()) {
     StringRef Name = Int.Name;
     StringRef Prefix = Name.drop_front(5).split('.').first;
     if (!TargetNames.contains(Prefix))
@@ -204,7 +220,7 @@ static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
 void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
   for (const TargetSet &Set : Targets) {
     const CodeGenIntrinsic *Overloaded = nullptr;
-    for (const CodeGenIntrinsic &Int : (*this)[Set]) {
+    for (const CodeGenIntrinsic &Int : Set.getIntrinsics()) {
       // If we do not have an overloaded intrinsic to check against, nothing
       // to do except potentially identifying this as a candidate for checking
       // against in future iteration.
@@ -246,6 +262,57 @@ void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
       Overloaded = nullptr;
     }
   }
+}
+
+// Enumerate all intrinsics and call back the visitor function with the
+// intrinsic and its index.
+void CodeGenIntrinsicTable::enumerateIntrinsics(
+    CodeGenIntrinsicTable::IntrinsicVisitor Visitor) const {
+  for (const TargetSet &T : getAllTargets()) {
+    unsigned Idx = T.FirstLinearIndex - 1;
+    for (const CodeGenIntrinsic &Int : T.getIntrinsics())
+      Visitor(Idx++, Int);
+  }
+}
+
+unsigned CodeGenIntrinsicTable::getIntrinsicID(const Record *Def) const {
+  for (const auto &T : getAllTargets())
+    for (const auto &[IntrinsicIndex, Int] : enumerate(T.getIntrinsics()))
+      if (Int.TheDef == Def)
+        return Intrinsic::encodeIntrinsicID(T.TargetIndex, IntrinsicIndex);
+  errs() << "Cannot find intrinsic for record: " << Def->getName() << '\n';
+  llvm_unreachable("Unknown intrinsic!");
+}
+
+const CodeGenIntrinsic &
+CodeGenIntrinsicTable::getIntrinsic(const Record *Def) const {
+  for (const TargetSet &T : getAllTargets())
+    for (const CodeGenIntrinsic &Int : T.getIntrinsics())
+      if (Int.TheDef == Def)
+        return Int;
+  errs() << "Cannot find intrinsic for record: " << Def->getName() << '\n';
+  llvm_unreachable("Unknown intrinsic!");
+}
+
+const CodeGenIntrinsic &CodeGenIntrinsicTable::getIntrinsic(unsigned ID) const {
+  auto getIntrinsicImpl = [&](unsigned ID) -> const CodeGenIntrinsic * {
+    auto Decoded = Intrinsic::decodeIntrinsicIDNoFail(ID);
+    if (!Decoded)
+      return nullptr;
+    unsigned TargetIndex = Decoded->first;
+    unsigned IntrinsicIndex = Decoded->second;
+    if (TargetIndex >= getAllTargets().size())
+      return nullptr;
+    const TargetSet &T = getAllTargets()[TargetIndex];
+    ArrayRef<CodeGenIntrinsic> Ints = T.getIntrinsics();
+    if (IntrinsicIndex >= Ints.size())
+      return nullptr;
+    return &Ints[IntrinsicIndex];
+  };
+  if (const CodeGenIntrinsic *Result = getIntrinsicImpl(ID))
+    return *Result;
+  errs() << "Cannot find intrinsic for ID: 0x" << Twine::utohexstr(ID) << '\n';
+  llvm_unreachable("Unknown intrinsic!");
 }
 
 const CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {

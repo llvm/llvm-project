@@ -19,6 +19,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/IntrinsicID.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -35,6 +36,7 @@
 #include <utility>
 #include <vector>
 using namespace llvm;
+using TargetSet = CodeGenIntrinsicTable::TargetSet;
 
 static cl::OptionCategory GenIntrinsicCat("Options for -gen-intrinsic-enums");
 static cl::opt<std::string>
@@ -87,8 +89,10 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
     // Emit the enum information.
     EmitEnumInfo(Ints, OS);
 
-    // Emit ArgKind for Intrinsics.h.
-    EmitArgKind(OS);
+    if (IntrinsicPrefix.empty()) {
+      // Emit ArgKind for Intrinsics.h.
+      EmitArgKind(OS);
+    }
   } else {
     // Emit IIT_Info constants.
     EmitIITInfo(OS);
@@ -121,9 +125,8 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   // Find the TargetSet for which to generate enums. There will be an initial
   // set with an empty target prefix which will include target independent
   // intrinsics like dbg.value.
-  using TargetSet = CodeGenIntrinsicTable::TargetSet;
   const TargetSet *Set = nullptr;
-  for (const auto &Target : Ints.getTargets()) {
+  for (const auto &[Idx, Target] : enumerate(Ints.getAllTargets())) {
     if (Target.Name == IntrinsicPrefix) {
       Set = &Target;
       break;
@@ -131,7 +134,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   }
   if (!Set) {
     // The first entry is for target independent intrinsics, so drop it.
-    auto KnowTargets = Ints.getTargets().drop_front();
+    auto KnowTargets = Ints.getAllTargets().drop_front();
     PrintFatalError([KnowTargets](raw_ostream &OS) {
       OS << "tried to generate intrinsics for unknown target "
          << IntrinsicPrefix << "\nKnown targets are: ";
@@ -142,10 +145,10 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   }
 
   // Generate a complete header for target specific intrinsics.
+  std::string UpperPrefix = StringRef(IntrinsicPrefix).upper();
   if (IntrinsicPrefix.empty()) {
     OS << "#ifdef GET_INTRINSIC_ENUM_VALUES\n";
   } else {
-    std::string UpperPrefix = StringRef(IntrinsicPrefix).upper();
     OS << formatv("#ifndef LLVM_IR_INTRINSIC_{}_ENUMS_H\n", UpperPrefix);
     OS << formatv("#define LLVM_IR_INTRINSIC_{}_ENUMS_H\n", UpperPrefix);
     OS << "namespace llvm::Intrinsic {\n";
@@ -154,13 +157,13 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
 
   OS << "// Enum values for intrinsics.\n";
   bool First = true;
-  for (const auto &Int : Ints[*Set]) {
+  for (const auto &Int : Set->getIntrinsics()) {
     OS << "    " << Int.EnumName;
 
     // Assign a value to the first intrinsic in this target set so that all
     // intrinsic ids are distinct.
     if (First) {
-      OS << " = " << Set->Offset + 1;
+      OS << formatv(" = ({} << 16) + 1", Set->TargetIndex);
       First = false;
     }
 
@@ -170,22 +173,23 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     OS << formatv(" // {}\n", Int.Name);
   }
 
-  // Emit num_intrinsics into the target neutral enum.
   if (IntrinsicPrefix.empty()) {
-    OS << formatv("    num_intrinsics = {}\n", Ints.size() + 1);
+    const TargetSet &LastTarget = Ints.getAllTargets().back();
+    const size_t LastCount = LastTarget.getIntrinsics().size();
+    OS << formatv("  last_valid_intrinsic_id = ({} << 16) + {} + 1,\n",
+                  LastTarget.TargetIndex, LastCount - 1);
     OS << "#endif\n\n";
   } else {
-    OS << R"(}; // enum
+    OS << formatv(R"(}; // enum {}Intrinsics
 } // namespace llvm::Intrinsic
 #endif
 
-)";
+)",
+                  UpperPrefix);
   }
 }
 
 void IntrinsicEmitter::EmitArgKind(raw_ostream &OS) {
-  if (!IntrinsicPrefix.empty())
-    return;
   OS << "// llvm::Intrinsic::IITDescriptor::ArgKind.\n";
   OS << "#ifdef GET_INTRINSIC_ARGKIND\n";
   if (const auto RecArgKind = Records.getDef("ArgKind")) {
@@ -224,13 +228,14 @@ void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
 #ifdef GET_INTRINSIC_TARGET_DATA
 struct IntrinsicTargetInfo {
   StringLiteral Name;
-  size_t Offset;
-  size_t Count;
+  unsigned Count;
+  unsigned FirstLinearIndex;
 };
 static constexpr IntrinsicTargetInfo TargetInfos[] = {
 )";
-  for (const auto [Name, Offset, Count] : Ints.getTargets())
-    OS << formatv("  {{\"{}\", {}, {}},\n", Name, Offset, Count);
+  for (const TargetSet &T : Ints.getAllTargets())
+    OS << formatv("  {{\"{}\", {}, {}},\n", T.Name, T.Intrinsics.size(),
+                  T.FirstLinearIndex);
   OS << R"(};
 #endif
 
@@ -243,30 +248,30 @@ void IntrinsicEmitter::EmitIntrinsicToNameTable(
 #ifdef GET_INTRINSIC_NAME_TABLE
 // Note that entry #0 is the invalid intrinsic!
 )";
-  for (const auto &Int : Ints)
+  Ints.enumerateIntrinsics([&OS](unsigned, const CodeGenIntrinsic &Int) {
     OS << "  \"" << Int.Name << "\",\n";
+  });
   OS << "#endif\n\n";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  OS << R"(// Intrinsic ID to overload bitset.
+  OS << formatv(R"(// Intrinsic ID to overload bitset.
 #ifdef GET_INTRINSIC_OVERLOAD_TABLE
-static constexpr uint8_t OTable[] = {
-  0
-  )";
-  for (auto [I, Int] : enumerate(Ints)) {
-    // Add one to the index so we emit a null bit for the invalid #0 intrinsic.
-    size_t Idx = I + 1;
-
-    if (Idx % 8 == 0)
+static constexpr uint8_t OTable[] = {{
+  0)");
+  Ints.enumerateIntrinsics([&OS](unsigned Idx, const CodeGenIntrinsic &Int) {
+    // Add one to the index so we emit a null bit for the invalid #0
+    // intrinsic.
+    unsigned LinearIndex = Idx + 1;
+    if (LinearIndex % 8 == 0)
       OS << ",\n  0";
     if (Int.isOverloaded)
-      OS << " | (1<<" << Idx % 8 << ')';
-  }
+      OS << " | (1<<" << LinearIndex % 8 << ')';
+  });
   OS << "\n};\n\n";
   // OTable contains a true bit at the position if the intrinsic is overloaded.
-  OS << "return (OTable[id/8] & (1 << (id%8))) != 0;\n";
+  OS << "return (ArrayRef(OTable)[Idx/8] & (1 << (Idx%8))) != 0;\n";
   OS << "#endif\n\n";
 }
 
@@ -316,10 +321,10 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   std::vector<FixedEncodingTy> FixedEncodings;
   SequenceToOffsetTable<TypeSigTy> LongEncodingTable;
 
-  FixedEncodings.reserve(Ints.size());
+  FixedEncodings.reserve(Ints.getNumIntrinsics());
 
   // Compute the unique argument type info.
-  for (const CodeGenIntrinsic &Int : Ints) {
+  Ints.enumerateIntrinsics([&](unsigned, const CodeGenIntrinsic &Int) {
     // Get the signature for the intrinsic.
     TypeSigTy TypeSig = ComputeTypeSignature(Int);
 
@@ -327,14 +332,14 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
     std::optional<uint32_t> Result = encodePacked(TypeSig);
     if (Result && (*Result & Mask) == Result) {
       FixedEncodings.push_back(static_cast<FixedEncodingTy>(*Result));
-      continue;
+      return;
     }
 
     LongEncodingTable.add(TypeSig);
 
     // This is a placehold that we'll replace after the table is laid out.
     FixedEncodings.push_back(static_cast<FixedEncodingTy>(~0U));
-  }
+  });
 
   LongEncodingTable.layout();
 
@@ -345,24 +350,25 @@ static constexpr {} IIT_Table[] = {{
                 FixedEncodingTypeName);
 
   unsigned MaxOffset = 0;
-  for (auto [Idx, FixedEncoding, Int] : enumerate(FixedEncodings, Ints)) {
+  Ints.enumerateIntrinsics([&](unsigned Idx, const CodeGenIntrinsic &Int) {
+    const FixedEncodingTy &FixedEncoding = FixedEncodings[Idx];
     if ((Idx & 7) == 7)
       OS << "\n  ";
 
     // If the entry fit in the table, just emit it.
     if ((FixedEncoding & Mask) == FixedEncoding) {
       OS << "0x" << Twine::utohexstr(FixedEncoding) << ", ";
-      continue;
+      return;
     }
 
     TypeSigTy TypeSig = ComputeTypeSignature(Int);
     unsigned Offset = LongEncodingTable.get(TypeSig);
     MaxOffset = std::max(MaxOffset, Offset);
 
-    // Otherwise, emit the offset into the long encoding table.  We emit it this
-    // way so that it is easier to read the offset in the .def file.
+    // Otherwise, emit the offset into the long encoding table.  We emit it
+    // this way so that it is easier to read the offset in the .def file.
     OS << formatv("(1U<<{}) | {}, ", MSBPostion, Offset);
-  }
+  });
 
   OS << "0\n};\n\n";
 
@@ -485,7 +491,7 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
   // Compute unique argument attribute sets.
   std::map<SmallVector<CodeGenIntrinsic::ArgAttribute, 0>, unsigned>
       UniqArgAttributes;
-  for (const CodeGenIntrinsic &Int : Ints) {
+  Ints.enumerateIntrinsics([&](unsigned, const CodeGenIntrinsic &Int) {
     for (auto &Attrs : Int.ArgumentAttributes) {
       if (Attrs.empty())
         continue;
@@ -512,7 +518,7 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
       }
       OS << "    });";
     }
-  }
+  });
   OS << R"(
   }
 } // getIntrinsicArgAttributeSet
@@ -526,12 +532,12 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
   switch (ID) {
     default: llvm_unreachable("Invalid attribute set number");)";
 
-  for (const CodeGenIntrinsic &Int : Ints) {
+  Ints.enumerateIntrinsics([&](unsigned, const CodeGenIntrinsic &Int) {
     if (!hasFnAttributes(Int))
-      continue;
+      return;
     unsigned ID = UniqFnAttributes.size();
     if (!UniqFnAttributes.try_emplace(&Int, ID).second)
-      continue;
+      return;
     OS << formatv(R"(
   case {}:
     return AttributeSet::get(C, {{
@@ -573,7 +579,7 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
                     ME.toIntValue());
     }
     OS << "    });";
-  }
+  });
   OS << R"(
   }
 } // getIntrinsicFnAttributeSet
@@ -586,10 +592,10 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {
   // arguments or not.
   std::map<const CodeGenIntrinsic *, unsigned, AttributeComparator>
       UniqAttributes;
-  for (const CodeGenIntrinsic &Int : Ints) {
+  Ints.enumerateIntrinsics([&](unsigned, const CodeGenIntrinsic &Int) {
     unsigned ID = UniqAttributes.size();
     UniqAttributes.try_emplace(&Int, ID);
-  }
+  });
 
   // Assign a 16-bit packed ID for each intrinsic. The lower 8-bits will be its
   // "argument attribute ID" (index in UniqAttributes) and upper 8 bits will be
@@ -602,18 +608,20 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {
   // Emit an array of AttributeList.  Most intrinsics will have at least one
   // entry, for the function itself (index ~1), which is usually nounwind.
   OS << "  static constexpr uint16_t IntrinsicsToAttributesMap[] = {";
-  for (const CodeGenIntrinsic &Int : Ints) {
+  Ints.enumerateIntrinsics([&](unsigned, const CodeGenIntrinsic &Int) {
     uint16_t FnAttrIndex = hasFnAttributes(Int) ? UniqFnAttributes[&Int] : 0;
     OS << formatv("\n    {} << 8 | {}, // {}", FnAttrIndex,
                   UniqAttributes[&Int], Int.Name);
-  }
+  });
 
   OS << formatv(R"(
   };
-  if (id == 0)
+  // First remap the Intrinsic::ID to intrinsic index.
+  unsigned Idx = getLinearIndex(id);
+  if (Idx == 0)
     return AttributeList();
 
-  uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
+  uint16_t PackedID = IntrinsicsToAttributesMap[Idx - 1];
   uint8_t FnAttrID = PackedID >> 8;
   switch(PackedID & 0xFF) {{
     default: llvm_unreachable("Invalid attribute number");
@@ -676,10 +684,10 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
       std::pair<std::map<StringRef, StringRef>, std::optional<StringRef>>;
   std::map<StringRef, BIMEntryTy> BuiltinMap;
 
-  for (const CodeGenIntrinsic &Int : Ints) {
+  Ints.enumerateIntrinsics([&](unsigned, const CodeGenIntrinsic &Int) {
     StringRef BuiltinName = IsClang ? Int.ClangBuiltinName : Int.MSBuiltinName;
     if (BuiltinName.empty())
-      continue;
+      return;
     // Get the map for this target prefix.
     auto &[Map, CommonPrefix] = BuiltinMap[Int.TargetPrefix];
 
@@ -692,14 +700,14 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     if (!CommonPrefix) {
       // For the first builtin for this target, initialize the common prefix.
       CommonPrefix = BuiltinName;
-      continue;
+      return;
     }
 
     // Update the common prefix. Note that this assumes that `take_front` will
     // never set the `Data` pointer in CommonPrefix to nullptr.
     const char *Mismatch = mismatch(*CommonPrefix, BuiltinName).first;
     *CommonPrefix = CommonPrefix->take_front(Mismatch - CommonPrefix->begin());
-  }
+  });
 
   // Populate the string table with the names of all the builtins after
   // removing this common prefix.
@@ -727,7 +735,7 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
   if (BuiltinMap.empty()) {
     OS << formatv(R"(
   return not_intrinsic;
-  }
+}
 #endif  // GET_LLVM_INTRINSIC_FOR_{}_BUILTIN
 )",
                   UpperCompilerName);
@@ -752,11 +760,13 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
 
   // Emit a per target table of bultin names.
   bool HasTargetIndependentBuiltins = false;
+  bool HasTargetDependentBuiltins = false;
   StringRef TargetIndepndentCommonPrefix;
   for (const auto &[TargetPrefix, Entry] : BuiltinMap) {
     const auto &[Map, CommonPrefix] = Entry;
     if (!TargetPrefix.empty()) {
       OS << formatv("  // Builtins for {0}.\n", TargetPrefix);
+      HasTargetDependentBuiltins = true;
     } else {
       OS << "  // Target independent builtins.\n";
       HasTargetIndependentBuiltins = true;
@@ -774,30 +784,32 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
     OS << formatv("  }; // {}Names\n\n", TargetPrefix);
   }
 
-  // After emitting the builtin tables for all targets, emit a lookup table for
-  // all targets. We will use binary search, similar to the table for builtin
-  // names to lookup into this table.
-  OS << R"(
-  struct TargetEntry {
-    StringLiteral TargetPrefix;
-    ArrayRef<BuiltinEntry> Names;
-    StringLiteral CommonPrefix;
-    bool operator<(StringRef RHS) const {
-      return TargetPrefix < RHS;
+  if (HasTargetDependentBuiltins) {
+    // After emitting the builtin tables for all targets, emit a lookup table
+    // for all targets. We will use binary search, similar to the table for
+    // builtin names to lookup into this table.
+    OS << R"(
+    struct TargetEntry {
+      StringLiteral TargetPrefix;
+      ArrayRef<BuiltinEntry> Names;
+      StringLiteral CommonPrefix;
+      bool operator<(StringRef RHS) const {
+        return TargetPrefix < RHS;
+      };
     };
-  };
-  static constexpr TargetEntry TargetTable[] = {
-)";
+    static constexpr TargetEntry TargetTable[] = {
+  )";
 
-  for (const auto &[TargetPrefix, Entry] : BuiltinMap) {
-    const auto &[Map, CommonPrefix] = Entry;
-    if (TargetPrefix.empty())
-      continue;
-    OS << formatv(R"(    {{"{0}", {0}Names, "{1}"},)", TargetPrefix,
-                  CommonPrefix)
-       << "\n";
+    for (const auto &[TargetPrefix, Entry] : BuiltinMap) {
+      const auto &[Map, CommonPrefix] = Entry;
+      if (TargetPrefix.empty())
+        continue;
+      OS << formatv(R"(    {{"{0}", {0}Names, "{1}"},)", TargetPrefix,
+                    CommonPrefix)
+         << "\n";
+    }
+    OS << "  };\n";
   }
-  OS << "  };\n";
 
   // Now for the actual lookup, first check the target independent table if
   // we emitted one.
@@ -816,8 +828,10 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
                   TargetIndepndentCommonPrefix);
   }
 
-  // If a target independent builtin was not found, lookup the target specific.
-  OS << formatv(R"(
+  if (HasTargetDependentBuiltins) {
+    // If a target independent builtin was not found, lookup the target
+    // specific.
+    OS << R"(
   auto TI = lower_bound(TargetTable, TargetPrefix);
   if (TI == std::end(TargetTable) || TI->TargetPrefix != TargetPrefix)
     return not_intrinsic;
@@ -829,6 +843,12 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
   if (II == std::end(TI->Names) || II->getName() != BuiltinName)
     return not_intrinsic;
   return II->IntrinsicID;
+)";
+  } else {
+    OS << "  return not_intrinsic;";
+  }
+
+  OS << formatv(R"(
 }
 #endif // GET_LLVM_INTRINSIC_FOR_{}_BUILTIN
 

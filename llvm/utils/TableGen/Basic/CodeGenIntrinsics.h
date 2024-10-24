@@ -16,6 +16,7 @@
 #include "SDNodeProperties.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ModRef.h"
 #include <string>
@@ -172,31 +173,35 @@ class CodeGenIntrinsicTable {
 public:
   struct TargetSet {
     StringRef Name;
-    size_t Offset;
-    size_t Count;
+    unsigned TargetIndex;
+    std::vector<CodeGenIntrinsic> Intrinsics;
+    size_t FirstLinearIndex;
+
+    ArrayRef<CodeGenIntrinsic> getIntrinsics() const { return Intrinsics; }
   };
 
   explicit CodeGenIntrinsicTable(const RecordKeeper &RC);
 
-  bool empty() const { return Intrinsics.empty(); }
-  size_t size() const { return Intrinsics.size(); }
-  auto begin() const { return Intrinsics.begin(); }
-  auto end() const { return Intrinsics.end(); }
-  const CodeGenIntrinsic &operator[](size_t Pos) const {
-    return Intrinsics[Pos];
-  }
-  ArrayRef<CodeGenIntrinsic> operator[](const TargetSet &Set) const {
-    return ArrayRef(&Intrinsics[Set.Offset], Set.Count);
-  }
-  ArrayRef<TargetSet> getTargets() const { return Targets; }
+  ArrayRef<TargetSet> getAllTargets() const { return Targets; }
+
+  using IntrinsicVisitor =
+      function_ref<void(unsigned Idx, const CodeGenIntrinsic &Int)>;
+  void enumerateIntrinsics(IntrinsicVisitor Visitor) const;
+
+  unsigned getNumIntrinsics() const { return NumIntrinsics; }
+
+  // Find the intrinsic corresponding to the given record.
+  unsigned getIntrinsicID(const Record *Def) const;
+  const CodeGenIntrinsic &getIntrinsic(const Record *Def) const;
+  const CodeGenIntrinsic &getIntrinsic(unsigned ID) const;
 
 private:
   void CheckDuplicateIntrinsics() const;
   void CheckTargetIndependentIntrinsics() const;
   void CheckOverloadSuffixConflicts() const;
 
-  std::vector<CodeGenIntrinsic> Intrinsics;
   std::vector<TargetSet> Targets;
+  unsigned NumIntrinsics;
 };
 
 // This class builds `CodeGenIntrinsic` on demand for a given Def.

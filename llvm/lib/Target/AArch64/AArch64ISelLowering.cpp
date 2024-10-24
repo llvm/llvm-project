@@ -7551,7 +7551,7 @@ static unsigned getIntrinsicID(const SDNode *N) {
     return Intrinsic::not_intrinsic;
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = N->getConstantOperandVal(0);
-    if (IID < Intrinsic::num_intrinsics)
+    if (Intrinsic::IsIntrinsicIDValid(IID))
       return IID;
     return Intrinsic::not_intrinsic;
   }
