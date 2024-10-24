@@ -457,6 +457,16 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
 
   if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
     opts.disabledIntegerKinds.push_back(16);
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
+    llvm::StringRef V = a->getValue();
+    if (V == "vec-extabi") {
+      opts.EnableAIXExtendedAltivecABI = true;
+    } else if (V == "vec-default") {
+      opts.EnableAIXExtendedAltivecABI = false;
+    }
+  }
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
