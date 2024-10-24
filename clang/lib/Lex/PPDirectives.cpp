@@ -11,6 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/FileManager.h"
@@ -101,7 +103,8 @@ SourceRange Preprocessor::DiscardUntilEndOfDirective(Token &Tmp) {
 enum MacroDiag {
   MD_NoWarn,        //> Not a reserved identifier
   MD_KeywordDef,    //> Macro hides keyword, enabled by default
-  MD_ReservedMacro  //> #define of #undef reserved id, disabled by default
+  MD_ReservedMacro, //> #define of #undef reserved id, disabled by default
+  MD_ReservedAttributeIdentifier
 };
 
 /// Enumerates possible %select values for the pp_err_elif_after_else and
@@ -177,6 +180,20 @@ static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
   return false;
 }
 
+static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
+  const LangOptions &Lang = PP.getLangOpts();
+  if (Lang.CPlusPlus &&
+      hasAttribute(AttributeCommonInfo::Syntax::AS_CXX11, /*Scope*/ nullptr, II,
+                   PP.getTargetInfo(), Lang) > 0) {
+    AttributeCommonInfo::Kind AttrKind = AttributeCommonInfo::getParsedKind(
+        II, /*Scope*/ nullptr, AttributeCommonInfo::Syntax::AS_CXX11);
+    return !((AttrKind == AttributeCommonInfo::Kind::AT_Likely ||
+              AttrKind == AttributeCommonInfo::Kind::AT_Unlikely) &&
+             PP.isNextPPTokenLParen());
+  }
+  return false;
+}
+
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
   StringRef Text = II->getName();
@@ -186,6 +203,8 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
     return MD_KeywordDef;
   if (Lang.CPlusPlus11 && (Text == "override" || Text == "final"))
     return MD_KeywordDef;
+  if (isReservedCXXAttributeName(PP, II))
+    return MD_ReservedAttributeIdentifier;
   return MD_NoWarn;
 }
 
@@ -194,6 +213,8 @@ static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   // Do not warn on keyword undef.  It is generally harmless and widely used.
   if (isReservedInAllContexts(II->isReserved(Lang)))
     return MD_ReservedMacro;
+  if (isReservedCXXAttributeName(PP, II))
+    return MD_ReservedAttributeIdentifier;
   return MD_NoWarn;
 }
 
@@ -369,6 +390,9 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
     }
     if (D == MD_ReservedMacro)
       Diag(MacroNameTok, diag::warn_pp_macro_is_reserved_id);
+    if (D == MD_ReservedAttributeIdentifier)
+      Diag(MacroNameTok, diag::warn_pp_macro_is_reserved_attribute_id)
+          << II->getName();
   }
 
   // Okay, we got a good identifier.
