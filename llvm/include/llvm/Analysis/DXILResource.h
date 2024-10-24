@@ -340,6 +340,11 @@ public:
 
   void updateResourceMap(CallInst *origCallInst, CallInst *newCallInst);
 
+  // Update ResUseMap with multiple new resource uses
+  void updateResUseMap(CallInst *origResUse,
+                       std::vector<Value *> &multiNewResUse);
+
+  // Update ResUseMap with single new resource use
   void updateResUseMap(CallInst *origResUse, CallInst *newResUse) {
     assert((origResUse != nullptr) && (newResUse != nullptr) &&
            (origResUse != newResUse) && "Wrong Inputs");

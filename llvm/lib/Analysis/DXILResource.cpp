@@ -791,6 +791,20 @@ void DXILResourceMap::updateResourceMap(CallInst *origCallInst,
   }
 }
 
+  void DXILResourceMap::updateResUseMap(CallInst *origResUse,
+                                      std::vector<Value *> &multiNewResUse) {
+    assert((origResUse != nullptr) && "Wrong Inputs");
+
+    for (int i = 0; i < multiNewResUse.size(); ++i) {
+      CallInst *newResUse = dyn_cast<CallInst>(multiNewResUse[i]);
+      assert(newResUse != nullptr);
+
+      bool keepOrigResUseInMap =
+          i == (multiNewResUse.size() - 1) ? false : true;
+      updateResUseMapCommon(origResUse, newResUse, keepOrigResUseInMap);
+    }
+  }
+
 void DXILResourceMap::print(raw_ostream &OS) const {
   for (unsigned I = 0, E = Resources.size(); I != E; ++I) {
     OS << "Binding " << I << ":\n";

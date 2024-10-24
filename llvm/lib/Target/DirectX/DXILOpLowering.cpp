@@ -704,6 +704,7 @@ public:
       Value *EVI = IRB.CreateExtractValue(Op, 0);
 
       Intrin->replaceAllUsesWith(EVI);
+      DRM.updateResUseMap(Intrin, Op);
       Intrin->eraseFromParent();
 
       return Error::success();
@@ -761,6 +762,7 @@ public:
     // TODO:
     // Remove the dx.op.rawbufferload without any uses now?
 
+    DRM.updateResUseMap(Intrin, bufLds);
     Intrin->eraseFromParent();
 
     return Error::success();
@@ -771,16 +773,14 @@ public:
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
-#if 0
-      auto *It = DRM.find(dyn_cast<CallInst>(CI->getArgOperand(0)));
+
+      auto *It = DRM.find(DRM.findResHandleByUse(CI));
       assert(It != DRM.end() && "Resource not in map?");
       dxil::ResourceInfo &RI = *It;
 
-      assert((RI.getResourceKind() == dxil::ResourceKind::StructuredBuffer) ||
-             (RI.getResourceKind() == dxil::ResourceKind::RawBuffer));
-#else
-      ResourceKind RCKind = dxil::ResourceKind::StructuredBuffer;
-#endif
+      ResourceKind RCKind =  RI.getResourceKind();
+      assert((RCKind == dxil::ResourceKind::StructuredBuffer) ||
+             (RCKind == dxil::ResourceKind::RawBuffer));
 
       Type *Ty = CI->getType();
       std::vector<Value *> bufLds;
