@@ -872,6 +872,10 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
   //
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
+  bool HasVectorFeature =
+      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
+  MCSymbol *FuncEntry = OutContext.getOrCreateSymbol(
+      HasVectorFeature ? "__xray_FunctionEntryVec" : "__xray_FunctionEntry");
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
   MCSymbol *EndOfSled = OutContext.createTempSymbol();
   OutStreamer->emitLabel(BeginOfSled);
@@ -885,8 +889,7 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
                  MCInstBuilder(SystemZ::BRASL)
                      .addReg(SystemZ::R14D)
                      .addExpr(MCSymbolRefExpr::create(
-                         OutContext.getOrCreateSymbol("__xray_FunctionEntry"),
-                         MCSymbolRefExpr::VK_PLT, OutContext)));
+                         FuncEntry, MCSymbolRefExpr::VK_PLT, OutContext)));
   OutStreamer->emitLabel(EndOfSled);
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_ENTER, 2);
 }
@@ -910,10 +913,14 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   //   nop
   //   nop
   //   llilf   %2,FuncID
-  //   j       __xray_FunctionEntry@GOT
+  //   j       __xray_FunctionExit@GOT
   //
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
+  bool HasVectorFeature =
+      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
+  MCSymbol *FuncExit = OutContext.getOrCreateSymbol(
+      HasVectorFeature ? "__xray_FunctionExitVec" : "__xray_FunctionExit");
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(BeginOfSled);
   EmitToStreamer(*OutStreamer,
@@ -924,8 +931,7 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(SystemZ::J)
                      .addExpr(MCSymbolRefExpr::create(
-                         OutContext.getOrCreateSymbol("__xray_FunctionExit"),
-                         MCSymbolRefExpr::VK_PLT, OutContext)));
+                         FuncExit, MCSymbolRefExpr::VK_PLT, OutContext)));
   if (FallthroughLabel)
     OutStreamer->emitLabel(FallthroughLabel);
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
