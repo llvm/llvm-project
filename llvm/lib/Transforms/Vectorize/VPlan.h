@@ -38,6 +38,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -291,8 +292,7 @@ struct VPTransformState {
 
   /// Set the generated scalar \p V for \p Def and the given \p Lane.
   void set(VPValue *Def, Value *V, const VPLane &Lane) {
-    auto Iter = Data.VPV2Scalars.insert({Def, {}});
-    auto &Scalars = Iter.first->second;
+    auto &Scalars = Data.VPV2Scalars[Def];
     unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
       Scalars.resize(CacheIdx + 1);
@@ -738,6 +738,9 @@ struct VPCostContext {
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
+
+  /// Returns the OperandInfo for \p V, if it is a live-in.
+  TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -954,6 +957,11 @@ public:
   /// Return the cost of this VPSingleDefRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print this VPSingleDefRecipe to dbgs() (for debugging).
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 /// Class to record LLVM IR flag for a recipe along with it.
@@ -1409,6 +1417,9 @@ public:
   /// Returns true if this VPInstruction's operands are single scalars and the
   /// result is also a single scalar.
   bool isSingleScalar() const;
+
+  /// Returns the symbolic name assigned to the VPInstruction.
+  StringRef getName() const { return Name; }
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
@@ -1591,6 +1602,10 @@ public:
   /// Produce widened copies of the cast.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenCastRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -1669,6 +1684,16 @@ public:
         MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         bool MayReadFromMemory, bool MayWriteToMemory,
+                         bool MayHaveSideEffects, DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayReadFromMemory(MayReadFromMemory),
+        MayWriteToMemory(MayWriteToMemory),
+        MayHaveSideEffects(MayHaveSideEffects) {}
+
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
@@ -1706,6 +1731,8 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
 };
 
 /// A recipe for widening Call instructions using library calls.
@@ -1823,6 +1850,10 @@ struct VPWidenSelectRecipe : public VPSingleDefRecipe {
 
   /// Produce a widened version of the select instruction.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenSelectRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3779,6 +3810,11 @@ public:
   }
   const VPRegionBlock *getVectorLoopRegion() const {
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
+  }
+
+  /// Returns the preheader of the vector loop region.
+  VPBasicBlock *getVectorPreheader() {
+    return cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
   }
 
   /// Returns the canonical induction recipe of the vector loop.

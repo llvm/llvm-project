@@ -6207,6 +6207,9 @@ void ARMBaseInstrInfo::mergeOutliningCandidateAttributes(
   if (CFn.hasFnAttribute("branch-target-enforcement"))
     F.addFnAttr(CFn.getFnAttribute("branch-target-enforcement"));
 
+  if (CFn.hasFnAttribute("sign-return-address"))
+    F.addFnAttr(CFn.getFnAttribute("sign-return-address"));
+
   ARMGenInstrInfo::mergeOutliningCandidateAttributes(F, Candidates);
 }
 
@@ -6623,10 +6626,7 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
       MBB.addLiveIn(ARM::LR);
 
     // Insert a save before the outlined region
-    bool Auth = OF.Candidates.front()
-                    .getMF()
-                    ->getInfo<ARMFunctionInfo>()
-                    ->shouldSignReturnAddress(true);
+    bool Auth = MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true);
     saveLROnStack(MBB, It, true, Auth);
 
     // Fix up the instructions in the range, since we're going to modify the

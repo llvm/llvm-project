@@ -337,7 +337,7 @@ void SymbolTable::scanVersionScript() {
         globalAsteriskFound = !isLocal;
       }
     }
-    assignWildcard(pat, isLocal ? VER_NDX_LOCAL : ver->id, ver->name);
+    assignWildcard(pat, isLocal ? (uint16_t)VER_NDX_LOCAL : ver->id, ver->name);
   };
   for (VersionDefinition &v : llvm::reverse(ctx.arg.versionDefinitions)) {
     for (SymbolVersion &pat : v.nonLocalPatterns)

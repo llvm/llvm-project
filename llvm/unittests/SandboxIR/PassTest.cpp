@@ -265,39 +265,45 @@ define void @f() {
                           "f");
   class FooPass final : public FunctionPass {
     std::string &Str;
+    std::string Args;
 
   public:
-    FooPass(std::string &Str) : FunctionPass("foo-pass"), Str(Str) {}
+    FooPass(std::string &Str, llvm::StringRef Args)
+        : FunctionPass("foo-pass"), Str(Str), Args(Args.str()) {}
     bool runOnFunction(Function &F) final {
-      Str += "foo";
+      Str += "foo<" + Args + ">";
       return false;
     }
   };
   class BarPass final : public FunctionPass {
     std::string &Str;
+    std::string Args;
 
   public:
-    BarPass(std::string &Str) : FunctionPass("bar-pass"), Str(Str) {}
+    BarPass(std::string &Str, llvm::StringRef Args)
+        : FunctionPass("bar-pass"), Str(Str), Args(Args.str()) {}
     bool runOnFunction(Function &F) final {
-      Str += "bar";
+      Str += "bar<" + Args + ">";
       return false;
     }
   };
 
   std::string Str;
   auto CreatePass =
-      [&Str](llvm::StringRef Name) -> std::unique_ptr<FunctionPass> {
+      [&Str](llvm::StringRef Name,
+             llvm::StringRef Args) -> std::unique_ptr<FunctionPass> {
     if (Name == "foo")
-      return std::make_unique<FooPass>(Str);
+      return std::make_unique<FooPass>(Str, Args);
     if (Name == "bar")
-      return std::make_unique<BarPass>(Str);
+      return std::make_unique<BarPass>(Str, Args);
     return nullptr;
   };
 
   FunctionPassManager FPM("test-fpm");
-  FPM.setPassPipeline("foo,bar,foo", CreatePass);
+  FPM.setPassPipeline("foo<abc>,bar<nested1<nested2<nested3>>>,foo",
+                      CreatePass);
   FPM.runOnFunction(*F);
-  EXPECT_EQ(Str, "foobarfoo");
+  EXPECT_EQ(Str, "foo<abc>bar<nested1<nested2<nested3>>>foo<>");
 
   // A second call to setPassPipeline will trigger an assertion in debug mode.
 #ifndef NDEBUG
@@ -308,8 +314,32 @@ define void @f() {
   // Fresh PM for the death tests so they die from bad pipeline strings, rather
   // than from multiple setPassPipeline calls.
   FunctionPassManager FPM2("test-fpm");
+  // Bad/empty pass names.
   EXPECT_DEATH(FPM2.setPassPipeline("bad-pass-name", CreatePass),
                ".*not registered.*");
-  EXPECT_DEATH(FPM2.setPassPipeline("", CreatePass), ".*not registered.*");
-  EXPECT_DEATH(FPM2.setPassPipeline(",", CreatePass), ".*not registered.*");
+  EXPECT_DEATH(FPM2.setPassPipeline(",", CreatePass), ".*empty pass name.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("<>", CreatePass), ".*empty pass name.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("<>foo", CreatePass),
+               ".*empty pass name.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo,<>", CreatePass),
+               ".*empty pass name.*");
+
+  // Mismatched argument brackets.
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<", CreatePass), ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar", CreatePass), ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar<>", CreatePass),
+               ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo>", CreatePass), ".*Unexpected '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline(">foo", CreatePass), ".*Unexpected '>'.*");
+  // Extra garbage between args and next delimiter/end-of-string.
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar<>>>", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("bar<>foo", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("bar<>foo,baz", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<args><more-args>", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<args>bar", CreatePass),
+               ".*Expected delimiter.*");
 }

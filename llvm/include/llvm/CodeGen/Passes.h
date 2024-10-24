@@ -273,7 +273,7 @@ namespace llvm {
 
   /// EarlyIfConverter - This pass performs if-conversion on SSA form by
   /// inserting cmov instructions.
-  extern char &EarlyIfConverterID;
+  extern char &EarlyIfConverterLegacyID;
 
   /// EarlyIfPredicator - This pass performs if-conversion on SSA form by
   /// predicating if/else block and insert select at the join point.
@@ -367,7 +367,7 @@ namespace llvm {
 
   /// OptimizePHIs - This pass optimizes machine instruction PHIs
   /// to take advantage of opportunities created during DAG legalization.
-  extern char &OptimizePHIsID;
+  extern char &OptimizePHIsLegacyID;
 
   /// StackSlotColoring - This pass performs stack slot coloring.
   extern char &StackSlotColoringID;

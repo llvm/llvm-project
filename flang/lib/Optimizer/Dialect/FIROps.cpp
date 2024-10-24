@@ -1359,7 +1359,7 @@ bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
 static std::optional<mlir::Type> getVectorElementType(mlir::Type ty) {
   mlir::Type elemTy;
   if (mlir::isa<fir::VectorType>(ty))
-    elemTy = mlir::dyn_cast<fir::VectorType>(ty).getEleTy();
+    elemTy = mlir::dyn_cast<fir::VectorType>(ty).getElementType();
   else if (mlir::isa<mlir::VectorType>(ty))
     elemTy = mlir::dyn_cast<mlir::VectorType>(ty).getElementType();
   else
@@ -1533,7 +1533,7 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
     }
     if (dimension) {
       if (--dimension == 0)
-        eleTy = mlir::cast<fir::SequenceType>(eleTy).getEleTy();
+        eleTy = mlir::cast<fir::SequenceType>(eleTy).getElementType();
     } else {
       if (auto t = mlir::dyn_cast<mlir::TupleType>(eleTy)) {
         // FIXME: Generally, we don't know which field of the tuple is being
@@ -3817,7 +3817,7 @@ void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
 //===----------------------------------------------------------------------===//
 
 inline fir::CharacterType::KindTy stringLitOpGetKind(fir::StringLitOp op) {
-  auto eleTy = mlir::cast<fir::SequenceType>(op.getType()).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(op.getType()).getElementType();
   return mlir::cast<fir::CharacterType>(eleTy).getFKind();
 }
 

@@ -13,14 +13,14 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/SandboxIR/PassManager.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {
-
-class RegionPassManager;
 
 class BottomUpVec final : public FunctionPass {
   bool Change = false;
@@ -32,8 +32,12 @@ class BottomUpVec final : public FunctionPass {
   RegionPassManager RPM;
 
 public:
-  BottomUpVec();
+  BottomUpVec(StringRef Pipeline);
   bool runOnFunction(Function &F) final;
+  void printPipeline(raw_ostream &OS) const final {
+    OS << getName() << "\n";
+    RPM.printPipeline(OS);
+  }
 };
 
 } // namespace llvm::sandboxir

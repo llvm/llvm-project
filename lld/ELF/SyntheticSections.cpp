@@ -276,8 +276,8 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
                                 InputSectionBase &section) {
-  Defined *s = makeDefined(section.file, name, STB_LOCAL, STV_DEFAULT, type,
-                           value, size, &section);
+  Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
+                           type, value, size, &section);
   if (ctx.in.symTab)
     ctx.in.symTab->addSymbol(s);
 
@@ -563,7 +563,7 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
   uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
   SmallVector<FdeData, 0> ret;
 
-  uint64_t va = getPartition().ehFrameHdr->getVA();
+  uint64_t va = getPartition(ctx).ehFrameHdr->getVA();
   for (CieRecord *rec : cieRecords) {
     uint8_t enc = getFdeEncoding(rec->cie);
     for (EhSectionPiece *fde : rec->fdes) {
@@ -650,8 +650,8 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   for (EhInputSection *s : sections)
     ctx.target->relocateAlloc(*s, buf);
 
-  if (getPartition().ehFrameHdr && getPartition().ehFrameHdr->getParent())
-    getPartition().ehFrameHdr->write();
+  if (getPartition(ctx).ehFrameHdr && getPartition(ctx).ehFrameHdr->getParent())
+    getPartition(ctx).ehFrameHdr->write();
 }
 
 GotSection::GotSection(Ctx &ctx)
@@ -749,7 +749,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
     if (const OutputSection *os = sym.getOutputSection())
       g.pagesMap.insert({os, {}});
     else
-      g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(addend))}, 0});
+      g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(ctx, addend))}, 0});
   } else if (sym.isTls())
     g.tls.insert({&sym, 0});
   else if (sym.isPreemptible && expr == R_ABS)
@@ -808,10 +808,11 @@ uint64_t MipsGotSection::getPageEntryOffset(const InputFile *f,
   uint64_t index = 0;
   if (const OutputSection *outSec = sym.getOutputSection()) {
     uint64_t secAddr = getMipsPageAddr(outSec->addr);
-    uint64_t symAddr = getMipsPageAddr(sym.getVA(addend));
+    uint64_t symAddr = getMipsPageAddr(sym.getVA(ctx, addend));
     index = g.pagesMap.lookup(outSec).firstIndex + (symAddr - secAddr) / 0xffff;
   } else {
-    index = g.local16.lookup({nullptr, getMipsPageAddr(sym.getVA(addend))});
+    index =
+        g.local16.lookup({nullptr, getMipsPageAddr(sym.getVA(ctx, addend))});
   }
   return index * ctx.arg.wordsize;
 }
@@ -1099,7 +1100,7 @@ uint64_t MipsGotSection::getGp(const InputFile *f) const {
   // returns "common" _gp value. For secondary GOTs calculate
   // individual _gp values.
   if (!f || f->mipsGotIndex == uint32_t(-1) || f->mipsGotIndex == 0)
-    return ctx.sym.mipsGp->getVA(0);
+    return ctx.sym.mipsGp->getVA(ctx, 0);
   return getVA() + gots[f->mipsGotIndex].startIndex * ctx.arg.wordsize + 0x7ff0;
 }
 
@@ -1124,7 +1125,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
     auto write = [&](size_t i, const Symbol *s, int64_t a) {
       uint64_t va = a;
       if (s)
-        va = s->getVA(a);
+        va = s->getVA(ctx, a);
       writeUint(ctx, buf + i * ctx.arg.wordsize, va);
     };
     // Write 'page address' entries to the local part of the GOT.
@@ -1325,7 +1326,7 @@ static uint64_t addPltRelSz(Ctx &ctx) { return ctx.in.relaPlt->getSize(); }
 template <class ELFT>
 std::vector<std::pair<int32_t, uint64_t>>
 DynamicSection<ELFT>::computeContents() {
-  elf::Partition &part = getPartition();
+  elf::Partition &part = getPartition(ctx);
   bool isMain = part.name.empty();
   std::vector<std::pair<int32_t, uint64_t>> entries;
 
@@ -1522,10 +1523,10 @@ DynamicSection<ELFT>::computeContents() {
 
     if (Symbol *b = ctx.symtab->find(ctx.arg.init))
       if (b->isDefined())
-        addInt(DT_INIT, b->getVA());
+        addInt(DT_INIT, b->getVA(ctx));
     if (Symbol *b = ctx.symtab->find(ctx.arg.fini))
       if (b->isDefined())
-        addInt(DT_FINI, b->getVA());
+        addInt(DT_FINI, b->getVA(ctx));
   }
 
   if (part.verSym && part.verSym->isNeeded())
@@ -1586,7 +1587,7 @@ DynamicSection<ELFT>::computeContents() {
 }
 
 template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
-  if (OutputSection *sec = getPartition().dynStrTab->getParent())
+  if (OutputSection *sec = getPartition(ctx).dynStrTab->getParent())
     getParent()->link = sec->sectionIndex;
   this->size = computeContents().size() * this->entsize;
 }
@@ -1688,7 +1689,7 @@ void RelocationBaseSection::partitionRels() {
 }
 
 void RelocationBaseSection::finalizeContents() {
-  SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
+  SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
 
   // When linking glibc statically, .rel{,a}.plt contains R_*_IRELATIVE
   // relocations due to IFUNC (e.g. strcpy). sh_link will be set to 0 in that
@@ -1712,7 +1713,7 @@ void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
 }
 
 void RelocationBaseSection::computeRels() {
-  SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
+  SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
     rel.computeRaw(ctx, symTab);
   });
@@ -1852,7 +1853,7 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize(Ctx &ctx) {
   for (const DynamicReloc &rel : relocs) {
     Elf_Rela r;
     r.r_offset = rel.getOffset();
-    r.setSymbolAndType(rel.getSymIndex(getPartition().dynSymTab.get()),
+    r.setSymbolAndType(rel.getSymIndex(getPartition(ctx).dynSymTab.get()),
                        rel.type, false);
     r.r_addend = ctx.arg.isRela ? rel.computeAddend(ctx) : 0;
 
@@ -2162,9 +2163,9 @@ void SymbolTableBaseSection::finalizeContents() {
   // Because the first symbol entry is a null entry, 1 is the first.
   getParent()->info = 1;
 
-  if (getPartition().gnuHashTab) {
+  if (getPartition(ctx).gnuHashTab) {
     // NB: It also sorts Symbols to meet the GNU hash table requirements.
-    getPartition().gnuHashTab->addSymbols(symbols);
+    getPartition(ctx).gnuHashTab->addSymbols(symbols);
   } else if (ctx.arg.emachine == EM_MIPS) {
     sortMipsSymbols(ctx, symbols);
   }
@@ -2288,7 +2289,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
       const uint32_t shndx = getSymSectionIndex(sym);
       if (isDefinedHere) {
         eSym->st_shndx = shndx;
-        eSym->st_value = sym->getVA();
+        eSym->st_value = sym->getVA(ctx);
         // Copy symbol size if it is a defined symbol. st_size is not
         // significant for undefined symbols, so whether copying it or not is up
         // to us if that's the case. We'll leave it as zero because by not
@@ -2416,7 +2417,7 @@ GnuHashTableSection::GnuHashTableSection(Ctx &ctx)
                        ".gnu.hash") {}
 
 void GnuHashTableSection::finalizeContents() {
-  if (OutputSection *sec = getPartition().dynSymTab->getParent())
+  if (OutputSection *sec = getPartition(ctx).dynSymTab->getParent())
     getParent()->link = sec->sectionIndex;
 
   // Computes bloom filter size in word size. We want to allocate 12
@@ -2438,7 +2439,7 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
   // Write a header.
   write32(ctx, buf, nBuckets);
   write32(ctx, buf + 4,
-          getPartition().dynSymTab->getNumSymbols() - symbols.size());
+          getPartition(ctx).dynSymTab->getNumSymbols() - symbols.size());
   write32(ctx, buf + 8, maskWords);
   write32(ctx, buf + 12, Shift2);
   buf += 16;
@@ -2474,7 +2475,7 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
     // Write a hash bucket. Hash buckets contain indices in the following hash
     // value table.
     write32(ctx, buckets + i->bucketIdx,
-            getPartition().dynSymTab->getSymbolIndex(*i->sym));
+            getPartition(ctx).dynSymTab->getSymbolIndex(*i->sym));
     oldBucket = i->bucketIdx;
   }
 }
@@ -2527,7 +2528,7 @@ HashTableSection::HashTableSection(Ctx &ctx)
 }
 
 void HashTableSection::finalizeContents() {
-  SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
+  SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
 
   if (OutputSection *sec = symTab->getParent())
     getParent()->link = sec->sectionIndex;
@@ -2541,7 +2542,7 @@ void HashTableSection::finalizeContents() {
 }
 
 void HashTableSection::writeTo(uint8_t *buf) {
-  SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
+  SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   unsigned numSymbols = symTab->getNumSymbols();
 
   uint32_t *p = reinterpret_cast<uint32_t *>(buf);
@@ -3241,7 +3242,7 @@ void DebugNamesSection<ELFT>::getNameRelocs(
     Relocs<RelTy> rels) {
   for (const RelTy &rel : rels) {
     Symbol &sym = file.getRelocTargetSym(rel);
-    relocs[rel.r_offset] = sym.getVA(getAddend<ELFT>(rel));
+    relocs[rel.r_offset] = sym.getVA(ctx, getAddend<ELFT>(rel));
   }
 }
 
@@ -3667,14 +3668,14 @@ void EhFrameHeader::writeTo(uint8_t *buf) {
 void EhFrameHeader::write() {
   uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
   using FdeData = EhFrameSection::FdeData;
-  SmallVector<FdeData, 0> fdes = getPartition().ehFrame->getFdeData();
+  SmallVector<FdeData, 0> fdes = getPartition(ctx).ehFrame->getFdeData();
 
   buf[0] = 1;
   buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
   buf[2] = DW_EH_PE_udata4;
   buf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
   write32(ctx, buf + 4,
-          getPartition().ehFrame->getParent()->addr - this->getVA() - 4);
+          getPartition(ctx).ehFrame->getParent()->addr - this->getVA() - 4);
   write32(ctx, buf + 8, fdes.size());
   buf += 12;
 
@@ -3687,11 +3688,11 @@ void EhFrameHeader::write() {
 
 size_t EhFrameHeader::getSize() const {
   // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
-  return 12 + getPartition().ehFrame->numFdes * 8;
+  return 12 + getPartition(ctx).ehFrame->numFdes * 8;
 }
 
 bool EhFrameHeader::isNeeded() const {
-  return isLive() && getPartition().ehFrame->isNeeded();
+  return isLive() && getPartition(ctx).ehFrame->isNeeded();
 }
 
 VersionDefinitionSection::VersionDefinitionSection(Ctx &ctx)
@@ -3699,19 +3700,19 @@ VersionDefinitionSection::VersionDefinitionSection(Ctx &ctx)
                        ".gnu.version_d") {}
 
 StringRef VersionDefinitionSection::getFileDefName() {
-  if (!getPartition().name.empty())
-    return getPartition().name;
+  if (!getPartition(ctx).name.empty())
+    return getPartition(ctx).name;
   if (!ctx.arg.soName.empty())
     return ctx.arg.soName;
   return ctx.arg.outputFile;
 }
 
 void VersionDefinitionSection::finalizeContents() {
-  fileDefNameOff = getPartition().dynStrTab->addString(getFileDefName());
+  fileDefNameOff = getPartition(ctx).dynStrTab->addString(getFileDefName());
   for (const VersionDefinition &v : namedVersionDefs(ctx))
-    verDefNameOffs.push_back(getPartition().dynStrTab->addString(v.name));
+    verDefNameOffs.push_back(getPartition(ctx).dynStrTab->addString(v.name));
 
-  if (OutputSection *sec = getPartition().dynStrTab->getParent())
+  if (OutputSection *sec = getPartition(ctx).dynStrTab->getParent())
     getParent()->link = sec->sectionIndex;
 
   // sh_info should be set to the number of definitions. This fact is missed in
@@ -3765,16 +3766,16 @@ VersionTableSection::VersionTableSection(Ctx &ctx)
 void VersionTableSection::finalizeContents() {
   // At the moment of june 2016 GNU docs does not mention that sh_link field
   // should be set, but Sun docs do. Also readelf relies on this field.
-  getParent()->link = getPartition().dynSymTab->getParent()->sectionIndex;
+  getParent()->link = getPartition(ctx).dynSymTab->getParent()->sectionIndex;
 }
 
 size_t VersionTableSection::getSize() const {
-  return (getPartition().dynSymTab->getSymbols().size() + 1) * 2;
+  return (getPartition(ctx).dynSymTab->getSymbols().size() + 1) * 2;
 }
 
 void VersionTableSection::writeTo(uint8_t *buf) {
   buf += 2;
-  for (const SymbolTableEntry &s : getPartition().dynSymTab->getSymbols()) {
+  for (const SymbolTableEntry &s : getPartition(ctx).dynSymTab->getSymbols()) {
     // For an unextracted lazy symbol (undefined weak), it must have been
     // converted to Undefined and have VER_NDX_GLOBAL version here.
     assert(!s.sym->isLazy());
@@ -3785,7 +3786,7 @@ void VersionTableSection::writeTo(uint8_t *buf) {
 
 bool VersionTableSection::isNeeded() const {
   return isLive() &&
-         (getPartition().verDef || getPartition().verNeed->isNeeded());
+         (getPartition(ctx).verDef || getPartition(ctx).verNeed->isNeeded());
 }
 
 void elf::addVerneed(Ctx &ctx, Symbol &ss) {
@@ -3817,7 +3818,7 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
       continue;
     verneeds.emplace_back();
     Verneed &vn = verneeds.back();
-    vn.nameStrTab = getPartition().dynStrTab->addString(f->soName);
+    vn.nameStrTab = getPartition(ctx).dynStrTab->addString(f->soName);
     bool isLibc = ctx.arg.relrGlibc && f->soName.starts_with("libc.so.");
     bool isGlibc2 = false;
     for (unsigned i = 0; i != f->vernauxs.size(); ++i) {
@@ -3829,17 +3830,17 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
       if (isLibc && ver.starts_with("GLIBC_2."))
         isGlibc2 = true;
       vn.vernauxs.push_back({verdef->vd_hash, f->vernauxs[i],
-                             getPartition().dynStrTab->addString(ver)});
+                             getPartition(ctx).dynStrTab->addString(ver)});
     }
     if (isGlibc2) {
       const char *ver = "GLIBC_ABI_DT_RELR";
       vn.vernauxs.push_back({hashSysV(ver),
                              ++SharedFile::vernauxNum + getVerDefNum(ctx),
-                             getPartition().dynStrTab->addString(ver)});
+                             getPartition(ctx).dynStrTab->addString(ver)});
     }
   }
 
-  if (OutputSection *sec = getPartition().dynStrTab->getParent())
+  if (OutputSection *sec = getPartition(ctx).dynStrTab->getParent())
     getParent()->link = sec->sectionIndex;
   getParent()->info = verneeds.size();
 }
@@ -3995,7 +3996,7 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
 void elf::combineEhSections(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Combine EH sections");
   for (EhInputSection *sec : ctx.ehInputSections) {
-    EhFrameSection &eh = *sec->getPartition().ehFrame;
+    EhFrameSection &eh = *sec->getPartition(ctx).ehFrame;
     sec->parent = &eh;
     eh.addralign = std::max(eh.addralign, sec->addralign);
     eh.sections.push_back(sec);
@@ -4004,12 +4005,12 @@ void elf::combineEhSections(Ctx &ctx) {
 
   if (!ctx.mainPart->armExidx)
     return;
-  llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
+  llvm::erase_if(ctx.inputSections, [&](InputSectionBase *s) {
     // Ignore dead sections and the partition end marker (.part.end),
     // whose partition number is out of bounds.
     if (!s->isLive() || s->partition == 255)
       return false;
-    Partition &part = s->getPartition();
+    Partition &part = s->getPartition(ctx);
     return s->kind() == SectionBase::Regular && part.armExidx &&
            part.armExidx->addSection(cast<InputSection>(s));
   });
@@ -4356,11 +4357,11 @@ void PPC64LongBranchTargetSection::writeTo(uint8_t *buf) {
   for (auto entry : entries) {
     const Symbol *sym = entry.first;
     int64_t addend = entry.second;
-    assert(sym->getVA());
+    assert(sym->getVA(ctx));
     // Need calls to branch to the local entry-point since a long-branch
     // must be a local-call.
     write64(ctx, buf,
-            sym->getVA(addend) +
+            sym->getVA(ctx, addend) +
                 getPPC64GlobalEntryToLocalEntryOffset(sym->stOther));
     buf += 8;
   }
@@ -4447,7 +4448,7 @@ size_t PartitionElfHeaderSection<ELFT>::getSize() const {
 
 template <typename ELFT>
 void PartitionElfHeaderSection<ELFT>::writeTo(uint8_t *buf) {
-  writeEhdr<ELFT>(ctx, buf, getPartition());
+  writeEhdr<ELFT>(ctx, buf, getPartition(ctx));
 
   // Loadable partitions are always ET_DYN.
   auto *eHdr = reinterpret_cast<typename ELFT::Ehdr *>(buf);
@@ -4460,12 +4461,12 @@ PartitionProgramHeadersSection<ELFT>::PartitionProgramHeadersSection(Ctx &ctx)
 
 template <typename ELFT>
 size_t PartitionProgramHeadersSection<ELFT>::getSize() const {
-  return sizeof(typename ELFT::Phdr) * getPartition().phdrs.size();
+  return sizeof(typename ELFT::Phdr) * getPartition(ctx).phdrs.size();
 }
 
 template <typename ELFT>
 void PartitionProgramHeadersSection<ELFT>::writeTo(uint8_t *buf) {
-  writePhdrs<ELFT>(buf, getPartition());
+  writePhdrs<ELFT>(buf, getPartition(ctx));
 }
 
 PartitionIndexSection::PartitionIndexSection(Ctx &ctx)
@@ -4616,7 +4617,7 @@ createMemtagGlobalDescriptors(Ctx &ctx,
   for (const Symbol *sym : symbols) {
     if (!includeInSymtab(ctx, *sym))
       continue;
-    const uint64_t addr = sym->getVA();
+    const uint64_t addr = sym->getVA(ctx);
     const uint64_t size = sym->getSize();
 
     if (addr <= kMemtagGranuleSize && buf != nullptr)
@@ -4653,8 +4654,8 @@ createMemtagGlobalDescriptors(Ctx &ctx,
 bool MemtagGlobalDescriptors::updateAllocSize(Ctx &ctx) {
   size_t oldSize = getSize();
   std::stable_sort(symbols.begin(), symbols.end(),
-                   [](const Symbol *s1, const Symbol *s2) {
-                     return s1->getVA() < s2->getVA();
+                   [&ctx = ctx](const Symbol *s1, const Symbol *s2) {
+                     return s1->getVA(ctx) < s2->getVA(ctx);
                    });
   return oldSize != getSize();
 }
@@ -4681,8 +4682,8 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
-  s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
-                          STT_NOTYPE, val,
+  s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+                          stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);
@@ -4747,7 +4748,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   const unsigned threadCount = ctx.arg.threadCount;
   for (Partition &part : ctx.partitions) {
     auto add = [&](SyntheticSection &sec) {
-      sec.partition = part.getNumber();
+      sec.partition = part.getNumber(ctx);
       ctx.inputSections.push_back(&sec);
     };
 

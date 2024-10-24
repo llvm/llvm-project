@@ -236,7 +236,6 @@ public:
     }
     // Iterators iterate over the bundles
     iterator &operator++() {
-      assert(VecIdx >= 0 && "Already at end!");
       ++VecIdx;
       if (VecIdx >= Vec->size()) {
         assert(MapIt != Map->end() && "Already at end!");
@@ -280,8 +279,36 @@ public:
   unsigned size() const { return Bundles.size(); }
 
 #ifndef NDEBUG
+  void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG
+};
+
+class SeedCollector {
+  SeedContainer StoreSeeds;
+  SeedContainer LoadSeeds;
+  Context &Ctx;
+
+  /// \Returns the number of SeedBundle groups for all seed types.
+  /// This is to be used for limiting compilation time.
+  unsigned totalNumSeedGroups() const {
+    return StoreSeeds.size() + LoadSeeds.size();
+  }
+
+public:
+  SeedCollector(BasicBlock *BB, ScalarEvolution &SE);
+  ~SeedCollector();
+
+  iterator_range<SeedContainer::iterator> getStoreSeeds() {
+    return {StoreSeeds.begin(), StoreSeeds.end()};
+  }
+  iterator_range<SeedContainer::iterator> getLoadSeeds() {
+    return {LoadSeeds.begin(), LoadSeeds.end()};
+  }
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 } // namespace llvm::sandboxir

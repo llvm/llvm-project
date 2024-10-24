@@ -1448,6 +1448,7 @@ Instruction *InstCombinerImpl::foldSelectEqualityTest(SelectInst &Sel) {
              m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(X), m_Specific(Y))))
     return nullptr;
 
+  cast<ICmpInst>(XeqY)->setSameSign(false);
   return replaceInstUsesWith(Sel, XeqY);
 }
 
@@ -1951,56 +1952,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     SI.swapValues();
     SI.swapProfMetadata();
     return &SI;
-  }
-
-  // FIXME: This code is nearly duplicated in InstSimplify. Using/refactoring
-  // decomposeBitTestICmp() might help.
-  if (TrueVal->getType()->isIntOrIntVectorTy()) {
-    unsigned BitWidth =
-        DL.getTypeSizeInBits(TrueVal->getType()->getScalarType());
-    APInt MinSignedValue = APInt::getSignedMinValue(BitWidth);
-    Value *X;
-    const APInt *Y, *C;
-    bool TrueWhenUnset;
-    bool IsBitTest = false;
-    if (ICmpInst::isEquality(Pred) &&
-        match(CmpLHS, m_And(m_Value(X), m_Power2(Y))) &&
-        match(CmpRHS, m_Zero())) {
-      IsBitTest = true;
-      TrueWhenUnset = Pred == ICmpInst::ICMP_EQ;
-    } else if (Pred == ICmpInst::ICMP_SLT && match(CmpRHS, m_Zero())) {
-      X = CmpLHS;
-      Y = &MinSignedValue;
-      IsBitTest = true;
-      TrueWhenUnset = false;
-    } else if (Pred == ICmpInst::ICMP_SGT && match(CmpRHS, m_AllOnes())) {
-      X = CmpLHS;
-      Y = &MinSignedValue;
-      IsBitTest = true;
-      TrueWhenUnset = true;
-    }
-    if (IsBitTest) {
-      Value *V = nullptr;
-      // (X & Y) == 0 ? X : X ^ Y  --> X & ~Y
-      if (TrueWhenUnset && TrueVal == X &&
-          match(FalseVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder.CreateAnd(X, ~(*Y));
-      // (X & Y) != 0 ? X ^ Y : X  --> X & ~Y
-      else if (!TrueWhenUnset && FalseVal == X &&
-               match(TrueVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder.CreateAnd(X, ~(*Y));
-      // (X & Y) == 0 ? X ^ Y : X  --> X | Y
-      else if (TrueWhenUnset && FalseVal == X &&
-               match(TrueVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder.CreateOr(X, *Y);
-      // (X & Y) != 0 ? X : X ^ Y  --> X | Y
-      else if (!TrueWhenUnset && TrueVal == X &&
-               match(FalseVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder.CreateOr(X, *Y);
-
-      if (V)
-        return replaceInstUsesWith(SI, V);
-    }
   }
 
   if (Instruction *V =
@@ -3192,12 +3143,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
           SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal)));
     }
 
-    if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
-      if (auto *RHS = dyn_cast<FCmpInst>(FalseVal))
-        if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
-                                        /*IsSelectLogical*/ true))
-          return replaceInstUsesWith(SI, V);
-
     // (A && B) || (C && B) --> (A || C) && B
     if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
         match(FalseVal, m_LogicalAnd(m_Value(C), m_Value(D))) &&
@@ -3239,12 +3184,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       return replaceInstUsesWith(
           SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal)));
     }
-
-    if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
-      if (auto *RHS = dyn_cast<FCmpInst>(TrueVal))
-        if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true,
-                                        /*IsSelectLogical*/ true))
-          return replaceInstUsesWith(SI, V);
 
     // (A || B) && (C || B) --> (A && C) || B
     if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
@@ -3354,11 +3293,9 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       return replaceInstUsesWith(SI, Op1);
     }
 
-    if (auto *ICmp0 = dyn_cast<ICmpInst>(CondVal))
-      if (auto *ICmp1 = dyn_cast<ICmpInst>(Op1))
-        if (auto *V = foldAndOrOfICmps(ICmp0, ICmp1, SI, IsAnd,
-                                       /* IsLogical */ true))
-          return replaceInstUsesWith(SI, V);
+    if (auto *V = foldBooleanAndOr(CondVal, Op1, SI, IsAnd,
+                                   /*IsLogical=*/true))
+      return replaceInstUsesWith(SI, V);
   }
 
   // select (a || b), c, false -> select a, c, false
@@ -3837,11 +3774,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // minnum/maxnum intrinsics.
     if (SIFPOp->hasNoNaNs() && SIFPOp->hasNoSignedZeros()) {
       Value *X, *Y;
-      if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
+      if (match(&SI, m_OrdOrUnordFMax(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
             SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
 
-      if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
+      if (match(&SI, m_OrdOrUnordFMin(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
             SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
     }

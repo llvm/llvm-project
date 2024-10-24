@@ -157,9 +157,7 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   for (User *U : Users) {
     Instruction *Inst = cast<Instruction>(U);
     IRBuilder<> Builder(Inst);
-    Function *GetID = Intrinsic::getOrInsertDeclaration(GV->getParent(),
-                                                        Intrinsic::xcore_getid);
-    Value *ThreadID = Builder.CreateCall(GetID, {});
+    Value *ThreadID = Builder.CreateIntrinsic(Intrinsic::xcore_getid, {}, {});
     Value *Addr = Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV,
                                             {Builder.getInt64(0), ThreadID});
     U->replaceUsesOfWith(GV, Addr);

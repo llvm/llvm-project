@@ -165,6 +165,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
+   * - ``SPV_INTEL_split_barrier``
+     - Adds SPIR-V instructions to split a control barrier into two separate operations: the first indicates that an invocation has "arrived" at the barrier but should continue executing, and the second indicates that an invocation should "wait" for other invocations to arrive at the barrier before executing further.
    * - ``SPV_INTEL_subgroups``
      - Allows work items in a subgroup to share data without the use of local memory and work group barriers, and to utilize specialized hardware to load and store blocks of data from images or buffers.
    * - ``SPV_INTEL_usm_storage_classes``

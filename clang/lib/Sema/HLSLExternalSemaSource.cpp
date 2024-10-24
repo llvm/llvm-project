@@ -208,8 +208,6 @@ struct BuiltinTypeDeclBuilder {
   BuiltinTypeDeclBuilder &addArraySubscriptOperator(bool IsConst) {
     if (Record->isCompleteDefinition())
       return *this;
-    assert(Fields.count("h") > 0 &&
-           "Subscript operator must be added after the handle.");
 
     ASTContext &AST = Record->getASTContext();
     QualType ElemTy = AST.Char8Ty;
@@ -515,7 +513,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV,
                     ResourceKind::TypedBuffer, /*IsROV=*/false,
                     /*RawBuffer=*/true)
         .addArraySubscriptOperators()

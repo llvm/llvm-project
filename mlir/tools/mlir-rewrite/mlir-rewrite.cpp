@@ -320,25 +320,25 @@ LogicalResult markRanges(RewritePad &rewriteState, raw_ostream &os) {
   for (auto it : rewriteState.getOpDefs()) {
     auto [startOp, endOp] = getOpRange(it);
 
-    rewriteState.insertText(startOp, "《");
-    rewriteState.insertText(endOp, "》");
+    rewriteState.insertText(startOp, "<");
+    rewriteState.insertText(endOp, ">");
 
     auto nameRange = getOpNameRange(it);
 
     if (isGeneric(it)) {
-      rewriteState.insertText(nameRange.Start, "〖");
-      rewriteState.insertText(nameRange.End, "〗");
+      rewriteState.insertText(nameRange.Start, "[");
+      rewriteState.insertText(nameRange.End, "]");
     } else {
-      rewriteState.insertText(nameRange.Start, "〔");
-      rewriteState.insertText(nameRange.End, "〕");
+      rewriteState.insertText(nameRange.Start, "![");
+      rewriteState.insertText(nameRange.End, "]!");
     }
   }
 
   // Highlight all comment lines.
   // TODO: Could be replaced if this is kept in memory.
   for (auto commentLine : rewriteState.getSingleLineComments()) {
-    rewriteState.insertText(commentLine.Start, "❰");
-    rewriteState.insertText(commentLine.End, "❱");
+    rewriteState.insertText(commentLine.Start, "{");
+    rewriteState.insertText(commentLine.End, "}");
   }
 
   return success();

@@ -1144,10 +1144,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
   }
 }
 
-bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
-  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
-    return false;
-
+bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   bool HasExtraAlign = HRI.hasStackRealignment(MF);

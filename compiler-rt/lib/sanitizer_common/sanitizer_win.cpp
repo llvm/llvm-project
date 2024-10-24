@@ -968,6 +968,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return true;
 }
 
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
+}
+
 bool SignalContext::IsStackOverflow() const {
   return (DWORD)GetType() == EXCEPTION_STACK_OVERFLOW;
 }

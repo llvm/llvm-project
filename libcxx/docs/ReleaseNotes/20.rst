@@ -78,9 +78,14 @@ Deprecations and Removals
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
   standards conforming.
 
-- Non-conforming member typedefs ``iterator`` and ``const_iterator`` of ``std::bitset`` are removed. Previously, they
-  were private but could cause ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in
-  LLVM 20.
+- Non-conforming member typedefs ``base``, ``iterator`` and ``const_iterator`` of ``std::bitset``, and member typedef
+  ``base`` of ``std::forward_list`` and ``std::list`` are removed. Previously, they were private but could cause
+  ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in LLVM 20.
+
+- The function ``__libcpp_verbose_abort()`` is now ``noexcept``, to match ``std::terminate()``. (The combination of
+  ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.) For backwards compatibility,
+  the ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro can be defined to make the function non-``noexcept``. That macro
+  will be removed in LLVM 21.
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -102,6 +107,9 @@ LLVM 21
 
   If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most
   out of libc++.
+
+- The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro will be removed in LLVM 21, making ``std::__libcpp_verbose_abort``
+  unconditionally ``noexcept``.
 
 
 ABI Affecting Changes

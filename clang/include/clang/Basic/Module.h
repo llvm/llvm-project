@@ -48,6 +48,7 @@ namespace clang {
 
 class FileManager;
 class LangOptions;
+class ModuleMap;
 class TargetInfo;
 
 /// Describes the name of a module.
@@ -97,6 +98,15 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
     std::copy(First, Last, Signature.begin());
     return Signature;
   }
+};
+
+/// Required to construct a Module.
+///
+/// This tag type is only constructible by ModuleMap, guaranteeing it ownership
+/// of all Module instances.
+class ModuleConstructorTag {
+  explicit ModuleConstructorTag() = default;
+  friend ModuleMap;
 };
 
 /// Describes a module or submodule.
@@ -497,8 +507,9 @@ public:
   std::vector<Conflict> Conflicts;
 
   /// Construct a new module or submodule.
-  Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
-         bool IsFramework, bool IsExplicit, unsigned VisibilityID);
+  Module(ModuleConstructorTag, StringRef Name, SourceLocation DefinitionLoc,
+         Module *Parent, bool IsFramework, bool IsExplicit,
+         unsigned VisibilityID);
 
   ~Module();
 
@@ -749,7 +760,6 @@ public:
   ///
   /// \returns The submodule if found, or NULL otherwise.
   Module *findSubmodule(StringRef Name) const;
-  Module *findOrInferSubmodule(StringRef Name);
 
   /// Get the Global Module Fragment (sub-module) for this module, it there is
   /// one.

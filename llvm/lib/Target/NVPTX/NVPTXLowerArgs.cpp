@@ -435,6 +435,9 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
         continue;
       }
 
+      if (isa<MemTransferInst>(CurUser))
+        continue;
+
       // supported for grid_constant
       if (IsGridConstant &&
           (isa<CallInst>(CurUser) || isa<StoreInst>(CurUser) ||
@@ -545,7 +548,8 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
 void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
                                       Argument *Arg) {
   Function *Func = Arg->getParent();
-  bool HasCvtaParam = TM.getSubtargetImpl(*Func)->hasCvtaParam();
+  bool HasCvtaParam =
+      TM.getSubtargetImpl(*Func)->hasCvtaParam() && isKernelFunction(*Func);
   bool IsGridConstant = HasCvtaParam && isParamGridConstant(*Arg);
   const DataLayout &DL = Func->getDataLayout();
   BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();

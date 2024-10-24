@@ -259,6 +259,15 @@ public:
   void mutuallyRecursive8() { mutuallyRecursive9(); someFunction(); }
   void mutuallyRecursive9() { mutuallyRecursive8(); }
 
+  int recursiveCost() {
+    unsigned totalCost = 0;
+    for (unsigned i = 0; i < sizeof(children)/sizeof(*children); ++i) {
+      if (auto* child = children[i])
+        totalCost += child->recursiveCost();
+    }
+    return totalCost;
+  }
+
   int trivial1() { return 123; }
   float trivial2() { return 0.3; }
   float trivial3() { return (float)0.4; }
@@ -448,6 +457,7 @@ public:
   Number* number { nullptr };
   ComplexNumber complex;
   Enum enumValue { Enum::Value1 };
+  RefCounted* children[4];
 };
 
 unsigned RefCounted::s_v = 0;
@@ -557,6 +567,8 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().mutuallyRecursive9();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+
+    getFieldTrivial().recursiveCost(); // no-warning
 
     getFieldTrivial().someFunction();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}

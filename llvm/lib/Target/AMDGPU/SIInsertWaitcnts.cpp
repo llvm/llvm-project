@@ -2606,15 +2606,24 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
   // instructions.
-  for (MachineInstr *MI : ReleaseVGPRInsts) {
-    if (ST->requiresNopBeforeDeallocVGPRs()) {
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
-          .addImm(0);
+  // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
+  // waveslot limited kernel runs slower with the deallocation.
+  if (!ReleaseVGPRInsts.empty() &&
+      (MF.getFrameInfo().hasCalls() ||
+       ST->getOccupancyWithNumVGPRs(
+           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+           AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+    for (MachineInstr *MI : ReleaseVGPRInsts) {
+      if (ST->requiresNopBeforeDeallocVGPRs()) {
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_NOP))
+            .addImm(0);
+      }
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+              TII->get(AMDGPU::S_SENDMSG))
+          .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+      Modified = true;
     }
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::S_SENDMSG))
-        .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
-    Modified = true;
   }
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();

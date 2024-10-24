@@ -630,8 +630,18 @@ define void @va_intrinsics_test(ptr %0, ptr %1, ...) {
 ; CHECK-LABEL: @assume
 ; CHECK-SAME:  %[[TRUE:[a-zA-Z0-9]+]]
 define void @assume(i1 %true) {
-  ; CHECK:  "llvm.intr.assume"(%[[TRUE]]) : (i1) -> ()
+  ; CHECK:  llvm.intr.assume %[[TRUE]] : i1
   call void @llvm.assume(i1 %true)
+  ret void
+}
+
+; CHECK-LABEL: @assume_with_opbundles
+; CHECK-SAME:  %[[TRUE:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @assume_with_opbundles(i1 %true, ptr %p) {
+  ; CHECK: %[[ALIGN:.+]] = llvm.mlir.constant(8 : i32) : i32
+  ; CHECK:  llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i32)] : i1
+  call void @llvm.assume(i1 %true) ["align"(ptr %p, i32 8)]
   ret void
 }
 
