@@ -194,7 +194,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     IRB.SetInsertPoint(TrapBB);
 
     Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
-    auto *F = Intrinsic::getDeclaration(Fn->getParent(), IntrID);
+    auto *F = Intrinsic::getOrInsertDeclaration(Fn->getParent(), IntrID);
 
     CallInst *TrapCall;
     if (DebugTrapBB) {

@@ -81,6 +81,32 @@ public:
     SingleIssuePlusExtras,
   };
 
+  /// How the push and pop instructions of callee saved general-purpose
+  /// registers should be split.
+  enum PushPopSplitVariation {
+    /// All GPRs can be pushed in a single instruction.
+    /// push {r0-r12, lr}
+    /// vpush {d8-d15}
+    NoSplit,
+
+    /// R7 and LR must be adjacent, because R7 is the frame pointer, and must
+    /// point to a frame record consisting of the previous frame pointer and the
+    /// return address.
+    /// push {r0-r7, lr}
+    /// push {r8-r12}
+    /// vpush {d8-d15}
+    SplitR7,
+
+    /// When the stack frame size is not known (because of variable-sized
+    /// objects or realignment), Windows SEH requires the callee-saved registers
+    /// to be stored in three regions, with R11 and LR below the floating-point
+    /// registers.
+    /// push {r0-r10, r12}
+    /// vpush {d8-d15}
+    /// push {r11, lr}
+    SplitR11WindowsSEH,
+  };
+
 protected:
 // Bool members corresponding to the SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -133,7 +159,7 @@ protected:
   int PreISelOperandLatencyAdjustment = 2;
 
   /// What alignment is preferred for loop bodies and functions, in log2(bytes).
-  unsigned PrefLoopLogAlignment = 0;
+  unsigned PreferBranchLogAlignment = 0;
 
   /// The cost factor for MVE instructions, representing the multiple beats an
   // instruction can take. The default is 2, (set in initSubtargetFeatures so
@@ -208,13 +234,6 @@ public:
   const ARMBaseRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo->getRegisterInfo();
   }
-
-  /// The correct instructions have been implemented to initialize undef
-  /// registers, therefore the ARM Architecture is supported by the Init Undef
-  /// Pass. This will return true as the pass needs to be supported for all
-  /// types of instructions. The pass will then perform more checks to ensure it
-  /// should be applying the Pseudo Instructions.
-  bool supportsInitUndef() const override { return true; }
 
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
@@ -325,7 +344,9 @@ public:
   }
   bool isTargetGNUAEABI() const {
     return (TargetTriple.getEnvironment() == Triple::GNUEABI ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHF) &&
+            TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
+            TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+            TargetTriple.getEnvironment() == Triple::GNUEABIHFT64) &&
            !isTargetDarwin() && !isTargetWindows();
   }
   bool isTargetMuslAEABI() const {
@@ -378,19 +399,8 @@ public:
     return ARM::R11;
   }
 
-  /// Returns true if the frame setup is split into two separate pushes (first
-  /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
-  /// to lr. This is always required on Thumb1-only targets, as the push and
-  /// pop instructions can't access the high registers.
-  bool splitFramePushPop(const MachineFunction &MF) const {
-    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress())
-      return true;
-    return (getFramePointerReg() == ARM::R7 &&
-            MF.getTarget().Options.DisableFramePointerElim(MF)) ||
-           isThumb1Only();
-  }
-
-  bool splitFramePointerPush(const MachineFunction &MF) const;
+  enum PushPopSplitVariation
+  getPushPopSplitVariation(const MachineFunction &MF) const;
 
   bool useStride4VFPs() const;
 
@@ -483,7 +493,9 @@ public:
     return isROPI() || !isTargetELF();
   }
 
-  unsigned getPrefLoopLogAlignment() const { return PrefLoopLogAlignment; }
+  unsigned getPreferBranchLogAlignment() const {
+    return PreferBranchLogAlignment;
+  }
 
   unsigned
   getMVEVectorCostFactor(TargetTransformInfo::TargetCostKind CostKind) const {

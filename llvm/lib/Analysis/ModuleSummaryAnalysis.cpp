@@ -81,6 +81,11 @@ static cl::opt<std::string> ModuleSummaryDotFile(
     "module-summary-dot-file", cl::Hidden, cl::value_desc("filename"),
     cl::desc("File to emit dot graph of new summary into"));
 
+static cl::opt<bool> EnableMemProfIndirectCallSupport(
+    "enable-memprof-indirect-call-support", cl::init(true), cl::Hidden,
+    cl::desc(
+        "Enable MemProf support for summarizing and cloning indirect calls"));
+
 extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
@@ -404,6 +409,11 @@ static void computeFunctionSummary(
       if (HasLocalsInUsedOrAsm && CI && CI->isInlineAsm())
         HasInlineAsmMaybeReferencingInternal = true;
 
+      // Compute this once per indirect call.
+      uint32_t NumCandidates = 0;
+      uint64_t TotalCount = 0;
+      MutableArrayRef<InstrProfValueData> CandidateProfileData;
+
       auto *CalledValue = CB->getCalledOperand();
       auto *CalledFunction = CB->getCalledFunction();
       if (CalledValue && !CalledFunction) {
@@ -481,9 +491,7 @@ static void computeFunctionSummary(
           }
         }
 
-        uint32_t NumCandidates;
-        uint64_t TotalCount;
-        auto CandidateProfileData =
+        CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(&I, TotalCount,
                                                                NumCandidates);
         for (const auto &Candidate : CandidateProfileData)
@@ -493,16 +501,6 @@ static void computeFunctionSummary(
 
       // Summarize memprof related metadata. This is only needed for ThinLTO.
       if (!IsThinLTO)
-        continue;
-
-      // TODO: Skip indirect calls for now. Need to handle these better, likely
-      // by creating multiple Callsites, one per target, then speculatively
-      // devirtualize while applying clone info in the ThinLTO backends. This
-      // will also be important because we will have a different set of clone
-      // versions per target. This handling needs to match that in the ThinLTO
-      // backend so we handle things consistently for matching of callsite
-      // summaries to instructions.
-      if (!CalledFunction)
         continue;
 
       // Ensure we keep this analysis in sync with the handling in the ThinLTO
@@ -555,13 +553,24 @@ static void computeFunctionSummary(
         SmallVector<unsigned> StackIdIndices;
         for (auto StackId : InstCallsite)
           StackIdIndices.push_back(Index.addOrGetStackIdIndex(StackId));
-        // Use the original CalledValue, in case it was an alias. We want
-        // to record the call edge to the alias in that case. Eventually
-        // an alias summary will be created to associate the alias and
-        // aliasee.
-        auto CalleeValueInfo =
-            Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
-        Callsites.push_back({CalleeValueInfo, StackIdIndices});
+        if (CalledFunction) {
+          // Use the original CalledValue, in case it was an alias. We want
+          // to record the call edge to the alias in that case. Eventually
+          // an alias summary will be created to associate the alias and
+          // aliasee.
+          auto CalleeValueInfo =
+              Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
+          Callsites.push_back({CalleeValueInfo, StackIdIndices});
+        } else if (EnableMemProfIndirectCallSupport) {
+          // For indirect callsites, create multiple Callsites, one per target.
+          // This enables having a different set of clone versions per target,
+          // and we will apply the cloning decisions while speculatively
+          // devirtualizing in the ThinLTO backends.
+          for (const auto &Candidate : CandidateProfileData) {
+            auto CalleeValueInfo = Index.getOrInsertValueInfo(Candidate.Value);
+            Callsites.push_back({CalleeValueInfo, StackIdIndices});
+          }
+        }
       }
     }
   }
@@ -1214,9 +1223,13 @@ bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
     if (CI && CalledFunction->isIntrinsic())
       return false;
   } else {
-    // TODO: For now skip indirect calls. See comments in
-    // computeFunctionSummary for what is needed to handle this.
-    return false;
+    // Skip inline assembly calls.
+    if (CI && CI->isInlineAsm())
+      return false;
+    // Skip direct calls via Constant.
+    if (!CalledValue || isa<Constant>(CalledValue))
+      return false;
+    return true;
   }
   return true;
 }

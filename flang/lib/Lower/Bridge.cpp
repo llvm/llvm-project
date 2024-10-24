@@ -1317,7 +1317,8 @@ private:
                                      bool isUnordered) {
     if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
         sym.has<Fortran::semantics::UseDetails>()) {
-      if (!shallowLookupSymbol(sym)) {
+      if (!shallowLookupSymbol(sym) &&
+          !sym.test(Fortran::semantics::Symbol::Flag::OmpShared)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
         mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
@@ -3256,15 +3257,10 @@ private:
         const Fortran::parser::CharBlock &endPosition =
             eval.getLastNestedEvaluation().position;
         localSymbols.pushScope();
-        mlir::func::FuncOp stackSave = fir::factory::getLlvmStackSave(*builder);
-        mlir::func::FuncOp stackRestore =
-            fir::factory::getLlvmStackRestore(*builder);
-        mlir::Value stackPtr =
-            builder->create<fir::CallOp>(toLocation(), stackSave).getResult(0);
+        mlir::Value stackPtr = builder->genStackSave(toLocation());
         mlir::Location endLoc = genLocation(endPosition);
-        stmtCtx.attachCleanup([=]() {
-          builder->create<fir::CallOp>(endLoc, stackRestore, stackPtr);
-        });
+        stmtCtx.attachCleanup(
+            [=]() { builder->genStackRestore(endLoc, stackPtr); });
         Fortran::semantics::Scope &scope =
             bridge.getSemanticsContext().FindScope(endPosition);
         scopeBlockIdMap.try_emplace(&scope, ++blockId);
@@ -5327,10 +5323,8 @@ private:
           LLVM_ATTRIBUTE_UNUSED auto getBitWidth = [this](mlir::Type ty) {
             // 15.6.2.6.3: differering result types should be integer, real,
             // complex or logical
-            if (auto cmplx = mlir::dyn_cast_or_null<fir::ComplexType>(ty)) {
-              fir::KindTy kind = cmplx.getFKind();
-              return 2 * builder->getKindMap().getRealBitsize(kind);
-            }
+            if (auto cmplx = mlir::dyn_cast_or_null<mlir::ComplexType>(ty))
+              return 2 * cmplx.getElementType().getIntOrFloatBitWidth();
             if (auto logical = mlir::dyn_cast_or_null<fir::LogicalType>(ty)) {
               fir::KindTy kind = logical.getFKind();
               return builder->getKindMap().getLogicalBitsize(kind);
@@ -6068,7 +6062,9 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::TargetMachine &targetMachine, const llvm::StringRef tuneCPU)
+    const llvm::TargetMachine &targetMachine,
+    const Fortran::frontend::TargetOptions &targetOpts,
+    const Fortran::frontend::CodeGenOptions &cgOpts)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -6125,11 +6121,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
   fir::setTargetCPU(*module.get(), targetMachine.getTargetCPU());
-  fir::setTuneCPU(*module.get(), tuneCPU);
+  fir::setTuneCPU(*module.get(), targetOpts.cpuToTuneFor);
   fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module.get(),
                                   targetMachine.createDataLayout());
   fir::setIdent(*module.get(), Fortran::common::getFlangFullVersion());
+  if (cgOpts.RecordCommandLine)
+    fir::setCommandline(*module.get(), *cgOpts.RecordCommandLine);
 }
 
 void Fortran::lower::genCleanUpInRegionIfAny(

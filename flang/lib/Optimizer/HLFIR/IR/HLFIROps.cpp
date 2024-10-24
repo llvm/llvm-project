@@ -360,14 +360,11 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
       return emitOpError("substring must contain 2 indices when provided");
   }
   if (getComplexPart()) {
-    if (!fir::isa_complex(outputElementType))
+    if (auto cplx = mlir::dyn_cast<mlir::ComplexType>(outputElementType))
+      outputElementType = cplx.getElementType();
+    else
       return emitOpError("memref or component must have complex type if "
                          "complex_part is provided");
-    if (auto firCplx = mlir::dyn_cast<fir::ComplexType>(outputElementType))
-      outputElementType = firCplx.getElementType();
-    else
-      outputElementType =
-          mlir::cast<mlir::ComplexType>(outputElementType).getElementType();
   }
   mlir::Type resultBaseType =
       getFortranElementOrSequenceType(getResult().getType());
@@ -383,9 +380,7 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
   // length may differ because of substrings.
   if (resultElementType != outputElementType &&
       !(mlir::isa<fir::CharacterType>(resultElementType) &&
-        mlir::isa<fir::CharacterType>(outputElementType)) &&
-      !(mlir::isa<mlir::FloatType>(resultElementType) &&
-        mlir::isa<fir::RealType>(outputElementType)))
+        mlir::isa<fir::CharacterType>(outputElementType)))
     return emitOpError(
                "result element type is not consistent with operands, expected ")
            << outputElementType;

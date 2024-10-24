@@ -17,14 +17,19 @@ namespace LIBC_NAMESPACE_DECL {
 
 // This calls the associated function pointer on the RPC server with the given
 // arguments. We expect that the pointer here is a valid pointer on the server.
-LLVM_LIBC_FUNCTION(void, rpc_host_call, (void *fn, void *data, size_t size)) {
+LLVM_LIBC_FUNCTION(unsigned long long, rpc_host_call,
+                   (void *fn, void *data, size_t size)) {
   rpc::Client::Port port = rpc::client.open<RPC_HOST_CALL>();
   port.send_n(data, size);
   port.send([=](rpc::Buffer *buffer) {
     buffer->data[0] = reinterpret_cast<uintptr_t>(fn);
   });
-  port.recv([](rpc::Buffer *) {});
+  unsigned long long ret;
+  port.recv([&](rpc::Buffer *buffer) {
+    ret = static_cast<unsigned long long>(buffer->data[0]);
+  });
   port.close();
+  return ret;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

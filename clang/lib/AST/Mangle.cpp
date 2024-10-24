@@ -574,9 +574,9 @@ private:
     std::string BackendBuf;
     llvm::raw_string_ostream BOS(BackendBuf);
 
-    llvm::Mangler::getNameWithPrefix(BOS, FOS.str(), DL);
+    llvm::Mangler::getNameWithPrefix(BOS, FrontendBuf, DL);
 
-    return BOS.str();
+    return BackendBuf;
   }
 
   std::string getMangledThunk(const CXXMethodDecl *MD, const ThunkInfo &T,
@@ -589,9 +589,9 @@ private:
     std::string BackendBuf;
     llvm::raw_string_ostream BOS(BackendBuf);
 
-    llvm::Mangler::getNameWithPrefix(BOS, FOS.str(), DL);
+    llvm::Mangler::getNameWithPrefix(BOS, FrontendBuf, DL);
 
-    return BOS.str();
+    return BackendBuf;
   }
 };
 

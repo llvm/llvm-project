@@ -1274,4 +1274,35 @@ TEST(FixedPoint, div) {
                                               true, false, false)));
 }
 
+TEST(FixedPoint, semanticsSerialization) {
+  auto roundTrip = [](FixedPointSemantics FPS) -> bool {
+    uint32_t I = FPS.toOpaqueInt();
+    FixedPointSemantics FPS2 = FixedPointSemantics::getFromOpaqueInt(I);
+    return FPS == FPS2;
+  };
+
+  ASSERT_TRUE(roundTrip(getS32Pos2()));
+  ASSERT_TRUE(roundTrip(getU8Pos4()));
+  ASSERT_TRUE(roundTrip(getS16Neg18()));
+  ASSERT_TRUE(roundTrip(getU8Neg10()));
+  ASSERT_TRUE(roundTrip(getPadULFractSema()));
+  ASSERT_TRUE(roundTrip(getPadUFractSema()));
+  ASSERT_TRUE(roundTrip(getPadUSFractSema()));
+  ASSERT_TRUE(roundTrip(getPadULAccumSema()));
+  ASSERT_TRUE(roundTrip(getPadUAccumSema()));
+  ASSERT_TRUE(roundTrip(getPadUSAccumSema()));
+  ASSERT_TRUE(roundTrip(getULFractSema()));
+  ASSERT_TRUE(roundTrip(getUFractSema()));
+  ASSERT_TRUE(roundTrip(getUSFractSema()));
+  ASSERT_TRUE(roundTrip(getULAccumSema()));
+  ASSERT_TRUE(roundTrip(getUAccumSema()));
+  ASSERT_TRUE(roundTrip(getUSAccumSema()));
+  ASSERT_TRUE(roundTrip(getLFractSema()));
+  ASSERT_TRUE(roundTrip(getFractSema()));
+  ASSERT_TRUE(roundTrip(getSFractSema()));
+  ASSERT_TRUE(roundTrip(getLAccumSema()));
+  ASSERT_TRUE(roundTrip(getAccumSema()));
+  ASSERT_TRUE(roundTrip(getSAccumSema()));
+}
+
 } // namespace

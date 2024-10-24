@@ -148,6 +148,17 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   unsigned Opcode = MI.getOpcode();
   LLT DstTy = MRI.getType(R);
 
+#ifndef NDEBUG
+  if (DstTy.isFixedVector()) {
+    assert(
+        DstTy.getNumElements() == DemandedElts.getBitWidth() &&
+        "DemandedElt width should equal the fixed vector number of elements");
+  } else {
+    assert(DemandedElts.getBitWidth() == 1 && DemandedElts == APInt(1, 1) &&
+           "DemandedElt width should be 1 for scalars or scalable vectors");
+  }
+#endif
+
   // Handle the case where this is called on a register that does not have a
   // type constraint (i.e. it has a register class constraint instead). This is
   // unlikely to occur except by looking through copies but it is possible for
@@ -196,7 +207,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
       if (!DemandedElts[i])
         continue;
 
-      computeKnownBitsImpl(MI.getOperand(i + 1).getReg(), Known2, DemandedElts,
+      computeKnownBitsImpl(MI.getOperand(i + 1).getReg(), Known2, APInt(1, 1),
                            Depth + 1);
 
       // Known bits are the values that are shared by every demanded element.

@@ -230,6 +230,10 @@ private:
       if (auto AllScopes = boolValue(N, "AllScopes"))
         F.AllScopes = *AllScopes;
     });
+    Dict.handle("ArgumentLists", [&](Node &N) {
+      if (auto ArgumentLists = scalarValue(N, "ArgumentLists"))
+        F.ArgumentLists = *ArgumentLists;
+    });
     Dict.parse(N);
   }
 

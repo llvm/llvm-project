@@ -800,6 +800,17 @@ public:
   }
 };
 
+/// Represents an extract subvector.
+class GExtractSubvector : public GenericMachineInstr {
+public:
+  Register getSrcVec() const { return getOperand(1).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(2).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_EXTRACT_SUBVECTOR;
+  }
+};
+
 /// Represents a freeze.
 class GFreeze : public GenericMachineInstr {
 public:
@@ -823,6 +834,8 @@ public:
     case TargetOpcode::G_FPEXT:
     case TargetOpcode::G_FPTOSI:
     case TargetOpcode::G_FPTOUI:
+    case TargetOpcode::G_FPTOSI_SAT:
+    case TargetOpcode::G_FPTOUI_SAT:
     case TargetOpcode::G_FPTRUNC:
     case TargetOpcode::G_INTTOPTR:
     case TargetOpcode::G_PTRTOINT:
@@ -947,6 +960,16 @@ public:
     default:
       return false;
     }
+  };
+};
+
+/// Represents a splat vector.
+class GSplatVector : public GenericMachineInstr {
+public:
+  Register getScalarReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
   };
 };
 

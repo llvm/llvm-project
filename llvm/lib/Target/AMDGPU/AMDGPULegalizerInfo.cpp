@@ -289,9 +289,11 @@ static const LLT F64 = LLT::float64();
 static const LLT S96 = LLT::scalar(96);
 static const LLT S128 = LLT::scalar(128);
 static const LLT S160 = LLT::scalar(160);
+static const LLT S192 = LLT::scalar(192);
 static const LLT S224 = LLT::scalar(224);
 static const LLT S256 = LLT::scalar(256);
 static const LLT S512 = LLT::scalar(512);
+static const LLT S1024 = LLT::scalar(1024);
 static const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
 
 static const LLT V2S8 = LLT::fixed_vector(2, 8);
@@ -332,8 +334,8 @@ static const LLT V16S64 = LLT::fixed_vector(16, 64);
 static const LLT V2S128 = LLT::fixed_vector(2, 128);
 static const LLT V4S128 = LLT::fixed_vector(4, 128);
 
-static std::initializer_list<LLT> AllScalarTypes = {S32,  S64,  S96,  S128,
-                                                    S160, S224, S256, S512};
+static std::initializer_list<LLT> AllScalarTypes = {
+    S32, S64, S96, S128, S160, S192, S224, S256, S512, S1024};
 
 static std::initializer_list<LLT> AllS16Vectors{
     V2S16, V4S16, V6S16, V8S16, V10S16, V12S16, V16S16, V2S128, V4S128};
@@ -889,10 +891,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S16, S64);
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
-      .legalIf(isRegisterType(0))
+      .legalIf(isRegisterClassType(0))
       // s1 and s16 are special cases because they have legal operations on
       // them, but don't really occupy registers in the normal way.
       .legalFor({S1, S16})
+      .clampNumElements(0, V16S32, V32S32)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .clampScalarOrElt(0, S32, MaxScalar)
       .widenScalarToNextPow2(0, 32)
@@ -4799,7 +4802,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn) ||
                             MF.getTarget().Options.UnsafeFPMath;
 
-  if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
+  if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
     if (!AllowInaccurateRcp && ResTy != LLT::scalar(16))
       return false;
 
@@ -4900,16 +4903,40 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   LLT S16 = LLT::scalar(16);
   LLT S32 = LLT::scalar(32);
 
+  // a32.u = opx(V_CVT_F32_F16, a.u); // CVT to F32
+  // b32.u = opx(V_CVT_F32_F16, b.u); // CVT to F32
+  // r32.u = opx(V_RCP_F32, b32.u); // rcp = 1 / d
+  // q32.u = opx(V_MUL_F32, a32.u, r32.u); // q = n * rcp
+  // e32.u = opx(V_MAD_F32, (b32.u^_neg32), q32.u, a32.u); // err = -d * q + n
+  // q32.u = opx(V_MAD_F32, e32.u, r32.u, q32.u); // q = n * rcp
+  // e32.u = opx(V_MAD_F32, (b32.u^_neg32), q32.u, a32.u); // err = -d * q + n
+  // tmp.u = opx(V_MUL_F32, e32.u, r32.u);
+  // tmp.u = opx(V_AND_B32, tmp.u, 0xff800000)
+  // q32.u = opx(V_ADD_F32, tmp.u, q32.u);
+  // q16.u = opx(V_CVT_F16_F32, q32.u);
+  // q16.u = opx(V_DIV_FIXUP_F16, q16.u, b.u, a.u); // q = touchup(q, d, n)
+
   auto LHSExt = B.buildFPExt(S32, LHS, Flags);
   auto RHSExt = B.buildFPExt(S32, RHS, Flags);
-
-  auto RCP = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {S32})
+  auto NegRHSExt = B.buildFNeg(S32, RHSExt);
+  auto Rcp = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {S32})
                  .addUse(RHSExt.getReg(0))
                  .setMIFlags(Flags);
-
-  auto QUOT = B.buildFMul(S32, LHSExt, RCP, Flags);
-  auto RDst = B.buildFPTrunc(S16, QUOT, Flags);
-
+  auto Quot = B.buildFMul(S32, LHSExt, Rcp, Flags);
+  MachineInstrBuilder Err;
+  if (ST.hasMadMacF32Insts()) {
+    Err = B.buildFMAD(S32, NegRHSExt, Quot, LHSExt, Flags);
+    Quot = B.buildFMAD(S32, Err, Rcp, Quot, Flags);
+    Err = B.buildFMAD(S32, NegRHSExt, Quot, LHSExt, Flags);
+  } else {
+    Err = B.buildFMA(S32, NegRHSExt, Quot, LHSExt, Flags);
+    Quot = B.buildFMA(S32, Err, Rcp, Quot, Flags);
+    Err = B.buildFMA(S32, NegRHSExt, Quot, LHSExt, Flags);
+  }
+  auto Tmp = B.buildFMul(S32, Err, Rcp, Flags);
+  Tmp = B.buildAnd(S32, Tmp, B.buildConstant(S32, 0xff800000));
+  Quot = B.buildFAdd(S32, Tmp, Quot, Flags);
+  auto RDst = B.buildFPTrunc(S16, Quot, Flags);
   B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, Res)
       .addUse(RDst.getReg(0))
       .addUse(RHS)

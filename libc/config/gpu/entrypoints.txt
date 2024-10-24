@@ -191,6 +191,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.at_quick_exit
     libc.src.stdlib.quick_exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.system
 
     # TODO: Implement these correctly
     libc.src.stdlib.aligned_alloc
@@ -239,6 +240,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.remove
+    libc.src.stdio.rename
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout

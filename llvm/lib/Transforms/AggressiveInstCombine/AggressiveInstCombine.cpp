@@ -172,7 +172,8 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   //   %cond = phi i32 [ %fsh, %FunnelBB ], [ %ShVal0, %GuardBB ]
   // -->
   // llvm.fshl.i32(i32 %ShVal0, i32 %ShVal1, i32 %ShAmt)
-  Function *F = Intrinsic::getDeclaration(Phi.getModule(), IID, Phi.getType());
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(Phi.getModule(), IID, Phi.getType());
   Phi.replaceAllUsesWith(Builder.CreateCall(F, {ShVal0, ShVal1, ShAmt}));
   return true;
 }
@@ -331,7 +332,7 @@ static bool tryToRecognizePopCount(Instruction &I) {
                                 m_SpecificInt(Mask55)))) {
           LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
           IRBuilder<> Builder(&I);
-          Function *Func = Intrinsic::getDeclaration(
+          Function *Func = Intrinsic::getOrInsertDeclaration(
               I.getModule(), Intrinsic::ctpop, I.getType());
           I.replaceAllUsesWith(Builder.CreateCall(Func, {Root}));
           ++NumPopCountRecognized;
@@ -398,8 +399,8 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
     return false;
 
   IRBuilder<> Builder(&I);
-  Function *Fn = Intrinsic::getDeclaration(I.getModule(), Intrinsic::fptosi_sat,
-                                           {SatTy, FpTy});
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      I.getModule(), Intrinsic::fptosi_sat, {SatTy, FpTy});
   Value *Sat = Builder.CreateCall(Fn, In);
   I.replaceAllUsesWith(Builder.CreateSExt(Sat, IntTy));
   return true;
@@ -431,7 +432,7 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());
 
-    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
+    Function *Sqrt = Intrinsic::getOrInsertDeclaration(M, Intrinsic::sqrt, Ty);
     Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
@@ -843,7 +844,7 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
   // Return a minimum gep stride, greatest common divisor of consective gep
   // index scales(c.f. Bézout's identity).
   while (auto *GEP = dyn_cast<GEPOperator>(PtrOp)) {
-    MapVector<Value *, APInt> VarOffsets;
+    SmallMapVector<Value *, APInt, 4> VarOffsets;
     if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset))
       break;
 
@@ -1052,6 +1053,13 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
   auto &Ctx = CI->getContext();
   IRBuilder<> B(Ctx);
+  // We want these instructions to be recognized as inlined instructions for the
+  // compare call, but we don't have a source location for the definition of
+  // that function, since we're generating that code now. Because the generated
+  // code is a viable point for a memory access error, we make the pragmatic
+  // choice here to directly use CI's location so that we have useful
+  // attribution for the generated code.
+  B.SetCurrentDebugLocation(CI->getDebugLoc());
 
   BasicBlock *BBCI = CI->getParent();
   BasicBlock *BBTail =

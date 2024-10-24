@@ -334,7 +334,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     if (UseStackGuard) {
       Value *Val = Builder.CreateLoad(Int32Ty, Cookie);
       Value *FrameAddr = Builder.CreateCall(
-          Intrinsic::getDeclaration(
+          Intrinsic::getOrInsertDeclaration(
               TheModule, Intrinsic::frameaddress,
               Builder.getPtrTy(
                   TheModule->getDataLayout().getAllocaAddrSpace())),
@@ -370,7 +370,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
 
 Value *WinEHStatePass::emitEHLSDA(IRBuilder<> &Builder, Function *F) {
   return Builder.CreateCall(
-      Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_lsda), F);
+      Intrinsic::getOrInsertDeclaration(TheModule, Intrinsic::x86_seh_lsda), F);
 }
 
 /// Generate a thunk that puts the LSDA of ParentFunc in EAX and then calls
@@ -423,7 +423,7 @@ void WinEHStatePass::linkExceptionRegistration(IRBuilder<> &Builder,
   // Handler = Handler
   Builder.CreateStore(Handler, Builder.CreateStructGEP(LinkTy, Link, 1));
   // Next = [fs:00]
-  Constant *FSZero = Constant::getNullValue(PointerType::get(C, 257));
+  Constant *FSZero = Constant::getNullValue(PointerType::get(C, X86AS::FS));
   Value *Next = Builder.CreateLoad(PointerType::getUnqual(C), FSZero);
   Builder.CreateStore(Next, Builder.CreateStructGEP(LinkTy, Link, 0));
   // [fs:00] = Link
@@ -443,7 +443,7 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
   // [fs:00] = Link->Next
   Value *Next = Builder.CreateLoad(PointerType::getUnqual(C),
                                    Builder.CreateStructGEP(LinkTy, Link, 0));
-  Constant *FSZero = Constant::getNullValue(PointerType::get(C, 257));
+  Constant *FSZero = Constant::getNullValue(PointerType::get(C, X86AS::FS));
   Builder.CreateStore(Next, FSZero);
 }
 
@@ -624,17 +624,17 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   // that it can recover the original frame pointer.
   IRBuilder<> Builder(RegNode->getNextNode());
   Value *RegNodeI8 = Builder.CreateBitCast(RegNode, Builder.getPtrTy());
-  Builder.CreateCall(
-      Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_ehregnode),
-      {RegNodeI8});
+  Builder.CreateCall(Intrinsic::getOrInsertDeclaration(
+                         TheModule, Intrinsic::x86_seh_ehregnode),
+                     {RegNodeI8});
 
   if (EHGuardNode) {
     IRBuilder<> Builder(EHGuardNode->getNextNode());
     Value *EHGuardNodeI8 =
         Builder.CreateBitCast(EHGuardNode, Builder.getPtrTy());
-    Builder.CreateCall(
-        Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_ehguard),
-        {EHGuardNodeI8});
+    Builder.CreateCall(Intrinsic::getOrInsertDeclaration(
+                           TheModule, Intrinsic::x86_seh_ehguard),
+                       {EHGuardNodeI8});
   }
 
   // Calculate state numbers.

@@ -72,7 +72,7 @@ static StringRef extractOmpClauseName(const Record *clause) {
   assert(ompClause && "base OpenMP records expected to be defined");
 
   StringRef clauseClassName;
-  SmallVector<Record *, 1> clauseSuperClasses;
+  SmallVector<const Record *, 1> clauseSuperClasses;
   clause->getDirectSuperClasses(clauseSuperClasses);
 
   // Check if OpenMP_Clause is a direct superclass.
@@ -112,13 +112,17 @@ static bool verifyArgument(DagInit *arguments, StringRef argName,
       });
 }
 
-/// Check that the given string record value, identified by its name \c value,
+/// Check that the given string record value, identified by its \c opValueName,
 /// is either undefined or empty in both the given operation and clause record
 /// or its contents for the clause record are contained in the operation record.
-static bool verifyStringValue(StringRef value, const Record *op,
-                              const Record *clause) {
-  auto opValue = op->getValueAsOptionalString(value);
-  auto clauseValue = clause->getValueAsOptionalString(value);
+/// Passing a non-empty \c clauseValueName enables checking values named
+/// differently in the operation and clause records.
+static bool verifyStringValue(const Record *op, const Record *clause,
+                              StringRef opValueName,
+                              StringRef clauseValueName = {}) {
+  auto opValue = op->getValueAsOptionalString(opValueName);
+  auto clauseValue = clause->getValueAsOptionalString(
+      clauseValueName.empty() ? opValueName : clauseValueName);
 
   bool opHasValue = opValue && !opValue->trim().empty();
   bool clauseHasValue = clauseValue && !clauseValue->trim().empty();
@@ -154,16 +158,25 @@ static void verifyClause(const Record *op, const Record *clause) {
   }
 
   if (!clause->getValueAsBit("ignoreAsmFormat") &&
-      !verifyStringValue("assemblyFormat", op, clause))
+      !verifyStringValue(op, clause, "assemblyFormat", "reqAssemblyFormat"))
     PrintWarning(
         op->getLoc(),
         "'" + clauseClassName +
-            "' clause-defined `assemblyFormat` not present in operation. "
-            "Consider concatenating `clausesAssemblyFormat` or explicitly "
-            "skipping this field.");
+            "' clause-defined `reqAssemblyFormat` not present in operation. "
+            "Consider concatenating `clauses[{Req,Opt}]AssemblyFormat` or "
+            "explicitly skipping this field.");
+
+  if (!clause->getValueAsBit("ignoreAsmFormat") &&
+      !verifyStringValue(op, clause, "assemblyFormat", "optAssemblyFormat"))
+    PrintWarning(
+        op->getLoc(),
+        "'" + clauseClassName +
+            "' clause-defined `optAssemblyFormat` not present in operation. "
+            "Consider concatenating `clauses[{Req,Opt}]AssemblyFormat` or "
+            "explicitly skipping this field.");
 
   if (!clause->getValueAsBit("ignoreDesc") &&
-      !verifyStringValue("description", op, clause))
+      !verifyStringValue(op, clause, "description"))
     PrintError(op->getLoc(),
                "'" + clauseClassName +
                    "' clause-defined `description` not present in operation. "
@@ -171,7 +184,7 @@ static void verifyClause(const Record *op, const Record *clause) {
                    "skipping this field.");
 
   if (!clause->getValueAsBit("ignoreExtraDecl") &&
-      !verifyStringValue("extraClassDeclaration", op, clause))
+      !verifyStringValue(op, clause, "extraClassDeclaration"))
     PrintWarning(
         op->getLoc(),
         "'" + clauseClassName +
@@ -197,7 +210,7 @@ static void verifyClause(const Record *op, const Record *clause) {
 ///         type.
 static StringRef translateArgumentType(ArrayRef<SMLoc> loc, StringInit *name,
                                        Init *init, int &nest, int &rank) {
-  Record *def = cast<DefInit>(init)->getDef();
+  const Record *def = cast<DefInit>(init)->getDef();
 
   llvm::StringSet<> superClasses;
   for (auto [sc, _] : def->getSuperClasses())
@@ -305,7 +318,7 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
     return;
 
   SmallVector<std::string> clauseNames;
-  for (Record *clause : op->getValueAsListOfDefs("clauseList"))
+  for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
     clauseNames.push_back((extractOmpClauseName(clause) + "ClauseOps").str());
 
   StringRef opName = stripPrefixAndSuffix(
@@ -315,8 +328,8 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
 
 /// Verify that all properties of `OpenMP_Clause`s of records deriving from
 /// `OpenMP_Op`s have been inherited by the latter.
-static bool verifyDecls(const RecordKeeper &recordKeeper, raw_ostream &) {
-  for (const Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op")) {
+static bool verifyDecls(const RecordKeeper &records, raw_ostream &) {
+  for (const Record *op : records.getAllDerivedDefinitions("OpenMP_Op")) {
     for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
       verifyClause(op, clause);
   }
@@ -328,16 +341,15 @@ static bool verifyDecls(const RecordKeeper &recordKeeper, raw_ostream &) {
 /// `OpenMP_Clause` definitions and aggregate them into operation-specific
 /// structures according to the `clauses` argument of each definition deriving
 /// from `OpenMP_Op`.
-static bool genClauseOps(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static bool genClauseOps(const RecordKeeper &records, raw_ostream &os) {
   mlir::tblgen::NamespaceEmitter ns(os, "mlir::omp");
-  for (const Record *clause :
-       recordKeeper.getAllDerivedDefinitions("OpenMP_Clause"))
+  for (const Record *clause : records.getAllDerivedDefinitions("OpenMP_Clause"))
     genClauseOpsStruct(clause, os);
 
   // Produce base mixin class.
   os << baseMixinClass;
 
-  for (const Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op"))
+  for (const Record *op : records.getAllDerivedDefinitions("OpenMP_Op"))
     genOperandsDef(op, os);
 
   return false;

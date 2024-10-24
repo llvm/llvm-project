@@ -1,0 +1,4 @@
+call-stack-contains:MallocViolation
+call-stack-contains:std::*vector
+call-stack-contains:free
+call-stack-contains:BlockFunc

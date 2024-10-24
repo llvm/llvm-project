@@ -14,6 +14,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
@@ -118,13 +119,13 @@ LLVM_LIBC_FUNCTION(float16, exp10f16, (float16 x)) {
   if (LIBC_UNLIKELY((x_u & ~(0x3c00U | 0x4000U | 0x4200U | 0x4400U)) == 0)) {
     switch (x_u) {
     case 0x3c00U: // x = 1.0f16
-      return static_cast<float16>(10.0);
+      return fputil::cast<float16>(10.0);
     case 0x4000U: // x = 2.0f16
-      return static_cast<float16>(100.0);
+      return fputil::cast<float16>(100.0);
     case 0x4200U: // x = 3.0f16
-      return static_cast<float16>(1'000.0);
+      return fputil::cast<float16>(1'000.0);
     case 0x4400U: // x = 4.0f16
-      return static_cast<float16>(10'000.0);
+      return fputil::cast<float16>(10'000.0);
     }
   }
 
@@ -164,7 +165,7 @@ LLVM_LIBC_FUNCTION(float16, exp10f16, (float16 x)) {
   //   > 1 + x * P;
   float exp10_lo = fputil::polyeval(lo, 0x1p+0f, 0x1.26bb14p+1f, 0x1.53526p+1f,
                                     0x1.04b434p+1f, 0x1.2bcf9ep+0f);
-  return static_cast<float16>(exp2_hi_mid * exp10_lo);
+  return fputil::cast<float16>(exp2_hi_mid * exp10_lo);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

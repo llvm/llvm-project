@@ -93,22 +93,28 @@ Log::MaskType Log::GetFlags(llvm::raw_ostream &stream,
 }
 
 void Log::Enable(const std::shared_ptr<LogHandler> &handler_sp,
-                 uint32_t options, Log::MaskType flags) {
+                 std::optional<Log::MaskType> flags, uint32_t options) {
   llvm::sys::ScopedWriter lock(m_mutex);
 
-  MaskType mask = m_mask.fetch_or(flags, std::memory_order_relaxed);
-  if (mask | flags) {
+  if (!flags)
+    flags = m_channel.default_flags;
+
+  MaskType mask = m_mask.fetch_or(*flags, std::memory_order_relaxed);
+  if (mask | *flags) {
     m_options.store(options, std::memory_order_relaxed);
     m_handler = handler_sp;
     m_channel.log_ptr.store(this, std::memory_order_relaxed);
   }
 }
 
-void Log::Disable(Log::MaskType flags) {
+void Log::Disable(std::optional<Log::MaskType> flags) {
   llvm::sys::ScopedWriter lock(m_mutex);
 
-  MaskType mask = m_mask.fetch_and(~flags, std::memory_order_relaxed);
-  if (!(mask & ~flags)) {
+  if (!flags)
+    flags = std::numeric_limits<MaskType>::max();
+
+  MaskType mask = m_mask.fetch_and(~(*flags), std::memory_order_relaxed);
+  if (!(mask & ~(*flags))) {
     m_handler.reset();
     m_channel.log_ptr.store(nullptr, std::memory_order_relaxed);
   }
@@ -230,10 +236,11 @@ bool Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
     error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
     return false;
   }
-  MaskType flags = categories.empty()
-                       ? iter->second.m_channel.default_flags
-                       : GetFlags(error_stream, *iter, categories);
-  iter->second.Enable(log_handler_sp, log_options, flags);
+
+  auto flags = categories.empty() ? std::optional<MaskType>{}
+                                  : GetFlags(error_stream, *iter, categories);
+
+  iter->second.Enable(log_handler_sp, flags, log_options);
   return true;
 }
 
@@ -245,9 +252,10 @@ bool Log::DisableLogChannel(llvm::StringRef channel,
     error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
     return false;
   }
-  MaskType flags = categories.empty()
-                       ? std::numeric_limits<MaskType>::max()
-                       : GetFlags(error_stream, *iter, categories);
+
+  auto flags = categories.empty() ? std::optional<MaskType>{}
+                                  : GetFlags(error_stream, *iter, categories);
+
   iter->second.Disable(flags);
   return true;
 }
@@ -374,7 +382,7 @@ void Log::Format(llvm::StringRef file, llvm::StringRef function,
   llvm::raw_string_ostream message(message_string);
   WriteHeader(message, file, function);
   message << payload << "\n";
-  WriteMessage(message.str());
+  WriteMessage(message_string);
 }
 
 StreamLogHandler::StreamLogHandler(int fd, bool should_close,

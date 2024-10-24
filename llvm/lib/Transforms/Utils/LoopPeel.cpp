@@ -859,7 +859,7 @@ static void cloneLoopBlocks(
       if (LatchInst && L->contains(LatchInst))
         LatchVal = VMap[LatchVal];
       PHI.addIncoming(LatchVal, cast<BasicBlock>(VMap[Edge.first]));
-      SE.forgetValue(&PHI);
+      SE.forgetLcssaPhiWithNewPredecessor(L, &PHI);
     }
 
   // LastValueMap is updated with the values for the current loop

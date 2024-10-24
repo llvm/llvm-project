@@ -1658,8 +1658,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        ".cfi.jumptable", &M);
   ArrayType *JumpTableType =
       ArrayType::get(getJumpTableEntryType(), Functions.size());
-  auto JumpTable =
-      ConstantExpr::getPointerCast(JumpTableFn, JumpTableType->getPointerTo(0));
+  auto JumpTable = ConstantExpr::getPointerCast(
+      JumpTableFn, PointerType::getUnqual(M.getContext()));
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 

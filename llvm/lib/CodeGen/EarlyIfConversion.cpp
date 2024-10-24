@@ -163,8 +163,8 @@ private:
   void rewritePHIOperands();
 
 public:
-  /// runOnMachineFunction - Initialize per-function data structures.
-  void runOnMachineFunction(MachineFunction &MF) {
+  /// init - Initialize per-function data structures.
+  void init(MachineFunction &MF) {
     TII = MF.getSubtarget().getInstrInfo();
     TRI = MF.getSubtarget().getRegisterInfo();
     MRI = &MF.getRegInfo();
@@ -186,7 +186,6 @@ public:
                  bool Predicate = false);
 };
 } // end anonymous namespace
-
 
 /// canSpeculateInstrs - Returns true if all the instructions in MBB can safely
 /// be speculated. The terminators are not considered.
@@ -780,7 +779,7 @@ public:
   StringRef getPassName() const override { return "Early If-Conversion"; }
 
 private:
-  bool tryConvertIf(MachineBasicBlock*);
+  bool tryConvertIf(MachineBasicBlock *);
   void invalidateTraces();
   bool shouldConvertIf();
 };
@@ -1098,7 +1097,7 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   MinInstr = nullptr;
 
   bool Changed = false;
-  IfConv.runOnMachineFunction(MF);
+  IfConv.init(MF);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase
@@ -1233,7 +1232,7 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   bool Changed = false;
-  IfConv.runOnMachineFunction(MF);
+  IfConv.init(MF);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase

@@ -14,7 +14,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcCoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;

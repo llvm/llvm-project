@@ -35,7 +35,9 @@ public:
     case llvm::Triple::EABI:
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
       return true;
@@ -48,6 +50,7 @@ public:
     switch (getTarget().getTriple().getEnvironment()) {
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
       return true;
     default:

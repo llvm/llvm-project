@@ -570,6 +570,16 @@ def SI_INIT_EXEC_FROM_INPUT : SPseudoInstSI <
   let Defs = [EXEC];
 }
 
+// Sets EXEC to all lanes and returns the previous EXEC.
+def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
+  (outs SReg_1:$dst), (ins),
+  [(set i1:$dst, (int_amdgcn_init_whole_wave))]> {
+  let Defs = [EXEC];
+  let Uses = [EXEC];
+
+  let isConvergent = 1;
+}
+
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {
@@ -921,6 +931,7 @@ def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
+  let hasExtraDefRegAllocReq = 1;
   let Constraints = "$vdst = $vdst_in";
 }
 
@@ -931,6 +942,7 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
+  let hasExtraSrcRegAllocReq = 1;
 }
 } // End Spill = 1, VALU = 1, isConvergent = 1
 

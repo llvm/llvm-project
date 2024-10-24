@@ -229,7 +229,7 @@ bool EnumAttr::genSpecializedAttr() const {
   return def->getValueAsBit("genSpecializedAttr");
 }
 
-llvm::Record *EnumAttr::getBaseAttrClass() const {
+const llvm::Record *EnumAttr::getBaseAttrClass() const {
   return def->getValueAsDef("baseAttrClass");
 }
 

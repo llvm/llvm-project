@@ -120,6 +120,11 @@ AMDGPUOpenMPToolChain::GetCXXStdlibType(const ArgList &Args) const {
   return HostTC.GetCXXStdlibType(Args);
 }
 
+void AMDGPUOpenMPToolChain::AddClangCXXStdlibIncludeArgs(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args) const {
+  HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+}
+
 void AMDGPUOpenMPToolChain::AddClangSystemIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);

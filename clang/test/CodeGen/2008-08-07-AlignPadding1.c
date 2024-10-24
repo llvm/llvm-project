@@ -1,4 +1,5 @@
 /* RUN: %clang_cc1 %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
+/* RUN: %clang_cc1 %s -emit-llvm -triple x86_64-apple-darwin -o - -fexperimental-new-constant-interpreter | FileCheck %s
 
 The FE must generate padding here both at the end of each PyG_Head and
 between array elements.  Reduced from Python. */

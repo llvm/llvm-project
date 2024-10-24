@@ -11,7 +11,6 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILMetadata.h"
 #include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
@@ -174,8 +173,9 @@ public:
         AttrMask.addAttribute(I);
     }
 
-    dxil::ValidatorVersionMD ValVerMD(M);
-    VersionTuple ValVer = ValVerMD.getAsVersionTuple();
+    const dxil::ModuleMetadataInfo MetadataInfo =
+        getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+    VersionTuple ValVer = MetadataInfo.ValidatorVersion;
     bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
 
     for (auto &F : M.functions()) {
@@ -247,6 +247,7 @@ public:
 
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
@@ -260,6 +261,7 @@ char DXILPrepareModule::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_END(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module", false,
                     false)
 

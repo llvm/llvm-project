@@ -785,6 +785,9 @@ public:
   // A corrupted chunk will not be reported as owned, which is WAI.
   bool isOwned(const void *Ptr) {
     initThreadMaybe();
+    // If the allocation is not owned, the tags could be wrong.
+    ScopedDisableMemoryTagChecks x(
+        useMemoryTagging<AllocatorConfig>(Primary.Options.load()));
 #ifdef GWP_ASAN_HOOKS
     if (GuardedAlloc.pointerIsMine(Ptr))
       return true;

@@ -1144,7 +1144,8 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
         if (SubframeworkDirName.empty())
           break;
 
-        if (auto SubDir = FileMgr.getDirectory(SubframeworkDirName)) {
+        if (auto SubDir =
+                FileMgr.getOptionalDirectoryRef(SubframeworkDirName)) {
           if (*SubDir == FrameworkDir) {
             FoundParent = true;
             break;

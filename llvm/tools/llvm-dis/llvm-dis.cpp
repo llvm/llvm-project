@@ -191,10 +191,6 @@ int main(int argc, char **argv) {
   if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
     LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
 
-  LLVMContext Context;
-  Context.setDiagnosticHandler(
-      std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
-
   if (InputFilenames.size() < 1) {
     InputFilenames.push_back("-");
   } else if (InputFilenames.size() > 1 && !OutputFilename.empty()) {
@@ -203,7 +199,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  for (std::string InputFilename : InputFilenames) {
+  for (const auto &InputFilename : InputFilenames) {
+    // Use a fresh context for each input to avoid state
+    // cross-contamination across inputs (e.g. type name collisions).
+    LLVMContext Context;
+    Context.setDiagnosticHandler(
+        std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
+
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(InputFilename);
     if (std::error_code EC = BufferOrErr.getError()) {

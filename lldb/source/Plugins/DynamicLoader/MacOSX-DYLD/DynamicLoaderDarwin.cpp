@@ -594,7 +594,7 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   }
 }
 
-void DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
+bool DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
     ImageInfo &image_info) {
   if (image_info.header.filetype == llvm::MachO::MH_DYLINKER) {
     const bool can_create = true;
@@ -605,8 +605,10 @@ void DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
       target.GetImages().AppendIfNeeded(dyld_sp);
       UpdateImageLoadAddress(dyld_sp.get(), image_info);
       SetDYLDModule(dyld_sp);
+      return true;
     }
   }
+  return false;
 }
 
 std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {

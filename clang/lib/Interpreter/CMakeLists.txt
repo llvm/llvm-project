@@ -22,6 +22,7 @@ add_clang_library(clangInterpreter
   IncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
+  InterpreterValuePrinter.cpp
   InterpreterUtils.cpp
   Value.cpp
   ${WASM_SRC}

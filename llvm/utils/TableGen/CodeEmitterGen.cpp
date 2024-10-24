@@ -47,28 +47,30 @@ using namespace llvm;
 namespace {
 
 class CodeEmitterGen {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 
 public:
-  CodeEmitterGen(RecordKeeper &R) : Records(R) {}
+  CodeEmitterGen(const RecordKeeper &R) : Records(R) {}
 
   void run(raw_ostream &o);
 
 private:
-  int getVariableBit(const std::string &VarName, BitsInit *BI, int bit);
+  int getVariableBit(const std::string &VarName, const BitsInit *BI, int bit);
   std::pair<std::string, std::string>
-  getInstructionCases(Record *R, CodeGenTarget &Target);
-  void addInstructionCasesForEncoding(Record *R, const Record *EncodingDef,
-                                      CodeGenTarget &Target, std::string &Case,
+  getInstructionCases(const Record *R, const CodeGenTarget &Target);
+  void addInstructionCasesForEncoding(const Record *R,
+                                      const Record *EncodingDef,
+                                      const CodeGenTarget &Target,
+                                      std::string &Case,
                                       std::string &BitOffsetCase);
-  bool addCodeToMergeInOperand(Record *R, BitsInit *BI,
+  bool addCodeToMergeInOperand(const Record *R, const BitsInit *BI,
                                const std::string &VarName, std::string &Case,
                                std::string &BitOffsetCase,
-                               CodeGenTarget &Target);
+                               const CodeGenTarget &Target);
 
   void emitInstructionBaseValues(
       raw_ostream &o, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
-      CodeGenTarget &Target, unsigned HwMode = DefaultMode);
+      const CodeGenTarget &Target, unsigned HwMode = DefaultMode);
   void
   emitCaseMap(raw_ostream &o,
               const std::map<std::string, std::vector<std::string>> &CaseMap);
@@ -78,13 +80,13 @@ private:
 
 // If the VarBitInit at position 'bit' matches the specified variable then
 // return the variable bit position.  Otherwise return -1.
-int CodeEmitterGen::getVariableBit(const std::string &VarName, BitsInit *BI,
-                                   int bit) {
-  if (VarBitInit *VBI = dyn_cast<VarBitInit>(BI->getBit(bit))) {
-    if (VarInit *VI = dyn_cast<VarInit>(VBI->getBitVar()))
+int CodeEmitterGen::getVariableBit(const std::string &VarName,
+                                   const BitsInit *BI, int bit) {
+  if (const VarBitInit *VBI = dyn_cast<VarBitInit>(BI->getBit(bit))) {
+    if (const VarInit *VI = dyn_cast<VarInit>(VBI->getBitVar()))
       if (VI->getName() == VarName)
         return VBI->getBitNum();
-  } else if (VarInit *VI = dyn_cast<VarInit>(BI->getBit(bit))) {
+  } else if (const VarInit *VI = dyn_cast<VarInit>(BI->getBit(bit))) {
     if (VI->getName() == VarName)
       return 0;
   }
@@ -93,11 +95,12 @@ int CodeEmitterGen::getVariableBit(const std::string &VarName, BitsInit *BI,
 }
 
 // Returns true if it succeeds, false if an error.
-bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
+bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
+                                             const BitsInit *BI,
                                              const std::string &VarName,
                                              std::string &Case,
                                              std::string &BitOffsetCase,
-                                             CodeGenTarget &Target) {
+                                             const CodeGenTarget &Target) {
   CodeGenInstruction &CGI = Target.getInstruction(R);
 
   // Determine if VarName actually contributes to the Inst encoding.
@@ -278,7 +281,8 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
 }
 
 std::pair<std::string, std::string>
-CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
+CodeEmitterGen::getInstructionCases(const Record *R,
+                                    const CodeGenTarget &Target) {
   std::string Case, BitOffsetCase;
 
   auto append = [&](const std::string &S) {
@@ -287,7 +291,7 @@ CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
   };
 
   if (const RecordVal *RV = R->getValue("EncodingInfos")) {
-    if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
+    if (const auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
       const CodeGenHwModes &HWM = Target.getHwModes();
       EncodingInfoByHwMode EBM(DI->getDef(), HWM);
 
@@ -342,7 +346,7 @@ CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(
-    Record *R, const Record *EncodingDef, CodeGenTarget &Target,
+    const Record *R, const Record *EncodingDef, const CodeGenTarget &Target,
     std::string &Case, std::string &BitOffsetCase) {
   BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
 
@@ -394,7 +398,7 @@ static void emitInstBits(raw_ostream &OS, const APInt &Bits) {
 
 void CodeEmitterGen::emitInstructionBaseValues(
     raw_ostream &o, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
-    CodeGenTarget &Target, unsigned HwMode) {
+    const CodeGenTarget &Target, unsigned HwMode) {
   const CodeGenHwModes &HWM = Target.getHwModes();
   if (HwMode == DefaultMode)
     o << "  static const uint64_t InstBits[] = {\n";
@@ -430,12 +434,12 @@ void CodeEmitterGen::emitInstructionBaseValues(
         }
       }
     }
-    BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+    const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
 
     // Start by filling in fixed values.
     APInt Value(BitWidth, 0);
     for (unsigned i = 0, e = BI->getNumBits(); i != e; ++i) {
-      if (auto *B = dyn_cast<BitInit>(BI->getBit(i)); B && B->getValue())
+      if (const auto *B = dyn_cast<BitInit>(BI->getBit(i)); B && B->getValue())
         Value.setBit(i);
     }
     o << "    ";
@@ -448,15 +452,13 @@ void CodeEmitterGen::emitInstructionBaseValues(
 void CodeEmitterGen::emitCaseMap(
     raw_ostream &o,
     const std::map<std::string, std::vector<std::string>> &CaseMap) {
-  std::map<std::string, std::vector<std::string>>::const_iterator IE, EE;
-  for (IE = CaseMap.begin(), EE = CaseMap.end(); IE != EE; ++IE) {
-    const std::string &Case = IE->first;
-    const std::vector<std::string> &InstList = IE->second;
-
-    for (int i = 0, N = InstList.size(); i < N; i++) {
-      if (i)
+  for (const auto &[Case, InstList] : CaseMap) {
+    bool First = true;
+    for (const auto &Inst : InstList) {
+      if (!First)
         o << "\n";
-      o << "    case " << InstList[i] << ":";
+      o << "    case " << Inst << ":";
+      First = false;
     }
     o << " {\n";
     o << Case;
@@ -469,7 +471,6 @@ void CodeEmitterGen::run(raw_ostream &o) {
   emitSourceFileHeader("Machine Code Emitter", o);
 
   CodeGenTarget Target(Records);
-  std::vector<Record *> Insts = Records.getAllDerivedDefinitions("Instruction");
 
   // For little-endian instruction bit encodings, reverse the bit order
   Target.reverseBitsForLittleEndianEncoding();
@@ -491,17 +492,17 @@ void CodeEmitterGen::run(raw_ostream &o) {
         continue;
 
       if (const RecordVal *RV = R->getValue("EncodingInfos")) {
-        if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
+        if (const DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
           EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-          for (auto &KV : EBM) {
-            BitsInit *BI = KV.second->getValueAsBitsInit("Inst");
+          for (const auto &[Key, Value] : EBM) {
+            const BitsInit *BI = Value->getValueAsBitsInit("Inst");
             BitWidth = std::max(BitWidth, BI->getNumBits());
-            HwModes.insert(KV.first);
+            HwModes.insert(Key);
           }
           continue;
         }
       }
-      BitsInit *BI = R->getValueAsBitsInit("Inst");
+      const BitsInit *BI = R->getValueAsBitsInit("Inst");
       BitWidth = std::max(BitWidth, BI->getNumBits());
     }
     UseAPInt = BitWidth > 64;
@@ -540,7 +541,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     std::map<std::string, std::vector<std::string>> BitOffsetCaseMap;
 
     // Construct all cases statement for each opcode
-    for (Record *R : Insts) {
+    for (const Record *R : Records.getAllDerivedDefinitions("Instruction")) {
       if (R->getValueAsString("Namespace") == "TargetOpcode" ||
           R->getValueAsBit("isPseudo"))
         continue;

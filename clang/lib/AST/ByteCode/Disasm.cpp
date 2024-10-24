@@ -13,6 +13,7 @@
 #include "Boolean.h"
 #include "Context.h"
 #include "EvaluationResult.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
@@ -126,6 +127,8 @@ static const char *primTypeToString(PrimType T) {
     return "FnPtr";
   case PT_MemberPtr:
     return "MemberPtr";
+  case PT_FixedPoint:
+    return "FixedPoint";
   }
   llvm_unreachable("Unhandled PrimType");
 }

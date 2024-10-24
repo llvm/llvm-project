@@ -1420,16 +1420,8 @@ void IRSimilarityIdentifier::findCandidates(
         // IRSimilarityCandidates that include that instruction.
         for (IRSimilarityCandidate &IRCand : SimilarityCandidates->back()) {
           for (unsigned Idx = IRCand.getStartIdx(), Edx = IRCand.getEndIdx();
-               Idx <= Edx; ++Idx) {
-            DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>>::iterator
-                IdIt;
-            IdIt = IndexToIncludedCand.find(Idx);
-            bool Inserted = false;
-            if (IdIt == IndexToIncludedCand.end())
-              std::tie(IdIt, Inserted) = IndexToIncludedCand.insert(
-                  std::make_pair(Idx, DenseSet<IRSimilarityCandidate *>()));
-            IdIt->second.insert(&IRCand);
-          }
+               Idx <= Edx; ++Idx)
+            IndexToIncludedCand[Idx].insert(&IRCand);
           // Add mapping of candidate to the overall similarity group number.
           CandToGroup.insert(
               std::make_pair(&IRCand, SimilarityCandidates->size() - 1));

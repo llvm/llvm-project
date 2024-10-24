@@ -891,6 +891,11 @@ public:
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc);
+  /// Called on well-form 'permutation' clause after parsing its arguments.
+  OMPClause *ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc);
   /// Called on well-form 'full' clauses.
   OMPClause *ActOnOpenMPFullClause(SourceLocation StartLoc,
                                    SourceLocation EndLoc);

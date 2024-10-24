@@ -1191,6 +1191,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fabs:
   case LibFunc_fabsf:
   case LibFunc_fabsl:
+  case LibFunc_fdim:
+  case LibFunc_fdiml:
+  case LibFunc_fdimf:
   case LibFunc_ffs:
   case LibFunc_ffsl:
   case LibFunc_ffsll:
@@ -1268,6 +1271,18 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotFreeMemory(F);
     Changed |= setOnlyWritesMemory(F);
+    Changed |= setWillReturn(F);
+    break;
+  case LibFunc_sincos:
+  case LibFunc_sincosf:
+  case LibFunc_sincosl:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotFreeMemory(F);
+    Changed |= setOnlyWritesMemory(F);
+    Changed |= setOnlyWritesMemory(F, 1);
+    Changed |= setOnlyWritesMemory(F, 2);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotCapture(F, 2);
     Changed |= setWillReturn(F);
     break;
   default:
@@ -1963,15 +1978,15 @@ Value *llvm::emitMalloc(Value *Num, IRBuilderBase &B, const DataLayout &DL,
 }
 
 Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
-                        const TargetLibraryInfo &TLI) {
+                        const TargetLibraryInfo &TLI, unsigned AddrSpace) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, &TLI, LibFunc_calloc))
     return nullptr;
 
   StringRef CallocName = TLI.getName(LibFunc_calloc);
   Type *SizeTTy = getSizeTTy(B, &TLI);
-  FunctionCallee Calloc = getOrInsertLibFunc(M, TLI, LibFunc_calloc,
-                                             B.getPtrTy(), SizeTTy, SizeTTy);
+  FunctionCallee Calloc = getOrInsertLibFunc(
+      M, TLI, LibFunc_calloc, B.getPtrTy(AddrSpace), SizeTTy, SizeTTy);
   inferNonMandatoryLibFuncAttrs(M, CallocName, TLI);
   CallInst *CI = B.CreateCall(Calloc, {Num, Size}, CallocName);
 

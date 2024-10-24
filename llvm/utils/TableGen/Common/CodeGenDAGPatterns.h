@@ -354,7 +354,7 @@ typedef StringSet<> MultipleUseVarSet;
 /// SDTypeConstraint - This is a discriminated union of constraints,
 /// corresponding to the SDTypeConstraint tablegen class in Target.td.
 struct SDTypeConstraint {
-  SDTypeConstraint(Record *R, const CodeGenHwModes &CGH);
+  SDTypeConstraint(const Record *R, const CodeGenHwModes &CGH);
 
   unsigned OperandNo; // The operand # this constraint applies to.
   enum {
@@ -435,7 +435,7 @@ public:
 /// the target .td file.  This represents the various dag nodes we will be
 /// processing.
 class SDNodeInfo {
-  Record *Def;
+  const Record *Def;
   StringRef EnumName;
   StringRef SDClassName;
   unsigned Properties;
@@ -445,14 +445,14 @@ class SDNodeInfo {
 
 public:
   // Parse the specified record.
-  SDNodeInfo(Record *R, const CodeGenHwModes &CGH);
+  SDNodeInfo(const Record *R, const CodeGenHwModes &CGH);
 
   unsigned getNumResults() const { return NumResults; }
 
   /// getNumOperands - This is the number of operands required or -1 if
   /// variadic.
   int getNumOperands() const { return NumOperands; }
-  Record *getRecord() const { return Def; }
+  const Record *getRecord() const { return Def; }
   StringRef getEnumName() const { return EnumName; }
   StringRef getSDClassName() const { return SDClassName; }
 
@@ -582,13 +582,13 @@ public:
   /// If non-null, indicates that this predicate is a predefined memory VT
   /// predicate for a load/store and returns the ValueType record for the memory
   /// VT.
-  Record *getMemoryVT() const;
+  const Record *getMemoryVT() const;
   /// If non-null, indicates that this predicate is a predefined memory VT
   /// predicate (checking only the scalar type) for load/store and returns the
   /// ValueType record for the memory VT.
-  Record *getScalarMemoryVT() const;
+  const Record *getScalarMemoryVT() const;
 
-  ListInit *getAddressSpaces() const;
+  const ListInit *getAddressSpaces() const;
   int64_t getMinAlignment() const;
 
   // If true, indicates that GlobalISel-based C++ code was supplied.
@@ -634,7 +634,7 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
   /// OperatorOrVal - The Record for the operator if this is an interior node
   /// (not a leaf) or the init value (e.g. the "GPRC" record, or "7") for a
   /// leaf.
-  PointerUnion<const Record *, Init *> OperatorOrVal;
+  PointerUnion<const Record *, const Init *> OperatorOrVal;
 
   /// Name - The name given to this node with the :$foo notation.
   ///
@@ -648,7 +648,7 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
 
   /// TransformFn - The transformation function to execute on this node before
   /// it can be substituted into the resulting instruction on a pattern match.
-  Record *TransformFn;
+  const Record *TransformFn;
 
   std::vector<TreePatternNodePtr> Children;
 
@@ -664,7 +664,7 @@ public:
     ResultPerm.resize(NumResults);
     std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
   }
-  TreePatternNode(Init *val, unsigned NumResults) // leaf ctor
+  TreePatternNode(const Init *val, unsigned NumResults) // leaf ctor
       : OperatorOrVal(val), TransformFn(nullptr) {
     Types.resize(NumResults);
     ResultPerm.resize(NumResults);
@@ -685,7 +685,7 @@ public:
     NamesAsPredicateArg.push_back(N);
   }
 
-  bool isLeaf() const { return isa<Init *>(OperatorOrVal); }
+  bool isLeaf() const { return isa<const Init *>(OperatorOrVal); }
 
   // Type accessors.
   unsigned getNumTypes() const { return Types.size(); }
@@ -713,9 +713,9 @@ public:
   unsigned getResultIndex(unsigned ResNo) const { return ResultPerm[ResNo]; }
   void setResultIndex(unsigned ResNo, unsigned RI) { ResultPerm[ResNo] = RI; }
 
-  Init *getLeafValue() const {
+  const Init *getLeafValue() const {
     assert(isLeaf());
-    return cast<Init *>(OperatorOrVal);
+    return cast<const Init *>(OperatorOrVal);
   }
   const Record *getOperator() const {
     assert(!isLeaf());
@@ -766,8 +766,8 @@ public:
     addPredicateCall(TreePredicateCall(Fn, Scope));
   }
 
-  Record *getTransformFn() const { return TransformFn; }
-  void setTransformFn(Record *Fn) { TransformFn = Fn; }
+  const Record *getTransformFn() const { return TransformFn; }
+  void setTransformFn(const Record *Fn) { TransformFn = Fn; }
 
   /// getIntrinsicInfo - If this node corresponds to an intrinsic, return the
   /// CodeGenIntrinsic information for it, otherwise return a null pointer.
@@ -901,14 +901,14 @@ class TreePattern {
   /// ComplexPattern. This records the ComplexPattern instance and the operand
   /// number for each operand encountered in a ComplexPattern to aid in that
   /// check.
-  StringMap<std::pair<Record *, unsigned>> ComplexPatternOperands;
+  StringMap<std::pair<const Record *, unsigned>> ComplexPatternOperands;
 
   TypeInfer Infer;
 
 public:
   /// TreePattern constructor - Parse the specified DagInits into the
   /// current record.
-  TreePattern(const Record *TheRec, ListInit *RawPat, bool isInput,
+  TreePattern(const Record *TheRec, const ListInit *RawPat, bool isInput,
               CodeGenDAGPatterns &ise);
   TreePattern(const Record *TheRec, DagInit *Pat, bool isInput,
               CodeGenDAGPatterns &ise);
@@ -1013,24 +1013,24 @@ struct DAGDefaultOperand {
 class DAGInstruction {
   std::vector<const Record *> Results;
   std::vector<const Record *> Operands;
-  std::vector<Record *> ImpResults;
+  std::vector<const Record *> ImpResults;
   TreePatternNodePtr SrcPattern;
   TreePatternNodePtr ResultPattern;
 
 public:
-  DAGInstruction(std::vector<const Record *> &&results,
-                 std::vector<const Record *> &&operands,
-                 std::vector<Record *> &&impresults,
-                 TreePatternNodePtr srcpattern = nullptr,
-                 TreePatternNodePtr resultpattern = nullptr)
-      : Results(std::move(results)), Operands(std::move(operands)),
-        ImpResults(std::move(impresults)), SrcPattern(srcpattern),
-        ResultPattern(resultpattern) {}
+  DAGInstruction(std::vector<const Record *> &&Results,
+                 std::vector<const Record *> &&Operands,
+                 std::vector<const Record *> &&ImpResults,
+                 TreePatternNodePtr SrcPattern = nullptr,
+                 TreePatternNodePtr ResultPattern = nullptr)
+      : Results(std::move(Results)), Operands(std::move(Operands)),
+        ImpResults(std::move(ImpResults)), SrcPattern(SrcPattern),
+        ResultPattern(ResultPattern) {}
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
   unsigned getNumImpResults() const { return ImpResults.size(); }
-  const std::vector<Record *> &getImpResults() const { return ImpResults; }
+  ArrayRef<const Record *> getImpResults() const { return ImpResults; }
 
   const Record *getResult(unsigned RN) const {
     assert(RN < Results.size());
@@ -1042,7 +1042,7 @@ public:
     return Operands[ON];
   }
 
-  Record *getImpResult(unsigned RN) const {
+  const Record *getImpResult(unsigned RN) const {
     assert(RN < ImpResults.size());
     return ImpResults[RN];
   }
@@ -1058,7 +1058,7 @@ class PatternToMatch {
   ListInit *Predicates;          // Top level predicate conditions to match.
   TreePatternNodePtr SrcPattern; // Source pattern to match.
   TreePatternNodePtr DstPattern; // Resulting pattern.
-  std::vector<Record *> Dstregs; // Physical register defs being matched.
+  std::vector<const Record *> Dstregs; // Physical register defs being matched.
   std::string HwModeFeatures;
   int AddedComplexity;    // Add to matching pattern complexity.
   bool GISelShouldIgnore; // Should GlobalISel ignore importing this pattern.
@@ -1067,12 +1067,11 @@ class PatternToMatch {
 public:
   PatternToMatch(const Record *srcrecord, ListInit *preds,
                  TreePatternNodePtr src, TreePatternNodePtr dst,
-                 std::vector<Record *> dstregs, int complexity, unsigned uid,
+                 ArrayRef<const Record *> dstregs, int complexity, unsigned uid,
                  bool ignore, const Twine &hwmodefeatures = "")
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
-        DstPattern(dst), Dstregs(std::move(dstregs)),
-        HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
-        GISelShouldIgnore(ignore), ID(uid) {}
+        DstPattern(dst), Dstregs(dstregs), HwModeFeatures(hwmodefeatures.str()),
+        AddedComplexity(complexity), GISelShouldIgnore(ignore), ID(uid) {}
 
   const Record *getSrcRecord() const { return SrcRecord; }
   ListInit *getPredicates() const { return Predicates; }
@@ -1080,14 +1079,15 @@ public:
   TreePatternNodePtr getSrcPatternShared() const { return SrcPattern; }
   TreePatternNode &getDstPattern() const { return *DstPattern; }
   TreePatternNodePtr getDstPatternShared() const { return DstPattern; }
-  const std::vector<Record *> &getDstRegs() const { return Dstregs; }
+  ArrayRef<const Record *> getDstRegs() const { return Dstregs; }
   StringRef getHwModeFeatures() const { return HwModeFeatures; }
   int getAddedComplexity() const { return AddedComplexity; }
   bool getGISelShouldIgnore() const { return GISelShouldIgnore; }
   unsigned getID() const { return ID; }
 
   std::string getPredicateCheck() const;
-  void getPredicateRecords(SmallVectorImpl<Record *> &PredicateRecs) const;
+  void
+  getPredicateRecords(SmallVectorImpl<const Record *> &PredicateRecs) const;
 
   /// Compute the complexity metric for the input pattern.  This roughly
   /// corresponds to the number of nodes that are covered.
@@ -1095,13 +1095,17 @@ public:
 };
 
 class CodeGenDAGPatterns {
-  RecordKeeper &Records;
+public:
+  using NodeXForm = std::pair<const Record *, std::string>;
+
+private:
+  const RecordKeeper &Records;
   CodeGenTarget Target;
   CodeGenIntrinsicTable Intrinsics;
 
   std::map<const Record *, SDNodeInfo, LessRecordByID> SDNodes;
-  std::map<const Record *, std::pair<Record *, std::string>, LessRecordByID>
-      SDNodeXForms;
+
+  std::map<const Record *, NodeXForm, LessRecordByID> SDNodeXForms;
   std::map<const Record *, ComplexPattern, LessRecordByID> ComplexPatterns;
   std::map<const Record *, std::unique_ptr<TreePattern>, LessRecordByID>
       PatternFragments;
@@ -1109,8 +1113,8 @@ class CodeGenDAGPatterns {
   std::map<const Record *, DAGInstruction, LessRecordByID> Instructions;
 
   // Specific SDNode definitions:
-  Record *intrinsic_void_sdnode;
-  Record *intrinsic_w_chain_sdnode, *intrinsic_wo_chain_sdnode;
+  const Record *intrinsic_void_sdnode;
+  const Record *intrinsic_w_chain_sdnode, *intrinsic_wo_chain_sdnode;
 
   /// PatternsToMatch - All of the things we are matching on the DAG.  The first
   /// value is the pattern to match, the second pattern is the result to
@@ -1125,14 +1129,14 @@ class CodeGenDAGPatterns {
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(RecordKeeper &R,
+  CodeGenDAGPatterns(const RecordKeeper &R,
                      PatternRewriterFn PatternRewriter = nullptr);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }
   const TypeSetByHwMode &getLegalTypes() const { return LegalVTS; }
 
-  Record *getSDNodeNamed(StringRef Name) const;
+  const Record *getSDNodeNamed(StringRef Name) const;
 
   const SDNodeInfo &getSDNodeInfo(const Record *R) const {
     auto F = SDNodes.find(R);
@@ -1141,7 +1145,6 @@ public:
   }
 
   // Node transformation lookups.
-  typedef std::pair<Record *, std::string> NodeXForm;
   const NodeXForm &getSDNodeTransform(const Record *R) const {
     auto F = SDNodeXForms.find(R);
     assert(F != SDNodeXForms.end() && "Invalid transform!");
@@ -1167,7 +1170,7 @@ public:
     llvm_unreachable("Bad intrinsic ID!");
   }
 
-  unsigned getIntrinsicID(Record *R) const {
+  unsigned getIntrinsicID(const Record *R) const {
     for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
       if (Intrinsics[i].TheDef == R)
         return i;
@@ -1206,7 +1209,7 @@ public:
 
   /// Parse the Pattern for an instruction, and insert the result in DAGInsts.
   typedef std::map<const Record *, DAGInstruction, LessRecordByID> DAGInstMap;
-  void parseInstructionPattern(CodeGenInstruction &CGI, ListInit *Pattern,
+  void parseInstructionPattern(CodeGenInstruction &CGI, const ListInit *Pattern,
                                DAGInstMap &DAGInsts);
 
   const DAGInstruction &getInstruction(const Record *R) const {
@@ -1215,11 +1218,13 @@ public:
     return F->second;
   }
 
-  Record *get_intrinsic_void_sdnode() const { return intrinsic_void_sdnode; }
-  Record *get_intrinsic_w_chain_sdnode() const {
+  const Record *get_intrinsic_void_sdnode() const {
+    return intrinsic_void_sdnode;
+  }
+  const Record *get_intrinsic_w_chain_sdnode() const {
     return intrinsic_w_chain_sdnode;
   }
-  Record *get_intrinsic_wo_chain_sdnode() const {
+  const Record *get_intrinsic_wo_chain_sdnode() const {
     return intrinsic_wo_chain_sdnode;
   }
 
@@ -1245,7 +1250,7 @@ private:
 
   void ParseOnePattern(const Record *TheDef, TreePattern &Pattern,
                        TreePattern &Result,
-                       const std::vector<Record *> &InstImpResults,
+                       ArrayRef<const Record *> InstImpResults,
                        bool ShouldIgnore = false);
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
   void FindPatternInputsAndOutputs(
@@ -1253,7 +1258,8 @@ private:
       std::map<std::string, TreePatternNodePtr> &InstInputs,
       MapVector<std::string, TreePatternNodePtr,
                 std::map<std::string, unsigned>> &InstResults,
-      std::vector<Record *> &InstImpResults);
+      std::vector<const Record *> &InstImpResults);
+  unsigned getNewUID();
 };
 
 inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode &N,

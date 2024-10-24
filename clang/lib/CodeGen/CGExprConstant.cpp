@@ -738,7 +738,7 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     // Zero-sized fields are not emitted, but their initializers may still
     // prevent emission of this struct as a constant.
     if (isEmptyFieldForLayout(CGM.getContext(), Field)) {
-      if (Init->HasSideEffects(CGM.getContext()))
+      if (Init && Init->HasSideEffects(CGM.getContext()))
         return false;
       continue;
     }

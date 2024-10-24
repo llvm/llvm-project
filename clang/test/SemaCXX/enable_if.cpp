@@ -5,7 +5,7 @@ int surrogate(int);
 struct Incomplete;  // expected-note{{forward declaration of 'Incomplete'}} \
                     // expected-note {{forward declaration of 'Incomplete'}}
 
-struct X {
+struct X { // expected-note{{defined here}}
   X() = default;  // expected-note{{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
   X(const X&) = default;  // expected-note{{candidate constructor not viable: no known conversion from 'bool' to 'const X' for 1st argument}}
   X(bool b) __attribute__((enable_if(b, "chosen when 'b' is true")));  // expected-note{{candidate disabled: chosen when 'b' is true}}

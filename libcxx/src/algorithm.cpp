@@ -21,7 +21,8 @@ void __sort(RandomAccessIterator first, RandomAccessIterator last, Comp comp) {
   std::__introsort<_ClassicAlgPolicy,
                    ranges::less,
                    RandomAccessIterator,
-                   __use_branchless_sort<ranges::less, RandomAccessIterator>>(first, last, ranges::less{}, depth_limit);
+                   __use_branchless_sort<ranges::less, RandomAccessIterator>::value>(
+      first, last, ranges::less{}, depth_limit);
 }
 
 // clang-format off

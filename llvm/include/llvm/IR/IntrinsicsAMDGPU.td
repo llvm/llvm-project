@@ -208,6 +208,16 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [IntrConvergent, IntrHasSideEffects, IntrNoMem, IntrNoCallback,
    IntrNoFree, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
+// Sets the function into whole-wave-mode and returns whether the lane was
+// active when entering the function. A branch depending on this return will
+// revert the EXEC mask to what it was when entering the function, thus
+// resulting in a no-op. This pattern is used to optimize branches when function
+// tails need to be run in whole-wave-mode. It may also have other consequences
+// (mostly related to WWM CSR handling) that differentiate it from using
+// a plain `amdgcn.init.exec -1`.
+def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
+    IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
+
 def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
@@ -548,7 +558,8 @@ class AMDGPUDSAppendConsumedIntrinsic : Intrinsic<
   [llvm_anyptr_ty, // LDS or GDS ptr
    llvm_i1_ty], // isVolatile
    [IntrConvergent, IntrWillReturn, IntrArgMemOnly,
-    NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrNoCallback, IntrNoFree],
+    Align<ArgIndex<0>, 4>, NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>, IntrNoCallback, IntrNoFree],
    "",
    [SDNPMemOperand]
 >;
@@ -852,8 +863,8 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
       !foreach(arg, P_.DataArgs, arg.Type),    // vdata(VGPR) -- for store/atomic
       !if(P_.IsAtomic, [], [llvm_i32_ty]),     // dmask(imm)
       P_.AddrTypes,                            // vaddr(VGPR)
-      [llvm_v8i32_ty],                         // rsrc(SGPR)
-      !if(P_.IsSample, [llvm_v4i32_ty,         // samp(SGPR)
+      [llvm_any_ty],                           // rsrc(SGPR); Valid types: v4i32 and v8i32
+      !if(P_.IsSample, [llvm_any_ty,           // samp(SGPR);
                         llvm_i1_ty], []),      // unorm(imm)
       [llvm_i32_ty,                            // texfailctrl(imm; bit 0 = tfe, bit 1 = lwe)
        llvm_i32_ty]),                          // auxiliary/cachepolicy(imm):
@@ -2075,6 +2086,8 @@ def int_amdgcn_fcmp :
             [IntrNoMem, IntrConvergent,
              ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// Returns a bitfield(i32 or i64) containing the result of its i1 argument
+// in all active lanes, and zero in all inactive lanes.
 def int_amdgcn_ballot :
   Intrinsic<[llvm_anyint_ty], [llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
@@ -2954,11 +2967,6 @@ def int_amdgcn_mfma_f32_16x16x8bf16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty,  llvm_v
 //===----------------------------------------------------------------------===//
 // gfx90a intrinsics
 // ===----------------------------------------------------------------------===//
-
-def int_amdgcn_global_atomic_fmin : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_global_atomic_fmax : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fmin   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fmax   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
 defset list<Intrinsic> AMDGPUMFMAIntrinsics90A = {
 def int_amdgcn_mfma_f32_32x32x4bf16_1k  : AMDGPUMfmaIntrinsic<llvm_v32f32_ty, llvm_v4i16_ty>;

@@ -49,6 +49,7 @@ To understand the status of various developments in Flang please join the respec
     - If you prefer to join using a meeting number and password, those can be 
       found in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/). Alternative methods of joining, such as call-in numbers, are also available.
 -   Time: Wednesdays, 8:30 a.m. Pacific Time, on the weeks alternating with regular Flang Community Technical Biweekly Call.
+-   Calendar invite: https://drive.google.com/file/d/1rkfWCtIvQFcxN0Uz8YVwQGoX_BbzT8oc/view?usp=drive_link
 -   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/edit).
 -   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
 

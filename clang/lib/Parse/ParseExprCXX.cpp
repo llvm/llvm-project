@@ -1344,9 +1344,13 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
-  Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
-                           ? diag::warn_cxx98_compat_lambda
-                           : diag::ext_lambda);
+  if (getLangOpts().HLSL)
+    Diag(LambdaBeginLoc, diag::ext_hlsl_lambda) << /*HLSL*/ 1;
+  else
+    Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
+                             ? diag::warn_cxx98_compat_lambda
+                             : diag::ext_lambda)
+        << /*C++*/ 0;
 
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(), LambdaBeginLoc,
                                 "lambda expression parsing");

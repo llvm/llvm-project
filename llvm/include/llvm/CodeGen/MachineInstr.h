@@ -728,7 +728,7 @@ public:
     return make_range(operands_begin(),
                       operands_begin() + getNumExplicitDefs());
   }
-  /// Returns a range that includes all operands that are register uses.
+  /// Returns a range that includes all operands which may be register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
     return make_range(operands_begin() + getNumExplicitDefs(), operands_end());

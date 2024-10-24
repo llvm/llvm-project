@@ -224,7 +224,7 @@ static cl::opt<unsigned> TopCalledLimit(
     cl::init(100), cl::Hidden, cl::cat(BoltCategory));
 
 // Profile density options, synced with llvm-profgen/ProfileGenerator.cpp
-static cl::opt<bool> ShowDensity("show-density", cl::init(false),
+static cl::opt<bool> ShowDensity("show-density", cl::init(true),
                                  cl::desc("show profile density details"),
                                  cl::Optional);
 
@@ -234,7 +234,7 @@ static cl::opt<int> ProfileDensityCutOffHot(
              "profile density."));
 
 static cl::opt<double> ProfileDensityThreshold(
-    "profile-density-threshold", cl::init(0),
+    "profile-density-threshold", cl::init(50),
     cl::desc("If the profile density is below the given threshold, it "
              "will be suggested to increase the sampling rate."),
     cl::Optional);

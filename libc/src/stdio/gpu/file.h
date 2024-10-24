@@ -10,9 +10,8 @@
 #include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
+#include "hdr/stdio_macros.h" // For stdin/out/err
 #include "hdr/types/FILE.h"
-
-#include <stdio.h> //needed for stdin/out/err
 
 namespace LIBC_NAMESPACE_DECL {
 namespace file {

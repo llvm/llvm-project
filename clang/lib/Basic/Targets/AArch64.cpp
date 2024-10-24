@@ -373,6 +373,12 @@ void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
   getTargetDefinesARMV94A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV96A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.6-A does not have a v8.* equivalent, but is a superset of v9.5-A.
+  getTargetDefinesARMV95A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -399,7 +405,13 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AARCH64_CMODEL_" + CodeModel + "__");
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
-  Builder.defineMacro("__ARM_ACLE", "200");
+  Builder.defineMacro("__ARM_ACLE_VERSION(year, quarter, patch)",
+                      "(100 * (year) + 10 * (quarter) + (patch))");
+#define ARM_ACLE_VERSION(Y, Q, P) (100 * (Y) + 10 * (Q) + (P))
+  Builder.defineMacro("__ARM_ACLE", Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+  Builder.defineMacro("__FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL",
+                      Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+#undef ARM_ACLE_VERSION
   Builder.defineMacro("__ARM_ARCH",
                       std::to_string(ArchInfo->Version.getMajor()));
   Builder.defineMacro("__ARM_ARCH_PROFILE",
@@ -651,6 +663,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV94A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
     getTargetDefinesARMV95A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_6A)
+    getTargetDefinesARMV96A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -1038,6 +1052,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.5a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_5A;
+    if (Feature == "+v9.6a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_6A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_6A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {

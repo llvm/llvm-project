@@ -1,11 +1,11 @@
-// REQUIRES: target={{.*(linux|solaris|windows-msvc).*}}
+// REQUIRES: target={{.*(linux|solaris|windows-msvc|aix).*}}
 
 // RUN: %clang -fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation=true -o %t.exe %s
 // RUN: echo "garbage" > %t.profraw
 // RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe
 // RUN: llvm-profdata show --counts --all-functions %t.profraw | FileCheck %s -check-prefix=CHECK-COUNTS
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
-// RUN: llvm-cov report %t.exe -instr-profile %t.profdata | FileCheck %s -check-prefix=CHECK-COVERAGE
+// RUN: %if !target={{.*aix.*}} %{ llvm-cov report %t.exe -instr-profile %t.profdata | FileCheck %s -check-prefix=CHECK-COVERAGE %}
 
 // CHECK-COUNTS: Counters:
 // CHECK-COUNTS-NEXT:   main:

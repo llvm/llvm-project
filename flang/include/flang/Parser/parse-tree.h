@@ -3448,18 +3448,18 @@ struct OmpObject {
 
 WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 
-// 2.15.5.1 map-type -> TO | FROM | TOFROM | ALLOC | RELEASE | DELETE
-struct OmpMapType {
-  TUPLE_CLASS_BOILERPLATE(OmpMapType);
-  EMPTY_CLASS(Always);
-  ENUM_CLASS(Type, To, From, Tofrom, Alloc, Release, Delete)
-  std::tuple<std::optional<Always>, Type> t;
-};
-
-// 2.15.5.1 map -> MAP ([ [ALWAYS[,]] map-type : ] variable-name-list)
+// 2.15.5.1 map ->
+//    MAP ([ [map-type-modifiers [,] ] map-type : ] variable-name-list)
+// map-type-modifiers -> map-type-modifier [,] [...]
+// map-type-modifier -> ALWAYS | CLOSE | PRESENT | OMPX_HOLD
+// map-type -> TO | FROM | TOFROM | ALLOC | RELEASE | DELETE
 struct OmpMapClause {
+  ENUM_CLASS(TypeModifier, Always, Close, Present, OmpxHold);
+  ENUM_CLASS(Type, To, From, Tofrom, Alloc, Release, Delete)
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
-  std::tuple<std::optional<OmpMapType>, OmpObjectList> t;
+  std::tuple<std::optional<std::list<TypeModifier>>, std::optional<Type>,
+      OmpObjectList>
+      t;
 };
 
 // 2.15.5.2 defaultmap -> DEFAULTMAP (implicit-behavior[:variable-category])
@@ -3646,6 +3646,15 @@ struct OmpDependClause {
 struct OmpAtomicDefaultMemOrderClause {
   WRAPPER_CLASS_BOILERPLATE(
       OmpAtomicDefaultMemOrderClause, common::OmpAtomicDefaultMemOrderType);
+};
+
+// OMP 5.0 2.19.4.5 lastprivate-clause ->
+//                    LASTPRIVATE ([lastprivate-modifier :] list)
+//                  lastprivate-modifier -> CONDITIONAL
+struct OmpLastprivateClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLastprivateClause);
+  ENUM_CLASS(LastprivateModifier, Conditional);
+  std::tuple<std::optional<LastprivateModifier>, OmpObjectList> t;
 };
 
 // OpenMP Clauses

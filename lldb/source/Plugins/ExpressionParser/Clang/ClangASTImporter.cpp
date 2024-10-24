@@ -1162,7 +1162,6 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
         if (NamedDecl *from_named_decl = dyn_cast<clang::NamedDecl>(from)) {
           llvm::raw_string_ostream name_stream(name_string);
           from_named_decl->printName(name_stream);
-          name_stream.flush();
         }
         LLDB_LOG(log_ast,
                  "==== [ClangASTImporter][TUDecl: {0:x}] Imported "
@@ -1292,7 +1291,6 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
       std::string name_string;
       llvm::raw_string_ostream name_stream(name_string);
       from_named_decl->printName(name_stream);
-      name_stream.flush();
 
       LLDB_LOG(
           log,

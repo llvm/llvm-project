@@ -183,18 +183,12 @@ define <8 x i16> @concat_v8s16_v2s16(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: concat_v8s16_v2s16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    ldr h2, [x0, #2]
-; CHECK-GI-NEXT:    dup v0.4s, w8
-; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-GI-NEXT:    xtn v2.4h, v0.4s
-; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
-; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    ldr h0, [x0]
+; CHECK-GI-NEXT:    ldr h1, [x0, #2]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    mov v0.s[2], w8
-; CHECK-GI-NEXT:    mov v0.s[3], w8
 ; CHECK-GI-NEXT:    ret
     %a = load <2 x i16>, ptr %ptr
     %b = shufflevector <2 x i16> %a, <2 x i16> %a, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -202,21 +196,10 @@ define <8 x i16> @concat_v8s16_v2s16(ptr %ptr) {
 }
 
 define <16 x i8> @concat_v16s8_v4s8(ptr %ptr) {
-; CHECK-SD-LABEL: concat_v16s8_v4s8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_v16s8_v4s8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v0.8h, w8
-; CHECK-GI-NEXT:    xtn v1.8b, v0.8h
-; CHECK-GI-NEXT:    ldr s0, [x0]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    mov v0.s[2], w8
-; CHECK-GI-NEXT:    mov v0.s[3], w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_v16s8_v4s8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ret
     %a = load <4 x i8>, ptr %ptr
     %b = shufflevector <4 x i8> %a, <4 x i8> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
     ret <16 x i8> %b

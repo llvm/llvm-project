@@ -54,6 +54,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -697,10 +698,20 @@ void TypeSystemClang::CreateASTContext() {
   TargetInfo *target_info = getTargetInfo();
   if (target_info)
     m_ast_up->InitBuiltinTypes(*target_info);
-  else if (auto *log = GetLog(LLDBLog::Expressions))
-    LLDB_LOG(log,
-             "Failed to initialize builtin ASTContext types for target '{0}'",
-             m_target_triple);
+  else {
+    std::string err =
+        llvm::formatv(
+            "Failed to initialize builtin ASTContext types for target '{0}'. "
+            "Printing variables may behave unexpectedly.",
+            m_target_triple)
+            .str();
+
+    LLDB_LOG(GetLog(LLDBLog::Expressions), err.c_str());
+
+    static std::once_flag s_uninitialized_target_warning;
+    Debugger::ReportWarning(std::move(err), /*debugger_id=*/std::nullopt,
+                            &s_uninitialized_target_warning);
+  }
 
   GetASTMap().Insert(m_ast_up.get(), this);
 
@@ -749,6 +760,10 @@ CompilerType
 TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
                                                      size_t bit_size) {
   ASTContext &ast = getASTContext();
+
+  if (!ast.VoidPtrTy)
+    return {};
+
   switch (encoding) {
   case eEncodingInvalid:
     if (QualTypeMatchesBitSize(bit_size, ast, ast.VoidPtrTy))
@@ -890,6 +905,9 @@ CompilerType TypeSystemClang::GetBasicType(lldb::BasicType basic_type) {
 CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     llvm::StringRef type_name, uint32_t dw_ate, uint32_t bit_size) {
   ASTContext &ast = getASTContext();
+
+  if (!ast.VoidPtrTy)
+    return {};
 
   switch (dw_ate) {
   default:
@@ -2335,6 +2353,9 @@ CompilerType TypeSystemClang::GetIntTypeFromBitSize(size_t bit_size,
                                                     bool is_signed) {
   clang::ASTContext &ast = getASTContext();
 
+  if (!ast.VoidPtrTy)
+    return {};
+
   if (is_signed) {
     if (bit_size == ast.getTypeSize(ast.SignedCharTy))
       return GetType(ast.SignedCharTy);
@@ -2376,6 +2397,9 @@ CompilerType TypeSystemClang::GetIntTypeFromBitSize(size_t bit_size,
 }
 
 CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
   return GetIntTypeFromBitSize(
       getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
 }
@@ -5075,7 +5099,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       break;
 
     // AMD GPU builtin types.
-#define AMDGPU_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  case clang::BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       break;
     }
@@ -7453,6 +7478,13 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
 
   clang::Expr *bit_width = nullptr;
   if (bitfield_bit_size != 0) {
+    if (clang_ast.IntTy.isNull()) {
+      LLDB_LOG(
+          GetLog(LLDBLog::Expressions),
+          "{0} failed: builtin ASTContext types have not been initialized");
+      return nullptr;
+    }
+
     llvm::APInt bitfield_bit_size_apint(clang_ast.getTypeSize(clang_ast.IntTy),
                                         bitfield_bit_size);
     bit_width = new (clang_ast)
@@ -9702,7 +9734,7 @@ ScratchTypeSystemClang::GetForTarget(Target &target,
       lldb::eLanguageTypeC, create_on_demand);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
-                   "Couldn't get scratch TypeSystemClang");
+                   "Couldn't get scratch TypeSystemClang: {0}");
     return nullptr;
   }
   auto ts_sp = *type_system_or_err;

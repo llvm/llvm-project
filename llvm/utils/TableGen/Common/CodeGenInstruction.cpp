@@ -523,7 +523,7 @@ MVT::SimpleValueType CodeGenInstruction::HasOneImplicitDefWithKnownVT(
     return MVT::Other;
 
   // Check to see if the first implicit def has a resolvable type.
-  Record *FirstImplicitDef = ImplicitDefs[0];
+  const Record *FirstImplicitDef = ImplicitDefs[0];
   assert(FirstImplicitDef->isSubClassOf("Register"));
   const std::vector<ValueTypeByHwMode> &RegVTs =
       TargetInfo.getRegisterVTs(FirstImplicitDef);
