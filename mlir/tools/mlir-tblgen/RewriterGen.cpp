@@ -845,7 +845,7 @@ void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
       emitMatchCheck(
           opName, /*matchStr=*/argName,
           formatv("\"There's no operation that defines variadic operand "
-                  "{0} (variadic sub-opearnd #{1}) of {2}\"",
+                  "{0} (variadic sub-operand #{1}) of {2}\"",
                   operandIndex, i, opName));
       emitMatch(argTree, argName, depth + 1);
       os << formatv("tblgen_ops.push_back({0});\n", argName);

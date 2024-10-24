@@ -3,9 +3,9 @@ func.func @test_addi(%arg0 : i64, %arg1 : i64) -> i64 {
 //        ^ function
 //                  ^ punctuation.bracket
 //                   ^ variable.parameter
-//                         ^ punctuation.delimeter
+//                         ^ punctuation.delimiter
 //                           ^ type.builtin
-//                              ^ punctuation.delimeter
+//                              ^ punctuation.delimiter
 //                                ^ variable.parameter
 //                                        ^ type.builtin
 //                                           ^ punctuation.bracket

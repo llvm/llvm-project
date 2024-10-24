@@ -438,7 +438,7 @@ public:
 
   /// Read a type belonging to this dialect from the given reader. This method
   /// should return null in the case of failure. Optionally, the dialect version
-  /// can be accessed thorugh the reader.
+  /// can be accessed through the reader.
   virtual Type readType(DialectBytecodeReader &reader) const {
     reader.emitError() << "dialect " << getDialect()->getNamespace()
                        << " does not support reading types from bytecode";

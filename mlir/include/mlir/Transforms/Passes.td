@@ -106,7 +106,7 @@ def RemoveDeadValues : Pass<"remove-dead-values"> {
     (A) Removes function arguments that are not live,
     (B) Removes function return values that are not live across all callers of
     the function,
-    (C) Removes unneccesary operands, results, region arguments, and region
+    (C) Removes unnecessary operands, results, region arguments, and region
     terminator operands of region branch ops, and,
     (D) Removes simple and region branch ops that have all non-live results and
     don't affect memory in any way,
@@ -412,7 +412,7 @@ def SROA : Pass<"sroa"> {
   let summary = "Scalar Replacement of Aggregates";
   let description = [{
     Scalar Replacement of Aggregates. Replaces allocations of aggregates into
-    independant allocations of its elements.
+    independent allocations of its elements.
 
     Allocators must implement `DestructurableAllocationOpInterface` to provide
     the list of memory slots for which destructuring should be attempted.
