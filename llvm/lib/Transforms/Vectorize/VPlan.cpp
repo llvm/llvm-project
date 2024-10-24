@@ -275,8 +275,8 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     // Place the code for broadcasting invariant variables in the new preheader.
     IRBuilder<>::InsertPointGuard Guard(Builder);
     if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader = CFG.VPBB2IRBB[cast<VPBasicBlock>(
-          Plan->getVectorLoopRegion()->getSinglePredecessor())];
+      BasicBlock *LoopVectorPreHeader =
+          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
       if (LoopVectorPreHeader)
         Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
     }

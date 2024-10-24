@@ -443,4 +443,11 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   ];
 }
 
+def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
+  let summary = "Convert some GPU operations lowered from CUF to runtime calls";
+  let dependentDialects = [
+    "mlir::LLVM::LLVMDialect"
+  ];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

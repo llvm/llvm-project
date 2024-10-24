@@ -9376,8 +9376,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (CallConv == CallingConv::PreserveNone) {
-    for (const ISD::OutputArg &O : Outs) {
+  if (CallConv == CallingConv::PreserveNon) {
+    for (unsignedSD::OutputArg &O : Outs) {
       if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
           O.Flags.isSwiftAsync()) {
         MachineFunction &MF = DAG.getMachineFunction();
@@ -29562,3 +29562,4 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
   }
 }
 #endif
+                                                                                                               

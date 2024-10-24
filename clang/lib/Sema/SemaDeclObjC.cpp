@@ -5511,10 +5511,9 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       InitializationKind InitKind =
           InitializationKind::CreateDefault(ObjCImplementation->getLocation());
 
-      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind,
-                                     std::nullopt);
+      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind, {});
       ExprResult MemberInit =
-          InitSeq.Perform(SemaRef, InitEntity, InitKind, std::nullopt);
+          InitSeq.Perform(SemaRef, InitEntity, InitKind, {});
       MemberInit = SemaRef.MaybeCreateExprWithCleanups(MemberInit);
       // Note, MemberInit could actually come back empty if no initialization
       // is required (e.g., because it would call a trivial default constructor)

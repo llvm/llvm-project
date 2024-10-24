@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/registration.h"
+#include "../terminator.h"
+#include "flang/Runtime/CUDA/common.h"
 
 #include "cuda_runtime.h"
 
@@ -26,9 +28,12 @@ void *RTDECL(CUFRegisterModule)(void *data) {
   return fatHandle;
 }
 
-void RTDEF(CUFRegisterFunction)(void **module, const char *fct) {
-  __cudaRegisterFunction(module, fct, const_cast<char *>(fct), fct, -1,
-      (uint3 *)0, (uint3 *)0, (dim3 *)0, (dim3 *)0, (int *)0);
+void RTDEF(CUFRegisterFunction)(
+    void **module, const char *fctSym, char *fctName) {
+  __cudaRegisterFunction(module, fctSym, fctName, fctName, -1, (uint3 *)0,
+      (uint3 *)0, (dim3 *)0, (dim3 *)0, (int *)0);
 }
-}
+
+} // extern "C"
+
 } // namespace Fortran::runtime::cuda

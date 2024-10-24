@@ -10423,6 +10423,57 @@ defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
 
+let Predicates = [HasCMPBR] in {
+ defm CBGT : CmpBranchRegister<0b000, "cbgt">;
+ defm CBGE : CmpBranchRegister<0b001, "cbge">;
+ defm CBHI : CmpBranchRegister<0b010, "cbhi">;
+ defm CBHS : CmpBranchRegister<0b011, "cbhs">;
+ defm CBEQ : CmpBranchRegister<0b110, "cbeq">;
+ defm CBNE : CmpBranchRegister<0b111, "cbne">;
+
+ def CBHGTWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b000, 0b11, "cbhgt">;
+ def CBHGEWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b001, 0b11, "cbhge">;
+ def CBHHIWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b010, 0b11, "cbhhi">;
+ def CBHHSWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b011, 0b11, "cbhhs">;
+ def CBHEQWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b110, 0b11, "cbheq">;
+ def CBHNEWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b111, 0b11, "cbhne">;
+
+ def CBBGTWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b000, 0b10, "cbbgt">;
+ def CBBGEWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b001, 0b10, "cbbge">;
+ def CBBHIWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b010, 0b10, "cbbhi">;
+ def CBBHSWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b011, 0b10, "cbbhs">;
+ def CBBEQWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b110, 0b10, "cbbeq">;
+ def CBBNEWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b111, 0b10, "cbbne">;
+
+ defm CBGT : CmpBranchImmediate<0b000, "uimm6", "cbgt">;
+ defm CBLT : CmpBranchImmediate<0b001, "uimm6", "cblt">;
+ defm CBHI : CmpBranchImmediate<0b010, "uimm6", "cbhi">;
+ defm CBLO : CmpBranchImmediate<0b011, "uimm6", "cblo">;
+ defm CBEQ : CmpBranchImmediate<0b110, "uimm6", "cbeq">;
+ defm CBNE : CmpBranchImmediate<0b111, "uimm6", "cbne">;
+
+ defm : CmpBranchImmediateAlias<"cbge", "CBGT", "uimm6p1">;
+ defm : CmpBranchImmediateAlias<"cbhs", "CBHI", "uimm6p1">;
+ defm : CmpBranchImmediateAlias<"cble", "CBLT", "uimm6m1">;
+ defm : CmpBranchImmediateAlias<"cbls", "CBLO", "uimm6m1">;
+
+ defm : CmpBranchRegisterAlias<"cble", "CBGE">;
+ defm : CmpBranchRegisterAlias<"cblo", "CBHI">;
+ defm : CmpBranchRegisterAlias<"cbls", "CBHS">;
+ defm : CmpBranchRegisterAlias<"cblt", "CBGT">;
+
+ defm : CmpBranchWRegisterAlias<"cbble", "CBBGE">;
+ defm : CmpBranchWRegisterAlias<"cbblo", "CBBHI">;
+ defm : CmpBranchWRegisterAlias<"cbbls", "CBBHS">;
+ defm : CmpBranchWRegisterAlias<"cbblt", "CBBGT">;
+
+ defm : CmpBranchWRegisterAlias<"cbhle", "CBHGE">;
+ defm : CmpBranchWRegisterAlias<"cbhlo", "CBHHI">;
+ defm : CmpBranchWRegisterAlias<"cbhls", "CBHHS">;
+ defm : CmpBranchWRegisterAlias<"cbhlt", "CBHGT">;
+} // HasCMPBR
+
+
 //===-----------------------------------------------------===//
 // Atomic floating-point in-memory instructions (FEAT_LSFE)
 //===-----------------------------------------------------===//

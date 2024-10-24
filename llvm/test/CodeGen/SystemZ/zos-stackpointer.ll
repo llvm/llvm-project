@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
 ; CHECK-LABEL: get_stack:
-; CHECK: lgr   3, 4
+; CHECK: lgr   3,4
 ; CHECK: b 2(7)
 
 define ptr @get_stack() nounwind {

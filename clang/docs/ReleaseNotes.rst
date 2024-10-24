@@ -544,6 +544,7 @@ Bug Fixes to C++ Support
 - Clang incorrectly considered a class with an anonymous union member to not be
   const-default-constructible even if a union member has a default member initializer.
   (#GH95854).
+- Fixed an assertion failure when evaluating an invalid expression in an array initializer (#GH112140)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -710,6 +711,7 @@ clang-format
   multi-line comments without touching their contents, renames ``false`` to
   ``Never``, and ``true`` to ``Always``.
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
+- Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
 
 libclang
 --------
