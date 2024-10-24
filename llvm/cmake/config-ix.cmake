@@ -157,7 +157,14 @@ if(LLVM_ENABLE_ZSTD)
     find_package(zstd QUIET)
   endif()
 endif()
+
+# If LLVM_USE_STATIC_ZSTD is specified, make sure we enable zstd only if static
+# libraries are found.
+if(LLVM_USE_STATIC_ZSTD AND NOT TARGET zstd::libzstd_static)
+set(LLVM_ENABLE_ZSTD OFF)
+else()
 set(LLVM_ENABLE_ZSTD ${zstd_FOUND})
+endif()
 
 if(LLVM_ENABLE_LIBXML2)
   if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON)
