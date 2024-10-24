@@ -183,8 +183,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI __float_buffer(const __float_buffer&)            = delete;
   _LIBCPP_HIDE_FROM_ABI __float_buffer& operator=(const __float_buffer&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI char* begin() const { return __begin_; }
-  _LIBCPP_HIDE_FROM_ABI char* end() const { return __begin_ + __size_; }
+  _LIBCPP_HIDE_FROM_ABI char* begin() const _LIBCPP_LIFETIMEBOUND { return __begin_; }
+  _LIBCPP_HIDE_FROM_ABI char* end() const _LIBCPP_LIFETIMEBOUND { return __begin_ + __size_; }
 
   _LIBCPP_HIDE_FROM_ABI int __precision() const { return __precision_; }
   _LIBCPP_HIDE_FROM_ABI int __num_trailing_zeros() const { return __num_trailing_zeros_; }

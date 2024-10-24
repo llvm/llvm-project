@@ -10,6 +10,8 @@
 #ifndef SUPPORT_TEST_MACROS_HPP
 #define SUPPORT_TEST_MACROS_HPP
 
+#pragma clang diagnostic warning "-Wdangling"
+
 #ifdef __has_include
 #  if __has_include(<version>)
 #    include <version>
