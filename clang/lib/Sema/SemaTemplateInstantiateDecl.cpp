@@ -2237,7 +2237,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         SemaRef.Context, DC, D->getInnerLocStart(),
         InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
         D->getSourceRange().getEnd(), DGuide->getCorrespondingConstructor(),
-        DGuide->getDeductionCandidateKind(), TrailingRequiresClause);
+        DGuide->getDeductionCandidateKind(), TrailingRequiresClause,
+        DGuide->getSourceDeductionGuide(), DGuide->getSourceKind());
     Function->setAccess(D->getAccess());
   } else {
     Function = FunctionDecl::Create(

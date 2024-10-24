@@ -8113,6 +8113,7 @@ TEST_P(ImportFunctions, CTADImplicit) {
   auto *ToD = Import(FromD, Lang_CXX17);
   ASSERT_TRUE(ToD);
   EXPECT_EQ(ToD->getDeductionCandidateKind(), DeductionCandidate::Copy);
+  EXPECT_EQ(ToD->getSourceDeductionGuide(), nullptr);
   // Check that the deduced class template is also imported.
   EXPECT_TRUE(findFromTU(FromD)->Importer->GetAlreadyImportedOrNull(
       FromD->getDeducedTemplate()));
@@ -8137,6 +8138,7 @@ TEST_P(ImportFunctions, CTADUserDefinedExplicit) {
   ASSERT_TRUE(ToD);
   EXPECT_FALSE(FromD->isImplicit());
   EXPECT_TRUE(ToD->isExplicit());
+  EXPECT_EQ(ToD->getSourceDeductionGuide(), nullptr);
 }
 
 TEST_P(ImportFunctions, CTADWithLocalTypedef) {
@@ -8153,6 +8155,46 @@ TEST_P(ImportFunctions, CTADWithLocalTypedef) {
       TU, cxxDeductionGuideDecl());
   auto *ToD = Import(FromD, Lang_CXX17);
   ASSERT_TRUE(ToD);
+}
+
+TEST_P(ImportFunctions, CTADAliasTemplate) {
+  Decl *TU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      template<typename T>
+      using B = A<T>;
+      B b{(int)0};
+      )",
+      Lang_CXX20, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int")))));
+  auto *ToD = Import(FromD, Lang_CXX20);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->getSourceKind() == CXXDeductionGuideDecl::SourceKind::Alias);
+  EXPECT_TRUE(ToD->getSourceDeductionGuide());
+}
+
+TEST_P(ImportFunctions, CTADInheritedCtor) {
+  Decl *TU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      template <typename T> struct B : public A<T> {
+        using A<T>::A;
+      };
+      B b{(int)0};
+      )",
+      Lang_CXX23, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int")))));
+  auto *ToD = Import(FromD, Lang_CXX23);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->getSourceKind() ==
+              CXXDeductionGuideDecl::SourceKind::InheritedConstructor);
+  EXPECT_TRUE(ToD->getSourceDeductionGuide());
 }
 
 TEST_P(ImportFunctions, ParmVarDeclDeclContext) {

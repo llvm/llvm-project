@@ -58,7 +58,7 @@ inline InheritableAttr *getDLLAttr(Decl *D) {
 }
 
 /// Retrieve the depth and index of a template parameter.
-inline std::pair<unsigned, unsigned> getDepthAndIndex(NamedDecl *ND) {
+inline std::pair<unsigned, unsigned> getDepthAndIndex(const NamedDecl *ND) {
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
 
