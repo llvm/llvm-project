@@ -20572,6 +20572,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::GPRCRegClass);
     }
   } else if (Constraint == "Pr") {
+    if (VT == MVT::f64 && !Subtarget.is64Bit() && Subtarget.hasStdExtZdinx())
+      return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
     return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
   }
 
