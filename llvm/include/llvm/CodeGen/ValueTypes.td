@@ -317,20 +317,23 @@ def riscv_nxv16i8x3  : VTVecTup<384, 3, i8, 220>; // RISCV vector tuple(min_num_
 def riscv_nxv16i8x4  : VTVecTup<512, 4, i8, 221>; // RISCV vector tuple(min_num_elts=16, nf=4)
 def riscv_nxv32i8x2  : VTVecTup<512, 2, i8, 222>; // RISCV vector tuple(min_num_elts=32, nf=2)
 
-def x86mmx    : ValueType<64,   223>;  // X86 MMX value
-def Glue      : ValueType<0,    224>;  // Pre-RA sched glue
-def isVoid    : ValueType<0,    225>;  // Produces no value
-def untyped   : ValueType<8,    226> { // Produces an untyped value
+def riscv_i32_pair : ValueType<64, 223>; // RISCV pair of RV32 GPRs
+def riscv_i64_pair : ValueType<128, 224>; // RISCV pair of RV64 GPRs
+
+def x86mmx    : ValueType<64,   225>;  // X86 MMX value
+def Glue      : ValueType<0,    226>;  // Pre-RA sched glue
+def isVoid    : ValueType<0,    227>;  // Produces no value
+def untyped   : ValueType<8,    228> { // Produces an untyped value
   let LLVMName = "Untyped";
 }
-def funcref   : ValueType<0,    227>;  // WebAssembly's funcref type
-def externref : ValueType<0,    228>;  // WebAssembly's externref type
-def exnref    : ValueType<0,    229>;  // WebAssembly's exnref type
-def x86amx    : ValueType<8192, 230>;  // X86 AMX value
-def i64x8     : ValueType<512,  231>;  // 8 Consecutive GPRs (AArch64)
+def funcref   : ValueType<0,    229>;  // WebAssembly's funcref type
+def externref : ValueType<0,    230>;  // WebAssembly's externref type
+def exnref    : ValueType<0,    231>;  // WebAssembly's exnref type
+def x86amx    : ValueType<8192, 232>;  // X86 AMX value
+def i64x8     : ValueType<512,  233>;  // 8 Consecutive GPRs (AArch64)
 def aarch64svcount
-              : ValueType<16,  232>;  // AArch64 predicate-as-counter
-def spirvbuiltin : ValueType<0, 233>; // SPIR-V's builtin type
+              : ValueType<16,  234>;  // AArch64 predicate-as-counter
+def spirvbuiltin : ValueType<0, 235>; // SPIR-V's builtin type
 
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy

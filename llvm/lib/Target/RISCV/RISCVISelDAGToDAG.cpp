@@ -953,6 +953,35 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Res);
     return;
   }
+  case RISCVISD::BuildGPRPair: {
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+        Node->getOperand(0),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
+        Node->getOperand(1),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+
+    SDNode *N = CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                       Subtarget->getXLenPairVT(), Ops);
+    ReplaceNode(Node, N);
+    return;
+  }
+  case RISCVISD::SplitGPRPair: {
+    if (!SDValue(Node, 0).use_empty()) {
+      SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL, VT,
+                                                  Node->getOperand(0));
+      ReplaceUses(SDValue(Node, 0), Lo);
+    }
+
+    if (!SDValue(Node, 1).use_empty()) {
+      SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL, VT,
+                                                  Node->getOperand(0));
+      ReplaceUses(SDValue(Node, 1), Hi);
+    }
+
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case RISCVISD::BuildPairF64: {
     if (!Subtarget->hasStdExtZdinx())
       break;
@@ -960,7 +989,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     assert(!Subtarget->is64Bit() && "Unexpected subtarget");
 
     SDValue Ops[] = {
-        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+        CurDAG->getTargetConstant(RISCV::GPRF64PairRegClassID, DL, MVT::i32),
         Node->getOperand(0),
         CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
         Node->getOperand(1),

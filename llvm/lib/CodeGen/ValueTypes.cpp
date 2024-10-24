@@ -177,6 +177,10 @@ std::string EVT::getEVTString() const {
     if (isFloatingPoint())
       return "f" + utostr(getSizeInBits());
     llvm_unreachable("Invalid EVT!");
+  case MVT::riscv_i32_pair:
+    return "riscv_i32_pair";
+  case MVT::riscv_i64_pair:
+    return "riscv_i64_pair";
   case MVT::bf16:      return "bf16";
   case MVT::ppcf128:   return "ppcf128";
   case MVT::isVoid:    return "isVoid";
@@ -214,6 +218,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     assert(isExtended() && "Type is not extended!");
     return LLVMTy;
   case MVT::isVoid:  return Type::getVoidTy(Context);
+  case MVT::riscv_i32_pair: return IntegerType::get(Context, 64);
+  case MVT::riscv_i64_pair: return IntegerType::get(Context, 128);
   case MVT::x86mmx:  return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case MVT::aarch64svcount:
     return TargetExtType::get(Context, "aarch64.svcount");

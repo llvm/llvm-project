@@ -201,6 +201,10 @@ public:
     return Min;
   }
 
+  MVT getXLenPairVT() const {
+    return is64Bit() ? MVT::riscv_i64_pair : MVT::riscv_i32_pair;
+  }
+
   /// If the ElementCount or TypeSize \p X is scalable and VScale (VLEN) is
   /// exactly known, returns \p X converted to a fixed quantity. Otherwise
   /// returns \p X unmodified.
