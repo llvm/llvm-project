@@ -15,10 +15,12 @@
 
 #include "VPlan.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
 
 class InductionDescriptor;
+class RecurrenceDescriptor;
 class Instruction;
 class PHINode;
 class ScalarEvolution;
@@ -26,6 +28,7 @@ class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
+class TargetTransformInfo;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
