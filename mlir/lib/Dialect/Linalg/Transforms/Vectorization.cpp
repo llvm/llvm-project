@@ -2712,6 +2712,9 @@ struct PadOpVectorizationWithInsertSlicePattern
 
 void mlir::linalg::populatePadOpVectorizationPatterns(
     RewritePatternSet &patterns, PatternBenefit baseBenefit) {
+  // TODO: The following pattern implements "decomposition" and
+  // optional "vectorization". Seperate "decomposition" into a sepereate
+  // pre-processing pattern group.
   patterns.add<GenericPadOpVectorizationPattern>(patterns.getContext(),
                                                  baseBenefit);
   // Try these specialized patterns first before resorting to the generic one.
