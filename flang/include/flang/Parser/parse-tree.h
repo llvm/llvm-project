@@ -3424,7 +3424,17 @@ struct AssignedGotoStmt {
 
 WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
-// Parse tree nodes for OpenMP 4.5 directives and clauses
+// Parse tree nodes for OpenMP 5.2 directives and clauses
+
+// [5.0] 2.1.6 iterator-specifier -> type-declaration-stmt = subscript-triple
+//             iterator-modifier -> iterator-specifier-list
+struct OmpIteratorSpecifier {
+  TUPLE_CLASS_BOILERPLATE(OmpIteratorSpecifier);
+  CharBlock source;
+  std::tuple<TypeDeclarationStmt, SubscriptTriplet> t;
+};
+
+WRAPPER_CLASS(OmpIteratorModifier, std::list<OmpIteratorSpecifier>);
 
 // 2.5 proc-bind-clause -> PROC_BIND (MASTER | CLOSE | SPREAD)
 struct OmpProcBindClause {
@@ -3450,16 +3460,25 @@ struct OmpObject {
 WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 
 // 2.15.5.1 map ->
-//    MAP ([ [map-type-modifiers [,] ] map-type : ] variable-name-list)
-// map-type-modifiers -> map-type-modifier [,] [...]
+//    MAP ([[map-type-modifier-list [,]] [iterator-modifier [,]] map-type : ]
+//         variable-name-list)
+// map-type-modifier-list -> map-type-modifier [,] [...]
 // map-type-modifier -> ALWAYS | CLOSE | PRESENT | OMPX_HOLD
 // map-type -> TO | FROM | TOFROM | ALLOC | RELEASE | DELETE
 struct OmpMapClause {
   ENUM_CLASS(TypeModifier, Always, Close, Present, Ompx_Hold);
   ENUM_CLASS(Type, To, From, Tofrom, Alloc, Release, Delete)
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
-  std::tuple<std::optional<std::list<TypeModifier>>, std::optional<Type>,
-      OmpObjectList>
+
+  // All modifiers are parsed into optional lists, even if they are unique.
+  // The checks for satisfying those constraints are deferred to semantics.
+  // In OpenMP 5.2 the non-comma syntax has been deprecated: keep the
+  // information about separator presence to emit a diagnostic if needed.
+  std::tuple<std::optional<std::list<TypeModifier>>,
+      std::optional<std::list<OmpIteratorModifier>>, // unique
+      std::optional<std::list<Type>>, // unique
+      OmpObjectList,
+      bool> // were the modifiers comma-separated?
       t;
 };
 
