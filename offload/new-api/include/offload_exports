@@ -1,0 +1,9 @@
+VERS1.0 {
+global:
+  offloadPlatformGet;
+  offloadPlatformGetInfo;
+  offloadDeviceGet;
+  offloadDeviceGetInfo;
+local:
+  *;
+};
