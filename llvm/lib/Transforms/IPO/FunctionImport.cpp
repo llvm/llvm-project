@@ -2006,17 +2006,6 @@ static bool doImportingForModuleForTest(
     ComputeCrossModuleImportForModuleForTest(M.getModuleIdentifier(),
                                              isPrevailing, *Index, ImportList);
 
-  // Conservatively mark all internal values as promoted. This interface is
-  // only used when doing importing via the function importing pass. The pass
-  // is only enabled when testing importing via the 'opt' tool, which does
-  // not do the ThinLink that would normally determine what values to promote.
-  for (auto &I : *Index) {
-    for (auto &S : I.second.SummaryList) {
-      if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
-    }
-  }
-
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.
   if (renameModuleForThinLTO(M, *Index, /*ClearDSOLocalOnDeclarations=*/false,
@@ -2024,6 +2013,20 @@ static bool doImportingForModuleForTest(
     errs() << "Error renaming module\n";
     return true;
   }
+
+  // Perform internalization of GVs in this module, if they are marked as
+  // internal by thinLTO summary.
+  GVSummaryMapTy DefinedGlobals;
+  for (const auto &GlobalList : *Index) {
+    auto GUID = GlobalList.first;
+    for (const auto &Summary : GlobalList.second.SummaryList) {
+      if (Summary->modulePath() == M.getName()) {
+        DefinedGlobals[GUID] = Summary.get();
+      }
+    }
+  }
+  thinLTOFinalizeInModule(M, DefinedGlobals, /*PropagateAttrs=*/true);
+  thinLTOInternalizeModule(M, DefinedGlobals);
 
   // Perform the import now.
   auto ModuleLoader = [&M](StringRef Identifier) {

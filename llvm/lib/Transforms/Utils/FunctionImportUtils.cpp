@@ -223,19 +223,6 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   if (GV.hasName())
     VI = ImportIndex.getValueInfo(GV.getGUID());
 
-  // Try lookup ValueInfo again without local symbol prefix, to handle a case
-  // where a GV with internal linkage somehow show up in ThinLTO index. We need
-  // to check if the GV in ThinLTO index is actually coming from the current
-  // module, in this case it is considered a match, as if this GV is being
-  // imported from this module itself.
-  if (!VI && GV.getLinkage() == GlobalValue::InternalLinkage)
-    if (ValueInfo VI2 = ImportIndex.getValueInfo(
-            GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-                GV.getName(), GlobalValue::ExternalLinkage, ""))))
-      if (!VI2.getSummaryList().empty() &&
-          VI2.getSummaryList()[0]->modulePath() == GV.getParent()->getName())
-        return;
-
   // We should always have a ValueInfo (i.e. GV in index) for definitions when
   // we are exporting, and also when importing that value.
   assert(VI || GV.isDeclaration() ||

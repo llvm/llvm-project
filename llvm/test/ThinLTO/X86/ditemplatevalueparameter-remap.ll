@@ -41,9 +41,8 @@
 ; RUN:   -r=%t1.bc,_Z8thinlto1v,x \
 ; RUN:   -r=%t1.bc,_Z3barv,px     \
 ; RUN:   -r=%t2.bc,_Z8thinlto1v,px
-; RUN: opt -passes='internalize<preserve-gv=_Z3bazv;preserve-gv=_Z3barv>,function-import,module-inline' \
-; RUN:   -enable-import-metadata -import-all-index \
-; RUN:   -summary-file=%t1.bc.thinlto.bc %t1.bc -o %t1.o
+; RUN: opt -passes='function-import,module-inline' -enable-import-metadata \
+; RUN:   -import-all-index -summary-file=%t1.bc.thinlto.bc %t1.bc -o %t1.o
 ; RUN: llvm-dis %t1.o -o - | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
