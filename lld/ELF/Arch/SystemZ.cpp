@@ -67,6 +67,7 @@ SystemZ::SystemZ(Ctx &ctx) : TargetInfo(ctx) {
   pltHeaderSize = 32;
   pltEntrySize = 32;
   ipltEntrySize = 32;
+  hashEntrySize = 8; // On SystemZ, .hash entries are 64 bit in size.
 
   // This "trap instruction" is used to fill gaps between sections.
   // On SystemZ, the behavior of the GNU ld is to fill those gaps

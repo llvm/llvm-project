@@ -7,9 +7,9 @@
 # RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck --check-prefix=DISASM %s
 
 # RELOC-LABEL: Relocation section '.rela.dyn' at offset {{.*}} contains 3 entries:
-# RELOC: 00000000000023f8 000000010000000a R_390_GLOB_DAT 00000000000012d8 foo + 0
-# RELOC: 0000000000002400 000000030000000a R_390_GLOB_DAT 0000000000000000 und + 0
-# RELOC: 0000000000002408 000000040000000a R_390_GLOB_DAT 0000000000000000 dsofoo + 0
+# RELOC: 0000000000002428 000000010000000a R_390_GLOB_DAT 0000000000001308 foo + 0
+# RELOC: 0000000000002430 000000030000000a R_390_GLOB_DAT 0000000000000000 und + 0
+# RELOC: 0000000000002438 000000040000000a R_390_GLOB_DAT 0000000000000000 dsofoo + 0
 
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
@@ -18,22 +18,22 @@
 # DISASM:      <hid>:
 # DISASM-NEXT:     nop     0
 # DISASM:      <_start>:
-# DISASM-NEXT:    lgrl    %r1, 0x2400
-# DISASM-NEXT:    lgrl    %r1, 0x2400
-# DISASM-NEXT:    lgrl    %r1, 0x2408
-# DISASM-NEXT:    lgrl    %r1, 0x2408
-# DISASM-NEXT:    larl    %r1, 0x12dc
-# DISASM-NEXT:    larl    %r1, 0x12dc
-# DISASM-NEXT:    lgrl    %r1, 0x23f8
-# DISASM-NEXT:    lgrl    %r1, 0x23f8
-# DISASM-NEXT:    lgrl    %r1, 0x2400
-# DISASM-NEXT:    lgrl    %r1, 0x2400
-# DISASM-NEXT:    lgrl    %r1, 0x2408
-# DISASM-NEXT:    lgrl    %r1, 0x2408
-# DISASM-NEXT:    larl    %r1, 0x12dc
-# DISASM-NEXT:    larl    %r1, 0x12dc
-# DISASM-NEXT:    lgrl    %r1, 0x23f8
-# DISASM-NEXT:    lgrl    %r1, 0x23f8
+# DISASM-NEXT:    lgrl    %r1, 0x2430
+# DISASM-NEXT:    lgrl    %r1, 0x2430
+# DISASM-NEXT:    lgrl    %r1, 0x2438
+# DISASM-NEXT:    lgrl    %r1, 0x2438
+# DISASM-NEXT:    larl    %r1, 0x130c
+# DISASM-NEXT:    larl    %r1, 0x130c
+# DISASM-NEXT:    lgrl    %r1, 0x2428
+# DISASM-NEXT:    lgrl    %r1, 0x2428
+# DISASM-NEXT:    lgrl    %r1, 0x2430
+# DISASM-NEXT:    lgrl    %r1, 0x2430
+# DISASM-NEXT:    lgrl    %r1, 0x2438
+# DISASM-NEXT:    lgrl    %r1, 0x2438
+# DISASM-NEXT:    larl    %r1, 0x130c
+# DISASM-NEXT:    larl    %r1, 0x130c
+# DISASM-NEXT:    lgrl    %r1, 0x2428
+# DISASM-NEXT:    lgrl    %r1, 0x2428
 
 .text
 .globl foo

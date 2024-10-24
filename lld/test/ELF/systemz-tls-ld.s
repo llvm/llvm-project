@@ -12,35 +12,35 @@
 # RUN: llvm-objdump --section .data.rel.ro --full-contents %t | FileCheck --check-prefix=LE-DATA %s
 
 # LD-REL: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entries:
-# LD-REL: 00000000000024f8 0000000000000036 R_390_TLS_DTPMOD 0
+# LD-REL: 0000000000002528 0000000000000036 R_390_TLS_DTPMOD 0
 
-## _GLOBAL_OFFSET_TABLE is at 0x24e0
-# LD:      larl    %r12, 0x24e0
+## _GLOBAL_OFFSET_TABLE is at 0x2510
+# LD:      larl    %r12, 0x2510
 
-## GOT offset of the LDM TLS module ID is at 0x23e0
-# LD-NEXT: lgrl    %r2, 0x23e0
-# LD-NEXT: brasl   %r14, 0x13c0
+## GOT offset of the LDM TLS module ID is at 0x2410
+# LD-NEXT: lgrl    %r2, 0x2410
+# LD-NEXT: brasl   %r14, 0x13f0
 # LD-NEXT: la      %r2, 0(%r2,%r7)
 
-## DTP offset for a is at 0x23e8
-# LD-NEXT: lgrl    %r1, 0x23e8
+## DTP offset for a is at 0x2418
+# LD-NEXT: lgrl    %r1, 0x2418
 # LD-NEXT: lgf     %r1, 0(%r1,%r2)
 
-## DTP offset for b is at 0x23f0
-# LD-NEXT: lgrl    %r1, 0x23f0
+## DTP offset for b is at 0x2420
+# LD-NEXT: lgrl    %r1, 0x2420
 # LD-NEXT: lgf     %r1, 0(%r1,%r2)
 
-## DTP offset for c is at 0x23f8
-# LD-NEXT: lgrl    %r1, 0x23f8
+## DTP offset for c is at 0x2428
+# LD-NEXT: lgrl    %r1, 0x2428
 # LD-NEXT: lgf     %r1, 0(%r1,%r2)
 
 ## Constant pool holding GOT offsets of TLS module ID and DTP offsets:
-# TLS module ID: 0x24f8 / 0x18
+# TLS module ID: 0x2528 / 0x18
 # a: 8
 # b: 12
 # c: 16
-# LD-DATA: 23e0 00000000 00000018 00000000 00000008
-# LD-DATA: 23f0 00000000 0000000c 00000000 00000010
+# LD-DATA: 2410 00000000 00000018 00000000 00000008
+# LD-DATA: 2420 00000000 0000000c 00000000 00000010
 
 # NOREL: no relocations
 

@@ -721,6 +721,7 @@ public:
 
 private:
   size_t size = 0;
+  void writeHashTable(Ctx &ctx, uint8_t *buf, uint64_t entry) const;
 };
 
 // Used for PLT entries. It usually has a PLT header for lazy binding. Each PLT
