@@ -2318,7 +2318,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           "'allockind()' requires exactly one of alloc, realloc, and free");
     if ((Type == AllocFnKind::Free) &&
         ((K & (AllocFnKind::Uninitialized | AllocFnKind::Zeroed |
-               AllocFnKind::Aligned)) != AllocFnKind::Unknown))
+               AllocFnKind::Aligned | AllocFnKind::NoFree)) !=
+         AllocFnKind::Unknown))
       CheckFailed("'allockind(\"free\")' doesn't allow uninitialized, zeroed, "
                   "or aligned modifiers.");
     AllocFnKind ZeroedUninit = AllocFnKind::Uninitialized | AllocFnKind::Zeroed;

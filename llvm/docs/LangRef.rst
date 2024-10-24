@@ -1887,6 +1887,8 @@ example:
       zeroed.
     * "aligned": the function returns memory aligned according to the
       ``allocalign`` parameter.
+    * "nofree": the block of memory is not explicitly freed (but might be freed
+      by a conservative GC when unreferenced).
 
     The first three options are mutually exclusive, and the remaining options
     describe more details of how the function behaves. The remaining options

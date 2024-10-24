@@ -100,6 +100,11 @@ Value *getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
 /// insertion or speculative execution of allocation routines.
 bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
 
+// Whether this is a function that allocates memory that will never be
+// explicitly freed. The memory might be freed in the background by a GC when
+// unreferenced.
+bool isNoFreeAllocFunction(const CallBase *CB);
+
 /// Gets the alignment argument for an aligned_alloc-like function, using either
 /// built-in knowledge based on fuction names/signatures or allocalign
 /// attributes. Note: the Value returned may not indicate a valid alignment, per
