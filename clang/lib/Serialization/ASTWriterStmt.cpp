@@ -643,6 +643,12 @@ void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
   Code = serialization::EXPR_CONSTANT;
 }
 
+void ASTStmtWriter::VisitOpenACCAsteriskSizeExpr(OpenACCAsteriskSizeExpr *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getLocation());
+  Code = serialization::EXPR_OPENACC_ASTERISK_SIZE;
+}
+
 void ASTStmtWriter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   VisitExpr(E);
 
@@ -780,6 +786,7 @@ void ASTStmtWriter::VisitCharacterLiteral(CharacterLiteral *E) {
 
 void ASTStmtWriter::VisitParenExpr(ParenExpr *E) {
   VisitExpr(E);
+  Record.push_back(E->isProducedByFoldExpansion());
   Record.AddSourceLocation(E->getLParen());
   Record.AddSourceLocation(E->getRParen());
   Record.AddStmt(E->getSubExpr());
@@ -2908,6 +2915,19 @@ void ASTStmtWriter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
   Code = serialization::STMT_OPENACC_LOOP_CONSTRUCT;
+}
+
+//===----------------------------------------------------------------------===//
+// HLSL Constructs/Directives.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtWriter::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
+  VisitExpr(S);
+  Record.AddStmt(S->getOpaqueArgLValue());
+  Record.AddStmt(S->getCastedTemporary());
+  Record.AddStmt(S->getWritebackCast());
+  Record.writeBool(S->isInOut());
+  Code = serialization::EXPR_HLSL_OUT_ARG;
 }
 
 //===----------------------------------------------------------------------===//

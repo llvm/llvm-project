@@ -512,10 +512,8 @@ void RuntimePointerChecking::groupChecks(
   unsigned TotalComparisons = 0;
 
   DenseMap<Value *, SmallVector<unsigned>> PositionMap;
-  for (unsigned Index = 0; Index < Pointers.size(); ++Index) {
-    auto [It, _] = PositionMap.insert({Pointers[Index].PointerValue, {}});
-    It->second.push_back(Index);
-  }
+  for (unsigned Index = 0; Index < Pointers.size(); ++Index)
+    PositionMap[Pointers[Index].PointerValue].push_back(Index);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.
@@ -827,14 +825,13 @@ static bool hasComputableBounds(PredicatedScalarEvolution &PSE, Value *Ptr,
 
 /// Check whether a pointer address cannot wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE,
-                     const DenseMap<Value *, const SCEV *> &Strides, Value *Ptr, Type *AccessTy,
-                     Loop *L) {
+                     const DenseMap<Value *, const SCEV *> &Strides, Value *Ptr,
+                     Type *AccessTy, Loop *L, bool Assume) {
   const SCEV *PtrScev = PSE.getSCEV(Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, L))
     return true;
 
-  int64_t Stride = getPtrStride(PSE, AccessTy, Ptr, L, Strides).value_or(0);
-  return Stride == 1 ||
+  return getPtrStride(PSE, AccessTy, Ptr, L, Strides, Assume).has_value() ||
          PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
 }
 
@@ -1081,12 +1078,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       if (TranslatedPtrs.size() > 1)
         return false;
 
-      if (!isNoWrap(PSE, StridesMap, Ptr, AccessTy, TheLoop)) {
-        const SCEV *Expr = PSE.getSCEV(Ptr);
-        if (!Assume || !isa<SCEVAddRecExpr>(Expr))
-          return false;
-        PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
-      }
+      if (!isNoWrap(PSE, StridesMap, Ptr, AccessTy, TheLoop, Assume))
+        return false;
     }
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
@@ -1414,9 +1407,9 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
   // Look through the potentially overflowing instruction to try to prove
   // non-wrapping for the *specific* value of Ptr.
 
-  // The arithmetic implied by an inbounds GEP can't overflow.
+  // The arithmetic implied by an nusw GEP can't overflow.
   const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP || !GEP->isInBounds())
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
     return false;
 
   // Make sure there is only one non-const index and analyze that.
@@ -1518,12 +1511,12 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (isNoWrapAddRec(Ptr, AR, PSE, Lp))
     return Stride;
 
-  // An inbounds getelementptr that is a AddRec with a unit stride
+  // An nusw getelementptr that is a AddRec with a unit stride
   // cannot wrap per definition.  If it did, the result would be poison
   // and any memory access dependent on it would be immediate UB
   // when executed.
   if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-      GEP && GEP->isInBounds() && (Stride == 1 || Stride == -1))
+      GEP && GEP->hasNoUnsignedSignedWrap() && (Stride == 1 || Stride == -1))
     return Stride;
 
   // If the null pointer is undefined, then a access sequence which would
@@ -1937,6 +1930,35 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   LLVM_DEBUG(dbgs() << "LAA: Distance for " << *AInst << " to " << *BInst
                     << ": " << *Dist << "\n");
 
+  // Check if we can prove that Sink only accesses memory after Src's end or
+  // vice versa. At the moment this is limited to cases where either source or
+  // sink are loop invariant to avoid compile-time increases. This is not
+  // required for correctness.
+  if (SE.isLoopInvariant(Src, InnermostLoop) ||
+      SE.isLoopInvariant(Sink, InnermostLoop)) {
+    const auto &[SrcStart_, SrcEnd_] =
+        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE, PointerBounds);
+    const auto &[SinkStart_, SinkEnd_] =
+        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE, PointerBounds);
+    if (!isa<SCEVCouldNotCompute>(SrcStart_) &&
+        !isa<SCEVCouldNotCompute>(SrcEnd_) &&
+        !isa<SCEVCouldNotCompute>(SinkStart_) &&
+        !isa<SCEVCouldNotCompute>(SinkEnd_)) {
+      if (!LoopGuards)
+        LoopGuards.emplace(
+            ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
+      auto SrcEnd = SE.applyLoopGuards(SrcEnd_, *LoopGuards);
+      auto SinkStart = SE.applyLoopGuards(SinkStart_, *LoopGuards);
+      if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
+        return MemoryDepChecker::Dependence::NoDep;
+
+      auto SinkEnd = SE.applyLoopGuards(SinkEnd_, *LoopGuards);
+      auto SrcStart = SE.applyLoopGuards(SrcStart_, *LoopGuards);
+      if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
+        return MemoryDepChecker::Dependence::NoDep;
+    }
+  }
+
   // Need accesses with constant strides and the same direction for further
   // dependence analysis. We don't want to vectorize "A[B[i]] += ..." and
   // similar code or pointer arithmetic that could wrap in the address space.
@@ -1982,45 +2004,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                               const MemAccessInfo &B, unsigned BIdx) {
   assert(AIdx < BIdx && "Must pass arguments in program order");
 
-  // Check if we can prove that Sink only accesses memory after Src's end or
-  // vice versa. The helper is used to perform the checks only on the exit paths
-  // where it helps to improve the analysis result.
-  auto CheckCompletelyBeforeOrAfter = [&]() {
-    auto *APtr = A.getPointer();
-    auto *BPtr = B.getPointer();
-
-    Type *ATy = getLoadStoreType(InstMap[AIdx]);
-    Type *BTy = getLoadStoreType(InstMap[BIdx]);
-
-    const SCEV *Src = PSE.getSCEV(APtr);
-    const SCEV *Sink = PSE.getSCEV(BPtr);
-
-    const auto &[SrcStart, SrcEnd] =
-        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE, PointerBounds);
-    if (isa<SCEVCouldNotCompute>(SrcStart) || isa<SCEVCouldNotCompute>(SrcEnd))
-      return false;
-
-    const auto &[SinkStart, SinkEnd] =
-        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE, PointerBounds);
-    if (isa<SCEVCouldNotCompute>(SinkStart) ||
-        isa<SCEVCouldNotCompute>(SinkEnd))
-      return false;
-
-    auto &SE = *PSE.getSE();
-    return SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart) ||
-           SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart);
-  };
-
   // Get the dependence distance, stride, type size and what access writes for
   // the dependence between A and B.
   auto Res =
       getDependenceDistanceStrideAndSize(A, InstMap[AIdx], B, InstMap[BIdx]);
-  if (std::holds_alternative<Dependence::DepType>(Res)) {
-    if (std::get<Dependence::DepType>(Res) == Dependence::Unknown &&
-        CheckCompletelyBeforeOrAfter())
-      return Dependence::NoDep;
+  if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
-  }
 
   auto &[Dist, StrideA, StrideB, TypeByteSize, AIsWrite, BIsWrite] =
       std::get<DepDistanceStrideAndSizeInfo>(Res);
@@ -2029,9 +2018,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   std::optional<uint64_t> CommonStride =
       StrideA == StrideB ? std::make_optional(StrideA) : std::nullopt;
   if (isa<SCEVCouldNotCompute>(Dist)) {
-    if (CheckCompletelyBeforeOrAfter())
-      return Dependence::NoDep;
-
     // TODO: Relax requirement that there is a common stride to retry with
     // non-constant distance dependencies.
     FoundNonConstantDistanceDependence |= CommonStride.has_value();
@@ -2083,8 +2069,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         // Write to the same location with the same size.
         return Dependence::Forward;
       }
-      assert(!CheckCompletelyBeforeOrAfter() &&
-             "unexpectedly proved no dependence");
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
                            "different type sizes\n");
       return Dependence::Unknown;
@@ -2106,8 +2090,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         // did not set it when strides were different but there is no inherent
         // reason to.
         FoundNonConstantDistanceDependence |= CommonStride.has_value();
-        if (CheckCompletelyBeforeOrAfter())
-          return Dependence::NoDep;
         return Dependence::Unknown;
       }
       if (!HasSameSize ||
@@ -2127,9 +2109,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Below we only handle strictly positive distances.
   if (MinDistance <= 0) {
     FoundNonConstantDistanceDependence |= CommonStride.has_value();
-    if (CheckCompletelyBeforeOrAfter())
-      return Dependence::NoDep;
-
     return Dependence::Unknown;
   }
 
@@ -2146,18 +2125,13 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   }
 
   if (!HasSameSize) {
-    if (CheckCompletelyBeforeOrAfter())
-      return Dependence::NoDep;
     LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
                          "different type sizes\n");
     return Dependence::Unknown;
   }
 
-  if (!CommonStride) {
-    if (CheckCompletelyBeforeOrAfter())
-      return Dependence::NoDep;
+  if (!CommonStride)
     return Dependence::Unknown;
-  }
 
   // Bail out early if passed-in parameters make vectorization not feasible.
   unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
@@ -2205,10 +2179,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       // dependence distance and the distance may be larger at runtime (and safe
       // for vectorization). Classify it as Unknown, so we re-try with runtime
       // checks.
-      //
-      if (CheckCompletelyBeforeOrAfter())
-        return Dependence::NoDep;
-
       return Dependence::Unknown;
     }
     LLVM_DEBUG(dbgs() << "LAA: Failure because of positive minimum distance "
@@ -2221,8 +2191,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   if (MinDistanceNeeded > MinDepDistBytes) {
     LLVM_DEBUG(dbgs() << "LAA: Failure because it needs at least "
                       << MinDistanceNeeded << " size in bytes\n");
-    assert(!CheckCompletelyBeforeOrAfter() &&
-           "unexpectedly proved no dependence");
     return Dependence::Backward;
   }
 
@@ -2270,8 +2238,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // For non-constant distances, we checked the lower bound of the dependence
     // distance and the distance may be larger at runtime (and safe for
     // vectorization). Classify it as Unknown, so we re-try with runtime checks.
-    assert(!CheckCompletelyBeforeOrAfter() &&
-           "unexpectedly proved no dependence");
     return Dependence::Unknown;
   }
 
@@ -2484,13 +2450,20 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         continue;
 
       // If this is a load, save it. If this instruction can read from memory
-      // but is not a load, then we quit. Notice that we don't handle function
-      // calls that read or write.
+      // but is not a load, we only allow it if it's a call to a function with a
+      // vector mapping and no pointer arguments.
       if (I.mayReadFromMemory()) {
-        // If the function has an explicit vectorized counterpart, we can safely
-        // assume that it can be vectorized.
+        auto hasPointerArgs = [](CallBase *CB) {
+          return any_of(CB->args(), [](Value const *Arg) {
+            return Arg->getType()->isPointerTy();
+          });
+        };
+
+        // If the function has an explicit vectorized counterpart, and does not
+        // take output/input pointers, we can safely assume that it can be
+        // vectorized.
         if (Call && !Call->isNoBuiltin() && Call->getCalledFunction() &&
-            !VFDatabase::getMappings(*Call).empty())
+            !hasPointerArgs(Call) && !VFDatabase::getMappings(*Call).empty())
           continue;
 
         auto *Ld = dyn_cast<LoadInst>(&I);

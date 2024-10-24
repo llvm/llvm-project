@@ -28,6 +28,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_DIA_SDK
 #include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBDataStream.h"
@@ -1294,12 +1295,11 @@ void SymbolFilePDB::CacheFunctionNames() {
         continue;
 
       if (CPlusPlusLanguage::IsCPPMangledName(name.c_str())) {
-        auto vm_addr = pub_sym_up->getVirtualAddress();
-
         // PDB public symbol has mangled name for its associated function.
-        if (vm_addr && addr_ids.find(vm_addr) != addr_ids.end()) {
-          // Cache mangled name.
-          m_func_full_names.Append(ConstString(name), addr_ids[vm_addr]);
+        if (auto vm_addr = pub_sym_up->getVirtualAddress()) {
+          if (auto it = addr_ids.find(vm_addr); it != addr_ids.end())
+            // Cache mangled name.
+            m_func_full_names.Append(ConstString(name), it->second);
         }
       }
     }

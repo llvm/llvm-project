@@ -15,6 +15,7 @@
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
@@ -479,6 +480,27 @@ public:
         T(Triple(M.getTargetTriple())) {}
   ~OpenMPIRBuilder();
 
+  class AtomicInfo : public llvm::AtomicInfo<IRBuilder<>> {
+    llvm::Value *AtomicVar;
+
+  public:
+    AtomicInfo(IRBuilder<> *Builder, llvm::Type *Ty, uint64_t AtomicSizeInBits,
+               uint64_t ValueSizeInBits, llvm::Align AtomicAlign,
+               llvm::Align ValueAlign, bool UseLibcall, llvm::Value *AtomicVar)
+        : llvm::AtomicInfo<IRBuilder<>>(Builder, Ty, AtomicSizeInBits,
+                                        ValueSizeInBits, AtomicAlign,
+                                        ValueAlign, UseLibcall),
+          AtomicVar(AtomicVar) {}
+
+    llvm::Value *getAtomicPointer() const override { return AtomicVar; }
+    void decorateWithTBAA(llvm::Instruction *I) override {}
+    llvm::AllocaInst *CreateAlloca(llvm::Type *Ty,
+                                   const llvm::Twine &Name) const override {
+      llvm::AllocaInst *allocaInst = Builder->CreateAlloca(Ty);
+      allocaInst->setName(Name);
+      return allocaInst;
+    }
+  };
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
   /// before any other method and only once! This internal state includes types
@@ -2242,6 +2264,9 @@ public:
 
     bool EmitDebug = false;
 
+    /// Whether the `target ... data` directive has a `nowait` clause.
+    bool HasNoWait = false;
+
     explicit TargetDataInfo() {}
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
                             bool SeparateBeginEndCalls)
@@ -2320,7 +2345,6 @@ public:
   /// Generate a target region entry call and host fallback call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  /// \param OutlinedFn The outlined kernel function.
   /// \param OutlinedFnID The ooulined function ID.
   /// \param EmitTargetCallFallbackCB Call back function to generate host
   ///        fallback code.
@@ -2328,18 +2352,27 @@ public:
   /// \param DeviceID Identifier for the device via the 'device' clause.
   /// \param RTLoc Source location identifier
   /// \param AllocaIP The insertion point to be used for alloca instructions.
-  InsertPointTy emitKernelLaunch(
-      const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
-      EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
-      Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
+  InsertPointTy
+  emitKernelLaunch(const LocationDescription &Loc, Value *OutlinedFnID,
+                   EmitFallbackCallbackTy EmitTargetCallFallbackCB,
+                   TargetKernelArgs &Args, Value *DeviceID, Value *RTLoc,
+                   InsertPointTy AllocaIP);
+
+  /// Callback type for generating the bodies of device directives that require
+  /// outer target tasks (e.g. in case of having `nowait` or `depend` clauses).
+  ///
+  /// \param DeviceID The ID of the device on which the target region will
+  ///        execute.
+  /// \param RTLoc Source location identifier
+  /// \Param TargetTaskAllocaIP Insertion point for the alloca block of the
+  ///        generated task.
+  using TargetTaskBodyCallbackTy =
+      function_ref<void(Value *DeviceID, Value *RTLoc,
+                        IRBuilderBase::InsertPoint TargetTaskAllocaIP)>;
 
   /// Generate a target-task for the target construct
   ///
-  /// \param OutlinedFn The outlined device/target kernel function.
-  /// \param OutlinedFnID The ooulined function ID.
-  /// \param EmitTargetCallFallbackCB Call back function to generate host
-  ///        fallback code.
-  /// \param Args Data structure holding information about the kernel arguments.
+  /// \param TaskBodyCB Callback to generate the actual body of the target task.
   /// \param DeviceID Identifier for the device via the 'device' clause.
   /// \param RTLoc Source location identifier
   /// \param AllocaIP The insertion point to be used for alloca instructions.
@@ -2348,10 +2381,10 @@ public:
   /// \param HasNoWait True if the target construct had 'nowait' on it, false
   ///        otherwise
   InsertPointTy emitTargetTask(
-      Function *OutlinedFn, Value *OutlinedFnID,
-      EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
-      Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP,
-      SmallVector<OpenMPIRBuilder::DependData> &Dependencies, bool HasNoWait);
+      TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID, Value *RTLoc,
+      OpenMPIRBuilder::InsertPointTy AllocaIP,
+      const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
+      bool HasNoWait);
 
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
@@ -2853,16 +2886,16 @@ public:
   /// instructions for passed in target arguments where neccessary
   /// \param Dependencies A vector of DependData objects that carry
   // dependency information as passed in the depend clause
-  InsertPointTy
-  createTarget(const LocationDescription &Loc, bool IsOffloadEntry,
-               OpenMPIRBuilder::InsertPointTy AllocaIP,
-               OpenMPIRBuilder::InsertPointTy CodeGenIP,
-               TargetRegionEntryInfo &EntryInfo, ArrayRef<int32_t> NumTeams,
-               ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Inputs,
-               GenMapInfoCallbackTy GenMapInfoCB,
-               TargetBodyGenCallbackTy BodyGenCB,
-               TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
-               SmallVector<DependData> Dependencies = {});
+  // \param HasNowait Whether the target construct has a `nowait` clause or not.
+  InsertPointTy createTarget(
+      const LocationDescription &Loc, bool IsOffloadEntry,
+      OpenMPIRBuilder::InsertPointTy AllocaIP,
+      OpenMPIRBuilder::InsertPointTy CodeGenIP,
+      TargetRegionEntryInfo &EntryInfo, ArrayRef<int32_t> NumTeams,
+      ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Inputs,
+      GenMapInfoCallbackTy GenMapInfoCB, TargetBodyGenCallbackTy BodyGenCB,
+      TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+      SmallVector<DependData> Dependencies = {}, bool HasNowait = false);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -3038,6 +3071,15 @@ private:
                    AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX,
                    bool IsXBinopExpr);
+
+  std::pair<llvm::LoadInst *, llvm::AllocaInst *>
+  EmitAtomicLoadLibcall(Value *X, Type *XElemTy, llvm::AtomicOrdering AO,
+                        uint64_t AtomicSizeInBits);
+
+  std::pair<llvm::Value *, llvm::Value *> EmitAtomicCompareExchangeLibcall(
+      Value *X, Type *XElemTy, uint64_t AtomicSizeInBits,
+      llvm::Value *ExpectedVal, llvm::Value *DesiredVal,
+      llvm::AtomicOrdering Success, llvm::AtomicOrdering Failure);
 
   /// Emit the binary op. described by \p RMWOp, using \p Src1 and \p Src2 .
   ///

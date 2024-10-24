@@ -120,7 +120,7 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
         OS << '%' << Register::virtReg2Index(Reg);
       }
     } else if (!TRI)
-      OS << '$' << "physreg" << Reg;
+      OS << '$' << "physreg" << Reg.id();
     else if (Reg < TRI->getNumRegs()) {
       OS << '$';
       printLowerCase(TRI->getName(Reg), OS);

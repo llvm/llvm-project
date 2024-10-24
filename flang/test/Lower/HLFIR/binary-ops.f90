@@ -28,11 +28,11 @@ subroutine complex_add(x, y, z)
  x = y + z
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_add(
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_8:.*]] = fir.addc %[[VAL_6]], %[[VAL_7]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_8:.*]] = fir.addc %[[VAL_6]], %[[VAL_7]] {fastmath = #arith.fastmath<contract>} : complex<f32>
 
 subroutine int_sub(x, y, z)
  integer :: x, y, z
@@ -61,11 +61,11 @@ subroutine complex_sub(x, y, z)
  x = y - z
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_sub(
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_8:.*]] = fir.subc %[[VAL_6]], %[[VAL_7]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_8:.*]] = fir.subc %[[VAL_6]], %[[VAL_7]] {fastmath = #arith.fastmath<contract>} : complex<f32>
 
 subroutine int_mul(x, y, z)
  integer :: x, y, z
@@ -94,11 +94,11 @@ subroutine complex_mul(x, y, z)
  x = y * z
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_mul(
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_8:.*]] = fir.mulc %[[VAL_6]], %[[VAL_7]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_8:.*]] = fir.mulc %[[VAL_6]], %[[VAL_7]] {fastmath = #arith.fastmath<contract>} : complex<f32>
 
 subroutine int_div(x, y, z)
  integer :: x, y, z
@@ -127,15 +127,15 @@ subroutine complex_div(x, y, z)
  x = y / z
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_div(
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_8:.*]] = fir.extract_value %[[VAL_6]], [0 : index] : (!fir.complex<4>) -> f32
-! CHECK:  %[[VAL_9:.*]] = fir.extract_value %[[VAL_6]], [1 : index] : (!fir.complex<4>) -> f32
-! CHECK:  %[[VAL_10:.*]] = fir.extract_value %[[VAL_7]], [0 : index] : (!fir.complex<4>) -> f32
-! CHECK:  %[[VAL_11:.*]] = fir.extract_value %[[VAL_7]], [1 : index] : (!fir.complex<4>) -> f32
-! CHECK:  %[[VAL_12:.*]] = fir.call @__divsc3(%[[VAL_8]], %[[VAL_9]], %[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (f32, f32, f32, f32) -> !fir.complex<4>
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_8:.*]] = fir.extract_value %[[VAL_6]], [0 : index] : (complex<f32>) -> f32
+! CHECK:  %[[VAL_9:.*]] = fir.extract_value %[[VAL_6]], [1 : index] : (complex<f32>) -> f32
+! CHECK:  %[[VAL_10:.*]] = fir.extract_value %[[VAL_7]], [0 : index] : (complex<f32>) -> f32
+! CHECK:  %[[VAL_11:.*]] = fir.extract_value %[[VAL_7]], [1 : index] : (complex<f32>) -> f32
+! CHECK:  %[[VAL_12:.*]] = fir.call @__divsc3(%[[VAL_8]], %[[VAL_9]], %[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (f32, f32, f32, f32) -> complex<f32>
 
 subroutine int_power(x, y, z)
   integer :: x, y, z
@@ -164,11 +164,11 @@ subroutine complex_power(x, y, z)
   x = y**z
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_power(
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_8:.*]] = fir.call @cpowf(%[[VAL_6]], %[[VAL_7]]) fastmath<contract> : (!fir.complex<4>, !fir.complex<4>) -> !fir.complex<4>
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_8:.*]] = fir.call @cpowf(%[[VAL_6]], %[[VAL_7]]) fastmath<contract> : (complex<f32>, complex<f32>) -> complex<f32>
 
 
 subroutine real_to_int_power(x, y, z)
@@ -189,11 +189,11 @@ subroutine complex_to_int_power(x, y, z)
   x = y**z
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_to_int_power(
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAcpowi(%[[VAL_6]], %[[VAL_7]]) fastmath<contract> : (!fir.complex<4>, i32) -> !fir.complex<4>
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAcpowi(%[[VAL_6]], %[[VAL_7]]) fastmath<contract> : (complex<f32>, i32) -> complex<f32>
 
 subroutine extremum(c, n, l)
   integer(8), intent(in) :: l
@@ -271,9 +271,9 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcmp_cmplx(
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}x"
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}y"
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_8:.*]] = fir.cmpc "oeq", %[[VAL_6]], %[[VAL_7]] {{.*}} : !fir.complex<4>
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_8:.*]] = fir.cmpc "oeq", %[[VAL_6]], %[[VAL_7]] {{.*}} : complex<f32>
 
 subroutine cmp_char(l, x, y)
   logical :: l
@@ -335,9 +335,9 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<f32>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<f32>
-! CHECK:  %[[VAL_8:.*]] = fir.undefined !fir.complex<4>
-! CHECK:  %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_6]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:  %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[VAL_7]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:  %[[VAL_8:.*]] = fir.undefined complex<f32>
+! CHECK:  %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_6]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:  %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[VAL_7]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 
 subroutine cmplx_ctor_2(z, x)
   complex(8) :: z
@@ -348,6 +348,6 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<f64>
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 1.000000e+00 : f64
-! CHECK:  %[[VAL_6:.*]] = fir.undefined !fir.complex<8>
-! CHECK:  %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_4]], [0 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
-! CHECK:  %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_5]], [1 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
+! CHECK:  %[[VAL_6:.*]] = fir.undefined complex<f64>
+! CHECK:  %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_4]], [0 : index] : (complex<f64>, f64) -> complex<f64>
+! CHECK:  %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_5]], [1 : index] : (complex<f64>, f64) -> complex<f64>

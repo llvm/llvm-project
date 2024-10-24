@@ -28,8 +28,11 @@
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/disjunction.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <climits>

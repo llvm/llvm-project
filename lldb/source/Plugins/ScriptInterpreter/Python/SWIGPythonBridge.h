@@ -86,7 +86,7 @@ public:
   static PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp);
   static PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp);
   static PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp);
-  static PythonObject ToSWIGWrapper(const Status &status);
+  static PythonObject ToSWIGWrapper(Status &&status);
   static PythonObject ToSWIGWrapper(const StructuredDataImpl &data_impl);
   static PythonObject ToSWIGWrapper(lldb::ThreadSP thread_sp);
   static PythonObject ToSWIGWrapper(lldb::StackFrameSP frame_sp);
@@ -157,16 +157,6 @@ public:
                                        const char *method_name,
                                        lldb_private::SymbolContext *sym_ctx);
 
-  static python::PythonObject LLDBSwigPythonCreateScriptedStopHook(
-      lldb::TargetSP target_sp, const char *python_class_name,
-      const char *session_dictionary_name, const StructuredDataImpl &args,
-      lldb_private::Status &error);
-
-  static bool
-  LLDBSwigPythonStopHookCallHandleStop(void *implementor,
-                                       lldb::ExecutionContextRefSP exc_ctx,
-                                       lldb::StreamSP stream);
-
   static size_t LLDBSwigPython_CalculateNumChildren(PyObject *implementor,
                                                     uint32_t max);
 
@@ -209,6 +199,15 @@ public:
   static std::optional<std::string>
   LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
                                                    std::string &command);
+
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+      PyObject *implementor, std::vector<llvm::StringRef> &args_impl,
+      size_t args_pos, size_t pos_in_arg);
+
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+      PyObject *implementor, llvm::StringRef &long_option, size_t pos_in_arg);
 
   static bool LLDBSwigPythonCallModuleInit(const char *python_module_name,
                                            const char *session_dictionary_name,
@@ -266,6 +265,7 @@ void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 } // namespace python
 
 } // namespace lldb_private

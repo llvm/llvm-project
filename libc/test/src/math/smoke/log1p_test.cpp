@@ -13,7 +13,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcLog1pTest = LIBC_NAMESPACE::testing::FPTest<double>;

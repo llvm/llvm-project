@@ -2099,7 +2099,7 @@ ArrayRef<uint8_t> getSegmentContents(const MachOObjectFile &Obj,
   }
   auto &Segment = SegmentOrErr.get();
   return arrayRefFromStringRef(
-      Obj.getData().slice(Segment.fileoff, Segment.fileoff + Segment.filesize));
+      Obj.getData().substr(Segment.fileoff, Segment.filesize));
 }
 } // namespace
 
@@ -2454,9 +2454,8 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
     Idx = 0;
   else
     Idx = b+1;
-  F = Name.slice(Idx, Idx + Foo.size());
-  DotFramework = Name.slice(Idx + Foo.size(),
-                            Idx + Foo.size() + sizeof(".framework/")-1);
+  F = Name.substr(Idx, Foo.size());
+  DotFramework = Name.substr(Idx + Foo.size(), sizeof(".framework/") - 1);
   if (F == Foo && DotFramework == ".framework/") {
     isFramework = true;
     return Foo;
@@ -2476,9 +2475,8 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
     Idx = 0;
   else
     Idx = d+1;
-  F = Name.slice(Idx, Idx + Foo.size());
-  DotFramework = Name.slice(Idx + Foo.size(),
-                            Idx + Foo.size() + sizeof(".framework/")-1);
+  F = Name.substr(Idx, Foo.size());
+  DotFramework = Name.substr(Idx + Foo.size(), sizeof(".framework/") - 1);
   if (F == Foo && DotFramework == ".framework/") {
     isFramework = true;
     return Foo;
@@ -2495,7 +2493,7 @@ guess_library:
 
   // First pull off the version letter for the form Foo.A.dylib if any.
   if (a >= 3) {
-    Dot = Name.slice(a-2, a-1);
+    Dot = Name.substr(a - 2, 1);
     if (Dot == ".")
       a = a - 2;
   }
@@ -2520,7 +2518,7 @@ guess_library:
   // There are incorrect library names of the form:
   // libATS.A_profile.dylib so check for these.
   if (Lib.size() >= 3) {
-    Dot = Lib.slice(Lib.size()-2, Lib.size()-1);
+    Dot = Lib.substr(Lib.size() - 2, 1);
     if (Dot == ".")
       Lib = Lib.slice(0, Lib.size()-2);
   }
@@ -2537,7 +2535,7 @@ guess_qtx:
     Lib = Name.slice(b+1, a);
   // There are library names of the form: QT.A.qtx so check for these.
   if (Lib.size() >= 3) {
-    Dot = Lib.slice(Lib.size()-2, Lib.size()-1);
+    Dot = Lib.substr(Lib.size() - 2, 1);
     if (Dot == ".")
       Lib = Lib.slice(0, Lib.size()-2);
   }
@@ -4908,12 +4906,12 @@ MachOObjectFile::getLinkOptHintsLoadCommand() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.rebase_off));
@@ -4922,12 +4920,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.bind_off));
@@ -4936,12 +4934,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.weak_bind_off));
@@ -4950,12 +4948,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
       getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.lazy_bind_off));
@@ -4964,12 +4962,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
       getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.export_off));
@@ -5250,12 +5248,12 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldExportsTrie() const {
   if (!DyldExportsTrieLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldExportsTrieOrError = getStructOrErr<MachO::linkedit_data_command>(
       *this, DyldExportsTrieLoadCmd);
   if (!DyldExportsTrieOrError)
-    return std::nullopt;
+    return {};
   MachO::linkedit_data_command DyldExportsTrie = DyldExportsTrieOrError.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldExportsTrie.dataoff));
@@ -5279,7 +5277,7 @@ SmallVector<uint64_t> MachOObjectFile::getFunctionStarts() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getUuid() const {
   if (!UuidLoadCmd)
-    return std::nullopt;
+    return {};
   // Returning a pointer is fine as uuid doesn't need endian swapping.
   const char *Ptr = UuidLoadCmd + offsetof(MachO::uuid_command, uuid);
   return ArrayRef(reinterpret_cast<const uint8_t *>(Ptr), 16);

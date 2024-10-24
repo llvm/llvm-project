@@ -12,8 +12,8 @@ class CCIfExtend<CCAction A>
   : CCIf<"ArgFlags.isSExt() || ArgFlags.isZExt()", A>;
 
 class CCIfSubtarget<string F, CCAction A>
-  : CCIf<!strconcat("static_cast<const SystemZSubtarget&>"
-                    "(State.getMachineFunction().getSubtarget()).", F),
+  : CCIf<!strconcat("State.getMachineFunction()."
+                    "getSubtarget<SystemZSubtarget>().", F),
          A>;
 
 // Match if this specific argument is a fixed (i.e. named) argument.

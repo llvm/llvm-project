@@ -559,8 +559,8 @@ public:
       switch (short_option) {
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore_count))
-          error.SetErrorStringWithFormat("invalid ignore count '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid ignore count '%s'",
+                                                    option_arg.str().c_str());
         break;
       default:
         llvm_unreachable("Unimplemented option");

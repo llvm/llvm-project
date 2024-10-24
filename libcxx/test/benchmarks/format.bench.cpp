@@ -20,18 +20,14 @@ static void BM_format_string(benchmark::State& state) {
   size_t size = state.range(0);
   std::basic_string<CharT> str(size, CharT('*'));
 
-  while (state.KeepRunningBatch(str.size()))
-    benchmark::DoNotOptimize(std::format(CSTR("{}"), str));
+  while (state.KeepRunningBatch(str.size())) {
+    std::basic_string<CharT> s = std::format(CSTR("{}"), str);
+    benchmark::DoNotOptimize(s);
+  }
 
   state.SetBytesProcessed(state.iterations() * size * sizeof(CharT));
 }
-BENCHMARK_TEMPLATE(BM_format_string, char)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK_TEMPLATE(BM_format_string, wchar_t)->RangeMultiplier(2)->Range(1, 1 << 20);
+BENCHMARK(BM_format_string<char>)->RangeMultiplier(2)->Range(1, 1 << 20);
+BENCHMARK(BM_format_string<wchar_t>)->RangeMultiplier(2)->Range(1, 1 << 20);
 
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
-
-  benchmark::RunSpecifiedBenchmarks();
-}
+BENCHMARK_MAIN();

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -30,6 +29,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
@@ -235,9 +235,9 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
           expr_thread_id);
       return execution_result;
     } else if (execution_result != lldb::eExpressionCompleted) {
-      diagnostic_manager.Printf(
-          lldb::eSeverityError, "Couldn't execute function; result was %s",
-          Process::ExecutionResultAsCString(execution_result));
+      diagnostic_manager.Printf(lldb::eSeverityError,
+                                "Couldn't execute function; result was %s",
+                                toString(execution_result).c_str());
       return execution_result;
     }
   }

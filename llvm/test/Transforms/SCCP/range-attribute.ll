@@ -190,3 +190,55 @@ define i1 @ip_range_attribute_constant() {
   %c = call i1 @ip_cmp_with_range_attribute(i32 5)
   ret i1 %c
 }
+
+define internal i1 @ip_cmp_attribute_overdefined_callee(i32 range(i32 0, 10) %x) {
+; IPSCCP-LABEL: @ip_cmp_attribute_overdefined_callee(
+; IPSCCP-NEXT:    ret i1 poison
+;
+; SCCP-LABEL: @ip_cmp_attribute_overdefined_callee(
+; SCCP-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i32 %x, 10
+  ret i1 %cmp
+}
+
+define i1 @ip_cmp_attribute_overdefined_caller(i32 %x) {
+; IPSCCP-LABEL: @ip_cmp_attribute_overdefined_caller(
+; IPSCCP-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_overdefined_callee(i32 [[X:%.*]])
+; IPSCCP-NEXT:    ret i1 true
+;
+; SCCP-LABEL: @ip_cmp_attribute_overdefined_caller(
+; SCCP-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_overdefined_callee(i32 [[X:%.*]])
+; SCCP-NEXT:    ret i1 [[RES]]
+;
+  %res = call i1 @ip_cmp_attribute_overdefined_callee(i32 %x)
+  ret i1 %res
+}
+
+define internal i1 @ip_cmp_attribute_intersect_callee(i32 range(i32 0, 10) %x) {
+; IPSCCP-LABEL: @ip_cmp_attribute_intersect_callee(
+; IPSCCP-NEXT:    ret i1 poison
+;
+; SCCP-LABEL: @ip_cmp_attribute_intersect_callee(
+; SCCP-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[X:%.*]], 5
+; SCCP-NEXT:    [[AND:%.*]] = and i1 true, [[CMP2]]
+; SCCP-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ult i32 %x, 10
+  %cmp2 = icmp uge i32 %x, 5
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
+define i1 @ip_cmp_attribute_intersect_caller(i32 range(i32 5, 15) %x) {
+; IPSCCP-LABEL: @ip_cmp_attribute_intersect_caller(
+; IPSCCP-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_intersect_callee(i32 [[X:%.*]])
+; IPSCCP-NEXT:    ret i1 true
+;
+; SCCP-LABEL: @ip_cmp_attribute_intersect_caller(
+; SCCP-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_intersect_callee(i32 [[X:%.*]])
+; SCCP-NEXT:    ret i1 [[RES]]
+;
+  %res = call i1 @ip_cmp_attribute_intersect_callee(i32 %x)
+  ret i1 %res
+}

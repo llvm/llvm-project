@@ -37,7 +37,9 @@ class MachineFunction;
 class TargetRegisterInfo;
 class VirtRegMap;
 
-class LiveRegMatrix : public MachineFunctionPass {
+class LiveRegMatrix {
+  friend class LiveRegMatrixWrapperLegacy;
+  friend class LiveRegMatrixAnalysis;
   const TargetRegisterInfo *TRI = nullptr;
   LiveIntervals *LIS = nullptr;
   VirtRegMap *VRM = nullptr;
@@ -57,15 +59,17 @@ class LiveRegMatrix : public MachineFunctionPass {
   unsigned RegMaskVirtReg = 0;
   BitVector RegMaskUsable;
 
-  // MachineFunctionPass boilerplate.
-  void getAnalysisUsage(AnalysisUsage &) const override;
-  bool runOnMachineFunction(MachineFunction &) override;
-  void releaseMemory() override;
+  LiveRegMatrix() = default;
+  void releaseMemory();
 
 public:
-  static char ID;
+  LiveRegMatrix(LiveRegMatrix &&Other)
+      : TRI(Other.TRI), LIS(Other.LIS), VRM(Other.VRM), UserTag(Other.UserTag),
+        Matrix(std::move(Other.Matrix)), Queries(std::move(Other.Queries)),
+        RegMaskTag(Other.RegMaskTag), RegMaskVirtReg(Other.RegMaskVirtReg),
+        RegMaskUsable(std::move(Other.RegMaskUsable)) {}
 
-  LiveRegMatrix();
+  void init(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM);
 
   //===--------------------------------------------------------------------===//
   // High-level interface.
@@ -157,6 +161,32 @@ public:
   LiveIntervalUnion *getLiveUnions() { return &Matrix[0]; }
 
   Register getOneVReg(unsigned PhysReg) const;
+};
+
+class LiveRegMatrixWrapperLegacy : public MachineFunctionPass {
+  LiveRegMatrix LRM;
+
+public:
+  static char ID;
+
+  LiveRegMatrixWrapperLegacy() : MachineFunctionPass(ID) {}
+
+  LiveRegMatrix &getLRM() { return LRM; }
+  const LiveRegMatrix &getLRM() const { return LRM; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void releaseMemory() override;
+};
+
+class LiveRegMatrixAnalysis : public AnalysisInfoMixin<LiveRegMatrixAnalysis> {
+  friend AnalysisInfoMixin<LiveRegMatrixAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = LiveRegMatrix;
+
+  LiveRegMatrix run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm
