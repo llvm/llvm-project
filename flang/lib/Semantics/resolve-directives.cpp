@@ -442,7 +442,8 @@ public:
     // Iterate over elements of x, and resolve any common blocks that
     // are still unresolved.
     for (const parser::OmpObject &obj : x.v) {
-      if (auto *name{std::get_if<parser::Name>(&obj.u)}) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
         Resolve(*name, currScope().MakeCommonBlock(name->source));
       }
     }
