@@ -25,7 +25,6 @@
 #include <map>
 #include <sstream>
 
-#include "llvm/Support/Signals.h"
 template <typename T>
 static Fortran::semantics::Scope *GetScope(
     Fortran::semantics::SemanticsContext &context, const T &x) {
