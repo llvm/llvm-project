@@ -8299,6 +8299,11 @@ static SelectPatternResult matchClamp(CmpInst::Predicate Pred,
     if (match(FalseVal, m_UMax(m_Specific(CmpLHS), m_APInt(C2))) &&
         C1->ugt(*C2) && Pred == CmpInst::ICMP_UGT)
       return {SPF_UMIN, SPNB_NA, false};
+
+    // (X <s C1) ? C1 : UMIN(X, C2) ==> SMAX(UMIN(X, C2), C1)
+    if (match(FalseVal, m_UMin(m_Specific(CmpLHS), m_APInt(C2))) &&
+        C1->slt(*C2) && Pred == CmpInst::ICMP_SLT)
+      return {SPF_SMAX, SPNB_NA, false};
   }
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
