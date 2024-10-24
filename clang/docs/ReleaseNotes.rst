@@ -545,6 +545,7 @@ Bug Fixes to C++ Support
   const-default-constructible even if a union member has a default member initializer.
   (#GH95854).
 - Fixed an assertion failure when evaluating an invalid expression in an array initializer (#GH112140)
+- Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
