@@ -2036,7 +2036,7 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
     // Calculate the input shape from the output
     SmallVector<int64_t> newInputShape(expandOp.getSrcType().getRank(), 1l);
-    for (uint64_t inDim = 0; inDim < newInputShape.size(); inDim++) {
+    for (auto inDim : llvm::seq<int>(0, newInputShape.size())) {
       for (auto outDim : reassoc[inDim]) {
         auto ofr = newOutputShape[outDim];
         if (ShapedType::isDynamic(ofr)) {
