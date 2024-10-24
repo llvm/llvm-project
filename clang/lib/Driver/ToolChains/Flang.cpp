@@ -210,14 +210,13 @@ void Flang::AddPPCTargetArgs(const ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
     StringRef V = A->getValue();
-    if (V == "vec-extabi") {
+    if (V == "vec-extabi")
       VecExtabi = true;
-    } else if (V == "vec-default") {
+    else if (V == "vec-default")
       VecExtabi = false;
-    } else {
+    else
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << V;
-    }
   }
 
   const llvm::Triple &T = getToolChain().getTriple();

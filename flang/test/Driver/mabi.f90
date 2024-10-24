@@ -5,6 +5,8 @@
 ! RUN: %flang -### -c -target powerpc-unknown-aix -mabi=vec-default %s 2>&1 | FileCheck --implicit-check-not=vec-extabi %s
 ! RUN: %flang -### -c -target powerpc-unknown-aix -mabi=vec-extabi %s 2>&1 | FileCheck --check-prefix=EXTABI %s
 
+! REQUIRES: target=powerpc{{.*}}
+
 ! INVALID1: error: unsupported option '-mabi=vec-extabi' for target '{{.*}}'
 ! INVALID2: error: unsupported option '-mabi=' for target '{{.*}}'
 ! INVALID3: error: unsupported argument 'abc' to option '-mabi='
