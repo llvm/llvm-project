@@ -5587,6 +5587,13 @@ static SDValue optimizeIncrementingWhile(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
   APInt X = Op.getConstantOperandAPInt(1);
   APInt Y = Op.getConstantOperandAPInt(2);
+
+  // When the second operand is the maximum value, comparisons that include
+  // equality can never fail and thus we can return an all active predicate.
+  if (IsEqual)
+    if (IsSigned ? Y.isMaxSignedValue() : Y.isMaxValue())
+      return DAG.getConstant(1, dl, Op.getValueType());
+
   bool Overflow;
   APInt NumActiveElems =
       IsSigned ? Y.ssub_ov(X, Overflow) : Y.usub_ov(X, Overflow);
@@ -9369,14 +9376,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (CallConv == CallingConv::PreserveNone) {
-    for (const ISD::OutputArg &O : Outs) {
-      if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
-          O.Flags.isSwiftAsync()) {
-        MachineFunction &MF = DAG.getMachineFunction();
-        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-            MF.getFunction(),
-            "Swift attributes can't be used with preserve_none",
+  if (CallConv == CallingConv::PreserveNon) {
+    for (unsigned"Swift attributes can't be used with preserve_none",
             DL.getDebugLoc()));
         break;
       }
@@ -29555,3 +29556,4 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
   }
 }
 #endif
+                                                                                                                                                                                                                                                                                                                                                                                                           

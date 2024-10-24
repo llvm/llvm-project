@@ -59,6 +59,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
       .Case("tail-call", HasTailCall)
+      .Case("wide-arithmetic", HasWideArithmetic)
       .Default(false);
 }
 
@@ -102,6 +103,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_simd128__");
   if (HasTailCall)
     Builder.defineMacro("__wasm_tail_call__");
+  if (HasWideArithmetic)
+    Builder.defineMacro("__wasm_wide_arithmetic__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -166,6 +169,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["multimemory"] = true;
     Features["nontrapping-fptoint"] = true;
     Features["tail-call"] = true;
+    Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
   };
   if (CPU == "generic") {
@@ -291,6 +295,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-tail-call") {
       HasTailCall = false;
+      continue;
+    }
+    if (Feature == "+wide-arithmetic") {
+      HasWideArithmetic = true;
+      continue;
+    }
+    if (Feature == "-wide-arithmetic") {
+      HasWideArithmetic = false;
       continue;
     }
 
