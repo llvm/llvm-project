@@ -609,6 +609,11 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
           Op.getOpcode(), dl, SmallVT,
           DAG.getNode(ISD::TRUNCATE, dl, SmallVT, Op.getOperand(0)),
           DAG.getNode(ISD::TRUNCATE, dl, SmallVT, Op.getOperand(1)));
+      // If the operation has the 'disjoint' flag, then the operands on
+      // the new node are also disjoint.
+      SDNodeFlags Flags = Op->getFlags();
+      X->setFlags(Flags.hasDisjoint() ? SDNodeFlags::Disjoint
+                                      : SDNodeFlags::None);
       assert(DemandedSize <= SmallVTBits && "Narrowed below demanded bits?");
       SDValue Z = DAG.getNode(ISD::ANY_EXTEND, dl, VT, X);
       return TLO.CombineTo(Op, Z);
