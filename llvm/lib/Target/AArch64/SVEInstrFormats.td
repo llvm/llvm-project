@@ -8734,6 +8734,54 @@ multiclass sve2_crypto_unary_op<bit opc, string asm, SDPatternOperator op> {
   def : SVE_1_Op_Pat<nxv16i8, op, nxv16i8, !cast<Instruction>(NAME)>;
 }
 
+class sve_crypto_binary_multi2<bits<3> opc, string asm>
+: I<(outs ZZ_b_mul_r:$Zdn),
+    (ins ZZ_b_mul_r:$_Zdn, ZPR128:$Zm, VectorIndexS32b_timm:$imm2),
+  asm,
+  "\t$Zdn, $_Zdn, $Zm$imm2",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zm;
+  bits<4> Zdn;
+  bits<2> imm2;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-19} = imm2;
+  let Inst{18-17} = 0b01;
+  let Inst{16}    = opc{2};
+  let Inst{15-11} = 0b11101;
+  let Inst{10}    = opc{1};
+  let Inst{9-5}   = Zm;
+  let Inst{4-1}   = Zdn;
+  let Inst{0}     = opc{0};
+
+  let Constraints = "$Zdn = $_Zdn";
+  let hasSideEffects = 0;
+}
+
+class sve_crypto_binary_multi4<bits<4> opc, string asm>
+: I<(outs ZZZZ_b_mul_r:$Zdn),
+    (ins ZZZZ_b_mul_r:$_Zdn, ZPR128:$Zm, VectorIndexS32b_timm:$imm2),
+  asm,
+  "\t$Zdn, $_Zdn, $Zm$imm2",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zm;
+  bits<3> Zdn;
+  bits<2> imm2;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-19} = imm2;
+  let Inst{18-17} = 0b11;
+  let Inst{16}    = opc{3};
+  let Inst{15-11} = 0b11101;
+  let Inst{10}    = opc{2};
+  let Inst{9-5}   = Zm;
+  let Inst{4-2}   = Zdn;
+  let Inst{1-0}   = opc{1-0};
+
+  let Constraints = "$Zdn = $_Zdn";
+  let hasSideEffects = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE BFloat16 Group
 //===----------------------------------------------------------------------===//
