@@ -2448,7 +2448,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
     }
   }
-  
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
     setTruncStoreAction(MVT::v4i64, MVT::v4i8,  Legal);
     setTruncStoreAction(MVT::v4i64, MVT::v4i16, Legal);
