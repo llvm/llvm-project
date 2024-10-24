@@ -710,6 +710,7 @@ clang-format
   multi-line comments without touching their contents, renames ``false`` to
   ``Never``, and ``true`` to ``Always``.
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
+- Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
 
 libclang
 --------
