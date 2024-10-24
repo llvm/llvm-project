@@ -15,6 +15,7 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 #include <mutex>
@@ -224,10 +225,6 @@ static cl::opt<unsigned> TopCalledLimit(
     cl::init(100), cl::Hidden, cl::cat(BoltCategory));
 
 // Profile density options, synced with llvm-profgen/ProfileGenerator.cpp
-static cl::opt<bool> ShowDensity("show-density", cl::init(true),
-                                 cl::desc("show profile density details"),
-                                 cl::Optional);
-
 static cl::opt<int> ProfileDensityCutOffHot(
     "profile-density-cutoff-hot", cl::init(990000),
     cl::desc("Total samples cutoff for functions used to calculate "
