@@ -1713,8 +1713,8 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    movaps %xmm12, %xmm4
 ; SSE-NEXT:    mulps %xmm3, %xmm4
 ; SSE-NEXT:    addps %xmm2, %xmm4
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; SSE-NEXT:    mulps %xmm5, %xmm1
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
+; SSE-NEXT:    mulps %xmm10, %xmm1
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; SSE-NEXT:    mulps %xmm13, %xmm3
 ; SSE-NEXT:    addps %xmm1, %xmm3
@@ -1776,8 +1776,7 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    movaps %xmm12, %xmm4
 ; SSE-NEXT:    mulps %xmm3, %xmm4
 ; SSE-NEXT:    addps %xmm2, %xmm4
-; SSE-NEXT:    mulps %xmm5, %xmm1
-; SSE-NEXT:    movaps %xmm5, %xmm10
+; SSE-NEXT:    mulps %xmm10, %xmm1
 ; SSE-NEXT:    mulps %xmm13, %xmm3
 ; SSE-NEXT:    addps %xmm1, %xmm3
 ; SSE-NEXT:    movaps %xmm0, %xmm1
@@ -4236,8 +4235,8 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1-NEXT:    vmovapd %ymm2, %ymm12
 ; AVX1-NEXT:    vmovapd %ymm0, (%rsp) # 32-byte Spill
 ; AVX1-NEXT:    movq %rdi, %rax
-; AVX1-NEXT:    vmovapd 144(%rbp), %ymm2
-; AVX1-NEXT:    vmovapd 112(%rbp), %ymm13
+; AVX1-NEXT:    vmovapd 144(%rbp), %ymm13
+; AVX1-NEXT:    vmovapd 112(%rbp), %ymm14
 ; AVX1-NEXT:    vbroadcastsd 272(%rbp), %ymm10
 ; AVX1-NEXT:    vmulpd %ymm1, %ymm10, %ymm8
 ; AVX1-NEXT:    vmovapd %ymm1, %ymm9
@@ -4245,7 +4244,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1-NEXT:    vbroadcastsd 280(%rbp), %ymm10
 ; AVX1-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
 ; AVX1-NEXT:    vaddpd %ymm11, %ymm8, %ymm1
-; AVX1-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
+; AVX1-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
 ; AVX1-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1-NEXT:    vbroadcastsd 288(%rbp), %ymm10
 ; AVX1-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
@@ -4263,14 +4262,12 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1-NEXT:    vmulpd 48(%rbp), %ymm10, %ymm10
 ; AVX1-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1-NEXT:    vbroadcastsd 312(%rbp), %ymm10
-; AVX1-NEXT:    vmulpd %ymm10, %ymm13, %ymm11
-; AVX1-NEXT:    vmovapd %ymm13, %ymm14
+; AVX1-NEXT:    vmulpd %ymm10, %ymm14, %ymm11
 ; AVX1-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1-NEXT:    vmulpd 80(%rbp), %ymm10, %ymm10
 ; AVX1-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1-NEXT:    vbroadcastsd 320(%rbp), %ymm10
-; AVX1-NEXT:    vmulpd %ymm2, %ymm10, %ymm11
-; AVX1-NEXT:    vmovapd %ymm2, %ymm13
+; AVX1-NEXT:    vmulpd %ymm10, %ymm13, %ymm11
 ; AVX1-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
 ; AVX1-NEXT:    vmulpd 176(%rbp), %ymm10, %ymm10
 ; AVX1-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
@@ -4289,7 +4286,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1-NEXT:    vmovapd (%rsp), %ymm15 # 32-byte Reload
 ; AVX1-NEXT:    vmulpd %ymm0, %ymm15, %ymm0
-; AVX1-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
+; AVX1-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
 ; AVX1-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1-NEXT:    vbroadcastsd 352(%rbp), %ymm10
 ; AVX1-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
@@ -4637,8 +4634,8 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX2-NEXT:    vmovapd %ymm2, %ymm12
 ; AVX2-NEXT:    vmovapd %ymm0, (%rsp) # 32-byte Spill
 ; AVX2-NEXT:    movq %rdi, %rax
-; AVX2-NEXT:    vmovapd 144(%rbp), %ymm2
-; AVX2-NEXT:    vmovapd 112(%rbp), %ymm13
+; AVX2-NEXT:    vmovapd 144(%rbp), %ymm13
+; AVX2-NEXT:    vmovapd 112(%rbp), %ymm14
 ; AVX2-NEXT:    vbroadcastsd 272(%rbp), %ymm10
 ; AVX2-NEXT:    vmulpd %ymm1, %ymm10, %ymm8
 ; AVX2-NEXT:    vmovapd %ymm1, %ymm9
@@ -4646,7 +4643,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX2-NEXT:    vbroadcastsd 280(%rbp), %ymm10
 ; AVX2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
 ; AVX2-NEXT:    vaddpd %ymm11, %ymm8, %ymm1
-; AVX2-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
+; AVX2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
 ; AVX2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX2-NEXT:    vbroadcastsd 288(%rbp), %ymm10
 ; AVX2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
@@ -4664,14 +4661,12 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX2-NEXT:    vmulpd 48(%rbp), %ymm10, %ymm10
 ; AVX2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX2-NEXT:    vbroadcastsd 312(%rbp), %ymm10
-; AVX2-NEXT:    vmulpd %ymm10, %ymm13, %ymm11
-; AVX2-NEXT:    vmovapd %ymm13, %ymm14
+; AVX2-NEXT:    vmulpd %ymm10, %ymm14, %ymm11
 ; AVX2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX2-NEXT:    vmulpd 80(%rbp), %ymm10, %ymm10
 ; AVX2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX2-NEXT:    vbroadcastsd 320(%rbp), %ymm10
-; AVX2-NEXT:    vmulpd %ymm2, %ymm10, %ymm11
-; AVX2-NEXT:    vmovapd %ymm2, %ymm13
+; AVX2-NEXT:    vmulpd %ymm10, %ymm13, %ymm11
 ; AVX2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
 ; AVX2-NEXT:    vmulpd 176(%rbp), %ymm10, %ymm10
 ; AVX2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
@@ -4690,7 +4685,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX2-NEXT:    vmovapd (%rsp), %ymm15 # 32-byte Reload
 ; AVX2-NEXT:    vmulpd %ymm0, %ymm15, %ymm0
-; AVX2-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
+; AVX2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
 ; AVX2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX2-NEXT:    vbroadcastsd 352(%rbp), %ymm10
 ; AVX2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11

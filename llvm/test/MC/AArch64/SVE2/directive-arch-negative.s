@@ -47,3 +47,9 @@ fmmla   z23.s, z13.b, z8.b
 fmmla   z23.s, z13.h, z8.h
 // CHECK: error: instruction requires: sve-f16f32mm
 // CHECK-NEXT: fmmla   z23.s, z13.h, z8.h
+
+.arch armv9-a+sve-bfscale
+.arch armv9-a+nosve-bfscale
+bfscale z0.h, p0/m, z0.h, z0.h
+// CHECK: error: instruction requires: sve-bfscale
+// CHECK-NEXT: bfscale z0.h, p0/m, z0.h, z0.h

@@ -1122,7 +1122,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                        ISD::VECREDUCE_ADD, ISD::STEP_VECTOR});
 
-  setTargetDAGCombine({ISD::MGATHER, ISD::MSCATTER});
+  setTargetDAGCombine(
+      {ISD::MGATHER, ISD::MSCATTER, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM});
 
   setTargetDAGCombine(ISD::FP_EXTEND);
 
@@ -5586,6 +5587,13 @@ static SDValue optimizeIncrementingWhile(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
   APInt X = Op.getConstantOperandAPInt(1);
   APInt Y = Op.getConstantOperandAPInt(2);
+
+  // When the second operand is the maximum value, comparisons that include
+  // equality can never fail and thus we can return an all active predicate.
+  if (IsEqual)
+    if (IsSigned ? Y.isMaxSignedValue() : Y.isMaxValue())
+      return DAG.getConstant(1, dl, Op.getValueType());
+
   bool Overflow;
   APInt NumActiveElems =
       IsSigned ? Y.ssub_ov(X, Overflow) : Y.usub_ov(X, Overflow);
@@ -5941,6 +5949,59 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                  Op.getOperand(1))));
     return SDValue();
   }
+  case Intrinsic::aarch64_neon_sqxtn:
+    return DAG.getNode(ISD::TRUNCATE_SSAT_S, dl, Op.getValueType(),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_neon_sqxtun:
+    return DAG.getNode(ISD::TRUNCATE_SSAT_U, dl, Op.getValueType(),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_neon_uqxtn:
+    return DAG.getNode(ISD::TRUNCATE_USAT_U, dl, Op.getValueType(),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_neon_sqshrn:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(ISD::TRUNCATE_SSAT_S, dl, Op.getValueType(),
+                         DAG.getNode(AArch64ISD::VASHR, dl,
+                                     Op.getOperand(1).getValueType(),
+                                     Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
+  case Intrinsic::aarch64_neon_sqshrun:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(ISD::TRUNCATE_SSAT_U, dl, Op.getValueType(),
+                         DAG.getNode(AArch64ISD::VASHR, dl,
+                                     Op.getOperand(1).getValueType(),
+                                     Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
+  case Intrinsic::aarch64_neon_uqshrn:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(ISD::TRUNCATE_USAT_U, dl, Op.getValueType(),
+                         DAG.getNode(AArch64ISD::VLSHR, dl,
+                                     Op.getOperand(1).getValueType(),
+                                     Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
+  case Intrinsic::aarch64_neon_sqrshrn:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(
+          ISD::TRUNCATE_SSAT_S, dl, Op.getValueType(),
+          DAG.getNode(
+              AArch64ISD::SRSHR_I, dl, Op.getOperand(1).getValueType(),
+              Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
+  case Intrinsic::aarch64_neon_sqrshrun:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(
+          ISD::TRUNCATE_SSAT_U, dl, Op.getValueType(),
+          DAG.getNode(
+              AArch64ISD::SRSHR_I, dl, Op.getOperand(1).getValueType(),
+              Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
+  case Intrinsic::aarch64_neon_uqrshrn:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(
+          ISD::TRUNCATE_USAT_U, dl, Op.getValueType(),
+          DAG.getNode(
+              AArch64ISD::URSHR_I, dl, Op.getOperand(1).getValueType(), Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
   case Intrinsic::aarch64_sve_whilelo:
     return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/false,
                                      /*IsEqual=*/false);
@@ -9315,8 +9376,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (CallConv == CallingConv::PreserveNone) {
-    for (const ISD::OutputArg &O : Outs) {
+  if (CallConv == CallingConv::PreserveNon) {
+    for (unsignedSD::OutputArg &O : Outs) {
       if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
           O.Flags.isSwiftAsync()) {
         MachineFunction &MF = DAG.getMachineFunction();
@@ -23768,11 +23829,9 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
 
 static SDValue performMaskedGatherScatterCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
-  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
-  assert(MGS && "Can only combine gather load or scatter store nodes");
-
   if (!DCI.isBeforeLegalize())
     return SDValue();
+  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
 
   SDLoc DL(MGS);
   SDValue Chain = MGS->getChain();
@@ -23794,12 +23853,18 @@ static SDValue performMaskedGatherScatterCombine(
         DAG.getVTList(N->getValueType(0), MVT::Other), MGT->getMemoryVT(), DL,
         Ops, MGT->getMemOperand(), IndexType, MGT->getExtensionType());
   }
-  auto *MSC = cast<MaskedScatterSDNode>(MGS);
-  SDValue Data = MSC->getValue();
-  SDValue Ops[] = {Chain, Data, Mask, BasePtr, Index, Scale};
-  return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL,
-                              Ops, MSC->getMemOperand(), IndexType,
-                              MSC->isTruncatingStore());
+  if (auto *MSC = dyn_cast<MaskedScatterSDNode>(MGS)) {
+    SDValue Data = MSC->getValue();
+    SDValue Ops[] = {Chain, Data, Mask, BasePtr, Index, Scale};
+    return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(),
+                                DL, Ops, MSC->getMemOperand(), IndexType,
+                                MSC->isTruncatingStore());
+  }
+  auto *HG = cast<MaskedHistogramSDNode>(MGS);
+  SDValue Ops[] = {Chain, HG->getInc(), Mask,          BasePtr,
+                   Index, Scale,        HG->getIntID()};
+  return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), HG->getMemoryVT(),
+                                DL, Ops, HG->getMemOperand(), IndexType);
 }
 
 /// Target-specific DAG combine function for NEON load/store intrinsics
@@ -25966,6 +26031,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return performMaskedGatherScatterCombine(N, DCI, DAG);
   case ISD::FP_EXTEND:
     return performFPExtendCombine(N, DAG, DCI, Subtarget);
@@ -29496,3 +29562,4 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
   }
 }
 #endif
+                                                                                                               

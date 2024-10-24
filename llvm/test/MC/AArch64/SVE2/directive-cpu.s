@@ -31,3 +31,7 @@ fmmla   z23.s, z13.b, z8.b
 .cpu generic+sve-f16f32mm
 fmmla   z23.s, z13.h, z8.h
 // CHECK: fmmla   z23.s, z13.h, z8.h
+
+.cpu generic+sve-bfscale
+bfscale z0.h, p0/m, z0.h, z0.h
+// CHECK: bfscale z0.h, p0/m, z0.h, z0.h

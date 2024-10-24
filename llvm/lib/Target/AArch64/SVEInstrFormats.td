@@ -2174,6 +2174,11 @@ multiclass sve_fp_2op_p_zds_bfloat<bits<4> opc, string asm, string Ps,
   def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
 }
 
+class  sve_fp_2op_p_zds_bfscale<bits<4> opc, string asm,  DestructiveInstTypeEnum flags>
+: sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>{
+  let DestructiveInstType = flags;
+}
+
 multiclass sve_fp_2op_p_zds_zeroing_hsd<SDPatternOperator op> {
   def _H_ZERO : PredTwoOpPseudo<NAME # _H, ZPR16, FalseLanesZero>;
   def _S_ZERO : PredTwoOpPseudo<NAME # _S, ZPR32, FalseLanesZero>;
@@ -2728,6 +2733,37 @@ multiclass sve2_fp_convert_down_odd_rounding_top<string asm, string op> {
   def _DtoS : sve2_fp_convert_precision<0b0010, asm, ZPR32, ZPR64>;
 
   def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
+}
+
+class sve_fp_fcvt2z<bits<4> opc, string asm, ZPRRegOp zprty1,
+                    ZPRRegOp zprty2>
+  : I<(outs zprty1:$Zd), (ins PPR3bAny:$Pg, zprty2:$Zn),
+    asm, "\t$Zd, $Pg/z, $Zn",
+    "",
+    []>, Sched<[]> {
+    bits<5> Zd;
+    bits<5> Zn;
+    bits<3> Pg;
+    let Inst{31-24} = 0b01100100;
+    let Inst{23-22} = opc{3-2};
+    let Inst{21-18} = 0b0000;
+    let Inst{17-16} = opc{1-0};
+    let Inst{15-13} = 0b101;
+    let Inst{12-10} = Pg;
+    let Inst{9-5}   = Zn;
+    let Inst{4-0}   = Zd;
+    let hasSideEffects = 0;
+    let mayRaiseFPException = 1;
+}
+
+multiclass sve_fp_fcvtntz<string asm> {
+  def _StoH : sve_fp_fcvt2z<0b1000, asm,  ZPR16, ZPR32>;
+  def _DtoS : sve_fp_fcvt2z<0b1110, asm,  ZPR32, ZPR64>;
+}
+
+multiclass sve_fp_fcvtltz<string asm> {
+  def _HtoS  : sve_fp_fcvt2z<0b1001, asm,  ZPR32, ZPR16>;
+  def _StoD  : sve_fp_fcvt2z<0b1111, asm,  ZPR64, ZPR32>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8696,6 +8732,54 @@ class sve2_crypto_unary_op<bit opc, string asm, ZPRRegOp zprty>
 multiclass sve2_crypto_unary_op<bit opc, string asm, SDPatternOperator op> {
   def NAME : sve2_crypto_unary_op<opc, asm, ZPR8>;
   def : SVE_1_Op_Pat<nxv16i8, op, nxv16i8, !cast<Instruction>(NAME)>;
+}
+
+class sve_crypto_binary_multi2<bits<3> opc, string asm>
+: I<(outs ZZ_b_mul_r:$Zdn),
+    (ins ZZ_b_mul_r:$_Zdn, ZPR128:$Zm, VectorIndexS32b_timm:$imm2),
+  asm,
+  "\t$Zdn, $_Zdn, $Zm$imm2",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zm;
+  bits<4> Zdn;
+  bits<2> imm2;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-19} = imm2;
+  let Inst{18-17} = 0b01;
+  let Inst{16}    = opc{2};
+  let Inst{15-11} = 0b11101;
+  let Inst{10}    = opc{1};
+  let Inst{9-5}   = Zm;
+  let Inst{4-1}   = Zdn;
+  let Inst{0}     = opc{0};
+
+  let Constraints = "$Zdn = $_Zdn";
+  let hasSideEffects = 0;
+}
+
+class sve_crypto_binary_multi4<bits<4> opc, string asm>
+: I<(outs ZZZZ_b_mul_r:$Zdn),
+    (ins ZZZZ_b_mul_r:$_Zdn, ZPR128:$Zm, VectorIndexS32b_timm:$imm2),
+  asm,
+  "\t$Zdn, $_Zdn, $Zm$imm2",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zm;
+  bits<3> Zdn;
+  bits<2> imm2;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-19} = imm2;
+  let Inst{18-17} = 0b11;
+  let Inst{16}    = opc{3};
+  let Inst{15-11} = 0b11101;
+  let Inst{10}    = opc{2};
+  let Inst{9-5}   = Zm;
+  let Inst{4-2}   = Zdn;
+  let Inst{1-0}   = opc{1-0};
+
+  let Constraints = "$Zdn = $_Zdn";
+  let hasSideEffects = 0;
 }
 
 //===----------------------------------------------------------------------===//
