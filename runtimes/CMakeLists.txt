@@ -114,40 +114,20 @@ filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} C
 # Currently, we counteract this issue by adding -fno-sanitize=all flag in
 # the project specific code within */cmake/config-ix.cmake files but that's
 # brittle. We should ideally move this to runtimes/CMakeLists.txt.
-llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+llvm_check_compiler_linker_flag(C "--unwindlib=none" "" "" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
-  set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
-  # TODO: When we can require CMake 3.14, we should use
-  # CMAKE_REQUIRED_LINK_OPTIONS here. Until then, we need a workaround:
-  # When using CMAKE_REQUIRED_FLAGS, this option gets added both to
-  # compilation and linking commands. That causes warnings in the
-  # compilation commands during cmake tests. This is normally benign, but
-  # when testing whether -Werror works, that test fails (due to the
-  # preexisting warning).
-  #
-  # Therefore, before we can use CMAKE_REQUIRED_LINK_OPTIONS, check if we
-  # can use --start-no-unused-arguments to silence the warnings about
-  # --unwindlib=none during compilation.
-  #
-  # We must first add --unwindlib=none to CMAKE_REQUIRED_FLAGS above, to
-  # allow this subsequent test to succeed, then rewrite CMAKE_REQUIRED_FLAGS
-  # below.
-  check_c_compiler_flag("--start-no-unused-arguments" C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
-  if (C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
-    set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS} --start-no-unused-arguments --unwindlib=none --end-no-unused-arguments")
-  endif()
+  list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "--unwindlib=none")
 endif()
 
 # Disable use of the installed C++ standard library when building runtimes.
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(CXX "-nostdlib++" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
-check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+llvm_check_compiler_linker_flag(CXX "-nostdinc++" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDINCXX_FLAG)
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
 endif()

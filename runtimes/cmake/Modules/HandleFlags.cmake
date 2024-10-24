@@ -1,5 +1,5 @@
-
 include(CheckCXXCompilerFlag)
+include(LLVMCheckCompilerLinkerFlag)
 
 unset(add_flag_if_supported)
 
@@ -105,7 +105,8 @@ endmacro()
 function(target_add_compile_flags_if_supported target visibility)
   foreach(flag ${ARGN})
     mangle_name("${flag}" flagname)
-    check_cxx_compiler_flag("${flag}" "CXX_SUPPORTS_${flagname}_FLAG")
+    llvm_check_compiler_linker_flag(
+        CXX "${flag}" RESET STATIC_LIBRARY "CXX_SUPPORTS_${flagname}_FLAG")
     if (CXX_SUPPORTS_${flagname}_FLAG)
       target_compile_options(${target} ${visibility} ${flag})
     endif()

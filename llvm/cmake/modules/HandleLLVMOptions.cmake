@@ -15,6 +15,7 @@ include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 include(CheckSymbolExists)
 include(CMakeDependentOption)
+include(LLVMCheckCompilerLinkerFlag)
 include(LLVMProcessSources)
 
 if(CMAKE_LINKER MATCHES ".*lld" OR (LLVM_USE_LINKER STREQUAL "lld" OR LLVM_ENABLE_LLD))
@@ -349,9 +350,11 @@ function(append_if condition value)
 endfunction()
 
 macro(add_flag_if_supported flag name)
-  check_c_compiler_flag("-Werror ${flag}" "C_SUPPORTS_${name}")
+  llvm_check_compiler_linker_flag(
+      C "-Werror ${flag}" RESET STATIC_LIBRARY "C_SUPPORTS_${name}")
   append_if("C_SUPPORTS_${name}" "${flag}" CMAKE_C_FLAGS)
-  check_cxx_compiler_flag("-Werror ${flag}" "CXX_SUPPORTS_${name}")
+  llvm_check_compiler_linker_flag(
+      CXX "-Werror ${flag}" RESET STATIC_LIBRARY "CXX_SUPPORTS_${name}")
   append_if("CXX_SUPPORTS_${name}" "${flag}" CMAKE_CXX_FLAGS)
 endmacro()
 
