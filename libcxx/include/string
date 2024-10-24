@@ -1705,11 +1705,11 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const value_type* c_str() const _NOEXCEPT { return data(); }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const value_type* data() const _NOEXCEPT {
-    return std::__to_address(__get_pointer());
+    return std::addressof(__get_pointer());
   }
 #if _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 value_type* data() _NOEXCEPT {
-    return std::__to_address(__get_pointer());
+    return std::addressof(__get_pointer());
   }
 #endif
 
