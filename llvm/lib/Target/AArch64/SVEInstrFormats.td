@@ -3144,6 +3144,44 @@ multiclass sve_fp_2op_u_zd<bits<3> opc, string asm, SDPatternOperator op> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE Floating Point Unary Operations - Zeroing Predicate Group
+//===----------------------------------------------------------------------===//
+
+class sve_fp_z2op_p_zd<bits<7> opc,string asm, RegisterOperand i_zprtype,
+                       RegisterOperand o_zprtype>
+: I<(outs o_zprtype:$Zd), (ins PPR3bAny:$Pg, i_zprtype:$Zn),
+  asm, "\t$Zd, $Pg/z, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = opc{6-5};
+  let Inst{21-19} = 0b011;
+  let Inst{18-16} = opc{4-2};
+  let Inst{15}    = 0b1;
+  let Inst{14-13} = opc{1-0};
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let hasSideEffects = 0;
+  let mayRaiseFPException = 1;
+}
+
+multiclass sve_fp_z2op_p_zd_hsd<bits<5> opc, string asm> {
+  def _H : sve_fp_z2op_p_zd<{ 0b01, opc }, asm, ZPR16, ZPR16>;
+  def _S : sve_fp_z2op_p_zd<{ 0b10, opc }, asm, ZPR32, ZPR32>;
+  def _D : sve_fp_z2op_p_zd<{ 0b11, opc }, asm, ZPR64, ZPR64>;
+}
+
+multiclass sve_fp_z2op_p_zd_frint<bits<2> opc, string asm> {
+  def _S : sve_fp_z2op_p_zd<{ 0b0010, opc{1}, 0, opc{0} }, asm, ZPR32, ZPR32>;
+  def _D : sve_fp_z2op_p_zd<{ 0b0010, opc{1}, 1, opc{0} }, asm, ZPR64, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE Integer Arithmetic - Binary Predicated Group
 //===----------------------------------------------------------------------===//
 
