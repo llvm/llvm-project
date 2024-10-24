@@ -6397,8 +6397,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     // Wrap Op2 in a scalable register, and splat it if necessary.
     if (Op1VT.getVectorMinNumElements() == Op2VT.getVectorNumElements()) {
-      // If Op1 and Op2 have the same number of elements we can trivially
-      // wrapping Op2 in an SVE register.
+      // If Op1 and Op2 have the same number of elements we can trivially wrap
+      // Op2 in an SVE register.
       Op2 = convertToScalableVector(DAG, OpContainerVT, Op2);
       // If the result is scalable, we need to broadcast Op2 to a full SVE
       // register.
@@ -6408,32 +6408,21 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     } else {
       // If Op1 and Op2 have different number of elements, we need to broadcast
       // Op2. Ideally we would use a AArch64ISD::DUPLANE* node for this
-      // similarly to the above, but unfortunately it seems we are missing some
+      // similarly to the above, but unfortunately we seem to be missing some
       // patterns for this. So, in alternative, we splat Op2 through a splat of
       // a scalable vector extract. This idiom, though a bit more verbose, is
       // supported and get us the MOV instruction we want.
-
-      // Some types we need. We'll use an integer type with `Op2BitWidth' bits
-      // to wrap Op2 and simulate the DUPLANE.
       unsigned Op2BitWidth = Op2VT.getFixedSizeInBits();
       MVT Op2IntVT = MVT::getIntegerVT(Op2BitWidth);
-      MVT Op2FixedVT = MVT::getVectorVT(Op2IntVT, 128 / Op2BitWidth);
-      EVT Op2ScalableVT = getContainerForFixedLengthVector(DAG, Op2FixedVT);
-      // Widen Op2 to a full 128-bit register. We need this to wrap Op2 in an
-      // SVE register before doing the extract and splat.
-      // It is unlikely we'll be widening from types other than v8i8 or v4i16,
-      // so in practice this loop will run for a single iteration.
-      while (Op2VT.getFixedSizeInBits() != 128) {
-        Op2VT = Op2VT.getDoubleNumVectorElementsVT(*DAG.getContext());
-        Op2 = DAG.getNode(ISD::CONCAT_VECTORS, dl, Op2VT, Op2,
-                          DAG.getUNDEF(Op2.getValueType()));
-      }
-      // Wrap Op2 in a scalable vector and do the splat of its 0-index lane.
-      Op2 = convertToScalableVector(DAG, OpContainerVT, Op2);
+      MVT Op2PromotedVT = MVT::getVectorVT(Op2IntVT, 128 / Op2BitWidth,
+                                           /*IsScalable=*/true);
+      SDValue Op2Widened = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpContainerVT,
+                                       DAG.getUNDEF(OpContainerVT), Op2,
+                                       DAG.getConstant(0, dl, MVT::i64));
       Op2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op2IntVT,
-                        DAG.getBitcast(Op2ScalableVT, Op2),
+                        DAG.getBitcast(Op2PromotedVT, Op2Widened),
                         DAG.getConstant(0, dl, MVT::i64));
-      Op2 = DAG.getSplatVector(Op2ScalableVT, dl, Op2);
+      Op2 = DAG.getSplatVector(Op2PromotedVT, dl, Op2);
       Op2 = DAG.getBitcast(OpContainerVT, Op2);
     }
 
@@ -6450,14 +6439,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     Mask = DAG.getNode(ISD::ANY_EXTEND, dl, Op1VT, Mask);
     Mask = convertFixedMaskToScalableVector(Mask, DAG);
 
-    // Carry out the match and extract it.
+    // Carry out the match.
     SDValue Match = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl,
                                 Mask.getValueType(), ID, Mask, Op1, Op2);
-    Match = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, Op1VT,
-                        DAG.getNode(ISD::SIGN_EXTEND, dl, OpContainerVT, Match),
-                        DAG.getVectorIdxConstant(0, dl));
 
-    // Truncate and return the result.
+    // Extract and promote the match result (nxv16i1/nxv8i1) to ResVT
+    // (v16i8/v8i8).
+    Match = DAG.getNode(ISD::SIGN_EXTEND, dl, OpContainerVT, Match);
+    Match = convertFromScalableVector(DAG, Op1VT, Match);
     return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Match);
   }
   }
