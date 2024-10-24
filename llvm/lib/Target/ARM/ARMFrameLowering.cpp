@@ -323,12 +323,16 @@ bool ARMFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const {
   return true;
 }
 
-/// hasFP - Return true if the specified function should have a dedicated frame
-/// pointer register.  This is true if the function has variable sized allocas
-/// or if frame pointer elimination is disabled.
-bool ARMFrameLowering::hasFP(const MachineFunction &MF) const {
+/// hasFPImpl - Return true if the specified function should have a dedicated
+/// frame pointer register.  This is true if the function has variable sized
+/// allocas or if frame pointer elimination is disabled.
+bool ARMFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Check to see if the target want to forcibly keep frame pointer.
+  if (keepFramePointer(MF))
+    return true;
 
   // ABI-required frame pointer.
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
@@ -940,7 +944,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Determine spill area sizes, and some important frame indices.
-  SpillArea FramePtrSpillArea;
+  SpillArea FramePtrSpillArea = SpillArea::GPRCS1;
   bool BeforeFPPush = true;
   for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
@@ -2403,7 +2407,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // to take advantage the eliminateFrameIndex machinery. This also ensures it
   // is spilled in the order specified by getCalleeSavedRegs() to make it easier
   // to combine multiple loads / stores.
-  bool CanEliminateFrame = !(requiresAAPCSFrameRecord(MF) && hasFP(MF));
+  bool CanEliminateFrame = !(requiresAAPCSFrameRecord(MF) && hasFP(MF)) &&
+                           !MF.getTarget().Options.DisableFramePointerElim(MF);
   bool CS1Spilled = false;
   bool LRSpilled = false;
   unsigned NumGPRSpills = 0;

@@ -403,15 +403,11 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     Value *PrefPtrValue = SCEVE.expandCodeFor(NextLSCEV, I8Ptr, P.InsertPt);
 
     IRBuilder<> Builder(P.InsertPt);
-    Module *M = BB->getParent()->getParent();
     Type *I32 = Type::getInt32Ty(BB->getContext());
-    Function *PrefetchFunc = Intrinsic::getOrInsertDeclaration(
-        M, Intrinsic::prefetch, PrefPtrValue->getType());
-    Builder.CreateCall(
-        PrefetchFunc,
-        {PrefPtrValue,
-         ConstantInt::get(I32, P.Writes),
-         ConstantInt::get(I32, 3), ConstantInt::get(I32, 1)});
+    Builder.CreateIntrinsic(Intrinsic::prefetch, PrefPtrValue->getType(),
+                            {PrefPtrValue, ConstantInt::get(I32, P.Writes),
+                             ConstantInt::get(I32, 3),
+                             ConstantInt::get(I32, 1)});
     ++NumPrefetches;
     LLVM_DEBUG(dbgs() << "  Access: "
                << *P.MemI->getOperand(isa<LoadInst>(P.MemI) ? 0 : 1)

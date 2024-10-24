@@ -45,6 +45,7 @@ def OMPC_AdjustArgs : Clause<"adjust_args"> {
 }
 def OMPC_Affinity : Clause<"affinity"> {
   let clangClass = "OMPAffinityClause";
+  let flangClass = "OmpAffinityClause";
 }
 def OMPC_Align : Clause<"align"> {
   let clangClass = "OMPAlignClause";
@@ -1170,7 +1171,7 @@ def OMP_Workshare : Directive<"workshare"> {
   let category = CA_Executable;
 }
 def OMP_EndWorkshare : Directive<"end workshare"> {
-  let allowedClauses = [
+  let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait>,
   ];
   let leafConstructs = OMP_Workshare.leafConstructs;

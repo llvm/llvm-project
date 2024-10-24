@@ -374,3 +374,20 @@ void constexprif() {
 void constevalif() {
   if consteval (300) {} //expected-error {{expected '(' after 'if'}}
 }
+
+struct S11 {
+  int len;
+};
+void ghissue112516() {
+  struct S11 *s11 = 0;
+  constexpr int num = s11->len; // expected-error {{constexpr variable 'num' must be initialized by a constant expression}}
+  void *Arr[num];
+}
+
+void ghissue109095() {
+  constexpr char c[] = { 'a' };
+  constexpr int i = c[1]; // expected-error {{constexpr variable 'i' must be initialized by a constant expression}}\
+                          // expected-note {{declared here}}
+  _Static_assert(i == c[0]); // expected-error {{static assertion expression is not an integral constant expression}}\
+                             // expected-note {{initializer of 'i' is not a constant expression}}
+}

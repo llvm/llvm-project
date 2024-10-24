@@ -254,7 +254,7 @@ static bool addOptional(Ctx &ctx, StringRef name, uint64_t value,
   Symbol *sym = ctx.symtab->find(name);
   if (!sym || sym->isDefined())
     return false;
-  sym->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
+  sym->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
                             STV_HIDDEN, STT_FUNC, value,
                             /*size=*/0, /*section=*/nullptr});
   defined.push_back(cast<Defined>(sym));
@@ -404,7 +404,7 @@ static bool tryRelaxPPC64TocIndirection(Ctx &ctx, const Relocation &rel,
   assert(!d->isGnuIFunc());
 
   // Two instructions can materialize a 32-bit signed offset from the toc base.
-  uint64_t tocRelative = d->getVA(addend) - getPPC64TocBase(ctx);
+  uint64_t tocRelative = d->getVA(ctx, addend) - getPPC64TocBase(ctx);
   if (!isInt<32>(tocRelative))
     return false;
 
@@ -1452,7 +1452,7 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // a range-extending thunk.
   // See the comment in getRelocTargetVA() about R_PPC64_CALL.
   return !inBranchRange(type, branchAddr,
-                        s.getVA(a) +
+                        s.getVA(ctx, a) +
                             getPPC64GlobalEntryToLocalEntryOffset(s.stOther));
 }
 

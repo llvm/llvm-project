@@ -50,6 +50,10 @@ void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
     }
     break;
   }
+  case LegalityResultID::Pack: {
+    // TODO: Unimplemented
+    llvm_unreachable("Unimplemented");
+  }
   }
 }
 

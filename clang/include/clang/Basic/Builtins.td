@@ -2714,6 +2714,7 @@ def Abs : IntMathTemplate, LibBuiltin<"stdlib.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Calloc : LibBuiltin<"stdlib.h"> {

@@ -1615,6 +1615,10 @@ void PGOUseFunc::populateCounters() {
     assert(BI->Count && "BB count is not valid");
   }
 #endif
+  // Now annotate select instructions.  This may fixup impossible block counts.
+  FuncInfo.SIVisitor.annotateSelects(this, &CountPosition);
+  assert(CountPosition == ProfileCountSize);
+
   uint64_t FuncEntryCount = *getBBInfo(&*F.begin()).Count;
   uint64_t FuncMaxCount = FuncEntryCount;
   for (auto &BB : F) {
@@ -1629,10 +1633,6 @@ void PGOUseFunc::populateCounters() {
     FuncEntryCount = 1;
   F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
   markFunctionAttributes(FuncEntryCount, FuncMaxCount);
-
-  // Now annotate select instructions
-  FuncInfo.SIVisitor.annotateSelects(this, &CountPosition);
-  assert(CountPosition == ProfileCountSize);
 
   LLVM_DEBUG(FuncInfo.dumpInfo("after reading profile."));
 }
@@ -1742,8 +1742,13 @@ void SelectInstVisitor::annotateOneSelectInst(SelectInst &SI) {
   ++(*CurCtrIdx);
   uint64_t TotalCount = 0;
   auto BI = UseFunc->findBBInfo(SI.getParent());
-  if (BI != nullptr)
+  if (BI != nullptr) {
     TotalCount = *BI->Count;
+
+    // Fix the block count if it is impossible.
+    if (TotalCount < SCounts[0])
+      BI->Count = SCounts[0];
+  }
   // False Count
   SCounts[1] = (TotalCount > SCounts[0] ? TotalCount - SCounts[0] : 0);
   uint64_t MaxCount = std::max(SCounts[0], SCounts[1]);

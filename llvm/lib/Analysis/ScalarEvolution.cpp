@@ -9662,14 +9662,14 @@ Constant *
 ScalarEvolution::getConstantEvolutionLoopExitValue(PHINode *PN,
                                                    const APInt &BEs,
                                                    const Loop *L) {
-  auto I = ConstantEvolutionLoopExitValue.find(PN);
-  if (I != ConstantEvolutionLoopExitValue.end())
+  auto [I, Inserted] = ConstantEvolutionLoopExitValue.try_emplace(PN);
+  if (!Inserted)
     return I->second;
 
   if (BEs.ugt(MaxBruteForceIterations))
-    return ConstantEvolutionLoopExitValue[PN] = nullptr;  // Not going to evaluate it.
+    return nullptr; // Not going to evaluate it.
 
-  Constant *&RetVal = ConstantEvolutionLoopExitValue[PN];
+  Constant *&RetVal = I->second;
 
   DenseMap<Instruction *, Constant *> CurrentIterVals;
   BasicBlock *Header = L->getHeader();

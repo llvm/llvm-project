@@ -8817,6 +8817,31 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
                             IsOrdered ? OrderedOp : UnorderedOp);
       }
     }
+
+    if (FPTestMask == fcNormal) {
+      // TODO: Handle unordered
+      ISD::CondCode IsFiniteOp = IsInvertedFP ? ISD::SETUGE : ISD::SETOLT;
+      ISD::CondCode IsNormalOp = IsInvertedFP ? ISD::SETOLT : ISD::SETUGE;
+
+      if (isCondCodeLegalOrCustom(IsFiniteOp,
+                                  OperandVT.getScalarType().getSimpleVT()) &&
+          isCondCodeLegalOrCustom(IsNormalOp,
+                                  OperandVT.getScalarType().getSimpleVT()) &&
+          isFAbsFree(OperandVT)) {
+        // isnormal(x) --> fabs(x) < infinity && !(fabs(x) < smallest_normal)
+        SDValue Inf =
+            DAG.getConstantFP(APFloat::getInf(Semantics), DL, OperandVT);
+        SDValue SmallestNormal = DAG.getConstantFP(
+            APFloat::getSmallestNormalized(Semantics), DL, OperandVT);
+
+        SDValue Abs = DAG.getNode(ISD::FABS, DL, OperandVT, Op);
+        SDValue IsFinite = DAG.getSetCC(DL, ResultVT, Abs, Inf, IsFiniteOp);
+        SDValue IsNormal =
+            DAG.getSetCC(DL, ResultVT, Abs, SmallestNormal, IsNormalOp);
+        unsigned LogicOp = IsInvertedFP ? ISD::OR : ISD::AND;
+        return DAG.getNode(LogicOp, DL, ResultVT, IsFinite, IsNormal);
+      }
+    }
   }
 
   // Some checks may be represented as inversion of simpler check, for example

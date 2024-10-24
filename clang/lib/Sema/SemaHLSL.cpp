@@ -102,23 +102,17 @@ static ResourceClass getResourceClass(RegisterType RT) {
     return ResourceClass::Sampler;
   case RegisterType::C:
   case RegisterType::I:
-    llvm_unreachable("unexpected RegisterType value");
+    // Deliberately falling through to the unreachable below.
+    break;
   }
+  llvm_unreachable("unexpected RegisterType value");
 }
 
 DeclBindingInfo *ResourceBindings::addDeclBindingInfo(const VarDecl *VD,
                                                       ResourceClass ResClass) {
   assert(getDeclBindingInfo(VD, ResClass) == nullptr &&
          "DeclBindingInfo already added");
-#ifndef NDEBUG
-  // Verify that existing bindings for this decl are stored sequentially
-  // and at the end of the BindingsList
-  auto I = DeclToBindingListIndex.find(VD);
-  if (I != DeclToBindingListIndex.end()) {
-    for (unsigned Index = I->getSecond(); Index < BindingsList.size(); ++Index)
-      assert(BindingsList[Index].Decl == VD);
-  }
-#endif
+  assert(!hasBindingInfoForDecl(VD) || BindingsList.back().Decl == VD);
   // VarDecl may have multiple entries for different resource classes.
   // DeclToBindingListIndex stores the index of the first binding we saw
   // for this decl. If there are any additional ones then that index
@@ -1047,21 +1041,6 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
   return LocInfo;
 }
 
-// Returns handle type of a resource, if the type is a resource
-static const HLSLAttributedResourceType *
-findHandleTypeOnResource(const Type *Ty) {
-  // If Ty is a resource class, the first field must
-  // be the resource handle of type HLSLAttributedResourceType
-  if (RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
-    if (!RD->fields().empty()) {
-      const auto &FirstFD = RD->fields().begin();
-      return dyn_cast<HLSLAttributedResourceType>(
-          FirstFD->getType().getTypePtr());
-    }
-  }
-  return nullptr;
-}
-
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
@@ -1083,7 +1062,7 @@ void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
       continue;
 
     if (const HLSLAttributedResourceType *AttrResType =
-            findHandleTypeOnResource(Ty)) {
+            HLSLAttributedResourceType::findHandleTypeOnResource(Ty)) {
       // Add a new DeclBindingInfo to Bindings if it does not already exist
       ResourceClass RC = AttrResType->getAttrs().ResourceClass;
       DeclBindingInfo *DBI = Bindings.getDeclBindingInfo(VD, RC);
@@ -1134,7 +1113,8 @@ static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
 
   // Resource
   if (const HLSLAttributedResourceType *AttrResType =
-          findHandleTypeOnResource(VD->getType().getTypePtr())) {
+          HLSLAttributedResourceType::findHandleTypeOnResource(
+              VD->getType().getTypePtr())) {
     if (RegType == getRegisterType(AttrResType->getAttrs().ResourceClass))
       return true;
 
@@ -2124,32 +2104,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   return false;
 }
 
-bool SemaHLSL::IsIntangibleType(clang::QualType QT) {
-  if (QT.isNull())
-    return false;
-
-  const Type *Ty = QT->getUnqualifiedDesugaredType();
-
-  // check if it's a builtin type first (simple check, no need to cache it)
-  if (Ty->isBuiltinType())
-    return Ty->isHLSLIntangibleType();
-
-  // unwrap arrays
-  while (isa<ConstantArrayType>(Ty))
-    Ty = Ty->getArrayElementTypeNoTypeQual();
-
-  const RecordType *RT =
-      dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
-  if (!RT)
-    return false;
-
-  CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
-  assert(RD != nullptr &&
-         "all HLSL struct and classes should be CXXRecordDecl");
-  assert(RD->isCompleteDefinition() && "expecting complete type");
-  return RD->isHLSLIntangible();
-}
-
 static void BuildFlattenedTypeList(QualType BaseTy,
                                    llvm::SmallVectorImpl<QualType> &List) {
   llvm::SmallVector<QualType, 16> WorkList;
@@ -2345,7 +2299,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     }
 
     // find all resources on decl
-    if (IsIntangibleType(VD->getType()))
+    if (VD->getType()->isHLSLIntangibleType())
       collectResourcesOnVarDecl(VD);
 
     // process explicit bindings
@@ -2356,7 +2310,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourcesOnVarDecl(VarDecl *VD) {
-  assert(VD->hasGlobalStorage() && IsIntangibleType(VD->getType()) &&
+  assert(VD->hasGlobalStorage() && VD->getType()->isHLSLIntangibleType() &&
          "expected global variable that contains HLSL resource");
 
   // Cbuffers and Tbuffers are HLSLBufferDecl types
@@ -2377,7 +2331,7 @@ void SemaHLSL::collectResourcesOnVarDecl(VarDecl *VD) {
 
   // Resource (or array of resources)
   if (const HLSLAttributedResourceType *AttrResType =
-          findHandleTypeOnResource(Ty)) {
+          HLSLAttributedResourceType::findHandleTypeOnResource(Ty)) {
     Bindings.addDeclBindingInfo(VD, AttrResType->getAttrs().ResourceClass);
     return;
   }

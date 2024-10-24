@@ -2550,7 +2550,7 @@ public:
     addVPTPredNOperands(Inst, N-1);
     MCRegister RegNum;
     if (getVPTPred() == ARMVCC::None) {
-      RegNum = MCRegister();
+      RegNum = ARM::NoRegister;
     } else {
       unsigned NextOpIndex = Inst.getNumOperands();
       auto &MCID = Parser->getInstrDesc(Inst.getOpcode());

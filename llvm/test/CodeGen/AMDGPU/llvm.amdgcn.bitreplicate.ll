@@ -68,8 +68,6 @@ define amdgpu_cs void @test_s_bitreplicate_sgpr(i32 inreg %mask, ptr addrspace(1
 ; GFX11-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 %mask)

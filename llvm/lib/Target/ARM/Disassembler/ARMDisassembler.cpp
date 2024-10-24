@@ -993,7 +993,7 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     CCI = MI.insert(CCI, MCOperand::createImm(CC));
     ++CCI;
     if (CC == ARMCC::AL)
-      MI.insert(CCI, MCOperand::createReg(0));
+      MI.insert(CCI, MCOperand::createReg(ARM::NoRegister));
     else
       MI.insert(CCI, MCOperand::createReg(ARM::CPSR));
   } else if (CC != ARMCC::AL) {
@@ -1060,7 +1060,7 @@ void ARMDisassembler::UpdateThumbVFPPredicate(
       I->setImm(CC);
       ++I;
       if (CC == ARMCC::AL)
-        I->setReg(0);
+        I->setReg(ARM::NoRegister);
       else
         I->setReg(ARM::CPSR);
       return;
@@ -1541,7 +1541,7 @@ static bool PermitsD32(const MCInst &Inst, const MCDisassembler *Decoder) {
 static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  if (RegNo > (PermitsD32(Inst, Decoder) ? 31 : 15))
+  if (RegNo > (PermitsD32(Inst, Decoder) ? 31u : 15u))
     return MCDisassembler::Fail;
 
   unsigned Register = DPRDecoderTable[RegNo];
@@ -1648,7 +1648,7 @@ static DecodeStatus DecodePredicateOperand(MCInst &Inst, unsigned Val,
     Check(S, MCDisassembler::SoftFail);
   Inst.addOperand(MCOperand::createImm(Val));
   if (Val == ARMCC::AL) {
-    Inst.addOperand(MCOperand::createReg(0));
+    Inst.addOperand(MCOperand::createReg(ARM::NoRegister));
   } else
     Inst.addOperand(MCOperand::createReg(ARM::CPSR));
   return S;
@@ -1660,7 +1660,7 @@ static DecodeStatus DecodeCCOutOperand(MCInst &Inst, unsigned Val,
   if (Val)
     Inst.addOperand(MCOperand::createReg(ARM::CPSR));
   else
-    Inst.addOperand(MCOperand::createReg(0));
+    Inst.addOperand(MCOperand::createReg(ARM::NoRegister));
   return MCDisassembler::Success;
 }
 

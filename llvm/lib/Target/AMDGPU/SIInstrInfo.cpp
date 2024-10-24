@@ -8918,6 +8918,7 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   uint16_t Opcode = MI.getOpcode();
   return IsNullOrVectorRegister &&
          (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode) ||
+          Opcode == AMDGPU::IMPLICIT_DEF ||
           (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
            MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }

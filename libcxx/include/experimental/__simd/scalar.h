@@ -68,6 +68,20 @@ struct __simd_operations<_Tp, simd_abi::__scalar> {
   static _LIBCPP_HIDE_FROM_ABI void __store(_SimdStorage __s, _Up* __mem) noexcept {
     *__mem = static_cast<_Up>(__s.__data);
   }
+
+  static _LIBCPP_HIDE_FROM_ABI void __increment(_SimdStorage& __s) noexcept { ++__s.__data; }
+
+  static _LIBCPP_HIDE_FROM_ABI void __decrement(_SimdStorage& __s) noexcept { --__s.__data; }
+
+  static _LIBCPP_HIDE_FROM_ABI _MaskStorage __negate(_SimdStorage __s) noexcept { return {!__s.__data}; }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __bitwise_not(_SimdStorage __s) noexcept {
+    return {static_cast<_Tp>(~__s.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __unary_minus(_SimdStorage __s) noexcept {
+    return {static_cast<_Tp>(-__s.__data)};
+  }
 };
 
 template <class _Tp>

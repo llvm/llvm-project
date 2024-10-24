@@ -3558,7 +3558,7 @@ transform::HoistRedundantVectorTransfersOp::applyToOne(
   // WARNING: This hoisting does not model parallelism and is generally
   // incorrect when used on distributed loops with memref semantics!
   // TODO: obsolete and should be retired.
-  linalg::hoistRedundantVectorTransfers(target);
+  linalg::hoistRedundantVectorTransfers(target, getVerifyNonZeroTrip());
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }

@@ -798,7 +798,7 @@ private:
     if (Slot == Record.size())
       return true;
     unsigned ValID = Record[Slot++];
-    if (ValID != bitc::OB_METADATA) {
+    if (ValID != static_cast<unsigned>(bitc::OB_METADATA)) {
       unsigned TypeId;
       return getValueTypePair(Record, --Slot, InstNum, ResVal, TypeId,
                               ConstExprInsertBB);
@@ -7040,11 +7040,12 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     // Remove incompatible attributes on function calls.
     if (auto *CI = dyn_cast<CallBase>(&I)) {
       CI->removeRetAttrs(AttributeFuncs::typeIncompatible(
-          CI->getFunctionType()->getReturnType()));
+          CI->getFunctionType()->getReturnType(), CI->getRetAttributes()));
 
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ++ArgNo)
         CI->removeParamAttrs(ArgNo, AttributeFuncs::typeIncompatible(
-                                        CI->getArgOperand(ArgNo)->getType()));
+                                        CI->getArgOperand(ArgNo)->getType(),
+                                        CI->getParamAttributes(ArgNo)));
     }
   }
 

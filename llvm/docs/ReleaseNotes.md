@@ -125,6 +125,17 @@ Changes to the ARM Backend
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
 
+* The default behavior for frame pointers in leaf functions has been updated.
+  When the `-fno-omit-frame-pointer` option is specified, `FPKeepKindStr` is
+  set to `-mframe-pointer=all`, meaning the frame pointer (FP) is now retained
+  in leaf functions by default. To eliminate the frame pointer in leaf functions,
+  you must explicitly use the `-momit-leaf-frame-pointer` option.
+
+* When using the `MOVT` or `MOVW` instructions, the Assembler will now check to
+  ensure that any addend that is used is within a 16-bit signed value range. If the
+  addend falls outside of this range, the LLVM backend will emit an error like so
+  `Relocation Not In Range`.
+
 Changes to the AVR Backend
 --------------------------
 
@@ -256,6 +267,10 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
+  files.
+
 
 Changes to BOLT
 ---------------------------------

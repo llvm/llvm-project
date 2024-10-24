@@ -198,7 +198,7 @@ namespace llvm {
     }
 
     /// slice(n) - Chop off the first N elements of the array.
-    ArrayRef<T> slice(size_t N) const { return slice(N, size() - N); }
+    ArrayRef<T> slice(size_t N) const { return drop_front(N); }
 
     /// Drop the first \p N elements of the array.
     ArrayRef<T> drop_front(size_t N = 1) const {
