@@ -9121,26 +9121,17 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   // Cache the partial reductions up front so we can remove the invalid ones
   // before creating the recipes
-  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
-    for (Instruction &I : drop_end(BB->instructionsWithoutDebug(false))) {
-      Instruction *Instr = &I;
-      auto *Phi = dyn_cast<PHINode>(Instr);
-      if (!Phi || !Legal->isReductionVariable(Phi))
-        continue;
-      const RecurrenceDescriptor &RdxDesc =
-          Legal->getReductionVars().find(Phi)->second;
-      std::optional<PartialReductionChain> Chain =
-          getScaledReduction(Phi, RdxDesc, &TTI, Range, CM);
-      if (Chain.has_value())
-        Plan->addScaledReductionExitInstr(*Chain);
-    }
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    std::optional<PartialReductionChain> Chain =
+        getScaledReduction(Phi, RdxDesc, &TTI, Range, CM);
+    if (Chain.has_value())
+      Plan->addScaledReductionExitInstr(*Chain);
   }
   Plan->removeInvalidScaledReductionExitInstrs();
 
   auto *MiddleVPBB =
       cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getSingleSuccessor());
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
-
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.
