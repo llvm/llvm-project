@@ -268,6 +268,10 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
+  files.
+
+
 Changes to BOLT
 ---------------------------------
 
