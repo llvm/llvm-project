@@ -5753,7 +5753,7 @@ int __kmp_get_first_osid_with_ecore(void) {
   int low = 0;
   int high = __kmp_topology->get_num_hw_threads() - 1;
   int mid = 0;
-  while (high - low > 1) {
+  while (high > low) {
     mid = (high + low) / 2;
     if (__kmp_topology->at(mid).attrs.get_core_type() ==
         KMP_HW_CORE_TYPE_CORE) {
@@ -5762,8 +5762,8 @@ int __kmp_get_first_osid_with_ecore(void) {
       high = mid;
     }
   }
-  if (__kmp_topology->at(mid).attrs.get_core_type() == KMP_HW_CORE_TYPE_ATOM) {
-    return mid;
+  if (__kmp_topology->at(low).attrs.get_core_type() == KMP_HW_CORE_TYPE_ATOM) {
+    return low;
   }
   return -1;
 }
