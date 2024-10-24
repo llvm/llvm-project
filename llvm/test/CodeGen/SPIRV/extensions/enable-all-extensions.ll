@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=all %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=all %s -o - | FileCheck %s
 
 define i6 @getConstantI6() {
   ret i6 2

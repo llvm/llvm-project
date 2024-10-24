@@ -61,6 +61,8 @@
    `(,(concat "\\<" llvm-mode-primitive-type-regexp "\\>") . font-lock-type-face)
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)
+   ;; Values that can appear in a vec
+   '("\\b\\(true\\|false\\|null\\|undef\\|poison\\|none\\)\\b" . font-lock-keyword-face)
    ;; Floating point constants
    '("\\b[-+]?[0-9]+.[0-9]*\\([eE][-+]?[0-9]+\\)?\\b" . font-lock-preprocessor-face)
    ;; Hex constants
@@ -74,7 +76,7 @@
          "private" "internal" "weak" "weak_odr" "linkonce" "linkonce_odr" "available_externally" "appending" "common" "extern_weak" "external"
          "uninitialized" "implementation" "..."
          ;; Values
-         "true" "false" "null" "undef" "zeroinitializer" "none" "c" "asm" "blockaddress" "poison"
+         "zeroinitializer" "c" "asm" "blockaddress"
 
          ;; Calling conventions
          "ccc" "fastcc" "coldcc" "anyregcc" "preserve_mostcc" "preserve_allcc"

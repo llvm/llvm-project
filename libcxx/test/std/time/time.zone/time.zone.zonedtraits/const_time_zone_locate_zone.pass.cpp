@@ -21,6 +21,7 @@
 #include <chrono>
 #include <cassert>
 #include <concepts>
+#include <string_view>
 
 #include "assert_macros.h"
 

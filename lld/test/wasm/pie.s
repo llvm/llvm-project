@@ -1,6 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten -o %t.o %s
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten %S/Inputs/internal_func.s -o %t.internal_func.o
-# RUN: wasm-ld --no-gc-sections --experimental-pic -pie -o %t.wasm %t.o %t.internal_func.o
+# RUN: wasm-ld --no-gc-sections --experimental-pic -pie --unresolved-symbols=import-dynamic -o %t.wasm %t.o %t.internal_func.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
 
@@ -150,7 +150,7 @@ _start:
 # instruction in the InitExpr.  We also, therefore, do not need these globals
 # to be mutable.
 
-# RUN: wasm-ld --no-gc-sections --experimental-pic -pie --extra-features=extended-const -o %t.extended.wasm %t.o %t.internal_func.o
+# RUN: wasm-ld --no-gc-sections --experimental-pic -pie --unresolved-symbols=import-dynamic --extra-features=extended-const -o %t.extended.wasm %t.o %t.internal_func.o
 # RUN: obj2yaml %t.extended.wasm | FileCheck %s --check-prefix=EXTENDED-CONST
 
 # EXTENDED-CONST-NOT: __wasm_apply_global_relocs
@@ -207,7 +207,7 @@ _start:
 # to be generated along with __wasm_start as the start
 # function.
 
-# RUN: wasm-ld --no-gc-sections --shared-memory --experimental-pic -pie -o %t.shmem.wasm %t.o %t.internal_func.o
+# RUN: wasm-ld --no-gc-sections --shared-memory --experimental-pic -pie --unresolved-symbols=import-dynamic -o %t.shmem.wasm %t.o %t.internal_func.o
 # RUN: obj2yaml %t.shmem.wasm | FileCheck %s --check-prefix=SHMEM
 # RUN: llvm-objdump --disassemble-symbols=__wasm_start --no-show-raw-insn --no-leading-addr %t.shmem.wasm | FileCheck %s --check-prefix DISASSEM-SHMEM
 

@@ -452,7 +452,7 @@ define void @int_iv_add_wrong_start(i64 %base, i64 %end) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    call void @use.i64(i64 [[IV2]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[IV2_NEXT]] = add i64 [[IV_NEXT]], [[BASE]]
+; CHECK-NEXT:    [[IV2_NEXT]] = add i64 [[BASE]], [[IV_NEXT]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -706,7 +706,7 @@ define void @different_loops(i64 %base) {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[IV2_NEXT:%.*]], [[LOOP2]] ], [ [[BASE]], [[LOOP1]] ]
 ; CHECK-NEXT:    call void @use.i64(i64 [[IV2]])
-; CHECK-NEXT:    [[IV2_NEXT]] = add nuw i64 [[IV_NEXT]], [[BASE]]
+; CHECK-NEXT:    [[IV2_NEXT]] = add nuw i64 [[BASE]], [[IV_NEXT]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @get.i1()
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[EXIT:%.*]], label [[LOOP2]]
 ; CHECK:       exit:

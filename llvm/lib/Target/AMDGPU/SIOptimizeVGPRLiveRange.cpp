@@ -147,12 +147,12 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariables>();
+    AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<LiveVariables>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineLoopInfo>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -189,7 +189,7 @@ void SIOptimizeVGPRLiveRange::collectElseRegionBlocks(
   unsigned Cur = 0;
   while (MBB) {
     for (auto *Pred : MBB->predecessors()) {
-      if (Pred != Flow && !Blocks.contains(Pred))
+      if (Pred != Flow)
         Blocks.insert(Pred);
     }
 
@@ -407,10 +407,8 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
   while (!WorkList.empty()) {
     auto *MBB = WorkList.pop_back_val();
     for (auto *Succ : MBB->successors()) {
-      if (Succ != Flow && !Blocks.contains(Succ)) {
+      if (Succ != Flow && Blocks.insert(Succ))
         WorkList.push_back(Succ);
-        Blocks.insert(Succ);
-      }
     }
   }
 
@@ -619,8 +617,8 @@ char SIOptimizeVGPRLiveRange::ID = 0;
 INITIALIZE_PASS_BEGIN(SIOptimizeVGPRLiveRange, DEBUG_TYPE,
                       "SI Optimize VGPR LiveRange", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(SIOptimizeVGPRLiveRange, DEBUG_TYPE,
                     "SI Optimize VGPR LiveRange", false, false)
 
@@ -636,8 +634,8 @@ bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  Loops = &getAnalysis<MachineLoopInfo>();
-  LV = &getAnalysis<LiveVariables>();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   MRI = &MF.getRegInfo();
 
   if (skipFunction(MF.getFunction()))

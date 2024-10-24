@@ -53,5 +53,5 @@ void f() {
         f = get_cursor(tu, "f")
         raw = f.raw_comment
         brief = f.brief_comment
-        self.assertIsNone(raw)
-        self.assertIsNone(brief)
+        self.assertEqual(raw, "")
+        self.assertEqual(brief, "")

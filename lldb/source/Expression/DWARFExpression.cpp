@@ -130,9 +130,10 @@ static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
 
 /// Return the length in bytes of the set of operands for \p op. No guarantees
 /// are made on the state of \p data after this call.
-static offset_t GetOpcodeDataSize(const DataExtractor &data,
-                                  const lldb::offset_t data_offset,
-                                  const uint8_t op, const DWARFUnit *dwarf_cu) {
+static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
+                                        const lldb::offset_t data_offset,
+                                        const uint8_t op,
+                                        const DWARFUnit *dwarf_cu) {
   lldb::offset_t offset = data_offset;
   switch (op) {
   case DW_OP_addr:
@@ -358,7 +359,7 @@ lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
       error = true;
       break;
     }
-    const offset_t op_arg_size =
+    const lldb::offset_t op_arg_size =
         GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
     if (op_arg_size == LLDB_INVALID_OFFSET) {
       error = true;
@@ -418,7 +419,7 @@ bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
       m_data.SetData(encoder.GetDataBuffer());
       return true;
     }
-    const offset_t op_arg_size =
+    const lldb::offset_t op_arg_size =
         GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
     if (op_arg_size == LLDB_INVALID_OFFSET)
       break;
@@ -435,7 +436,7 @@ bool DWARFExpression::ContainsThreadLocalStorage(
 
     if (op == DW_OP_form_tls_address || op == DW_OP_GNU_push_tls_address)
       return true;
-    const offset_t op_arg_size =
+    const lldb::offset_t op_arg_size =
         GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
     if (op_arg_size == LLDB_INVALID_OFFSET)
       return false;
@@ -515,7 +516,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
     }
 
     if (!decoded_data) {
-      const offset_t op_arg_size =
+      const lldb::offset_t op_arg_size =
           GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
       if (op_arg_size == LLDB_INVALID_OFFSET)
         return false;
@@ -859,10 +860,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   // TODO: Implement a real typed stack, and store the genericness of the value
   // there.
   auto to_generic = [&](auto v) {
+    // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
     bool is_signed = std::is_signed<decltype(v)>::value;
-    return Scalar(llvm::APSInt(
-        llvm::APInt(8 * opcodes.GetAddressByteSize(), v, is_signed),
-        !is_signed));
+    return Scalar(llvm::APSInt(llvm::APInt(8 * opcodes.GetAddressByteSize(), v,
+                                           is_signed, /*implicitTrunc=*/true),
+                               !is_signed));
   };
 
   // The default kind is a memory location. This is updated by any
@@ -1779,14 +1782,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (exe_ctx) {
         if (frame) {
           Scalar value;
-          Status fb_err;
-          if (frame->GetFrameBaseValue(value, &fb_err)) {
-            int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
-            value += fbreg_offset;
-            stack.push_back(value);
-            stack.back().SetValueType(Value::ValueType::LoadAddress);
-          } else
-            return fb_err.ToError();
+          if (llvm::Error err = frame->GetFrameBaseValue(value))
+            return err;
+          int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
+          value += fbreg_offset;
+          stack.push_back(value);
+          stack.back().SetValueType(Value::ValueType::LoadAddress);
         } else {
           return llvm::createStringError(
               "invalid stack frame in context for DW_OP_fbreg opcode");

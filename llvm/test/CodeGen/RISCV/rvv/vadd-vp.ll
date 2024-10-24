@@ -1425,7 +1425,6 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <v
   ret <vscale x 32 x i32> %v
 }
 
-; FIXME: The first vadd.vi should be able to infer that its AVL is equivalent to VLMAX.
 ; FIXME: The upper half of the operation is doing nothing but we don't catch
 ; that on RV64; we issue a usubsat(and (vscale x 16), 0xffffffff, vscale x 16)
 ; (the "original" %evl is the "and", due to known-bits issues with legalizing
@@ -1436,20 +1435,17 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <v
 define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) {
 ; RV32-LABEL: vadd_vi_nxv32i32_evl_nx16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 1
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vadd.vi v8, v8, -1, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vadd_vi_nxv32i32_evl_nx16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    srli a1, a0, 2
-; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v24, v0, a1
-; RV64-NEXT:    slli a0, a0, 1
-; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; RV64-NEXT:    srli a0, a0, 2
+; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vslidedown.vx v24, v0, a0
+; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vadd.vi v8, v8, -1, v0.t
 ; RV64-NEXT:    vmv1r.v v0, v24
 ; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
@@ -1488,8 +1484,8 @@ define <vscale x 1 x i64> @vadd_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <vsca
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -1514,8 +1510,8 @@ define <vscale x 1 x i64> @vadd_vx_nxv1i64_unmasked(<vscale x 1 x i64> %va, i64 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -1582,8 +1578,8 @@ define <vscale x 2 x i64> @vadd_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b, <vsca
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -1608,8 +1604,8 @@ define <vscale x 2 x i64> @vadd_vx_nxv2i64_unmasked(<vscale x 2 x i64> %va, i64 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -1676,8 +1672,8 @@ define <vscale x 4 x i64> @vadd_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b, <vsca
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -1702,8 +1698,8 @@ define <vscale x 4 x i64> @vadd_vx_nxv4i64_unmasked(<vscale x 4 x i64> %va, i64 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -1770,8 +1766,8 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <vsca
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
@@ -1796,8 +1792,8 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_unmasked(<vscale x 8 x i64> %va, i64 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero

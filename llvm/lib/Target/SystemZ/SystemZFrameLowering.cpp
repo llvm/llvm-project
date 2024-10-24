@@ -517,8 +517,7 @@ static void buildDefCFAReg(MachineBasicBlock &MBB,
                            const DebugLoc &DL, unsigned Reg,
                            const SystemZInstrInfo *ZII) {
   MachineFunction &MF = *MBB.getParent();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   unsigned RegNum = MRI->getDwarfRegNum(Reg, true);
   unsigned CFIIndex = MF.addFrameInst(
                         MCCFIInstruction::createDefCfaRegister(nullptr, RegNum));
@@ -535,8 +534,7 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
   auto *ZII = static_cast<const SystemZInstrInfo *>(STI.getInstrInfo());
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const std::vector<CalleeSavedInfo> &CSI = MFFrame.getCalleeSavedInfo();
   bool HasFP = hasFP(MF);
 
@@ -834,7 +832,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
   }
 }
 
-bool SystemZELFFrameLowering::hasFP(const MachineFunction &MF) const {
+bool SystemZELFFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
           MF.getFrameInfo().hasVarSizedObjects());
 }
@@ -1451,7 +1449,12 @@ void SystemZXPLINKFrameLowering::inlineStackProbe(
   fullyRecomputeLiveIns({StackExtMBB, NextMBB});
 }
 
-bool SystemZXPLINKFrameLowering::hasFP(const MachineFunction &MF) const {
+bool SystemZXPLINKFrameLowering::hasFPImpl(const MachineFunction &MF) const {
+  // Naked functions have no stack frame pushed, so we don't have a frame
+  // pointer.
+  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
+    return false;
+
   return (MF.getFrameInfo().hasVarSizedObjects());
 }
 

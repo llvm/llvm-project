@@ -252,6 +252,32 @@ mlir::computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
   return res;
 }
 
+SmallVector<int64_t> mlir::dropDims(ArrayRef<int64_t> inputPerm,
+                                    ArrayRef<int64_t> dropPositions) {
+  assert(inputPerm.size() >= dropPositions.size() &&
+         "expect inputPerm size large than position to drop");
+  SmallVector<int64_t> res;
+  unsigned permSize = inputPerm.size();
+  for (unsigned inputIndex = 0; inputIndex < permSize; ++inputIndex) {
+    int64_t targetIndex = inputPerm[inputIndex];
+    bool shouldDrop = false;
+    unsigned dropSize = dropPositions.size();
+    for (unsigned dropIndex = 0; dropIndex < dropSize; dropIndex++) {
+      if (dropPositions[dropIndex] == inputPerm[inputIndex]) {
+        shouldDrop = true;
+        break;
+      }
+      if (dropPositions[dropIndex] < inputPerm[inputIndex]) {
+        targetIndex--;
+      }
+    }
+    if (!shouldDrop) {
+      res.push_back(targetIndex);
+    }
+  }
+  return res;
+}
+
 SmallVector<int64_t> mlir::getI64SubArray(ArrayAttr arrayAttr,
                                           unsigned dropFront,
                                           unsigned dropBack) {

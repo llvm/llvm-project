@@ -120,7 +120,8 @@ def LLVM_Log2Op : LLVM_UnaryIntrOpF<"log2">;
 def LLVM_LogOp : LLVM_UnaryIntrOpF<"log">;
 def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-  /*immArgPositions=*/[1, 2, 3], /*immArgAttrNames=*/["rw", "hint", "cache"]
+  /*requiresOpBundles=*/0, /*immArgPositions=*/[1, 2, 3],
+  /*immArgAttrNames=*/["rw", "hint", "cache"]
 > {
   let arguments = (ins LLVM_AnyPointer:$addr, I32Attr:$rw, I32Attr:$hint, I32Attr:$cache);
 }
@@ -166,6 +167,9 @@ def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
+def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
+def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
+def LLVM_TanhOp : LLVM_UnaryIntrOpF<"tanh">;
 
 class LLVM_MemcpyIntrOpBase<string name> :
     LLVM_ZeroResultIntrOp<name, [0, 1, 2],
@@ -173,7 +177,8 @@ class LLVM_MemcpyIntrOpBase<string name> :
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
-    /*immArgPositions=*/[3], /*immArgAttrNames=*/["isVolatile"]> {
+    /*requiresOpBundles=*/0, /*immArgPositions=*/[3],
+    /*immArgAttrNames=*/["isVolatile"]> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
                   AnySignlessInteger:$len, I1Attr:$isVolatile);
@@ -203,7 +208,8 @@ def LLVM_MemcpyInlineOp :
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
-    /*immArgPositions=*/[2, 3], /*immArgAttrNames=*/["len", "isVolatile"]> {
+    /*requiresOpBundles=*/0, /*immArgPositions=*/[2, 3],
+    /*immArgAttrNames=*/["len", "isVolatile"]> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
                   APIntAttr:$len, I1Attr:$isVolatile);
@@ -229,7 +235,8 @@ def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2],
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
-    /*immArgPositions=*/[3], /*immArgAttrNames=*/["isVolatile"]> {
+    /*requiresOpBundles=*/0, /*immArgPositions=*/[3],
+    /*immArgAttrNames=*/["isVolatile"]> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   I8:$val, AnySignlessInteger:$len, I1Attr:$isVolatile);
   // Append the alias attributes defined by LLVM_IntrOpBase.
@@ -283,7 +290,8 @@ def LLVM_NoAliasScopeDeclOp
 class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName, [1],
     [DeclareOpInterfaceMethods<PromotableOpInterface>],
     /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-    /*immArgPositions=*/[0], /*immArgAttrNames=*/["size"]> {
+    /*requiresOpBundles=*/0, /*immArgPositions=*/[0],
+    /*immArgAttrNames=*/["size"]> {
   let arguments = (ins I64Attr:$size, LLVM_AnyPointer:$ptr);
   let assemblyFormat = "$size `,` $ptr attr-dict `:` qualified(type($ptr))";
 }
@@ -303,7 +311,8 @@ def LLVM_InvariantStartOp : LLVM_OneResultIntrOp<"invariant.start", [], [1],
 def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
     [DeclareOpInterfaceMethods<PromotableOpInterface>],
     /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-    /*immArgPositions=*/[1], /*immArgAttrNames=*/["size"]> {
+    /*requiresOpBundles=*/0, /*immArgPositions=*/[1],
+    /*immArgAttrNames=*/["size"]> {
   let arguments = (ins LLVM_DefaultPointer:$start,
                        I64Attr:$size,
                        LLVM_AnyPointer:$ptr);
@@ -347,7 +356,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
                     [&args](unsigned index) { return args[index]->getType(); });
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *callee =
-      llvm::Intrinsic::getDeclaration(module,
+      llvm::Intrinsic::getOrInsertDeclaration(module,
         llvm::Intrinsic::experimental_constrained_}] #
     mnem # [{, overloadedTypes); }] #
     !cond(!gt(hasRoundingMode, 0) : [{
@@ -365,7 +374,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
     SmallVector<Value> mlirOperands;
     SmallVector<NamedAttribute> mlirAttrs;
     if (failed(moduleImport.convertIntrinsicArguments(
-        llvmOperands.take_front( }] # numArgs # [{),
+        llvmOperands.take_front( }] # numArgs # [{), {}, false,
         {}, {}, mlirOperands, mlirAttrs))) {
       return failure();
     }
@@ -426,7 +435,26 @@ def LLVM_USHLSat : LLVM_BinarySameArgsIntrOpI<"ushl.sat">;
 //
 
 def LLVM_AssumeOp
-  : LLVM_ZeroResultIntrOp<"assume", []>, Arguments<(ins I1:$cond)>;
+    : LLVM_ZeroResultIntrOp<"assume", /*overloadedOperands=*/[], /*traits=*/[],
+                            /*requiresAccessGroup=*/0,
+                            /*requiresAliasAnalysis=*/0,
+                            /*requiresOpBundles=*/1> {
+  dag args = (ins I1:$cond);
+  let arguments = !con(args, opBundleArgs);
+
+  let assemblyFormat = [{
+    $cond
+    ( custom<OpBundles>($op_bundle_operands, type($op_bundle_operands),
+                        $op_bundle_tags)^ )?
+    `:` type($cond) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$cond)>
+  ];
+
+  let hasVerifier = 1;
+}
 
 def LLVM_SSACopyOp : LLVM_OneResultIntrOp<"ssa.copy", [], [0],
                                             [Pure, SameOperandsAndResultType]> {
@@ -541,7 +569,7 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
     llvm::Function *fn =
-      llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::}]
+      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::}]
        # !subst(".", "_", name) # [{);
     builder.CreateCall(fn, {
         llvm::MetadataAsValue::get(ctx,
@@ -594,7 +622,7 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
     llvm::Function *fn =
-      llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::dbg_label);
+      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::dbg_label);
     builder.CreateCall(fn, {
         llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($label))
       });
@@ -842,22 +870,27 @@ def LLVM_GetActiveLaneMaskOp
 /// Create a call to Masked Load intrinsic.
 def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   let arguments = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
-                   Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment);
+                   Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
+                   UnitAttr:$nontemporal);
   let results = (outs LLVM_AnyVector:$res);
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
 
   string llvmBuilder = [{
-    $res = $pass_thru.empty() ? builder.CreateMaskedLoad(
+    auto *inst = $pass_thru.empty() ? builder.CreateMaskedLoad(
         $_resultType, $data, llvm::Align($alignment), $mask) :
       builder.CreateMaskedLoad(
         $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
-  }];
+    $res = inst;
+  }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
     $res = $_builder.create<LLVM::MaskedLoadOp>($_location,
-      $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment));
+      $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment),
+        nontemporal ? $_builder.getUnitAttr() : nullptr);
   }];
-  list<int> llvmArgIndices = [0, 2, 3, 1];
+  list<int> llvmArgIndices = [0, 2, 3, 1, -1];
 }
 
 /// Create a call to Masked Store intrinsic.
@@ -900,6 +933,8 @@ def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
       $_resultType, $ptrs, $mask, $pass_thru, $_int_attr($alignment));
   }];
   list<int> llvmArgIndices = [0, 2, 3, 1];
+
+  let hasVerifier = 1;
 }
 
 /// Create a call to Masked Scatter intrinsic.
@@ -919,6 +954,8 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
       $value, $ptrs, $mask, $_int_attr($alignment));
   }];
   list<int> llvmArgIndices = [0, 1, 3, 2];
+
+  let hasVerifier = 1;
 }
 
 /// Create a call to Masked Expand Load intrinsic.
@@ -980,7 +1017,8 @@ def LLVM_DebugTrap : LLVM_ZeroResultIntrOp<"debugtrap">;
 def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   /*overloadedOperands=*/[], /*traits=*/[],
   /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-  /*immArgPositions=*/[0], /*immArgAttrNames=*/["failureKind"]> {
+  /*requiresOpBundles=*/0, /*immArgPositions=*/[0],
+  /*immArgAttrNames=*/["failureKind"]> {
   let arguments = (ins I8Attr:$failureKind);
 }
 
@@ -989,7 +1027,7 @@ def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
 /// Create a call to stepvector intrinsic.
 def LLVM_StepVectorOp
-    : LLVM_IntrOp<"experimental.stepvector", [0], [], [Pure], 1> {
+    : LLVM_IntrOp<"stepvector", [0], [], [Pure], 1> {
   let arguments = (ins);
   let results = (outs LLVM_VectorOf<AnySignlessInteger>:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -1147,6 +1185,10 @@ def LLVM_VPShlOp  : LLVM_VPBinaryI<"shl">;
 def LLVM_VPOrOp   : LLVM_VPBinaryI<"or">;
 def LLVM_VPAndOp  : LLVM_VPBinaryI<"and">;
 def LLVM_VPXorOp  : LLVM_VPBinaryI<"xor">;
+def LLVM_VPSMaxOp : LLVM_VPBinaryI<"smax">;
+def LLVM_VPSMinOp : LLVM_VPBinaryI<"smin">;
+def LLVM_VPUMaxOp : LLVM_VPBinaryI<"umax">;
+def LLVM_VPUMinOp : LLVM_VPBinaryI<"umin">;
 
 // Float Binary
 def LLVM_VPFAddOp : LLVM_VPBinaryF<"fadd">;

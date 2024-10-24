@@ -120,17 +120,17 @@ func.func @illegaltype(i21312312323120) // expected-error {{invalid integer widt
 // -----
 
 // Test no nested vector.
-// expected-error@+1 {{vector elements must be int/index/float type}}
+// expected-error@+1 {{failed to verify 'elementType': integer or index or floating-point}}
 func.func @vectors(vector<1 x vector<1xi32>>, vector<2x4xf32>)
 
 // -----
 
-// expected-error @+1 {{vector types must have positive constant sizes}}
+// expected-error @+1 {{vector types must have positive constant sizes but got 0}}
 func.func @zero_vector_type() -> vector<0xi32>
 
 // -----
 
-// expected-error @+1 {{vector types must have positive constant sizes}}
+// expected-error @+1 {{vector types must have positive constant sizes but got 1, 0}}
 func.func @zero_in_vector_type() -> vector<1x0xi32>
 
 // -----

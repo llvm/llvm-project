@@ -131,6 +131,10 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit basic_format_context(_OutIt __out_it, basic_format_args<basic_format_context> __args)
       : __out_it_(std::move(__out_it)), __args_(__args) {}
 #  endif
+
+public:
+  basic_format_context(const basic_format_context&)            = delete;
+  basic_format_context& operator=(const basic_format_context&) = delete;
 };
 
 // A specialization for __retarget_buffer
@@ -177,13 +181,13 @@ public:
                   __format::__determine_arg_t<basic_format_context, decltype(__arg)>(),
                   __basic_format_arg_value<basic_format_context>(__arg)};
           };
-#  if _LIBCPP_STD_VER >= 26 && defined(_LIBCPP_HAS_EXPLICIT_THIS_PARAMETER)
+#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
           return static_cast<_Context*>(__c)->arg(__id).visit(std::move(__visitor));
 #  else
           _LIBCPP_SUPPRESS_DEPRECATED_PUSH
           return std::visit_format_arg(std::move(__visitor), static_cast<_Context*>(__c)->arg(__id));
           _LIBCPP_SUPPRESS_DEPRECATED_POP
-#  endif // _LIBCPP_STD_VER >= 26 && defined(_LIBCPP_HAS_EXPLICIT_THIS_PARAMETER)
+#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
         }) {
   }
 
@@ -208,7 +212,7 @@ private:
 };
 
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_format_context);
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

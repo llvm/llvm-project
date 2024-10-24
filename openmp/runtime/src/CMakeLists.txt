@@ -161,7 +161,9 @@ endif()
 
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
-add_definitions(-U_GLIBCXX_ASSERTIONS)
+if(NOT WIN32)
+  add_definitions(-U_GLIBCXX_ASSERTIONS)
+endif()
 
 # Add the OpenMP library
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
@@ -210,6 +212,15 @@ if(OPENMP_MSVC_NAME_SCHEME)
     LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
     LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
  )
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  set(LIBOMP_SHARED_OUTPUT_NAME "omp" CACHE STRING "Output name for the shared libomp runtime library.")
+  set_target_properties(omp PROPERTIES
+    OUTPUT_NAME "${LIBOMP_SHARED_OUTPUT_NAME}"
+    LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
+    LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
+    VERSION "1.0"
+    SOVERSION "1"
+  )
 else()
   set_target_properties(omp PROPERTIES
     PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_LIB_FILE}"

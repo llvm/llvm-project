@@ -2072,6 +2072,41 @@ public:
   }
 };
 
+/// This expression type represents an asterisk in an OpenACC Size-Expr, used in
+/// the 'tile' and 'gang' clauses. It is of 'int' type, but should not be
+/// evaluated.
+class OpenACCAsteriskSizeExpr final : public Expr {
+  friend class ASTStmtReader;
+  SourceLocation AsteriskLoc;
+
+  OpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc, QualType IntTy)
+      : Expr(OpenACCAsteriskSizeExprClass, IntTy, VK_PRValue, OK_Ordinary),
+        AsteriskLoc(AsteriskLoc) {}
+
+  void setAsteriskLocation(SourceLocation Loc) { AsteriskLoc = Loc; }
+
+public:
+  static OpenACCAsteriskSizeExpr *Create(const ASTContext &C,
+                                         SourceLocation Loc);
+  static OpenACCAsteriskSizeExpr *CreateEmpty(const ASTContext &C);
+
+  SourceLocation getBeginLoc() const { return AsteriskLoc; }
+  SourceLocation getEndLoc() const { return AsteriskLoc; }
+  SourceLocation getLocation() const { return AsteriskLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCAsteriskSizeExprClass;
+  }
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
 // This represents a use of the __builtin_sycl_unique_stable_name, which takes a
 // type-id, and at CodeGen time emits a unique string representation of the
 // type in a way that permits us to properly encode information about the SYCL
@@ -2135,11 +2170,13 @@ public:
 class ParenExpr : public Expr {
   SourceLocation L, R;
   Stmt *Val;
+
 public:
   ParenExpr(SourceLocation l, SourceLocation r, Expr *val)
       : Expr(ParenExprClass, val->getType(), val->getValueKind(),
              val->getObjectKind()),
         L(l), R(r), Val(val) {
+    ParenExprBits.ProducedByFoldExpansion = false;
     setDependence(computeDependence(this));
   }
 
@@ -2170,6 +2207,13 @@ public:
   child_range children() { return child_range(&Val, &Val+1); }
   const_child_range children() const {
     return const_child_range(&Val, &Val + 1);
+  }
+
+  bool isProducedByFoldExpansion() const {
+    return ParenExprBits.ProducedByFoldExpansion != 0;
+  }
+  void setIsProducedByFoldExpansion(bool ProducedByFoldExpansion = true) {
+    ParenExprBits.ProducedByFoldExpansion = ProducedByFoldExpansion;
   }
 };
 
@@ -2331,6 +2375,11 @@ public:
   /// Get FPFeatures from trailing storage.
   FPOptionsOverride getStoredFPFeatures() const {
     return getTrailingFPFeatures();
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
 protected:
@@ -2986,6 +3035,9 @@ public:
 
   bool hasStoredFPFeatures() const { return CallExprBits.HasFPFeatures; }
 
+  bool isCoroElideSafe() const { return CallExprBits.IsCoroElideSafe; }
+  void setCoroElideSafe(bool V = true) { CallExprBits.IsCoroElideSafe = V; }
+
   Decl *getCalleeDecl() { return getCallee()->getReferencedDeclOfCallee(); }
   const Decl *getCalleeDecl() const {
     return getCallee()->getReferencedDeclOfCallee();
@@ -3094,6 +3146,11 @@ public:
   void setStoredFPFeatures(FPOptionsOverride F) {
     assert(hasStoredFPFeatures());
     *getTrailingFPFeatures() = F;
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
   /// Get the FP features status of this operator. Only meaningful for
@@ -3592,6 +3649,11 @@ public:
     return *getTrailingFPFeatures();
   }
 
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
   /// Get the FP features status of this operation. Only meaningful for
   /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
@@ -3873,6 +3935,7 @@ protected:
   /// Construct an empty binary operator.
   explicit BinaryOperator(EmptyShell Empty) : Expr(BinaryOperatorClass, Empty) {
     BinaryOperatorBits.Opc = BO_Comma;
+    BinaryOperatorBits.ExcludedOverflowPattern = false;
   }
 
 public:
@@ -4028,6 +4091,15 @@ public:
   void setHasStoredFPFeatures(bool B) { BinaryOperatorBits.HasFPFeatures = B; }
   bool hasStoredFPFeatures() const { return BinaryOperatorBits.HasFPFeatures; }
 
+  /// Set and get the bit that informs arithmetic overflow sanitizers whether
+  /// or not they should exclude certain BinaryOperators from instrumentation
+  void setExcludedOverflowPattern(bool B) {
+    BinaryOperatorBits.ExcludedOverflowPattern = B;
+  }
+  bool hasExcludedOverflowPattern() const {
+    return BinaryOperatorBits.ExcludedOverflowPattern;
+  }
+
   /// Get FPFeatures from trailing storage
   FPOptionsOverride getStoredFPFeatures() const {
     assert(hasStoredFPFeatures());
@@ -4037,6 +4109,10 @@ public:
   void setStoredFPFeatures(FPOptionsOverride F) {
     assert(BinaryOperatorBits.HasFPFeatures);
     *getTrailingFPFeatures() = F;
+  }
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
   /// Get the FP features status of this operator. Only meaningful for
@@ -6337,9 +6413,9 @@ class BlockExpr : public Expr {
 protected:
   BlockDecl *TheBlock;
 public:
-  BlockExpr(BlockDecl *BD, QualType ty)
+  BlockExpr(BlockDecl *BD, QualType ty, bool ContainsUnexpandedParameterPack)
       : Expr(BlockExprClass, ty, VK_PRValue, OK_Ordinary), TheBlock(BD) {
-    setDependence(computeDependence(this));
+    setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
   }
 
   /// Build an empty block expression.
@@ -6701,6 +6777,17 @@ public:
            getOp() <= AO__opencl_atomic_store;
   }
 
+  bool isHIP() const {
+    return Op >= AO__hip_atomic_compare_exchange_strong &&
+           Op <= AO__hip_atomic_store;
+  }
+
+  /// Return true if atomics operations targeting allocations in private memory
+  /// are undefined.
+  bool threadPrivateMemoryAtomicsAreUndefined() const {
+    return isOpenCL() || isHIP();
+  }
+
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
 
@@ -7040,6 +7127,103 @@ private:
     ColonLocSecond = L;
   }
   void setRBracketLoc(SourceLocation L) { RBracketLoc = L; }
+};
+
+/// This class represents temporary values used to represent inout and out
+/// arguments in HLSL. From the callee perspective these parameters are more or
+/// less __restrict__ T&. They are guaranteed to not alias any memory. inout
+/// parameters are initialized by the caller, and out parameters are references
+/// to uninitialized memory.
+///
+/// In the caller, the argument expression creates a temporary in local memory
+/// and the address of the temporary is passed into the callee. There may be
+/// implicit conversion sequences to initialize the temporary, and on expiration
+/// of the temporary an inverse conversion sequence is applied as a write-back
+/// conversion to the source l-value.
+///
+/// This AST node has three sub-expressions:
+///  - An OpaqueValueExpr with a source that is the argument lvalue expression.
+///  - An OpaqueValueExpr with a source that is an implicit conversion
+///    sequence from the source lvalue to the argument type.
+///  - An expression that assigns the second expression into the first,
+///    performing any necessary conversions.
+class HLSLOutArgExpr : public Expr {
+  friend class ASTStmtReader;
+
+  enum {
+    BaseLValue,
+    CastedTemporary,
+    WritebackCast,
+    NumSubExprs,
+  };
+
+  Stmt *SubExprs[NumSubExprs];
+  bool IsInOut;
+
+  HLSLOutArgExpr(QualType Ty, OpaqueValueExpr *B, OpaqueValueExpr *OpV,
+                 Expr *WB, bool IsInOut)
+      : Expr(HLSLOutArgExprClass, Ty, VK_LValue, OK_Ordinary),
+        IsInOut(IsInOut) {
+    SubExprs[BaseLValue] = B;
+    SubExprs[CastedTemporary] = OpV;
+    SubExprs[WritebackCast] = WB;
+    assert(!Ty->isDependentType() && "HLSLOutArgExpr given a dependent type!");
+  }
+
+  explicit HLSLOutArgExpr(EmptyShell Shell)
+      : Expr(HLSLOutArgExprClass, Shell) {}
+
+public:
+  static HLSLOutArgExpr *Create(const ASTContext &C, QualType Ty,
+                                OpaqueValueExpr *Base, OpaqueValueExpr *OpV,
+                                Expr *WB, bool IsInOut);
+  static HLSLOutArgExpr *CreateEmpty(const ASTContext &Ctx);
+
+  const OpaqueValueExpr *getOpaqueArgLValue() const {
+    return cast<OpaqueValueExpr>(SubExprs[BaseLValue]);
+  }
+  OpaqueValueExpr *getOpaqueArgLValue() {
+    return cast<OpaqueValueExpr>(SubExprs[BaseLValue]);
+  }
+
+  /// Return the l-value expression that was written as the argument
+  /// in source.  Everything else here is implicitly generated.
+  const Expr *getArgLValue() const {
+    return getOpaqueArgLValue()->getSourceExpr();
+  }
+  Expr *getArgLValue() { return getOpaqueArgLValue()->getSourceExpr(); }
+
+  const Expr *getWritebackCast() const {
+    return cast<Expr>(SubExprs[WritebackCast]);
+  }
+  Expr *getWritebackCast() { return cast<Expr>(SubExprs[WritebackCast]); }
+
+  const OpaqueValueExpr *getCastedTemporary() const {
+    return cast<OpaqueValueExpr>(SubExprs[CastedTemporary]);
+  }
+  OpaqueValueExpr *getCastedTemporary() {
+    return cast<OpaqueValueExpr>(SubExprs[CastedTemporary]);
+  }
+
+  /// returns true if the parameter is inout and false if the parameter is out.
+  bool isInOut() const { return IsInOut; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return SubExprs[BaseLValue]->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return SubExprs[BaseLValue]->getEndLoc();
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == HLSLOutArgExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[BaseLValue], &SubExprs[NumSubExprs]);
+  }
 };
 
 /// Frontend produces RecoveryExprs on semantic errors that prevent creating

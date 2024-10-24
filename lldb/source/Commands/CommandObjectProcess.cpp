@@ -25,6 +25,7 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -369,25 +370,23 @@ protected:
 
     // Okay, we're done.  Last step is to warn if the executable module has
     // changed:
-    char new_path[PATH_MAX];
     ModuleSP new_exec_module_sp(target->GetExecutableModule());
     if (!old_exec_module_sp) {
       // We might not have a module if we attached to a raw pid...
       if (new_exec_module_sp) {
-        new_exec_module_sp->GetFileSpec().GetPath(new_path, PATH_MAX);
-        result.AppendMessageWithFormat("Executable module set to \"%s\".\n",
-                                       new_path);
+        result.AppendMessageWithFormat(
+            "Executable binary set to \"%s\".\n",
+            new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
+    } else if (!new_exec_module_sp) {
+      result.AppendWarningWithFormat("No executable binary.");
     } else if (old_exec_module_sp->GetFileSpec() !=
                new_exec_module_sp->GetFileSpec()) {
-      char old_path[PATH_MAX];
-
-      old_exec_module_sp->GetFileSpec().GetPath(old_path, PATH_MAX);
-      new_exec_module_sp->GetFileSpec().GetPath(new_path, PATH_MAX);
 
       result.AppendWarningWithFormat(
-          "Executable module changed from \"%s\" to \"%s\".\n", old_path,
-          new_path);
+          "Executable binary changed from \"%s\" to \"%s\".\n",
+          old_exec_module_sp->GetFileSpec().GetPath().c_str(),
+          new_exec_module_sp->GetFileSpec().GetPath().c_str());
     }
 
     if (!old_arch_spec.IsValid()) {
@@ -454,7 +453,7 @@ protected:
       switch (short_option) {
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore))
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid value for ignore option: \"%s\", should be a number.",
               option_arg.str().c_str());
         break;
@@ -512,7 +511,7 @@ protected:
         }
       }
 
-      Target *target = m_exe_ctx.GetTargetPtr();
+      Target &target = GetTarget();
       BreakpointIDList run_to_bkpt_ids;
       // Don't pass an empty run_to_breakpoint list, as Verify will look for the
       // default breakpoint.
@@ -540,7 +539,7 @@ protected:
         // the breakpoint.location specifications since the latter require
         // special handling.  We also figure out whether there's at least one
         // specifier in the set that is enabled.
-        BreakpointList &bkpt_list = target->GetBreakpointList();
+        BreakpointList &bkpt_list = target.GetBreakpointList();
         std::unordered_set<break_id_t> bkpts_seen;
         std::unordered_set<break_id_t> bkpts_with_locs_seen;
         BreakpointIDList with_locs;
@@ -668,7 +667,7 @@ protected:
       }
 
       // Now re-enable the breakpoints we disabled:
-      BreakpointList &bkpt_list = target->GetBreakpointList();
+      BreakpointList &bkpt_list = target.GetBreakpointList();
       for (break_id_t bp_id : bkpts_disabled) {
         BreakpointSP bp_sp = bkpt_list.FindBreakpointByID(bp_id);
         if (bp_sp)
@@ -745,8 +744,8 @@ public:
         bool success;
         tmp_result = OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
-          error.SetErrorStringWithFormat("invalid boolean option: \"%s\"",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean option: \"%s\"", option_arg.str().c_str());
         else {
           if (tmp_result)
             m_keep_stopped = eLazyBoolYes;
@@ -950,11 +949,13 @@ public:
                           ExecutionContext *execution_context) override {
       Status error;
       const int short_option = m_getopt_table[option_idx].val;
+      ArchSpec arch =
+          execution_context->GetProcessPtr()->GetSystemArchitecture();
       switch (short_option) {
       case 'i':
         do_install = true;
         if (!option_arg.empty())
-          install_path.SetFile(option_arg, FileSpec::Style::native);
+          install_path.SetFile(option_arg, arch.GetTriple());
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1271,13 +1272,13 @@ public:
 
       switch (short_option) {
       case 'p':
-        m_requested_plugin_name = option_arg.str();
+        error = m_core_dump_options.SetPluginName(option_arg.data());
         break;
       case 's':
-        m_requested_save_core_style =
+        m_core_dump_options.SetStyle(
             (lldb::SaveCoreStyle)OptionArgParser::ToOptionEnum(
                 option_arg, GetDefinitions()[option_idx].enum_values,
-                eSaveCoreUnspecified, error);
+                eSaveCoreUnspecified, error));
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1287,13 +1288,11 @@ public:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
-      m_requested_save_core_style = eSaveCoreUnspecified;
-      m_requested_plugin_name.clear();
+      m_core_dump_options.Clear();
     }
 
     // Instance variables to hold the values for command options.
-    SaveCoreStyle m_requested_save_core_style = eSaveCoreUnspecified;
-    std::string m_requested_plugin_name;
+    SaveCoreOptions m_core_dump_options;
   };
 
 protected:
@@ -1303,13 +1302,14 @@ protected:
       if (command.GetArgumentCount() == 1) {
         FileSpec output_file(command.GetArgumentAtIndex(0));
         FileSystem::Instance().Resolve(output_file);
-        SaveCoreStyle corefile_style = m_options.m_requested_save_core_style;
-        Status error =
-            PluginManager::SaveCore(process_sp, output_file, corefile_style,
-                                    m_options.m_requested_plugin_name);
+        auto &core_dump_options = m_options.m_core_dump_options;
+        core_dump_options.SetOutputFile(output_file);
+        Status error = PluginManager::SaveCore(process_sp, core_dump_options);
         if (error.Success()) {
-          if (corefile_style == SaveCoreStyle::eSaveCoreDirtyOnly ||
-              corefile_style == SaveCoreStyle::eSaveCoreStackOnly) {
+          if (core_dump_options.GetStyle() ==
+                  SaveCoreStyle::eSaveCoreDirtyOnly ||
+              core_dump_options.GetStyle() ==
+                  SaveCoreStyle::eSaveCoreStackOnly) {
             result.AppendMessageWithFormat(
                 "\nModified-memory or stack-memory only corefile "
                 "created.  This corefile may \n"
@@ -1420,7 +1420,7 @@ protected:
 
       PlatformSP platform_sp = process->GetTarget().GetPlatform();
       if (!platform_sp) {
-        result.AppendError("Couldn'retrieve the target's platform");
+        result.AppendError("Couldn't retrieve the target's platform");
         return;
       }
 
@@ -1585,7 +1585,7 @@ public:
 
 protected:
   void DoExecute(Args &signal_args, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     // Any signals that are being set should be added to the Target's
     // DummySignals so they will get applied on rerun, etc.

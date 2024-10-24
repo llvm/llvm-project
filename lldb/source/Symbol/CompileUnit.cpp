@@ -213,11 +213,12 @@ VariableListSP CompileUnit::GetVariableList(bool can_create) {
   return m_variables;
 }
 
-std::vector<uint32_t> FindFileIndexes(const SupportFileList &files,
-                                      const FileSpec &file) {
+std::vector<uint32_t>
+FindFileIndexes(const SupportFileList &files, const FileSpec &file,
+                RealpathPrefixes *realpath_prefixes = nullptr) {
   std::vector<uint32_t> result;
   uint32_t idx = -1;
-  while ((idx = files.FindCompatibleIndex(idx + 1, file)) !=
+  while ((idx = files.FindCompatibleIndex(idx + 1, file, realpath_prefixes)) !=
          UINT32_MAX)
     result.push_back(idx);
   return result;
@@ -247,7 +248,8 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
 
 void CompileUnit::ResolveSymbolContext(
     const SourceLocationSpec &src_location_spec,
-    SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
+    SymbolContextItem resolve_scope, SymbolContextList &sc_list,
+    RealpathPrefixes *realpath_prefixes) {
   const FileSpec file_spec = src_location_spec.GetFileSpec();
   const uint32_t line = src_location_spec.GetLine().value_or(0);
   const bool check_inlines = src_location_spec.GetCheckInlines();
@@ -275,8 +277,8 @@ void CompileUnit::ResolveSymbolContext(
     return;
   }
 
-  std::vector<uint32_t> file_indexes = FindFileIndexes(GetSupportFiles(),
-                                                       file_spec);
+  std::vector<uint32_t> file_indexes =
+      FindFileIndexes(GetSupportFiles(), file_spec, realpath_prefixes);
   const size_t num_file_indexes = file_indexes.size();
   if (num_file_indexes == 0)
     return;

@@ -99,7 +99,7 @@ define i32 @t8(i64 %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smin.i64(i64 [[A:%.*]], i64 -32767)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[B:%.*]], 42
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[B]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[B]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i1 true, i1 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
@@ -852,10 +852,8 @@ define i32 @common_factor_umax_extra_use_both(i32 %a, i32 %b, i32 %c) {
 
 define float @not_min_of_min(i8 %i, float %x) {
 ; CHECK-LABEL: @not_min_of_min(
-; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp fast oge float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[MIN1:%.*]] = select fast i1 [[CMP1_INV]], float 1.000000e+00, float [[X]]
-; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp fast oge float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[MIN2:%.*]] = select fast i1 [[CMP2_INV]], float 2.000000e+00, float [[X]]
+; CHECK-NEXT:    [[MIN1:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[MIN2:%.*]] = call fast float @llvm.minnum.f32(float [[X]], float 2.000000e+00)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[I:%.*]], 16
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP3]], float [[MIN1]], float [[MIN2]]
 ; CHECK-NEXT:    ret float [[R]]
@@ -1360,11 +1358,11 @@ define i8 @PR14613_smax(i8 %x) {
 
 define i8 @PR46271(<2 x i8> %x) {
 ; CHECK-LABEL: @PR46271(
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[X:%.*]], <i8 poison, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 poison, i8 -1>
 ; CHECK-NEXT:    [[A_INV:%.*]] = icmp slt <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[A_INV]], <2 x i8> <i8 poison, i8 0>, <2 x i8> [[TMP3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i8> [[TMP1]], i64 1
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    [[NOT:%.*]] = select <2 x i1> [[A_INV]], <2 x i8> <i8 poison, i8 0>, <2 x i8> [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x i8> [[NOT]], i64 1
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = icmp sgt <2 x i8> %x, <i8 -1, i8 -1>
   %b = select <2 x i1> %a, <2 x i8> %x, <2 x i8> <i8 poison, i8 -1>

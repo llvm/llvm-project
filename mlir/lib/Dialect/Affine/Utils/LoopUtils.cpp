@@ -12,10 +12,8 @@
 
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -1386,7 +1384,7 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
   assert(input.size() == permMap.size() && "invalid permutation map size");
   // Check whether the permutation spec is valid. This is a small vector - we'll
   // just sort and check if it's iota.
-  SmallVector<unsigned, 4> checkPermMap(permMap.begin(), permMap.end());
+  SmallVector<unsigned, 4> checkPermMap(permMap);
   llvm::sort(checkPermMap);
   if (llvm::any_of(llvm::enumerate(checkPermMap),
                    [](const auto &en) { return en.value() != en.index(); }))
@@ -1585,7 +1583,7 @@ SmallVector<SmallVector<AffineForOp, 8>, 8>
 mlir::affine::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
                    ArrayRef<AffineForOp> targets) {
   SmallVector<SmallVector<AffineForOp, 8>, 8> res;
-  SmallVector<AffineForOp, 8> currentTargets(targets.begin(), targets.end());
+  SmallVector<AffineForOp, 8> currentTargets(targets);
   for (auto it : llvm::zip(forOps, sizes)) {
     auto step = stripmineSink(std::get<0>(it), std::get<1>(it), currentTargets);
     res.push_back(step);
@@ -2069,7 +2067,7 @@ static LogicalResult generateCopy(
     // fastMemRefType is a constant shaped memref.
     auto maySizeInBytes = getIntOrFloatMemRefSizeInBytes(fastMemRefType);
     // We don't account for things of unknown size.
-    *sizeInBytes = maySizeInBytes ? *maySizeInBytes : 0;
+    *sizeInBytes = maySizeInBytes.value_or(0);
 
     LLVM_DEBUG(emitRemarkForBlock(*block)
                << "Creating fast buffer of type " << fastMemRefType
@@ -2082,8 +2080,8 @@ static LogicalResult generateCopy(
 
   auto numElementsSSA = top.create<arith::ConstantIndexOp>(loc, *numElements);
 
-  Value dmaStride = nullptr;
-  Value numEltPerDmaStride = nullptr;
+  Value dmaStride;
+  Value numEltPerDmaStride;
   if (copyOptions.generateDma) {
     SmallVector<StrideInfo, 4> dmaStrideInfos;
     getMultiLevelStrides(region, fastBufferShape, &dmaStrideInfos);

@@ -86,7 +86,7 @@ int internal_pthread_join(void *th, void **ret);
       return REAL(pthread_create)(th, attr, callback, param);             \
     }                                                                     \
     int internal_pthread_join(void *th, void **ret) {                     \
-      return REAL(pthread_join(th, ret));                                 \
+      return REAL(pthread_join)(th, ret);                                 \
     }                                                                     \
     }  // namespace __sanitizer
 
@@ -108,6 +108,7 @@ bool IsStateDetached(int state);
 fd_t ReserveStandardFds(fd_t fd);
 
 bool ShouldMockFailureToOpen(const char *path);
+bool OpenReadsVaArgs(int oflag);
 
 // Create a non-file mapping with a given /proc/self/maps name.
 uptr MmapNamed(void *addr, uptr length, int prot, int flags, const char *name);

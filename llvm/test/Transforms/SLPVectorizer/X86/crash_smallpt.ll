@@ -32,7 +32,7 @@ define void @main() {
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr undef, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> <double 2.000000e-01, double 3.000000e-01>, [[TMP1]]
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[AGG_TMP101211_SROA_0_0_IDX]], align 8
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ; CHECK:       cond.true63.us:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.body42.lr.ph.us:
@@ -81,7 +81,7 @@ cond.false66.us:
   store double %add4.i246.us, ptr %agg.tmp99208.sroa.1.8.idx388, align 8
   store double %mul.i.i.us, ptr %agg.tmp101211.sroa.0.0.idx, align 8
   store double %mul2.i.i.us, ptr %agg.tmp101211.sroa.1.8.idx390, align 8
-  unreachable
+  ret void
 
 cond.true63.us:
   unreachable

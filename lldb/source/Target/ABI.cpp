@@ -210,7 +210,7 @@ bool ABI::PrepareTrivialCall(Thread &thread, lldb::addr_t sp,
 
 bool ABI::GetFallbackRegisterLocation(
     const RegisterInfo *reg_info,
-    UnwindPlan::Row::RegisterLocation &unwind_regloc) {
+    UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc) {
   // Did the UnwindPlan fail to give us the caller's stack pointer? The stack
   // pointer is defined to be the same as THIS frame's CFA, so return the CFA
   // value as the caller's stack pointer.  This is true on x86-32/x86-64 at

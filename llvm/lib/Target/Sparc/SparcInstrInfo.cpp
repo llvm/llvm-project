@@ -438,7 +438,8 @@ bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
 void SparcInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc) const {
+                                 MCRegister SrcReg, bool KillSrc,
+                                 bool RenamableDest, bool RenamableSrc) const {
   unsigned numSubRegs = 0;
   unsigned movOpc     = 0;
   const unsigned *subRegIdx = nullptr;

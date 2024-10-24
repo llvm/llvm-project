@@ -81,12 +81,8 @@ bool MipsAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   MipsFI = MF.getInfo<MipsFunctionInfo>();
   if (Subtarget->inMips16Mode())
-    for (const auto &I : MipsFI->StubsNeeded) {
-      const char *Symbol = I.first;
-      const Mips16HardFloatInfo::FuncSignature *Signature = I.second;
-      if (StubsNeeded.find(Symbol) == StubsNeeded.end())
-        StubsNeeded[Symbol] = Signature;
-    }
+    for (const auto &I : MipsFI->StubsNeeded)
+      StubsNeeded.insert(I);
   MCP = MF.getConstantPool();
 
   // In NaCl, all indirect jump targets must be aligned to bundle size.
@@ -254,8 +250,10 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   do {
     // Do any auto-generated pseudo lowerings.
-    if (emitPseudoExpansionLowering(*OutStreamer, &*I))
+    if (MCInst OutInst; lowerPseudoInstExpansion(&*I, OutInst)) {
+      EmitToStreamer(*OutStreamer, OutInst);
       continue;
+    }
 
     // Skip the BUNDLE pseudo instruction and lower the contents
     if (I->isBundle())

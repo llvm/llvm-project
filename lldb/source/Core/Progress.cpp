@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/Signposts.h"
 
 #include <cstdint>
 #include <mutex>
@@ -19,6 +20,9 @@ using namespace lldb;
 using namespace lldb_private;
 
 std::atomic<uint64_t> Progress::g_id(0);
+
+// Instrument progress events with signposts when supported.
+static llvm::ManagedStatic<llvm::SignpostEmitter> g_progress_signposts;
 
 Progress::Progress(std::string title, std::string details,
                    std::optional<uint64_t> total,
@@ -39,14 +43,19 @@ Progress::Progress(std::string title, std::string details,
   // Report to the ProgressManager if that subsystem is enabled.
   if (ProgressManager::Enabled())
     ProgressManager::Instance().Increment(m_progress_data);
+
+  // Start signpost interval right before the meaningful work starts.
+  g_progress_signposts->startInterval(this, m_progress_data.title);
 }
 
 Progress::~Progress() {
+  // End signpost interval as soon as possible.
+  g_progress_signposts->endInterval(this, m_progress_data.title);
+
   // Make sure to always report progress completed when this object is
   // destructed so it indicates the progress dialog/activity should go away.
   std::lock_guard<std::mutex> guard(m_mutex);
-  if (!m_completed)
-    m_completed = m_total;
+  m_completed = m_total;
   ReportProgress();
 
   // Report to the ProgressManager if that subsystem is enabled.
@@ -142,10 +151,11 @@ void ProgressManager::Decrement(const Progress::ProgressData &progress_data) {
   std::lock_guard<std::mutex> lock(m_entries_mutex);
   llvm::StringRef key = progress_data.title;
 
-  if (!m_entries.contains(key))
+  auto it = m_entries.find(key);
+  if (it == m_entries.end())
     return;
 
-  Entry &entry = m_entries[key];
+  Entry &entry = it->second;
   entry.refcount--;
 
   if (entry.refcount == 0) {

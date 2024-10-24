@@ -134,7 +134,7 @@ public:
 private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<SlotIndexes>();
+    AU.addRequired<SlotIndexesWrapperPass>();
     RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
   }
 
@@ -151,7 +151,7 @@ private:
             InteractiveChannelBaseName + ".in");
     }
     return std::make_unique<MLPriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexes>(), Runner.get());
+        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI(), Runner.get());
   }
   std::unique_ptr<MLModelRunner> Runner;
 };
@@ -215,7 +215,7 @@ public:
 private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<SlotIndexes>();
+    AU.addRequired<SlotIndexesWrapperPass>();
     RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
   }
 
@@ -266,7 +266,8 @@ private:
     }
 
     return std::make_unique<DevelopmentModePriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexes>(), Runner.get(), Log.get());
+        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI(), Runner.get(),
+        Log.get());
   }
 
   std::unique_ptr<MLModelRunner> Runner;

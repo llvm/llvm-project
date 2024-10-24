@@ -63,8 +63,8 @@ jobs:
         cxx: [ 'clang++-19' ]
         include:
           - config: 'generic-gcc'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
@@ -101,8 +101,8 @@ jobs:
         cxx: [ 'clang++-19' ]
         include:
           - config: 'generic-gcc-cxx11'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
           - config: 'generic-cxx23'
             cc: 'clang-17'
             cxx: 'clang++-17'
@@ -146,6 +146,7 @@ jobs:
           'generic-no-experimental',
           'generic-no-filesystem',
           'generic-no-localization',
+          'generic-no-terminal',
           'generic-no-random_device',
           'generic-no-threads',
           'generic-no-tzdb',
@@ -190,6 +191,49 @@ jobs:
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+
+  macos:
+    needs: [ stage1 ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - config: generic-cxx03
+          os: macos-latest
+        - config: generic-cxx23
+          os: macos-latest
+        - config: generic-modules
+          os: macos-latest
+        - config: apple-configuration
+          os: macos-latest
+        - config: apple-system
+          os: macos-13
+        - config: apple-system-hardened
+          os: macos-13
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest'
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Build and test
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install psutil
+          bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        if: always()  # Upload artifacts even if the build or test suite fails
+        with:
+          name: macos-${{ matrix.config }}-results
+          path: |
+            **/test-results.xml
+            **/*.abilist
+            **/CMakeError.log
+            **/CMakeOutput.log
+            **/crash_diagnostics/*
+
   windows:
     runs-on: windows-2022
     needs: [ stage1 ]
@@ -205,6 +249,7 @@ jobs:
         - { config: mingw-dll, mingw: true }
         - { config: mingw-static, mingw: true }
         - { config: mingw-dll-i686, mingw: true }
+        - { config: mingw-incomplete-sysroot, mingw: true }
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -223,6 +268,12 @@ jobs:
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw
           echo "c:\llvm-mingw\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Simulate a from-scratch build of llvm-mingw
+        if: ${{ matrix.config == 'mingw-incomplete-sysroot' }}
+        run: |
+          rm -r c:\llvm-mingw\include\c++
+          rm -r c:\llvm-mingw\*-w64-mingw32\lib\libc++*
+          rm -r c:\llvm-mingw\*-w64-mingw32\lib\libunwind*
       - name: Add Git Bash to the path
         run: |
           echo "c:\Program Files\Git\usr\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append

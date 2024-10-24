@@ -59,6 +59,9 @@ protected:
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
+  // Default scatter/gather overhead.
+  unsigned ScatterOverhead = 10;
+  unsigned GatherOverhead = 10;
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
@@ -185,10 +188,14 @@ public:
            (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
   }
 
-  /// Returns true if the target has access to either the full range of SVE instructions,
-  /// or the streaming-compatible subset of SVE instructions.
+  /// Returns true if the target has access to the streaming-compatible subset
+  /// of SVE instructions.
+  bool isStreamingSVEAvailable() const { return hasSME() && isStreaming(); }
+
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions.
   bool isSVEorStreamingSVEAvailable() const {
-    return hasSVE() || (hasSME() && isStreaming());
+    return hasSVE() || isStreamingSVEAvailable();
   }
 
   unsigned getMinVectorRegisterBitWidth() const {
@@ -209,6 +216,7 @@ public:
     AllReservedX |= ReserveXRegisterForRA;
     return AllReservedX.count();
   }
+  bool isLRReservedForRA() const { return ReserveLRForRA; }
   bool isXRegCustomCalleeSaved(size_t i) const {
     return CustomCallSavedXRegs[i];
   }
@@ -224,6 +232,8 @@ public:
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }
+  unsigned getScatterOverhead() const { return ScatterOverhead; }
+  unsigned getGatherOverhead() const { return GatherOverhead; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,
                                 unsigned NumStridedMemAccesses,
@@ -321,13 +331,15 @@ public:
 
   std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const override;
 
-  bool isCallingConvWin64(CallingConv::ID CC) const {
+  bool isCallingConvWin64(CallingConv::ID CC, bool IsVarArg) const {
     switch (CC) {
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
       return isTargetWindows();
+    case CallingConv::PreserveNone:
+      return IsVarArg && isTargetWindows();
     case CallingConv::Win64:
       return true;
     default:
@@ -410,7 +422,18 @@ public:
   }
 
   /// Choose a method of checking LR before performing a tail call.
-  AArch64PAuth::AuthCheckMethod getAuthenticatedLRCheckMethod() const;
+  AArch64PAuth::AuthCheckMethod
+  getAuthenticatedLRCheckMethod(const MachineFunction &MF) const;
+
+  /// Compute the integer discriminator for a given BlockAddress constant, if
+  /// blockaddress signing is enabled, or std::nullopt otherwise.
+  /// Blockaddress signing is controlled by the function attribute
+  /// "ptrauth-indirect-gotos" on the parent function.
+  /// Note that this assumes the discriminator is independent of the indirect
+  /// goto branch site itself, i.e., it's the same for all BlockAddresses in
+  /// a function.
+  std::optional<uint16_t>
+  getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
 
   const PseudoSourceValue *getAddressCheckPSV() const {
     return AddressCheckPSV.get();

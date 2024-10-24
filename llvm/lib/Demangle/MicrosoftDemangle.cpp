@@ -2035,6 +2035,10 @@ Demangler::demanglePrimitiveType(std::string_view &MangledName) {
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char16);
     case 'U':
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char32);
+    case 'P':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Auto);
+    case 'T':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::DecltypeAuto);
     }
     break;
   }
@@ -2343,12 +2347,13 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->Symbol = parse(MangledName);
       TPRN->Affinity = PointerAffinity::Reference;
-    } else if (llvm::itanium_demangle::starts_with(MangledName, "$F") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$G")) {
+    } else if (startsWith(MangledName, "$F", "F", !IsAutoNTTP) ||
+               startsWith(MangledName, "$G", "G", !IsAutoNTTP)) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
 
       // Data member pointer.
-      MangledName.remove_prefix(1);
+      if (!IsAutoNTTP)
+        MangledName.remove_prefix(1); // Remove leading '$'
       char InheritanceSpecifier = MangledName.front();
       MangledName.remove_prefix(1);
 

@@ -1455,6 +1455,15 @@ TEST_F(SortIncludesTest, DisableRawStringLiteralSorting) {
 #undef X
 }
 
+TEST_F(SortIncludesTest, BlockCommentedOutIncludes) {
+  StringRef Code{"/* #include \"foo.h\"\n"
+                 "#include \"bar.h\" */\n"
+                 "#include <chrono>"};
+
+  FmtStyle = getGoogleStyle(FormatStyle::LK_Cpp);
+  verifyFormat(Code, sort(Code, "input.cpp", 0));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

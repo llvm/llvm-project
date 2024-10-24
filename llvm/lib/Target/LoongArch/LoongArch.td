@@ -106,16 +106,17 @@ def FeatureRelax
     : SubtargetFeature<"relax", "HasLinkerRelax", "true",
                        "Enable Linker relaxation">;
 
-// Experimental auto vectorization
-def FeatureAutoVec
-    : SubtargetFeature<"auto-vec", "HasExpAutoVec", "true",
-                       "Experimental auto vectorization">;
-
 // Floating point approximation operation
 def FeatureFrecipe
     : SubtargetFeature<"frecipe", "HasFrecipe", "true",
                        "Support frecipe.{s/d} and frsqrte.{s/d} instructions.">;
 def HasFrecipe : Predicate<"Subtarget->hasFrecipe()">;
+
+// Atomic memory swap and add instructions for byte and half word
+def FeatureLAM_BH
+    : SubtargetFeature<"lam-bh", "HasLAM_BH", "true",
+                        "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions.">;
+def HasLAM_BH : Predicate<"Subtarget->hasLAM_BH()">;
 
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
@@ -150,6 +151,14 @@ def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
                                              FeatureExtLBT]>;
+
+def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
+                                             FeatureUAL,
+                                             FeatureExtLASX,
+                                             FeatureExtLVZ,
+                                             FeatureExtLBT,
+                                             FeatureFrecipe,
+                                             FeatureLAM_BH]>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.

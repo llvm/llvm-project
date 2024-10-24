@@ -17,4 +17,7 @@
 
 %%public_api()
 
+
+#include "llvm-libc-macros/math-function-macros.h"
+
 #endif // LLVM_LIBC_MATH_H

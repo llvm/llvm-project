@@ -117,8 +117,7 @@ void XCoreTargetAsmStreamer::emitCCBottomFunction(StringRef Name) {
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
-                                                 MCInstPrinter *InstPrint,
-                                                 bool isVerboseAsm) {
+                                                 MCInstPrinter *InstPrint) {
   return new XCoreTargetAsmStreamer(S, OS);
 }
 

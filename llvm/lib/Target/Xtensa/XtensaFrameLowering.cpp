@@ -27,7 +27,7 @@ XtensaFrameLowering::XtensaFrameLowering(const XtensaSubtarget &STI)
                           Align(4)),
       TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 
-bool XtensaFrameLowering::hasFP(const MachineFunction &MF) const {
+bool XtensaFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.hasVarSizedObjects();
@@ -41,8 +41,7 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   MCRegister SP = Xtensa::SP;
   MCRegister FP = TRI->getFrameRegister(MF);
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
 
   // First, compute final stack size.
   uint64_t StackSize = MFI.getStackSize();

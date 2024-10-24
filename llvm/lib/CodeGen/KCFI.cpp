@@ -89,7 +89,7 @@ bool KCFI::emitCheck(MachineBasicBlock &MBB,
 }
 
 bool KCFI::runOnMachineFunction(MachineFunction &MF) {
-  const Module *M = MF.getMMI().getModule();
+  const Module *M = MF.getFunction().getParent();
   if (!M->getModuleFlag("kcfi"))
     return false;
 

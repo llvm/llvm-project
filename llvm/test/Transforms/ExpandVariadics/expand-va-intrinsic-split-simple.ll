@@ -131,9 +131,9 @@ define zeroext i1 @variadic_can_get_firstIidEEbT_T0_(i32 %x, double %y) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    %vararg_buffer = alloca %variadic_can_get_firstIidEEbT_T0_.vararg, align 16
 ; OPT-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr %vararg_buffer)
-; OPT-NEXT:    %0 = getelementptr inbounds %variadic_can_get_firstIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 0
+; OPT-NEXT:    %0 = getelementptr inbounds nuw %variadic_can_get_firstIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 0
 ; OPT-NEXT:    store i32 %x, ptr %0, align 4
-; OPT-NEXT:    %1 = getelementptr inbounds %variadic_can_get_firstIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 2
+; OPT-NEXT:    %1 = getelementptr inbounds nuw %variadic_can_get_firstIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 2
 ; OPT-NEXT:    store double %y, ptr %1, align 8
 ; OPT-NEXT:    %call = call i32 @variadic_int_double_get_firstz.valist(ptr %vararg_buffer)
 ; OPT-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr %vararg_buffer)
@@ -144,9 +144,9 @@ define zeroext i1 @variadic_can_get_firstIidEEbT_T0_(i32 %x, double %y) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    %vararg_buffer = alloca %variadic_can_get_firstIidEEbT_T0_.vararg, align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr %vararg_buffer)
-; ABI-NEXT:    %0 = getelementptr inbounds %variadic_can_get_firstIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 0
+; ABI-NEXT:    %0 = getelementptr inbounds nuw %variadic_can_get_firstIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 0
 ; ABI-NEXT:    store i32 %x, ptr %0, align 4
-; ABI-NEXT:    %1 = getelementptr inbounds %variadic_can_get_firstIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 2
+; ABI-NEXT:    %1 = getelementptr inbounds nuw %variadic_can_get_firstIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 2
 ; ABI-NEXT:    store double %y, ptr %1, align 8
 ; ABI-NEXT:    %call = call i32 @variadic_int_double_get_firstz(ptr %vararg_buffer)
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr %vararg_buffer)
@@ -178,9 +178,9 @@ define zeroext i1 @variadic_can_get_secondIidEEbT_T0_(i32 %x, double %y) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    %vararg_buffer = alloca %variadic_can_get_secondIidEEbT_T0_.vararg, align 16
 ; OPT-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr %vararg_buffer)
-; OPT-NEXT:    %0 = getelementptr inbounds %variadic_can_get_secondIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 0
+; OPT-NEXT:    %0 = getelementptr inbounds nuw %variadic_can_get_secondIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 0
 ; OPT-NEXT:    store i32 %x, ptr %0, align 4
-; OPT-NEXT:    %1 = getelementptr inbounds %variadic_can_get_secondIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 2
+; OPT-NEXT:    %1 = getelementptr inbounds nuw %variadic_can_get_secondIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 2
 ; OPT-NEXT:    store double %y, ptr %1, align 8
 ; OPT-NEXT:    %call = call double @variadic_int_double_get_secondz.valist(ptr %vararg_buffer)
 ; OPT-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr %vararg_buffer)
@@ -191,9 +191,9 @@ define zeroext i1 @variadic_can_get_secondIidEEbT_T0_(i32 %x, double %y) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    %vararg_buffer = alloca %variadic_can_get_secondIidEEbT_T0_.vararg, align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr %vararg_buffer)
-; ABI-NEXT:    %0 = getelementptr inbounds %variadic_can_get_secondIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 0
+; ABI-NEXT:    %0 = getelementptr inbounds nuw %variadic_can_get_secondIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 0
 ; ABI-NEXT:    store i32 %x, ptr %0, align 4
-; ABI-NEXT:    %1 = getelementptr inbounds %variadic_can_get_secondIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 2
+; ABI-NEXT:    %1 = getelementptr inbounds nuw %variadic_can_get_secondIidEEbT_T0_.vararg, ptr %vararg_buffer, i32 0, i32 2
 ; ABI-NEXT:    store double %y, ptr %1, align 8
 ; ABI-NEXT:    %call = call double @variadic_int_double_get_secondz(ptr %vararg_buffer)
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr %vararg_buffer)

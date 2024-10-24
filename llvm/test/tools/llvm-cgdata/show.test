@@ -1,0 +1,30 @@
+# Test show
+
+RUN: split-file %s %t
+RUN: llvm-cgdata --show %t/show.cgtext | FileCheck %s
+
+CHECK: Outlined hash tree:
+CHECK-NEXT:   Total Node Count: 3
+CHECK-NEXT:   Terminal Node Count: 1
+CHECK-NEXT:   Depth: 2
+
+# Convert the text file to the binary file
+RUN: llvm-cgdata --convert --format binary %t/show.cgtext -o %t/show.cgdata
+RUN: llvm-cgdata --show %t/show.cgdata | FileCheck %s
+
+;--- show.cgtext
+:outlined_hash_tree
+---
+0:
+  Hash:            0x0
+  Terminals:       0
+  SuccessorIds:    [ 1 ]
+1:
+  Hash:            0x1
+  Terminals:       0
+  SuccessorIds:    [ 2 ]
+2:
+  Hash:            0x2
+  Terminals:       3
+  SuccessorIds:    [  ]
+...

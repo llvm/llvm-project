@@ -126,3 +126,15 @@ _CLC_DEF _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
 }
 
 #endif
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF half __clc_ldexp(half x, int n) {
+    return (half)__clc_ldexp((float)x, n);
+}
+
+_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_ldexp, half, int);
+
+#endif

@@ -11,20 +11,23 @@
 #define _LIBCPP___CHRONO_PARSER_STD_FORMAT_SPEC_H
 
 #include <__config>
-#include <__format/concepts.h>
-#include <__format/format_error.h>
-#include <__format/format_parse_context.h>
-#include <__format/formatter_string.h>
-#include <__format/parser_std_format_spec.h>
-#include <string_view>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+
+#  include <__format/concepts.h>
+#  include <__format/format_error.h>
+#  include <__format/format_parse_context.h>
+#  include <__format/formatter_string.h>
+#  include <__format/parser_std_format_spec.h>
+#  include <string_view>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 20
 
 namespace __format_spec {
 
@@ -409,8 +412,10 @@ private:
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
 #endif // _LIBCPP___CHRONO_PARSER_STD_FORMAT_SPEC_H

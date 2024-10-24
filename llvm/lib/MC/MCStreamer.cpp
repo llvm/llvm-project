@@ -267,6 +267,12 @@ void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                   Discriminator);
 }
 
+void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
+  getContext()
+      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
+      .endCurrentSeqAndEmitLineStreamLabel(this, Loc, Name);
+}
+
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   if (!Table.getLabel()) {
@@ -687,6 +693,13 @@ void MCStreamer::emitCFIReturnColumn(int64_t Register) {
   if (!CurFrame)
     return;
   CurFrame->RAReg = Register;
+}
+
+void MCStreamer::emitCFILabelDirective(SMLoc Loc, StringRef Name) {
+  MCSymbol *Label = emitCFILabel();
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+  if (MCDwarfFrameInfo *F = getCurrentDwarfFrameInfo())
+    F->Instructions.push_back(MCCFIInstruction::createLabel(Label, Sym, Loc));
 }
 
 WinEH::FrameInfo *MCStreamer::EnsureValidWinFrameInfo(SMLoc Loc) {

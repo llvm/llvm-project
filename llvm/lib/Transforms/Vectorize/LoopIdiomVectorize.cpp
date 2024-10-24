@@ -268,25 +268,25 @@ bool LoopIdiomVectorize::recognizeByteCompare() {
             return false;
 
   // Match the branch instruction for the header
-  ICmpInst::Predicate Pred;
   Value *MaxLen;
   BasicBlock *EndBB, *WhileBB;
   if (!match(Header->getTerminator(),
-             m_Br(m_ICmp(Pred, m_Specific(Index), m_Value(MaxLen)),
+             m_Br(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(Index),
+                                 m_Value(MaxLen)),
                   m_BasicBlock(EndBB), m_BasicBlock(WhileBB))) ||
-      Pred != ICmpInst::Predicate::ICMP_EQ || !CurLoop->contains(WhileBB))
+      !CurLoop->contains(WhileBB))
     return false;
 
   // WhileBB should contain the pattern of load & compare instructions. Match
   // the pattern and find the GEP instructions used by the loads.
-  ICmpInst::Predicate WhilePred;
   BasicBlock *FoundBB;
   BasicBlock *TrueBB;
   Value *LoadA, *LoadB;
   if (!match(WhileBB->getTerminator(),
-             m_Br(m_ICmp(WhilePred, m_Value(LoadA), m_Value(LoadB)),
+             m_Br(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(LoadA),
+                                 m_Value(LoadB)),
                   m_BasicBlock(TrueBB), m_BasicBlock(FoundBB))) ||
-      WhilePred != ICmpInst::Predicate::ICMP_EQ || !CurLoop->contains(TrueBB))
+      !CurLoop->contains(TrueBB))
     return false;
 
   Value *A, *B;
@@ -470,9 +470,7 @@ Value *LoopIdiomVectorize::createMaskedFindMismatch(
   VectorFoundIndex->addIncoming(VectorIndexPhi, VectorLoopStartBlock);
 
   Value *PredMatchCmp = Builder.CreateAnd(LastLoopPred, FoundPred);
-  Value *Ctz = Builder.CreateIntrinsic(
-      Intrinsic::experimental_cttz_elts, {ResType, PredMatchCmp->getType()},
-      {PredMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true)});
+  Value *Ctz = Builder.CreateCountTrailingZeroElems(ResType, PredMatchCmp);
   Ctz = Builder.CreateZExt(Ctz, I64Type);
   Value *VectorLoopRes64 = Builder.CreateAdd(VectorFoundIndex, Ctz, "",
                                              /*HasNUW=*/true, /*HasNSW=*/true);

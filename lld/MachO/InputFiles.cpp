@@ -1725,7 +1725,10 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   }
 
   // Initialize symbols.
-  exportingFile = isImplicitlyLinked(installName) ? this : this->umbrella;
+  bool canBeImplicitlyLinked = findCommand(hdr, LC_SUB_CLIENT) == nullptr;
+  exportingFile = (canBeImplicitlyLinked && isImplicitlyLinked(installName))
+                      ? this
+                      : this->umbrella;
 
   const auto *dyldInfo = findCommand<dyld_info_command>(hdr, LC_DYLD_INFO_ONLY);
   const auto *exportsTrie =
@@ -1884,7 +1887,10 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 
   checkAppExtensionSafety(interface.isApplicationExtensionSafe());
 
-  exportingFile = isImplicitlyLinked(installName) ? this : umbrella;
+  bool canBeImplicitlyLinked = interface.allowableClients().size() == 0;
+  exportingFile = (canBeImplicitlyLinked && isImplicitlyLinked(installName))
+                      ? this
+                      : umbrella;
   auto addSymbol = [&](const llvm::MachO::Symbol &symbol,
                        const Twine &name) -> void {
     StringRef savedName = saver().save(name);
@@ -2193,10 +2199,6 @@ Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
   if (!mb)
     return mb.takeError();
-
-  // Thin archives refer to .o files, so --reproduce needs the .o files too.
-  if (tar && c.getParent()->isThin())
-    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb->getBuffer());
 
   Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
   if (!modTime)

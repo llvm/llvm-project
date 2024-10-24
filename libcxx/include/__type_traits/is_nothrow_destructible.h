@@ -10,10 +10,10 @@
 #define _LIBCPP___TYPE_TRAITS_IS_NOTHROW_DESTRUCTIBLE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_destructible.h>
 #include <__utility/declval.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

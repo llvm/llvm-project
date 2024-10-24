@@ -2,6 +2,7 @@
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx90a | FileCheck %s --check-prefixes=CHECK,GFX9,GFX90A
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1030 | FileCheck %s --check-prefixes=CHECK,GFX10,RDNA
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1100 | FileCheck %s --check-prefixes=CHECK,GFX11,RDNA
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1201 | FileCheck %s --check-prefixes=CHECK,GFX12,RDNA
 
 // CHECK-LABEL: func @gpu_gcn_raw_buffer_load_scalar_i32
 func.func @gpu_gcn_raw_buffer_load_scalar_i32(%buf: memref<i32>) -> i32 {
@@ -151,6 +152,17 @@ func.func @gpu_gcn_raw_buffer_atomic_fadd_f32(%value: f32, %buf: memref<64xf32>,
   func.return
 }
 
+// CHECK-LABEL: func @gpu_gcn_raw_buffer_atomic_fadd_v2f16
+func.func @gpu_gcn_raw_buffer_atomic_fadd_v2f16(%value: vector<2xf16>, %buf: memref<64xf16>, %idx: i32) {
+  // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(128 : i32)
+  // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
+  // RDNA:  %[[flags:.*]] = llvm.mlir.constant(822243328 : i32)
+  // CHECK: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]]
+  // CHECK: rocdl.raw.ptr.buffer.atomic.fadd %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, %{{.*}} : vector<2xf16>
+  amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %value -> %buf[%idx] : vector<2xf16> -> memref<64xf16>, i32
+  func.return
+}
+
 // CHECK-LABEL: func @gpu_gcn_raw_buffer_atomic_fmax_f32
 func.func @gpu_gcn_raw_buffer_atomic_fmax_f32(%value: f32, %buf: memref<64xf32>, %idx: i32) {
   // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(256 : i32)
@@ -213,6 +225,18 @@ func.func @amdgpu_raw_buffer_atomic_cmpswap_i64(%src : i64, %cmp : i64, %buf : m
   func.return %dst : i64
 }
 
+// CHECK-LABEL: func @amdgpu_raw_buffer_atomic_cmpswap_v2f16
+// CHECK-SAME: (%[[src:.*]]: vector<2xf16>, %[[cmp:.*]]: vector<2xf16>, {{.*}})
+func.func @amdgpu_raw_buffer_atomic_cmpswap_v2f16(%src : vector<2xf16>, %cmp : vector<2xf16>, %buf : memref<64xf16>, %idx: i32) -> vector<2xf16> {
+  // CHECK-DAG: %[[srcBits:.+]] = llvm.bitcast %[[src]] : vector<2xf16> to i32
+  // CHECK-DAG: %[[cmpBits:.+]] = llvm.bitcast %[[cmp]] : vector<2xf16> to i32
+  // CHECK: %[[dstBits:.+]] = rocdl.raw.ptr.buffer.atomic.cmpswap %[[srcBits]], %[[cmpBits]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i32
+  // CHECK: %[[dst:.+]] = llvm.bitcast %[[dstBits]] : i32 to vector<2xf16>
+  // CHECK: return %[[dst]]
+  %dst = amdgpu.raw_buffer_atomic_cmpswap {boundsCheck = true} %src, %cmp -> %buf[%idx] : vector<2xf16> -> memref<64xf16>, i32
+  func.return %dst : vector<2xf16>
+}
+
 // CHECK-LABEL: func @lds_barrier
 func.func @lds_barrier() {
   // GFX908: llvm.inline_asm has_side_effects asm_dialect = att
@@ -223,6 +247,40 @@ func.func @lds_barrier() {
   // GFX10-NEXT: rocdl.s.barrier
   // GFX11:  llvm.inline_asm has_side_effects asm_dialect = att
   // GFX11-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"
+  // GFX12:  rocdl.s.wait.dscnt 0
+  // GFX12-NEXT: rocdl.s.barrier.signal -1
+  // GFX12-NEXT: rocdl.s.barrier.wait -1
   amdgpu.lds_barrier
+  func.return
+}
+
+// CHECK-LABEL: func @sched_barrier
+func.func @sched_barrier() {
+  // CHECK: rocdl.sched.barrier 0
+  amdgpu.sched_barrier allow = <none>
+  // CHECK: rocdl.sched.barrier 1
+  amdgpu.sched_barrier allow = <non_mem_non_sideffect>
+  // CHECK: rocdl.sched.barrier 2
+  amdgpu.sched_barrier allow = <valu>
+  // CHECK: rocdl.sched.barrier 4
+  amdgpu.sched_barrier allow = <salu>
+  // CHECK: rocdl.sched.barrier 8
+  amdgpu.sched_barrier allow = <mfma_wmma>
+  // CHECK: rocdl.sched.barrier 16
+  amdgpu.sched_barrier allow = <all_vmem>
+  // CHECK: rocdl.sched.barrier 32
+  amdgpu.sched_barrier allow = <vmem_read>
+  // CHECK: rocdl.sched.barrier 64
+  amdgpu.sched_barrier allow = <vmem_write>
+  // CHECK: rocdl.sched.barrier 128
+  amdgpu.sched_barrier allow = <all_ds>
+  // CHECK: rocdl.sched.barrier 256
+  amdgpu.sched_barrier allow = <ds_read>
+  // CHECK: rocdl.sched.barrier 512
+  amdgpu.sched_barrier allow = <ds_write>
+  // CHECK: rocdl.sched.barrier 1024
+  amdgpu.sched_barrier allow = <transcendental>
+  // CHECK: rocdl.sched.barrier 18
+  amdgpu.sched_barrier allow = <valu|all_vmem>
   func.return
 }

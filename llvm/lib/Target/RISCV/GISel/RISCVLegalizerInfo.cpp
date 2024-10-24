@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -67,6 +68,19 @@ typeIsLegalBoolVec(unsigned TypeIdx, std::initializer_list<LLT> BoolVecTys,
   return all(typeInSet(TypeIdx, BoolVecTys), P);
 }
 
+static LegalityPredicate typeIsLegalPtrVec(unsigned TypeIdx,
+                                           std::initializer_list<LLT> PtrVecTys,
+                                           const RISCVSubtarget &ST) {
+  LegalityPredicate P = [=, &ST](const LegalityQuery &Query) {
+    return ST.hasVInstructions() &&
+           (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 1 ||
+            ST.getELen() == 64) &&
+           (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 16 ||
+            Query.Types[TypeIdx].getScalarSizeInBits() == 32);
+  };
+  return all(typeInSet(TypeIdx, PtrVecTys), P);
+}
+
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     : STI(ST), XLen(STI.getXLen()), sXLen(LLT::scalar(XLen)) {
   const LLT sDoubleXLen = LLT::scalar(2 * XLen);
@@ -111,6 +125,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT nxv4s64 = LLT::scalable_vector(4, s64);
   const LLT nxv8s64 = LLT::scalable_vector(8, s64);
 
+  const LLT nxv1p0 = LLT::scalable_vector(1, p0);
+  const LLT nxv2p0 = LLT::scalable_vector(2, p0);
+  const LLT nxv4p0 = LLT::scalable_vector(4, p0);
+  const LLT nxv8p0 = LLT::scalable_vector(8, p0);
+  const LLT nxv16p0 = LLT::scalable_vector(16, p0);
+
   using namespace TargetOpcode;
 
   auto BoolVecTys = {nxv1s1, nxv2s1, nxv4s1, nxv8s1, nxv16s1, nxv32s1, nxv64s1};
@@ -119,6 +139,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                         nxv64s8,  nxv1s16, nxv2s16, nxv4s16, nxv8s16, nxv16s16,
                         nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
                         nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
+
+  auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0, nxv16p0};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, sXLen})
@@ -136,14 +158,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .lower();
 
   auto &ShiftActions = getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL});
-  if (ST.is64Bit())
-    ShiftActions.customFor({{s32, s32}});
-  ShiftActions.legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
+  ShiftActions.legalFor({{s32, s32}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
       .clampScalar(0, s32, sXLen)
       .minScalarSameAs(1, 0)
-      .widenScalarToNextPow2(1);
+      .maxScalarSameAs(1, 0);
 
   auto &ExtActions =
       getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
@@ -152,11 +172,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   if (ST.is64Bit()) {
     ExtActions.legalFor({{sXLen, s32}});
     getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({sXLen})
+        .customFor({s32, sXLen})
         .maxScalar(0, sXLen)
         .lower();
   } else {
-    getActionDefinitionsBuilder(G_SEXT_INREG).maxScalar(0, sXLen).lower();
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .customFor({s32})
+        .maxScalar(0, sXLen)
+        .lower();
   }
   ExtActions.customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
@@ -179,13 +202,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
-  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb()) {
-    RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
-    // Widen s32 rotate amount to s64 so SDAG patterns will match.
-    if (ST.is64Bit())
-      RotateActions.widenScalarIf(all(typeIs(0, s32), typeIs(1, s32)),
-                                  changeTo(1, sXLen));
-  }
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
+    RotateActions.legalFor({{s32, s32}, {sXLen, sXLen}});
   RotateActions.lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
@@ -260,26 +278,126 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32)
       .clampScalar(1, sXLen, sXLen);
 
-  auto &LoadStoreActions =
-      getActionDefinitionsBuilder({G_LOAD, G_STORE})
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                     {s32, p0, s16, 16},
-                                     {s32, p0, s32, 32},
-                                     {p0, p0, sXLen, XLen}});
-  auto &ExtLoadActions =
-      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
+  auto &LoadActions = getActionDefinitionsBuilder(G_LOAD);
+  auto &StoreActions = getActionDefinitionsBuilder(G_STORE);
+  auto &ExtLoadActions = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD});
+
+  // Return the alignment needed for scalar memory ops. If unaligned scalar mem
+  // is supported, we only require byte alignment. Otherwise, we need the memory
+  // op to be natively aligned.
+  auto getScalarMemAlign = [&ST](unsigned Size) {
+    return ST.enableUnalignedScalarMem() ? 8 : Size;
+  };
+
+  LoadActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)},
+       {s32, p0, s32, getScalarMemAlign(32)},
+       {p0, p0, sXLen, getScalarMemAlign(XLen)}});
+  StoreActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)},
+       {s32, p0, s32, getScalarMemAlign(32)},
+       {p0, p0, sXLen, getScalarMemAlign(XLen)}});
+  ExtLoadActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)}});
   if (XLen == 64) {
-    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s8, 8},
-                                               {s64, p0, s16, 16},
-                                               {s64, p0, s32, 32},
-                                               {s64, p0, s64, 64}});
+    LoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)},
+         {s64, p0, s64, getScalarMemAlign(64)}});
+    StoreActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)},
+         {s64, p0, s64, getScalarMemAlign(64)}});
     ExtLoadActions.legalForTypesWithMemDesc(
-        {{s64, p0, s8, 8}, {s64, p0, s16, 16}, {s64, p0, s32, 32}});
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)}});
   } else if (ST.hasStdExtD()) {
-    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
+    LoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s64, getScalarMemAlign(64)}});
+    StoreActions.legalForTypesWithMemDesc(
+        {{s64, p0, s64, getScalarMemAlign(64)}});
   }
-  LoadStoreActions.clampScalar(0, s32, sXLen).lower();
+
+  // Vector loads/stores.
+  if (ST.hasVInstructions()) {
+    LoadActions.legalForTypesWithMemDesc({{nxv2s8, p0, nxv2s8, 8},
+                                          {nxv4s8, p0, nxv4s8, 8},
+                                          {nxv8s8, p0, nxv8s8, 8},
+                                          {nxv16s8, p0, nxv16s8, 8},
+                                          {nxv32s8, p0, nxv32s8, 8},
+                                          {nxv64s8, p0, nxv64s8, 8},
+                                          {nxv2s16, p0, nxv2s16, 16},
+                                          {nxv4s16, p0, nxv4s16, 16},
+                                          {nxv8s16, p0, nxv8s16, 16},
+                                          {nxv16s16, p0, nxv16s16, 16},
+                                          {nxv32s16, p0, nxv32s16, 16},
+                                          {nxv2s32, p0, nxv2s32, 32},
+                                          {nxv4s32, p0, nxv4s32, 32},
+                                          {nxv8s32, p0, nxv8s32, 32},
+                                          {nxv16s32, p0, nxv16s32, 32}});
+    StoreActions.legalForTypesWithMemDesc({{nxv2s8, p0, nxv2s8, 8},
+                                           {nxv4s8, p0, nxv4s8, 8},
+                                           {nxv8s8, p0, nxv8s8, 8},
+                                           {nxv16s8, p0, nxv16s8, 8},
+                                           {nxv32s8, p0, nxv32s8, 8},
+                                           {nxv64s8, p0, nxv64s8, 8},
+                                           {nxv2s16, p0, nxv2s16, 16},
+                                           {nxv4s16, p0, nxv4s16, 16},
+                                           {nxv8s16, p0, nxv8s16, 16},
+                                           {nxv16s16, p0, nxv16s16, 16},
+                                           {nxv32s16, p0, nxv32s16, 16},
+                                           {nxv2s32, p0, nxv2s32, 32},
+                                           {nxv4s32, p0, nxv4s32, 32},
+                                           {nxv8s32, p0, nxv8s32, 32},
+                                           {nxv16s32, p0, nxv16s32, 32}});
+
+    if (ST.getELen() == 64) {
+      LoadActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
+                                            {nxv1s16, p0, nxv1s16, 16},
+                                            {nxv1s32, p0, nxv1s32, 32}});
+      StoreActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
+                                             {nxv1s16, p0, nxv1s16, 16},
+                                             {nxv1s32, p0, nxv1s32, 32}});
+    }
+
+    if (ST.hasVInstructionsI64()) {
+      LoadActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
+                                            {nxv2s64, p0, nxv2s64, 64},
+                                            {nxv4s64, p0, nxv4s64, 64},
+                                            {nxv8s64, p0, nxv8s64, 64}});
+      StoreActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
+                                             {nxv2s64, p0, nxv2s64, 64},
+                                             {nxv4s64, p0, nxv4s64, 64},
+                                             {nxv8s64, p0, nxv8s64, 64}});
+    }
+
+    // we will take the custom lowering logic if we have scalable vector types
+    // with non-standard alignments
+    LoadActions.customIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST));
+    StoreActions.customIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST));
+
+    // Pointers require that XLen sized elements are legal.
+    if (XLen <= ST.getELen()) {
+      LoadActions.customIf(typeIsLegalPtrVec(0, PtrVecTys, ST));
+      StoreActions.customIf(typeIsLegalPtrVec(0, PtrVecTys, ST));
+    }
+  }
+
+  LoadActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
+      .lowerIfMemSizeNotByteSizePow2()
+      .clampScalar(0, s32, sXLen)
+      .lower();
+  StoreActions
+      .clampScalar(0, s32, sXLen)
+      .lowerIfMemSizeNotByteSizePow2()
+      .lower();
+
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
 
   getActionDefinitionsBuilder({G_PTR_ADD, G_PTRMASK}).legalFor({{p0, sXLen}});
@@ -368,7 +486,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
-  getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
+  getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
+      .lower();
 
   // FP Operations
 
@@ -429,7 +548,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
   // FIXME: Legal with Zfa.
-  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
+                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
+                               G_INTRINSIC_ROUNDEVEN})
       .libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
@@ -438,9 +559,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // as the destination.
   getActionDefinitionsBuilder(G_VAARG)
       // TODO: Implement narrowScalar and widenScalar for G_VAARG for types
-      // outside the [s32, sXLen] range.
-      .clampScalar(0, s32, sXLen)
-      .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
+      // other than sXLen.
+      .clampScalar(0, sXLen, sXLen)
+      .lowerForCartesianProduct({sXLen, p0}, {p0});
 
   getActionDefinitionsBuilder(G_VSCALE)
       .clampScalar(0, sXLen, sXLen)
@@ -468,6 +589,37 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
 
   SplatActions.clampScalar(1, sXLen, sXLen);
+
+  LegalityPredicate ExtractSubvecBitcastPred = [=](const LegalityQuery &Query) {
+    LLT DstTy = Query.Types[0];
+    LLT SrcTy = Query.Types[1];
+    return DstTy.getElementType() == LLT::scalar(1) &&
+           DstTy.getElementCount().getKnownMinValue() >= 8 &&
+           SrcTy.getElementCount().getKnownMinValue() >= 8;
+  };
+  getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
+      // We don't have the ability to slide mask vectors down indexed by their
+      // i1 elements; the smallest we can do is i8. Often we are able to bitcast
+      // to equivalent i8 vectors.
+      .bitcastIf(
+          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+              typeIsLegalBoolVec(1, BoolVecTys, ST), ExtractSubvecBitcastPred),
+          [=](const LegalityQuery &Query) {
+            LLT CastTy = LLT::vector(
+                Query.Types[0].getElementCount().divideCoefficientBy(8), 8);
+            return std::pair(0, CastTy);
+          })
+      .customIf(LegalityPredicates::any(
+          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+              typeIsLegalBoolVec(1, BoolVecTys, ST)),
+          all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+              typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST))));
+
+  getActionDefinitionsBuilder(G_INSERT_SUBVECTOR)
+      .customIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+                    typeIsLegalBoolVec(1, BoolVecTys, ST)))
+      .customIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                    typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
 
   getLegacyLegalizerInfo().computeTables();
 }
@@ -508,30 +660,6 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
 }
 
-bool RISCVLegalizerInfo::legalizeShlAshrLshr(
-    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-    GISelChangeObserver &Observer) const {
-  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
-         MI.getOpcode() == TargetOpcode::G_LSHR ||
-         MI.getOpcode() == TargetOpcode::G_SHL);
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  // If the shift amount is a G_CONSTANT, promote it to a 64 bit type so the
-  // imported patterns can select it later. Either way, it will be legal.
-  Register AmtReg = MI.getOperand(2).getReg();
-  auto VRegAndVal = getIConstantVRegValWithLookThrough(AmtReg, MRI);
-  if (!VRegAndVal)
-    return true;
-  // Check the shift amount is in range for an immediate form.
-  uint64_t Amount = VRegAndVal->Value.getZExtValue();
-  if (Amount > 31)
-    return true; // This will have to remain a register variant.
-  auto ExtCst = MIRBuilder.buildConstant(LLT::scalar(64), Amount);
-  Observer.changingInstr(MI);
-  MI.getOperand(2).setReg(ExtCst.getReg(0));
-  Observer.changedInstr(MI);
-  return true;
-}
-
 bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
                                          MachineIRBuilder &MIRBuilder) const {
   // Stores the address of the VarArgsFrameIndex slot into the memory location
@@ -548,7 +676,7 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   return true;
 }
 
-bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
+bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
                                                 bool ShouldOptForSize) const {
   assert(APImm.getBitWidth() == 32 || APImm.getBitWidth() == 64);
   int64_t Imm = APImm.getSExtValue();
@@ -651,6 +779,46 @@ bool RISCVLegalizerInfo::legalizeExt(MachineInstr &MI,
   return true;
 }
 
+bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
+                                           LegalizerHelper &Helper,
+                                           MachineIRBuilder &MIB) const {
+  assert((isa<GLoad>(MI) || isa<GStore>(MI)) &&
+         "Machine instructions must be Load/Store.");
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+  MachineFunction *MF = MI.getMF();
+  const DataLayout &DL = MIB.getDataLayout();
+  LLVMContext &Ctx = MF->getFunction().getContext();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DataTy = MRI.getType(DstReg);
+  if (!DataTy.isVector())
+    return false;
+
+  if (!MI.hasOneMemOperand())
+    return false;
+
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+
+  const auto *TLI = STI.getTargetLowering();
+  EVT VT = EVT::getEVT(getTypeForLLT(DataTy, Ctx));
+
+  if (TLI->allowsMemoryAccessForAlignment(Ctx, DL, VT, *MMO))
+    return true;
+
+  unsigned EltSizeBits = DataTy.getScalarSizeInBits();
+  assert((EltSizeBits == 16 || EltSizeBits == 32 || EltSizeBits == 64) &&
+         "Unexpected unaligned RVV load type");
+
+  // Calculate the new vector type with i8 elements
+  unsigned NumElements =
+      DataTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
+  LLT NewDataTy = LLT::scalable_vector(NumElements, 8);
+
+  Helper.bitcast(MI, 0, NewDataTy);
+
+  return true;
+}
+
 /// Return the type of the mask type suitable for masking the provided
 /// vector type.  This is simply an i1 element type vector of the same
 /// (possibly scalable) length.
@@ -671,19 +839,19 @@ static MachineInstrBuilder buildAllOnesMask(LLT VecTy, const SrcOp &VL,
 
 /// Gets the two common "VL" operands: an all-ones mask and the vector length.
 /// VecTy is a scalable vector type.
-static std::pair<MachineInstrBuilder, Register>
-buildDefaultVLOps(const DstOp &Dst, MachineIRBuilder &MIB,
-                  MachineRegisterInfo &MRI) {
-  LLT VecTy = Dst.getLLTTy(MRI);
+static std::pair<MachineInstrBuilder, MachineInstrBuilder>
+buildDefaultVLOps(LLT VecTy, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) {
   assert(VecTy.isScalableVector() && "Expecting scalable container type");
-  Register VL(RISCV::X0);
-  MachineInstrBuilder Mask = buildAllOnesMask(VecTy, VL, MIB, MRI);
+  const RISCVSubtarget &STI = MIB.getMF().getSubtarget<RISCVSubtarget>();
+  LLT XLenTy(STI.getXLenVT());
+  auto VL = MIB.buildConstant(XLenTy, -1);
+  auto Mask = buildAllOnesMask(VecTy, VL, MIB, MRI);
   return {Mask, VL};
 }
 
 static MachineInstrBuilder
 buildSplatPartsS64WithVL(const DstOp &Dst, const SrcOp &Passthru, Register Lo,
-                         Register Hi, Register VL, MachineIRBuilder &MIB,
+                         Register Hi, const SrcOp &VL, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI) {
   // TODO: If the Hi bits of the splat are undefined, then it's fine to just
   // splat Lo even if it might be sign extended. I don't think we have
@@ -699,7 +867,7 @@ buildSplatPartsS64WithVL(const DstOp &Dst, const SrcOp &Passthru, Register Lo,
 
 static MachineInstrBuilder
 buildSplatSplitS64WithVL(const DstOp &Dst, const SrcOp &Passthru,
-                         const SrcOp &Scalar, Register VL,
+                         const SrcOp &Scalar, const SrcOp &VL,
                          MachineIRBuilder &MIB, MachineRegisterInfo &MRI) {
   assert(Scalar.getLLTTy(MRI) == LLT::scalar(64) && "Unexpected VecTy!");
   auto Unmerge = MIB.buildUnmerge(LLT::scalar(32), Scalar);
@@ -726,7 +894,7 @@ bool RISCVLegalizerInfo::legalizeSplatVector(MachineInstr &MI,
   // Handle case of s64 element vectors on rv32
   if (XLenTy.getSizeInBits() == 32 &&
       VecTy.getElementType().getSizeInBits() == 64) {
-    auto [_, VL] = buildDefaultVLOps(Dst, MIB, MRI);
+    auto [_, VL] = buildDefaultVLOps(MRI.getType(Dst), MIB, MRI);
     buildSplatSplitS64WithVL(Dst, MIB.buildUndef(VecTy), SplatVal, VL, MIB,
                              MRI);
     MI.eraseFromParent();
@@ -763,11 +931,237 @@ bool RISCVLegalizerInfo::legalizeSplatVector(MachineInstr &MI,
   return true;
 }
 
+static LLT getLMUL1Ty(LLT VecTy) {
+  assert(VecTy.getElementType().getSizeInBits() <= 64 &&
+         "Unexpected vector LLT");
+  return LLT::scalable_vector(RISCV::RVVBitsPerBlock /
+                                  VecTy.getElementType().getSizeInBits(),
+                              VecTy.getElementType());
+}
+
+bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
+                                                  MachineIRBuilder &MIB) const {
+  GExtractSubvector &ES = cast<GExtractSubvector>(MI);
+
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  Register Dst = ES.getReg(0);
+  Register Src = ES.getSrcVec();
+  uint64_t Idx = ES.getIndexImm();
+
+  // With an index of 0 this is a cast-like subvector, which can be performed
+  // with subregister operations.
+  if (Idx == 0)
+    return true;
+
+  LLT LitTy = MRI.getType(Dst);
+  LLT BigTy = MRI.getType(Src);
+
+  if (LitTy.getElementType() == LLT::scalar(1)) {
+    // We can't slide this mask vector up indexed by its i1 elements.
+    // This poses a problem when we wish to insert a scalable vector which
+    // can't be re-expressed as a larger type. Just choose the slow path and
+    // extend to a larger type, then truncate back down.
+    LLT ExtBigTy = BigTy.changeElementType(LLT::scalar(8));
+    LLT ExtLitTy = LitTy.changeElementType(LLT::scalar(8));
+    auto BigZExt = MIB.buildZExt(ExtBigTy, Src);
+    auto ExtractZExt = MIB.buildExtractSubvector(ExtLitTy, BigZExt, Idx);
+    auto SplatZero = MIB.buildSplatVector(
+        ExtLitTy, MIB.buildConstant(ExtLitTy.getElementType(), 0));
+    MIB.buildICmp(CmpInst::Predicate::ICMP_NE, Dst, ExtractZExt, SplatZero);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // extract_subvector scales the index by vscale if the subvector is scalable,
+  // and decomposeSubvectorInsertExtractToSubRegs takes this into account.
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
+  MVT LitTyMVT = getMVTForLLT(LitTy);
+  auto Decompose =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          getMVTForLLT(BigTy), LitTyMVT, Idx, TRI);
+  unsigned RemIdx = Decompose.second;
+
+  // If the Idx has been completely eliminated then this is a subvector extract
+  // which naturally aligns to a vector register. These can easily be handled
+  // using subregister manipulation.
+  if (RemIdx == 0)
+    return true;
+
+  // Else LitTy is M1 or smaller and may need to be slid down: if LitTy
+  // was > M1 then the index would need to be a multiple of VLMAX, and so would
+  // divide exactly.
+  assert(
+      RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(LitTyMVT)).second ||
+      RISCVTargetLowering::getLMUL(LitTyMVT) == RISCVII::VLMUL::LMUL_1);
+
+  // If the vector type is an LMUL-group type, extract a subvector equal to the
+  // nearest full vector register type.
+  LLT InterLitTy = BigTy;
+  Register Vec = Src;
+  if (TypeSize::isKnownGT(BigTy.getSizeInBits(),
+                          getLMUL1Ty(BigTy).getSizeInBits())) {
+    // If BigTy has an LMUL > 1, then LitTy should have a smaller LMUL, and
+    // we should have successfully decomposed the extract into a subregister.
+    assert(Decompose.first != RISCV::NoSubRegister);
+    InterLitTy = getLMUL1Ty(BigTy);
+    // SDAG builds a TargetExtractSubreg. We cannot create a a Copy with SubReg
+    // specified on the source Register (the equivalent) since generic virtual
+    // register does not allow subregister index.
+    Vec = MIB.buildExtractSubvector(InterLitTy, Src, Idx - RemIdx).getReg(0);
+  }
+
+  // Slide this vector register down by the desired number of elements in order
+  // to place the desired subvector starting at element 0.
+  const LLT XLenTy(STI.getXLenVT());
+  auto SlidedownAmt = MIB.buildVScale(XLenTy, RemIdx);
+  auto [Mask, VL] = buildDefaultVLOps(LitTy, MIB, MRI);
+  uint64_t Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+  auto Slidedown = MIB.buildInstr(
+      RISCV::G_VSLIDEDOWN_VL, {InterLitTy},
+      {MIB.buildUndef(InterLitTy), Vec, SlidedownAmt, Mask, VL, Policy});
+
+  // Now the vector is in the right position, extract our final subvector. This
+  // should resolve to a COPY.
+  MIB.buildExtractSubvector(Dst, Slidedown, 0);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
+                                                 LegalizerHelper &Helper,
+                                                 MachineIRBuilder &MIB) const {
+  GInsertSubvector &IS = cast<GInsertSubvector>(MI);
+
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  Register Dst = IS.getReg(0);
+  Register BigVec = IS.getBigVec();
+  Register LitVec = IS.getSubVec();
+  uint64_t Idx = IS.getIndexImm();
+
+  LLT BigTy = MRI.getType(BigVec);
+  LLT LitTy = MRI.getType(LitVec);
+
+  if (Idx == 0 ||
+      MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+    return true;
+
+  // We don't have the ability to slide mask vectors up indexed by their i1
+  // elements; the smallest we can do is i8. Often we are able to bitcast to
+  // equivalent i8 vectors. Otherwise, we can must zeroextend to equivalent i8
+  // vectors and truncate down after the insert.
+  if (LitTy.getElementType() == LLT::scalar(1)) {
+    auto BigTyMinElts = BigTy.getElementCount().getKnownMinValue();
+    auto LitTyMinElts = LitTy.getElementCount().getKnownMinValue();
+    if (BigTyMinElts >= 8 && LitTyMinElts >= 8)
+      return Helper.bitcast(
+          IS, 0,
+          LLT::vector(BigTy.getElementCount().divideCoefficientBy(8), 8));
+
+    // We can't slide this mask vector up indexed by its i1 elements.
+    // This poses a problem when we wish to insert a scalable vector which
+    // can't be re-expressed as a larger type. Just choose the slow path and
+    // extend to a larger type, then truncate back down.
+    LLT ExtBigTy = BigTy.changeElementType(LLT::scalar(8));
+    return Helper.widenScalar(IS, 0, ExtBigTy);
+  }
+
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
+  unsigned SubRegIdx, RemIdx;
+  std::tie(SubRegIdx, RemIdx) =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          getMVTForLLT(BigTy), getMVTForLLT(LitTy), Idx, TRI);
+
+  TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
+  assert(isPowerOf2_64(
+      STI.expandVScale(LitTy.getSizeInBits()).getKnownMinValue()));
+  bool ExactlyVecRegSized =
+      STI.expandVScale(LitTy.getSizeInBits())
+          .isKnownMultipleOf(STI.expandVScale(VecRegSize));
+
+  // If the Idx has been completely eliminated and this subvector's size is a
+  // vector register or a multiple thereof, or the surrounding elements are
+  // undef, then this is a subvector insert which naturally aligns to a vector
+  // register. These can easily be handled using subregister manipulation.
+  if (RemIdx == 0 && ExactlyVecRegSized)
+    return true;
+
+  // If the subvector is smaller than a vector register, then the insertion
+  // must preserve the undisturbed elements of the register. We do this by
+  // lowering to an EXTRACT_SUBVECTOR grabbing the nearest LMUL=1 vector type
+  // (which resolves to a subregister copy), performing a VSLIDEUP to place the
+  // subvector within the vector register, and an INSERT_SUBVECTOR of that
+  // LMUL=1 type back into the larger vector (resolving to another subregister
+  // operation). See below for how our VSLIDEUP works. We go via a LMUL=1 type
+  // to avoid allocating a large register group to hold our subvector.
+
+  // VSLIDEUP works by leaving elements 0<i<OFFSET undisturbed, elements
+  // OFFSET<=i<VL set to the "subvector" and vl<=i<VLMAX set to the tail policy
+  // (in our case undisturbed). This means we can set up a subvector insertion
+  // where OFFSET is the insertion offset, and the VL is the OFFSET plus the
+  // size of the subvector.
+  const LLT XLenTy(STI.getXLenVT());
+  LLT InterLitTy = BigTy;
+  Register AlignedExtract = BigVec;
+  unsigned AlignedIdx = Idx - RemIdx;
+  if (TypeSize::isKnownGT(BigTy.getSizeInBits(),
+                          getLMUL1Ty(BigTy).getSizeInBits())) {
+    InterLitTy = getLMUL1Ty(BigTy);
+    // Extract a subvector equal to the nearest full vector register type. This
+    // should resolve to a G_EXTRACT on a subreg.
+    AlignedExtract =
+        MIB.buildExtractSubvector(InterLitTy, BigVec, AlignedIdx).getReg(0);
+  }
+
+  auto Insert = MIB.buildInsertSubvector(InterLitTy, MIB.buildUndef(InterLitTy),
+                                         LitVec, 0);
+
+  auto [Mask, _] = buildDefaultVLOps(BigTy, MIB, MRI);
+  auto VL = MIB.buildVScale(XLenTy, LitTy.getElementCount().getKnownMinValue());
+
+  // If we're inserting into the lowest elements, use a tail undisturbed
+  // vmv.v.v.
+  MachineInstrBuilder Inserted;
+  bool NeedInsertSubvec =
+      TypeSize::isKnownGT(BigTy.getSizeInBits(), InterLitTy.getSizeInBits());
+  Register InsertedDst =
+      NeedInsertSubvec ? MRI.createGenericVirtualRegister(InterLitTy) : Dst;
+  if (RemIdx == 0) {
+    Inserted = MIB.buildInstr(RISCV::G_VMV_V_V_VL, {InsertedDst},
+                              {AlignedExtract, Insert, VL});
+  } else {
+    auto SlideupAmt = MIB.buildVScale(XLenTy, RemIdx);
+    // Construct the vector length corresponding to RemIdx + length(LitTy).
+    VL = MIB.buildAdd(XLenTy, SlideupAmt, VL);
+    // Use tail agnostic policy if we're inserting over InterLitTy's tail.
+    ElementCount EndIndex =
+        ElementCount::getScalable(RemIdx) + LitTy.getElementCount();
+    uint64_t Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    if (STI.expandVScale(EndIndex) ==
+        STI.expandVScale(InterLitTy.getElementCount()))
+      Policy = RISCVII::TAIL_AGNOSTIC;
+
+    Inserted =
+        MIB.buildInstr(RISCV::G_VSLIDEUP_VL, {InsertedDst},
+                       {AlignedExtract, Insert, SlideupAmt, Mask, VL, Policy});
+  }
+
+  // If required, insert this subvector back into the correct vector register.
+  // This should resolve to an INSERT_SUBREG instruction.
+  if (NeedInsertSubvec)
+    MIB.buildInsertSubvector(Dst, BigVec, Inserted, AlignedIdx);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  GISelChangeObserver &Observer = Helper.Observer;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   MachineFunction &MF = *MI.getParent()->getParent();
   switch (MI.getOpcode()) {
   default:
@@ -786,14 +1180,14 @@ bool RISCVLegalizerInfo::legalizeCustom(
       return true;
     return Helper.lowerConstant(MI);
   }
-  case TargetOpcode::G_SHL:
-  case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR:
-    return legalizeShlAshrLshr(MI, MIRBuilder, Observer);
   case TargetOpcode::G_SEXT_INREG: {
-    // Source size of 32 is sext.w.
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     int64_t SizeInBits = MI.getOperand(2).getImm();
-    if (SizeInBits == 32)
+    // Source size of 32 is sext.w.
+    if (DstTy.getSizeInBits() == 64 && SizeInBits == 32)
+      return true;
+
+    if (STI.hasStdExtZbb() && (SizeInBits == 8 || SizeInBits == 16))
       return true;
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
@@ -828,6 +1222,13 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return legalizeExt(MI, MIRBuilder);
   case TargetOpcode::G_SPLAT_VECTOR:
     return legalizeSplatVector(MI, MIRBuilder);
+  case TargetOpcode::G_EXTRACT_SUBVECTOR:
+    return legalizeExtractSubvector(MI, MIRBuilder);
+  case TargetOpcode::G_INSERT_SUBVECTOR:
+    return legalizeInsertSubvector(MI, Helper, MIRBuilder);
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE:
+    return legalizeLoadStore(MI, Helper, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");

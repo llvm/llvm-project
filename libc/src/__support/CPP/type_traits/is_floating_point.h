@@ -11,9 +11,11 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_floating_point
 template <typename T> struct is_floating_point {
@@ -40,6 +42,7 @@ template <typename T>
 LIBC_INLINE_VAR constexpr bool is_floating_point_v =
     is_floating_point<T>::value;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_FLOATING_POINT_H

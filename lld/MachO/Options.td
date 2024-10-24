@@ -111,6 +111,12 @@ def no_warn_dylib_install_name: Flag<["--"], "no-warn-dylib-install-name">,
 def warn_dylib_install_name: Flag<["--"], "warn-dylib-install-name">,
     HelpText<"Warn on -install_name if -dylib is not passed">,
     Group<grp_lld>;
+def warn_duplicate_rpath: Flag<["--"], "warn-duplicate-rpath">,
+    HelpText<"Warn if the same -rpath is specified multiple times (default)">,
+    Group<grp_lld>;
+def no_warn_duplicate_rpath: Flag<["--"], "no-warn-duplicate-rpath">,
+    HelpText<"Do not warn if the same -rpath is specified multiple times">,
+    Group<grp_lld>;
 def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
     HelpText<"Reorder sections with call graph profile (default)">,
     Group<grp_lld>;
@@ -119,6 +125,22 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
     Group<grp_lld>;
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
+    Group<grp_lld>;
+def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
+def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
+    Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
+    HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
+    Group<grp_lld>;
+def compression_sort_startup_functions: Flag<["--"], "compression-sort-startup-functions">,
+    HelpText<"Order startup functions to improve compressed size in addition to startup time">,
+    Group<grp_lld>;
+def no_compression_sort_startup_functions: Flag<["--"], "no-compression-sort-startup-functions">,
+    HelpText<"Do not order startup function for compression">, Group<grp_lld>;
+def compression_sort: Joined<["--"], "compression-sort=">,
+    MetaVarName<"[none,function,data,both]">,
+    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+def verbose_bp_section_orderer: Flag<["--"], "verbose-bp-section-orderer">,
+    HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
     Group<grp_lld>;
 def ignore_auto_link_option : Separate<["--"], "ignore-auto-link-option">,
     Group<grp_lld>;
@@ -140,6 +162,10 @@ def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
     Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
+def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
+def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
+    Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,
+    HelpText<"Write the CG data to the specified path <cgdata>.">, Group<grp_lld>;
 def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
     HelpText<"Perform context sensitive PGO instrumentation">, Group<grp_lld>;
 def cs_profile_path: Joined<["--"], "cs-profile-path=">,
@@ -147,6 +173,9 @@ def cs_profile_path: Joined<["--"], "cs-profile-path=">,
 defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
   "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">, Group<grp_lld>;
+defm warn_thin_archive_missing_members : BB<"warn-thin-archive-missing-members",
+  "Warn on missing object files referenced by thin archives (default)",
+  "Do not warn on missing object files referenced by thin archives">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

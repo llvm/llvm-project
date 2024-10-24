@@ -6,12 +6,13 @@ define i32 @test(i32 %a, i1 %c.1, i1 %c.2 ) #0 {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[BROADCAST_SPLAT]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i1> poison, i1 [[C_1:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT1]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i1> poison, i1 [[C_2:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT3]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -22,7 +23,6 @@ define i32 @test(i32 %a, i1 %c.1, i1 %c.2 ) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT4]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP6]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[TMP0]], <i32 20, i32 20>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[BROADCAST_SPLAT]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[BROADCAST_SPLAT4]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> <i32 9, i32 9>, <2 x i32> [[VEC_IND]]
@@ -34,12 +34,12 @@ define i32 @test(i32 %a, i1 %c.1, i1 %c.2 ) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 176
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[PREDPHI5]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PREDPHI7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[PREDPHI5]], i32 1
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 182, [[MIDDLE_BLOCK]] ], [ 6, [[BB:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 35902, [[BB]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ 35902, [[BB]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]

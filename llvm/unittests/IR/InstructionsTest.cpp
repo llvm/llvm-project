@@ -205,7 +205,6 @@ TEST(InstructionsTest, CastInst) {
   Type *Int64Ty = Type::getInt64Ty(C);
   Type *V8x8Ty = FixedVectorType::get(Int8Ty, 8);
   Type *V8x64Ty = FixedVectorType::get(Int64Ty, 8);
-  Type *X86MMXTy = Type::getX86_MMXTy(C);
 
   Type *HalfTy = Type::getHalfTy(C);
   Type *FloatTy = Type::getFloatTy(C);
@@ -248,9 +247,6 @@ TEST(InstructionsTest, CastInst) {
   EXPECT_EQ(CastInst::Trunc, CastInst::getCastOpcode(c64, true, V8x8Ty, true));
   EXPECT_EQ(CastInst::SExt, CastInst::getCastOpcode(c8, true, V8x64Ty, true));
 
-  EXPECT_FALSE(CastInst::isBitCastable(V8x8Ty, X86MMXTy));
-  EXPECT_FALSE(CastInst::isBitCastable(X86MMXTy, V8x8Ty));
-  EXPECT_FALSE(CastInst::isBitCastable(Int64Ty, X86MMXTy));
   EXPECT_FALSE(CastInst::isBitCastable(V8x64Ty, V8x8Ty));
   EXPECT_FALSE(CastInst::isBitCastable(V8x8Ty, V8x64Ty));
 
@@ -760,7 +756,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Call->setDebugLoc(DebugLoc(MDNode::get(C, std::nullopt)));
+  Call->setDebugLoc(DebugLoc(MDNode::get(C, {})));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
@@ -790,7 +786,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, std::nullopt)));
+  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, {})));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<InvokeInst> Clone(
@@ -1163,7 +1159,8 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_TRUE(
       ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3}), 2));
 
-  // Nothing special about the values here - just re-using inputs to reduce code. 
+  // Nothing special about the values here - just re-using inputs to reduce
+  // code.
   Constant *V0 = ConstantVector::get({C0, C1, C2, C3});
   Constant *V1 = ConstantVector::get({C3, C2, C1, C0});
 
@@ -1220,7 +1217,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id6->isIdentityWithExtract());
   EXPECT_FALSE(Id6->isConcat());
   delete Id6;
-  
+
   // Result has more elements than operands, but extra elements are not undef.
   ShuffleVectorInst *Id7 = new ShuffleVectorInst(V0, V1,
                                                  ConstantVector::get({C0, C1, C2, C3, CU, C1}));
@@ -1229,7 +1226,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id7->isIdentityWithExtract());
   EXPECT_FALSE(Id7->isConcat());
   delete Id7;
-  
+
   // Result has more elements than operands; choose from Op0 and Op1 is not identity.
   ShuffleVectorInst *Id8 = new ShuffleVectorInst(V0, V1,
                                                  ConstantVector::get({C4, CU, C2, C3, CU, CU}));
@@ -1562,12 +1559,61 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
       CallInst::Create(AVFFnTy, AVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AVFCall));
 
-  Type *AAVFTy = ArrayType::get(AVFTy, 2);
-  FunctionType *AAVFFnTy = FunctionType::get(AAVFTy, {});
-  Value *AAVFCallee = Constant::getNullValue(PtrTy);
-  std::unique_ptr<CallInst> AAVFCall(
-      CallInst::Create(AAVFFnTy, AAVFCallee, {}, ""));
-  EXPECT_TRUE(isa<FPMathOperator>(AAVFCall));
+  Type *StructITy = StructType::get(ITy, ITy);
+  FunctionType *StructIFnTy = FunctionType::get(StructITy, {});
+  Value *StructICallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructICall(
+      CallInst::Create(StructIFnTy, StructICallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(StructICall));
+
+  Type *EmptyStructTy = StructType::get(C);
+  FunctionType *EmptyStructFnTy = FunctionType::get(EmptyStructTy, {});
+  Value *EmptyStructCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> EmptyStructCall(
+      CallInst::Create(EmptyStructFnTy, EmptyStructCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(EmptyStructCall));
+
+  Type *NamedStructFTy = StructType::create({FTy, FTy}, "AStruct");
+  FunctionType *NamedStructFFnTy = FunctionType::get(NamedStructFTy, {});
+  Value *NamedStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> NamedStructFCall(
+      CallInst::Create(NamedStructFFnTy, NamedStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(NamedStructFCall));
+
+  Type *MixedStructTy = StructType::get(FTy, ITy);
+  FunctionType *MixedStructFnTy = FunctionType::get(MixedStructTy, {});
+  Value *MixedStructCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> MixedStructCall(
+      CallInst::Create(MixedStructFnTy, MixedStructCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(MixedStructCall));
+
+  Type *StructFTy = StructType::get(FTy, FTy, FTy);
+  FunctionType *StructFFnTy = FunctionType::get(StructFTy, {});
+  Value *StructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructFCall(
+      CallInst::Create(StructFFnTy, StructFCallee, {}, ""));
+  EXPECT_TRUE(isa<FPMathOperator>(StructFCall));
+
+  Type *StructVFTy = StructType::get(VFTy, VFTy, VFTy, VFTy);
+  FunctionType *StructVFFnTy = FunctionType::get(StructVFTy, {});
+  Value *StructVFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructVFCall(
+      CallInst::Create(StructVFFnTy, StructVFCallee, {}, ""));
+  EXPECT_TRUE(isa<FPMathOperator>(StructVFCall));
+
+  Type *NestedStructFTy = StructType::get(StructFTy, StructFTy, StructFTy);
+  FunctionType *NestedStructFFnTy = FunctionType::get(NestedStructFTy, {});
+  Value *NestedStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> NestedStructFCall(
+      CallInst::Create(NestedStructFFnTy, NestedStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(NestedStructFCall));
+
+  Type *AStructFTy = ArrayType::get(StructFTy, 5);
+  FunctionType *AStructFFnTy = FunctionType::get(AStructFTy, {});
+  Value *AStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> AStructFCall(
+      CallInst::Create(AStructFFnTy, AStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(AStructFCall));
 }
 
 TEST(InstructionsTest, FNegInstruction) {
@@ -1736,6 +1782,20 @@ TEST(InstructionsTest, BranchWeightOverflow) {
   ASSERT_EQ(ProfWeight, UINT32_MAX);
 }
 
+TEST(InstructionsTest, FreezeInst) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      define void @foo(i8 %arg) {
+        freeze i8 %arg
+        ret void
+  }
+  )");
+  ASSERT_TRUE(M);
+  Value *FI = &M->getFunction("foo")->getEntryBlock().front();
+  EXPECT_TRUE(isa<UnaryInstruction>(FI));
+}
+
 TEST(InstructionsTest, AllocaInst) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M = parseIR(Ctx, R"(
@@ -1745,7 +1805,7 @@ TEST(InstructionsTest, AllocaInst) {
         %A = alloca i32, i32 1
         %B = alloca i32, i32 4
         %C = alloca i32, i32 %n
-        %D = alloca <8 x double>
+        %D = alloca double
         %E = alloca <vscale x 8 x double>
         %F = alloca [2 x half]
         %G = alloca [2 x [3 x i128]]
@@ -1771,7 +1831,8 @@ TEST(InstructionsTest, AllocaInst) {
   EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
   EXPECT_FALSE(C.getAllocationSizeInBits(DL));
-  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(512));
+  EXPECT_EQ(DL.getTypeSizeInBits(D.getAllocatedType()), TypeSize::getFixed(64));
+  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(64));
   EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::getScalable(512));
   EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
@@ -1815,6 +1876,51 @@ TEST(InstructionsTest, InsertAtEnd) {
   auto It = I->insertInto(BB, BB->end());
   EXPECT_EQ(&*It, I);
   EXPECT_EQ(Ret->getNextNode(), I);
+}
+
+TEST(InstructionsTest, AtomicSyncscope) {
+  LLVMContext Ctx;
+
+  Module M("Mod", Ctx);
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "Fun", M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "Entry", F);
+  IRBuilder<> Builder(BB);
+
+  // SyncScope-variants of LLVM C IRBuilder APIs are tested by llvm-c-test,
+  // so cover the old versions (with a SingleThreaded argument) here.
+  Value *Ptr = ConstantPointerNull::get(Builder.getPtrTy());
+  Value *Val = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+
+  // fence
+  LLVMValueRef Fence = LLVMBuildFence(
+      wrap(&Builder), LLVMAtomicOrderingSequentiallyConsistent, 0, "");
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(Fence));
+  Fence = LLVMBuildFence(wrap(&Builder),
+                         LLVMAtomicOrderingSequentiallyConsistent, 1, "");
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(Fence));
+
+  // atomicrmw
+  LLVMValueRef AtomicRMW = LLVMBuildAtomicRMW(
+      wrap(&Builder), LLVMAtomicRMWBinOpXchg, wrap(Ptr), wrap(Val),
+      LLVMAtomicOrderingSequentiallyConsistent, 0);
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(AtomicRMW));
+  AtomicRMW = LLVMBuildAtomicRMW(wrap(&Builder), LLVMAtomicRMWBinOpXchg,
+                                 wrap(Ptr), wrap(Val),
+                                 LLVMAtomicOrderingSequentiallyConsistent, 1);
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(AtomicRMW));
+
+  // cmpxchg
+  LLVMValueRef CmpXchg =
+      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+                             LLVMAtomicOrderingSequentiallyConsistent,
+                             LLVMAtomicOrderingSequentiallyConsistent, 0);
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(CmpXchg));
+  CmpXchg =
+      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+                             LLVMAtomicOrderingSequentiallyConsistent,
+                             LLVMAtomicOrderingSequentiallyConsistent, 1);
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(CmpXchg));
 }
 
 } // end anonymous namespace

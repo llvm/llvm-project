@@ -382,19 +382,15 @@ defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
   AMDGPUfdot2, 1/*ExplicitClamp*/>;
 
 let OtherPredicates = [HasDot7Insts] in {
-let IsInvalidSingleUseConsumer = 1 in {
-  defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
-    VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
-}
+defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
 defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
 let OtherPredicates = [HasDot1Insts] in {
-let IsInvalidSingleUseConsumer = 1 in {
-  defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
-    VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4, 1>;
-}
+defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4, 1>;
 defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot8, 1>;
 } // End OtherPredicates = [HasDot1Insts]
@@ -681,8 +677,9 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node>
   bit is_gfx940_xdl = 0;
 }
 
-multiclass MAIInst<string OpName, string P, SDPatternOperator node,
-                   bit NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap> {
+multiclass MAIInst<string OpName, string P, SDPatternOperator node> {
+  defvar NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap;
+
   let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {

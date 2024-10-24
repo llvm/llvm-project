@@ -353,6 +353,96 @@ define half @tan_f16(half %x) #0 {
   ret half %val
 }
 
+define half @asin_f16(half %x) #0 {
+; CHECK-LABEL: asin_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl asinf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.asin.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @acos_f16(half %x) #0 {
+; CHECK-LABEL: acos_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl acosf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.acos.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @atan_f16(half %x) #0 {
+; CHECK-LABEL: atan_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl atanf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.atan.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @sinh_f16(half %x) #0 {
+; CHECK-LABEL: sinh_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl sinhf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.sinh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @cosh_f16(half %x) #0 {
+; CHECK-LABEL: cosh_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl coshf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.cosh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @tanh_f16(half %x) #0 {
+; CHECK-LABEL: tanh_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl tanhf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.tanh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
 define half @pow_f16(half %x, half %y) #0 {
 ; CHECK-LABEL: pow_f16:
 ; CHECK:       // %bb.0:

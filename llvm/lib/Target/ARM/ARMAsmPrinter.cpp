@@ -153,9 +153,9 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OptimizationGoals = 0;
 
   if (Subtarget->isTargetCOFF()) {
-    bool Internal = F.hasInternalLinkage();
-    COFF::SymbolStorageClass Scl = Internal ? COFF::IMAGE_SYM_CLASS_STATIC
-                                            : COFF::IMAGE_SYM_CLASS_EXTERNAL;
+    bool Local = F.hasLocalLinkage();
+    COFF::SymbolStorageClass Scl =
+        Local ? COFF::IMAGE_SYM_CLASS_STATIC : COFF::IMAGE_SYM_CLASS_EXTERNAL;
     int Type = COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
     OutStreamer->beginCOFFSymbolDef(CurrentFnSym);
@@ -1219,7 +1219,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     assert(DstReg == ARM::SP &&
            "Only stack pointer as a destination reg is supported");
 
-    SmallVector<unsigned, 4> RegList;
+    SmallVector<MCRegister, 4> RegList;
     // Skip src & dst reg, and pred ops.
     unsigned StartOp = 2 + 2;
     // Use all the operands.
@@ -1447,8 +1447,10 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitUnwindingInstruction(MI);
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
+  }
 
   assert(!convertAddSubFlagsOpcode(MI->getOpcode()) &&
          "Pseudo flag setting opcode should be expanded early");
@@ -2408,12 +2410,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case ARM::SEH_EpilogEnd:
     ATS.emitARMWinCFIEpilogEnd();
-    return;
-
-  case ARM::PseudoARMInitUndefMQPR:
-  case ARM::PseudoARMInitUndefSPR:
-  case ARM::PseudoARMInitUndefDPR_VFP2:
-  case ARM::PseudoARMInitUndefGPR:
     return;
   }
 

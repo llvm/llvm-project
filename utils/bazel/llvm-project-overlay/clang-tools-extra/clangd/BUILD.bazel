@@ -67,5 +67,6 @@ cc_library(
         "//clang:index",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:config",
     ],
 )

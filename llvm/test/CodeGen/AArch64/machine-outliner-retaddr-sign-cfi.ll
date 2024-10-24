@@ -11,7 +11,8 @@ define void @a() "sign-return-address"="all" "sign-return-address-key"="b_key" {
 ; CHECK-NEXT:          .cfi_b_key_frame
 ; V8A-NEXT:            hint #27
 ; V83A-NEXT:           pacibsp
-; CHECK-NEXT:          .cfi_negate_ra_state
+; CHECK:               .cfi_negate_ra_state
+; CHECK-NEXT:          .cfi_def_cfa_offset
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4

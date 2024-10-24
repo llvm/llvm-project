@@ -202,6 +202,11 @@ void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
   unwrap(flags)->elideLargeElementsAttrs(largeElementLimit);
 }
 
+void mlirOpPrintingFlagsElideLargeResourceString(MlirOpPrintingFlags flags,
+                                                 intptr_t largeResourceLimit) {
+  unwrap(flags)->elideLargeResourceString(largeResourceLimit);
+}
+
 void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool enable,
                                         bool prettyForm) {
   unwrap(flags)->enableDebugInfo(enable, /*prettyForm=*/prettyForm);
@@ -731,6 +736,7 @@ static mlir::WalkResult unwrap(MlirWalkResult result) {
   case MlirWalkResultSkip:
     return mlir::WalkResult::skip();
   }
+  llvm_unreachable("unknown result in WalkResult::unwrap");
 }
 
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,

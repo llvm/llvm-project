@@ -35,7 +35,9 @@ public:
     case llvm::Triple::EABI:
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
       return true;
@@ -48,6 +50,7 @@ public:
     switch (getTarget().getTriple().getEnvironment()) {
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
       return true;
     default:
@@ -141,7 +144,7 @@ public:
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
-        TargetInfo::BranchProtectionInfo BPI;
+        TargetInfo::BranchProtectionInfo BPI{};
         StringRef DiagMsg;
         StringRef Arch =
             Attr.CPU.empty() ? CGM.getTarget().getTargetOpts().CPU : Attr.CPU;
@@ -151,11 +154,8 @@ public:
               D->getLocation(),
               diag::warn_target_unsupported_branch_protection_attribute)
               << Arch;
-        } else {
-          Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
-          Fn->addFnAttr("branch-target-enforcement",
-                        BPI.BranchTargetEnforcement ? "true" : "false");
-        }
+        } else
+          setBranchProtectionFnAttributes(BPI, (*Fn));
       } else if (CGM.getLangOpts().BranchTargetEnforcement ||
                  CGM.getLangOpts().hasSignReturnAddress()) {
         // If the Branch Protection attribute is missing, validate the target
@@ -167,6 +167,10 @@ public:
               diag::warn_target_unsupported_branch_protection_attribute)
               << Attr.CPU;
       }
+    } else if (CGM.getTarget().isBranchProtectionSupportedArch(
+                   CGM.getTarget().getTargetOpts().CPU)) {
+      TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
+      setBranchProtectionFnAttributes(BPI, (*Fn));
     }
 
     const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
@@ -353,8 +357,9 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
       if (EIT->getNumBits() > 64)
         return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
 
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                              : ABIArgInfo::getDirect());
+    return (isPromotableIntegerTypeForABI(Ty)
+                ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+                : ABIArgInfo::getDirect());
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {

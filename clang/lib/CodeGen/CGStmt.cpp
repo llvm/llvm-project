@@ -222,6 +222,12 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPUnrollDirectiveClass:
     EmitOMPUnrollDirective(cast<OMPUnrollDirective>(*S));
     break;
+  case Stmt::OMPReverseDirectiveClass:
+    EmitOMPReverseDirective(cast<OMPReverseDirective>(*S));
+    break;
+  case Stmt::OMPInterchangeDirectiveClass:
+    EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));
+    break;
   case Stmt::OMPForDirectiveClass:
     EmitOMPForDirective(cast<OMPForDirective>(*S));
     break;
@@ -414,7 +420,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     CGM.ErrorUnsupported(S, "OpenMP dispatch directive");
     break;
   case Stmt::OMPScopeDirectiveClass:
-    CGM.ErrorUnsupported(S, "scope with FE outlining");
+    EmitOMPScopeDirective(cast<OMPScopeDirective>(*S));
     break;
   case Stmt::OMPMaskedDirectiveClass:
     EmitOMPMaskedDirective(cast<OMPMaskedDirective>(*S));
@@ -439,6 +445,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
+    break;
+  case Stmt::OMPAssumeDirectiveClass:
+    EmitOMPAssumeDirective(cast<OMPAssumeDirective>(*S));
     break;
   case Stmt::OpenACCComputeConstructClass:
     EmitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*S));
@@ -717,6 +726,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool nomerge = false;
   bool noinline = false;
   bool alwaysinline = false;
+  bool noconvergent = false;
   const CallExpr *musttail = nullptr;
 
   for (const auto *A : S.getAttrs()) {
@@ -732,6 +742,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     case attr::AlwaysInline:
       alwaysinline = true;
       break;
+    case attr::NoConvergent:
+      noconvergent = true;
+      break;
     case attr::MustTail: {
       const Stmt *Sub = S.getSubStmt();
       const ReturnStmt *R = cast<ReturnStmt>(Sub);
@@ -739,9 +752,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     } break;
     case attr::CXXAssume: {
       const Expr *Assumption = cast<CXXAssumeAttr>(A)->getAssumption();
-      if (getLangOpts().CXXAssumptions &&
+      if (getLangOpts().CXXAssumptions && Builder.GetInsertBlock() &&
           !Assumption->HasSideEffects(getContext())) {
-        llvm::Value *AssumptionVal = EvaluateExprAsBool(Assumption);
+        llvm::Value *AssumptionVal = EmitCheckedArgForAssume(Assumption);
         Builder.CreateAssumption(AssumptionVal);
       }
     } break;
@@ -750,6 +763,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_nomerge(InNoMergeAttributedStmt, nomerge);
   SaveAndRestore save_noinline(InNoInlineAttributedStmt, noinline);
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
+  SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt, noconvergent);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
@@ -787,10 +801,12 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
 }
 
 void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
+  const Stmt *Else = S.getElse();
+
   // The else branch of a consteval if statement is always the only branch that
   // can be runtime evaluated.
   if (S.isConsteval()) {
-    const Stmt *Executed = S.isNegatedConsteval() ? S.getThen() : S.getElse();
+    const Stmt *Executed = S.isNegatedConsteval() ? S.getThen() : Else;
     if (Executed) {
       RunCleanupsScope ExecutedScope(*this);
       EmitStmt(Executed);
@@ -801,6 +817,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // C99 6.8.4.1: The first substatement is executed if the expression compares
   // unequal to 0.  The condition must be a scalar type.
   LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
+  ApplyDebugLocation DL(*this, S.getCond());
 
   if (S.getInit())
     EmitStmt(S.getInit());
@@ -815,8 +832,8 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
                                    S.isConstexpr())) {
     // Figure out which block (then or else) is executed.
     const Stmt *Executed = S.getThen();
-    const Stmt *Skipped  = S.getElse();
-    if (!CondConstant)  // Condition false?
+    const Stmt *Skipped = Else;
+    if (!CondConstant) // Condition false?
       std::swap(Executed, Skipped);
 
     // If the skipped block has no labels in it, just emit the executed block.
@@ -837,7 +854,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   llvm::BasicBlock *ThenBlock = createBasicBlock("if.then");
   llvm::BasicBlock *ContBlock = createBasicBlock("if.end");
   llvm::BasicBlock *ElseBlock = ContBlock;
-  if (S.getElse())
+  if (Else)
     ElseBlock = createBasicBlock("if.else");
 
   // Prefer the PGO based weights over the likelihood attribute.
@@ -855,7 +872,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   uint64_t ThenCount = getProfileCount(S.getThen());
   if (!ThenCount && !getCurrentProfileCount() &&
       CGM.getCodeGenOpts().OptimizationLevel)
-    LH = Stmt::getLikelihood(S.getThen(), S.getElse());
+    LH = Stmt::getLikelihood(S.getThen(), Else);
 
   // When measuring MC/DC, always fully evaluate the condition up front using
   // EvaluateExprAsBool() so that the test vector bitmap can be updated prior to
@@ -883,7 +900,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   EmitBranch(ContBlock);
 
   // Emit the 'else' code if present.
-  if (const Stmt *Else = S.getElse()) {
+  if (Else) {
     {
       // There is no need to emit line number for an unconditional branch.
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
@@ -1537,9 +1554,15 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     Builder.CreateStore(Result.getScalarVal(), ReturnValue);
   } else {
     switch (getEvaluationKind(RV->getType())) {
-    case TEK_Scalar:
-      Builder.CreateStore(EmitScalarExpr(RV), ReturnValue);
+    case TEK_Scalar: {
+      llvm::Value *Ret = EmitScalarExpr(RV);
+      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
+        EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
+                          /*isInit*/ true);
+      else
+        Builder.CreateStore(Ret, ReturnValue);
       break;
+    }
     case TEK_Complex:
       EmitComplexExprIntoLValue(RV, MakeAddrLValue(ReturnValue, RV->getType()),
                                 /*isInit*/ true);
@@ -2453,7 +2476,8 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
 
 static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
                               bool HasUnwindClobber, bool ReadOnly,
-                              bool ReadNone, bool NoMerge, const AsmStmt &S,
+                              bool ReadNone, bool NoMerge, bool NoConvergent,
+                              const AsmStmt &S,
                               const std::vector<llvm::Type *> &ResultRegTypes,
                               const std::vector<llvm::Type *> &ArgElemTypes,
                               CodeGenFunction &CGF,
@@ -2494,11 +2518,11 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
                                          llvm::ConstantAsMetadata::get(Loc)));
   }
 
-  if (CGF.getLangOpts().assumeFunctionsAreConvergent())
+  if (!NoConvergent && CGF.getLangOpts().assumeFunctionsAreConvergent())
     // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
     // convergent (meaning, they may call an intrinsically convergent op, such
     // as bar.sync, and so can't have certain optimizations applied around
-    // them).
+    // them) unless it's explicitly marked 'noconvergent'.
     Result.addFnAttr(llvm::Attribute::Convergent);
   // Extract all of the register value results from the asm.
   if (ResultRegTypes.size() == 1) {
@@ -2739,7 +2763,10 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
       if (RequiresCast) {
         unsigned Size = getContext().getTypeSize(QTy);
-        Ty = llvm::IntegerType::get(getLLVMContext(), Size);
+        if (Size)
+          Ty = llvm::IntegerType::get(getLLVMContext(), Size);
+        else
+          CGM.Error(OutExpr->getExprLoc(), "output size should not be zero");
       }
       ResultRegTypes.push_back(Ty);
       // If this output is tied to an input, and if the input is larger, then
@@ -3025,9 +3052,10 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   if (IsGCCAsmGoto) {
     CBR = Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
     EmitBlock(Fallthrough);
-    UpdateAsmCallInst(*CBR, HasSideEffect, false, ReadOnly, ReadNone,
-                      InNoMergeAttributedStmt, S, ResultRegTypes, ArgElemTypes,
-                      *this, RegResults);
+    UpdateAsmCallInst(*CBR, HasSideEffect, /*HasUnwindClobber=*/false, ReadOnly,
+                      ReadNone, InNoMergeAttributedStmt,
+                      InNoConvergentAttributedStmt, S, ResultRegTypes,
+                      ArgElemTypes, *this, RegResults);
     // Because we are emitting code top to bottom, we don't have enough
     // information at this point to know precisely whether we have a critical
     // edge. If we have outputs, split all indirect destinations.
@@ -3055,15 +3083,17 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     }
   } else if (HasUnwindClobber) {
     llvm::CallBase *Result = EmitCallOrInvoke(IA, Args, "");
-    UpdateAsmCallInst(*Result, HasSideEffect, true, ReadOnly, ReadNone,
-                      InNoMergeAttributedStmt, S, ResultRegTypes, ArgElemTypes,
-                      *this, RegResults);
+    UpdateAsmCallInst(*Result, HasSideEffect, /*HasUnwindClobber=*/true,
+                      ReadOnly, ReadNone, InNoMergeAttributedStmt,
+                      InNoConvergentAttributedStmt, S, ResultRegTypes,
+                      ArgElemTypes, *this, RegResults);
   } else {
     llvm::CallInst *Result =
         Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
-    UpdateAsmCallInst(*Result, HasSideEffect, false, ReadOnly, ReadNone,
-                      InNoMergeAttributedStmt, S, ResultRegTypes, ArgElemTypes,
-                      *this, RegResults);
+    UpdateAsmCallInst(*Result, HasSideEffect, /*HasUnwindClobber=*/false,
+                      ReadOnly, ReadNone, InNoMergeAttributedStmt,
+                      InNoConvergentAttributedStmt, S, ResultRegTypes,
+                      ArgElemTypes, *this, RegResults);
   }
 
   EmitAsmStores(*this, S, RegResults, ResultRegTypes, ResultTruncRegTypes,
@@ -3211,7 +3241,7 @@ CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input,
   llvm::Value *bundleArgs[] = {ParentToken};
   llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
   auto Output = llvm::CallBase::addOperandBundle(
-      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input);
+      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input->getIterator());
   Input->replaceAllUsesWith(Output);
   Input->eraseFromParent();
   return Output;

@@ -25,6 +25,7 @@ Using Clang as a Compiler
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
+   SafeBuffers
    DataFlowAnalysisIntro
    AddressSanitizer
    ThreadSanitizer
@@ -32,6 +33,7 @@ Using Clang as a Compiler
    UndefinedBehaviorSanitizer
    DataFlowSanitizer
    LeakSanitizer
+   RealtimeSanitizer
    SanitizerCoverage
    SanitizerStats
    SanitizerSpecialCaseList
@@ -92,6 +94,7 @@ Using Clang Tools
    ClangFormatStyleOptions
    ClangFormattedStatus
    ClangLinkerWrapper
+   ClangNVLinkWrapper
    ClangOffloadBundler
    ClangOffloadPackager
    ClangRepl
@@ -102,7 +105,7 @@ Design Documents
 .. toctree::
    :maxdepth: 1
 
-   CodeOwners
+   Maintainers
    InternalsManual
    DriverInternals
    Multilib
