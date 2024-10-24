@@ -4,8 +4,8 @@
 // CHECK-SAME:             %[[PRED:.*]]: i1,
 // CHECK-SAME:             %[[TRUE_TENSOR:.*]]: tensor<?xf32>,
 // CHECK-SAME:             %[[FALSE_TENSOR:.*]]: tensor<?xf32>) -> tensor<?xf32> {
-// CHECK-DAG:       %[[TRUE_MEMREF:.*]] = bufferization.to_memref %[[TRUE_TENSOR]] : memref<?xf32>
-// CHECK-DAG:       %[[FALSE_MEMREF:.*]] = bufferization.to_memref %[[FALSE_TENSOR]] : memref<?xf32>
+// CHECK-DAG:       %[[TRUE_MEMREF:.*]] = bufferization.to_memref %[[TRUE_TENSOR]] : tensor<?xf32> -> memref<?xf32>
+// CHECK-DAG:       %[[FALSE_MEMREF:.*]] = bufferization.to_memref %[[FALSE_TENSOR]] : tensor<?xf32> -> memref<?xf32>
 // CHECK:           %[[RESULT_MEMREF:.*]] = scf.if %[[PRED]] -> (memref<?xf32>) {
 // CHECK:             scf.yield %[[TRUE_MEMREF]] : memref<?xf32>
 // CHECK:           } else {
@@ -27,7 +27,7 @@ func.func @if(%pred: i1, %true_val: tensor<?xf32>, %false_val: tensor<?xf32>) ->
 // CHECK-SAME:              %[[TENSOR:.*]]: tensor<f32>,
 // CHECK-SAME:              %[[LB:.*]]: index, %[[UB:.*]]: index,
 // CHECK-SAME:              %[[STEP:.*]]: index) -> tensor<f32> {
-// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<f32>
+// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : tensor<f32> -> memref<f32>
 // CHECK:           %[[RESULT_MEMREF:.*]] = scf.for %[[VAL_6:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[ITER:.*]] = %[[MEMREF]]) -> (memref<f32>) {
 // CHECK:             scf.yield %[[ITER]] : memref<f32>
 // CHECK:           } {some_attr}
@@ -60,11 +60,11 @@ func.func @if_correct_recursive_legalization_behavior(%pred: i1, %tensor: tensor
 // CHECK-LABEL:   func @for_correct_recursive_legalization_behavior(
 // CHECK-SAME:                                                      %[[TENSOR:.*]]: tensor<f32>,
 // CHECK-SAME:                                                      %[[INDEX:.*]]: index) -> tensor<f32> {
-// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<f32>
+// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : tensor<f32> -> memref<f32>
 // CHECK:           %[[RESULT:.*]] = scf.for %[[IV:.*]] = %[[INDEX]] to %[[INDEX]] step %[[INDEX]] iter_args(%[[MEMREF_ITER:.*]] = %[[MEMREF]]) -> (memref<f32>) {
 // CHECK:             %[[TENSOR_ITER:.*]] = bufferization.to_tensor %[[MEMREF_ITER]] : memref<f32>
 // CHECK:             %[[TENSOR_MUNGED:.*]] = "test.munge_tensor"(%[[TENSOR_ITER]]) : (tensor<f32>) -> tensor<f32>
-// CHECK:             %[[MEMREF_MUNGED:.*]] = bufferization.to_memref %[[TENSOR_MUNGED]] : memref<f32>
+// CHECK:             %[[MEMREF_MUNGED:.*]] = bufferization.to_memref %[[TENSOR_MUNGED]] : tensor<f32> -> memref<f32>
 // CHECK:             scf.yield %[[MEMREF_MUNGED]] : memref<f32>
 // CHECK:           }
 // CHECK:           %[[TENSOR:.*]] = bufferization.to_tensor %[[RESULT:.*]] : memref<f32>
@@ -80,7 +80,7 @@ func.func @for_correct_recursive_legalization_behavior(%arg0: tensor<f32>, %inde
 
 // CHECK-LABEL:   func @bufferize_while(
 // CHECK-SAME: %[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64, %[[ARG2:.*]]: tensor<f32>
-// CHECK: %[[M:.*]] = bufferization.to_memref %[[ARG2]] : memref<f32>
+// CHECK: %[[M:.*]] = bufferization.to_memref %[[ARG2]] : tensor<f32> -> memref<f32>
 // CHECK: %[[RES1:.*]]:3 = scf.while (%{{.*}} = %[[ARG0]], %{{.*}} = %[[M]]) : (i64, memref<f32>) -> (i64, i64, memref<f32>)
 // CHECK: scf.condition(%{{.*}}) %{{.*}}, %{{.*}}, %{{.*}} : i64, i64, memref<f32>
 // CHECK: ^bb0(%{{.*}}: i64, %{{.*}}: i64, %{{.*}}: memref<f32>):

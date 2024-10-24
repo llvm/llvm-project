@@ -4,8 +4,8 @@
 // CHECK-SAME:                                     %[[ARG:.*]]: memref<f32>) -> memref<f32> {
 // CHECK:           return %[[ARG]] : memref<f32>
 func.func @eliminate_materializations(%arg0: memref<f32>) -> memref<f32> {
-  %0 = bufferization.to_tensor %arg0 : memref<f32>
-  %1 = bufferization.to_memref %0 : memref<f32>
+  %0 = bufferization.to_tensor %arg0 : memref<f32> -> tensor<f32>
+  %1 = bufferization.to_memref %0 : tensor<f32> -> memref<f32>
   return %1 : memref<f32>
 }
 
@@ -14,14 +14,14 @@ func.func @eliminate_materializations(%arg0: memref<f32>) -> memref<f32> {
 func.func @unable_to_convert_lone_buffer_cast() -> memref<f32> {
   // expected-error @+1 {{failed to legalize operation 'test.source'}}
   %0 = "test.source"() : () -> tensor<f32>
-  %1 = bufferization.to_memref %0 : memref<f32>
+  %1 = bufferization.to_memref %0 : tensor<f32> -> memref<f32>
   return %1 : memref<f32>
 }
 
 // -----
 
 func.func @unable_to_convert_lone_tensor_load(%arg0: memref<f32>) {
-  %0 = bufferization.to_tensor %arg0 : memref<f32>
+  %0 = bufferization.to_tensor %arg0 : memref<f32> -> tensor<f32>
   // expected-error @+1 {{failed to legalize operation 'test.sink'}}
   "test.sink"(%0) : (tensor<f32>) -> ()
   return
@@ -37,8 +37,8 @@ func.func @unable_to_convert_lone_tensor_load(%arg0: memref<f32>) {
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
 func.func @dyn_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset: ?>>) -> memref<?xf32> {
-  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[1], offset: ?>>
-  %1 = bufferization.to_memref %0 : memref<?xf32>
+  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[1], offset: ?>> -> tensor<?xf32>
+  %1 = bufferization.to_memref %0 : tensor<?xf32> -> memref<?xf32>
   return %1 : memref<?xf32>
 }
 
@@ -52,8 +52,8 @@ func.func @dyn_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset: ?
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
 func.func @fancy_layout_to_no_layout_cast(%m: memref<?xf32, strided<[100], offset: ?>>) -> memref<?xf32> {
-  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[100], offset: ?>>
-  %1 = bufferization.to_memref %0 : memref<?xf32>
+  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[100], offset: ?>> -> tensor<?xf32>
+  %1 = bufferization.to_memref %0 : tensor<?xf32> -> memref<?xf32>
   return %1 : memref<?xf32>
 }
 
@@ -67,8 +67,8 @@ func.func @fancy_layout_to_no_layout_cast(%m: memref<?xf32, strided<[100], offse
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
 func.func @static_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset: 25>>) -> memref<?xf32> {
-  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[1], offset: 25>>
-  %1 = bufferization.to_memref %0 : memref<?xf32>
+  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[1], offset: 25>> -> tensor<?xf32>
+  %1 = bufferization.to_memref %0 : tensor<?xf32> -> memref<?xf32>
   return %1 : memref<?xf32>
 }
 
@@ -77,19 +77,9 @@ func.func @static_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset
 // TODO: to_memref with layout maps not supported yet. This should fold to a
 // memref.cast.
 func.func @no_layout_to_dyn_layout_cast(%m: memref<?xf32>) -> memref<?xf32, strided<[1], offset: ?>> {
-  %0 = bufferization.to_tensor %m : memref<?xf32>
+  %0 = bufferization.to_tensor %m : memref<?xf32> -> tensor<?xf32>
   // expected-error @+1 {{failed to legalize unresolved materialization from ('memref<?xf32>') to 'memref<?xf32, strided<[1], offset: ?>>' that remained live after conversion}}
-  %1 = bufferization.to_memref %0 : memref<?xf32, strided<[1], offset: ?>>
+  %1 = bufferization.to_memref %0 : tensor<?xf32> -> memref<?xf32, strided<[1], offset: ?>>
   // expected-note @below{{see existing live user here}}
   return %1 : memref<?xf32, strided<[1], offset: ?>>
-}
-
-// -----
-
-func.func @illegal_unranked_to_rank(%m: memref<*xf32>) -> memref<?xf32> {
-  // expected-note @+1 {{prior use here}}
-  %0 = bufferization.to_tensor %m : memref<*xf32>
-  // expected-error @+1 {{expects different type than prior uses: 'tensor<?xf32>' vs 'tensor<*xf32>'}}
-  %1 = bufferization.to_memref %0 : memref<?xf32>
-  return %1 : memref<?xf32>
 }

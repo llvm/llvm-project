@@ -23,6 +23,16 @@ using namespace mlir::bufferization;
 // Helper functions
 //===----------------------------------------------------------------------===//
 
+bool bufferization::detail::tensorTypesMatchUpToEncoding(Type lhs, Type rhs) {
+  auto lhsType = cast<ShapedType>(lhs);
+  auto rhsType = cast<ShapedType>(rhs);
+  if (lhsType.getElementType() != rhsType.getElementType())
+    return false;
+  if (lhsType.hasRank() && rhsType.hasRank())
+    return lhsType.getShape() == rhsType.getShape();
+  return true;
+}
+
 FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
     OpBuilder &b, Value value, MemRefType destType,
     const BufferizationOptions &options) {

@@ -526,6 +526,10 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            /*default=*/"false",
            "The memory space of an memref types must always be inferred. If "
            "unset, a default memory space of 0 is used otherwise.">,
+    Option<"useEncodingForMemorySpace", "use-encoding-for-memory-space", "bool",
+            /*default=*/"false",
+            "Use the Tensor encoding attribute for the memory space. Exclusive to"
+            " the 'must-infer-memory-space option'">,
     Option<"testAnalysisOnly", "test-analysis-only", "bool",
             /*default=*/"false",
            "Test only: Only run inplaceability analysis and annotate IR">,
