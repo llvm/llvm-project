@@ -46,6 +46,6 @@ namespace llvm {
 // CLANG_LINK_CLANG_DYLIB
 extern template struct CLANG_TEMPLATE_ABI
     Any::TypeId<clang::dataflow::NoopLattice>;
-}; // namespace llvm
+} // namespace llvm
 
 #endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOP_LATTICE_H
