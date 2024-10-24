@@ -236,10 +236,20 @@ bool TLSVariableHoistPass::tryReplaceTLSCandidate(Function &Fn,
 
   // Generate a bitcast (no type change)
   auto *CastInst = genBitCastInst(Fn, GV);
+  bool InstUsed = false;
 
   // to replace the uses of TLS Candidate
-  for (auto &User : Cand.Users)
+  for (auto &User : Cand.Users) {
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(User.Inst)) {
+      if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+        continue;
+    }
+    InstUsed = true;
     User.Inst->setOperand(User.OpndIdx, CastInst);
+  }
+
+  if (!InstUsed)
+    CastInst->eraseFromParent();
 
   return true;
 }
