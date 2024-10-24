@@ -43,6 +43,7 @@
 #include "ToolChains/PS4CPU.h"
 #include "ToolChains/RISCVToolchain.h"
 #include "ToolChains/SPIRV.h"
+#include "ToolChains/SYCL.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
 #include "ToolChains/UEFI.h"
@@ -784,6 +785,27 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   return RT;
 }
 
+static const char *getDefaultSYCLArch(Compilation &C) {
+  // If -fsycl is supplied we will assume SPIR-V
+  if (C.getDefaultToolChain().getTriple().getArch() == llvm::Triple::x86)
+    return "spirv32";
+  return "spirv64";
+}
+
+static bool addSYCLDefaultTriple(Compilation &C,
+                                 SmallVectorImpl<llvm::Triple> &SYCLTriples) {
+  for (const auto &SYCLTriple : SYCLTriples) {
+    if (SYCLTriple.getSubArch() == llvm::Triple::NoSubArch &&
+        SYCLTriple.isSPIROrSPIRV())
+      return false;
+  }
+  // Add the default triple as it was not found.
+  llvm::Triple DefaultTriple =
+      C.getDriver().MakeSYCLDeviceTriple(getDefaultSYCLArch(C));
+  SYCLTriples.insert(SYCLTriples.begin(), DefaultTriple);
+  return true;
+}
+
 void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                               InputList &Inputs) {
 
@@ -995,6 +1017,42 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   } else if (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ)) {
     Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
     return;
+  }
+
+  //
+  // SYCL
+  //
+  // We need to generate a SYCL toolchain if the user specified -fsycl.
+  bool IsSYCL =
+      C.getInputArgs().hasFlag(options::OPT_fsycl, options::OPT_fno_sycl,
+                               false);
+
+  auto argSYCLIncompatible = [&](OptSpecifier OptId) {
+    if (!IsSYCL)
+      return;
+    if (Arg *IncompatArg = C.getInputArgs().getLastArg(OptId))
+      Diag(clang::diag::err_drv_argument_not_allowed_with)
+          << IncompatArg->getSpelling() << "-fsycl";
+  };
+  // -static-libstdc++ is not compatible with -fsycl.
+  argSYCLIncompatible(options::OPT_static_libstdcxx);
+  // -ffreestanding cannot be used with -fsycl
+  argSYCLIncompatible(options::OPT_ffreestanding);
+
+  llvm::SmallVector<llvm::Triple, 4> UniqueSYCLTriplesVec;
+
+  if (IsSYCL) {
+    addSYCLDefaultTriple(C, UniqueSYCLTriplesVec);
+
+    // We'll need to use the SYCL and host triples as the key into
+    // getOffloadingDeviceToolChain, because the device toolchains we're
+    // going to create will depend on both.
+    const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
+    for (const auto &TT : UniqueSYCLTriplesVec) {
+      auto SYCLTC = &getOffloadingDeviceToolChain(C.getInputArgs(), TT, *HostTC,
+                                                  Action::OFK_SYCL);
+      C.addOffloadDeviceToolChain(SYCLTC, Action::OFK_SYCL);
+    }
   }
 
   //
@@ -2028,6 +2086,19 @@ void Driver::PrintHelp(bool ShowHidden) const {
   getOpts().printHelp(llvm::outs(), Usage.c_str(), DriverTitle.c_str(),
                       ShowHidden, /*ShowAllAliases=*/false,
                       VisibilityMask);
+}
+
+llvm::Triple Driver::MakeSYCLDeviceTriple(StringRef TargetArch) const {
+  SmallVector<StringRef, 5> SYCLAlias = { "spir", "spir64", "spirv32", "spirv64"};
+  if (std::find(SYCLAlias.begin(), SYCLAlias.end(), TargetArch) !=
+      SYCLAlias.end()) {
+    llvm::Triple TT;
+    TT.setArchName(TargetArch);
+    TT.setVendor(llvm::Triple::UnknownVendor);
+    TT.setOS(llvm::Triple::UnknownOS);
+    return TT;
+  }
+  return llvm::Triple(TargetArch);
 }
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
@@ -4185,6 +4256,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) ||
+      C.isOffloadingHostKind(Action::OFK_SYCL) ||
       Args.hasFlag(options::OPT_foffload_via_llvm,
                    options::OPT_fno_offload_via_llvm, false) ||
       Args.hasFlag(options::OPT_offload_new_driver,
@@ -4595,6 +4667,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
       Archs.insert(OffloadArchToString(OffloadArch::HIPDefault));
     else if (Kind == Action::OFK_OpenMP)
       Archs.insert(StringRef());
+    else if (Kind == Action::OFK_SYCL)
+      Archs.insert(StringRef());
   } else {
     Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
     Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
@@ -4619,7 +4693,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   OffloadAction::DeviceDependences DDeps;
 
   const Action::OffloadKind OffloadKinds[] = {
-      Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP};
+      Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP, Action::OFK_SYCL};
 
   for (Action::OffloadKind Kind : OffloadKinds) {
     SmallVector<const ToolChain *, 2> ToolChains;
@@ -4663,6 +4737,11 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
         assert(Phase == PL.back() && "linking must be final compilation step.");
         break;
       }
+
+      // Assemble actions are not used for the SYCL device side.  Both compile
+      // and backend actions are used to generate IR and textual IR if needed.
+      if (Kind == Action::OFK_SYCL && Phase == phases::Assemble)
+        continue;
 
       auto TCAndArch = TCAndArchs.begin();
       for (Action *&A : DeviceActions) {
@@ -4897,12 +4976,13 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        (((Input->getOffloadingToolChain() &&
-           Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
-          TargetDeviceOffloadKind == Action::OFK_HIP) &&
-         (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                       false) ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
+        (TargetDeviceOffloadKind == Action::OFK_SYCL ||
+         (((Input->getOffloadingToolChain() &&
+            Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
+           TargetDeviceOffloadKind == Action::OFK_HIP) &&
+          (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                        false) ||
+           TargetDeviceOffloadKind == Action::OFK_OpenMP)))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) &&
                   (TargetDeviceOffloadKind == Action::OFK_None ||
@@ -6588,6 +6668,19 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
                                                            HostTC, Args);
       break;
     }
+    case Action::OFK_SYCL:
+      switch (Target.getArch()) {
+      case llvm::Triple::spir:
+      case llvm::Triple::spir64:
+      case llvm::Triple::spirv32:
+      case llvm::Triple::spirv64:
+        TC = std::make_unique<toolchains::SYCLToolChain>(*this, Target, HostTC,
+                                                         Args);
+        break;
+      default:
+        break;
+      }
+      break;
     default:
       break;
     }
