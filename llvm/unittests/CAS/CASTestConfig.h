@@ -1,0 +1,56 @@
+//===- CASTestConfig.h ----------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_UNITTESTS_CASTESTCONFIG_H
+#define LLVM_UNITTESTS_CASTESTCONFIG_H
+
+#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Testing/Support/Error.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
+#include "gtest/gtest.h"
+#include <memory>
+
+namespace llvm::unittest::cas {
+std::string getCASPluginPath();
+} // namespace llvm::unittest::cas
+
+struct TestingAndDir {
+  std::shared_ptr<llvm::cas::ObjectStore> CAS;
+  std::shared_ptr<llvm::cas::ActionCache> Cache;
+  std::optional<llvm::unittest::TempDir> Temp;
+};
+
+class CASTest
+    : public testing::TestWithParam<std::function<TestingAndDir(int)>> {
+protected:
+  std::optional<int> NextCASIndex;
+
+  llvm::SmallVector<llvm::unittest::TempDir> Dirs;
+
+  std::shared_ptr<llvm::cas::ObjectStore> createObjectStore() {
+    auto TD = GetParam()(++(*NextCASIndex));
+    if (TD.Temp)
+      Dirs.push_back(std::move(*TD.Temp));
+    return std::move(TD.CAS);
+  }
+  std::shared_ptr<llvm::cas::ActionCache> createActionCache() {
+    auto TD = GetParam()(++(*NextCASIndex));
+    if (TD.Temp)
+      Dirs.push_back(std::move(*TD.Temp));
+    return std::move(TD.Cache);
+  }
+  void SetUp() { NextCASIndex = 0; }
+  void TearDown() {
+    NextCASIndex = std::nullopt;
+    Dirs.clear();
+  }
+};
+
+#endif
