@@ -34,6 +34,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -445,6 +446,16 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
                                          bool IsResolved, MCContext &Ctx,
                                          const MCSubtargetInfo* STI) const {
   unsigned Kind = Fixup.getKind();
+  int64_t Addend = Target.getConstant();
+
+  // For MOVW/MOVT Instructions, the fixup value must already be within a
+  // signed 16bit range.
+  if ((Kind == ARM::fixup_arm_movw_lo16 || Kind == ARM::fixup_arm_movt_hi16 ||
+       Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16) &&
+      (Addend < minIntN(16) || Addend > maxIntN(16))) {
+    Ctx.reportError(Fixup.getLoc(), "Relocation Not In Range");
+    return 0;
+  }
 
   // MachO tries to make .o files that look vaguely pre-linked, so for MOVW/MOVT
   // and .word relocations they put the Thumb bit into the addend if possible.

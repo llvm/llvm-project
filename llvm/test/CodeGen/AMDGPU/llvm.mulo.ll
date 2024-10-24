@@ -448,8 +448,6 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[0:1], off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: umulo_i64_s:
@@ -476,8 +474,6 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; GFX12-NEXT:    s_cselect_b32 s1, 0, s1
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[0:1], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %umulo = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %x, i64 %y)
@@ -661,8 +657,6 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[0:1], off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: smulo_i64_s:
@@ -703,8 +697,6 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[0:1], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %umulo = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %x, i64 %y)

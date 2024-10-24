@@ -4163,7 +4163,9 @@ defm BFMIN_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmin>;
 defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
 } // HasSVEB16B16, UseExperimentalZeroingPseudos
 
-
+let Predicates = [HasSVEBFSCALE] in {
+  def BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", DestructiveBinary>;
+} // HasSVEBFSCALE
 //===----------------------------------------------------------------------===//
 // SME2.1 or SVE2.1 instructions
 //===----------------------------------------------------------------------===//
@@ -4196,6 +4198,22 @@ defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2", int_aarch64_sve_uzpq
 defm TBXQ_ZZZ : sve2_int_perm_tbx<"tbxq", 0b10, int_aarch64_sve_tbxq>;
 defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 } // End HasSVE2p1_or_HasSME2p1
+
+
+//===----------------------------------------------------------------------===//
+// SME2.2 or SVE2.2 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE2p2orSME2p2] in {
+  // SVE2p2 floating-point convert precision down (placing odd), zeroing predicate
+  defm FCVTNT_ZPzZ      : sve_fp_fcvtntz<"fcvtnt">;
+  def FCVTXNT_ZPzZ_DtoS : sve_fp_fcvt2z<0b0010, "fcvtxnt", ZPR32, ZPR64>;
+
+  // SVE2p2 floating-point convert precision up, zeroing predicate
+  defm FCVTLT_ZPzZ      : sve_fp_fcvtltz<"fcvtlt">;
+
+  // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
+  def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
+} // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
 // SVE2 FP8 instructions

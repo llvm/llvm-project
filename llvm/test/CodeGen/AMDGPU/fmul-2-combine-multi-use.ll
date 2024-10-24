@@ -59,8 +59,6 @@ define amdgpu_kernel void @multiple_fadd_use_test_f32(ptr addrspace(1) %out, flo
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v0, v0
 ; GFX11-NEXT:    v_fma_f32 v0, -v1, v0, 1.0
 ; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a11 = fadd float %y, -1.0
   %a12 = call float @llvm.fabs.f32(float %a11)
@@ -128,8 +126,6 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f32(ptr addrspace(1) %out, flo
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b32 v0, v2, s[0:1] offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1
   %mul2 = fmul fast float %x, 2.0
@@ -183,8 +179,6 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f32(ptr addrspace(1) %out, flo
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b32 v0, v2, s[0:1] offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1
   %x.abs = call float @llvm.fabs.f32(float %x)
@@ -245,8 +239,6 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b32 v0, v2, s[0:1] offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1
   %x.abs = call float @llvm.fabs.f32(float %x)
@@ -296,8 +288,6 @@ define amdgpu_kernel void @fmul_x2_xn2_f32(ptr addrspace(1) %out, float %x, floa
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mul_f32 v0, s4, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1] dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1
   %mul2 = fmul fast float %x, 2.0
@@ -346,8 +336,6 @@ define amdgpu_kernel void @fmul_x2_xn3_f32(ptr addrspace(1) %out, float %x, floa
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mul_f32 v0, s4, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1] dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1
   %mul2 = fmul fast float %x, 2.0
@@ -449,8 +437,6 @@ define amdgpu_kernel void @multiple_fadd_use_test_f16(ptr addrspace(1) %out, i16
 ; GFX11-DENORM-NEXT:    v_fma_f16 v0, -v1, v0, 1.0
 ; GFX11-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-DENORM-NEXT:    global_store_b16 v2, v0, s[0:1]
-; GFX11-DENORM-NEXT:    s_nop 0
-; GFX11-DENORM-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: multiple_fadd_use_test_f16:
@@ -473,8 +459,6 @@ define amdgpu_kernel void @multiple_fadd_use_test_f16(ptr addrspace(1) %out, i16
 ; GFX11-FLUSH-NEXT:    v_sub_f16_e32 v0, 1.0, v0
 ; GFX11-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FLUSH-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX11-FLUSH-NEXT:    s_nop 0
-; GFX11-FLUSH-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLUSH-NEXT:    s_endpgm
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
@@ -582,8 +566,6 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16
 ; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    global_store_b16 v0, v2, s[0:1] offset:2 dlc
 ; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-DENORM-NEXT:    s_nop 0
-; GFX11-DENORM-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: multiple_use_fadd_fmac_f16:
@@ -601,8 +583,6 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16
 ; GFX11-FLUSH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLUSH-NEXT:    global_store_b16 v1, v2, s[0:1] offset:2 dlc
 ; GFX11-FLUSH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FLUSH-NEXT:    s_nop 0
-; GFX11-FLUSH-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLUSH-NEXT:    s_endpgm
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
@@ -703,8 +683,6 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f16(ptr addrspace(1) %out, i16
 ; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    global_store_b16 v0, v2, s[0:1] offset:2 dlc
 ; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-DENORM-NEXT:    s_nop 0
-; GFX11-DENORM-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: multiple_use_fadd_fmad_f16:
@@ -722,8 +700,6 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f16(ptr addrspace(1) %out, i16
 ; GFX11-FLUSH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLUSH-NEXT:    global_store_b16 v1, v2, s[0:1] offset:2 dlc
 ; GFX11-FLUSH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FLUSH-NEXT:    s_nop 0
-; GFX11-FLUSH-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLUSH-NEXT:    s_endpgm
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
@@ -833,8 +809,6 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(ptr addrspace(1) %ou
 ; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    global_store_b16 v0, v2, s[2:3] offset:2 dlc
 ; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-DENORM-NEXT:    s_nop 0
-; GFX11-DENORM-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-DENORM-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: multiple_use_fadd_multi_fmad_f16:
@@ -854,8 +828,6 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(ptr addrspace(1) %ou
 ; GFX11-FLUSH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLUSH-NEXT:    global_store_b16 v1, v0, s[2:3] offset:2 dlc
 ; GFX11-FLUSH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FLUSH-NEXT:    s_nop 0
-; GFX11-FLUSH-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FLUSH-NEXT:    s_endpgm
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
@@ -909,8 +881,6 @@ define amdgpu_kernel void @fmul_x2_xn2_f16(ptr addrspace(1) %out, i16 zeroext %x
 ; GFX11-NEXT:    v_mul_f16_e32 v0, s4, v0
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
@@ -962,8 +932,6 @@ define amdgpu_kernel void @fmul_x2_xn3_f16(ptr addrspace(1) %out, i16 zeroext %x
 ; GFX11-NEXT:    v_mul_f16_e32 v0, s4, v0
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half

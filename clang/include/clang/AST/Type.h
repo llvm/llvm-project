@@ -2661,8 +2661,10 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
-  bool isHLSLIntangibleType() const; // Any HLSL intangible type
+  bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
   bool isHLSLAttributedResourceType() const;
+  bool isHLSLIntangibleType()
+      const; // Any HLSL intangible type (builtin, array, class)
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -8450,15 +8452,15 @@ inline bool Type::isOpenCLSpecificType() const {
   }
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
-inline bool Type::isHLSLIntangibleType() const {
+inline bool Type::isHLSLBuiltinIntangibleType() const {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) is##Id##Type() ||
   return
 #include "clang/Basic/HLSLIntangibleTypes.def"
-      isHLSLAttributedResourceType();
+      false;
 }
 
 inline bool Type::isHLSLSpecificType() const {
-  return isHLSLIntangibleType() || isa<HLSLAttributedResourceType>(this);
+  return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType();
 }
 
 inline bool Type::isHLSLAttributedResourceType() const {

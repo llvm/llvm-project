@@ -3398,16 +3398,14 @@ define void @load_i64_stride3_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX-NEXT:    vmovapd 896(%rdi), %ymm0
 ; AVX-NEXT:    vmovapd 704(%rdi), %ymm1
 ; AVX-NEXT:    vmovapd 512(%rdi), %ymm2
-; AVX-NEXT:    vmovapd 320(%rdi), %ymm3
-; AVX-NEXT:    vmovapd 128(%rdi), %ymm4
-; AVX-NEXT:    vblendpd {{.*#+}} ymm7 = mem[0,1],ymm4[2,3]
+; AVX-NEXT:    vmovapd 320(%rdi), %ymm5
+; AVX-NEXT:    vmovapd 128(%rdi), %ymm6
+; AVX-NEXT:    vblendpd {{.*#+}} ymm7 = mem[0,1],ymm6[2,3]
 ; AVX-NEXT:    vmovupd %ymm7, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vmovapd %ymm4, %ymm6
-; AVX-NEXT:    vmovupd %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vblendpd {{.*#+}} ymm8 = mem[0,1],ymm3[2,3]
+; AVX-NEXT:    vmovupd %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX-NEXT:    vblendpd {{.*#+}} ymm8 = mem[0,1],ymm5[2,3]
 ; AVX-NEXT:    vmovupd %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vmovapd %ymm3, %ymm5
-; AVX-NEXT:    vmovupd %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX-NEXT:    vmovupd %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vblendpd {{.*#+}} ymm9 = mem[0,1],ymm2[2,3]
 ; AVX-NEXT:    vmovupd %ymm9, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovapd %ymm2, %ymm4
