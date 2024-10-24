@@ -142,6 +142,26 @@ __declspec(noinline) void *_recalloc_base(void *p, size_t n, size_t elem_size) {
   return _recalloc(p, n, elem_size);
 }
 
+__declspec(noinline) void *_aligned_malloc(size_t alignment, size_t size) {
+  GET_STACK_TRACE_MALLOC;
+  return asan_aligned_alloc(alignment, size, &stack);
+}
+
+__declspec(noinline) void *_aligned_realloc(void *p, size_t alignment,
+                                            size_t size) {
+  GET_STACK_TRACE_MALLOC;
+  void *n = asan_aligned_alloc(alignment, size, &stack);
+  if (n) {
+    size_t osize = _msize(p);
+    REAL(memcpy)(n, p, Min<size_t>(osize, size));
+    free(p);
+  }
+
+  return n;
+}
+
+__declspec(noinline) void *_aligned_free(void *p) { free(p); }
+
 __declspec(noinline) void *_expand(void *memblock, size_t size) {
   // _expand is used in realloc-like functions to resize the buffer if possible.
   // We don't want memory to stand still while resizing buffers, so return 0.
