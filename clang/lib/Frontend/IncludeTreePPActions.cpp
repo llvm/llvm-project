@@ -135,6 +135,7 @@ public:
         return reportError(FilenameBlob.takeError());
 
       SourceManager &SM = PP.getSourceManager();
+      ModuleMap &MMap = PP.getHeaderSearchInfo().getModuleMap();
       Expected<FileEntryRef> FE =
           SM.getFileManager().getFileRef(FilenameBlob->getData(),
                                          /*OpenFile=*/true);
@@ -160,14 +161,13 @@ public:
           return reportErrorTwine(llvm::Twine("failed to find module '") +
                                   ModuleComponents[0] + "'");
         for (StringRef Sub : ArrayRef(ModuleComponents).drop_front()) {
-          M = M->findOrInferSubmodule(Sub);
+          M = MMap.findOrInferSubmodule(M, Sub);
           if (!M)
             return reportErrorTwine(
                 llvm::Twine("failed to find or infer submodule '") + Sub + "'");
         }
 
         // Add to known headers for the module.
-        ModuleMap &MMap = PP.getHeaderSearchInfo().getModuleMap();
         Module::Header H{"", "", *FE};
         MMap.addHeader(M, std::move(H), ModuleMap::NormalHeader);
       }
