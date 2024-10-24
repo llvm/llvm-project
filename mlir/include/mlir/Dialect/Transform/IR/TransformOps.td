@@ -24,10 +24,7 @@ include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorRegions",
-         "getRegionInvocationBounds"]>,
-     DeclareOpInterfaceMethods<TransformOpInterface>,
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      IsolatedFromAbove, PossibleTopLevelTransformOpTrait,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">]> {
@@ -37,8 +34,8 @@ def AlternativesOp : TransformDialectOp<"alternatives",
     sequence of transform operations to be applied to the same payload IR. The
     regions are visited in order of appearance, and transforms in them are
     applied in their respective order of appearance. If one of these transforms
-    fails to apply, the remaining ops in the same region are skipped an the next
-    region is attempted. If all transformations in a region succeed, the
+    fails to apply, the remaining ops in the same region are skipped and the
+    next region is attempted. If all transformations in a region succeed, the
     remaining regions are skipped and the entire "alternatives" transformation
     succeeds. If all regions contained a failing transformation, the entire
     "alternatives" transformation fails.
@@ -610,8 +607,6 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
 def ForeachOp : TransformDialectOp<"foreach",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-         "getSuccessorRegions", "getEntrySuccessorOperands"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
   let summary = "Executes the body for each element of the payload";
@@ -1358,7 +1353,8 @@ def VerifyOp : TransformDialectOp<"verify",
 }
 
 def YieldOp : TransformDialectOp<"yield",
-    [Terminator, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+    [Terminator, ReturnLike,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Yields operation handles from a transform IR region";
   let description = [{
     This terminator operation yields operation handles from regions of the
