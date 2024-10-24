@@ -37,6 +37,14 @@ functions:
     arguments:
       - type: const time_t *
       - type: char *
+  - name: ctime_s
+    standard:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *
+      - type: size_t
+      - type: const time_t *
   - name: clock
     standard:
       - stdc
