@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include <optional>
 
 #ifndef MLIR_DIALECT_TRANSFORM_UTILS_DIAGNOSEDSILENCEABLEFAILURE_H
