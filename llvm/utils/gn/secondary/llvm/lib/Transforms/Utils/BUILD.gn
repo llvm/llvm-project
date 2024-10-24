@@ -40,7 +40,6 @@ static_library("Utils") {
     "GlobalStatus.cpp",
     "GuardUtils.cpp",
     "HelloWorld.cpp",
-    "IRNormalizer.cpp",
     "InjectTLIMappings.cpp",
     "InlineFunction.cpp",
     "InstructionNamer.cpp",
