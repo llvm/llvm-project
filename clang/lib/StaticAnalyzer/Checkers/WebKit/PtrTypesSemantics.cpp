@@ -414,7 +414,8 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || Name.find("__builtin") == 0)
+        Name == "bitwise_cast" || Name.find("__builtin") == 0 ||
+        Name == "__libcpp_verbose_abort")
       return true;
 
     return IsFunctionTrivial(Callee);
