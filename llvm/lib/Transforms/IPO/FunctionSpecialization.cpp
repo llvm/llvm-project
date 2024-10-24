@@ -680,7 +680,9 @@ bool FunctionSpecializer::run() {
       continue;
 
     // When specialization on literal constants is disabled, only consider
-    // recursive functions when running multiple times.
+    // recursive functions when running multiple times to save wasted analysis,
+    // as we will not be able to specialize on any newly found literal constant
+    // return values.
     if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
       continue;
 
