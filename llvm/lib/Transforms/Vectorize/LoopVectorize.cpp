@@ -9189,6 +9189,14 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   // Replace VPValues for known constant strides guaranteed by predicate scalar
   // evolution.
+  auto CanUseVersionedStride = [&Plan](VPUser &U, unsigned) {
+    auto *R = dyn_cast<VPRecipeBase>(&U);
+    if (!R)
+      return false;
+    return R->getParent()->getParent() ||
+           R->getParent() ==
+               Plan->getVectorLoopRegion()->getSinglePredecessor();
+  };
   for (auto [_, Stride] : Legal->getLAI()->getSymbolicStrides()) {
     auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
     auto *ScevStride = dyn_cast<SCEVConstant>(PSE.getSCEV(StrideV));
@@ -9199,7 +9207,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     auto *CI = Plan->getOrAddLiveIn(
         ConstantInt::get(Stride->getType(), ScevStride->getAPInt()));
     if (VPValue *StrideVPV = Plan->getLiveIn(StrideV))
-      StrideVPV->replaceAllUsesWith(CI);
+      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
 
     // The versioned value may not be used in the loop directly but through a
     // sext/zext. Add new live-ins in those cases.
@@ -9213,7 +9221,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       APInt C = isa<SExtInst>(U) ? ScevStride->getAPInt().sext(BW)
                                  : ScevStride->getAPInt().zext(BW);
       VPValue *CI = Plan->getOrAddLiveIn(ConstantInt::get(U->getType(), C));
-      StrideVPV->replaceAllUsesWith(CI);
+      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
     }
   }
 
