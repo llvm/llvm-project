@@ -43,11 +43,29 @@ public:
   static char ID;
 };
 
+class MyTypeWithConstructor
+    : public RTTIExtends<MyTypeWithConstructor, MyBaseType> {
+public:
+  static char ID;
+
+  MyTypeWithConstructor(int) {}
+};
+
+class MyDerivedTypeWithConstructor
+    : public RTTIExtends<MyDerivedTypeWithConstructor, MyTypeWithConstructor> {
+public:
+  static char ID;
+
+  MyDerivedTypeWithConstructor(int x) : RTTIExtends(x) {}
+};
+
 char MyBaseType::ID = 0;
 char MyDerivedType::ID = 0;
 char MyOtherDerivedType::ID = 0;
 char MyDeeperDerivedType::ID = 0;
 char MyMultipleInheritanceType::ID = 0;
+char MyTypeWithConstructor::ID = 0;
+char MyDerivedTypeWithConstructor::ID = 0;
 
 TEST(ExtensibleRTTI, isa) {
   MyBaseType B;
@@ -116,6 +134,10 @@ TEST(ExtensibleRTTI, dyn_cast) {
   EXPECT_EQ(dyn_cast<MyDerivedType>(&MI), &D);
   EXPECT_EQ(dyn_cast<MyOtherDerivedType>(&MI), &OD);
   EXPECT_EQ(dyn_cast<MyMultipleInheritanceType>(&MI), &MI);
+}
+
+TEST(ExtensibleRTTI, multiple_inheritance_constructor) {
+  MyDerivedTypeWithConstructor V(42);
 }
 
 } // namespace
