@@ -5469,7 +5469,7 @@ multiclass IntegerToFPSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, SDPa
   // 64-bit to single-precision
   def SDr: BaseIntegerToFPUnscaled<rmode, opcode, FPR64, FPR32, f32, asm, node> {
     let Inst{31} = 1; // 64-bit FPR flag
-    let Inst{23-22} = 0b00; // 16-bit FPR flag
+    let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
 }
 
