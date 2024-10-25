@@ -61,7 +61,7 @@ using ErrSetT = std::unordered_set<ErrPtrT, ErrPtrHash, ErrPtrEqual>;
 ErrSetT &Errors();
 
 struct offload_impl_result_t {
-  offload_impl_result_t(std::nullptr_t) : Result(OFFLOAD_SUCCESS) {}
+  offload_impl_result_t(std::nullptr_t) : Result(OFFLOAD_RESULT_SUCCESS) {}
   offload_impl_result_t(offload_errc_t Code) {
     if (Code == OFFLOAD_ERRC_SUCCESS) {
       Result = nullptr;
