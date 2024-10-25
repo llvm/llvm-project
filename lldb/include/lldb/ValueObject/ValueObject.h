@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECT_H
-#define LLDB_CORE_VALUEOBJECT_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECT_H
+#define LLDB_VALUEOBJECT_VALUEOBJECT_H
 
 #include "lldb/Core/SwiftScratchContextReader.h"
 #include "lldb/Core/Value.h"
@@ -1088,7 +1088,7 @@ protected:
   void SetPreferredDisplayLanguageIfNeeded(lldb::LanguageType);
 
 protected:
-  virtual void DoUpdateChildrenAddressType(ValueObject &valobj){};
+  virtual void DoUpdateChildrenAddressType(ValueObject &valobj) {};
 
 private:
   virtual CompilerType MaybeCalculateCompleteType();
@@ -1109,4 +1109,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECT_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECT_H

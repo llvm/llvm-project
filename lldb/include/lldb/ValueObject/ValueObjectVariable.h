@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTVARIABLE_H
-#define LLDB_CORE_VALUEOBJECTVARIABLE_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTVARIABLE_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTVARIABLE_H
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -68,7 +68,7 @@ public:
 
 protected:
   bool UpdateValue() override;
-  
+
   void DoUpdateChildrenAddressType(ValueObject &valobj) override;
 
   CompilerType GetCompilerTypeImpl() override;
@@ -90,4 +90,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTVARIABLE_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTVARIABLE_H

@@ -6,20 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectCast.h"
-#include "lldb/Core/ValueObjectChild.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectDynamicValue.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectSyntheticFilter.h"
-#include "lldb/Core/ValueObjectVTable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -50,6 +43,14 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectCast.h"
+#include "lldb/ValueObject/ValueObjectChild.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectDynamicValue.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectSyntheticFilter.h"
+#include "lldb/ValueObject/ValueObjectVTable.h"
 #include "lldb/lldb-private-types.h"
 
 #ifdef LLDB_ENABLE_SWIFT
@@ -70,8 +71,6 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
-
-#include <lldb/Core/ValueObject.h>
 
 namespace lldb_private {
 class ExecutionContextScope;
@@ -346,8 +345,6 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   }
   return compiler_type;
 }
-
-
 
 DataExtractor &ValueObject::GetDataExtractor() {
   UpdateValueIfNeeded(false);
@@ -661,8 +658,8 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
   // a valid summary string or function because the type is not complete and
   // no member variables or member functions will be available.
   if (GetCompilerType().IsForcefullyCompleted()) {
-      destination = "<incomplete type>";
-      return true;
+    destination = "<incomplete type>";
+    return true;
   }
 
   // ideally we would like to bail out if passing NULL, but if we do so we end
@@ -1820,8 +1817,7 @@ std::optional<SwiftScratchContextReader> ValueObject::GetSwiftScratchContext() {
 }
 #endif // LLDB_ENABLE_SWIFT
 
-void ValueObject::AddSyntheticChild(ConstString key,
-                                    ValueObject *valobj) {
+void ValueObject::AddSyntheticChild(ConstString key, ValueObject *valobj) {
   m_synthetic_children[key] = valobj;
 }
 
@@ -3049,13 +3045,13 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 }
 
 ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
-    return ValueObjectCast::Create(*this, GetName(), compiler_type);
+  return ValueObjectCast::Create(*this, GetName(), compiler_type);
 }
 
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   // Only allow casts if the original type is equal or larger than the cast
   // type, unless we know this is a load address.  Getting the size wrong for
-  // a host side storage could leak lldb memory, so we absolutely want to 
+  // a host side storage could leak lldb memory, so we absolutely want to
   // prevent that.  We may not always get the right value, for instance if we
   // have an expression result value that's copied into a storage location in
   // the target may not have copied enough memory.  I'm not trying to fix that
@@ -3070,13 +3066,12 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   Status error;
   CompilerType my_type = GetCompilerType();
 
-  ExecutionContextScope *exe_scope
-      = ExecutionContext(GetExecutionContextRef())
-          .GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope)
-      <= GetCompilerType().GetByteSize(exe_scope) 
-      || m_value.GetValueType() == Value::ValueType::LoadAddress)
-        return DoCast(compiler_type);
+  ExecutionContextScope *exe_scope =
+      ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope();
+  if (compiler_type.GetByteSize(exe_scope) <=
+          GetCompilerType().GetByteSize(exe_scope) ||
+      m_value.GetValueType() == Value::ValueType::LoadAddress)
+    return DoCast(compiler_type);
 
   error = Status::FromErrorString(
       "Can only cast to a type that is equal to or smaller "
@@ -3863,8 +3858,6 @@ bool ValueObject::CanProvideValue() {
   CompilerType type = GetCompilerType();
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
-
-
 
 ValueObjectSP ValueObject::Persist() {
   if (!UpdateValueIfNeeded())

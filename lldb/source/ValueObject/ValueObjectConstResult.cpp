@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
-#include "lldb/Core/ValueObjectDynamicValue.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
@@ -17,6 +16,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/ValueObject/ValueObjectDynamicValue.h"
 #include <optional>
 
 namespace lldb_private {
@@ -97,8 +97,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
 }
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
-                                             Value &value,
-                                             ConstString name,
+                                             Value &value, ConstString name,
                                              Module *module) {
   auto manager_sp = ValueObjectManager::Create();
   return (new ValueObjectConstResult(exe_scope, *manager_sp, value, name,
@@ -141,8 +140,7 @@ ValueObjectConstResult::ValueObjectConstResult(
     ExecutionContextScope *exe_scope, ValueObjectManager &manager,
     const CompilerType &compiler_type, ConstString name, lldb::addr_t address,
     AddressType address_type, uint32_t addr_byte_size)
-    : ValueObject(exe_scope, manager), m_type_name(),
-      m_impl(this, address) {
+    : ValueObject(exe_scope, manager), m_type_name(), m_impl(this, address) {
   m_value.GetScalar() = address;
   m_data.SetAddressByteSize(addr_byte_size);
   m_value.GetScalar().GetData(m_data, addr_byte_size);
@@ -208,8 +206,8 @@ lldb::ValueType ValueObjectConstResult::GetValueType() const {
 std::optional<uint64_t> ValueObjectConstResult::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   if (!m_byte_size) {
-    if (auto size =
-        GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope()))
+    if (auto size = GetCompilerType().GetByteSize(
+            exe_ctx.GetBestExecutionContextScope()))
       SetByteSize(*size);
   }
   return m_byte_size;

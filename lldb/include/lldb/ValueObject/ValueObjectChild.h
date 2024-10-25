@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCHILD_H
-#define LLDB_CORE_VALUEOBJECTCHILD_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTCHILD_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTCHILD_H
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
@@ -76,10 +76,9 @@ protected:
   friend class ValueObjectVTable;
 
   ValueObjectChild(ValueObject &parent, const CompilerType &compiler_type,
-                   ConstString name, uint64_t byte_size,
-                   int32_t byte_offset, uint32_t bitfield_bit_size,
-                   uint32_t bitfield_bit_offset, bool is_base_class,
-                   bool is_deref_of_parent,
+                   ConstString name, uint64_t byte_size, int32_t byte_offset,
+                   uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
+                   bool is_base_class, bool is_deref_of_parent,
                    AddressType child_ptr_or_ref_addr_type,
                    uint64_t language_flags);
 
@@ -89,4 +88,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCHILD_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTCHILD_H

@@ -34,6 +34,7 @@ add_lldb_library(lldbExpression ${PLUGIN_DEPENDENCY_ARG}
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
 
     # Begin Swift Mods
     ${SWIFT_LIBS}

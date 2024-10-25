@@ -64,6 +64,7 @@ add_lldb_library(lldbSymbol ${PLUGIN_DEPENDENCY_ARG}
     lldbHost
     lldbTarget
     lldbUtility
+    lldbValueObject
     ${LLDB_PLUGIN_DEPENDENCIES}
     ${SWIFT_LIBS}
 
