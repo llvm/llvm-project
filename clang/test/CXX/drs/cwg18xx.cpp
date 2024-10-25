@@ -707,4 +707,19 @@ struct A {
 struct B : A {
   void k(int) {} // OK, shadows A::k
 };
+
+void l() {}
+void l(...) {}
+
+#if __cplusplus >= 201103L
+template <typename T>
+void m(T) {}
+template <typename... Ts>
+void m(Ts...) {}
+
+template <typename T, typename U>
+void m2(T, U) {}
+template <typename... Ts, typename U>
+void m2(Ts..., U) {}
+#endif
 } // namespace cwg1898
