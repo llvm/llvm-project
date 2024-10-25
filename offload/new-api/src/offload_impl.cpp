@@ -65,6 +65,8 @@ void initPlugins() {
       }
     }
   }
+
+  offloadConfig().TracingEnabled = std::getenv("OFFLOAD_TRACE");
 }
 
 // TODO: We can properly reference count here and manage the resources in a more
