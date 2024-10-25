@@ -209,7 +209,7 @@ constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
 // Default pointer type specifications.
 constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
     // p0:64:64:64:64
-    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false},
+    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false, false},
 };
 
 DataLayout::DataLayout()
@@ -437,7 +437,8 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
       return Err;
   }
   if (AddrSpace == 0 && (NonIntegralRepr || UnstableRepr))
-    return createStringError("address space 0 cannot be non-integral");
+    return createStringError(
+        "address space 0 cannot be non-integral or unstable");
 
   // Size. Required, cannot be zero.
   unsigned BitWidth;

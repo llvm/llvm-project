@@ -341,9 +341,9 @@ public:
   /// rounded up to a whole number of bytes.
   unsigned getIndexSize(unsigned AS) const;
 
-  /// Return the address spaces containing non-integral pointers.  Pointers in
-  /// this address space don't have a well-defined bitwise representation.
-  SmallVector<unsigned, 8> getNonIntegralAddressSpaces() const {
+  /// Return the address spaces with special pointer semantics (such as being
+  /// unstable or non-integral).
+  SmallVector<unsigned, 8> getNonStandardAddressSpaces() const {
     SmallVector<unsigned, 8> AddrSpaces;
     for (const PointerSpec &PS : PointerSpecs) {
       if (PS.HasNonIntegralRepresentation || PS.HasUnstableRepresentation)

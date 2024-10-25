@@ -709,8 +709,10 @@ Pointers are not represented as just an address, but may instead include
 additional metadata such as bounds information or a temporal identifier.
 Examples include AMDGPU buffer descriptors with a 128-bit fat pointer and a
 32-bit offset, or CHERI capabilities that contain bounds, permissions and an
-out-of-band validity bit. In general, these pointers cannot be re-created
-from just an integer value.
+out-of-band validity bit. In general, valid non-integral pointers cannot be
+created from just an integer value: while ``inttoptr`` yields a deterministic
+bitwise pattern, the resulting value is not guaranteed to be a valid
+dereferenceable pointer.
 
 In most cases pointers with a non-integral representation behave exactly the
 same as an integral pointer, the only difference is that it is not possible to
@@ -3200,9 +3202,11 @@ as follows:
     this set are considered to support most general arithmetic operations
     efficiently.
 ``ni:<address space0>:<address space1>:<address space2>...``
-    This specifies pointer types with the specified address spaces
-    as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
-    address space cannot be specified as non-integral.
+    This marks pointer types with the specified address spaces
+    as :ref:`non-integral and unstable <nointptrtype>`.
+    The ``0`` address space cannot be specified as non-integral.
+    It is only supported for backwards compatibility, the flags of the ``p``
+    specifier should be used instead for new code.
 
 On every specification that takes a ``<abi>:<pref>``, specifying the
 ``<pref>`` alignment is optional. If omitted, the preceding ``:``
@@ -12189,7 +12193,7 @@ If ``value`` is smaller than ``ty2`` then a zero extension is done. If
 ``value`` is larger than ``ty2`` then a truncation is done. If they are
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
-For :ref:`non-integral pointers <_nointptrtype>` the ``ptrtoint`` instruction
+For :ref:`non-integral pointers <nointptrtype>` the ``ptrtoint`` instruction
 may involve additional transformations beyond truncations or extension.
 
 Example:

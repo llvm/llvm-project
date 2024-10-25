@@ -412,7 +412,7 @@ TEST(DataLayout, ParsePointerSpec) {
                         "pn0:64:64", "pu0:64:64", "pun0:64:64", "pnu0:64:64"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
-        FailedWithMessage("address space 0 cannot be non-integral"));
+        FailedWithMessage("address space 0 cannot be non-integral or unstable"));
 }
 
 TEST(DataLayoutTest, ParseNativeIntegersSpec) {
@@ -569,12 +569,12 @@ TEST(DataLayout, GetPointerPrefAlignment) {
 
 TEST(DataLayout, IsNonIntegralAddressSpace) {
   DataLayout Default;
-  EXPECT_THAT(Default.getNonIntegralAddressSpaces(), ::testing::SizeIs(0));
+  EXPECT_THAT(Default.getNonStandardAddressSpaces(), ::testing::SizeIs(0));
   EXPECT_FALSE(Default.isNonIntegralAddressSpace(0));
   EXPECT_FALSE(Default.isNonIntegralAddressSpace(1));
 
   DataLayout Custom = cantFail(DataLayout::parse("ni:2:16777215"));
-  EXPECT_THAT(Custom.getNonIntegralAddressSpaces(),
+  EXPECT_THAT(Custom.getNonStandardAddressSpaces(),
               ::testing::ElementsAreArray({2U, 16777215U}));
   EXPECT_FALSE(Custom.isNonIntegralAddressSpace(0));
   EXPECT_FALSE(Custom.isNonIntegralAddressSpace(1));
@@ -582,37 +582,45 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
   EXPECT_TRUE(Custom.isNonIntegralAddressSpace(16777215));
 
   // Pointers can be marked as non-integral using 'pn'
-  DataLayout NonIntegral = cantFail(DataLayout::parse("pn2:64:64:64:32"));
-  EXPECT_TRUE(NonIntegral.isNonIntegralAddressSpace(2));
-  EXPECT_TRUE(NonIntegral.hasNonIntegralRepresentation(2));
-  EXPECT_FALSE(NonIntegral.hasUnstableRepresentation(2));
-  EXPECT_TRUE(NonIntegral.shouldAvoidIntToPtr(2));
-  EXPECT_FALSE(NonIntegral.shouldAvoidPtrToInt(2));
+  Custom = cantFail(DataLayout::parse("pn2:64:64:64:32"));
+  EXPECT_TRUE(Custom.isNonIntegralAddressSpace(2));
+  EXPECT_TRUE(Custom.hasNonIntegralRepresentation(2));
+  EXPECT_FALSE(Custom.hasUnstableRepresentation(2));
+  EXPECT_TRUE(Custom.shouldAvoidIntToPtr(2));
+  EXPECT_FALSE(Custom.shouldAvoidPtrToInt(2));
+  EXPECT_THAT(Custom.getNonStandardAddressSpaces(),
+              ::testing::ElementsAreArray({2U}));
 
   // Pointers can be marked as unstable using 'pu'
-  DataLayout Unstable = cantFail(DataLayout::parse("pu2:64:64:64:32"));
-  EXPECT_TRUE(Unstable.isNonIntegralAddressSpace(2));
-  EXPECT_TRUE(Unstable.hasUnstableRepresentation(2));
-  EXPECT_FALSE(Unstable.hasNonIntegralRepresentation(2));
-  EXPECT_TRUE(Unstable.shouldAvoidPtrToInt(2));
-  EXPECT_TRUE(Unstable.shouldAvoidIntToPtr(2));
+  Custom = cantFail(DataLayout::parse("pu2:64:64:64:32"));
+  EXPECT_TRUE(Custom.isNonIntegralAddressSpace(2));
+  EXPECT_TRUE(Custom.hasUnstableRepresentation(2));
+  EXPECT_FALSE(Custom.hasNonIntegralRepresentation(2));
+  EXPECT_TRUE(Custom.shouldAvoidPtrToInt(2));
+  EXPECT_TRUE(Custom.shouldAvoidIntToPtr(2));
+  EXPECT_THAT(Custom.getNonStandardAddressSpaces(),
+              ::testing::ElementsAreArray({2U}));
 
   // Both properties can also be set using 'pnu'/'pun'
-  for (auto Layout : {"pnu2:64:64:64:32", "pun2:64:64:64:32"}) {
+  for (const auto *Layout : {"pnu2:64:64:64:32", "pun2:64:64:64:32"}) {
     DataLayout DL = cantFail(DataLayout::parse(Layout));
     EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
     EXPECT_TRUE(DL.hasNonIntegralRepresentation(2));
     EXPECT_TRUE(DL.hasUnstableRepresentation(2));
+    EXPECT_THAT(DL.getNonStandardAddressSpaces(),
+                ::testing::ElementsAreArray({2U}));
   }
 
   // For backwards compatibility, the ni DataLayout part overrides any p[n][u].
-  for (auto Layout : {"ni:2-pn2:64:64:64:32", "ni:2-pnu2:64:64:64:32",
-                      "ni:2-pu2:64:64:64:32", "pn2:64:64:64:32-ni:2",
-                      "pnu2:64:64:64:32-ni:2", "pu2:64:64:64:32-ni:2"}) {
+  for (const auto *Layout : {"ni:2-pn2:64:64:64:32", "ni:2-pnu2:64:64:64:32",
+                             "ni:2-pu2:64:64:64:32", "pn2:64:64:64:32-ni:2",
+                             "pnu2:64:64:64:32-ni:2", "pu2:64:64:64:32-ni:2"}) {
     DataLayout DL = cantFail(DataLayout::parse(Layout));
     EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
     EXPECT_TRUE(DL.hasNonIntegralRepresentation(2));
     EXPECT_TRUE(DL.hasUnstableRepresentation(2));
+    EXPECT_THAT(DL.getNonStandardAddressSpaces(),
+                ::testing::ElementsAreArray({2U}));
   }
 }
 
