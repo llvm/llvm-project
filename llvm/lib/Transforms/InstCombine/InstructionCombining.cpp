@@ -3753,6 +3753,8 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   }
 
   // Replace all dominated uses of the condition with true/false
+  // Ignore constant expressions to avoid iterating over uses on other
+  // functions.
   if (!isa<Constant>(Cond) && BI.getSuccessor(0) != BI.getSuccessor(1)) {
     for (auto &U : make_early_inc_range(Cond->uses())) {
       BasicBlockEdge Edge0(BI.getParent(), BI.getSuccessor(0));
