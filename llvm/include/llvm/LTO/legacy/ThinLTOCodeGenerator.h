@@ -35,8 +35,15 @@ namespace llvm {
 class StringRef;
 class TargetMachine;
 
+/// ThinLTOCodeGeneratorImpl - Namespace used for ThinLTOCodeGenerator
+/// implementation details. It should be considered private to the
+/// implementation.
+namespace ThinLTOCodeGeneratorImpl {
+struct TargetMachineBuilder;
+}
+
 /// Helper to gather options relevant to the target machine creation
-struct TargetMachineBuilder {
+struct ThinLTOCodeGeneratorImpl::TargetMachineBuilder {
   Triple TheTriple;
   std::string MCpu;
   std::string MAttr;
@@ -69,7 +76,8 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder);
+      bool Freestanding,
+      const ThinLTOCodeGeneratorImpl::TargetMachineBuilder &TMBuilder);
 };
 
 /// This class define an interface similar to the LTOCodeGenerator, but adapted
@@ -175,7 +183,8 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder,
+      bool Freestanding,
+      const ThinLTOCodeGeneratorImpl::TargetMachineBuilder &TMBuilder,
       std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger =
           nullptr);
 
@@ -350,7 +359,7 @@ public:
 
 private:
   /// Helper factory to build a TargetMachine
-  TargetMachineBuilder TMBuilder;
+  ThinLTOCodeGeneratorImpl::TargetMachineBuilder TMBuilder;
 
   /// Vector holding the in-memory buffer containing the produced binaries, when
   /// SavedObjectsDirectoryPath isn't set.

@@ -77,6 +77,7 @@
 #endif
 
 using namespace llvm;
+using namespace ThinLTOCodeGeneratorImpl;
 
 #define DEBUG_TYPE "thinlto"
 
