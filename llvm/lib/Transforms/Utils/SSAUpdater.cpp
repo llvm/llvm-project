@@ -318,6 +318,7 @@ public:
                                SSAUpdater *Updater) {
     PHINode *PHI =
         PHINode::Create(Updater->ProtoType, NumPreds, Updater->ProtoName);
+    PHI->setDebugLoc(DebugLoc::getUnknown());
     PHI->insertBefore(BB->begin());
     return PHI;
   }
