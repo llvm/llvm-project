@@ -1451,7 +1451,6 @@ module std [system] {
       textual header "__locale_dir/locale_base_api/fuchsia.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
       textual header "__locale_dir/locale_base_api/musl.h"
-      textual header "__locale_dir/locale_base_api/newlib.h"
       textual header "__locale_dir/locale_base_api/openbsd.h"
       textual header "__locale_dir/locale_base_api/win32.h"
     }
