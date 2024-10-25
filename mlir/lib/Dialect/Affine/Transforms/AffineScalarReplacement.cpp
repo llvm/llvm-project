@@ -16,7 +16,9 @@
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OpDefinition.h"
 #include <algorithm>
 
 namespace mlir {
@@ -40,13 +42,13 @@ struct AffineScalarReplacement
 
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>>
+std::unique_ptr<AffineScopePassBase>
 mlir::affine::createAffineScalarReplacementPass() {
   return std::make_unique<AffineScalarReplacement>();
 }
 
 void AffineScalarReplacement::runOnOperation() {
-  affineScalarReplace(getOperation(), getAnalysis<DominanceInfo>(),
-                      getAnalysis<PostDominanceInfo>(),
-                      getAnalysis<AliasAnalysis>());
+  affineScalarReplace(
+      getOperation(), getAnalysis<DominanceInfo>(),
+      getAnalysis<PostDominanceInfo>(), getAnalysis<AliasAnalysis>());
 }

@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -81,24 +82,24 @@ struct SimplifyAffineStructures
 
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>>
+std::unique_ptr<AffineScopePassBase>
 mlir::affine::createSimplifyAffineStructuresPass() {
   return std::make_unique<SimplifyAffineStructures>();
 }
 
 void SimplifyAffineStructures::runOnOperation() {
-  auto func = getOperation();
+  Operation *func = getOperation();
   simplifiedAttributes.clear();
-  RewritePatternSet patterns(func.getContext());
-  AffineApplyOp::getCanonicalizationPatterns(patterns, func.getContext());
-  AffineForOp::getCanonicalizationPatterns(patterns, func.getContext());
-  AffineIfOp::getCanonicalizationPatterns(patterns, func.getContext());
+  RewritePatternSet patterns(func->getContext());
+  AffineApplyOp::getCanonicalizationPatterns(patterns, func->getContext());
+  AffineForOp::getCanonicalizationPatterns(patterns, func->getContext());
+  AffineIfOp::getCanonicalizationPatterns(patterns, func->getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
   // The simplification of affine attributes will likely simplify the op. Try to
   // fold/apply canonicalization patterns when we have affine dialect ops.
   SmallVector<Operation *> opsToSimplify;
-  func.walk([&](Operation *op) {
+  func->walk([&](Operation *op) {
     for (auto attr : op->getAttrs()) {
       if (auto mapAttr = dyn_cast<AffineMapAttr>(attr.getValue()))
         simplifyAndUpdateAttribute(op, attr.getName(), mapAttr);

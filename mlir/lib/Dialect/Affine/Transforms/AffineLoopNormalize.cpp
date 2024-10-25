@@ -38,7 +38,7 @@ struct AffineLoopNormalizePass
   }
 
   void runOnOperation() override {
-    getOperation().walk([&](Operation *op) {
+    getOperation()->walk([&](Operation *op) {
       if (auto affineParallel = dyn_cast<AffineParallelOp>(op))
         normalizeAffineParallel(affineParallel);
       else if (auto affineFor = dyn_cast<AffineForOp>(op))
@@ -49,7 +49,7 @@ struct AffineLoopNormalizePass
 
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>>
+std::unique_ptr<AffineScopePassBase>
 mlir::affine::createAffineLoopNormalizePass(bool promoteSingleIter) {
   return std::make_unique<AffineLoopNormalizePass>(promoteSingleIter);
 }

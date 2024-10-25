@@ -52,7 +52,7 @@ struct PipelineDataTransfer
 
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.
-std::unique_ptr<OperationPass<func::FuncOp>>
+std::unique_ptr<AffineScopePassBase>
 mlir::affine::createPipelineDataTransferPass() {
   return std::make_unique<PipelineDataTransfer>();
 }
@@ -142,7 +142,7 @@ void PipelineDataTransfer::runOnOperation() {
   // gets deleted and replaced by a prologue, a new steady-state loop and an
   // epilogue).
   forOps.clear();
-  getOperation().walk([&](AffineForOp forOp) { forOps.push_back(forOp); });
+  getOperation()->walk([&](AffineForOp forOp) { forOps.push_back(forOp); });
   for (auto forOp : forOps)
     runOnAffineForOp(forOp);
 }

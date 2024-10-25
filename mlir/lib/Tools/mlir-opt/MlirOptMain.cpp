@@ -460,7 +460,7 @@ performActions(raw_ostream &os,
   context->enableMultithreading(wasThreadingEnabled);
 
   // Prepare the pass manager, applying command-line and reproducer options.
-  PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
+  PassManager pm(op.get()->getName(), PassManager::Nesting::ImplicitAny);
   pm.enableVerifier(config.shouldVerifyPasses());
   if (failed(applyPassManagerCLOptions(pm)))
     return failure();

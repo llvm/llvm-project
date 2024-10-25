@@ -16,6 +16,7 @@
 #define MLIR_DIALECT_AFFINE_LOOPUTILS_H
 
 #include "mlir/IR/Block.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include <optional>
@@ -101,7 +102,7 @@ LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
 /// Identify valid and profitable bands of loops to tile. This is currently just
 /// a temporary placeholder to test the mechanics of tiled code generation.
 /// Returns all maximal outermost perfect loop nests to tile.
-void getTileableBands(func::FuncOp f,
+void getTileableBands(Operation *f,
                       std::vector<SmallVector<AffineForOp, 6>> *bands);
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
@@ -272,7 +273,7 @@ void mapLoopToProcessorIds(scf::ForOp forOp, ArrayRef<Value> processorId,
                            ArrayRef<Value> numProcessors);
 
 /// Gathers all AffineForOps in 'func.func' grouped by loop depth.
-void gatherLoops(func::FuncOp func,
+void gatherLoops(Operation* func,
                  std::vector<SmallVector<AffineForOp, 2>> &depthToLoops);
 
 /// Creates an AffineForOp while ensuring that the lower and upper bounds are

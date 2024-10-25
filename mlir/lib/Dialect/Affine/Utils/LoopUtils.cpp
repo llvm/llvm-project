@@ -871,10 +871,10 @@ void mlir::affine::getPerfectlyNestedLoops(
 /// a temporary placeholder to test the mechanics of tiled code generation.
 /// Returns all maximal outermost perfect loop nests to tile.
 void mlir::affine::getTileableBands(
-    func::FuncOp f, std::vector<SmallVector<AffineForOp, 6>> *bands) {
+    Operation* f, std::vector<SmallVector<AffineForOp, 6>> *bands) {
   // Get maximal perfect nest of 'affine.for' insts starting from root
   // (inclusive).
-  for (AffineForOp forOp : f.getOps<AffineForOp>()) {
+  for (AffineForOp forOp : f->getRegion(0).getOps<AffineForOp>()) {
     SmallVector<AffineForOp, 6> band;
     getPerfectlyNestedLoops(band, forOp);
     bands->push_back(band);
@@ -2543,8 +2543,8 @@ gatherLoopsInBlock(Block *block, unsigned currLoopDepth,
 
 /// Gathers all AffineForOps in 'func.func' grouped by loop depth.
 void mlir::affine::gatherLoops(
-    func::FuncOp func, std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
-  for (auto &block : func)
+    Operation* func, std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
+  for (auto &block : func->getRegion(0))
     gatherLoopsInBlock(&block, /*currLoopDepth=*/0, depthToLoops);
 
   // Remove last loop level from output since it's empty.

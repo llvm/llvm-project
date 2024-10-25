@@ -24,7 +24,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -39,7 +38,7 @@ static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
 
 namespace {
 struct VectorizerTestPass
-    : public PassWrapper<VectorizerTestPass, OperationPass<func::FuncOp>> {
+    : public PassWrapper<VectorizerTestPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorizerTestPass)
 
   static constexpr auto kTestAffineMapOpName = "test_affine_map";
@@ -53,7 +52,7 @@ struct VectorizerTestPass
   }
 
   VectorizerTestPass() = default;
-  VectorizerTestPass(const VectorizerTestPass &pass) : PassWrapper(pass){};
+  VectorizerTestPass(const VectorizerTestPass &pass) : PassWrapper(pass) {};
 
   ListOption<int> clTestVectorShapeRatio{
       *this, "vector-shape-ratio",
@@ -97,11 +96,12 @@ struct VectorizerTestPass
 } // namespace
 
 void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
-  auto f = getOperation();
+  auto *f = getOperation();
   using affine::matcher::Op;
   SmallVector<int64_t, 8> shape(clTestVectorShapeRatio.begin(),
                                 clTestVectorShapeRatio.end());
-  auto subVectorType = VectorType::get(shape, Float32Type::get(f.getContext()));
+  auto subVectorType =
+      VectorType::get(shape, FloatType::getF32(f->getContext()));
   // Only filter operations that operate on a strict super-vector and have one
   // return. This makes testing easier.
   auto filter = [&](Operation &op) {
@@ -147,7 +147,7 @@ static NestedPattern patternTestSlicingOps() {
 }
 
 void VectorizerTestPass::testBackwardSlicing(llvm::raw_ostream &outs) {
-  auto f = getOperation();
+  auto f = cast<func::FuncOp>(getOperation());
   outs << "\n" << f.getName();
 
   SmallVector<NestedMatch, 8> matches;
@@ -163,7 +163,7 @@ void VectorizerTestPass::testBackwardSlicing(llvm::raw_ostream &outs) {
 }
 
 void VectorizerTestPass::testForwardSlicing(llvm::raw_ostream &outs) {
-  auto f = getOperation();
+  auto f = cast<func::FuncOp>(getOperation());
   outs << "\n" << f.getName();
 
   SmallVector<NestedMatch, 8> matches;
@@ -179,7 +179,7 @@ void VectorizerTestPass::testForwardSlicing(llvm::raw_ostream &outs) {
 }
 
 void VectorizerTestPass::testSlicing(llvm::raw_ostream &outs) {
-  auto f = getOperation();
+  auto f = cast<func::FuncOp>(getOperation());
   outs << "\n" << f.getName();
 
   SmallVector<NestedMatch, 8> matches;
@@ -198,7 +198,7 @@ static bool customOpWithAffineMapAttribute(Operation &op) {
 }
 
 void VectorizerTestPass::testComposeMaps(llvm::raw_ostream &outs) {
-  auto f = getOperation();
+  auto f = cast<func::FuncOp>(getOperation());
 
   using affine::matcher::Op;
   auto pattern = Op(customOpWithAffineMapAttribute);
@@ -252,7 +252,7 @@ void VectorizerTestPass::testVecAffineLoopNest(llvm::raw_ostream &outs) {
 
 void VectorizerTestPass::runOnOperation() {
   // Only support single block functions at this point.
-  func::FuncOp f = getOperation();
+  func::FuncOp f = cast<func::FuncOp>(getOperation());
   if (!llvm::hasSingleElement(f))
     return;
 

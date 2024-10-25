@@ -36,8 +36,7 @@ struct LoopCoalescingPass
     : public affine::impl::LoopCoalescingBase<LoopCoalescingPass> {
 
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
-    func.walk<WalkOrder::PreOrder>([](Operation *op) {
+    getOperation()->walk<WalkOrder::PreOrder>([](Operation *op) {
       if (auto scfForOp = dyn_cast<scf::ForOp>(op))
         (void)coalescePerfectlyNestedSCFForLoops(scfForOp);
       else if (auto affineForOp = dyn_cast<AffineForOp>(op))
@@ -48,7 +47,7 @@ struct LoopCoalescingPass
 
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>>
+std::unique_ptr<AffineScopePassBase>
 mlir::affine::createLoopCoalescingPass() {
   return std::make_unique<LoopCoalescingPass>();
 }

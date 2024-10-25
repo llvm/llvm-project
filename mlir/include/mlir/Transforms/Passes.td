@@ -273,7 +273,7 @@ def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
   let constructor = "mlir::createGenerateRuntimeVerificationPass()";
 }
 
-def Inliner : Pass<"inline"> {
+def Inliner : Pass<"inline", "mlir::ModuleOp"> {
   let summary = "Inline function calls";
   let constructor = "mlir::createInlinerPass()";
   let options = [

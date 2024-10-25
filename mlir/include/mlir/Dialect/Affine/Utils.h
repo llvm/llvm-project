@@ -105,7 +105,7 @@ struct VectorizationStrategy {
 /// Replace affine store and load accesses by scalars by forwarding stores to
 /// loads and eliminate invariant affine loads; consequently, eliminate dead
 /// allocs.
-void affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
+void affineScalarReplace(Operation* parentOp, DominanceInfo &domInfo,
                          PostDominanceInfo &postDomInfo,
                          AliasAnalysis &analysis);
 

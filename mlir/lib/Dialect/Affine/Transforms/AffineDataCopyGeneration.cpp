@@ -27,6 +27,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -86,8 +87,13 @@ struct AffineDataCopyGeneration
 
 /// Generates copies for memref's living in 'slowMemorySpace' into newly created
 /// buffers in 'fastMemorySpace', and replaces memory operations to the former
+<<<<<<< HEAD
 /// by the latter.
 std::unique_ptr<OperationPass<func::FuncOp>>
+=======
+/// by the latter. Only load op's handled for now.
+std::unique_ptr<AffineScopePassBase>
+>>>>>>> 9bd74f961815 (Make affine and bufferization pass applicable to any AffineScopeOp/AutomaticAllocationScope)
 mlir::affine::createAffineDataCopyGenerationPass(
     unsigned slowMemorySpace, unsigned fastMemorySpace, unsigned tagMemorySpace,
     int minDmaTransferSize, uint64_t fastMemCapacityBytes) {
@@ -95,7 +101,7 @@ mlir::affine::createAffineDataCopyGenerationPass(
       slowMemorySpace, fastMemorySpace, tagMemorySpace, minDmaTransferSize,
       fastMemCapacityBytes);
 }
-std::unique_ptr<OperationPass<func::FuncOp>>
+std::unique_ptr<AffineScopePassBase>
 mlir::affine::createAffineDataCopyGenerationPass() {
   return std::make_unique<AffineDataCopyGeneration>();
 }
@@ -203,9 +209,9 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
 }
 
 void AffineDataCopyGeneration::runOnOperation() {
-  func::FuncOp f = getOperation();
-  OpBuilder topBuilder(f.getBody());
-  zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
+  Operation* f = getOperation();
+  OpBuilder topBuilder(f->getRegion(0));
+  zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f->getLoc(), 0);
 
   // Nests that are copy-in's or copy-out's; the root AffineForOps of those
   // nests are stored herein.
@@ -214,7 +220,7 @@ void AffineDataCopyGeneration::runOnOperation() {
   // Clear recorded copy nests.
   copyNests.clear();
 
-  for (auto &block : f)
+  for (auto &block : f->getRegion(0))
     runOnBlock(&block, copyNests);
 
   // Promote any single iteration loops in the copy nests and collect

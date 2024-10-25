@@ -17,6 +17,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -206,7 +207,7 @@ void OpPassManagerImpl::mergeInto(OpPassManagerImpl &rhs) {
 
 OpPassManager &OpPassManagerImpl::nest(OpPassManager &&nested) {
   auto *adaptor = new OpToOpPassAdaptor(std::move(nested));
-  addPass(std::unique_ptr<Pass>(adaptor));
+  passes.emplace_back(std::unique_ptr<Pass>(adaptor));
   return adaptor->getPassManagers().front();
 }
 
@@ -216,12 +217,20 @@ void OpPassManagerImpl::addPass(std::unique_ptr<Pass> pass) {
   std::optional<StringRef> pmOpName = getOpName();
   std::optional<StringRef> passOpName = pass->getOpName();
   if (pmOpName && passOpName && *pmOpName != *passOpName) {
-    if (nesting == OpPassManager::Nesting::Implicit)
-      return nest(*passOpName).addPass(std::move(pass));
+    if (nesting != OpPassManager::Nesting::Explicit)
+      return nest(OpPassManager(*passOpName, OpPassManager::Nesting::Explicit))
+          .addPass(std::move(pass));
     llvm::report_fatal_error(llvm::Twine("Can't add pass '") + pass->getName() +
                              "' restricted to '" + *passOpName +
                              "' on a PassManager intended to run on '" +
                              getOpAnchorName() + "', did you intend to nest?");
+  } else if (pmOpName && !passOpName &&
+             nesting == OpPassManager::Nesting::ImplicitAny) {
+    nesting = OpPassManager::Nesting::Implicit;
+    nest(OpPassManager(OpPassManager::Nesting::Explicit))
+        .addPass(std::move(pass));
+    nesting = OpPassManager::Nesting::ImplicitAny;
+    return;
   }
 
   passes.emplace_back(std::move(pass));
@@ -463,7 +472,6 @@ llvm::hash_code OpPassManager::hash() {
   }
   return hashCode;
 }
-
 
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
@@ -869,7 +877,8 @@ LogicalResult PassManager::run(Operation *op) {
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
   llvm::hash_code pipelineKey = hash();
-  if (newInitKey != initializationKey || pipelineKey != pipelineInitializationKey) {
+  if (newInitKey != initializationKey ||
+      pipelineKey != pipelineInitializationKey) {
     if (failed(initialize(context, impl->initializationGeneration + 1)))
       return failure();
     initializationKey = newInitKey;

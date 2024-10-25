@@ -26,6 +26,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/LogicalResult.h"
 #include <optional>
@@ -1036,7 +1037,7 @@ static void loadCSE(AffineReadOpInterface loadA,
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
-void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
+void mlir::affine::affineScalarReplace(Operation* parentOp, DominanceInfo &domInfo,
                                        PostDominanceInfo &postDomInfo,
                                        AliasAnalysis &aliasAnalysis) {
   // Load op's whose results were replaced by those forwarded from stores.
@@ -1050,7 +1051,7 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
   };
 
   // Walk all load's and perform store to load forwarding.
-  f.walk([&](AffineReadOpInterface loadOp) {
+  parentOp->walk([&](AffineReadOpInterface loadOp) {
     forwardStoreToLoad(loadOp, opsToErase, memrefsToErase, domInfo, mayAlias);
   });
   for (auto *op : opsToErase)
@@ -1058,7 +1059,7 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
   opsToErase.clear();
 
   // Walk all store's and perform unused store elimination
-  f.walk([&](AffineWriteOpInterface storeOp) {
+  parentOp->walk([&](AffineWriteOpInterface storeOp) {
     findUnusedStore(storeOp, opsToErase, postDomInfo, mayAlias);
   });
   for (auto *op : opsToErase)
@@ -1091,7 +1092,7 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
   // To eliminate as many loads as possible, run load CSE after eliminating
   // stores. Otherwise, some stores are wrongly seen as having an intervening
   // effect.
-  f.walk([&](AffineReadOpInterface loadOp) {
+  parentOp->walk([&](AffineReadOpInterface loadOp) {
     loadCSE(loadOp, opsToErase, domInfo, mayAlias);
   });
   for (auto *op : opsToErase)

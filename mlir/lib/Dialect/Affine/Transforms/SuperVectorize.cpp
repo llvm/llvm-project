@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1748,21 +1749,21 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
 /// Applies vectorization to the current function by searching over a bunch of
 /// predetermined patterns.
 void Vectorize::runOnOperation() {
-  func::FuncOp f = getOperation();
+  Operation* f = getOperation();
   if (!fastestVaryingPattern.empty() &&
       fastestVaryingPattern.size() != vectorSizes.size()) {
-    f.emitRemark("Fastest varying pattern specified with different size than "
+    f->emitRemark("Fastest varying pattern specified with different size than "
                  "the vector size.");
     return signalPassFailure();
   }
 
   if (vectorizeReductions && vectorSizes.size() != 1) {
-    f.emitError("Vectorizing reductions is supported only for 1-D vectors.");
+    f->emitError("Vectorizing reductions is supported only for 1-D vectors.");
     return signalPassFailure();
   }
 
   if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
-    f.emitError("Vectorization factor must be greater than zero.");
+    f->emitError("Vectorization factor must be greater than zero.");
     return signalPassFailure();
   }
 
@@ -1772,7 +1773,7 @@ void Vectorize::runOnOperation() {
   // If 'vectorize-reduction=true' is provided, we also populate the
   // `reductionLoops` map.
   if (vectorizeReductions) {
-    f.walk([&parallelLoops, &reductionLoops](AffineForOp loop) {
+    f->walk([&parallelLoops, &reductionLoops](AffineForOp loop) {
       SmallVector<LoopReduction, 2> reductions;
       if (isLoopParallel(loop, &reductions)) {
         parallelLoops.insert(loop);
@@ -1782,7 +1783,7 @@ void Vectorize::runOnOperation() {
       }
     });
   } else {
-    f.walk([&parallelLoops](AffineForOp loop) {
+    f->walk([&parallelLoops](AffineForOp loop) {
       if (isLoopParallel(loop))
         parallelLoops.insert(loop);
     });

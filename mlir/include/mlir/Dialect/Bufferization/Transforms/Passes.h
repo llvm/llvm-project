@@ -4,6 +4,8 @@
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
+#include <mlir/IR/BuiltinOps.h>
+#include <mlir/IR/OpDefinition.h>
 
 namespace mlir {
 class FunctionOpInterface;
@@ -22,6 +24,16 @@ struct OneShotBufferizationOptions;
 
 /// Maps from symbol table to its corresponding dealloc helper function.
 using DeallocHelperMap = llvm::DenseMap<Operation *, func::FuncOp>;
+
+
+class BufferScopePassBase : public OperationPass<> {
+  using OperationPass<>::OperationPass;
+
+  bool canScheduleOn(RegisteredOperationName opInfo) const final {
+    return opInfo.hasTrait<OpTrait::AutomaticAllocationScope>() &&
+           opInfo.getStringRef() != ModuleOp::getOperationName();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // Passes

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
@@ -31,8 +32,7 @@ namespace {
 
 /// This pass applies the permutation on the first maximal perfect nest.
 struct TestReifyValueBounds
-    : public PassWrapper<TestReifyValueBounds,
-                         InterfacePass<FunctionOpInterface>> {
+    : public PassWrapper<TestReifyValueBounds, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestReifyValueBounds)
 
   StringRef getArgument() const final { return PASS_NAME; }
@@ -76,11 +76,11 @@ invertComparisonOperator(ValueBoundsConstraintSet::ComparisonOperator cmp) {
 
 /// Look for "test.reify_bound" ops in the input and replace their results with
 /// the reified values.
-static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
+static LogicalResult testReifyValueBounds(Operation* funcOp,
                                           bool reifyToFuncArgs,
                                           bool useArithOps) {
-  IRRewriter rewriter(funcOp.getContext());
-  WalkResult result = funcOp.walk([&](test::ReifyBoundOp op) {
+  IRRewriter rewriter(funcOp->getContext());
+  WalkResult result = funcOp->walk([&](test::ReifyBoundOp op) {
     auto boundType = op.getBoundType();
     Value value = op.getVar();
     std::optional<int64_t> dim = op.getDim();
@@ -158,9 +158,9 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
 }
 
 /// Look for "test.compare" ops and emit errors/remarks.
-static LogicalResult testEquality(FunctionOpInterface funcOp) {
-  IRRewriter rewriter(funcOp.getContext());
-  WalkResult result = funcOp.walk([&](test::CompareOp op) {
+static LogicalResult testEquality(Operation* funcOp) {
+  IRRewriter rewriter(funcOp->getContext());
+  WalkResult result = funcOp->walk([&](test::CompareOp op) {
     auto cmpType = op.getComparisonOperator();
     if (op.getCompose()) {
       if (cmpType != ValueBoundsConstraintSet::EQ) {

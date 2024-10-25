@@ -19,6 +19,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -82,27 +83,25 @@ static bool isInnermostAffineForOp(AffineForOp op) {
 }
 
 /// Gathers loops that have no affine.for's nested within.
-static void gatherInnermostLoops(FunctionOpInterface f,
+static void gatherInnermostLoops(Operation* f,
                                  SmallVectorImpl<AffineForOp> &loops) {
-  f.walk([&](AffineForOp forOp) {
+  f->walk([&](AffineForOp forOp) {
     if (isInnermostAffineForOp(forOp))
       loops.push_back(forOp);
   });
 }
 
 void LoopUnroll::runOnOperation() {
-  FunctionOpInterface func = getOperation();
-  if (func.isExternal())
-    return;
+  Operation* func = getOperation();
 
   if (unrollFull && unrollFullThreshold.hasValue()) {
     // Store short loops as we walk.
     SmallVector<AffineForOp, 4> loops;
 
     // Gathers all loops with trip count <= minTripCount. Do a post order walk
-    // so that loops are gathered from innermost to outermost (or else
-    // unrolling an outer one may delete gathered inner ones).
-    getOperation().walk([&](AffineForOp forOp) {
+    // so that loops are gathered from innermost to outermost (or else unrolling
+    // an outer one may delete gathered inner ones).
+    getOperation()->walk([&](AffineForOp forOp) {
       std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
       if (tripCount && *tripCount <= unrollFullThreshold)
         loops.push_back(forOp);
@@ -145,8 +144,7 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
                             cleanUpUnroll);
 }
 
-std::unique_ptr<InterfacePass<FunctionOpInterface>>
-mlir::affine::createLoopUnrollPass(
+std::unique_ptr<AffineScopePassBase> mlir::affine::createLoopUnrollPass(
     int unrollFactor, bool unrollUpToFactor, bool unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(

@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def CheckUsesPass : Pass<"transform-dialect-check-uses"> {
+def CheckUsesPass : Pass<"transform-dialect-check-uses", "mlir::ModuleOp"> {
   let summary = "warn about potential use-after-free in the transform dialect";
   let description = [{
     This pass analyzes operations from the transform dialect and its extensions
@@ -32,7 +32,7 @@ def CheckUsesPass : Pass<"transform-dialect-check-uses"> {
   }];
 }
 
-def InferEffectsPass : Pass<"transform-infer-effects"> {
+def InferEffectsPass : Pass<"transform-infer-effects", "mlir::ModuleOp"> {
   let summary = "infer transform side effects for symbols";
   let description = [{
     This pass analyzes the definitions of transform dialect callable symbol
@@ -42,7 +42,7 @@ def InferEffectsPass : Pass<"transform-infer-effects"> {
   }];
 }
 
-def PreloadLibraryPass : Pass<"transform-preload-library"> {
+def PreloadLibraryPass : Pass<"transform-preload-library", "mlir::ModuleOp"> {
   let summary = "preload transform dialect library";
   let description = [{
     This pass preloads a transform library and makes it available to subsequent
@@ -61,7 +61,7 @@ def PreloadLibraryPass : Pass<"transform-preload-library"> {
   ];
 }
 
-def InterpreterPass : Pass<"transform-interpreter"> {
+def InterpreterPass : Pass<"transform-interpreter", "mlir::ModuleOp"> {
   let summary = "transform dialect interpreter";
   let description = [{
     This pass runs the transform dialect interpreter and applies the named

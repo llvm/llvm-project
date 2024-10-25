@@ -54,7 +54,10 @@ public:
     Implicit,
     /// Explicit nesting behavior. This requires that any passes added to this
     /// pass manager support its operation type.
-    Explicit
+    Explicit,
+    /// Implicitly add an "any" nesting level when scheduling a pass that handles 
+    /// "any" type.
+    ImplicitAny,
   };
 
   /// Construct a new op-agnostic ("any") pass manager with the given operation

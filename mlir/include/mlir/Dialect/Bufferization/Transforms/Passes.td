@@ -11,8 +11,85 @@
 
 include "mlir/Pass/PassBase.td"
 
-def OwnershipBasedBufferDeallocationPass
-    : Pass<"ownership-based-buffer-deallocation"> {
+class BufferScopePass<string name> 
+  : PassBase<name, "::mlir::bufferization::BufferScopePassBase">;
+
+
+def BufferDeallocation : BufferScopePass<"buffer-deallocation"> {
+  let summary = "Adds all required dealloc operations for all allocations in "
+                "the input program";
+  let description = [{
+    This pass implements an algorithm to automatically introduce all required
+    deallocation operations for all buffers in the input program. This ensures
+    that the resulting program does not have any memory leaks.
+
+
+    Input
+
+    ```mlir
+    #map0 = affine_map<(d0) -> (d0)>
+    module {
+      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+        cf.cond_br %arg0, ^bb1, ^bb2
+      ^bb1:
+        cf.br ^bb3(%arg1 : memref<2xf32>)
+      ^bb2:
+        %0 = memref.alloc() : memref<2xf32>
+        linalg.generic {
+          indexing_maps = [#map0, #map0],
+          iterator_types = ["parallel"]} %arg1, %0 {
+        ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
+          %tmp1 = exp %gen1_arg0 : f32
+          linalg.yield %tmp1 : f32
+        }: memref<2xf32>, memref<2xf32>
+        cf.br ^bb3(%0 : memref<2xf32>)
+      ^bb3(%1: memref<2xf32>):
+        "memref.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+        return
+      }
+    }
+
+    ```
+
+    Output
+
+    ```mlir
+    #map0 = affine_map<(d0) -> (d0)>
+    module {
+      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+        cf.cond_br %arg0, ^bb1, ^bb2
+      ^bb1:  // pred: ^bb0
+        %0 = memref.alloc() : memref<2xf32>
+        memref.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
+        cf.br ^bb3(%0 : memref<2xf32>)
+      ^bb2:  // pred: ^bb0
+        %1 = memref.alloc() : memref<2xf32>
+        linalg.generic {
+          indexing_maps = [#map0, #map0],
+          iterator_types = ["parallel"]} %arg1, %1 {
+        ^bb0(%arg3: f32, %arg4: f32):
+          %4 = exp %arg3 : f32
+          linalg.yield %4 : f32
+        }: memref<2xf32>, memref<2xf32>
+        %2 = memref.alloc() : memref<2xf32>
+        memref.copy(%1, %2) : memref<2xf32>, memref<2xf32>
+        dealloc %1 : memref<2xf32>
+        cf.br ^bb3(%2 : memref<2xf32>)
+      ^bb3(%3: memref<2xf32>):  // 2 preds: ^bb1, ^bb2
+        memref.copy(%3, %arg2) : memref<2xf32>, memref<2xf32>
+        dealloc %3 : memref<2xf32>
+        return
+      }
+
+    }
+    ```
+
+  }];
+  let constructor = "mlir::bufferization::createBufferDeallocationPass()";
+}
+
+def OwnershipBasedBufferDeallocation : BufferScopePass<
+    "ownership-based-buffer-deallocation"> {
   let summary = "Adds all required dealloc operations for all allocations in "
                 "the input program";
   let description = [{
@@ -152,8 +229,8 @@ def OwnershipBasedBufferDeallocationPass
   ];
 }
 
-def BufferDeallocationSimplificationPass
-    : Pass<"buffer-deallocation-simplification"> {
+def BufferDeallocationSimplification :
+    BufferScopePass<"buffer-deallocation-simplification"> {
   let summary = "Optimizes `bufferization.dealloc` operation for more "
                 "efficient codegen";
   let description = [{
@@ -169,8 +246,8 @@ def BufferDeallocationSimplificationPass
   ];
 }
 
-def OptimizeAllocationLivenessPass
-    : Pass<"optimize-allocation-liveness", "func::FuncOp"> {
+def OptimizeAllocationLiveness
+    : BufferScopePass<"optimize-allocation-liveness"> {
   let summary = "This pass optimizes the liveness of temp allocations in the "
                 "input function";
   let description = [{
@@ -184,7 +261,7 @@ def OptimizeAllocationLivenessPass
   let dependentDialects = ["mlir::memref::MemRefDialect"];
 }
 
-def LowerDeallocationsPass : Pass<"bufferization-lower-deallocations"> {
+def LowerDeallocations : BufferScopePass<"bufferization-lower-deallocations"> {
   let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
                 "operations";
   let description = [{
@@ -204,7 +281,7 @@ def LowerDeallocationsPass : Pass<"bufferization-lower-deallocations"> {
   ];
 }
 
-def BufferHoistingPass : Pass<"buffer-hoisting", "func::FuncOp"> {
+def BufferHoisting : BufferScopePass<"buffer-hoisting"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";
   let description = [{
@@ -213,7 +290,7 @@ def BufferHoistingPass : Pass<"buffer-hoisting", "func::FuncOp"> {
   }];
 }
 
-def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
+def BufferLoopHoisting : BufferScopePass<"buffer-loop-hoisting"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "out of loop nests";
   let description = [{
@@ -462,8 +539,7 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
   ];
 }
 
-def PromoteBuffersToStackPass
-    : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
+def PromoteBuffersToStack : BufferScopePass<"promote-buffers-to-stack"> {
   let summary = "Promotes heap-based allocations to automatically managed "
                 "stack-based allocations";
   let description = [{
@@ -483,7 +559,7 @@ def PromoteBuffersToStackPass
   ];
 }
 
-def EmptyTensorEliminationPass : Pass<"eliminate-empty-tensors"> {
+def EmptyTensorElimination : BufferScopePass<"eliminate-empty-tensors"> {
   let summary = "Try to eliminate all tensor.empty ops.";
   let description = [{
     Try to eliminate "tensor.empty" ops inside `op`. This transformation looks

@@ -26,7 +26,7 @@ using namespace mlir::affine;
 namespace {
 
 struct TestDecomposeAffineOps
-    : public PassWrapper<TestDecomposeAffineOps, OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestDecomposeAffineOps, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDecomposeAffineOps)
 
   StringRef getArgument() const final { return PASS_NAME; }
@@ -43,7 +43,7 @@ struct TestDecomposeAffineOps
 
 void TestDecomposeAffineOps::runOnOperation() {
   IRRewriter rewriter(&getContext());
-  this->getOperation().walk([&](AffineApplyOp op) {
+  this->getOperation()->walk([&](AffineApplyOp op) {
     rewriter.setInsertionPoint(op);
     reorderOperandsByHoistability(rewriter, op);
     (void)decompose(rewriter, op);

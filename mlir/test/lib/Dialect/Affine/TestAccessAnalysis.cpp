@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/LoopFusionUtils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 
 #define PASS_NAME "test-affine-access-analysis"
@@ -23,7 +22,7 @@ using namespace mlir::affine;
 namespace {
 
 struct TestAccessAnalysis
-    : public PassWrapper<TestAccessAnalysis, OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestAccessAnalysis, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAccessAnalysis)
 
   StringRef getArgument() const final { return PASS_NAME; }
@@ -52,7 +51,7 @@ void TestAccessAnalysis::runOnOperation() {
   SmallVector<AffineForOp> enclosingOps;
   // Go over all top-level affine.for ops and test each contained affine
   // access's contiguity along every surrounding loop IV.
-  for (auto forOp : getOperation().getOps<AffineForOp>()) {
+  for (auto forOp : getOperation()->getRegion(0).getOps<AffineForOp>()) {
     loadStores.clear();
     gatherLoadsAndStores(forOp, loadStores);
     for (Operation *memOp : loadStores) {

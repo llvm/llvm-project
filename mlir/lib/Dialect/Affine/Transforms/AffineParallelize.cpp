@@ -60,12 +60,12 @@ struct ParallelizationCandidate {
 } // namespace
 
 void AffineParallelize::runOnOperation() {
-  func::FuncOp f = getOperation();
+  Operation* f = getOperation();
 
   // The walker proceeds in pre-order to process the outer loops first
   // and control the number of outer parallel loops.
   std::vector<ParallelizationCandidate> parallelizableLoops;
-  f.walk<WalkOrder::PreOrder>([&](AffineForOp loop) {
+  f->walk<WalkOrder::PreOrder>([&](AffineForOp loop) {
     SmallVector<LoopReduction> reductions;
     if (isLoopParallel(loop, parallelReductions ? &reductions : nullptr))
       parallelizableLoops.emplace_back(loop, std::move(reductions));
@@ -91,4 +91,9 @@ void AffineParallelize::runOnOperation() {
                               << loop);
     }
   }
+}
+
+std::unique_ptr<AffineScopePassBase>
+mlir::affine::createAffineParallelizePass() {
+  return std::make_unique<AffineParallelize>();
 }
