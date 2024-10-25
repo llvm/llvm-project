@@ -63,26 +63,17 @@ define i64 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; CHECK-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI3_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; CHECK-NEXT:    fld.d $fa3, $a0, %pc_lo12(.LCPI3_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; CHECK-NEXT:    fld.d $fa4, $a0, %pc_lo12(.LCPI3_3)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; CHECK-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI3_4)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; CHECK-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI3_5)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; CHECK-NEXT:    fld.d $fa7, $a0, %pc_lo12(.LCPI3_6)
-; CHECK-NEXT:    addi.d $a0, $zero, 1
-; CHECK-NEXT:    movgr2fr.d $fa0, $a0
-; CHECK-NEXT:    ffint.d.l $fa0, $fa0
 ; CHECK-NEXT:    ori $a0, $zero, 0
 ; CHECK-NEXT:    lu32i.d $a0, 131072
 ; CHECK-NEXT:    lu52i.d $a0, $a0, 1026
+; CHECK-NEXT:    vldi $vr0, -912
+; CHECK-NEXT:    vldi $vr1, -1024
+; CHECK-NEXT:    vldi $vr2, -1016
+; CHECK-NEXT:    vldi $vr3, -1008
+; CHECK-NEXT:    vldi $vr4, -1004
+; CHECK-NEXT:    vldi $vr5, -1000
+; CHECK-NEXT:    vldi $vr6, -996
+; CHECK-NEXT:    vldi $vr7, -992
 ; CHECK-NEXT:    bl %plt(callee_double_in_gpr_exhausted_fprs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -98,9 +89,7 @@ define i64 @caller_double_in_gpr_exhausted_fprs() nounwind {
 define double @callee_double_ret() nounwind {
 ; CHECK-LABEL: callee_double_ret:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $a0, $zero, 1
-; CHECK-NEXT:    movgr2fr.d $fa0, $a0
-; CHECK-NEXT:    ffint.d.l $fa0, $fa0
+; CHECK-NEXT:    vldi $vr0, -912
 ; CHECK-NEXT:    ret
   ret double 1.0
 }

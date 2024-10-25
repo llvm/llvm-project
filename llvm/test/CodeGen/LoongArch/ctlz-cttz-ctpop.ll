@@ -175,16 +175,11 @@ define i8 @test_ctpop_i8(i8 %a) nounwind {
 ;
 ; LA64-LABEL: test_ctpop_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srli.d $a1, $a0, 1
-; LA64-NEXT:    andi $a1, $a1, 85
-; LA64-NEXT:    sub.d $a0, $a0, $a1
-; LA64-NEXT:    andi $a1, $a0, 51
-; LA64-NEXT:    srli.d $a0, $a0, 2
-; LA64-NEXT:    andi $a0, $a0, 51
-; LA64-NEXT:    add.d $a0, $a1, $a0
-; LA64-NEXT:    srli.d $a1, $a0, 4
-; LA64-NEXT:    add.d $a0, $a0, $a1
-; LA64-NEXT:    andi $a0, $a0, 15
+; LA64-NEXT:    andi $a0, $a0, 255
+; LA64-NEXT:    vldi $vr0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vpcnt.d $vr0, $vr0
+; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-NEXT:    ret
   %1 = call i8 @llvm.ctpop.i8(i8 %a)
   ret i8 %1
@@ -213,22 +208,11 @@ define i16 @test_ctpop_i16(i16 %a) nounwind {
 ;
 ; LA64-LABEL: test_ctpop_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srli.d $a1, $a0, 1
-; LA64-NEXT:    lu12i.w $a2, 5
-; LA64-NEXT:    ori $a2, $a2, 1365
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    sub.d $a0, $a0, $a1
-; LA64-NEXT:    lu12i.w $a1, 3
-; LA64-NEXT:    ori $a1, $a1, 819
-; LA64-NEXT:    and $a2, $a0, $a1
-; LA64-NEXT:    srli.d $a0, $a0, 2
-; LA64-NEXT:    and $a0, $a0, $a1
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    srli.d $a1, $a0, 4
-; LA64-NEXT:    add.d $a0, $a0, $a1
-; LA64-NEXT:    bstrpick.d $a1, $a0, 11, 8
-; LA64-NEXT:    andi $a0, $a0, 15
-; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
+; LA64-NEXT:    vldi $vr0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vpcnt.d $vr0, $vr0
+; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-NEXT:    ret
   %1 = call i16 @llvm.ctpop.i16(i16 %a)
   ret i16 %1
@@ -261,26 +245,11 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 ;
 ; LA64-LABEL: test_ctpop_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srli.d $a1, $a0, 1
-; LA64-NEXT:    lu12i.w $a2, 349525
-; LA64-NEXT:    ori $a2, $a2, 1365
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    sub.d $a0, $a0, $a1
-; LA64-NEXT:    lu12i.w $a1, 209715
-; LA64-NEXT:    ori $a1, $a1, 819
-; LA64-NEXT:    and $a2, $a0, $a1
-; LA64-NEXT:    srli.d $a0, $a0, 2
-; LA64-NEXT:    and $a0, $a0, $a1
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    srli.d $a1, $a0, 4
-; LA64-NEXT:    add.d $a0, $a0, $a1
-; LA64-NEXT:    lu12i.w $a1, 61680
-; LA64-NEXT:    ori $a1, $a1, 3855
-; LA64-NEXT:    and $a0, $a0, $a1
-; LA64-NEXT:    lu12i.w $a1, 4112
-; LA64-NEXT:    ori $a1, $a1, 257
-; LA64-NEXT:    mul.d $a0, $a0, $a1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 24
+; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    vldi $vr0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vpcnt.d $vr0, $vr0
+; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-NEXT:    ret
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1
@@ -327,30 +296,10 @@ define i64 @test_ctpop_i64(i64 %a) nounwind {
 ;
 ; LA64-LABEL: test_ctpop_i64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srli.d $a1, $a0, 1
-; LA64-NEXT:    lu12i.w $a2, 349525
-; LA64-NEXT:    ori $a2, $a2, 1365
-; LA64-NEXT:    bstrins.d $a2, $a2, 62, 32
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    sub.d $a0, $a0, $a1
-; LA64-NEXT:    lu12i.w $a1, 209715
-; LA64-NEXT:    ori $a1, $a1, 819
-; LA64-NEXT:    bstrins.d $a1, $a1, 61, 32
-; LA64-NEXT:    and $a2, $a0, $a1
-; LA64-NEXT:    srli.d $a0, $a0, 2
-; LA64-NEXT:    and $a0, $a0, $a1
-; LA64-NEXT:    add.d $a0, $a2, $a0
-; LA64-NEXT:    srli.d $a1, $a0, 4
-; LA64-NEXT:    add.d $a0, $a0, $a1
-; LA64-NEXT:    lu12i.w $a1, 61680
-; LA64-NEXT:    ori $a1, $a1, 3855
-; LA64-NEXT:    bstrins.d $a1, $a1, 59, 32
-; LA64-NEXT:    and $a0, $a0, $a1
-; LA64-NEXT:    lu12i.w $a1, 4112
-; LA64-NEXT:    ori $a1, $a1, 257
-; LA64-NEXT:    bstrins.d $a1, $a1, 56, 32
-; LA64-NEXT:    mul.d $a0, $a0, $a1
-; LA64-NEXT:    srli.d $a0, $a0, 56
+; LA64-NEXT:    vldi $vr0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vpcnt.d $vr0, $vr0
+; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-NEXT:    ret
   %1 = call i64 @llvm.ctpop.i64(i64 %a)
   ret i64 %1

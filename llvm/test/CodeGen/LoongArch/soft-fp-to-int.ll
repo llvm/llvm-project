@@ -45,11 +45,8 @@ define i32 @fptosi_i32_double(double %X) nounwind {
 ;
 ; LA64-LABEL: fptosi_i32_double:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    bl %plt(__fixdfsi)
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    ret
   %tmp = fptosi double %X to i32
   ret i32 %tmp
@@ -67,11 +64,8 @@ define i32 @fptosi_i32_float(float %X) nounwind {
 ;
 ; LA64-LABEL: fptosi_i32_float:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    bl %plt(__fixsfsi)
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    ret
   %tmp = fptosi float %X to i32
   ret i32 %tmp
@@ -120,11 +114,8 @@ define i64 @fptosi_i64_double(double %X) nounwind {
 ;
 ; LA64-LABEL: fptosi_i64_double:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    bl %plt(__fixdfdi)
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ftintrz.l.d $fa0, $fa0
+; LA64-NEXT:    movfr2gr.d $a0, $fa0
 ; LA64-NEXT:    ret
   %tmp = fptosi double %X to i64
   ret i64 %tmp
@@ -142,11 +133,8 @@ define i64 @fptosi_i64_float(float %X) nounwind {
 ;
 ; LA64-LABEL: fptosi_i64_float:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    bl %plt(__fixsfdi)
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ftintrz.l.s $fa0, $fa0
+; LA64-NEXT:    movfr2gr.d $a0, $fa0
 ; LA64-NEXT:    ret
   %tmp = fptosi float %X to i64
   ret i64 %tmp
