@@ -510,7 +510,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
       reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
   if (DryRun) {
-    return Replaces.size() > (IsJson ? 1 : 0) &&
+    return Replaces.size() > (IsJson ? 1u : 0u) &&
            emitReplacementWarnings(Replaces, AssumedFileName, Code);
   }
   if (OutputXML) {
