@@ -18,24 +18,23 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadInit() {
     std::cout << "---> offloadInit";
   }
 
-  offload_result_t result = offloadInit_val();
+  offload_result_t Result = offloadInit_val();
 
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "()";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
-offload_result_t
-offloadInitWithCodeLoc(offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result = offloadInit();
+offload_result_t offloadInitWithCodeLoc(offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result = offloadInit();
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -50,406 +49,403 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadShutDown() {
     std::cout << "---> offloadShutDown";
   }
 
-  offload_result_t result = offloadShutDown_val();
+  offload_result_t Result = offloadShutDown_val();
 
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "()";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
 offload_result_t
-offloadShutDownWithCodeLoc(offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result = offloadShutDown();
+offloadShutDownWithCodeLoc(offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result = offloadShutDown();
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 offload_impl_result_t
 offloadPlatformGet_val(uint32_t NumEntries,
-                       offload_platform_handle_t *phPlatforms) {
+                       offload_platform_handle_t *Platforms) {
   if (true /*enableParameterValidation*/) {
     if (NumEntries == 0) {
       return OFFLOAD_ERRC_INVALID_SIZE;
     }
 
-    if (NULL == phPlatforms) {
+    if (NULL == Platforms) {
       return OFFLOAD_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return offloadPlatformGet_impl(NumEntries, phPlatforms);
+  return offloadPlatformGet_impl(NumEntries, Platforms);
 }
-OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGet(
-    uint32_t NumEntries, offload_platform_handle_t *phPlatforms) {
+OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
+offloadPlatformGet(uint32_t NumEntries, offload_platform_handle_t *Platforms) {
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "---> offloadPlatformGet";
   }
 
-  offload_result_t result = offloadPlatformGet_val(NumEntries, phPlatforms);
+  offload_result_t Result = offloadPlatformGet_val(NumEntries, Platforms);
 
   if (std::getenv("OFFLOAD_TRACE")) {
-    offload_platform_get_params_t Params = {&NumEntries, &phPlatforms};
+    offload_platform_get_params_t Params = {&NumEntries, &Platforms};
     std::cout << "(" << &Params << ")";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
 offload_result_t
 offloadPlatformGetWithCodeLoc(uint32_t NumEntries,
-                              offload_platform_handle_t *phPlatforms,
-                              offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result = offloadPlatformGet(NumEntries, phPlatforms);
+                              offload_platform_handle_t *Platforms,
+                              offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result = offloadPlatformGet(NumEntries, Platforms);
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-offload_impl_result_t offloadPlatformGetCount_val(uint32_t *pNumPlatforms) {
+offload_impl_result_t offloadPlatformGetCount_val(uint32_t *NumPlatforms) {
   if (true /*enableParameterValidation*/) {
-    if (NULL == pNumPlatforms) {
+    if (NULL == NumPlatforms) {
       return OFFLOAD_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return offloadPlatformGetCount_impl(pNumPlatforms);
+  return offloadPlatformGetCount_impl(NumPlatforms);
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadPlatformGetCount(uint32_t *pNumPlatforms) {
+offloadPlatformGetCount(uint32_t *NumPlatforms) {
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "---> offloadPlatformGetCount";
   }
 
-  offload_result_t result = offloadPlatformGetCount_val(pNumPlatforms);
+  offload_result_t Result = offloadPlatformGetCount_val(NumPlatforms);
 
   if (std::getenv("OFFLOAD_TRACE")) {
-    offload_platform_get_count_params_t Params = {&pNumPlatforms};
+    offload_platform_get_count_params_t Params = {&NumPlatforms};
     std::cout << "(" << &Params << ")";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
 offload_result_t
-offloadPlatformGetCountWithCodeLoc(uint32_t *pNumPlatforms,
-                                   offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result = offloadPlatformGetCount(pNumPlatforms);
+offloadPlatformGetCountWithCodeLoc(uint32_t *NumPlatforms,
+                                   offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result = offloadPlatformGetCount(NumPlatforms);
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 offload_impl_result_t
-offloadPlatformGetInfo_val(offload_platform_handle_t hPlatform,
-                           offload_platform_info_t propName, size_t propSize,
-                           void *pPropValue) {
+offloadPlatformGetInfo_val(offload_platform_handle_t Platform,
+                           offload_platform_info_t PropName, size_t PropSize,
+                           void *PropValue) {
   if (true /*enableParameterValidation*/) {
-    if (propSize == 0) {
+    if (PropSize == 0) {
       return OFFLOAD_ERRC_INVALID_SIZE;
     }
 
-    if (NULL == hPlatform) {
+    if (NULL == Platform) {
       return OFFLOAD_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == pPropValue) {
+    if (NULL == PropValue) {
       return OFFLOAD_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return offloadPlatformGetInfo_impl(hPlatform, propName, propSize, pPropValue);
+  return offloadPlatformGetInfo_impl(Platform, PropName, PropSize, PropValue);
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfo(
-    offload_platform_handle_t hPlatform, offload_platform_info_t propName,
-    size_t propSize, void *pPropValue) {
+    offload_platform_handle_t Platform, offload_platform_info_t PropName,
+    size_t PropSize, void *PropValue) {
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "---> offloadPlatformGetInfo";
   }
 
-  offload_result_t result =
-      offloadPlatformGetInfo_val(hPlatform, propName, propSize, pPropValue);
+  offload_result_t Result =
+      offloadPlatformGetInfo_val(Platform, PropName, PropSize, PropValue);
 
   if (std::getenv("OFFLOAD_TRACE")) {
-    offload_platform_get_info_params_t Params = {&hPlatform, &propName,
-                                                 &propSize, &pPropValue};
+    offload_platform_get_info_params_t Params = {&Platform, &PropName,
+                                                 &PropSize, &PropValue};
     std::cout << "(" << &Params << ")";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
 offload_result_t offloadPlatformGetInfoWithCodeLoc(
-    offload_platform_handle_t hPlatform, offload_platform_info_t propName,
-    size_t propSize, void *pPropValue, offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result =
-      offloadPlatformGetInfo(hPlatform, propName, propSize, pPropValue);
+    offload_platform_handle_t Platform, offload_platform_info_t PropName,
+    size_t PropSize, void *PropValue, offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result =
+      offloadPlatformGetInfo(Platform, PropName, PropSize, PropValue);
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 offload_impl_result_t
-offloadPlatformGetInfoSize_val(offload_platform_handle_t hPlatform,
-                               offload_platform_info_t propName,
-                               size_t *pPropSizeRet) {
+offloadPlatformGetInfoSize_val(offload_platform_handle_t Platform,
+                               offload_platform_info_t PropName,
+                               size_t *PropSizeRet) {
   if (true /*enableParameterValidation*/) {
-    if (NULL == hPlatform) {
+    if (NULL == Platform) {
       return OFFLOAD_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == pPropSizeRet) {
+    if (NULL == PropSizeRet) {
       return OFFLOAD_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return offloadPlatformGetInfoSize_impl(hPlatform, propName, pPropSizeRet);
+  return offloadPlatformGetInfoSize_impl(Platform, PropName, PropSizeRet);
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfoSize(
-    offload_platform_handle_t hPlatform, offload_platform_info_t propName,
-    size_t *pPropSizeRet) {
+    offload_platform_handle_t Platform, offload_platform_info_t PropName,
+    size_t *PropSizeRet) {
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "---> offloadPlatformGetInfoSize";
   }
 
-  offload_result_t result =
-      offloadPlatformGetInfoSize_val(hPlatform, propName, pPropSizeRet);
+  offload_result_t Result =
+      offloadPlatformGetInfoSize_val(Platform, PropName, PropSizeRet);
 
   if (std::getenv("OFFLOAD_TRACE")) {
-    offload_platform_get_info_size_params_t Params = {&hPlatform, &propName,
-                                                      &pPropSizeRet};
+    offload_platform_get_info_size_params_t Params = {&Platform, &PropName,
+                                                      &PropSizeRet};
     std::cout << "(" << &Params << ")";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
 offload_result_t offloadPlatformGetInfoSizeWithCodeLoc(
-    offload_platform_handle_t hPlatform, offload_platform_info_t propName,
-    size_t *pPropSizeRet, offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result =
-      offloadPlatformGetInfoSize(hPlatform, propName, pPropSizeRet);
+    offload_platform_handle_t Platform, offload_platform_info_t PropName,
+    size_t *PropSizeRet, offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result =
+      offloadPlatformGetInfoSize(Platform, PropName, PropSizeRet);
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 offload_impl_result_t
-offloadDeviceGetCount_val(offload_platform_handle_t hPlatform,
-                          uint32_t *pNumDevices) {
+offloadDeviceGetCount_val(offload_platform_handle_t Platform,
+                          uint32_t *NumDevices) {
   if (true /*enableParameterValidation*/) {
-    if (NULL == hPlatform) {
+    if (NULL == Platform) {
       return OFFLOAD_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == pNumDevices) {
+    if (NULL == NumDevices) {
       return OFFLOAD_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return offloadDeviceGetCount_impl(hPlatform, pNumDevices);
+  return offloadDeviceGetCount_impl(Platform, NumDevices);
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetCount(
-    offload_platform_handle_t hPlatform, uint32_t *pNumDevices) {
+    offload_platform_handle_t Platform, uint32_t *NumDevices) {
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "---> offloadDeviceGetCount";
   }
 
-  offload_result_t result = offloadDeviceGetCount_val(hPlatform, pNumDevices);
+  offload_result_t Result = offloadDeviceGetCount_val(Platform, NumDevices);
 
   if (std::getenv("OFFLOAD_TRACE")) {
-    offload_device_get_count_params_t Params = {&hPlatform, &pNumDevices};
+    offload_device_get_count_params_t Params = {&Platform, &NumDevices};
     std::cout << "(" << &Params << ")";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
 offload_result_t
-offloadDeviceGetCountWithCodeLoc(offload_platform_handle_t hPlatform,
-                                 uint32_t *pNumDevices,
-                                 offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result = offloadDeviceGetCount(hPlatform, pNumDevices);
+offloadDeviceGetCountWithCodeLoc(offload_platform_handle_t Platform,
+                                 uint32_t *NumDevices,
+                                 offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result = offloadDeviceGetCount(Platform, NumDevices);
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-offload_impl_result_t offloadDeviceGet_val(offload_platform_handle_t hPlatform,
+offload_impl_result_t offloadDeviceGet_val(offload_platform_handle_t Platform,
                                            uint32_t NumEntries,
-                                           offload_device_handle_t *phDevices) {
+                                           offload_device_handle_t *Devices) {
   if (true /*enableParameterValidation*/) {
     if (NumEntries == 0) {
       return OFFLOAD_ERRC_INVALID_SIZE;
     }
 
-    if (NULL == hPlatform) {
+    if (NULL == Platform) {
       return OFFLOAD_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == phDevices) {
+    if (NULL == Devices) {
       return OFFLOAD_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return offloadDeviceGet_impl(hPlatform, NumEntries, phDevices);
+  return offloadDeviceGet_impl(Platform, NumEntries, Devices);
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadDeviceGet(offload_platform_handle_t hPlatform, uint32_t NumEntries,
-                 offload_device_handle_t *phDevices) {
+offloadDeviceGet(offload_platform_handle_t Platform, uint32_t NumEntries,
+                 offload_device_handle_t *Devices) {
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "---> offloadDeviceGet";
   }
 
-  offload_result_t result =
-      offloadDeviceGet_val(hPlatform, NumEntries, phDevices);
+  offload_result_t Result = offloadDeviceGet_val(Platform, NumEntries, Devices);
 
   if (std::getenv("OFFLOAD_TRACE")) {
-    offload_device_get_params_t Params = {&hPlatform, &NumEntries, &phDevices};
+    offload_device_get_params_t Params = {&Platform, &NumEntries, &Devices};
     std::cout << "(" << &Params << ")";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
-offload_result_t
-offloadDeviceGetWithCodeLoc(offload_platform_handle_t hPlatform,
-                            uint32_t NumEntries,
-                            offload_device_handle_t *phDevices,
-                            offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result = offloadDeviceGet(hPlatform, NumEntries, phDevices);
+offload_result_t offloadDeviceGetWithCodeLoc(
+    offload_platform_handle_t Platform, uint32_t NumEntries,
+    offload_device_handle_t *Devices, offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result = offloadDeviceGet(Platform, NumEntries, Devices);
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-offload_impl_result_t offloadDeviceGetInfo_val(offload_device_handle_t hDevice,
-                                               offload_device_info_t propName,
-                                               size_t propSize,
-                                               void *pPropValue) {
+offload_impl_result_t offloadDeviceGetInfo_val(offload_device_handle_t Device,
+                                               offload_device_info_t PropName,
+                                               size_t PropSize,
+                                               void *PropValue) {
   if (true /*enableParameterValidation*/) {
-    if (propSize == 0) {
+    if (PropSize == 0) {
       return OFFLOAD_ERRC_INVALID_SIZE;
     }
 
-    if (NULL == hDevice) {
+    if (NULL == Device) {
       return OFFLOAD_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == pPropValue) {
+    if (NULL == PropValue) {
       return OFFLOAD_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return offloadDeviceGetInfo_impl(hDevice, propName, propSize, pPropValue);
+  return offloadDeviceGetInfo_impl(Device, PropName, PropSize, PropValue);
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetInfo(
-    offload_device_handle_t hDevice, offload_device_info_t propName,
-    size_t propSize, void *pPropValue) {
+    offload_device_handle_t Device, offload_device_info_t PropName,
+    size_t PropSize, void *PropValue) {
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "---> offloadDeviceGetInfo";
   }
 
-  offload_result_t result =
-      offloadDeviceGetInfo_val(hDevice, propName, propSize, pPropValue);
+  offload_result_t Result =
+      offloadDeviceGetInfo_val(Device, PropName, PropSize, PropValue);
 
   if (std::getenv("OFFLOAD_TRACE")) {
-    offload_device_get_info_params_t Params = {&hDevice, &propName, &propSize,
-                                               &pPropValue};
+    offload_device_get_info_params_t Params = {&Device, &PropName, &PropSize,
+                                               &PropValue};
     std::cout << "(" << &Params << ")";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
 offload_result_t offloadDeviceGetInfoWithCodeLoc(
-    offload_device_handle_t hDevice, offload_device_info_t propName,
-    size_t propSize, void *pPropValue, offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result =
-      offloadDeviceGetInfo(hDevice, propName, propSize, pPropValue);
+    offload_device_handle_t Device, offload_device_info_t PropName,
+    size_t PropSize, void *PropValue, offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result =
+      offloadDeviceGetInfo(Device, PropName, PropSize, PropValue);
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 offload_impl_result_t
-offloadDeviceGetInfoSize_val(offload_device_handle_t hDevice,
-                             offload_device_info_t propName,
-                             size_t *pPropSizeRet) {
+offloadDeviceGetInfoSize_val(offload_device_handle_t Device,
+                             offload_device_info_t PropName,
+                             size_t *PropSizeRet) {
   if (true /*enableParameterValidation*/) {
-    if (NULL == hDevice) {
+    if (NULL == Device) {
       return OFFLOAD_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == pPropSizeRet) {
+    if (NULL == PropSizeRet) {
       return OFFLOAD_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return offloadDeviceGetInfoSize_impl(hDevice, propName, pPropSizeRet);
+  return offloadDeviceGetInfoSize_impl(Device, PropName, PropSizeRet);
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadDeviceGetInfoSize(offload_device_handle_t hDevice,
-                         offload_device_info_t propName, size_t *pPropSizeRet) {
+offloadDeviceGetInfoSize(offload_device_handle_t Device,
+                         offload_device_info_t PropName, size_t *PropSizeRet) {
   if (std::getenv("OFFLOAD_TRACE")) {
     std::cout << "---> offloadDeviceGetInfoSize";
   }
 
-  offload_result_t result =
-      offloadDeviceGetInfoSize_val(hDevice, propName, pPropSizeRet);
+  offload_result_t Result =
+      offloadDeviceGetInfoSize_val(Device, PropName, PropSizeRet);
 
   if (std::getenv("OFFLOAD_TRACE")) {
-    offload_device_get_info_size_params_t Params = {&hDevice, &propName,
-                                                    &pPropSizeRet};
+    offload_device_get_info_size_params_t Params = {&Device, &PropName,
+                                                    &PropSizeRet};
     std::cout << "(" << &Params << ")";
-    std::cout << "-> " << result << "\n";
-    if (result && result->details) {
-      std::cout << "     *Error Details* " << result->details << " \n";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
     }
   }
-  return result;
+  return Result;
 }
 offload_result_t offloadDeviceGetInfoSizeWithCodeLoc(
-    offload_device_handle_t hDevice, offload_device_info_t propName,
-    size_t *pPropSizeRet, offload_code_location_t *pCodeLocation) {
-  CodeLocation() = pCodeLocation;
-  offload_result_t result =
-      offloadDeviceGetInfoSize(hDevice, propName, pPropSizeRet);
+    offload_device_handle_t Device, offload_device_info_t PropName,
+    size_t *PropSizeRet, offload_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  offload_result_t Result =
+      offloadDeviceGetInfoSize(Device, PropName, PropSizeRet);
 
-  CodeLocation() = nullptr;
-  return result;
+  currentCodeLocation() = nullptr;
+  return Result;
 }

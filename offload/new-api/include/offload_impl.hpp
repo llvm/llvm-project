@@ -22,7 +22,7 @@
 
 // Use the StringSet container to efficiently deduplicate repeated error
 // strings (e.g. if the same error is hit constantly in a long running program)
-llvm::StringSet<> &ErrorStrs();
+llvm::StringSet<> &errorStrs();
 
 // Use an unordered_set to avoid duplicates of error structs themselves.
 // We cannot store the structs directly as returned pointers to them must always
@@ -39,12 +39,12 @@ struct ErrPtrEqual {
     }
 
     bool StrsEqual = false;
-    if (lhs->details == NULL && rhs->details == NULL) {
+    if (lhs->Details == NULL && rhs->Details == NULL) {
       StrsEqual = true;
-    } else if (lhs->details != NULL && rhs->details != NULL) {
-      StrsEqual = (std::strcmp(lhs->details, rhs->details) == 0);
+    } else if (lhs->Details != NULL && rhs->Details != NULL) {
+      StrsEqual = (std::strcmp(lhs->Details, rhs->Details) == 0);
     }
-    return (lhs->code == rhs->code) && StrsEqual;
+    return (lhs->Code == rhs->Code) && StrsEqual;
   }
 };
 struct ErrPtrHash {
@@ -53,12 +53,12 @@ struct ErrPtrHash {
       // We shouldn't store empty errors (i.e. success), but just in case
       return 0lu;
     } else {
-      return std::hash<int>{}(e->code);
+      return std::hash<int>{}(e->Code);
     }
   }
 };
 using ErrSetT = std::unordered_set<ErrPtrT, ErrPtrHash, ErrPtrEqual>;
-ErrSetT &Errors();
+ErrSetT &errors();
 
 struct offload_impl_result_t {
   offload_impl_result_t(std::nullptr_t) : Result(OFFLOAD_RESULT_SUCCESS) {}
@@ -68,17 +68,17 @@ struct offload_impl_result_t {
     } else {
       auto Err = std::unique_ptr<offload_error_struct_t>(
           new offload_error_struct_t{Code, nullptr});
-      Result = Errors().emplace(std::move(Err)).first->get();
+      Result = errors().emplace(std::move(Err)).first->get();
     }
   }
 
   offload_impl_result_t(offload_errc_t Code, llvm::StringRef Details) {
     assert(Code != OFFLOAD_ERRC_SUCCESS);
     Result = nullptr;
-    auto DetailsStr = ErrorStrs().insert(Details).first->getKeyData();
+    auto DetailsStr = errorStrs().insert(Details).first->getKeyData();
     auto Err = std::unique_ptr<offload_error_struct_t>(
         new offload_error_struct_t{Code, DetailsStr});
-    Result = Errors().emplace(std::move(Err)).first->get();
+    Result = errors().emplace(std::move(Err)).first->get();
   }
 
   operator offload_result_t() { return Result; }

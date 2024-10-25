@@ -38,8 +38,8 @@ def : Function {
   let name = "offloadDeviceGetCount";
   let desc = "Retrieves the number of available devices within a platform";
   let params = [
-    Param<"offload_platform_handle_t", "hPlatform", "handle of the platform instance", PARAM_IN>,
-    Param<"uint32_t*", "pNumDevices", "pointer to the number of devices.", PARAM_OUT>
+    Param<"offload_platform_handle_t", "Platform", "handle of the platform instance", PARAM_IN>,
+    Param<"uint32_t*", "NumDevices", "pointer to the number of devices.", PARAM_OUT>
   ];
   let returns = [];
 }
@@ -52,9 +52,9 @@ def : Function {
     "The application may call this function from simultaneous threads, the implementation must be thread-safe"
   ];
   let params = [
-    Param<"offload_platform_handle_t", "hPlatform", "handle of the platform instance", PARAM_IN>,
+    Param<"offload_platform_handle_t", "Platform", "handle of the platform instance", PARAM_IN>,
     Param<"uint32_t", "NumEntries", "the number of devices to be added to phDevices, which must be greater than zero", PARAM_IN>,
-    RangedParam<"offload_device_handle_t*", "phDevices", "Array of device handles. "
+    RangedParam<"offload_device_handle_t*", "Devices", "Array of device handles. "
         "If NumEntries is less than the number of devices available, then this function shall only retrieve that number of devices.", PARAM_OUT,
         Range<"0", "NumEntries">>
   ];
@@ -73,20 +73,20 @@ def : Function {
     "The implementation of this function should be lock-free."
   ];
   let params = [
-    Param<"offload_device_handle_t", "hDevice", "handle of the device instance", PARAM_IN>,
-    Param<"offload_device_info_t", "propName", "type of the info to retrieve", PARAM_IN>,
-    Param<"size_t", "propSize", "the number of bytes pointed to by pPropValue.", PARAM_IN>,
-    TypeTaggedParam<"void*", "pPropValue", "array of bytes holding the info. If propSize is not equal to or greater than the real "
+    Param<"offload_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
+    Param<"offload_device_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
+    Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
+    TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. If PropSize is not equal to or greater than the real "
                     "number of bytes needed to return the info then the OFFLOAD_ERRC_INVALID_SIZE error is returned and "
-                    "pPropValue is not used.", PARAM_OUT, TypeInfo<"propName" , "propSize">>
+                    "PropValue is not used.", PARAM_OUT, TypeInfo<"PropName" , "PropSize">>
   ];
   let returns = [
     Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
-      "If `propName` is not supported by the device."
+      "If `PropName` is not supported by the device."
     ]>,
     Return<"OFFLOAD_ERRC_INVALID_SIZE", [
-      "`propSize == 0`",
-      "If `propSize` is less than the real number of bytes needed to return the info."
+      "`PropSize == 0`",
+      "If `PropSize` is less than the real number of bytes needed to return the info."
     ]>,
     Return<"OFFLOAD_ERRC_INVALID_DEVICE">
   ];
@@ -100,13 +100,13 @@ def : Function {
     "The implementation of this function should be lock-free."
   ];
   let params = [
-    Param<"offload_device_handle_t", "hDevice", "handle of the device instance", PARAM_IN>,
-    Param<"offload_device_info_t", "propName", "type of the info to retrieve", PARAM_IN>,
-    Param<"size_t*", "pPropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
+    Param<"offload_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
+    Param<"offload_device_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
+    Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
   ];
   let returns = [
     Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
-      "If `propName` is not supported by the device."
+      "If `PropName` is not supported by the device."
     ]>,
     Return<"OFFLOAD_ERRC_INVALID_DEVICE">
   ];

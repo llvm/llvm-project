@@ -187,7 +187,7 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL {0}WithCodeLoc(
     OS << "  " << Param.getType() << " " << Param.getName();
     OS << ",\n";
   }
-  OS << "offload_code_location_t *pCodeLocation);\n\n";
+  OS << "offload_code_location_t *CodeLocation);\n\n";
 }
 
 void EmitOffloadAPI(RecordKeeper &Records, raw_ostream &OS) {
