@@ -153,6 +153,10 @@ static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
 }
 
 static void ProcessFuncParamStruct(const FunctionRec &Func, raw_ostream &OS) {
+  if (Func.getParams().size() == 0) {
+    return;
+  }
+
   auto FuncParamStructBegin = R"(
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for {0}

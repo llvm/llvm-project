@@ -17,23 +17,31 @@ def : Function {
   ];
   let params = [
     Param<"uint32_t", "NumEntries",
-      "The number of platforms to be added to phPlatforms. If phPlatforms is not NULL, then "
-      "NumEntries should be greater than zero, otherwise OFFLOAD_ERRC_INVALID_SIZE "
-      "will be returned.", PARAM_IN>,
+      "The number of platforms to be added to phPlatforms. NumEntries must be "
+      "greater than zero.",
+      PARAM_IN>,
     RangedParam<"offload_platform_handle_t*", "phPlatforms", 
       "Array of handle of platforms. If NumEntries is less than the number of "
       "platforms available, then offloadPlatformGet shall only retrieve that "
       "number of platforms.",
-      PARAM_OUT_OPTIONAL, Range<"0", "NumEntries">>,
-    Param<"uint32_t*",
-      "pNumPlatforms", "returns the total number of platforms available.",
-      PARAM_OUT_OPTIONAL>
+      PARAM_OUT, Range<"0", "NumEntries">>
   ];
   let returns = [
     Return<"OFFLOAD_ERRC_INVALID_SIZE", [
-      "`NumEntries == 0 && phPlatforms != NULL`"
+      "`NumEntries == 0`"
     ]>
   ];
+}
+
+def : Function {
+  let name = "offloadPlatformGetCount";
+  let desc = "Retrieves the number of available platforms";
+  let params = [
+    Param<"uint32_t*",
+      "pNumPlatforms", "returns the total number of platforms available.",
+      PARAM_OUT>
+  ];
+  let returns = [];
 }
 
 def : Enum {
@@ -60,8 +68,10 @@ def : Enum {
 
 def : Function {
   let name = "offloadPlatformGetInfo";
-  let desc = "Retrieves various information about platform";
+  let desc = "Queries the given property of the platform";
   let details = [
+    "`offloadPlatformGetInfoSize` can be used to query the storage size "
+    "required for the given query."
     "The application may call this function from simultaneous threads.",
     "The implementation of this function should be lock-free."
   ];
@@ -71,24 +81,37 @@ def : Function {
     Param<"size_t", "propSize", "the number of bytes pointed to by pPlatformInfo.", PARAM_IN>,
     TypeTaggedParam<"void*", "pPropValue", "array of bytes holding the info. "
       "If Size is not equal to or greater to the real number of bytes needed to return the info "
-      "then the OFFLOAD_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT_OPTIONAL,
-      TypeInfo<"propName" , "propSize">>,
-    Param<"size_t*", "pPropSizeRet", "pointer to the actual number of bytes being queried by pPlatformInfo.", PARAM_OUT_OPTIONAL>
+      "then the OFFLOAD_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT,
+      TypeInfo<"propName" , "propSize">>
   ];
   let returns = [
     Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
       "If `propName` is not supported by the platform."
     ]>,
     Return<"OFFLOAD_ERRC_INVALID_SIZE", [
-      "`propSize == 0 && pPropValue != NULL`",
+      "`propSize == 0`",
       "If `propSize` is less than the real number of bytes needed to return the info."
     ]>,
-    Return<"OFFLOAD_ERRC_INVALID_NULL_POINTER", [
-      "`propSize != 0 && pPropValue == NULL`",
-      "`pPropValue == NULL && pPropSizeRet == NULL`"
+    Return<"OFFLOAD_ERRC_INVALID_PLATFORM">
+  ];
+}
+
+def : Function {
+  let name = "offloadPlatformGetInfoSize";
+  let desc = "Returns the storage size of the given platform query";
+  let details = [
+    "The application may call this function from simultaneous threads.",
+    "The implementation of this function should be lock-free."
+  ];
+  let params = [
+    Param<"offload_platform_handle_t", "hPlatform", "handle of the platform", PARAM_IN>,
+    Param<"offload_platform_info_t", "propName", "type of the info to query", PARAM_IN>,
+    Param<"size_t*", "pPropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
+      "If `propName` is not supported by the platform."
     ]>,
-    Return<"OFFLOAD_ERRC_INVALID_PLATFORM">,
-    Return<"OFFLOAD_ERRC_OUT_OF_RESOURCES">,
-    Return<"OFFLOAD_ERRC_OUT_OF_HOST_MEMORY">
+    Return<"OFFLOAD_ERRC_INVALID_PLATFORM">
   ];
 }
