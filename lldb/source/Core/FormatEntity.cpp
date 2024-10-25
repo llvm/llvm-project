@@ -411,7 +411,7 @@ static bool DumpAddressAndContent(Stream &s, const SymbolContext *sc,
                                   bool print_file_addr_or_load_addr) {
   Target *target = Target::GetTargetFromContexts(exe_ctx, sc);
   addr_t vaddr = LLDB_INVALID_ADDRESS;
-  if (exe_ctx && !target->GetSectionLoadList().IsEmpty())
+  if (exe_ctx && target->HasLoadedSections())
     vaddr = addr.GetLoadAddress(target);
   if (vaddr == LLDB_INVALID_ADDRESS)
     vaddr = addr.GetFileAddress();
