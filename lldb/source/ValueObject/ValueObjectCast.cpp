@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectCast.h"
+#include "lldb/ValueObject/ValueObjectCast.h"
 
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 namespace lldb_private {
@@ -43,8 +43,7 @@ CompilerType ValueObjectCast::GetCompilerTypeImpl() { return m_cast_type; }
 
 llvm::Expected<uint32_t> ValueObjectCast::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  auto children_count = GetCompilerType().GetNumChildren(
-      true, &exe_ctx);
+  auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
   if (!children_count)
     return children_count;
   return *children_count <= max ? *children_count : max;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCONSTRESULTIMPL_H
-#define LLDB_CORE_VALUEOBJECTCONSTRESULTIMPL_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTIMPL_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTIMPL_H
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-defines.h"
@@ -22,7 +22,7 @@ class CompilerType;
 class DataExtractor;
 class Status;
 class ValueObject;
-}
+} // namespace lldb_private
 
 namespace lldb_private {
 
@@ -77,4 +77,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCONSTRESULTIMPL_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTIMPL_H

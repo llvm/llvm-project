@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectUpdater.h"
+#include "lldb/ValueObject/ValueObjectUpdater.h"
 
 using namespace lldb_private;
 

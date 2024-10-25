@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectList.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include <utility>
 

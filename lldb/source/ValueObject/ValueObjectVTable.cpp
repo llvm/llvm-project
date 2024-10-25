@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectVTable.h"
+#include "lldb/ValueObject/ValueObjectVTable.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectChild.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/ValueObject/ValueObjectChild.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -84,7 +84,6 @@ protected:
       return false;
     }
 
-
     // Set our value to be the load address of the function pointer in memory
     // and our type to be the function pointer type.
     m_value.SetValueType(Value::ValueType::LoadAddress);
@@ -109,7 +108,7 @@ protected:
       // the language from it correctly.
       ValueObject *val = parent->GetParent();
       auto type_system = target_sp->GetScratchTypeSystemForLanguage(
-            val ? val->GetObjectRuntimeLanguage() : eLanguageTypeC_plus_plus);
+          val ? val->GetObjectRuntimeLanguage() : eLanguageTypeC_plus_plus);
       if (type_system) {
         m_value.SetCompilerType(
             (*type_system)->CreateGenericFunctionPrototype().GetPointerType());
@@ -124,7 +123,7 @@ protected:
     if (m_error.Success()) {
       const bool thread_and_frame_only_if_stopped = true;
       ExecutionContext exe_ctx(
-        GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped));
+          GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped));
       m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
     }
     SetValueDidChange(true);
@@ -255,7 +254,7 @@ bool ValueObjectVTable::UpdateValue() {
   m_value.SetValueType(Value::ValueType::LoadAddress);
   m_value.GetScalar() = parent->GetAddressOf();
   auto type_system_or_err =
-        target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+      target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (type_system_or_err) {
     m_value.SetCompilerType(
         (*type_system_or_err)->GetBasicTypeFromAST(eBasicTypeUnsignedLong));

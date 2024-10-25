@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectRegister.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"

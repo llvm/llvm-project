@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECT_H
-#define LLDB_CORE_VALUEOBJECT_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECT_H
+#define LLDB_VALUEOBJECT_VALUEOBJECT_H
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -1004,8 +1004,8 @@ protected:
   } m_flags;
 
   friend class ValueObjectChild;
-  friend class ExpressionVariable;     // For SetName
-  friend class Target;                 // For SetName
+  friend class ExpressionVariable; // For SetName
+  friend class Target;             // For SetName
   friend class ValueObjectConstResultImpl;
   friend class ValueObjectSynthetic; // For ClearUserVisibleData
 
@@ -1079,7 +1079,7 @@ protected:
   void SetPreferredDisplayLanguageIfNeeded(lldb::LanguageType);
 
 protected:
-  virtual void DoUpdateChildrenAddressType(ValueObject &valobj){};
+  virtual void DoUpdateChildrenAddressType(ValueObject &valobj) {};
 
 private:
   virtual CompilerType MaybeCalculateCompleteType();
@@ -1100,4 +1100,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECT_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECT_H

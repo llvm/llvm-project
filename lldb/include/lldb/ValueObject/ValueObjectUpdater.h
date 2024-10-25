@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTUPDATER_H
-#define LLDB_CORE_VALUEOBJECTUPDATER_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTUPDATER_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTUPDATER_H
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 
@@ -40,4 +40,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTUPDATER_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTUPDATER_H

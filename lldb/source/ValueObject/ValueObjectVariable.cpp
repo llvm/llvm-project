@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectVariable.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
@@ -209,8 +209,7 @@ bool ValueObjectVariable::UpdateValue() {
       case Value::ValueType::Scalar:
         // The variable value is in the Scalar value inside the m_value. We can
         // point our m_data right to it.
-        m_error =
-            m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
+        m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
         break;
 
       case Value::ValueType::FileAddress:
@@ -238,8 +237,7 @@ bool ValueObjectVariable::UpdateValue() {
           // extract read its value into m_data appropriately
           Value value(m_value);
           value.SetContext(Value::ContextType::Variable, variable);
-          m_error =
-              value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
+          m_error = value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
 
           SetValueDidChange(value_type != old_value.GetValueType() ||
                             m_value.GetScalar() != old_value.GetScalar());
@@ -310,8 +308,6 @@ void ValueObjectVariable::DoUpdateChildrenAddressType(ValueObject &valobj) {
     break;
   }
 }
-
-
 
 bool ValueObjectVariable::IsInScope() {
   const ExecutionContextRef &exe_ctx_ref = GetExecutionContextRef();
