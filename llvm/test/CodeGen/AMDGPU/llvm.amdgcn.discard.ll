@@ -18,7 +18,6 @@ define amdgpu_ps void @global_discard_b32(ptr addrspace(1) %addr) {
 ; GFX1300-LABEL: global_discard_b32:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    global_discard_b32 v[0:1], off offset:32
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
@@ -30,7 +29,6 @@ define amdgpu_ps void @global_discard_b32_saddr(ptr addrspace(1) inreg %sbase, i
 ; GFX1300-LABEL: global_discard_b32_saddr:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    global_discard_b32 v0, s[0:1] offset:128
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64
@@ -55,7 +53,6 @@ define amdgpu_ps void @global_discard_b128(ptr addrspace(1) %addr) {
 ; GFX1300-LABEL: global_discard_b128:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    global_discard_b128 v[0:1], off offset:32
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
@@ -67,7 +64,6 @@ define amdgpu_ps void @global_discard_b128_saddr(ptr addrspace(1) inreg %sbase, 
 ; GFX1300-LABEL: global_discard_b128_saddr:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    global_discard_b128 v0, s[0:1] offset:128
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64
@@ -92,7 +88,6 @@ define amdgpu_ps void @global_discard_b1024(ptr addrspace(1) %addr) {
 ; GFX1300-LABEL: global_discard_b1024:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    global_discard_b1024 v[0:1], off offset:32 th:TH_STORE_HT scope:SCOPE_SE
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
@@ -104,7 +99,6 @@ define amdgpu_ps void @global_discard_b1024_saddr(ptr addrspace(1) inreg %sbase,
 ; GFX1300-LABEL: global_discard_b1024_saddr:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    global_discard_b1024 v0, s[0:1] offset:128 th:TH_STORE_HT scope:SCOPE_SE
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64

@@ -18,7 +18,6 @@ define amdgpu_ps void @v_add_u64(i64 %a, ptr addrspace(1) %out) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], 0xf12345678, v[0:1]
 ; GCN-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %result = add i64 %a, 64729929336
   store i64 %result, ptr addrspace(1) %out, align 8
@@ -44,14 +43,12 @@ define amdgpu_ps void @v_add_neg_u64(i64 %a, ptr addrspace(1) %out) {
 ; GCN-SDAG:       ; %bb.0:
 ; GCN-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 0xfffffff0edcba988, v[0:1]
 ; GCN-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GCN-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-SDAG-NEXT:    s_endpgm
 ;
 ; GCN-GISEL-LABEL: v_add_neg_u64:
 ; GCN-GISEL:       ; %bb.0:
 ; GCN-GISEL-NEXT:    v_sub_nc_u64_e32 v[0:1], 0xf12345678, v[0:1]
 ; GCN-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GCN-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-GISEL-NEXT:    s_endpgm
   %result = sub i64 %a, 64729929336
   store i64 %result, ptr addrspace(1) %out, align 8
@@ -72,7 +69,6 @@ define amdgpu_ps void @v_sub_u64(i64 %a, ptr addrspace(1) %out) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_sub_nc_u64_e32 v[0:1], 0xf12345678, v[0:1]
 ; GCN-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %result = sub i64 64729929336, %a
   store i64 %result, ptr addrspace(1) %out, align 8
@@ -278,7 +274,6 @@ define amdgpu_ps void @v_and_b64(i64 %a, ptr addrspace(1) %out) {
 ; GCN-SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GCN-SDAG-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
 ; GCN-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GCN-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-SDAG-NEXT:    s_endpgm
 ;
 ; GCN-GISEL-LABEL: v_and_b64:
@@ -286,7 +281,6 @@ define amdgpu_ps void @v_and_b64(i64 %a, ptr addrspace(1) %out) {
 ; GCN-GISEL-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
 ; GCN-GISEL-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GCN-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GCN-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-GISEL-NEXT:    s_endpgm
   %result = and i64 %a, 64729929336
   store i64 %result, ptr addrspace(1) %out, align 8

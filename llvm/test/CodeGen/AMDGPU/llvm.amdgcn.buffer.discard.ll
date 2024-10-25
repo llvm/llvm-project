@@ -8,7 +8,6 @@ define amdgpu_ps void @raw_buffer_discard(<4 x i32> inreg) {
 ; GFX13-NEXT:    buffer_discard_b32 off, s[0:3], null th:TH_STORE_NT
 ; GFX13-NEXT:    buffer_discard_b128 off, s[0:3], null scope:SCOPE_SE
 ; GFX13-NEXT:    buffer_discard_b1024 off, s[0:3], null th:TH_STORE_RT_WB
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.buffer.discard.b32(<4 x i32> %0, i32 0, i32 0, i32 1)
@@ -23,7 +22,6 @@ define amdgpu_ps void @raw_buffer_discard_imm(<4 x i32> inreg) {
 ; GFX13-NEXT:    buffer_discard_b32 off, s[0:3], null offset:2 scope:SCOPE_DEV
 ; GFX13-NEXT:    buffer_discard_b128 off, s[0:3], null offset:23124 th:TH_STORE_NT_RT
 ; GFX13-NEXT:    buffer_discard_b1024 off, s[0:3], null offset:8388607
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.buffer.discard.b32(<4 x i32> %0, i32 2, i32 0, i32 16)
@@ -38,7 +36,6 @@ define amdgpu_ps void @raw_buffer_discard_offen(<4 x i32> inreg, i32) {
 ; GFX13-NEXT:    buffer_discard_b32 v0, s[0:3], null offen
 ; GFX13-NEXT:    buffer_discard_b128 v0, s[0:3], null offen th:TH_STORE_NT_HT
 ; GFX13-NEXT:    buffer_discard_b1024 v0, s[0:3], null offen scope:SCOPE_SYS
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.buffer.discard.b32(<4 x i32> %0, i32 %1, i32 0, i32 0)
@@ -54,7 +51,6 @@ define amdgpu_ps void @struct_buffer_discard(<4 x i32> inreg, i32) {
 ; GFX13-NEXT:    buffer_discard_b32 v0, s[0:3], null idxen
 ; GFX13-NEXT:    buffer_discard_b128 v0, s[0:3], null idxen th:TH_STORE_RT_NT
 ; GFX13-NEXT:    buffer_discard_b1024 v0, s[0:3], null idxen
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.buffer.discard.b32(<4 x i32> %0, i32 0, i32 0, i32 0, i32 0)
@@ -70,7 +66,6 @@ define amdgpu_ps void @struct_buffer_discard_immoffs(<4 x i32> inreg, i32) {
 ; GFX13-NEXT:    buffer_discard_b32 v0, s[0:3], null idxen offset:42 scope:SCOPE_DEV
 ; GFX13-NEXT:    buffer_discard_b128 v0, s[0:3], null idxen offset:8388607 scope:SCOPE_SYS
 ; GFX13-NEXT:    buffer_discard_b1024 v0, s[0:3], null idxen offset:84 scope:SCOPE_SE
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.buffer.discard.b32(<4 x i32> %0, i32 0, i32 42, i32 0, i32 16)
@@ -85,7 +80,6 @@ define amdgpu_ps void @struct_buffer_discard_idx(<4 x i32> inreg, i32) {
 ; GFX13-NEXT:    buffer_discard_b32 v0, s[0:3], null idxen th:TH_STORE_NT_WB
 ; GFX13-NEXT:    buffer_discard_b128 v0, s[0:3], null idxen scope:SCOPE_SE
 ; GFX13-NEXT:    buffer_discard_b1024 v0, s[0:3], null idxen th:TH_STORE_NT scope:SCOPE_SE
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.buffer.discard.b32(<4 x i32> %0, i32 %1, i32 0, i32 0, i32 7)
@@ -101,7 +95,6 @@ define amdgpu_ps void @struct_buffer_discard_offen(<4 x i32> inreg, i32) {
 ; GFX13-NEXT:    buffer_discard_b32 v[0:1], s[0:3], null idxen offen th:TH_STORE_NT_RT
 ; GFX13-NEXT:    buffer_discard_b128 v[0:1], s[0:3], null idxen offen th:TH_STORE_RT_NT
 ; GFX13-NEXT:    buffer_discard_b1024 v[0:1], s[0:3], null idxen offen th:TH_STORE_NT_HT
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.buffer.discard.b32(<4 x i32> %0, i32 0, i32 %1, i32 0, i32 4)
@@ -116,7 +109,6 @@ define amdgpu_ps void @struct_buffer_discard_both(<4 x i32> inreg, i32, i32) {
 ; GFX13-NEXT:    buffer_discard_b32 v[0:1], s[0:3], null idxen offen th:TH_STORE_NT
 ; GFX13-NEXT:    buffer_discard_b128 v[0:1], s[0:3], null idxen offen th:TH_STORE_HT
 ; GFX13-NEXT:    buffer_discard_b1024 v[0:1], s[0:3], null idxen offen th:TH_STORE_RT_WB
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.buffer.discard.b32(<4 x i32> %0, i32 %1, i32 %2, i32 0, i32 1)
@@ -147,7 +139,6 @@ define amdgpu_ps void @struct_buffer_discard_waterfall_rsrc_vgpr(<4 x i32> %rsrc
 ; GFX13-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX13-SDAG-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX13-SDAG-NEXT:  ; %bb.2:
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: struct_buffer_discard_waterfall_rsrc_vgpr:
@@ -174,7 +165,6 @@ define amdgpu_ps void @struct_buffer_discard_waterfall_rsrc_vgpr(<4 x i32> %rsrc
 ; GFX13-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX13-GISEL-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX13-GISEL-NEXT:  ; %bb.2:
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.buffer.discard.b32(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
@@ -201,7 +191,6 @@ define amdgpu_ps void @raw_buffer_discard_waterfall_rsrc_vgpr(<4 x i32> %rsrc) {
 ; GFX13-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX13-SDAG-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX13-SDAG-NEXT:  ; %bb.2:
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: raw_buffer_discard_waterfall_rsrc_vgpr:
@@ -226,7 +215,6 @@ define amdgpu_ps void @raw_buffer_discard_waterfall_rsrc_vgpr(<4 x i32> %rsrc) {
 ; GFX13-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX13-GISEL-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX13-GISEL-NEXT:  ; %bb.2:
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.buffer.discard.b32(<4 x i32> %rsrc, i32 0, i32 0, i32 0)

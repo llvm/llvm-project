@@ -769,7 +769,7 @@ def InvalidCast : Opcode {
 }
 
 def InvalidDeclRef : Opcode {
-  let Args = [ArgDeclRef];
+  let Args = [ArgDeclRef, ArgBool];
 }
 
 def SizelessVectorElementSize : Opcode;
@@ -836,3 +836,4 @@ def CheckNewTypeMismatchArray : Opcode {
 }
 
 def IsConstantContext: Opcode;
+def CheckAllocations : Opcode;

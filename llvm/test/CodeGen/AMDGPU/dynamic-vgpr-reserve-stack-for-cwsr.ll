@@ -43,8 +43,10 @@ define amdgpu_cs void @with_local() #0 {
   ret void
 }
 
-define amdgpu_cs void @with_calls() #0 {
-; CHECK-LABEL: with_calls:
+; Check that we generate s_cselect for SP if we can fit
+; the offset in an inline constant.
+define amdgpu_cs void @with_calls_inline_const() #0 {
+; CHECK-LABEL: with_calls_inline_const:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 15
@@ -56,13 +58,39 @@ define amdgpu_cs void @with_calls() #0 {
 ; CHECK-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
-; CHECK-NEXT:    s_mov_b32 s32, 16
-; CHECK-NEXT:    s_cmovk_i32 s32, 0x1d0
+; CHECK-NEXT:    s_cselect_b32 s32, 0x1d0, 16
 ; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-NEXT:    s_alloc_vgpr 0
 ; CHECK-NEXT:    s_endpgm
   %local = alloca i32, addrspace(5)
+  store volatile i8 15, ptr addrspace(5) %local
+  call amdgpu_gfx void @callee(i32 71)
+  ret void
+}
+
+; Check that we generate s_mov + s_cmovk if we can't
+; fit the offset for SP in an inline constant.
+define amdgpu_cs void @with_calls_no_inline_const() #0 {
+; CHECK-LABEL: with_calls_no_inline_const:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    v_mov_b32_e32 v0, 15
+; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
+; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-NEXT:    s_mov_b32 s0, callee@abs32@lo
+; CHECK-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
+; CHECK-NEXT:    s_movk_i32 s32, 0x100
+; CHECK-NEXT:    s_cmovk_i32 s32, 0x2c0
+; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; CHECK-NEXT:    s_alloc_vgpr 0
+; CHECK-NEXT:    s_endpgm
+  %local = alloca i32, i32 61, addrspace(5)
   store volatile i8 15, ptr addrspace(5) %local
   call amdgpu_gfx void @callee(i32 71)
   ret void

@@ -386,7 +386,7 @@ define i1 @cttz_ugt_other_multiuse_i33(i33 %x, ptr %p) {
 ; CHECK-LABEL: @cttz_ugt_other_multiuse_i33(
 ; CHECK-NEXT:    [[TZ:%.*]] = tail call range(i33 0, 34) i33 @llvm.cttz.i33(i33 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    store i33 [[TZ]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i33 [[TZ]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i33 [[TZ]], 16
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %tz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
@@ -430,7 +430,7 @@ define <2 x i1> @cttz_ult_other_multiuse_v2i32(<2 x i32> %x, ptr %p) {
 ; CHECK-LABEL: @cttz_ult_other_multiuse_v2i32(
 ; CHECK-NEXT:    [[TZ:%.*]] = tail call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    store <2 x i32> [[TZ]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[TZ]], <i32 16, i32 16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult <2 x i32> [[TZ]], <i32 16, i32 16>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %tz = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %x, i1 false)

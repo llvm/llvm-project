@@ -6777,6 +6777,17 @@ public:
            getOp() <= AO__opencl_atomic_store;
   }
 
+  bool isHIP() const {
+    return Op >= AO__hip_atomic_compare_exchange_strong &&
+           Op <= AO__hip_atomic_store;
+  }
+
+  /// Return true if atomics operations targeting allocations in private memory
+  /// are undefined.
+  bool threadPrivateMemoryAtomicsAreUndefined() const {
+    return isOpenCL() || isHIP();
+  }
+
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
 

@@ -19,8 +19,6 @@ define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    s_barrier_signal -1
 ; GFX12-SDAG-NEXT:    s_barrier_wait -1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test1_s_barrier_signal:
@@ -37,8 +35,6 @@ define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    s_barrier_signal -1
 ; GFX12-GISEL-NEXT:    s_barrier_wait -1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test1_s_barrier_signal:
@@ -54,7 +50,6 @@ define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    s_barrier_signal -1
 ; GFX13-SDAG-NEXT:    s_barrier_wait -1
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test1_s_barrier_signal:
@@ -70,7 +65,6 @@ define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    s_barrier_signal -1
 ; GFX13-GISEL-NEXT:    s_barrier_wait -1
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -99,8 +93,6 @@ define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    s_barrier_signal 1
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test2_s_barrier_signal:
@@ -117,8 +109,6 @@ define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    s_barrier_signal 1
 ; GFX12-GISEL-NEXT:    s_barrier_wait 1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test2_s_barrier_signal:
@@ -134,7 +124,6 @@ define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    s_barrier_signal 1
 ; GFX13-SDAG-NEXT:    s_barrier_wait 1
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test2_s_barrier_signal:
@@ -150,7 +139,6 @@ define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    s_barrier_signal 1
 ; GFX13-GISEL-NEXT:    s_barrier_wait 1
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -179,8 +167,6 @@ define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    s_barrier_signal 0
 ; GFX12-SDAG-NEXT:    s_barrier_wait 0
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test3_s_barrier_signal:
@@ -197,8 +183,6 @@ define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    s_barrier_signal 0
 ; GFX12-GISEL-NEXT:    s_barrier_wait 0
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test3_s_barrier_signal:
@@ -214,7 +198,6 @@ define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    s_barrier_signal 0
 ; GFX13-SDAG-NEXT:    s_barrier_wait 0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test3_s_barrier_signal:
@@ -230,7 +213,6 @@ define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    s_barrier_signal 0
 ; GFX13-GISEL-NEXT:    s_barrier_wait 0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -260,8 +242,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) #0 
 ; GFX12-SDAG-NEXT:    s_barrier_signal m0
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test1_s_barrier_signal_var:
@@ -280,8 +260,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) #0 
 ; GFX12-GISEL-NEXT:    s_barrier_signal m0
 ; GFX12-GISEL-NEXT:    s_barrier_wait 1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test1_s_barrier_signal_var:
@@ -298,7 +276,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) #0 
 ; GFX13-SDAG-NEXT:    s_barrier_signal m0
 ; GFX13-SDAG-NEXT:    s_barrier_wait 1
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test1_s_barrier_signal_var:
@@ -315,7 +292,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) #0 
 ; GFX13-GISEL-NEXT:    s_barrier_signal m0
 ; GFX13-GISEL-NEXT:    s_barrier_wait 1
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -405,8 +381,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[6:7]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test1_s_barrier_signal_isfirst:
@@ -430,8 +404,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX12-GISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test1_s_barrier_signal_isfirst:
@@ -451,7 +423,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test1_s_barrier_signal_isfirst:
@@ -474,7 +445,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -508,8 +478,6 @@ define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[6:7]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test2_s_barrier_signal_isfirst:
@@ -533,8 +501,6 @@ define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX12-GISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test2_s_barrier_signal_isfirst:
@@ -554,7 +520,6 @@ define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test2_s_barrier_signal_isfirst:
@@ -577,7 +542,6 @@ define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -611,8 +575,6 @@ define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[6:7]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test3_s_barrier_signal_isfirst:
@@ -636,8 +598,6 @@ define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX12-GISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test3_s_barrier_signal_isfirst:
@@ -657,7 +617,6 @@ define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test3_s_barrier_signal_isfirst:
@@ -680,7 +639,6 @@ define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -715,8 +673,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[6:7]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test1_s_barrier_signal_isfirst_var:
@@ -741,8 +697,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX12-GISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test1_s_barrier_signal_isfirst_var:
@@ -763,7 +717,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test1_s_barrier_signal_isfirst_var:
@@ -787,7 +740,6 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    v_mul_lo_u32 v1, v1, v2
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -948,8 +900,6 @@ define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX12-SDAG-NEXT:    s_barrier_init -1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test1_s_barrier_init:
@@ -965,8 +915,6 @@ define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_barrier_init -1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test1_s_barrier_init:
@@ -981,7 +929,6 @@ define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test1_s_barrier_init:
@@ -997,7 +944,6 @@ define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-GISEL-NEXT:    s_or_b32 m0, -1, s2
 ; GFX13-GISEL-NEXT:    s_barrier_init m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1025,8 +971,6 @@ define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX12-SDAG-NEXT:    s_barrier_init 1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test2_s_barrier_init:
@@ -1042,8 +986,6 @@ define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_barrier_init 1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test2_s_barrier_init:
@@ -1061,7 +1003,6 @@ define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test2_s_barrier_init:
@@ -1077,7 +1018,6 @@ define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-GISEL-NEXT:    s_or_b32 m0, 1, s2
 ; GFX13-GISEL-NEXT:    s_barrier_init m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1105,8 +1045,6 @@ define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX12-SDAG-NEXT:    s_barrier_init 0
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test3_s_barrier_init:
@@ -1122,8 +1060,6 @@ define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_barrier_init 0
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test3_s_barrier_init:
@@ -1139,7 +1075,6 @@ define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test3_s_barrier_init:
@@ -1155,7 +1090,6 @@ define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-GISEL-NEXT:    s_or_b32 m0, 0, s2
 ; GFX13-GISEL-NEXT:    s_barrier_init m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1185,8 +1119,6 @@ define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar,
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX12-SDAG-NEXT:    s_barrier_init m0
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test4_s_barrier_init:
@@ -1203,8 +1135,6 @@ define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar,
 ; GFX12-GISEL-NEXT:    s_or_b32 m0, s2, s3
 ; GFX12-GISEL-NEXT:    s_barrier_init m0
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test4_s_barrier_init:
@@ -1222,7 +1152,6 @@ define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar,
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test4_s_barrier_init:
@@ -1238,7 +1167,6 @@ define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar,
 ; GFX13-GISEL-NEXT:    s_or_b32 m0, s2, s3
 ; GFX13-GISEL-NEXT:    s_barrier_init m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1333,8 +1261,6 @@ define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-SDAG-NEXT:    s_barrier_join -1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test1_s_barrier_join:
@@ -1349,8 +1275,6 @@ define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_barrier_join -1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test1_s_barrier_join:
@@ -1364,7 +1288,6 @@ define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_barrier_join -1
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test1_s_barrier_join:
@@ -1378,7 +1301,6 @@ define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_barrier_join -1
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1405,8 +1327,6 @@ define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-SDAG-NEXT:    s_barrier_join 1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test2_s_barrier_join:
@@ -1421,8 +1341,6 @@ define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_barrier_join 1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test2_s_barrier_join:
@@ -1436,7 +1354,6 @@ define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_barrier_join 1
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test2_s_barrier_join:
@@ -1450,7 +1367,6 @@ define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_barrier_join 1
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1477,8 +1393,6 @@ define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-SDAG-NEXT:    s_barrier_join 0
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test3_s_barrier_join:
@@ -1493,8 +1407,6 @@ define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_barrier_join 0
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test3_s_barrier_join:
@@ -1508,7 +1420,6 @@ define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_barrier_join 0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test3_s_barrier_join:
@@ -1522,7 +1433,6 @@ define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_barrier_join 0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1549,8 +1459,6 @@ define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %b
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_barrier_join m0
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test4_s_barrier_join_m0:
@@ -1566,8 +1474,6 @@ define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %b
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_barrier_join m0
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test4_s_barrier_join_m0:
@@ -1582,7 +1488,6 @@ define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %b
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_barrier_join m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test4_s_barrier_join_m0:
@@ -1597,7 +1502,6 @@ define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %b
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_barrier_join m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1716,8 +1620,6 @@ define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-SDAG-NEXT:    s_wakeup_barrier -1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test1_s_wakeup_barrier:
@@ -1732,8 +1634,6 @@ define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_wakeup_barrier -1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test1_s_wakeup_barrier:
@@ -1747,7 +1647,6 @@ define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_wakeup_barrier -1
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test1_s_wakeup_barrier:
@@ -1761,7 +1660,6 @@ define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_wakeup_barrier -1
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1788,8 +1686,6 @@ define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-SDAG-NEXT:    s_wakeup_barrier 1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test2_s_wakeup_barrier:
@@ -1804,8 +1700,6 @@ define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_wakeup_barrier 1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test2_s_wakeup_barrier:
@@ -1819,7 +1713,6 @@ define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_wakeup_barrier 1
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test2_s_wakeup_barrier:
@@ -1833,7 +1726,6 @@ define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_wakeup_barrier 1
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1860,8 +1752,6 @@ define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-SDAG-NEXT:    s_wakeup_barrier 0
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test3_s_wakeup_barrier:
@@ -1876,8 +1766,6 @@ define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_wakeup_barrier 0
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test3_s_wakeup_barrier:
@@ -1891,7 +1779,6 @@ define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_wakeup_barrier 0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test3_s_wakeup_barrier:
@@ -1905,7 +1792,6 @@ define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_wakeup_barrier 0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1932,8 +1818,6 @@ define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_wakeup_barrier m0
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test4_s_wakeup_barrier_m0:
@@ -1949,8 +1833,6 @@ define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
 ; GFX12-GISEL-NEXT:    s_wakeup_barrier m0
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test4_s_wakeup_barrier_m0:
@@ -1965,7 +1847,6 @@ define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_wakeup_barrier m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test4_s_wakeup_barrier_m0:
@@ -1980,7 +1861,6 @@ define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_wakeup_barrier m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2059,8 +1939,6 @@ define amdgpu_kernel void @test1_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: test1_s_get_barrier_state:
@@ -2075,7 +1953,6 @@ define amdgpu_kernel void @test1_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX13-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2099,8 +1976,6 @@ define amdgpu_kernel void @test2_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: test2_s_get_barrier_state:
@@ -2115,7 +1990,6 @@ define amdgpu_kernel void @test2_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX13-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2139,8 +2013,6 @@ define amdgpu_kernel void @test3_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: test3_s_get_barrier_state:
@@ -2155,7 +2027,6 @@ define amdgpu_kernel void @test3_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX13-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2181,8 +2052,6 @@ define amdgpu_kernel void @test4_s_get_barrier_state_m0(ptr addrspace(1) %out, i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: test4_s_get_barrier_state_m0:
@@ -2198,7 +2067,6 @@ define amdgpu_kernel void @test4_s_get_barrier_state_m0(ptr addrspace(1) %out, i
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX13-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2319,8 +2187,6 @@ define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) #0 {
 ; GFX12-SDAG-NEXT:    s_barrier_signal -1
 ; GFX12-SDAG-NEXT:    s_barrier_wait -1
 ; GFX12-SDAG-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: test_barrier_convert:
@@ -2337,8 +2203,6 @@ define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) #0 {
 ; GFX12-GISEL-NEXT:    s_barrier_signal -1
 ; GFX12-GISEL-NEXT:    s_barrier_wait -1
 ; GFX12-GISEL-NEXT:    global_store_b32 v3, v0, s[0:1]
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: test_barrier_convert:
@@ -2354,7 +2218,6 @@ define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) #0 {
 ; GFX13-SDAG-NEXT:    s_barrier_signal -1
 ; GFX13-SDAG-NEXT:    s_barrier_wait -1
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_barrier_convert:
@@ -2370,7 +2233,6 @@ define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) #0 {
 ; GFX13-GISEL-NEXT:    s_barrier_signal -1
 ; GFX13-GISEL-NEXT:    s_barrier_wait -1
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()

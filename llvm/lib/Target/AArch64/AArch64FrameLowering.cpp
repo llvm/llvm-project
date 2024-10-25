@@ -480,9 +480,9 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
            getSVEStackSize(MF) || LowerQRegCopyThroughMem);
 }
 
-/// hasFP - Return true if the specified function should have a dedicated frame
-/// pointer register.
-bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
+/// hasFPImpl - Return true if the specified function should have a dedicated
+/// frame pointer register.
+bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 

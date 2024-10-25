@@ -57,9 +57,9 @@ else()
     message(STATUS "Found make: ${LLDB_DEFAULT_TEST_MAKE}")
   else()
     message(STATUS "Not found: make")
-    message(SEND_ERROR
-          "LLDB tests require 'make' tool. Please pass via `LLDB_TEST_MAKE` "
-          "(or otherwise disable tests with `LLDB_INCLUDE_TESTS=OFF`)")
+    message(WARNING
+          "Many LLDB API tests require 'make' tool. Please provide it in Path "
+          "or pass via LLDB_TEST_MAKE.")
   endif()
 endif()
 

@@ -973,13 +973,10 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
 
   if (!IsAMDHSA) {
-    Function *LocalSizeYFn = Intrinsic::getOrInsertDeclaration(
-        Mod, Intrinsic::r600_read_local_size_y);
-    Function *LocalSizeZFn = Intrinsic::getOrInsertDeclaration(
-        Mod, Intrinsic::r600_read_local_size_z);
-
-    CallInst *LocalSizeY = Builder.CreateCall(LocalSizeYFn, {});
-    CallInst *LocalSizeZ = Builder.CreateCall(LocalSizeZFn, {});
+    CallInst *LocalSizeY =
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {}, {});
+    CallInst *LocalSizeZ =
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {}, {});
 
     ST.makeLIDRangeMetadata(LocalSizeY);
     ST.makeLIDRangeMetadata(LocalSizeZ);
@@ -1021,10 +1018,8 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   //     hsa_signal_t completion_signal; // uint64_t wrapper
   //   } hsa_kernel_dispatch_packet_t
   //
-  Function *DispatchPtrFn =
-      Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::amdgcn_dispatch_ptr);
-
-  CallInst *DispatchPtr = Builder.CreateCall(DispatchPtrFn, {});
+  CallInst *DispatchPtr =
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {}, {});
   DispatchPtr->addRetAttr(Attribute::NoAlias);
   DispatchPtr->addRetAttr(Attribute::NonNull);
   F.removeFnAttr("amdgpu-no-dispatch-ptr");
@@ -1564,13 +1559,10 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
       continue;
     case Intrinsic::objectsize: {
       Value *Src = Intr->getOperand(0);
-      Function *ObjectSize = Intrinsic::getOrInsertDeclaration(
-          Mod, Intrinsic::objectsize,
-          {Intr->getType(),
-           PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS)});
 
-      CallInst *NewCall = Builder.CreateCall(
-          ObjectSize,
+      CallInst *NewCall = Builder.CreateIntrinsic(
+          Intrinsic::objectsize,
+          {Intr->getType(), PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS)},
           {Src, Intr->getOperand(1), Intr->getOperand(2), Intr->getOperand(3)});
       Intr->replaceAllUsesWith(NewCall);
       Intr->eraseFromParent();

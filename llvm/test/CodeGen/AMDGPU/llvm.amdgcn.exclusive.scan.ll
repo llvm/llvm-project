@@ -13,7 +13,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-SDAG-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_sum_i32_sgpr:
@@ -25,7 +24,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 %src0, i32 %src1, i1 true)
   %vnc = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 %src0, i32 %src1, i1 false)
@@ -46,7 +44,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_vgpr(i32 addrspace(1)* %out)
 ; GFX13-NEXT:    v_add_nc_u32_e32 v0, v2, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -68,7 +65,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_sum_i32_constant:
@@ -80,7 +76,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 7, i32 5, i1 true)
   %vnc = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 7, i32 5, i1 false)
@@ -99,7 +94,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-SDAG-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_sum_i32_undef:
@@ -111,7 +105,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 undef, i32 undef, i1 true)
   %vnc = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 undef, i32 undef, i1 false)
@@ -130,7 +123,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-SDAG-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_sum_u32_undef:
@@ -142,7 +134,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 undef, i32 undef, i1 true)
   %vnc = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 undef, i32 undef, i1 false)
@@ -161,7 +152,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-SDAG-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_sum_u32_sgpr:
@@ -173,7 +163,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 %src0, i32 %src1, i1 true)
   %vnc = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 %src0, i32 %src1, i1 false)
@@ -194,7 +183,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_vgpr(i32 addrspace(1)* %out)
 ; GFX13-NEXT:    v_add_nc_u32_e32 v0, v2, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -216,7 +204,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v2, v0, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_sum_u32_constant:
@@ -228,7 +215,6 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 7, i32 5, i1 true)
   %vnc = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 7, i32 5, i1 false)
@@ -245,7 +231,6 @@ define amdgpu_kernel void @v_exclusive_scan_xor_b32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_xor_b32 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_xor_b32_sgpr:
@@ -255,7 +240,6 @@ define amdgpu_kernel void @v_exclusive_scan_xor_b32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_xor_b32 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 %src0, i32 %src1)
   store i32 %v, ptr addrspace(1) %out
@@ -272,7 +256,6 @@ define amdgpu_kernel void @v_exclusive_scan_xor_b32_vgpr(i32 addrspace(1)* %out)
 ; GFX13-NEXT:    v_exclusive_scan_xor_b32 v0, v1, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -290,7 +273,6 @@ define amdgpu_kernel void @v_exclusive_scan_xor_b32_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_xor_b32 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_xor_b32_constant:
@@ -300,7 +282,6 @@ define amdgpu_kernel void @v_exclusive_scan_xor_b32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 7, i32 5)
   store i32 %v, ptr addrspace(1) %out
@@ -315,7 +296,6 @@ define amdgpu_kernel void @v_exclusive_scan_xor_b32_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_xor_b32 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_xor_b32_undef:
@@ -325,7 +305,6 @@ define amdgpu_kernel void @v_exclusive_scan_xor_b32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_xor_b32 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out
@@ -340,7 +319,6 @@ define amdgpu_kernel void @v_exclusive_scan_or_b32_sgpr(ptr addrspace(1) %out, i
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_or_b32 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_or_b32_sgpr:
@@ -350,7 +328,6 @@ define amdgpu_kernel void @v_exclusive_scan_or_b32_sgpr(ptr addrspace(1) %out, i
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_or_b32 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 %src0, i32 %src1)
   store i32 %v, ptr addrspace(1) %out
@@ -367,7 +344,6 @@ define amdgpu_kernel void @v_exclusive_scan_or_b32_vgpr(i32 addrspace(1)* %out) 
 ; GFX13-NEXT:    v_exclusive_scan_or_b32 v0, v1, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -385,7 +361,6 @@ define amdgpu_kernel void @v_exclusive_scan_or_b32_constant(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_or_b32 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_or_b32_constant:
@@ -395,7 +370,6 @@ define amdgpu_kernel void @v_exclusive_scan_or_b32_constant(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 7, i32 5)
   store i32 %v, ptr addrspace(1) %out
@@ -410,7 +384,6 @@ define amdgpu_kernel void @v_exclusive_scan_or_b32_undef(ptr addrspace(1) %out) 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_or_b32 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_or_b32_undef:
@@ -420,7 +393,6 @@ define amdgpu_kernel void @v_exclusive_scan_or_b32_undef(ptr addrspace(1) %out) 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_or_b32 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out
@@ -435,7 +407,6 @@ define amdgpu_kernel void @v_exclusive_scan_and_b32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_and_b32 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_and_b32_sgpr:
@@ -445,7 +416,6 @@ define amdgpu_kernel void @v_exclusive_scan_and_b32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_and_b32 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 %src0, i32 %src1)
   store i32 %v, ptr addrspace(1) %out
@@ -462,7 +432,6 @@ define amdgpu_kernel void @v_exclusive_scan_and_b32_vgpr(i32 addrspace(1)* %out)
 ; GFX13-NEXT:    v_exclusive_scan_and_b32 v0, v1, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -480,7 +449,6 @@ define amdgpu_kernel void @v_exclusive_scan_and_b32_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_and_b32 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_and_b32_constant:
@@ -490,7 +458,6 @@ define amdgpu_kernel void @v_exclusive_scan_and_b32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 7, i32 5)
   store i32 %v, ptr addrspace(1) %out
@@ -505,7 +472,6 @@ define amdgpu_kernel void @v_exclusive_scan_and_b32_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_and_b32 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_and_b32_undef:
@@ -515,7 +481,6 @@ define amdgpu_kernel void @v_exclusive_scan_and_b32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_and_b32 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out
@@ -530,7 +495,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_i16 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_i16_sgpr:
@@ -540,7 +504,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_min_i16 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.min.i16(i16 %src0, i32 %src1)
   store i16 %v, ptr addrspace(1) %out
@@ -557,7 +520,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_vgpr(i16 addrspace(1)* %out)
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_i16 v0, v1, v0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b16 v1, v0, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_i16_vgpr:
@@ -572,7 +534,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_vgpr(i16 addrspace(1)* %out)
 ; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -591,7 +552,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_i16 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_i16_constant:
@@ -601,7 +561,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.min.i16(i16 7, i32 5)
   store i16 %v, ptr addrspace(1) %out
@@ -616,7 +575,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_i16 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_i16_undef:
@@ -626,7 +584,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_min_i16 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.min.i16(i16 undef, i32 undef)
   store i16 %v, ptr addrspace(1) %out
@@ -641,7 +598,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_u16 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_u16_sgpr:
@@ -651,7 +607,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_min_u16 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.min.u16(i16 %src0, i32 %src1)
   store i16 %v, ptr addrspace(1) %out
@@ -668,7 +623,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_vgpr(i16 addrspace(1)* %out)
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_u16 v0, v1, v0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b16 v1, v0, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_u16_vgpr:
@@ -683,7 +637,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_vgpr(i16 addrspace(1)* %out)
 ; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -702,7 +655,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_u16 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_u16_constant:
@@ -712,7 +664,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.min.u16(i16 7, i32 5)
   store i16 %v, ptr addrspace(1) %out
@@ -727,7 +678,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_u16 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_u16_undef:
@@ -737,7 +687,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_min_u16 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.min.u16(i16 undef, i32 undef)
   store i16 %v, ptr addrspace(1) %out
@@ -752,7 +701,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_i32 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_i32_sgpr:
@@ -762,7 +710,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_min_i32 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 %src0, i32 %src1)
   store i32 %v, ptr addrspace(1) %out
@@ -779,7 +726,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i32_vgpr(i32 addrspace(1)* %out)
 ; GFX13-NEXT:    v_exclusive_scan_min_i32 v0, v1, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -797,7 +743,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i32_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_i32 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_i32_constant:
@@ -807,7 +752,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 7, i32 5)
   store i32 %v, ptr addrspace(1) %out
@@ -822,7 +766,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i32_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_i32 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_i32_undef:
@@ -832,7 +775,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_i32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_min_i32 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out
@@ -847,7 +789,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_u32 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_u32_sgpr:
@@ -857,7 +798,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_min_u32 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 %src0, i32 %src1)
   store i32 %v, ptr addrspace(1) %out
@@ -874,7 +814,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u32_vgpr(i32 addrspace(1)* %out)
 ; GFX13-NEXT:    v_exclusive_scan_min_u32 v0, v1, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -892,7 +831,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u32_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_u32 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_u32_constant:
@@ -902,7 +840,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 7, i32 5)
   store i32 %v, ptr addrspace(1) %out
@@ -917,7 +854,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u32_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_min_u32 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_min_u32_undef:
@@ -927,7 +863,6 @@ define amdgpu_kernel void @v_exclusive_scan_min_u32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_min_u32 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out
@@ -942,7 +877,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_i16 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_i16_sgpr:
@@ -952,7 +886,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_max_i16 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.max.i16(i16 %src0, i32 %src1)
   store i16 %v, ptr addrspace(1) %out
@@ -969,7 +902,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_vgpr(i16 addrspace(1)* %out)
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_i16 v0, v1, v0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b16 v1, v0, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_i16_vgpr:
@@ -984,7 +916,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_vgpr(i16 addrspace(1)* %out)
 ; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -1003,7 +934,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_i16 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_i16_constant:
@@ -1013,7 +943,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.max.i16(i16 7, i32 5)
   store i16 %v, ptr addrspace(1) %out
@@ -1028,7 +957,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_i16 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_i16_undef:
@@ -1038,7 +966,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_max_i16 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.max.i16(i16 undef, i32 undef)
   store i16 %v, ptr addrspace(1) %out
@@ -1053,7 +980,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_u16 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_u16_sgpr:
@@ -1063,7 +989,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_max_u16 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.max.u16(i16 %src0, i32 %src1)
   store i16 %v, ptr addrspace(1) %out
@@ -1080,7 +1005,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_vgpr(i16 addrspace(1)* %out)
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_u16 v0, v1, v0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b16 v1, v0, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_u16_vgpr:
@@ -1095,7 +1019,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_vgpr(i16 addrspace(1)* %out)
 ; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -1114,7 +1037,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_u16 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_u16_constant:
@@ -1124,7 +1046,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.max.u16(i16 7, i32 5)
   store i16 %v, ptr addrspace(1) %out
@@ -1139,7 +1060,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_u16 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_u16_undef:
@@ -1149,7 +1069,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_max_u16 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i16 @llvm.amdgcn.exclusive.scan.max.u16(i16 undef, i32 undef)
   store i16 %v, ptr addrspace(1) %out
@@ -1164,7 +1083,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_i32 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_i32_sgpr:
@@ -1174,7 +1092,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_max_i32 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 %src0, i32 %src1)
   store i32 %v, ptr addrspace(1) %out
@@ -1191,7 +1108,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i32_vgpr(i32 addrspace(1)* %out)
 ; GFX13-NEXT:    v_exclusive_scan_max_i32 v0, v1, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -1209,7 +1125,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i32_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_i32 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_i32_constant:
@@ -1219,7 +1134,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 7, i32 5)
   store i32 %v, ptr addrspace(1) %out
@@ -1234,7 +1148,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i32_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_i32 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_i32_undef:
@@ -1244,7 +1157,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_i32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_max_i32 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out
@@ -1259,7 +1171,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_u32 v1, s2, s3
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_u32_sgpr:
@@ -1269,7 +1180,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_max_u32 v0, s2, s3
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 %src0, i32 %src1)
   store i32 %v, ptr addrspace(1) %out
@@ -1286,7 +1196,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u32_vgpr(i32 addrspace(1)* %out)
 ; GFX13-NEXT:    v_exclusive_scan_max_u32 v0, v1, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -1304,7 +1213,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u32_constant(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_u32 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_u32_constant:
@@ -1314,7 +1222,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 7, i32 5)
   store i32 %v, ptr addrspace(1) %out
@@ -1329,7 +1236,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u32_undef(ptr addrspace(1) %out)
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_exclusive_scan_max_u32 v1, s0, s0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: v_exclusive_scan_max_u32_undef:
@@ -1339,7 +1245,6 @@ define amdgpu_kernel void @v_exclusive_scan_max_u32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_max_u32 v0, s0, s0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out

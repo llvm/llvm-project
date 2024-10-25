@@ -1012,7 +1012,6 @@ define amdgpu_kernel void @shuffle8i8(ptr addrspace(1) %in0, ptr addrspace(1) %i
 ; GFX13-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %vec0 = load <8 x i8>, ptr addrspace(1) %in0

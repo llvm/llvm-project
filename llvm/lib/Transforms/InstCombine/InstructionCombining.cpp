@@ -4087,7 +4087,7 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   if (LoadInst *L = dyn_cast<LoadInst>(Agg)) {
     // Bail out if the aggregate contains scalable vector type
     if (auto *STy = dyn_cast<StructType>(Agg->getType());
-        STy && STy->containsScalableVectorType())
+        STy && STy->isScalableTy())
       return nullptr;
 
     // If the (non-volatile) load only has one use, we can rewrite this to a
@@ -4822,7 +4822,8 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
-  if (I->mayReadFromMemory()) {
+  if (I->mayReadFromMemory() &&
+      !I->hasMetadata(LLVMContext::MD_invariant_load)) {
     // We don't want to do any sophisticated alias analysis, so we only check
     // the instructions after I in I's parent block if we try to sink to its
     // successor block.

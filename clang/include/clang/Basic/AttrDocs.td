@@ -2669,7 +2669,7 @@ sign. For example:
 
   .. code-block:: c++
 
-    __attribute__((target_clones("sha2+memtag2", "fcma+sve2-pmull128")))
+    __attribute__((target_clones("sha2+memtag", "fcma+sve2-pmull128")))
     void foo() {}
 
 For every multiversioned function a ``default`` (fallback) implementation

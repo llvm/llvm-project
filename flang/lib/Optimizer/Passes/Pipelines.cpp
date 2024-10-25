@@ -35,11 +35,11 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config) {
   if (config.NSWOnLoopVarInc)
-    addNestedPassToAllTopLevelOperationsConditionally(
-        pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
-  else
     addNestedPassToAllTopLevelOperationsConditionally(pm, disableCfgConversion,
                                                       fir::createCFGConversion);
+  else
+    addNestedPassToAllTopLevelOperationsConditionally(
+        pm, disableCfgConversion, fir::createCFGConversionPassWithoutNSW);
 }
 
 void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
@@ -243,6 +243,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
 /// rather than the host device.
 void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice) {
   pm.addPass(flangomp::createMapInfoFinalizationPass());
+  pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
   if (isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());

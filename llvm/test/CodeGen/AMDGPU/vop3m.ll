@@ -7,7 +7,6 @@ define amdgpu_ps void @test_permute_pair_2src_interleave_b64(i32 %src0, i32 %src
 ; GFX13-NEXT:    v_permute_pair_2src_interleave_b64 v0, v1, v0, v1 aux_data:2
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.permute.pair.2src.interleave.b64(i32 %src0, i32 %src1, i32 2)
@@ -24,7 +23,6 @@ define amdgpu_ps void @test_permute_pack_tensor_2src_b64(i32 %src0, i32 %src1, p
 ; GFX13-NEXT:    v_permute_pack_tensor_2src_b64 v0, v1, v0, v1 aux_data:2
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.permute.pack.tensor.2src.b64(i32 %src0, i32 %src1, i32 2)
@@ -45,7 +43,6 @@ define amdgpu_ps void @test_scale_bias_activate_f32_inreg(float inreg %ssrc, <4 
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
 ; GFX13-NEXT:    v_scale_bias_activate_f32 v[0:3], v[0:3], s0, v4 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.scale.bias.activate.f32(<4 x float> %acc_in, float %ssrc, float %bias, i32 2, i1 1)
@@ -59,7 +56,6 @@ define amdgpu_ps void @test_scale_bias_activate_f32_ssrc_null(<4 x float> %acc_i
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
 ; GFX13-NEXT:    v_scale_bias_activate_f32 v[0:3], v[0:3], null, v4 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.scale.bias.activate.f32(<4 x float> %acc_in, float 0.0, float %bias, i32 67108866, i1 1)
@@ -75,7 +71,6 @@ define amdgpu_ps void @test_scale_bias_activate_f32(float %ssrc, <4 x float> %ac
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_scale_bias_activate_f32 v[0:3], v[8:11], s0, v5 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.scale.bias.activate.f32(<4 x float> %acc_in, float %ssrc, float %bias, i32 2, i1 1)
@@ -89,7 +84,6 @@ define amdgpu_ps void @test_scale_bias_activate_f16_inreg(half inreg %ssrc, <8 x
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
 ; GFX13-NEXT:    v_scale_bias_activate_f16 v[0:3], v[0:3], s0, v4 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> %acc_in, half %ssrc, <2 x half> %bias, i32 2, i1 1)
@@ -103,7 +97,6 @@ define amdgpu_ps void @test_scale_bias_activate_f16_ssrc_null(<8 x half> %acc_in
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
 ; GFX13-NEXT:    v_scale_bias_activate_f16 v[0:3], v[0:3], null, v4 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> %acc_in, half 0xH0000, <2 x half> %bias, i32 67108866, i1 1)
@@ -119,7 +112,6 @@ define amdgpu_ps void @test_scale_bias_activate_f16(half %ssrc, <8 x half> %acc_
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_scale_bias_activate_f16 v[0:3], v[8:11], s0, v5 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> %acc_in, half %ssrc, <2 x half> %bias, i32 2, i1 1)
@@ -133,7 +125,6 @@ define amdgpu_ps void @test_scale_bias_activate_bf16_inreg(bfloat inreg %ssrc, <
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
 ; GFX13-NEXT:    v_scale_bias_activate_bf16 v[0:3], v[0:3], s0, v4 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> %acc_in, bfloat %ssrc, <2 x bfloat> %bias, i32 2, i1 1)
@@ -147,7 +138,6 @@ define amdgpu_ps void @test_scale_bias_activate_bf16_ssrc_null(<8 x bfloat> %acc
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
 ; GFX13-NEXT:    v_scale_bias_activate_bf16 v[0:3], v[0:3], null, v4 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> %acc_in, bfloat 0xR0000, <2 x bfloat> %bias, i32 67108866, i1 1)
@@ -163,7 +153,6 @@ define amdgpu_ps void @test_scale_bias_activate_bf16(bfloat %ssrc, <8 x bfloat> 
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_scale_bias_activate_bf16 v[0:3], v[8:11], s0, v5 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[6:7], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> %acc_in, bfloat %ssrc, <2 x bfloat> %bias, i32 2, i1 1)
@@ -184,7 +173,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter2_f16_inreg(half inreg %s
 ; GFX13-NEXT:    v_scale_bias_activate_scatter2_f16 v0, v1, v[0:1], s0, v2 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> %acc_in, half %ssrc, <2 x half> %bias, i32 2, i1 1)
@@ -203,7 +191,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter2_f16_ssrc_null(<4 x half
 ; GFX13-NEXT:    v_scale_bias_activate_scatter2_f16 v0, v1, v[0:1], null, v2 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> %acc_in, half 0xH0000, <2 x half> %bias, i32 67108866, i1 1)
@@ -222,7 +209,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter2_f16(half %ssrc, <4 x ha
 ; GFX13-NEXT:    v_scale_bias_activate_scatter2_f16 v0, v1, v[8:9], s0, v3 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> %acc_in, half %ssrc, <2 x half> %bias, i32 2, i1 1)
@@ -241,7 +227,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter2_bf16_inreg(bfloat inreg
 ; GFX13-NEXT:    v_scale_bias_activate_scatter2_bf16 v0, v1, v[0:1], s0, v2 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> %acc_in, bfloat %ssrc, <2 x bfloat> %bias, i32 2, i1 1)
@@ -260,7 +245,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter2_bf16_ssrc_null(<4 x bfl
 ; GFX13-NEXT:    v_scale_bias_activate_scatter2_bf16 v0, v1, v[0:1], null, v2 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> %acc_in, bfloat 0xR0000, <2 x bfloat> %bias, i32 67108866, i1 1)
@@ -279,7 +263,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter2_bf16(bfloat %ssrc, <4 x
 ; GFX13-NEXT:    v_scale_bias_activate_scatter2_bf16 v0, v1, v[8:9], s0, v3 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> %acc_in, bfloat %ssrc, <2 x bfloat> %bias, i32 2, i1 1)
@@ -306,7 +289,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter4_f16_inreg(half inreg %s
 ; GFX13-NEXT:    global_store_b32 v[8:9], v1, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v2, off
 ; GFX13-NEXT:    global_store_b32 v[12:13], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> %acc_in, half %ssrc, <2 x half> %bias, i32 2, i1 1)
@@ -333,7 +315,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter4_f16_ssrc_null(<8 x half
 ; GFX13-NEXT:    global_store_b32 v[8:9], v1, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v2, off
 ; GFX13-NEXT:    global_store_b32 v[12:13], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> %acc_in, half 0xH0000, <2 x half> %bias, i32 67108866, i1 1)
@@ -359,7 +340,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter4_f16(half %ssrc, <8 x ha
 ; GFX13-NEXT:    global_store_b32 v[8:9], v1, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v2, off
 ; GFX13-NEXT:    global_store_b32 v[12:13], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> %acc_in, half %ssrc, <2 x half> %bias, i32 2, i1 1)
@@ -386,7 +366,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter4_bf16_inreg(bfloat inreg
 ; GFX13-NEXT:    global_store_b32 v[8:9], v1, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v2, off
 ; GFX13-NEXT:    global_store_b32 v[12:13], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> %acc_in, bfloat %ssrc, <2 x bfloat> %bias, i32 2, i1 1)
@@ -413,7 +392,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter4_bf16_ssrc_null(<8 x bfl
 ; GFX13-NEXT:    global_store_b32 v[8:9], v1, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v2, off
 ; GFX13-NEXT:    global_store_b32 v[12:13], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> %acc_in, bfloat 0xR0000, <2 x bfloat> %bias, i32 67108866, i1 1)
@@ -439,7 +417,6 @@ define amdgpu_ps void @test_scale_bias_activate_scatter4_bf16(bfloat %ssrc, <8 x
 ; GFX13-NEXT:    global_store_b32 v[8:9], v1, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v2, off
 ; GFX13-NEXT:    global_store_b32 v[12:13], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> %acc_in, bfloat %ssrc, <2 x bfloat> %bias, i32 2, i1 1)
@@ -463,7 +440,6 @@ define amdgpu_ps void @test_uniform_scale_activate_f32_inreg(float inreg %ssrc, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_uniform_scale_activate_f32 v[0:3], v[0:3], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[4:5], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.uniform.scale.activate.f32(<4 x float> %acc_in, float %ssrc, i32 2, i1 1)
@@ -480,7 +456,6 @@ define amdgpu_ps void @test_uniform_scale_activate_f32(float %ssrc, <4 x float> 
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_uniform_scale_activate_f32 v[0:3], v[6:9], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[10:11], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.uniform.scale.activate.f32(<4 x float> %acc_in, float %ssrc, i32 2, i1 1)
@@ -493,7 +468,6 @@ define amdgpu_ps void @test_uniform_scale_activate_f16_inreg(half inreg %ssrc, <
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_uniform_scale_activate_f16 v[0:3], v[0:3], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[4:5], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.uniform.scale.activate.f16(<8 x half> %acc_in, half %ssrc, i32 2, i1 1)
@@ -510,7 +484,6 @@ define amdgpu_ps void @test_uniform_scale_activate_f16(half %ssrc, <8 x half> %a
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_uniform_scale_activate_f16 v[0:3], v[6:9], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[10:11], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.uniform.scale.activate.f16(<8 x half> %acc_in, half %ssrc, i32 2, i1 1)
@@ -523,7 +496,6 @@ define amdgpu_ps void @test_uniform_scale_activate_bf16_inreg(bfloat inreg %ssrc
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_uniform_scale_activate_bf16 v[0:3], v[0:3], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[4:5], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.uniform.scale.activate.bf16(<8 x bfloat> %acc_in, bfloat %ssrc, i32 2, i1 1)
@@ -540,7 +512,6 @@ define amdgpu_ps void @test_uniform_scale_activate_bf16(bfloat %ssrc, <8 x bfloa
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_uniform_scale_activate_bf16 v[0:3], v[6:9], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[10:11], v[0:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.uniform.scale.activate.bf16(<8 x bfloat> %acc_in, bfloat %ssrc, i32 2, i1 1)
@@ -558,7 +529,6 @@ define amdgpu_ps void @test_uniform_scale_activate_scatter2_f16_inreg(half inreg
 ; GFX13-NEXT:    v_uniform_scale_activate_scatter2_f16 v0, v1, v[0:1], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.uniform.scale.activate.scatter2.f16(<4 x half> %acc_in, half %ssrc, i32 2, i1 1)
@@ -579,7 +549,6 @@ define amdgpu_ps void @test_uniform_scale_activate_scatter2_f16(half %ssrc, <4 x
 ; GFX13-NEXT:    v_uniform_scale_activate_scatter2_f16 v0, v1, v[8:9], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.uniform.scale.activate.scatter2.f16(<4 x half> %acc_in, half %ssrc, i32 2, i1 1)
@@ -596,7 +565,6 @@ define amdgpu_ps void @test_uniform_scale_activate_scatter2_bf16_inreg(bfloat in
 ; GFX13-NEXT:    v_uniform_scale_activate_scatter2_bf16 v0, v1, v[0:1], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.uniform.scale.activate.scatter2.bf16(<4 x bfloat> %acc_in, bfloat %ssrc, i32 2, i1 1)
@@ -617,7 +585,6 @@ define amdgpu_ps void @test_uniform_scale_activate_scatter2_bf16(bfloat %ssrc, <
 ; GFX13-NEXT:    v_uniform_scale_activate_scatter2_bf16 v0, v1, v[8:9], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.uniform.scale.activate.scatter2.bf16(<4 x bfloat> %acc_in, bfloat %ssrc, i32 2, i1 1)
@@ -640,7 +607,6 @@ define amdgpu_ps void @test_uniform_scale_activate_scatter4_f16_inreg(half inreg
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.uniform.scale.activate.scatter4.f16(<8 x half> %acc_in, half %ssrc, i32 2, i1 1)
@@ -670,7 +636,6 @@ define amdgpu_ps void @test_uniform_scale_activate_scatter4_f16(half %ssrc, <8 x
 ; GFX13-NEXT:    global_store_b32 v[16:17], v1, off
 ; GFX13-NEXT:    global_store_b32 v[14:15], v4, off
 ; GFX13-NEXT:    global_store_b32 v[12:13], v5, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.uniform.scale.activate.scatter4.f16(<8 x half> %acc_in, half %ssrc, i32 2, i1 1)
@@ -693,7 +658,6 @@ define amdgpu_ps void @test_uniform_scale_activate_scatter4_bf16_inreg(bfloat in
 ; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    global_store_b32 v[8:9], v2, off
 ; GFX13-NEXT:    global_store_b32 v[10:11], v3, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.uniform.scale.activate.scatter4.bf16(<8 x bfloat> %acc_in, bfloat %ssrc, i32 2, i1 1)
@@ -723,7 +687,6 @@ define amdgpu_ps void @test_uniform_scale_activate_scatter4_bf16(bfloat %ssrc, <
 ; GFX13-NEXT:    global_store_b32 v[16:17], v1, off
 ; GFX13-NEXT:    global_store_b32 v[14:15], v4, off
 ; GFX13-NEXT:    global_store_b32 v[12:13], v5, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.uniform.scale.activate.scatter4.bf16(<8 x bfloat> %acc_in, bfloat %ssrc, i32 2, i1 1)

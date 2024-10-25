@@ -1045,9 +1045,8 @@ UnresolvedMaterializationRewrite::UnresolvedMaterializationRewrite(
     const TypeConverter *converter, MaterializationKind kind, Type originalType)
     : OperationRewrite(Kind::UnresolvedMaterialization, rewriterImpl, op),
       converterAndKind(converter, kind), originalType(originalType) {
-  assert(!originalType ||
-         kind == MaterializationKind::Target &&
-             "original type is valid only for target materializations");
+  assert((!originalType || kind == MaterializationKind::Target) &&
+         "original type is valid only for target materializations");
   rewriterImpl.unresolvedMaterializations[op] = this;
 }
 
@@ -1337,9 +1336,8 @@ Value ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     MaterializationKind kind, OpBuilder::InsertPoint ip, Location loc,
     ValueRange inputs, Type outputType, Type originalType,
     const TypeConverter *converter) {
-  assert(!originalType ||
-         kind == MaterializationKind::Target &&
-             "original type is valid only for target materializations");
+  assert((!originalType || kind == MaterializationKind::Target) &&
+         "original type is valid only for target materializations");
 
   // Avoid materializing an unnecessary cast.
   if (inputs.size() == 1 && inputs.front().getType() == outputType)
@@ -2814,8 +2812,8 @@ Value TypeConverter::materializeArgumentConversion(OpBuilder &builder,
                                                    ValueRange inputs) const {
   for (const MaterializationCallbackFn &fn :
        llvm::reverse(argumentMaterializations))
-    if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
-      return *result;
+    if (Value result = fn(builder, resultType, inputs, loc))
+      return result;
   return nullptr;
 }
 
@@ -2824,8 +2822,8 @@ Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
                                                  ValueRange inputs) const {
   for (const MaterializationCallbackFn &fn :
        llvm::reverse(sourceMaterializations))
-    if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
-      return *result;
+    if (Value result = fn(builder, resultType, inputs, loc))
+      return result;
   return nullptr;
 }
 
@@ -2835,9 +2833,8 @@ Value TypeConverter::materializeTargetConversion(OpBuilder &builder,
                                                  Type originalType) const {
   for (const TargetMaterializationCallbackFn &fn :
        llvm::reverse(targetMaterializations))
-    if (std::optional<Value> result =
-            fn(builder, resultType, inputs, loc, originalType))
-      return *result;
+    if (Value result = fn(builder, resultType, inputs, loc, originalType))
+      return result;
   return nullptr;
 }
 

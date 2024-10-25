@@ -161,15 +161,11 @@ public:
   // memcpy as per section 3 of the SPIR spec.
   bool useFP16ConversionIntrinsics() const override { return false; }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
-  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
 
   std::string_view getClobbers() const override { return ""; }
 
-  ArrayRef<const char *> getGCCRegNames() const override {
-    return std::nullopt;
-  }
+  ArrayRef<const char *> getGCCRegNames() const override { return {}; }
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override {
@@ -177,7 +173,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

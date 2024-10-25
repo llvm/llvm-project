@@ -35,8 +35,6 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX12-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
-; GFX12-SDAG-NEXT:    s_nop 0
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: _amdgpu_cs_main:
@@ -47,8 +45,6 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: _amdgpu_cs_main:
@@ -58,7 +54,6 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
 ; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX1210-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: _amdgpu_cs_main:
@@ -69,7 +64,6 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1210-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
 .entry:
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()

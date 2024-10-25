@@ -4162,3 +4162,27 @@ SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
   }
   return 0;
 }
+
+unsigned
+SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
+                                   const TargetRegisterClass &RC) const {
+  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+  ArrayRef<MCPhysReg> Registers =
+      (RC.getID() == AMDGPU::VGPR_32RegClassID)
+          ? RC.getRegisters().take_front(NumArchVGPRs)
+          : RC.getRegisters();
+  for (MCPhysReg Reg : reverse(Registers))
+    if (MRI.isPhysRegUsed(Reg))
+      return getHWRegIndex(Reg) + 1;
+  return 0;
+}
+
+SmallVector<StringLiteral>
+SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
+                                  const MachineFunction &MF) const {
+  SmallVector<StringLiteral> RegFlags;
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  if (FuncInfo->checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
+    RegFlags.push_back("WWM_REG");
+  return RegFlags;
+}

@@ -12,34 +12,22 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x i8> @concat_v8i8(<4 x i8> %op1, <4 x i8> %op2)  {
 ; CHECK-LABEL: concat_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    mov z2.h, z1.h[3]
-; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z2.h, z1.h[3]
 ; CHECK-NEXT:    mov z3.h, z1.h[2]
-; CHECK-NEXT:    mov z1.h, z1.h[1]
-; CHECK-NEXT:    mov z4.h, z0.h[3]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w8, [sp, #12]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z2.h, z0.h[2]
-; CHECK-NEXT:    mov z0.h, z0.h[1]
-; CHECK-NEXT:    strb w9, [sp, #8]
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    strb w9, [sp, #14]
-; CHECK-NEXT:    strb w8, [sp, #13]
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    strb w8, [sp, #11]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    strb w8, [sp, #10]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strb w8, [sp, #9]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    mov z4.h, z1.h[1]
+; CHECK-NEXT:    mov z5.h, z0.h[3]
+; CHECK-NEXT:    mov z6.h, z0.h[2]
+; CHECK-NEXT:    mov z7.h, z0.h[1]
+; CHECK-NEXT:    zip1 z2.b, z3.b, z2.b
+; CHECK-NEXT:    zip1 z1.b, z1.b, z4.b
+; CHECK-NEXT:    zip1 z3.b, z6.b, z5.b
+; CHECK-NEXT:    zip1 z0.b, z0.b, z7.b
+; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v8i8:
@@ -152,22 +140,14 @@ define void @concat_v64i8(ptr %a, ptr %b, ptr %c) {
 define <4 x i16> @concat_v4i16(<2 x i16> %op1, <2 x i16> %op2)  {
 ; CHECK-LABEL: concat_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z2.s, z1.s[1]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    strh w8, [sp, #12]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    strh w8, [sp, #14]
-; CHECK-NEXT:    strh w9, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    mov z3.s, z0.s[1]
+; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v4i16:
@@ -428,18 +408,14 @@ define void @concat_v8i64(ptr %a, ptr %b, ptr %c) {
 define <4 x half> @concat_v4f16(<2 x half> %op1, <2 x half> %op2)  {
 ; CHECK-LABEL: concat_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z2.h, z1.h[1]
-; CHECK-NEXT:    str h1, [sp, #12]
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    str h0, [sp, #8]
-; CHECK-NEXT:    str h2, [sp, #14]
-; CHECK-NEXT:    str h1, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    mov z3.h, z0.h[1]
+; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v4f16:

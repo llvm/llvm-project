@@ -756,8 +756,8 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
 
     // Looking for an immediate or a register VL that isn't X0.
-    assert(!VLOp.isReg() ||
-           VLOp.getReg() != RISCV::X0 && "Did not expect X0 VL");
+    assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
+           "Did not expect X0 VL");
 
     if (!CommonVL) {
       CommonVL = &VLOp;

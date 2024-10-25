@@ -678,7 +678,7 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
                                           vectorOperand, fmf);
 }
 
-/// Overloaded methods to lower a *predicated* reduction to an llvm instrinsic
+/// Overloaded methods to lower a *predicated* reduction to an llvm intrinsic
 /// that requires a start value. This start value format spans across fp
 /// reductions without mask and all the masked reduction intrinsics.
 template <class LLVMVPRedIntrinOp, class ReductionNeutral>

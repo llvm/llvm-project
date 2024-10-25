@@ -11,9 +11,10 @@ typedef unsigned short ushort;
 // CHECK-LABEL: @test_wavegroup_id(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wavegroup.id()
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[TMP1]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -25,9 +26,10 @@ void test_wavegroup_id(global uint *out)
 // CHECK-LABEL: @test_wave_id_in_wavegroup(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[TMP1]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -40,11 +42,13 @@ void test_wave_id_in_wavegroup(global uint *out)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.prng.b32(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -55,12 +59,13 @@ void test_prng_b32(global uint* out, uint a) {
 // CHECK-LABEL: @test_flat_discard(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    store ptr [[PTR:%.*]], ptr addrspace(5) [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PTR_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[PTR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b32.p0(ptr [[TMP0]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b128.p0(ptr [[TMP1]], i32 0)
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b1024.p0(ptr [[TMP2]], i32 0)
 // CHECK-NEXT:    ret void
 //
@@ -73,12 +78,13 @@ void test_flat_discard(int* ptr) {
 // CHECK-LABEL: @test_global_discard(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[PTR:%.*]], ptr addrspace(5) [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PTR_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[PTR:%.*]], ptr [[PTR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b32.p1(ptr addrspace(1) [[TMP0]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b128.p1(ptr addrspace(1) [[TMP1]], i32 0)
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b1024.p1(ptr addrspace(1) [[TMP2]], i32 0)
 // CHECK-NEXT:    ret void
 //
@@ -90,17 +96,21 @@ void test_global_discard(global int* ptr) {
 
 // CHECK-LABEL: @test_scratch_discard(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TAB:%.*]] = alloca [10 x i32], align 4, addrspace(5)
-// CHECK-NEXT:    call void @llvm.amdgcn.discard.b32.p5(ptr addrspace(5) [[TAB]], i32 0)
-// CHECK-NEXT:    call void @llvm.amdgcn.discard.b128.p5(ptr addrspace(5) [[TAB]], i32 0)
-// CHECK-NEXT:    call void @llvm.amdgcn.discard.b1024.p5(ptr addrspace(5) [[TAB]], i32 0)
+// CHECK-NEXT:    [[TAB:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CHECK-NEXT:    [[TAB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TAB]] to ptr
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(5), ptr [[TAB_ASCAST]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b32.p5(ptr addrspace(5) [[TMP0]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(5), ptr [[TAB_ASCAST]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b128.p5(ptr addrspace(5) [[TMP1]], i32 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(5), ptr [[TAB_ASCAST]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b1024.p5(ptr addrspace(5) [[TMP2]], i32 0)
 // CHECK-NEXT:    ret void
 //
 void test_scratch_discard() {
-  int tab[10];
-  __builtin_amdgcn_discard_b32(&tab, 0);
-  __builtin_amdgcn_discard_b128(&tab, 0);
-  __builtin_amdgcn_discard_b1024(&tab, 0);
+  __attribute__((opencl_private)) int* tab;
+  __builtin_amdgcn_discard_b32(tab, 0);
+  __builtin_amdgcn_discard_b128(tab, 0);
+  __builtin_amdgcn_discard_b1024(tab, 0);
 }
 
 // CHECK-LABEL: @test_wave_match_b32(
@@ -108,13 +118,16 @@ void test_scratch_discard() {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -127,18 +140,21 @@ void test_wave_match_b32(global uint* out, uint src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 [[TMP0]], i32 [[TMP1]], i1 true)
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 [[TMP4]], i32 [[TMP5]], i1 false)
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP6]], ptr addrspace(1) [[TMP7]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -152,18 +168,21 @@ void test_exclusive_scan_sum_i32(global int* out, int src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 [[TMP0]], i32 [[TMP1]], i1 true)
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 [[TMP4]], i32 [[TMP5]], i1 false)
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP6]], ptr addrspace(1) [[TMP7]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -177,13 +196,16 @@ void test_exclusive_scan_sum_u32(global uint* out, uint src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -196,13 +218,16 @@ void test_exclusive_scan_xor_b32(global uint* out, uint src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -215,13 +240,16 @@ void test_exclusive_scan_or_b32(global uint* out, uint src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -234,13 +262,16 @@ void test_exclusive_scan_and_b32(global uint* out, uint src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i16 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 2
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr addrspace(5) [[SRC0_ADDR]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC0_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.amdgcn.exclusive.scan.min.i16(i16 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i16 [[TMP2]], ptr addrspace(1) [[TMP3]], align 2
 // CHECK-NEXT:    ret void
 //
@@ -253,13 +284,16 @@ void test_exclusive_scan_min_i16(global short* out, short src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i16 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 2
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr addrspace(5) [[SRC0_ADDR]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC0_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.amdgcn.exclusive.scan.min.u16(i16 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i16 [[TMP2]], ptr addrspace(1) [[TMP3]], align 2
 // CHECK-NEXT:    ret void
 //
@@ -272,13 +306,16 @@ void test_exclusive_scan_min_u16(global ushort* out, ushort src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -291,13 +328,16 @@ void test_exclusive_scan_min_i32(global int* out, int src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -310,13 +350,16 @@ void test_exclusive_scan_min_u32(global uint* out, uint src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i16 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 2
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr addrspace(5) [[SRC0_ADDR]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC0_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.amdgcn.exclusive.scan.max.i16(i16 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i16 [[TMP2]], ptr addrspace(1) [[TMP3]], align 2
 // CHECK-NEXT:    ret void
 //
@@ -329,13 +372,16 @@ void test_exclusive_scan_max_i16(global short* out, short src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i16 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 2
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr addrspace(5) [[SRC0_ADDR]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC0_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.amdgcn.exclusive.scan.max.u16(i16 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i16 [[TMP2]], ptr addrspace(1) [[TMP3]], align 2
 // CHECK-NEXT:    ret void
 //
@@ -348,31 +394,38 @@ void test_exclusive_scan_max_u16(global ushort* out, ushort src0, uint src1) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
 void test_exclusive_scan_max_i32(global int* out, int src0, uint src1) {
   *out = __builtin_amdgcn_exclusive_scan_max_i32(src0, src1);
 }
+
 // CHECK-LABEL: @test_exclusive_scan_max_u32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC0_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC0_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC1_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr [[SRC1_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -380,19 +433,21 @@ void test_exclusive_scan_max_u32(global uint* out, uint src0, uint src1) {
   *out = __builtin_amdgcn_exclusive_scan_max_u32(src0, src1);
 }
 
-
 // CHECK-LABEL: @test_pdep_b32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[MASK:%.*]], ptr addrspace(5) [[MASK_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[MASK_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
+// CHECK-NEXT:    [[MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[MASK_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[MASK:%.*]], ptr [[MASK_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MASK_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.pdep.b32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -405,13 +460,16 @@ void test_pdep_b32(global uint* out, uint src, uint mask) {
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[MASK:%.*]], ptr addrspace(5) [[MASK_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[MASK_ADDR]], align 4
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
+// CHECK-NEXT:    [[MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[MASK_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[MASK:%.*]], ptr [[MASK_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MASK_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.pext.b32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    ret void
 //

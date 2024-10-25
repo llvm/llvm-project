@@ -124,7 +124,7 @@ LLVM_LIBC_FUNCTION(float16, exp10f16, (float16 x)) {
 
   // 10^x = 2^((hi + mid) * log2(10)) * 10^lo
   auto [exp2_hi_mid, exp10_lo] = exp10_range_reduction(x);
-  return static_cast<float16>(exp2_hi_mid * exp10_lo);
+  return fputil::cast<float16>(exp2_hi_mid * exp10_lo);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

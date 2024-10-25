@@ -2118,7 +2118,7 @@ multiclass VOP3_Realtriple_t16_gfx12<bits<10> op, string asmName, string opName 
 
 multiclass VOP3_Realtriple_t16_and_fake16_gfx12<bits<10> op, string asmName, string opName = NAME,
                                                 string pseudo_mnemonic = "", bit isSingle = 0> {
-  defm opName#"_t16":VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_16", pseudo_mnemonic, isSingle>;
+  defm opName#"_t16":VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
   defm opName#"_fake16":VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
 }
 

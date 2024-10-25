@@ -4200,11 +4200,11 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
   // Currently f64 immediate vectors are represented as vectors of v2i32, with
   // different lo and hi 32-bit values even though double values are splated.
   // So we have to manually compare to determine whether it is splated.
-  if (auto *BV = CurDAG->isConstantIntBuildVectorOrConstantInt(SplatSrc32)) {
+  if (CurDAG->isConstantIntBuildVectorOrConstantInt(SplatSrc32)) {
     int64_t Imm64 = 0;
-    for (unsigned i = 0; i < BV->getNumOperands(); i += 2) {
-      auto Lo32 = cast<ConstantSDNode>(BV->getOperand(i));
-      auto Hi32 = cast<ConstantSDNode>(BV->getOperand(i+1));
+    for (unsigned i = 0; i < SplatSrc32->getNumOperands(); i += 2) {
+      auto Lo32 = cast<ConstantSDNode>(SplatSrc32->getOperand(i));
+      auto Hi32 = cast<ConstantSDNode>(SplatSrc32->getOperand(i+1));
       int64_t LoImm = Lo32->getAPIntValue().getSExtValue();
       int64_t HiImm = Hi32->getAPIntValue().getSExtValue();
       int64_t Imm64I = (HiImm << 32) + LoImm;

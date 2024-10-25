@@ -6,7 +6,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_i4_dequant_disable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_i4 v[2:5], v[2:5], v6, v7, v8 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.i4.v4f32.v4f32(<4 x float> %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -23,7 +22,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i4_dequant_disable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i4 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v4f16.v4f16(<4 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -40,7 +38,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i4_dequant_disable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i4 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -57,7 +54,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i4_dequant_disable_8x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i4 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -74,7 +70,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i4_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i4 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v4bf16.v4bf16(<4 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -91,7 +86,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i4_dequant_disable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i4 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -108,7 +102,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i4_dequant_disable_8x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i4 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -125,7 +118,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_u4_dequant_disable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_u4 v[2:5], v[2:5], v6, v7, v8 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.u4.v4f32.v4f32(<4 x float> %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -142,7 +134,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u4_dequant_disable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u4 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v4f16.v4f16(<4 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -159,7 +150,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u4_dequant_disable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u4 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -176,7 +166,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u4_dequant_disable_8x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u4 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -193,7 +182,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u4_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u4 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v4bf16.v4bf16(<4 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -210,7 +198,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u4_dequant_disable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u4 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -227,7 +214,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u4_dequant_disable_8x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u4 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -244,7 +230,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_i8_dequant_disable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_i8 v[2:5], v[2:5], v6, v7, v8 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.i8.v4f32.v4f32(<4 x float> %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -261,7 +246,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i8_dequant_disable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i8 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v4f16.v4f16(<4 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -278,7 +262,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i8_dequant_disable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i8 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -295,7 +278,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i8_dequant_disable_8x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i8 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -312,7 +294,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i8_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i8 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v4bf16.v4bf16(<4 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -329,7 +310,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i8_dequant_disable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i8 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -346,7 +326,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i8_dequant_disable_8x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i8 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -363,7 +342,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_u8_dequant_disable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_u8 v[2:5], v[2:5], v6, v7, v8 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.u8.v4f32.v4f32(<4 x float> %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -380,7 +358,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u8_dequant_disable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u8 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v4f16.v4f16(<4 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -397,7 +374,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u8_dequant_disable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u8 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -414,7 +390,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u8_dequant_disable_8x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u8 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -431,7 +406,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u8_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u8 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v4bf16.v4bf16(<4 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -448,7 +422,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u8_dequant_disable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u8 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -465,7 +438,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u8_dequant_disable_8x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u8 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -482,7 +454,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_fp8_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_fp8 v[2:5], v[2:5], v6, v7, v8 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.fp8.v4f32.v4f32(<4 x float> %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -499,7 +470,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_fp8_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_fp8 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v4f16.v4f16(<4 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -516,7 +486,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_fp8_dequant_disable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_fp8 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -533,7 +502,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_fp8_dequant_disable_8x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_fp8 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -550,7 +518,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_fp8_dequant_disable_4x2(ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_fp8 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v4bf16.v4bf16(<4 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -567,7 +534,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_fp8_dequant_disable_4x4(ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_fp8 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -584,7 +550,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_fp8_dequant_disable_8x4(ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_fp8 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -601,7 +566,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_bf8_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_bf8 v[2:5], v[2:5], v6, v7, v8 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.bf8.v4f32.v4f32(<4 x float> %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -618,7 +582,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_bf8_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_bf8 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v4f16.v4f16(<4 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -635,7 +598,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_bf8_dequant_disable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_bf8 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -652,7 +614,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_bf8_dequant_disable_8x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_bf8 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v8f16.v8f16(<8 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -669,7 +630,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_bf8_dequant_disable_4x2(ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_bf8 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v4bf16.v4bf16(<4 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -686,7 +646,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_bf8_dequant_disable_4x4(ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_bf8 v[2:5], v[2:5], v6, v7, v8 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -703,7 +662,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_bf8_dequant_disable_8x4(ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_bf8 v[2:5], v[2:5], v6, v7, v8 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v8bf16.v8bf16(<8 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -720,7 +678,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_f16_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_f16 v[2:5], v[2:5], v6, v7, v8 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.f16.v4f32.v4f32(<4 x float> %acc_in, <2 x half> %resid_0, <2 x half> %resid_1, float %scale,
@@ -737,7 +694,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_f16_dequant_disable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_f16 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> %acc_in, <2 x half> %resid_0, <2 x half> %resid_1, <2 x half> %scale,
@@ -754,7 +710,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_f16_dequant_disable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_f16 v[2:3], v[2:3], v4, v5, v6 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> %acc_in, <2 x half> %resid_0, <2 x half> %resid_1, <2 x half> %scale,
@@ -771,7 +726,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_f16_dequant_disable_8x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_f16 v[2:3], v[2:3], v4, v5, v6 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> %acc_in, <2 x half> %resid_0, <2 x half> %resid_1, <2 x half> %scale,
@@ -788,7 +742,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_bf16_dequant_disable_4x2(ptr add
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_bf16 v[2:5], v[2:5], v6, v7, v8 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.bf16.v4f32.v4f32(<4 x float> %acc_in, <2 x bfloat> %resid_0, <2 x bfloat> %resid_1, float %scale,
@@ -805,7 +758,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_bf16_dequant_disable_4x2(ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_bf16 v[2:3], v[2:3], v4, v5, v6 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> %acc_in, <2 x bfloat> %resid_0, <2 x bfloat> %resid_1, <2 x bfloat> %scale,
@@ -822,7 +774,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_bf16_dequant_disable_4x4(ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_bf16 v[2:3], v[2:3], v4, v5, v6 aux_data:1 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> %acc_in, <2 x bfloat> %resid_0, <2 x bfloat> %resid_1, <2 x bfloat> %scale,
@@ -839,7 +790,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_bf16_dequant_disable_8x4(ptr ad
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_bf16 v[2:3], v[2:3], v4, v5, v6 clamp
 ; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> %acc_in, <2 x bfloat> %resid_0, <2 x bfloat> %resid_1, <2 x bfloat> %scale,
@@ -856,7 +806,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_i4_dequant_enable_4x2(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_i4 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call float @llvm.amdgcn.fma.from.tensor.f32.i4.f32.f32(float %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -873,7 +822,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i4_dequant_enable_4x2(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i4 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -890,7 +838,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i4_dequant_enable_4x4(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i4 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -907,7 +854,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i4_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i4 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -924,7 +870,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i4_dequant_enable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i4 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -941,7 +886,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_u4_dequant_enable_4x2(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_u4 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call float @llvm.amdgcn.fma.from.tensor.f32.u4.f32.f32(float %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -958,7 +902,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u4_dequant_enable_4x2(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u4 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -975,7 +918,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u4_dequant_enable_4x4(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u4 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -992,7 +934,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u4_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u4 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1009,7 +950,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u4_dequant_enable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u4 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1026,7 +966,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_i8_dequant_enable_4x2(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_i8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call float @llvm.amdgcn.fma.from.tensor.f32.i8.f32.f32(float %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -1043,7 +982,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i8_dequant_enable_4x2(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -1060,7 +998,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_i8_dequant_enable_4x4(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_i8 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -1077,7 +1014,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i8_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1094,7 +1030,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_i8_dequant_enable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_i8 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1111,7 +1046,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_u8_dequant_enable_4x2(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_u8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call float @llvm.amdgcn.fma.from.tensor.f32.u8.f32.f32(float %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -1128,7 +1062,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u8_dequant_enable_4x2(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -1145,7 +1078,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_u8_dequant_enable_4x4(ptr addrsp
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_u8 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -1162,7 +1094,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u8_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1179,7 +1110,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_u8_dequant_enable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_u8 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1196,7 +1126,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_fp8_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_fp8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call float @llvm.amdgcn.fma.from.tensor.f32.fp8.f32.f32(float %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -1213,7 +1142,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_fp8_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_fp8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -1230,7 +1158,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_fp8_dequant_enable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_fp8 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -1247,7 +1174,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_fp8_dequant_enable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_fp8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1264,7 +1190,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_fp8_dequant_enable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_fp8 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1281,7 +1206,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_bf8_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_bf8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call float @llvm.amdgcn.fma.from.tensor.f32.bf8.f32.f32(float %acc_in, i32 %resid_0, i32 %resid_1, float %scale,
@@ -1298,7 +1222,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_bf8_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_bf8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -1315,7 +1238,6 @@ define amdgpu_ps void @test_fma_from_tensor_f16_bf8_dequant_enable_4x4(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f16_bf8 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v2f16.v2f16(<2 x half> %acc_in, i32 %resid_0, i32 %resid_1, <2 x half> %scale,
@@ -1332,7 +1254,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_bf8_dequant_enable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_bf8 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1349,7 +1270,6 @@ define amdgpu_ps void @test_fma_from_tensor_bf16_bf8_dequant_enable_4x4(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_bf16_bf8 v2, v2, v3, v4, v5 aux_data:4 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v2bf16.v2bf16(<2 x bfloat> %acc_in, i32 %resid_0, i32 %resid_1, <2 x bfloat> %scale,
@@ -1366,7 +1286,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_f16_dequant_enable_4x2(ptr addrs
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_f16 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call float @llvm.amdgcn.fma.from.tensor.f32.f16.f32.f32(float %acc_in, <2 x half> %resid_0, <2 x half> %resid_1, float %scale,
@@ -1383,7 +1302,6 @@ define amdgpu_ps void @test_fma_from_tensor_f32_bf16_dequant_enable_4x2(ptr addr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_fma_from_tensor_f32_bf16 v2, v2, v3, v4, v5 aux_data:3 clamp
 ; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call float @llvm.amdgcn.fma.from.tensor.f32.bf16.f32.f32(float %acc_in, <2 x bfloat> %resid_0, <2 x bfloat> %resid_1, float %scale,

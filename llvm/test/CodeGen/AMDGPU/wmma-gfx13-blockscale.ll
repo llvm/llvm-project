@@ -8,7 +8,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_fp8_clamp(<8 x i32> %A, <8 x i
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_store_b128 v[26:27], v[20:23], off offset:16
 ; GFX13-NEXT:    global_store_b128 v[26:27], v[16:19], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x64.f8f6f4.clamp(<8 x i32> %A, <8 x i32> %B, <8 x float> %C, i32 %scaleA, i32 %scaleB,
@@ -27,7 +26,6 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_fp8_clamp_inline(<8 x i32> %A,
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_store_b128 v[18:19], v[24:27], off offset:16
 ; GFX13-NEXT:    global_store_b128 v[18:19], v[20:23], off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x64.f8f6f4.clamp(<8 x i32> %A, <8 x i32> %B, <8 x float> zeroinitializer, i32 %scaleA, i32 %scaleB,

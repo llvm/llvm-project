@@ -12,7 +12,6 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_vv(half %a, half %b, ptr addrspace(1)
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    v_cvt_pk_bf8_f16 v0, v0, v1
 ; GFX1210-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(half %a, half %b)
   store i16 %cvt, ptr addrspace(1) %out
@@ -24,7 +23,6 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_ss(half inreg %a, half inreg %b, ptr 
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    v_cvt_pk_bf8_f16 v2, s0, s1
 ; GFX1210-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(half %a, half %b)
   store i16 %cvt, ptr addrspace(1) %out
@@ -36,7 +34,6 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_sl(half inreg %a, ptr addrspace(1) %o
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    v_cvt_pk_bf8_f16 v2, s0, 0x5640
 ; GFX1210-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(half %a, half 100.0)
   store i16 %cvt, ptr addrspace(1) %out
@@ -48,7 +45,6 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_vv(half %a, half %b, ptr addrspace(1)
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    v_cvt_pk_fp8_f16 v0, v0, v1
 ; GFX1210-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(half %a, half %b)
   store i16 %cvt, ptr addrspace(1) %out
@@ -60,7 +56,6 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_ss(half inreg %a, half inreg %b, ptr 
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    v_cvt_pk_fp8_f16 v2, s0, s1
 ; GFX1210-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(half %a, half %b)
   store i16 %cvt, ptr addrspace(1) %out
@@ -72,7 +67,6 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_sl(half inreg %a, ptr addrspace(1) %o
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    v_cvt_pk_fp8_f16 v2, s0, 0x5640
 ; GFX1210-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(half %a, half 100.0)
   store i16 %cvt, ptr addrspace(1) %out
@@ -85,7 +79,6 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte0(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1210-SDAG-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v2, off
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_cvt_sr_bf8_f16_byte0:
@@ -93,7 +86,6 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte0(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1210-GISEL-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 0)
   store i32 %cvt, ptr addrspace(1) %out
@@ -106,7 +98,6 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte1(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1210-SDAG-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:1
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v2, off
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_cvt_sr_bf8_f16_byte1:
@@ -114,7 +105,6 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte1(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1210-GISEL-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:1
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 1)
   store i32 %cvt, ptr addrspace(1) %out
@@ -127,7 +117,6 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte2(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1210-SDAG-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:2
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v2, off
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_cvt_sr_bf8_f16_byte2:
@@ -135,7 +124,6 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte2(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1210-GISEL-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:2
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 2)
   store i32 %cvt, ptr addrspace(1) %out
@@ -148,7 +136,6 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte3(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1210-SDAG-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:3
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v2, off
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_cvt_sr_bf8_f16_byte3:
@@ -156,7 +143,6 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte3(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1210-GISEL-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:3
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 3)
   store i32 %cvt, ptr addrspace(1) %out
@@ -169,7 +155,6 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte0(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1210-SDAG-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v2, off
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_cvt_sr_fp8_f16_byte0:
@@ -177,7 +162,6 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte0(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1210-GISEL-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 0)
   store i32 %cvt, ptr addrspace(1) %out
@@ -190,7 +174,6 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte1(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1210-SDAG-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:1
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v2, off
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_cvt_sr_fp8_f16_byte1:
@@ -198,7 +181,6 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte1(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1210-GISEL-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:1
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 1)
   store i32 %cvt, ptr addrspace(1) %out
@@ -211,7 +193,6 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte2(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1210-SDAG-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:2
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v2, off
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_cvt_sr_fp8_f16_byte2:
@@ -219,7 +200,6 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte2(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1210-GISEL-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:2
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 2)
   store i32 %cvt, ptr addrspace(1) %out
@@ -232,7 +212,6 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte3(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1210-SDAG-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:3
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v2, off
-; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_cvt_sr_fp8_f16_byte3:
@@ -240,7 +219,6 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte3(half %a, i32 %sr, i32 %old, ptr
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1210-GISEL-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:3
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
-; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 3)
   store i32 %cvt, ptr addrspace(1) %out

@@ -55,6 +55,7 @@ extern llvm::cl::opt<bool> PrintSections;
 enum ProfileFormatKind { PF_Fdata, PF_YAML };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
+extern llvm::cl::opt<bool> ShowDensity;
 extern llvm::cl::opt<bool> SplitEH;
 extern llvm::cl::opt<bool> StrictMode;
 extern llvm::cl::opt<bool> TimeOpts;
