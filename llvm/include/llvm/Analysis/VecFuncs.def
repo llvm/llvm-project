@@ -92,7 +92,9 @@ TLI_DEFINE_VECFUNC("llvm.atan.f64", "_simd_atan_d2", FIXED(2), "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("atanf", "_simd_atan_f4", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.atan.f32", "_simd_atan_f4", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atan2", "_simd_atan2_d2", FIXED(2), "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f64", "_simd_atan2_d2", FIXED(2), "_ZGV_LLVM_N2vv")
 TLI_DEFINE_VECFUNC("atan2f", "_simd_atan2_f4", FIXED(4), "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "_simd_atan2_f4", FIXED(4), "_ZGV_LLVM_N4vv")
 
 TLI_DEFINE_VECFUNC("cos", "_simd_cos_d2", FIXED(2), "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("llvm.cos.f64", "_simd_cos_d2", FIXED(2), "_ZGV_LLVM_N2v")
@@ -531,6 +533,7 @@ TLI_DEFINE_VECFUNC("atan", "_ZGVnN2v_atan", FIXED(2), "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("llvm.atan.f64", "_ZGVnN2v_atan", FIXED(2), "_ZGV_LLVM_N2v")
 
 TLI_DEFINE_VECFUNC("atan2", "_ZGVnN2vv_atan2", FIXED(2), "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f64", "_ZGVnN2vv_atan2", FIXED(2), "_ZGV_LLVM_N2vv")
 
 TLI_DEFINE_VECFUNC("atanh", "_ZGVnN2v_atanh", FIXED(2), "_ZGV_LLVM_N2v")
 
@@ -635,6 +638,7 @@ TLI_DEFINE_VECFUNC("atanf", "_ZGVnN4v_atanf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.atan.f32", "_ZGVnN4v_atanf", FIXED(4), "_ZGV_LLVM_N4v")
 
 TLI_DEFINE_VECFUNC("atan2f", "_ZGVnN4vv_atan2f", FIXED(4), "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "_ZGVnN4vv_atan2f", FIXED(4), "_ZGV_LLVM_N4vv")
 
 TLI_DEFINE_VECFUNC("atanhf", "_ZGVnN4v_atanhf", FIXED(4), "_ZGV_LLVM_N4v")
 
@@ -748,6 +752,8 @@ TLI_DEFINE_VECFUNC("llvm.atan.f32", "_ZGVsMxv_atanf", SCALABLE(4), MASKED, "_ZGV
 
 TLI_DEFINE_VECFUNC("atan2", "_ZGVsMxvv_atan2",  SCALABLE(2), MASKED, "_ZGVsMxvv")
 TLI_DEFINE_VECFUNC("atan2f", "_ZGVsMxvv_atan2f", SCALABLE(4), MASKED, "_ZGVsMxvv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f64", "_ZGVsMxvv_atan2",  SCALABLE(2), MASKED, "_ZGVsMxvv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "_ZGVsMxvv_atan2f", SCALABLE(4), MASKED, "_ZGVsMxvv")
 
 TLI_DEFINE_VECFUNC("atanh", "_ZGVsMxv_atanh",  SCALABLE(2), MASKED, "_ZGVsMxv")
 TLI_DEFINE_VECFUNC("atanhf", "_ZGVsMxv_atanhf", SCALABLE(4), MASKED, "_ZGVsMxv")
@@ -932,6 +938,11 @@ TLI_DEFINE_VECFUNC("atan2", "armpl_vatan2q_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2
 TLI_DEFINE_VECFUNC("atan2f", "armpl_vatan2q_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
 TLI_DEFINE_VECFUNC("atan2", "armpl_svatan2_f64_x",  SCALABLE(2), MASKED, "_ZGVsMxvv")
 TLI_DEFINE_VECFUNC("atan2f", "armpl_svatan2_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvv")
+
+TLI_DEFINE_VECFUNC("llvm.atan2.f64", "armpl_vatan2q_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "armpl_vatan2q_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f64", "armpl_svatan2_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "armpl_svatan2_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvv")
 
 TLI_DEFINE_VECFUNC("atanh", "armpl_vatanhq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("atanhf", "armpl_vatanhq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")

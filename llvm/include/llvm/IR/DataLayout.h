@@ -82,7 +82,7 @@ public:
     /// representation (e.g. may be relocated by a copying garbage collector).
     /// Additionally, they may also be non-integral (i.e. containing additional
     /// metadata such as bounds information/permissions).
-    bool IsNonIntegral = false;
+    bool IsNonIntegral;
     bool operator==(const PointerSpec &Other) const;
   };
 
