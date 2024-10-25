@@ -1445,6 +1445,14 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
+
+  for (VPUser *U : Plan.getVF().users()) {
+    auto *CurRecipe = cast<VPRecipeBase>(U);
+
+    if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(CurRecipe))
+      R->setOperand(1, &EVL);
+  }
+
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
