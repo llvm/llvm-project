@@ -202,7 +202,7 @@ DECLARE_S93;
 // CHECK-MESSAGES-MACROS: :[[@LINE-4]]:28: note: expanded from macro 'DECLARE_S93'
 // CHECK-MESSAGES-MACROS: :[[@LINE-71]]:1: note: aggregate type is defined here
 
-// Issus #113652.
+// Issue #113652.
 struct S14;
 
 struct S15{
