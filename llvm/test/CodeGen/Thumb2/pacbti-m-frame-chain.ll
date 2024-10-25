@@ -19,7 +19,22 @@ define i32 @test1() "sign-return-address"="non-leaf" {
 ; R7-ABI:         .cfi_sections .debug_frame
 ; R7-ABI-NEXT:    .cfi_startproc
 ; R7-ABI-NEXT:  @ %bb.0: @ %entry
+; R7-ABI-NEXT:    pac r12, lr, sp
+; R7-ABI-NEXT:    .save {r7, lr}
+; R7-ABI-NEXT:    push {r7, lr}
+; R7-ABI-NEXT:    .cfi_def_cfa_offset 8
+; R7-ABI-NEXT:    .cfi_offset lr, -4
+; R7-ABI-NEXT:    .cfi_offset r7, -8
+; R7-ABI-NEXT:    .setfp r7, sp
+; R7-ABI-NEXT:    mov r7, sp
+; R7-ABI-NEXT:    .cfi_def_cfa_register r7
+; R7-ABI-NEXT:    .save {ra_auth_code}
+; R7-ABI-NEXT:    str r12, [sp, #-4]!
+; R7-ABI-NEXT:    .cfi_offset ra_auth_code, -12
 ; R7-ABI-NEXT:    movs r0, #0
+; R7-ABI-NEXT:    ldr r12, [sp], #4
+; R7-ABI-NEXT:    pop.w {r7, lr}
+; R7-ABI-NEXT:    aut r12, lr, sp
 ; R7-ABI-NEXT:    bx lr
 ;
 ; R11-LABEL: test1:
