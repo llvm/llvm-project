@@ -2163,8 +2163,8 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       continue; // We have no information on this being a header file.
     if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
       continue; // Header file info is tracked by the owning module file.
-    if (!HFI->isCompilingModuleHeader && !PP->alreadyIncluded(*File))
-      continue; // Non-modular header not included is not needed.
+    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
+      continue; // Header file info is tracked by the including module file.
 
     // Massage the file path into an appropriate form.
     StringRef Filename = File->getName();
@@ -2176,7 +2176,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       SavedStrings.push_back(Filename.data());
     }
 
-    bool Included = PP->alreadyIncluded(*File);
+    bool Included = HFI->IsLocallyIncluded || PP->alreadyIncluded(*File);
 
     HeaderFileInfoTrait::key_type Key = {
       Filename, File->getSize(), getTimestampForOutput(*File)
