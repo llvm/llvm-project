@@ -33,3 +33,30 @@ TEST_F(LlvmLibcCbrtTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(0x1.0p341, LIBC_NAMESPACE::cbrt(0x1.0p1023));
   EXPECT_FP_EQ_ALL_ROUNDING(-0x1.0p341, LIBC_NAMESPACE::cbrt(-0x1.0p1023));
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcCbrtTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0x1.0p-358, LIBC_NAMESPACE::cbrt(min_denormal));
+  EXPECT_FP_EQ(0x1.428a2f98d728ap-341, LIBC_NAMESPACE::cbrt(max_denormal));
+}
+
+TEST_F(LlvmLibcCbrtTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cbrt(min_denormal));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cbrt(max_denormal));
+}
+
+TEST_F(LlvmLibcCbrtTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cbrt(min_denormal));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cbrt(max_denormal));
+}
+
+#endif
