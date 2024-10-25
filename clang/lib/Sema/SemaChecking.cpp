@@ -9574,14 +9574,19 @@ static QualType GetExprType(const Expr *E) {
   return Ty;
 }
 
-/// Pseudo-evaluate the given integer expression, estimating the
-/// range of values it might take.
+/// Attempts to estimate an approximate range for the given integer expression.
+/// Returns a range if successful, otherwise it returns \c std::nullopt if a
+/// reliable estimation cannot be determined.
 ///
 /// \param MaxWidth The width to which the value will be truncated.
-/// \param Approximate If \c true, return a likely range for the result: in
-///        particular, assume that arithmetic on narrower types doesn't leave
-///        those types. If \c false, return a range including all possible
-///        result values.
+/// \param InConstantContext If \c true, interpret the expression within a
+///        constant context.
+/// \param Approximate If \c true, provide a likely range of values by assuming
+///        that arithmetic on narrower types remains within those types.
+///        If \c false, return a range that includes all possible values
+///        resulting from the expression.
+/// \returns A range of values that the expression might take, or
+///          std::nullopt if a reliable estimation cannot be determined.
 static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                                unsigned MaxWidth,
                                                bool InConstantContext,
