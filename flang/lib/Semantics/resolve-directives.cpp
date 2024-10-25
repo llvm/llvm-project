@@ -435,6 +435,20 @@ public:
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source));
+      }
+    }
+  }
+
   // 2.15.3 Data-Sharing Attribute Clauses
   void Post(const parser::OmpDefaultClause &);
   bool Pre(const parser::OmpClause::Shared &x) {
@@ -531,16 +545,9 @@ public:
     return false;
   }
 
-  bool Pre(const parser::OmpDependClause &x) {
-    if (const auto *dependSink{
-            std::get_if<parser::OmpDependClause::Sink>(&x.u)}) {
-      const auto &dependSinkVec{dependSink->v};
-      for (const auto &dependSinkElement : dependSinkVec) {
-        const auto &name{std::get<parser::Name>(dependSinkElement.t)};
-        ResolveName(&name);
-      }
-    }
-    return false;
+  void Post(const parser::OmpDependSinkVec &x) {
+    const auto &name{std::get<parser::Name>(x.t)};
+    ResolveName(&name);
   }
 
   bool Pre(const parser::OmpClause::UseDevicePtr &x) {

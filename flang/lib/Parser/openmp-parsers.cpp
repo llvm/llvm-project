@@ -365,10 +365,10 @@ TYPE_PARSER(construct<OmpDependSinkVecLength>(
 TYPE_PARSER(
     construct<OmpDependSinkVec>(name, maybe(Parser<OmpDependSinkVecLength>{})))
 
-TYPE_PARSER(
-    construct<OmpDependenceType>("IN"_id >> pure(OmpDependenceType::Type::In) ||
-        "INOUT" >> pure(OmpDependenceType::Type::Inout) ||
-        "OUT" >> pure(OmpDependenceType::Type::Out)))
+TYPE_PARSER(construct<OmpTaskDependenceType>(
+    "IN"_id >> pure(OmpTaskDependenceType::Type::In) ||
+    "INOUT" >> pure(OmpTaskDependenceType::Type::Inout) ||
+    "OUT" >> pure(OmpTaskDependenceType::Type::Out)))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(construct<OmpDependClause::Sink>(
@@ -376,7 +376,7 @@ TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
         construct<OmpDependClause>(
             construct<OmpDependClause::Source>("SOURCE"_tok)) ||
         construct<OmpDependClause>(construct<OmpDependClause::InOut>(
-            Parser<OmpDependenceType>{}, ":" >> nonemptyList(designator))))
+            Parser<OmpTaskDependenceType>{}, ":" >> Parser<OmpObjectList>{})))
 
 // 2.15.3.7 LINEAR (linear-list: linear-step)
 //          linear-list -> list | modifier(list)

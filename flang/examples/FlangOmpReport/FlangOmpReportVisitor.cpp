@@ -222,9 +222,9 @@ void OpenMPCounterVisitor::Post(const OmpLinearModifier::Type &c) {
   clauseDetails +=
       "modifier=" + std::string{OmpLinearModifier::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpDependenceType::Type &c) {
+void OpenMPCounterVisitor::Post(const OmpTaskDependenceType::Type &c) {
   clauseDetails +=
-      "type=" + std::string{OmpDependenceType::EnumToString(c)} + ";";
+      "type=" + std::string{OmpTaskDependenceType::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpMapClause::Type &c) {
   clauseDetails += "type=" + std::string{OmpMapClause::EnumToString(c)} + ";";

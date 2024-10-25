@@ -503,7 +503,7 @@ struct DependT {
   using LocatorList = ObjectListT<I, E>;
   using TaskDependenceType = tomp::type::TaskDependenceType;
 
-  struct WithLocators { // Modern form
+  struct DepType { // The form with task dependence type.
     using TupleTrait = std::true_type;
     // Empty LocatorList means "omp_all_memory".
     std::tuple<TaskDependenceType, OPT(Iterator), LocatorList> t;
@@ -511,7 +511,7 @@ struct DependT {
 
   using Doacross = DoacrossT<T, I, E>;
   using UnionTrait = std::true_type;
-  std::variant<Doacross, WithLocators> u; // Doacross form is legacy
+  std::variant<Doacross, DepType> u; // Doacross form is legacy
 };
 
 // V5.2: [3.5] `destroy` clause
