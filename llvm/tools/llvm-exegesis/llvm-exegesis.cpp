@@ -50,15 +50,27 @@
 namespace llvm {
 namespace exegesis {
 
+struct OpcodeNameParser
+    : public cl::parser<std::vector<std::pair<StringRef, StringRef>>> {
+  OpcodeNameParser(cl::Option &O)
+      : cl::parser<std::vector<std::pair<StringRef, StringRef>>>(O) {}
+  bool parse(cl::Option &O, StringRef ArgName, const StringRef ArgValue,
+             std::vector<std::pair<StringRef, StringRef>> &Val);
+};
+
 static cl::opt<int> OpcodeIndex(
     "opcode-index",
     cl::desc("opcode to measure, by index, or -1 to measure all opcodes"),
     cl::cat(BenchmarkOptions), cl::init(0));
 
-static cl::opt<std::string>
+static cl::opt<std::vector<std::pair<StringRef, StringRef>>, false,
+               OpcodeNameParser>
     OpcodeNames("opcode-name",
-                cl::desc("comma-separated list of opcodes to measure, by name"),
-                cl::cat(BenchmarkOptions), cl::init(""));
+                cl::desc("comma-separated list of opcodes to measure, "
+                         "each item is either opcode name ('OP') "
+                         "or opcode range ('OP1..OP2', ends are inclusive)"),
+                cl::cat(BenchmarkOptions),
+                cl::init(std::vector<std::pair<StringRef, StringRef>>()));
 
 static cl::opt<std::string> SnippetsFile("snippets-file",
                                          cl::desc("code snippets to measure"),
@@ -274,6 +286,10 @@ static cl::opt<int> BenchmarkProcessCPU(
     cl::desc("The CPU number that the benchmarking process should executon on"),
     cl::cat(BenchmarkOptions), cl::init(-1));
 
+static cl::opt<std::string> MAttr(
+    "mattr", cl::desc("comma-separated list of target architecture features"),
+    cl::value_desc("+feature1,-feature2,..."), cl::cat(Options), cl::init(""));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -294,6 +310,43 @@ template <typename T>
 T ExitOnFileError(const Twine &FileName, Expected<T> &&E) {
   ExitOnFileError(FileName, E.takeError());
   return std::move(*E);
+}
+
+static const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
+                                                unsigned Opcode) {
+  const MCInstrDesc &InstrDesc = State.getIC().getInstr(Opcode).Description;
+  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
+    return "Unsupported opcode: isPseudo/usesCustomInserter";
+  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
+    return "Unsupported opcode: isBranch/isIndirectBranch";
+  if (InstrDesc.isCall() || InstrDesc.isReturn())
+    return "Unsupported opcode: isCall/isReturn";
+  return nullptr;
+}
+
+static bool isIgnoredOpcode(const LLVMState &State, unsigned Opcode) {
+  return getIgnoredOpcodeReasonOrNull(State, Opcode) != nullptr;
+}
+
+bool OpcodeNameParser::parse(
+    cl::Option &O, StringRef ArgName, const StringRef OpcodeNames,
+    std::vector<std::pair<StringRef, StringRef>> &Val) {
+  SmallVector<StringRef, 2> Pieces;
+  StringRef(OpcodeNames)
+      .split(Pieces, ",", /* MaxSplit */ -1, /* KeepEmpty */ false);
+  for (const StringRef &OpcodeName : Pieces) {
+    size_t DotDotPos = OpcodeName.find("..");
+    if (DotDotPos == StringRef::npos) {
+      Val.push_back(std::make_pair(OpcodeName, OpcodeName));
+      continue;
+    }
+    StringRef BeginOpcodeName = OpcodeName.substr(0, DotDotPos);
+    StringRef EndOpcodeName = OpcodeName.substr(DotDotPos + 2);
+    Val.push_back(std::make_pair(BeginOpcodeName, EndOpcodeName));
+  }
+  if (Val.empty())
+    return O.error("No matching opcode names");
+  return false;
 }
 
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
@@ -334,16 +387,35 @@ static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
       return I->getSecond();
     return 0u;
   };
-  SmallVector<StringRef, 2> Pieces;
-  StringRef(OpcodeNames.getValue())
-      .split(Pieces, ",", /* MaxSplit */ -1, /* KeepEmpty */ false);
+
   std::vector<unsigned> Result;
-  Result.reserve(Pieces.size());
-  for (const StringRef &OpcodeName : Pieces) {
-    if (unsigned Opcode = ResolveName(OpcodeName))
-      Result.push_back(Opcode);
-    else
-      ExitWithError(Twine("unknown opcode ").concat(OpcodeName));
+  for (const std::pair<StringRef, StringRef> &OpcodeName : OpcodeNames) {
+    if (OpcodeName.first == OpcodeName.second) {
+      if (unsigned Opcode = ResolveName(OpcodeName.first)) {
+        Result.push_back(Opcode);
+        continue;
+      } else {
+        ExitWithError(Twine("unknown opcode ").concat(OpcodeName.first));
+      }
+    } else {
+      StringRef BeginOpcodeName = OpcodeName.first;
+      unsigned BeginOpcode =
+          BeginOpcodeName.empty() ? 1 : ResolveName(BeginOpcodeName);
+      if (BeginOpcode == 0) {
+        ExitWithError(Twine("unknown opcode ").concat(BeginOpcodeName));
+      }
+      StringRef EndOpcodeName = OpcodeName.second;
+      unsigned EndOpcode = EndOpcodeName.empty()
+                               ? State.getInstrInfo().getNumOpcodes() - 1
+                               : ResolveName(EndOpcodeName);
+      if (EndOpcode == 0) {
+        ExitWithError(Twine("unknown opcode ").concat(EndOpcodeName));
+      }
+      for (unsigned I = BeginOpcode; I <= EndOpcode; ++I) {
+        if (!isIgnoredOpcode(State, I))
+          Result.push_back(I);
+      }
+    }
   }
   return Result;
 }
@@ -352,17 +424,11 @@ static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
 static Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode,
                  const BitVector &ForbiddenRegs) {
-  const Instruction &Instr = State.getIC().getInstr(Opcode);
-  const MCInstrDesc &InstrDesc = Instr.Description;
   // Ignore instructions that we cannot run.
-  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
-    return make_error<Failure>(
-        "Unsupported opcode: isPseudo/usesCustomInserter");
-  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
-    return make_error<Failure>("Unsupported opcode: isBranch/isIndirectBranch");
-  if (InstrDesc.isCall() || InstrDesc.isReturn())
-    return make_error<Failure>("Unsupported opcode: isCall/isReturn");
+  if (const char *Reason = getIgnoredOpcodeReasonOrNull(State, Opcode))
+    return make_error<Failure>(Reason);
 
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
   const std::vector<InstructionTemplate> InstructionVariants =
       State.getExegesisTarget().generateInstructionVariants(
           Instr, MaxConfigsPerOpcode);
@@ -485,8 +551,8 @@ void benchmarkMain() {
   LLVMInitialize##TargetName##AsmParser();
 #include "llvm/Config/TargetExegesis.def"
 
-  const LLVMState State =
-      ExitOnErr(LLVMState::Create(TripleName, MCPU, "", UseDummyPerfCounters));
+  const LLVMState State = ExitOnErr(
+      LLVMState::Create(TripleName, MCPU, MAttr, UseDummyPerfCounters));
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
