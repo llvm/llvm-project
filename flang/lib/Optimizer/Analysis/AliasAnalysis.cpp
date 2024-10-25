@@ -374,13 +374,32 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
 
 static std::optional<omp::BlockArgOpenMPOpInterface>
 getOpenMPBlockArgInterface(Operation *op) {
-  std::optional<omp::BlockArgOpenMPOpInterface> blockArgOpenMPOpInterface;
   if (!op)
-    return blockArgOpenMPOpInterface;
-  if (llvm::isa<omp::TargetOp>(op) || llvm::isa<omp::ParallelOp>(op)) {
-    blockArgOpenMPOpInterface = dyn_cast<omp::BlockArgOpenMPOpInterface>(op);
+    return {};
+  return dyn_cast<omp::BlockArgOpenMPOpInterface>(op);
+}
+
+template <typename OMPTypeOp, typename DeclTypeOp>
+static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
+                           OMPTypeOp &op, DeclTypeOp &declOp) {
+  Value privateArg;
+  if (!op.getPrivateSyms().has_value())
+    return privateArg;
+  for (auto [opSym, blockArg] :
+       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
+    if (blockArg == declOp.getMemref()) {
+      omp::PrivateClauseOp privateOp =
+          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
+              op, cast<SymbolRefAttr>(opSym));
+      privateOp.walk([&](omp::YieldOp yieldOp) {
+        llvm::TypeSwitch<Operation *>(yieldOp.getResults()[0].getDefiningOp())
+            .template Case<fir::DeclareOp, hlfir::DeclareOp>(
+                [&](auto declOp) { privateArg = declOp.getMemref(); });
+      });
+      return privateArg;
+    }
   }
-  return blockArgOpenMPOpInterface;
+  return privateArg;
 }
 
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
@@ -505,27 +524,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                   // We should extend alias analysis when Flang
                   // will handle private clause for different than parallel
                   // directives.
-                  if (!parallelOp.getPrivateSyms().has_value())
-                    return;
-                  for (auto [opSym, blockArg] :
-                       llvm::zip_equal(*parallelOp.getPrivateSyms(),
-                                       (*argIface).getPrivateBlockArgs())) {
-                    if (blockArg == op.getMemref()) {
-                      omp::PrivateClauseOp privateOp =
-                          SymbolTable::lookupNearestSymbolFrom<
-                              omp::PrivateClauseOp>(parallelOp,
-                                                    cast<SymbolRefAttr>(opSym));
-                      privateOp.walk([&](omp::YieldOp yieldOp) {
-                        llvm::TypeSwitch<Operation *>(
-                            yieldOp.getResults()[0].getDefiningOp())
-                            .template Case<fir::DeclareOp, hlfir::DeclareOp>(
-                                [&](auto declOp) {
-                                  ompValArg = declOp.getMemref();
-                                });
-                      });
-                      return;
-                    }
-                  }
+                  ompValArg = getPrivateArg(*argIface, parallelOp, op);
                 });
             if (ompValArg) {
               v = ompValArg;
