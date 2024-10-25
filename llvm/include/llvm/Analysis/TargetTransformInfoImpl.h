@@ -332,6 +332,11 @@ public:
     return false;
   }
 
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
+    return false;
+  }
+
   bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) const {
     return false;
   }
@@ -1000,6 +1005,10 @@ public:
   bool hasArmWideBranch(bool) const { return false; }
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
+
+  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {
+    return 0;
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

@@ -153,7 +153,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP4]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[IX_09:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 1016, [[VECTOR_BODY]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[IX_09]], [[CONV]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i32 [[IX_09]], [[CONV]]
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; ENABLED_MASKED_STRIDED:       if.then:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_09]], 1

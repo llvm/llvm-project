@@ -4905,6 +4905,12 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
   this->BaseDirectory.clear();
 
   WritingAST = false;
+
+  if (WritingModule && SemaRef.PP.getHeaderSearchInfo()
+                           .getHeaderSearchOpts()
+                           .ModulesValidateOncePerBuildSession)
+    updateModuleTimestamp(OutputFile);
+
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
     ModuleCache.addBuiltPCM(OutputFile,
@@ -8192,11 +8198,25 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     }
     return;
   }
+  case OpenACCClauseKind::Worker: {
+    const auto *WC = cast<OpenACCWorkerClause>(C);
+    writeSourceLocation(WC->getLParenLoc());
+    writeBool(WC->hasIntExpr());
+    if (WC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(WC->getIntExpr()));
+    return;
+  }
+  case OpenACCClauseKind::Vector: {
+    const auto *VC = cast<OpenACCVectorClause>(C);
+    writeSourceLocation(VC->getLParenLoc());
+    writeBool(VC->hasIntExpr());
+    if (VC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(VC->getIntExpr()));
+    return;
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Delete:

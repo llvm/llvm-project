@@ -433,10 +433,10 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     int NumFlags = 0;
     const ListInit *LI = R.getValueAsListInit("Flags");
-    for (Init *I : *LI)
+    for (const Init *I : *LI)
       OS << (NumFlags++ ? " | " : "") << cast<DefInit>(I)->getDef()->getName();
     if (GroupFlags) {
-      for (Init *I : *GroupFlags)
+      for (const Init *I : *GroupFlags)
         OS << (NumFlags++ ? " | " : "")
            << cast<DefInit>(I)->getDef()->getName();
     }
@@ -447,11 +447,11 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     int NumVisFlags = 0;
     LI = R.getValueAsListInit("Visibility");
-    for (Init *I : *LI)
+    for (const Init *I : *LI)
       OS << (NumVisFlags++ ? " | " : "")
          << cast<DefInit>(I)->getDef()->getName();
     if (GroupVis) {
-      for (Init *I : *GroupVis)
+      for (const Init *I : *GroupVis)
         OS << (NumVisFlags++ ? " | " : "")
            << cast<DefInit>(I)->getDef()->getName();
     }
@@ -473,7 +473,7 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
         HelpTextsForVariants;
     for (const Record *VisibilityHelp :
          R.getValueAsListOfDefs("HelpTextsForVariants")) {
-      ArrayRef<Init *> Visibilities =
+      ArrayRef<const Init *> Visibilities =
           VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
 
       std::vector<std::string> VisibilityNames;

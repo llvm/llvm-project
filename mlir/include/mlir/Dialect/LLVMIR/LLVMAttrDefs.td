@@ -471,6 +471,10 @@ def LLVM_DIGlobalVariableExpressionAttr
   let constBuilderCall = "$0";
 }
 
+def DIGlobalVariableExpressionArrayAttr :
+  TypedArrayAttrBase<LLVM_DIGlobalVariableExpressionAttr,
+  "an array of variable expressions">;
+
 //===----------------------------------------------------------------------===//
 // DIGlobalVariableAttr
 //===----------------------------------------------------------------------===//

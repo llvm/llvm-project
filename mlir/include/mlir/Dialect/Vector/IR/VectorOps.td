@@ -2808,7 +2808,7 @@ def Vector_SplatOp : Vector_Op<"splat", [
 
     ```mlir
     %s = arith.constant 10.1 : f32
-    %t = vector.splat %s : vector<8x16xi32>
+    %t = vector.splat %s : vector<8x16xf32>
     ```
   }];
 

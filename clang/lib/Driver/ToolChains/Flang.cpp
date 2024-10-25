@@ -148,7 +148,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
-                            options::OPT_flang_experimental_integer_overflow,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -869,6 +868,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
@@ -881,6 +882,20 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
   addDashXForInput(Args, Input, CmdArgs);
+
+  bool FRecordCmdLine = false;
+  bool GRecordCmdLine = false;
+  if (shouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
+    const char *CmdLine = renderEscapedCommandLine(TC, Args);
+    if (FRecordCmdLine) {
+      CmdArgs.push_back("-record-command-line");
+      CmdArgs.push_back(CmdLine);
+    }
+    if (TC.UseDwarfDebugFlags() || GRecordCmdLine) {
+      CmdArgs.push_back("-dwarf-debug-flags");
+      CmdArgs.push_back(CmdLine);
+    }
+  }
 
   CmdArgs.push_back(Input.getFilename());
 

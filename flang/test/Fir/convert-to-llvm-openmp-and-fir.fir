@@ -17,7 +17,6 @@ func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!
         fir.store %3 to %6 : !fir.ref<i32>
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -43,7 +42,6 @@ func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!
 // CHECK:   llvm.store %[[I1]], %[[ARR_I_REF]] : i32, !llvm.ptr
 // CHECK: omp.yield
 // CHECK: }
-// CHECK: omp.terminator
 // CHECK: }
 // CHECK: omp.terminator
 // CHECK: }
@@ -93,7 +91,6 @@ func.func @_QPsb(%arr: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
         fir.store %indx to %3 : !fir.ref<i32>
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -110,7 +107,6 @@ func.func @_QPsb(%arr: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
 // CHECK-NEXT:   omp.loop_nest (%[[INDX:.*]]) : i32 = (%[[C1]]) to (%[[C50]]) inclusive step (%[[C1]]) {
 // CHECK:          llvm.store %[[INDX]], %{{.*}} : i32, !llvm.ptr
 // CHECK:          omp.yield
-// CHECK:        omp.terminator
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
 
@@ -200,7 +196,6 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
         fir.store %3 to %6 : !fir.ref<i32>
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -226,7 +221,6 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // CHECK:   llvm.store %[[I1]], %[[ARR_I_REF]] : i32, !llvm.ptr
 // CHECK: omp.yield
 // CHECK: }
-// CHECK: omp.terminator
 // CHECK: }
 // CHECK: omp.terminator
 // CHECK: }
@@ -364,10 +358,10 @@ func.func @_QPopenmp_target_data_region() {
       %9 = arith.subi %8, %c1_i64 : i64
       %10 = fir.coordinate_of %0, %9 : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
       fir.store %6 to %10 : !fir.ref<i32>
-      %11 = arith.addi %arg0, %c1 : index
+      %11 = arith.addi %arg0, %c1 overflow<nsw> : index
       %12 = fir.convert %c1 : (index) -> i32
       %13 = fir.load %1 : !fir.ref<i32>
-      %14 = arith.addi %13, %12 : i32
+      %14 = arith.addi %13, %12 overflow<nsw> : i32
       fir.result %11, %14 : index, i32
     }
     fir.store %5#1 to %1 : !fir.ref<i32>
@@ -410,11 +404,11 @@ func.func @_QPopenmp_target_data_region() {
 // CHECK:             %[[VAL_21:.*]] = llvm.sub %[[VAL_19]], %[[VAL_20]]  : i64
 // CHECK:             %[[VAL_22:.*]] = llvm.getelementptr %[[VAL_1]][0, %[[VAL_21]]] : (!llvm.ptr, i64) -> !llvm.ptr
 // CHECK:             llvm.store %[[VAL_17]], %[[VAL_22]] : i32, !llvm.ptr
-// CHECK:             %[[VAL_23:.*]] = llvm.add %[[VAL_12]], %[[VAL_8]]  : i64
+// CHECK:             %[[VAL_23:.*]] = llvm.add %[[VAL_12]], %[[VAL_8]] overflow<nsw> : i64
 // CHECK:             %[[VAL_24:.*]] = llvm.trunc %[[VAL_8]] : i64 to i32
 // CHECK:             %[[VAL_25:.*]] = llvm.load %[[VAL_3]] : !llvm.ptr -> i32
-// CHECK:             %[[VAL_26:.*]] = llvm.add %[[VAL_25]], %[[VAL_24]]  : i32
-// CHECK:             %[[VAL_27:.*]] = llvm.add %[[VAL_12]], %[[VAL_8]]  : i64
+// CHECK:             %[[VAL_26:.*]] = llvm.add %[[VAL_25]], %[[VAL_24]] overflow<nsw> : i32
+// CHECK:             %[[VAL_27:.*]] = llvm.add %[[VAL_12]], %[[VAL_8]] overflow<nsw> : i64
 // CHECK:             %[[VAL_28:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:             %[[VAL_29:.*]] = llvm.sub %[[VAL_14]], %[[VAL_28]]  : i64
 // CHECK:             llvm.br ^bb1(%[[VAL_27]], %[[VAL_26]], %[[VAL_29]] : i64, i32, i64)
@@ -519,7 +513,6 @@ func.func @_QPsimd_with_nested_loop() {
       fir.store %7 to %3 : !fir.ref<i32>
       omp.yield
     }
-    omp.terminator
   }
   return
 }
@@ -540,7 +533,6 @@ func.func @_QPsimd_with_nested_loop() {
 // CHECK:             ^bb3:
 // CHECK:               omp.yield
 // CHECK:             }
-// CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           llvm.return
 // CHECK:         }
@@ -736,7 +728,6 @@ func.func @_QPsb() {
 // CHECK:          %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32
 // CHECK:          llvm.store %[[RES_EXT]], %[[PRV]] : i32, !llvm.ptr
 // CHECK:          omp.yield
-// CHECK:        omp.terminator
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
 
@@ -781,7 +772,6 @@ func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> 
         fir.store %11 to %prv : !fir.ref<!fir.logical<4>>
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }

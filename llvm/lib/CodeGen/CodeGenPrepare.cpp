@@ -2111,6 +2111,31 @@ bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
   return false;
 }
 
+/// Some targets have better codegen for `ctpop(X) u< 2` than `ctpop(X) == 1`.
+/// This function converts `ctpop(X) ==/!= 1` into `ctpop(X) u</u> 2/1` if the
+/// result cannot be zero.
+static bool adjustIsPower2Test(CmpInst *Cmp, const TargetLowering &TLI,
+                               const TargetTransformInfo &TTI,
+                               const DataLayout &DL) {
+  ICmpInst::Predicate Pred;
+  if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(), m_One())))
+    return false;
+  if (!ICmpInst::isEquality(Pred))
+    return false;
+  auto *II = cast<IntrinsicInst>(Cmp->getOperand(0));
+
+  if (isKnownNonZero(II, DL)) {
+    if (Pred == ICmpInst::ICMP_EQ) {
+      Cmp->setOperand(1, ConstantInt::get(II->getType(), 2));
+      Cmp->setPredicate(ICmpInst::ICMP_ULT);
+    } else {
+      Cmp->setPredicate(ICmpInst::ICMP_UGT);
+    }
+    return true;
+  }
+  return false;
+}
+
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (sinkCmpExpression(Cmp, *TLI))
     return true;
@@ -2128,6 +2153,9 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
     return true;
 
   if (foldFCmpToFPClassTest(Cmp, *TLI, *DL))
+    return true;
+
+  if (adjustIsPower2Test(Cmp, *TLI, *TTI, *DL))
     return true;
 
   return false;
@@ -3312,7 +3340,7 @@ class TypePromotionTransaction {
         // Set a dummy one.
         // We could use OperandSetter here, but that would imply an overhead
         // that we are not willing to pay.
-        Inst->setOperand(It, UndefValue::get(Val->getType()));
+        Inst->setOperand(It, PoisonValue::get(Val->getType()));
       }
     }
 

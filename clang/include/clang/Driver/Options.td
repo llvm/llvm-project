@@ -2002,16 +2002,18 @@ def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Grou
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
 def frecord_command_line : Flag<["-"], "frecord-command-line">,
-  DocBrief<[{Generate a section named ".GCC.command.line" containing the clang
+  DocBrief<[{Generate a section named ".GCC.command.line" containing the
 driver command-line. After linking, the section may contain multiple command
 lines, which will be individually terminated by null bytes. Separate arguments
 within a command line are combined with spaces; spaces and backslashes within an
 argument are escaped with backslashes. This format differs from the format of
 the equivalent section produced by GCC with the -frecord-gcc-switches flag.
 This option is currently only supported on ELF targets.}]>,
-  Group<f_clang_Group>;
+  Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def fno_record_command_line : Flag<["-"], "fno-record-command-line">,
-  Group<f_clang_Group>;
+  Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def : Flag<["-"], "frecord-gcc-switches">, Alias<frecord_command_line>;
 def : Flag<["-"], "fno-record-gcc-switches">, Alias<fno_record_command_line>;
 def fcommon : Flag<["-"], "fcommon">, Group<f_Group>,
@@ -2946,6 +2948,11 @@ def fxray_selected_function_group :
   HelpText<"When using -fxray-function-groups, select which group of functions to instrument. Valid range is 0 to fxray-function-groups - 1">,
   MarshallingInfoInt<CodeGenOpts<"XRaySelectedFunctionGroup">, "0">;
 
+defm xray_shared : BoolFOption<"xray-shared",
+  CodeGenOpts<"XRayShared">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable shared library instrumentation with XRay">,
+  NegFlag<SetFalse>>;
 
 defm fine_grained_bitfield_accesses : BoolOption<"f", "fine-grained-bitfield-accesses",
   CodeGenOpts<"FineGrainedBitfieldAccesses">, DefaultFalse,
@@ -3409,6 +3416,9 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Use the given vector functions library">,
+    HelpTextForVariants<[ClangOption, CC1Option],
+      "Use the given vector functions library. "
+      "Note: -fveclib={ArmPL,SLEEF} implies -fno-math-errno">,
     Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM,none">,
     NormalizedValuesScope<"llvm::driver::VectorLibrary">,
     NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
@@ -3452,7 +3462,8 @@ def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
 def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
-def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>;
+def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def fno_pointer_tbaa : Flag<["-"], "fno-pointer-tbaa">, Group<f_Group>;
 def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>, HelpText<
@@ -3468,7 +3479,8 @@ def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
 def fno_working_directory : Flag<["-"], "fno-working-directory">, Group<f_Group>;
-def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>;
+def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Synthesize retain and release calls for Objective-C pointers">;
@@ -3964,7 +3976,8 @@ defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
           "Enable optimizations based on the strict rules for"
             " overwriting polymorphic C++ objects">,
   NegFlag<SetFalse>>;
-def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
+def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def fpointer_tbaa : Flag<["-"], "fpointer-tbaa">, Group<f_Group>;
 def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
@@ -4233,7 +4246,7 @@ defm virtual_function_elimination : BoolFOption<"virtual-function-elimination",
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
 
 def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -5098,6 +5111,8 @@ def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
 def mtail_call : Flag<["-"], "mtail-call">, Group<m_wasm_Features_Group>;
 def mno_tail_call : Flag<["-"], "mno-tail-call">, Group<m_wasm_Features_Group>;
+def mwide_arithmetic : Flag<["-"], "mwide-arithmetic">, Group<m_wasm_Features_Group>;
+def mno_wide_arithmetic : Flag<["-"], "mno-wide-arithmetic">, Group<m_wasm_Features_Group>;
 def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver_Group>,
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">,
@@ -5382,9 +5397,22 @@ def mlasx : Flag<["-"], "mlasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable Loongson Advanced SIMD Extension (LASX).">;
 def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable Loongson Advanced SIMD Extension (LASX).">;
+let Flags = [TargetSpecific] in {
 def msimd_EQ : Joined<["-"], "msimd=">, Group<m_loongarch_Features_Group>,
-  Flags<[TargetSpecific]>,
   HelpText<"Select the SIMD extension(s) to be enabled in LoongArch either 'none', 'lsx', 'lasx'.">;
+def mfrecipe : Flag<["-"], "mfrecipe">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable frecipe.{s/d} and frsqrte.{s/d}">;
+def mno_frecipe : Flag<["-"], "mno-frecipe">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable frecipe.{s/d} and frsqrte.{s/d}">;
+def mlam_bh : Flag<["-"], "mlam-bh">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable amswap[_db].{b/h} and amadd[_db].{b/h}">;
+def mno_lam_bh : Flag<["-"], "mno-lam-bh">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable amswap[_db].{b/h} and amadd[_db].{b/h}">;
+def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
+def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable annotate table jump instruction to correlate it with the jump table.">;
+} // let Flags = [TargetSpecific]
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;
@@ -6401,6 +6429,8 @@ def mmovdiri : Flag<["-"], "mmovdiri">, Group<m_x86_Features_Group>;
 def mno_movdiri : Flag<["-"], "mno-movdiri">, Group<m_x86_Features_Group>;
 def mmovdir64b : Flag<["-"], "mmovdir64b">, Group<m_x86_Features_Group>;
 def mno_movdir64b : Flag<["-"], "mno-movdir64b">, Group<m_x86_Features_Group>;
+def mmovrs : Flag<["-"], "mmovrs">, Group<m_x86_Features_Group>;
+def mno_movrs : Flag<["-"], "mno-movrs">, Group<m_x86_Features_Group>;
 def mmwaitx : Flag<["-"], "mmwaitx">, Group<m_x86_Features_Group>;
 def mno_mwaitx : Flag<["-"], "mno-mwaitx">, Group<m_x86_Features_Group>;
 def mpku : Flag<["-"], "mpku">, Group<m_x86_Features_Group>;
@@ -6756,10 +6786,6 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
 def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
-
-def flang_experimental_integer_overflow : Flag<["-"], "flang-experimental-integer-overflow">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Add nsw flag to internal operations such as do-variable increment (experimental)">;
 
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
@@ -7166,6 +7192,9 @@ def mrelocation_model : Separate<["-"], "mrelocation-model">,
   NormalizedValues<["Static", "PIC_", "ROPI", "RWPI", "ROPI_RWPI", "DynamicNoPIC"]>,
   MarshallingInfoEnum<CodeGenOpts<"RelocationModel">, "PIC_">;
 def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">;
+def record_command_line : Separate<["-"], "record-command-line">,
+  HelpText<"The string to embed in the .LLVM.command.line section.">,
+  MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
 
 } // let Visibility = [CC1Option, CC1AsOption, FC1Option]
 
@@ -7186,9 +7215,6 @@ def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
 def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
   HelpText<"The string to embed in the Dwarf debug flags record.">,
   MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
-def record_command_line : Separate<["-"], "record-command-line">,
-  HelpText<"The string to embed in the .LLVM.command.line section.">,
-  MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zstd">,
     NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Zlib", "Zstd"]>,
@@ -8088,7 +8114,7 @@ def fnative_half_type: Flag<["-"], "fnative-half-type">,
 def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and-returns">,
   HelpText<"Use the native __fp16 type for arguments and returns (and skip ABI-specific lowering)">,
   MarshallingInfoFlag<LangOpts<"NativeHalfArgsAndReturns">>,
-  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath, hlsl.KeyPath]>;
+  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">,
   Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall">,
@@ -8524,7 +8550,7 @@ def _SLASH_execution_charset : CLCompileJoined<"execution-charset:">,
   HelpText<"Set runtime encoding, supports only UTF-8">,
   Alias<fexec_charset_EQ>;
 def _SLASH_std : CLCompileJoined<"std:">,
-  HelpText<"Set language version (c++14,c++17,c++20,c++latest,c11,c17)">;
+  HelpText<"Set language version (c++14,c++17,c++20,c++23preview,c++latest,c11,c17)">;
 def _SLASH_U : CLJoinedOrSeparate<"U">, HelpText<"Undefine macro">,
   MetaVarName<"<macro>">, Alias<U>;
 def _SLASH_validate_charset : CLFlag<"validate-charset">,

@@ -186,14 +186,28 @@ private:
     int64_t Addend = 0;
 
     switch (*Kind) {
-    case i386::EdgeKind_i386::Delta32: {
+    case i386::EdgeKind_i386::None:
+      break;
+    case i386::EdgeKind_i386::Pointer32:
+    case i386::EdgeKind_i386::PCRel32:
+    case i386::EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT:
+    case i386::EdgeKind_i386::Delta32:
+    case i386::EdgeKind_i386::Delta32FromGOT:
+    case i386::EdgeKind_i386::BranchPCRel32:
+    case i386::EdgeKind_i386::BranchPCRel32ToPtrJumpStub:
+    case i386::EdgeKind_i386::BranchPCRel32ToPtrJumpStubBypassable: {
       const char *FixupContent = BlockToFix.getContent().data() +
                                  (FixupAddress - BlockToFix.getAddress());
-      Addend = *(const support::ulittle32_t *)FixupContent;
+      Addend = *(const support::little32_t *)FixupContent;
       break;
     }
-    default:
+    case i386::EdgeKind_i386::Pointer16:
+    case i386::EdgeKind_i386::PCRel16: {
+      const char *FixupContent = BlockToFix.getContent().data() +
+                                 (FixupAddress - BlockToFix.getAddress());
+      Addend = *(const support::little16_t *)FixupContent;
       break;
+    }
     }
 
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();

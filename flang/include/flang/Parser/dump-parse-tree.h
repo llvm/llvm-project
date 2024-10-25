@@ -474,6 +474,9 @@ public:
   NODE(parser, NullInit)
   NODE(parser, ObjectDecl)
   NODE(parser, OldParameterStmt)
+  NODE(parser, OmpIteratorSpecifier)
+  NODE(parser, OmpIteratorModifier)
+  NODE(parser, OmpAffinityClause)
   NODE(parser, OmpAlignedClause)
   NODE(parser, OmpAtomic)
   NODE(parser, OmpAtomicCapture)
@@ -884,8 +887,10 @@ protected:
     } else if constexpr (HasSource<T>::value) {
       return x.source.ToString();
 #endif
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      return x;
+    } else if constexpr (std::is_same_v<T, int>) {
+      return std::to_string(x);
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return x ? "true" : "false";
     } else {
       return "";
     }

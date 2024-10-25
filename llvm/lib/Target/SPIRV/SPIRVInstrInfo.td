@@ -622,13 +622,13 @@ def OpLoopMerge: Op<246, (outs), (ins unknown:$merge, unknown:$continue, LoopCon
 def OpSelectionMerge: Op<247, (outs), (ins unknown:$merge, SelectionControl:$sc),
                   "OpSelectionMerge $merge $sc">;
 def OpLabel: Op<248, (outs ID:$label), (ins), "$label = OpLabel">;
-let isBarrier = 1, isTerminator=1 in {
+let isBarrier = 1, isTerminator = 1, isBranch = 1 in {
   def OpBranch: Op<249, (outs), (ins unknown:$label), "OpBranch $label">;
   def OpBranchConditional: Op<250, (outs), (ins ID:$cond, unknown:$true, unknown:$false, variable_ops),
                   "OpBranchConditional $cond $true $false">;
   def OpSwitch: Op<251, (outs), (ins ID:$sel, ID:$dflt, variable_ops), "OpSwitch $sel $dflt">;
 }
-let isReturn = 1, hasDelaySlot=0, isBarrier = 0, isTerminator=1, isNotDuplicable = 1 in {
+let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplicable = 1 in {
   def OpKill: SimpleOp<"OpKill", 252>;
   def OpReturn: SimpleOp<"OpReturn", 253>;
   def OpReturnValue: Op<254, (outs), (ins ID:$ret), "OpReturnValue $ret">;
@@ -702,6 +702,12 @@ def OpMemoryBarrier: Op<225, (outs), (ins ID:$mem, ID:$sem),
 def OpNamedBarrierInitialize: UnOp<"OpNamedBarrierInitialize", 328>;
 def OpMemoryNamedBarrier: Op<329, (outs), (ins ID:$barr, ID:$mem, ID:$sem),
                   "OpMemoryNamedBarrier $barr $mem $sem">;
+
+// SPV_INTEL_split_barrier
+def OpControlBarrierArriveINTEL: Op<6142, (outs), (ins ID:$exec, ID:$mem, ID:$sem),
+                  "OpControlBarrierArriveINTEL $exec $mem $sem">;
+def OpControlBarrierWaitINTEL: Op<6143, (outs), (ins ID:$exec, ID:$mem, ID:$sem),
+                  "OpControlBarrierWaitINTEL $exec $mem $sem">;
 
 // 3.42.21. Group and Subgroup Instructions
 

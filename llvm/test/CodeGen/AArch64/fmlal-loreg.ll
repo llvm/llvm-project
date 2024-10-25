@@ -11,8 +11,8 @@ define <4 x float> @test(ptr %lhs_panel, ptr %rhs_panel, <4 x float> %a) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset b8, -16
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    ldr q8, [x0]
 ; CHECK-NEXT:    ldr q16, [x1]
+; CHECK-NEXT:    ldr q8, [x0]
 ; CHECK-NEXT:    lsr x9, x8, #32
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    nop

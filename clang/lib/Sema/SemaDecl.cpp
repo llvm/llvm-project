@@ -357,10 +357,13 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       return nullptr;
   }
 
-  // FIXME: LookupNestedNameSpecifierName isn't the right kind of
-  // lookup for class-names.
-  LookupNameKind Kind = isClassName ? LookupNestedNameSpecifierName :
-                                      LookupOrdinaryName;
+  // In the case where we know that the identifier is a class name, we know that
+  // it is a type declaration (struct, class, union or enum) so we can use tag
+  // name lookup.
+  //
+  // C++ [class.derived]p2 (wrt lookup in a base-specifier): The lookup for
+  // the component name of the type-name or simple-template-id is type-only.
+  LookupNameKind Kind = isClassName ? LookupTagName : LookupOrdinaryName;
   LookupResult Result(*this, &II, NameLoc, Kind);
   if (LookupCtx) {
     // Perform "qualified" name lookup into the declaration context we
@@ -7880,6 +7883,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // Handle attributes prior to checking for duplicates in MergeVarDecl
   ProcessDeclAttributes(S, NewVD, D);
 
+  if (getLangOpts().HLSL)
+    HLSL().ActOnVariableDeclarator(NewVD);
+
   // FIXME: This is probably the wrong location to be doing this and we should
   // probably be doing this for more attributes (especially for function
   // pointer attributes such as format, warn_unused_result, etc.). Ideally
@@ -14129,8 +14135,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     InitializationKind Kind
       = InitializationKind::CreateDefault(Var->getLocation());
 
-    InitializationSequence InitSeq(*this, Entity, Kind, std::nullopt);
-    ExprResult Init = InitSeq.Perform(*this, Entity, Kind, std::nullopt);
+    InitializationSequence InitSeq(*this, Entity, Kind, {});
+    ExprResult Init = InitSeq.Perform(*this, Entity, Kind, {});
 
     if (Init.get()) {
       Var->setInit(MaybeCreateExprWithCleanups(Init.get()));
@@ -16422,8 +16428,8 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                                              /*NumExceptions=*/0,
                                              /*NoexceptExpr=*/nullptr,
                                              /*ExceptionSpecTokens=*/nullptr,
-                                             /*DeclsInPrototype=*/std::nullopt,
-                                             Loc, Loc, D),
+                                             /*DeclsInPrototype=*/{}, Loc, Loc,
+                                             D),
                 std::move(DS.getAttributes()), SourceLocation());
   D.SetIdentifier(&II, Loc);
 

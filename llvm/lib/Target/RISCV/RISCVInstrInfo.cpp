@@ -4102,3 +4102,17 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   assert(Scaled >= 3 && Scaled <= 6);
   return Scaled;
 }
+
+/// Given two VL operands, do we know that LHS <= RHS?
+bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
+  if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
+      LHS.getReg() == RHS.getReg())
+    return true;
+  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
+    return false;
+  if (!LHS.isImm() || !RHS.isImm())
+    return false;
+  return LHS.getImm() <= RHS.getImm();
+}
