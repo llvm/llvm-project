@@ -143,8 +143,17 @@ if (LLVM_ENABLE_SPHINX)
     gen_rst_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
     gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Driver/ClangOptionDocs.td "${docs_targets}")
 
+    add_custom_target(clang-format-style-options
+      COMMAND "${Python3_EXECUTABLE}" "${CLANG_SOURCE_DIR}/docs/tools/dump_format_style.py"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+      DEPENDS "${CLANG_SOURCE_DIR}/include/clang/Format/Format.h"
+              "${CLANG_SOURCE_DIR}/include/clang/Tooling/Inclusions/IncludeStyle.h"
+              "${CLANG_SOURCE_DIR}/docs/tools/dump_format_style.py"
+              copy-clang-rst-docs
+    )
+
     foreach(target ${docs_targets})
-      add_dependencies(${target} copy-clang-rst-docs)
+      add_dependencies(${target} copy-clang-rst-docs clang-format-style-options)
     endforeach()
   endif()
 endif()

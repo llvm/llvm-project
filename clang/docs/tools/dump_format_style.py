@@ -15,7 +15,7 @@ FORMAT_STYLE_FILE = os.path.join(CLANG_DIR, "include/clang/Format/Format.h")
 INCLUDE_STYLE_FILE = os.path.join(
     CLANG_DIR, "include/clang/Tooling/Inclusions/IncludeStyle.h"
 )
-DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormatStyleOptions.rst")
+DOC_FILE = "ClangFormatStyleOptions.rst"
 
 PLURALS_FILE = os.path.join(os.path.dirname(__file__), "plurals.txt")
 
