@@ -33,9 +33,12 @@ bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
   const GMerge *Merge = cast<GMerge>(&MI);
 
   Register Dst = Merge->getReg(0);
-  Register Undef = Merge->getSourceReg(1);
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Merge->getSourceReg(0));
+
+  // Otherwise, we would miscompile.
+  if (Merge->getNumSources() > 2)
+    return false;
 
   //
   //   %bits_8_15:_(s8) = G_IMPLICIT_DEF
@@ -46,8 +49,7 @@ bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
   //   %0:_(s16) = G_ZEXT %bits_0_7:(s8)
   //
 
-  if (!MRI.hasOneNonDBGUse(Undef) ||
-      !isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {

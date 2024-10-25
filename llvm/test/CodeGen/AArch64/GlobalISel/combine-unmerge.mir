@@ -564,7 +564,7 @@ body:             |
     ; CHECK-LABEL: name: test_merge_undef_multi_use
     ; CHECK: %opaque:_(s64) = COPY $x0
     ; CHECK-NEXT: %def:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def(s64)
+    ; CHECK-NEXT: %me:_(s128) = G_ZEXT %opaque(s64)
     ; CHECK-NEXT: $q0 = COPY %me(s128)
     ; CHECK-NEXT: $x0 = COPY %def(s64)
     %opaque:_(s64) = COPY $x0
