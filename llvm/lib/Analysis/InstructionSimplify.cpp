@@ -6376,10 +6376,8 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC) {
       if (auto *ASC = dyn_cast<AddrSpaceCastInst>(Op0))
         AS = ASC->getSrcAddressSpace();
-      else if (auto *CE = dyn_cast<ConstantExpr>(Op0)) {
-        if (CE->getOpcode() == Instruction::AddrSpaceCast)
-          AS = CE->getOperand(0)->getType()->getPointerAddressSpace();
-      }
+      else if (auto *ASCO = dyn_cast<AddrSpaceCastOperator>(Op0))
+        AS = ASCO->getOperand(0)->getType()->getPointerAddressSpace();
     }
     if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
         AS == NVPTXAS::ADDRESS_SPACE_PARAM)
