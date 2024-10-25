@@ -34,7 +34,9 @@ namespace usage_ok {
 
   template <class T, class R = void> R dependent_void(const T& t [[clang::lifetimebound]]);
   void dependent_void_instantiation() {
-    dependent_void<int>(1);
+    dependent_void<int>(1); // OK: Returns void.
+    int x = dependent_void<int, int>(1); // expected-warning {{temporary whose address is used as value of local variable 'x' will be destroyed at the end of the full-expression}}
+    dependent_void<int, int>(1); // OK: Returns an unused value.
   }
 
   struct A {
