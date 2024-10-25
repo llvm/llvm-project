@@ -234,7 +234,7 @@ In general, ``ScopedDisabler`` should be preferred, as it is the most performant
 ``ScopedDisabler``
 ##################
 
-At compile time, RealtimeSanitizer may be disabled using ``__rtsan::ScopedDisabler``. All RTSan errors are ignored within the lifetime scope of the ``ScopedDisabler`` object.
+At compile time, RealtimeSanitizer may be disabled using ``__rtsan::ScopedDisabler``. RTSan ignores any errors originating within the ``ScopedDisabler`` instance variable scope.
 
 .. code-block:: c++
 
