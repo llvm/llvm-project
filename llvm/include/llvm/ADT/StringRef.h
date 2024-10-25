@@ -48,7 +48,9 @@ namespace llvm {
   /// situations where the character data resides in some other buffer, whose
   /// lifetime extends past that of the StringRef. For this reason, it is not in
   /// general safe to store a StringRef.
-  class LLVM_GSL_POINTER StringRef {
+  class LLVM_GSL_POINTER StringRef : public std::string_view {
+    using Base = std::string_view;
+
   public:
     static constexpr size_t npos = ~size_t(0);
 
@@ -60,12 +62,6 @@ namespace llvm {
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   private:
-    /// The start of the string, in an external buffer.
-    const char *Data = nullptr;
-
-    /// The length of the string.
-    size_t Length = 0;
-
     // Workaround memcmp issue with null pointers (undefined behavior)
     // by providing a specialized version
     static int compareMemory(const char *Lhs, const char *Rhs, size_t Length) {
@@ -86,27 +82,25 @@ namespace llvm {
 
     /// Construct a string ref from a cstring.
     /*implicit*/ constexpr StringRef(const char *Str)
-        : Data(Str), Length(Str ?
+        : Base(Str, Str ?
     // GCC 7 doesn't have constexpr char_traits. Fall back to __builtin_strlen.
 #if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 8
-                                __builtin_strlen(Str)
+                        __builtin_strlen(Str)
 #else
-                                std::char_traits<char>::length(Str)
+                        std::char_traits<char>::length(Str)
 #endif
-                                : 0) {
+                        : 0) {
     }
 
     /// Construct a string ref from a pointer and length.
     /*implicit*/ constexpr StringRef(const char *data, size_t length)
-        : Data(data), Length(length) {}
+        : Base(data, length) {}
 
     /// Construct a string ref from an std::string.
-    /*implicit*/ StringRef(const std::string &Str)
-        : Data(Str.data()), Length(Str.length()) {}
+    /*implicit*/ StringRef(const std::string &Str) : Base(Str) {}
 
     /// Construct a string ref from an std::string_view.
-    /*implicit*/ constexpr StringRef(std::string_view Str)
-        : Data(Str.data()), Length(Str.size()) {}
+    /*implicit*/ constexpr StringRef(std::string_view Str) : Base(Str) {}
 
     /// @}
     /// @name Iterators
@@ -138,15 +132,8 @@ namespace llvm {
     /// @name String Operations
     /// @{
 
-    /// data - Get a pointer to the start of the string (which may not be null
-    /// terminated).
-    [[nodiscard]] constexpr const char *data() const { return Data; }
-
     /// empty - Check if the string is empty.
     [[nodiscard]] constexpr bool empty() const { return size() == 0; }
-
-    /// size - Get the string size.
-    [[nodiscard]] constexpr size_t size() const { return Length; }
 
     /// front - Get the first character in the string.
     [[nodiscard]] char front() const {
@@ -247,14 +234,6 @@ namespace llvm {
     template <typename T>
     std::enable_if_t<std::is_same<T, std::string>::value, StringRef> &
     operator=(T &&Str) = delete;
-
-    /// @}
-    /// @name Type Conversions
-    /// @{
-
-    constexpr operator std::string_view() const {
-      return std::string_view(data(), size());
-    }
 
     /// @}
     /// @name String Predicates
