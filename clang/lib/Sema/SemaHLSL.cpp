@@ -2170,6 +2170,8 @@ bool SemaHLSL::IsLineVectorLayoutCompatibleType(clang::QualType QT) {
   llvm::SmallVector<QualType, 16> QTTypes;
   BuildFlattenedTypeList(QT, QTTypes);
 
+  assert(QTTypes.size() > 0 &&
+         "expected at least one constituent type from non-null type");
   QualType FirstQT = QTTypes[0];
 
   // element count cannot exceed 4
