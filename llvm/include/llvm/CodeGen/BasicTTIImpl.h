@@ -1998,6 +1998,9 @@ public:
     case Intrinsic::atan:
       ISD = ISD::FATAN;
       break;
+    case Intrinsic::atan2:
+      ISD = ISD::FATAN2;
+      break;
     case Intrinsic::sinh:
       ISD = ISD::FSINH;
       break;

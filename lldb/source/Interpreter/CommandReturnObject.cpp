@@ -42,7 +42,7 @@ static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
 }
 
 CommandReturnObject::CommandReturnObject(bool colors)
-    : m_out_stream(colors), m_err_stream(colors), m_diag_stream(colors) {}
+    : m_out_stream(colors), m_err_stream(colors), m_colors(colors) {}
 
 void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   SetStatus(eReturnStatusFailed);
@@ -123,30 +123,79 @@ void CommandReturnObject::SetError(llvm::Error error) {
   }
 }
 
-llvm::StringRef
-CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
-  RenderDiagnosticDetails(m_diag_stream, indent, true, m_diagnostics);
+std::string CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
+  StreamString diag_stream(m_colors);
+  RenderDiagnosticDetails(diag_stream, indent, true, m_diagnostics);
   // Duplex the diagnostics to the secondary stream (but not inlined).
-  if (auto stream_sp = m_err_stream.GetStreamAtIndex(eStreamStringIndex))
+  if (auto stream_sp = m_err_stream.GetStreamAtIndex(eImmediateStreamIndex))
     RenderDiagnosticDetails(*stream_sp, std::nullopt, false, m_diagnostics);
 
-  // Clear them so GetErrorData() doesn't render them again.
-  m_diagnostics.clear();
-  return m_diag_stream.GetString();
+  return diag_stream.GetString().str();
 }
 
-llvm::StringRef CommandReturnObject::GetErrorString() {
-  // Diagnostics haven't been fetched; render them now (not inlined).
-  if (!m_diagnostics.empty()) {
-    RenderDiagnosticDetails(GetErrorStream(), std::nullopt, false,
-                            m_diagnostics);
-    m_diagnostics.clear();
-  }
+std::string CommandReturnObject::GetErrorString(bool with_diagnostics) {
+  StreamString stream(m_colors);
+  if (with_diagnostics)
+    RenderDiagnosticDetails(stream, std::nullopt, false, m_diagnostics);
 
   lldb::StreamSP stream_sp(m_err_stream.GetStreamAtIndex(eStreamStringIndex));
   if (stream_sp)
-    return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
-  return llvm::StringRef();
+    stream << std::static_pointer_cast<StreamString>(stream_sp)->GetString();
+  return stream.GetString().str();
+}
+
+StructuredData::ObjectSP CommandReturnObject::GetErrorData() {
+  auto make_array = []() { return std::make_unique<StructuredData::Array>(); };
+  auto make_bool = [](bool b) {
+    return std::make_unique<StructuredData::Boolean>(b);
+  };
+  auto make_dict = []() {
+    return std::make_unique<StructuredData::Dictionary>();
+  };
+  auto make_int = [](unsigned i) {
+    return std::make_unique<StructuredData::UnsignedInteger>(i);
+  };
+  auto make_string = [](llvm::StringRef s) {
+    return std::make_unique<StructuredData::String>(s);
+  };
+  auto dict_up = make_dict();
+  dict_up->AddItem("version", make_int(1));
+  auto array_up = make_array();
+  for (const DiagnosticDetail &diag : m_diagnostics) {
+    auto detail_up = make_dict();
+    if (auto &sloc = diag.source_location) {
+      auto sloc_up = make_dict();
+      sloc_up->AddItem("file", make_string(sloc->file.GetPath()));
+      sloc_up->AddItem("line", make_int(sloc->line));
+      sloc_up->AddItem("length", make_int(sloc->length));
+      sloc_up->AddItem("hidden", make_bool(sloc->hidden));
+      sloc_up->AddItem("in_user_input", make_bool(sloc->in_user_input));
+      detail_up->AddItem("source_location", std::move(sloc_up));
+    }
+    llvm::StringRef severity = "unknown";
+    switch (diag.severity) {
+    case lldb::eSeverityError:
+      severity = "error";
+      break;
+    case lldb::eSeverityWarning:
+      severity = "warning";
+      break;
+    case lldb::eSeverityInfo:
+      severity = "note";
+      break;
+    }
+    detail_up->AddItem("severity", make_string(severity));
+    detail_up->AddItem("message", make_string(diag.message));
+    detail_up->AddItem("rendered", make_string(diag.rendered));
+    array_up->AddItem(std::move(detail_up));
+  }
+  dict_up->AddItem("details", std::move(array_up));
+  if (auto stream_sp = m_err_stream.GetStreamAtIndex(eStreamStringIndex)) {
+    auto text = std::static_pointer_cast<StreamString>(stream_sp)->GetString();
+    if (!text.empty())
+      dict_up->AddItem("text", make_string(text));
+  }
+  return dict_up;
 }
 
 // Similar to AppendError, but do not prepend 'Status: ' to message, and don't
@@ -179,6 +228,7 @@ void CommandReturnObject::Clear() {
   stream_sp = m_err_stream.GetStreamAtIndex(eStreamStringIndex);
   if (stream_sp)
     static_cast<StreamString *>(stream_sp.get())->Clear();
+  m_diagnostics.clear();
   m_status = eReturnStatusStarted;
   m_did_change_process_state = false;
   m_suppress_immediate_output = false;

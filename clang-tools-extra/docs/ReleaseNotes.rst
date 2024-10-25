@@ -56,6 +56,8 @@ Improvements to clangd
 Inlay hints
 ^^^^^^^^^^^
 
+- Added `DefaultArguments` Inlay Hints option.
+
 Diagnostics
 ^^^^^^^^^^^
 
@@ -158,7 +160,7 @@ Changes in existing checks
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
-  subtracting from a pointer.
+  subtracting from a pointer directly or when used to scale a numeric value.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
@@ -178,6 +180,10 @@ Changes in existing checks
   avoid false positive when member initialization depends on a structured
   binding variable.
 
+- Fixed :doc:`cppcoreguidelines-pro-type-union-access
+  <clang-tidy/checks/cppcoreguidelines/pro-type-union-access>` check to
+  report a location even when the member location is not valid.
+
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
@@ -194,6 +200,10 @@ Changes in existing checks
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
   using loop variable in initializer of lambda capture.
+
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static`` keyword
+  before type qualifiers such as ``const`` and ``volatile``.
 
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
@@ -228,7 +238,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on
-  any class that has a ``contains`` method.
+  any class that has a ``contains`` method. Fix some false negatives in the
+  ``find()`` case.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by only issuing
@@ -245,7 +256,7 @@ Changes in existing checks
   remove `->`, when redundant `get()` is removed.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/readability-identifier-naming>` check to
+  <clang-tidy/checks/readability/identifier-naming>` check to
   validate ``namespace`` aliases.
 
 Removed checks

@@ -1033,15 +1033,15 @@ public:
   // to expand Tablegen classes like 'Vector' which mean something different in
   // each member of a parametric family.
   const Type *getType(const Record *R, const Type *Param);
-  const Type *getType(DagInit *D, const Type *Param);
-  const Type *getType(Init *I, const Type *Param);
+  const Type *getType(const DagInit *D, const Type *Param);
+  const Type *getType(const Init *I, const Type *Param);
 
   // Functions that translate the Tablegen representation of an intrinsic's
   // code generation into a collection of Value objects (which will then be
   // reprocessed to read out the actual C++ code included by CGBuiltin.cpp).
-  Result::Ptr getCodeForDag(DagInit *D, const Result::Scope &Scope,
+  Result::Ptr getCodeForDag(const DagInit *D, const Result::Scope &Scope,
                             const Type *Param);
-  Result::Ptr getCodeForDagArg(DagInit *D, unsigned ArgNum,
+  Result::Ptr getCodeForDagArg(const DagInit *D, unsigned ArgNum,
                                const Result::Scope &Scope, const Type *Param);
   Result::Ptr getCodeForArg(unsigned ArgNum, const Type *ArgType, bool Promote,
                             bool Immediate);
@@ -1060,10 +1060,10 @@ public:
   void EmitBuiltinAliases(raw_ostream &OS);
 };
 
-const Type *EmitterBase::getType(Init *I, const Type *Param) {
-  if (auto Dag = dyn_cast<DagInit>(I))
+const Type *EmitterBase::getType(const Init *I, const Type *Param) {
+  if (const auto *Dag = dyn_cast<DagInit>(I))
     return getType(Dag, Param);
-  if (auto Def = dyn_cast<DefInit>(I))
+  if (const auto *Def = dyn_cast<DefInit>(I))
     return getType(Def->getDef(), Param);
 
   PrintFatalError("Could not convert this value into a type");
@@ -1088,7 +1088,7 @@ const Type *EmitterBase::getType(const Record *R, const Type *Param) {
   PrintFatalError(R->getLoc(), "Could not convert this record into a type");
 }
 
-const Type *EmitterBase::getType(DagInit *D, const Type *Param) {
+const Type *EmitterBase::getType(const DagInit *D, const Type *Param) {
   // The meat of the getType system: types in the Tablegen are represented by a
   // dag whose operators select sub-cases of this function.
 
@@ -1156,7 +1156,8 @@ const Type *EmitterBase::getType(DagInit *D, const Type *Param) {
   PrintFatalError("Bad operator in type dag expression");
 }
 
-Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
+Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
+                                       const Result::Scope &Scope,
                                        const Type *Param) {
   const Record *Op = cast<DefInit>(D->getOperator())->getDef();
 
@@ -1199,14 +1200,14 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
     Result::Ptr Arg = getCodeForDagArg(D, 0, Scope, Param);
 
     const Type *Ty = nullptr;
-    if (auto *DI = dyn_cast<DagInit>(D->getArg(0)))
+    if (const auto *DI = dyn_cast<DagInit>(D->getArg(0)))
       if (auto *PTy = dyn_cast<PointerType>(getType(DI->getOperator(), Param)))
         Ty = PTy->getPointeeType();
     if (!Ty)
       PrintFatalError("'address' pointer argument should be a pointer");
 
     unsigned Alignment;
-    if (auto *II = dyn_cast<IntInit>(D->getArg(1))) {
+    if (const auto *II = dyn_cast<IntInit>(D->getArg(1))) {
       Alignment = II->getValue();
     } else {
       PrintFatalError("'address' alignment argument should be an integer");
@@ -1267,10 +1268,10 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
   }
 }
 
-Result::Ptr EmitterBase::getCodeForDagArg(DagInit *D, unsigned ArgNum,
+Result::Ptr EmitterBase::getCodeForDagArg(const DagInit *D, unsigned ArgNum,
                                           const Result::Scope &Scope,
                                           const Type *Param) {
-  Init *Arg = D->getArg(ArgNum);
+  const Init *Arg = D->getArg(ArgNum);
   StringRef Name = D->getArgNameStr(ArgNum);
 
   if (!Name.empty()) {
@@ -1286,18 +1287,18 @@ Result::Ptr EmitterBase::getCodeForDagArg(DagInit *D, unsigned ArgNum,
   // Sometimes the Arg is a bit. Prior to multiclass template argument
   // checking, integers would sneak through the bit declaration,
   // but now they really are bits.
-  if (auto *BI = dyn_cast<BitInit>(Arg))
+  if (const auto *BI = dyn_cast<BitInit>(Arg))
     return std::make_shared<IntLiteralResult>(getScalarType("u32"),
                                               BI->getValue());
 
-  if (auto *II = dyn_cast<IntInit>(Arg))
+  if (const auto *II = dyn_cast<IntInit>(Arg))
     return std::make_shared<IntLiteralResult>(getScalarType("u32"),
                                               II->getValue());
 
-  if (auto *DI = dyn_cast<DagInit>(Arg))
+  if (const auto *DI = dyn_cast<DagInit>(Arg))
     return getCodeForDag(DI, Scope, Param);
 
-  if (auto *DI = dyn_cast<DefInit>(Arg)) {
+  if (const auto *DI = dyn_cast<DefInit>(Arg)) {
     const Record *Rec = DI->getDef();
     if (Rec->isSubClassOf("Type")) {
       const Type *T = getType(Rec, Param);
@@ -1307,7 +1308,7 @@ Result::Ptr EmitterBase::getCodeForDagArg(DagInit *D, unsigned ArgNum,
 
   PrintError("bad DAG argument type for code generation");
   PrintNote("DAG: " + D->getAsString());
-  if (TypedInit *Typed = dyn_cast<TypedInit>(Arg))
+  if (const auto *Typed = dyn_cast<TypedInit>(Arg))
     PrintNote("argument type: " + Typed->getType()->getAsString());
   PrintFatalNote("argument number " + Twine(ArgNum) + ": " + Arg->getAsString());
 }
@@ -1379,13 +1380,13 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
   HeaderOnly = R->getValueAsBit("headerOnly");
 
   // Process the intrinsic's argument list.
-  DagInit *ArgsDag = R->getValueAsDag("args");
+  const DagInit *ArgsDag = R->getValueAsDag("args");
   Result::Scope Scope;
   for (unsigned i = 0, e = ArgsDag->getNumArgs(); i < e; ++i) {
-    Init *TypeInit = ArgsDag->getArg(i);
+    const Init *TypeInit = ArgsDag->getArg(i);
 
     bool Promote = true;
-    if (auto TypeDI = dyn_cast<DefInit>(TypeInit))
+    if (const auto *TypeDI = dyn_cast<DefInit>(TypeInit))
       if (TypeDI->getDef()->isSubClassOf("unpromoted"))
         Promote = false;
 
@@ -1397,7 +1398,7 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
     // If the argument is a subclass of Immediate, record the details about
     // what values it can take, for Sema checking.
     bool Immediate = false;
-    if (auto TypeDI = dyn_cast<DefInit>(TypeInit)) {
+    if (const auto *TypeDI = dyn_cast<DefInit>(TypeInit)) {
       const Record *TypeRec = TypeDI->getDef();
       if (TypeRec->isSubClassOf("Immediate")) {
         Immediate = true;
@@ -1444,7 +1445,7 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
 
   // Finally, go through the codegen dag and translate it into a Result object
   // (with an arbitrary DAG of depended-on Results hanging off it).
-  DagInit *CodeDag = R->getValueAsDag("codegen");
+  const DagInit *CodeDag = R->getValueAsDag("codegen");
   const Record *MainOp = cast<DefInit>(CodeDag->getOperator())->getDef();
   if (MainOp->isSubClassOf("CustomCodegen")) {
     // Or, if it's the special case of CustomCodegen, just accumulate
@@ -1456,9 +1457,9 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
       StringRef Name = CodeDag->getArgNameStr(i);
       if (Name.empty()) {
         PrintFatalError("Operands to CustomCodegen should have names");
-      } else if (auto *II = dyn_cast<IntInit>(CodeDag->getArg(i))) {
+      } else if (const auto *II = dyn_cast<IntInit>(CodeDag->getArg(i))) {
         CustomCodeGenArgs[std::string(Name)] = itostr(II->getValue());
-      } else if (auto *SI = dyn_cast<StringInit>(CodeDag->getArg(i))) {
+      } else if (const auto *SI = dyn_cast<StringInit>(CodeDag->getArg(i))) {
         CustomCodeGenArgs[std::string(Name)] = std::string(SI->getValue());
       } else {
         PrintFatalError("Operands to CustomCodegen should be integers");

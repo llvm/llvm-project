@@ -2012,7 +2012,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           Attrs.hasAttribute(Attribute::ReadOnly)),
         "Attributes writable and readonly are incompatible!", V);
 
-  AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
+  AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty, Attrs);
   for (Attribute Attr : Attrs) {
     if (!Attr.isStringAttribute() &&
         IncompatibleAttrs.contains(Attr.getKindAsEnum())) {
@@ -2400,6 +2400,19 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     const std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, FT);
     if (!Info)
       CheckFailed("invalid name for a VFABI variant: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("denormal-fp-math"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (!parseDenormalFPAttribute(S).isValid())
+      CheckFailed("invalid value for 'denormal-fp-math' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("denormal-fp-math-f32"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (!parseDenormalFPAttribute(S).isValid())
+      CheckFailed("invalid value for 'denormal-fp-math-f32' attribute: " + S,
+                  V);
   }
 }
 

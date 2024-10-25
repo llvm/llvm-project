@@ -820,6 +820,8 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake:
     case 0xc5:
+    // Arrowlake U:
+    case 0xb5:
       CPU = "arrowlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ARROWLAKE;
@@ -1839,6 +1841,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["cmpccxadd"]  = HasLeaf7Subleaf1 && ((EAX >> 7) & 1);
   Features["hreset"]     = HasLeaf7Subleaf1 && ((EAX >> 22) & 1);
   Features["avxifma"]    = HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave;
+  Features["movrs"] = HasLeaf7Subleaf1 && ((EAX >> 31) & 1);
   Features["avxvnniint8"] = HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave;
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;

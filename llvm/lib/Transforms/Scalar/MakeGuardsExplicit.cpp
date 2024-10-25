@@ -56,8 +56,8 @@ static void turnToExplicitForm(CallInst *Guard, Function *DeoptIntrinsic) {
 static bool explicifyGuards(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
   // do.
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_guard);
   if (!GuardDecl || GuardDecl->use_empty())
     return false;
 

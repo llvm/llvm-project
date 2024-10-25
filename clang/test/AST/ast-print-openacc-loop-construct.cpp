@@ -216,4 +216,79 @@ void foo() {
 #pragma acc kernels
 #pragma acc loop worker(num:5)
   for(;;);
+
+  // CHECK: #pragma acc loop vector
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop vector
+  for(;;);
+
+// CHECK: #pragma acc loop vector(length: 5)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop vector(5)
+  for(;;);
+
+// CHECK: #pragma acc loop vector(length: 5)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop vector(length:5)
+  for(;;);
+
+// CHECK: #pragma acc parallel
+// CHECK-NEXT: #pragma acc loop vector
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc parallel
+#pragma acc loop vector
+  for(;;);
+
+// CHECK: #pragma acc parallel
+// CHECK-NEXT: #pragma acc loop vector(length: 5)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc parallel
+#pragma acc loop vector(5)
+  for(;;);
+
+// CHECK: #pragma acc parallel
+// CHECK-NEXT: #pragma acc loop vector(length: 5)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc parallel
+#pragma acc loop vector(length:5)
+  for(;;);
+
+// CHECK: #pragma acc kernels
+// CHECK-NEXT: #pragma acc loop vector
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc kernels
+#pragma acc loop vector
+  for(;;);
+
+// CHECK: #pragma acc kernels
+// CHECK-NEXT: #pragma acc loop vector(length: 5)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc kernels
+#pragma acc loop vector(5)
+  for(;;);
+
+// CHECK: #pragma acc kernels
+// CHECK-NEXT: #pragma acc loop vector(length: 5)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc kernels
+#pragma acc loop vector(length:5)
+  for(;;);
+
+// CHECK: #pragma acc serial
+// CHECK-NEXT: #pragma acc loop vector
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc serial
+#pragma acc loop vector
+  for(;;);
+
 }

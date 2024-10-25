@@ -794,8 +794,7 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
            additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
                NumExpandedTypes, HasTypeConstraint ? 1 : 0))
           NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
-                                  0, 0, nullptr, QualType(), nullptr,
-                                  std::nullopt, std::nullopt);
+                                  0, 0, nullptr, QualType(), nullptr, {}, {});
   NTTP->NumExpandedTypes = NumExpandedTypes;
   return NTTP;
 }
@@ -870,7 +869,7 @@ TemplateTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
   auto *TTP =
       new (C, ID, additionalSizeToAlloc<TemplateParameterList *>(NumExpansions))
           TemplateTemplateParmDecl(nullptr, SourceLocation(), 0, 0, nullptr,
-                                   false, nullptr, std::nullopt);
+                                   false, nullptr, {});
   TTP->NumExpandedParams = NumExpansions;
   return TTP;
 }
@@ -1183,6 +1182,20 @@ SourceRange ClassTemplatePartialSpecializationDecl::getSourceRange() const {
       TPL && !getNumTemplateParameterLists())
     Range.setBegin(TPL->getTemplateLoc());
   return Range;
+}
+
+ArrayRef<TemplateArgument>
+ClassTemplatePartialSpecializationDecl::getInjectedTemplateArgs() {
+  TemplateParameterList *Params = getTemplateParameters();
+  auto *First = cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
+  if (!First->InjectedArgs) {
+    auto &Context = getASTContext();
+    SmallVector<TemplateArgument, 16> TemplateArgs;
+    Context.getInjectedTemplateArgs(Params, TemplateArgs);
+    First->InjectedArgs = new (Context) TemplateArgument[TemplateArgs.size()];
+    std::copy(TemplateArgs.begin(), TemplateArgs.end(), First->InjectedArgs);
+  }
+  return llvm::ArrayRef(First->InjectedArgs, Params->size());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1533,6 +1546,20 @@ SourceRange VarTemplatePartialSpecializationDecl::getSourceRange() const {
       TPL && !getNumTemplateParameterLists())
     Range.setBegin(TPL->getTemplateLoc());
   return Range;
+}
+
+ArrayRef<TemplateArgument>
+VarTemplatePartialSpecializationDecl::getInjectedTemplateArgs() {
+  TemplateParameterList *Params = getTemplateParameters();
+  auto *First = cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
+  if (!First->InjectedArgs) {
+    auto &Context = getASTContext();
+    SmallVector<TemplateArgument, 16> TemplateArgs;
+    Context.getInjectedTemplateArgs(Params, TemplateArgs);
+    First->InjectedArgs = new (Context) TemplateArgument[TemplateArgs.size()];
+    std::copy(TemplateArgs.begin(), TemplateArgs.end(), First->InjectedArgs);
+  }
+  return llvm::ArrayRef(First->InjectedArgs, Params->size());
 }
 
 static TemplateParameterList *

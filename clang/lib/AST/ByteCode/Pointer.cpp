@@ -635,7 +635,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Return the composite type.
   APValue Result;
-  if (!Composite(getType(), *this, Result))
+  if (!Composite(ResultType, *this, Result))
     return std::nullopt;
   return Result;
 }

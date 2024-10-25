@@ -59,6 +59,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getStructRetAttrName() { return "llvm.sret"; }
     static StringRef getWriteOnlyAttrName() { return "llvm.writeonly"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
+    static StringRef getOpBundleSizesAttrName() { return "op_bundle_sizes"; }
+    static StringRef getOpBundleTagsAttrName() { return "op_bundle_tags"; }
     // TODO Restrict the usage of this to parameter attributes once there is an
     // alternative way of modeling memory effects on FunctionOpInterface.
     /// Name of the attribute that will cause the creation of a readnone memory

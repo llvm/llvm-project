@@ -282,6 +282,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::HLSLAttributedResource:
       return TEK_Scalar;
 
     // Complexes.
@@ -1594,7 +1595,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       llvm::Value *IsFalse = Builder.getFalse();
       EmitCheck(std::make_pair(IsFalse, SanitizerKind::Return),
                 SanitizerHandler::MissingReturn,
-                EmitCheckSourceLocation(FD->getLocation()), std::nullopt);
+                EmitCheckSourceLocation(FD->getLocation()), {});
     } else if (ShouldEmitUnreachable) {
       if (CGM.getCodeGenOpts().OptimizationLevel == 0)
         EmitTrapCall(llvm::Intrinsic::trap);
@@ -2903,19 +2904,18 @@ void CodeGenFunction::EmitMultiVersionResolver(
   }
 }
 
-static int getPriorityFromAttrString(StringRef AttrStr) {
+static unsigned getPriorityFromAttrString(StringRef AttrStr) {
   SmallVector<StringRef, 8> Attrs;
 
   AttrStr.split(Attrs, ';');
 
   // Default Priority is zero.
-  int Priority = 0;
+  unsigned Priority = 0;
   for (auto Attr : Attrs) {
     if (Attr.consume_front("priority=")) {
-      int Result;
-      if (!Attr.getAsInteger(0, Result)) {
+      unsigned Result;
+      if (!Attr.getAsInteger(0, Result))
         Priority = Result;
-      }
     }
   }
 

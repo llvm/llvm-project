@@ -793,6 +793,9 @@ EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
 
 bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
+  if (useSoftFloat())
+    return false;
+
   VT = VT.getScalarType();
 
   if (!VT.isSimple())
@@ -9863,7 +9866,7 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
     if (CalleeFn != nullptr)
       printFunctionArgExts(CalleeFn, errs());
     else
-      errs() << "-";
+      errs() << "-\n";
     errs() << "Caller:  ";
     printFunctionArgExts(F, errs());
     llvm_unreachable("");
