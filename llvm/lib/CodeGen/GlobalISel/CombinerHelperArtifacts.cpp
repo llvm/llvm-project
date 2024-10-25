@@ -37,8 +37,7 @@ bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
   LLT SrcTy = MRI.getType(Merge->getSourceReg(0));
 
   // Otherwise, we would miscompile.
-  if (Merge->getNumSources() > 2)
-    return false;
+  assert(Merge->getNumSources() == 2 && "Unexpected number of operands");
 
   //
   //   %bits_8_15:_(s8) = G_IMPLICIT_DEF
@@ -46,14 +45,14 @@ bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
   //
   // ->
   //
-  //   %0:_(s16) = G_ZEXT %bits_0_7:(s8)
+  //   %0:_(s16) = G_ANYEXT %bits_0_7:(s8)
   //
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ANYEXT, {DstTy, SrcTy}}))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildZExt(Dst, Merge->getSourceReg(0));
+    B.buildAnyExt(Dst, Merge->getSourceReg(0));
   };
   return true;
 }

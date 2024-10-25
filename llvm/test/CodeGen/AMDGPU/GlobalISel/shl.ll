@@ -1720,22 +1720,20 @@ define i65 @v_shl_i65_33(i65 %value) {
 define amdgpu_ps i65 @s_shl_i65(i65 inreg %value, i65 inreg %amount) {
 ; GCN-LABEL: s_shl_i65:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s4, s3
-; GCN-NEXT:    s_sub_i32 s10, s4, 64
-; GCN-NEXT:    s_sub_i32 s5, 64, s4
-; GCN-NEXT:    s_cmp_lt_u32 s4, 64
-; GCN-NEXT:    s_mov_b32 s3, 0
+; GCN-NEXT:    s_sub_i32 s10, s3, 64
+; GCN-NEXT:    s_sub_i32 s6, 64, s3
+; GCN-NEXT:    s_cmp_lt_u32 s3, 64
 ; GCN-NEXT:    s_cselect_b32 s11, 1, 0
-; GCN-NEXT:    s_cmp_eq_u32 s4, 0
+; GCN-NEXT:    s_cmp_eq_u32 s3, 0
 ; GCN-NEXT:    s_cselect_b32 s12, 1, 0
-; GCN-NEXT:    s_lshl_b64 s[6:7], s[0:1], s4
-; GCN-NEXT:    s_lshr_b64 s[8:9], s[0:1], s5
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[2:3], s4
-; GCN-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
+; GCN-NEXT:    s_lshr_b64 s[6:7], s[0:1], s6
+; GCN-NEXT:    s_lshl_b64 s[8:9], s[2:3], s3
+; GCN-NEXT:    s_lshl_b64 s[4:5], s[0:1], s3
+; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
 ; GCN-NEXT:    s_lshl_b64 s[8:9], s[0:1], s10
 ; GCN-NEXT:    s_cmp_lg_u32 s11, 0
-; GCN-NEXT:    s_cselect_b64 s[0:1], s[6:7], 0
-; GCN-NEXT:    s_cselect_b32 s3, s4, s8
+; GCN-NEXT:    s_cselect_b64 s[0:1], s[4:5], 0
+; GCN-NEXT:    s_cselect_b32 s3, s6, s8
 ; GCN-NEXT:    s_cmp_lg_u32 s12, 0
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s3
 ; GCN-NEXT:    ; return to shader part epilog
@@ -1743,21 +1741,19 @@ define amdgpu_ps i65 @s_shl_i65(i65 inreg %value, i65 inreg %amount) {
 ; GFX10PLUS-LABEL: s_shl_i65:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_sub_i32 s10, s3, 64
-; GFX10PLUS-NEXT:    s_sub_i32 s5, 64, s3
+; GFX10PLUS-NEXT:    s_sub_i32 s4, 64, s3
 ; GFX10PLUS-NEXT:    s_cmp_lt_u32 s3, 64
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s3
 ; GFX10PLUS-NEXT:    s_cselect_b32 s11, 1, 0
 ; GFX10PLUS-NEXT:    s_cmp_eq_u32 s3, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s3, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s12, 1, 0
-; GFX10PLUS-NEXT:    s_lshr_b64 s[6:7], s[0:1], s5
-; GFX10PLUS-NEXT:    s_lshl_b64 s[8:9], s[2:3], s4
-; GFX10PLUS-NEXT:    s_lshl_b64 s[4:5], s[0:1], s4
-; GFX10PLUS-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
-; GFX10PLUS-NEXT:    s_lshl_b64 s[8:9], s[0:1], s10
+; GFX10PLUS-NEXT:    s_lshr_b64 s[4:5], s[0:1], s4
+; GFX10PLUS-NEXT:    s_lshl_b64 s[6:7], s[2:3], s3
+; GFX10PLUS-NEXT:    s_lshl_b64 s[8:9], s[0:1], s3
+; GFX10PLUS-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
+; GFX10PLUS-NEXT:    s_lshl_b64 s[6:7], s[0:1], s10
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s11, 0
-; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[4:5], 0
-; GFX10PLUS-NEXT:    s_cselect_b32 s3, s6, s8
+; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[8:9], 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s3, s4, s6
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s12, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
