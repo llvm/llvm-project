@@ -416,7 +416,7 @@
 #if LLVM_HAS_CPP_ATTRIBUTE(clang::lifetimebound)
 #define LLVM_LIFETIME_BOUND [[clang::lifetimebound]]
 #else
-#define LLVM_LLVM_LIFETIME_BOUND
+#define LLVM_LIFETIME_BOUND
 #endif
 
 #if LLVM_HAS_CPP_ATTRIBUTE(nodiscard) >= 201907L
