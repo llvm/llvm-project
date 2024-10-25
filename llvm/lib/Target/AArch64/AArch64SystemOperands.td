@@ -2061,3 +2061,10 @@ def : RWSysReg<"PMBSR_EL3",       0b11, 0b110, 0b1001, 0b1010, 0b011>;
 def : RWSysReg<"TRBSR_EL12",      0b11, 0b101, 0b1001, 0b1011, 0b011>;
 def : RWSysReg<"TRBSR_EL2",       0b11, 0b100, 0b1001, 0b1011, 0b011>;
 def : RWSysReg<"TRBSR_EL3",       0b11, 0b110, 0b1001, 0b1011, 0b011>;
+
+// v9.6 FEAT_PoPS
+//
+let Requires = [{ {AArch64::FeaturePoPS} }] in {
+def : DC<"CIGDVAPS",  0b000, 0b0111, 0b1111, 0b101>;
+def : DC<"CIVAPS",    0b000, 0b0111, 0b1111, 0b001>;
+}

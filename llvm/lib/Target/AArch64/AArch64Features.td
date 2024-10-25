@@ -565,6 +565,9 @@ def FeatureOCCMO: ExtensionWithMArch<"occmo", "OCCMO", "FEAT_OCCMO",
 def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
   "Enable Armv9.6-A Producer Consumer Data Placement hints">;
 
+def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
+  "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//

@@ -1333,7 +1333,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_F8F16MM,      AArch64::AEK_LSFE,
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
-      AArch64::AEK_PCDPHINT,
+      AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
   };
 
   std::vector<StringRef> Features;
@@ -1437,6 +1437,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+lsui"));
   EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1592,6 +1593,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"lsui", "nolsui", "+lsui", "-lsui"},
       {"occmo", "nooccmo", "+occmo", "-occmo"},
       {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
+      {"pops", "nopops", "+pops", "-pops"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {

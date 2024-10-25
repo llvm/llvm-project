@@ -3794,6 +3794,7 @@ static const struct Extension {
     {"sme-fa64", {AArch64::FeatureSMEFA64}},
     {"cpa", {AArch64::FeatureCPA}},
     {"tlbiw", {AArch64::FeatureTLBIW}},
+    {"pops", {AArch64::FeaturePoPS}},
     {"cmpbr", {AArch64::FeatureCMPBR}},
     {"f8f32mm", {AArch64::FeatureF8F32MM}},
     {"f8f16mm", {AArch64::FeatureF8F16MM}},
