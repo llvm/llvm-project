@@ -357,8 +357,8 @@ public:
   /// instructions operating on pointers of this address space.
   /// TODO: remove this function after migrating to finer-grained properties.
   bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
-    const PointerSpec &PS = getPointerSpec(AddrSpace);
-    return PS.HasNonIntegralRepresentation || PS.HasUnstableRepresentation;
+    return hasUnstableRepresentation(AddrSpace) ||
+           hasNonIntegralRepresentation(AddrSpace);
   }
 
   /// Returns whether this address space has an "unstable" pointer
@@ -390,8 +390,8 @@ public:
   /// representations (hasUnstableRepresentation()) unless the pass knows it is
   /// within a critical section that retains the current representation.
   bool shouldAvoidIntToPtr(unsigned AddrSpace) const {
-    const PointerSpec &PS = getPointerSpec(AddrSpace);
-    return PS.HasNonIntegralRepresentation || PS.HasUnstableRepresentation;
+    return hasUnstableRepresentation(AddrSpace) ||
+           hasNonIntegralRepresentation(AddrSpace);
   }
 
   /// Returns whether passes should avoid introducing `ptrtoint` instructions

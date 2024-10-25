@@ -659,7 +659,7 @@ LLVM IR optionally allows the frontend to denote pointers in certain address
 spaces as "non-integral" or "unstable" (or both "non-integral" and "unstable")
 via the :ref:`datalayout string<langref_datalayout>`.
 
-These exact implications of these properties are target-specific, but the
+The exact implications of these properties are target-specific, but the
 following IR semantics and restrictions to optimization passes apply:
 
 Unstable pointer representation
@@ -668,7 +668,7 @@ Unstable pointer representation
 Pointers in this address space have an *unspecified* bitwise representation
 (i.e. not backed by a fixed integer). The bitwise pattern of such pointers is
 allowed to change in a target-specific way. For example, this could be a pointer
-type used for with copying garbage collection where the garbage collector could
+type used with copying garbage collection where the garbage collector could
 update the pointer at any time in the collection sweep.
 
 ``inttoptr`` and ``ptrtoint`` instructions have the same semantics as for
@@ -705,10 +705,10 @@ representation of the pointer.
 Non-integral pointer representation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pointers are not represented as an address, but may instead include
+Pointers are not represented as just an address, but may instead include
 additional metadata such as bounds information or a temporal identifier.
 Examples include AMDGPU buffer descriptors with a 128-bit fat pointer and a
-32-bit offset or CHERI capabilities that contain bounds, permissions and an
+32-bit offset, or CHERI capabilities that contain bounds, permissions and an
 out-of-band validity bit. In general, these pointers cannot be re-created
 from just an integer value.
 
@@ -716,23 +716,25 @@ In most cases pointers with a non-integral representation behave exactly the
 same as an integral pointer, the only difference is that it is not possible to
 create a pointer just from an address.
 
-"Non-integral" pointers also impose restrictions on the optimizer, but in
-general these are less restrictive than for "unstable" pointers. The main
+"Non-integral" pointers also impose restrictions on transformation passes, but
+in general these are less restrictive than for "unstable" pointers. The main
 difference compared to integral pointers is that ``inttoptr`` instructions
 should not be inserted by passes as they may not be able to create a valid
 pointer. This property also means that ``inttoptr(ptrtoint(x))`` cannot be
 folded to ``x`` as the ``ptrtoint`` operation may destroy the necessary metadata
 to reconstruct the pointer.
-Additionaly, since there could be out-of-band state, it is also not legal to
+Additionally, since there could be out-of-band state, it is also not legal to
 convert a load/store of a non-integral pointer type to a load/store of an
-integer type with same bitwidth as that may not copy all the state.
-However, it is legal to use appropriately aligned ``llvm.memcpy`` and
-``llvm.memmove`` for copies of non-integral pointers as long as these are not
-converted into integer operations.
+integer type with same bitwidth, as that may not copy all the state.
+However, it is legal to use appropriately-aligned ``llvm.memcpy`` and
+``llvm.memmove`` for copies of non-integral pointers.
+NOTE: Lowering of ``llvm.memcpy`` containing non-integral pointer types must use
+appropriately-aligned and sized types instead of smaller integer types.
 
 Unlike "unstable" pointers, the bit-wise representation is stable and
-``ptrtoint(x)`` always yields a deterministic values.
-This means optimizer is still permitted to insert new ``ptrtoint`` instructions.
+``ptrtoint(x)`` always yields a deterministic value.
+This means transformation passes are still permitted to insert new ``ptrtoint``
+instructions.
 However, it is important to note that ``ptrtoint`` may not yield the same value
 as storing the pointer via memory and reading it back as an integer, even if the
 bitwidth of the two types matches (since ptrtoint could involve some form of
@@ -12187,6 +12189,8 @@ If ``value`` is smaller than ``ty2`` then a zero extension is done. If
 ``value`` is larger than ``ty2`` then a truncation is done. If they are
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
+For :ref:`non-integral pointers <_nointptrtype>` the ``ptrtoint`` instruction
+may involve additional transformations beyond truncations or extension.
 
 Example:
 """"""""
