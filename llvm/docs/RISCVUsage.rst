@@ -129,6 +129,9 @@ on support follow.
      ``Smcdeleg``      Supported
      ``Smcsrind``      Supported
      ``Smepmp``        Supported
+     ``Smmpm``         Supported
+     ``Smnpm``         Supported
+     ``Smrnmi``        Assembly Support
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
      ``Ssccfg``        Supported
@@ -136,6 +139,8 @@ on support follow.
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscsrind``      Supported
+     ``Ssnpm``         Supported
+     ``Sspm``          Supported
      ``Ssqosid``       Assembly Support
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -143,6 +148,7 @@ on support follow.
      ``Sstvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sstvecd``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssu64xl``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Supm``          Supported
      ``Svade``         Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Svadu``         Assembly Support
      ``Svbare``        Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -306,9 +312,6 @@ Experimental Extensions
 LLVM supports (to various degrees) a number of experimental extensions.  All experimental extensions have ``experimental-`` as a prefix.  There is explicitly no compatibility promised between versions of the toolchain, and regular users are strongly advised *not* to make use of experimental extensions before they reach ratification.
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
-
-``experimental-ssnpm``, ``experimental-smnpm``, ``experimental-smmpm``, ``experimental-sspm``, ``experimental-supm``
-  LLVM implements the `v1.0.0-rc2 specification <https://github.com/riscv/riscv-j-extension/releases/tag/pointer-masking-v1.0.0-rc2>`__.
 
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.

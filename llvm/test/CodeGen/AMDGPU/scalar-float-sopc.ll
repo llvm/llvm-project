@@ -13,8 +13,6 @@ define amdgpu_vs void @f32_olt(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_olt:
@@ -26,8 +24,6 @@ define amdgpu_vs void @f32_olt(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp olt float %a, %b
@@ -45,8 +41,6 @@ define amdgpu_vs void @f32_oeq(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_oeq:
@@ -58,8 +52,6 @@ define amdgpu_vs void @f32_oeq(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp oeq float %a, %b
@@ -77,8 +69,6 @@ define amdgpu_vs void @f32_ole(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_ole:
@@ -90,8 +80,6 @@ define amdgpu_vs void @f32_ole(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ole float %a, %b
@@ -109,8 +97,6 @@ define amdgpu_vs void @f32_ogt(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_ogt:
@@ -122,8 +108,6 @@ define amdgpu_vs void @f32_ogt(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ogt float %a, %b
@@ -141,8 +125,6 @@ define amdgpu_vs void @f32_one(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_one:
@@ -154,8 +136,6 @@ define amdgpu_vs void @f32_one(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp one float %a, %b
@@ -173,8 +153,6 @@ define amdgpu_vs void @f32_oge(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_oge:
@@ -186,8 +164,6 @@ define amdgpu_vs void @f32_oge(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp oge float %a, %b
@@ -205,8 +181,6 @@ define amdgpu_vs void @f32_ord(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_ord:
@@ -218,8 +192,6 @@ define amdgpu_vs void @f32_ord(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ord float %a, %b
@@ -237,8 +209,6 @@ define amdgpu_vs void @f32_uno(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_uno:
@@ -250,8 +220,6 @@ define amdgpu_vs void @f32_uno(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp uno float %a, %b
@@ -269,8 +237,6 @@ define amdgpu_vs void @f32_ult(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_ult:
@@ -282,8 +248,6 @@ define amdgpu_vs void @f32_ult(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ult float %a, %b
@@ -301,8 +265,6 @@ define amdgpu_vs void @f32_ueq(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_ueq:
@@ -314,8 +276,6 @@ define amdgpu_vs void @f32_ueq(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ueq float %a, %b
@@ -333,8 +293,6 @@ define amdgpu_vs void @f32_ule(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_ule:
@@ -346,8 +304,6 @@ define amdgpu_vs void @f32_ule(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ule float %a, %b
@@ -365,8 +321,6 @@ define amdgpu_vs void @f32_ugt(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_ugt:
@@ -378,8 +332,6 @@ define amdgpu_vs void @f32_ugt(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ugt float %a, %b
@@ -397,8 +349,6 @@ define amdgpu_vs void @f32_une(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_une:
@@ -410,8 +360,6 @@ define amdgpu_vs void @f32_une(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp une float %a, %b
@@ -429,8 +377,6 @@ define amdgpu_vs void @f32_uge(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f32_uge:
@@ -442,8 +388,6 @@ define amdgpu_vs void @f32_uge(ptr addrspace(1) inreg %out, float inreg %a, floa
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp uge float %a, %b
@@ -461,8 +405,6 @@ define amdgpu_vs void @f16_olt(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_olt:
@@ -474,8 +416,6 @@ define amdgpu_vs void @f16_olt(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp olt half %a, %b
@@ -493,8 +433,6 @@ define amdgpu_vs void @f16_oeq(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_oeq:
@@ -506,8 +444,6 @@ define amdgpu_vs void @f16_oeq(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp oeq half %a, %b
@@ -525,8 +461,6 @@ define amdgpu_vs void @f16_ole(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_ole:
@@ -538,8 +472,6 @@ define amdgpu_vs void @f16_ole(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ole half %a, %b
@@ -557,8 +489,6 @@ define amdgpu_vs void @f16_ogt(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_ogt:
@@ -570,8 +500,6 @@ define amdgpu_vs void @f16_ogt(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ogt half %a, %b
@@ -589,8 +517,6 @@ define amdgpu_vs void @f16_one(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_one:
@@ -602,8 +528,6 @@ define amdgpu_vs void @f16_one(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp one half %a, %b
@@ -621,8 +545,6 @@ define amdgpu_vs void @f16_oge(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_oge:
@@ -634,8 +556,6 @@ define amdgpu_vs void @f16_oge(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp oge half %a, %b
@@ -653,8 +573,6 @@ define amdgpu_vs void @f16_ord(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_ord:
@@ -666,8 +584,6 @@ define amdgpu_vs void @f16_ord(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ord half %a, %b
@@ -685,8 +601,6 @@ define amdgpu_vs void @f16_uno(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_uno:
@@ -698,8 +612,6 @@ define amdgpu_vs void @f16_uno(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp uno half %a, %b
@@ -717,8 +629,6 @@ define amdgpu_vs void @f16_ult(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_ult:
@@ -730,8 +640,6 @@ define amdgpu_vs void @f16_ult(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ult half %a, %b
@@ -749,8 +657,6 @@ define amdgpu_vs void @f16_ueq(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_ueq:
@@ -762,8 +668,6 @@ define amdgpu_vs void @f16_ueq(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ueq half %a, %b
@@ -781,8 +685,6 @@ define amdgpu_vs void @f16_ule(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_ule:
@@ -794,8 +696,6 @@ define amdgpu_vs void @f16_ule(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ule half %a, %b
@@ -813,8 +713,6 @@ define amdgpu_vs void @f16_ugt(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_ugt:
@@ -826,8 +724,6 @@ define amdgpu_vs void @f16_ugt(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp ugt half %a, %b
@@ -845,8 +741,6 @@ define amdgpu_vs void @f16_une(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_une:
@@ -858,8 +752,6 @@ define amdgpu_vs void @f16_une(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp une half %a, %b
@@ -877,8 +769,6 @@ define amdgpu_vs void @f16_uge(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: f16_uge:
@@ -890,8 +780,6 @@ define amdgpu_vs void @f16_uge(ptr addrspace(1) inreg %out, half inreg %a, half 
 ; GISEL-NEXT:    s_bfe_i32 s2, s2, 0x10000
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 entry:
   %0 = fcmp uge half %a, %b

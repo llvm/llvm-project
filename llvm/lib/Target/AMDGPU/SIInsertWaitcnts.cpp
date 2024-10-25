@@ -2884,22 +2884,33 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   // Deallocate the VGPRs before previously identified S_ENDPGM instructions.
   // This is done in different ways depending on how the VGPRs were allocated
   // (i.e. whether we're in dynamic VGPR mode or not).
-  for (MachineInstr *MI : ReleaseVGPRInsts) {
-    if (ST->isDynamicVGPREnabled())
+  // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
+  // waveslot limited kernel runs slower with the deallocation.
+  if (ST->isDynamicVGPREnabled()) {
+    for (MachineInstr *MI : ReleaseVGPRInsts) {
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
               TII->get(AMDGPU::S_ALLOC_VGPR))
           .addImm(0);
-    else {
-      if (ST->requiresNopBeforeDeallocVGPRs()) {
-        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-                TII->get(AMDGPU::S_NOP))
-            .addImm(0);
-      }
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-              TII->get(AMDGPU::S_SENDMSG))
-          .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+      Modified = true;
     }
-    Modified = true;
+  } else {
+    if (!ReleaseVGPRInsts.empty() &&
+        (MF.getFrameInfo().hasCalls() ||
+         ST->getOccupancyWithNumVGPRs(
+             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+             AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+      for (MachineInstr *MI : ReleaseVGPRInsts) {
+        if (ST->requiresNopBeforeDeallocVGPRs()) {
+          BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                  TII->get(AMDGPU::S_NOP))
+              .addImm(0);
+        }
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_SENDMSG))
+            .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+        Modified = true;
+      }
+    }
   }
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();

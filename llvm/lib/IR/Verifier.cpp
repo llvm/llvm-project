@@ -2012,7 +2012,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           Attrs.hasAttribute(Attribute::ReadOnly)),
         "Attributes writable and readonly are incompatible!", V);
 
-  AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
+  AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty, Attrs);
   for (Attribute Attr : Attrs) {
     if (!Attr.isStringAttribute() &&
         IncompatibleAttrs.contains(Attr.getKindAsEnum())) {
@@ -4107,8 +4107,7 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Check(GEP.getSourceElementType()->isSized(), "GEP into unsized type!", &GEP);
 
   if (auto *STy = dyn_cast<StructType>(GEP.getSourceElementType())) {
-    SmallPtrSet<Type *, 4> Visited;
-    Check(!STy->containsScalableVectorType(&Visited),
+    Check(!STy->isScalableTy(),
           "getelementptr cannot target structure that contains scalable vector"
           "type",
           &GEP);

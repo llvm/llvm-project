@@ -38,8 +38,6 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[24:27], 0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: mixed_vmem_types:
@@ -77,8 +75,6 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX12-NEXT:    buffer_store_b32 v0, off, s[24:27], null
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: mixed_vmem_types:
@@ -117,8 +113,6 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX12-GISEL-NEXT:    buffer_store_b32 v0, off, s[24:27], null
-; GFX12-GISEL-NEXT:    s_nop 0
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 .entry:
   %0 = call i64 @llvm.amdgcn.s.getpc()

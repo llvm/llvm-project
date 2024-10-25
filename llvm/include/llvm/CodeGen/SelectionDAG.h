@@ -584,7 +584,7 @@ public:
     return Root;
   }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   void VerifyDAGDivergence();
 #endif
 
@@ -2301,10 +2301,11 @@ public:
   Align getEVTAlign(EVT MemoryVT) const;
 
   /// Test whether the given value is a constant int or similar node.
-  SDNode *isConstantIntBuildVectorOrConstantInt(SDValue N) const;
+  bool isConstantIntBuildVectorOrConstantInt(SDValue N,
+                                             bool AllowOpaques = true) const;
 
   /// Test whether the given value is a constant FP or similar node.
-  SDNode *isConstantFPBuildVectorOrConstantFP(SDValue N) const ;
+  bool isConstantFPBuildVectorOrConstantFP(SDValue N) const;
 
   /// \returns true if \p N is any kind of constant or build_vector of
   /// constants, int or float. If a vector, it may not necessarily be a splat.

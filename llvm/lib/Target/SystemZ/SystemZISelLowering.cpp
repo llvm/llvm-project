@@ -793,6 +793,9 @@ EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
 
 bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
+  if (useSoftFloat())
+    return false;
+
   VT = VT.getScalarType();
 
   if (!VT.isSimple())
