@@ -170,13 +170,11 @@ define i32 @knownbits_phi_select_test1(ptr %p1, ptr %p2, i8 %x) {
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB2]], label [[EXIT]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i8 [[INDVAR1]], 39
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[INDVAR4]], 0
-; CHECK-NEXT:    [[EXT2:%.*]] = zext i1 [[CMP5]] to i32
-; CHECK-NEXT:    [[INDVAR4_NEXT]] = select i1 [[CMP4]], i32 [[EXT2]], i32 [[INDVAR4]]
+; CHECK-NEXT:    [[EXT2:%.*]] = zext i1 [[CMP4]] to i32
+; CHECK-NEXT:    [[INDVAR4_NEXT]] = xor i32 [[INDVAR4]], [[EXT2]]
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i8 [[INDVAR1]], 34
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[INDVAR5]], 0
-; CHECK-NEXT:    [[EXT3:%.*]] = zext i1 [[CMP7]] to i32
-; CHECK-NEXT:    [[INDVAR5_NEXT]] = select i1 [[CMP6]], i32 [[EXT3]], i32 [[INDVAR5]]
+; CHECK-NEXT:    [[EXT3:%.*]] = zext i1 [[CMP6]] to i32
+; CHECK-NEXT:    [[INDVAR5_NEXT]] = xor i32 [[INDVAR5]], [[EXT3]]
 ; CHECK-NEXT:    [[INDVAR3_NEXT]] = getelementptr inbounds i8, ptr [[INDVAR3]], i64 1
 ; CHECK-NEXT:    [[LOAD2]] = load i8, ptr [[INDVAR3_NEXT]], align 1
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -241,8 +239,7 @@ define i8 @knownbits_phi_select_test2() {
 ; CHECK-NEXT:    [[COND1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[CONTAIN]], 1
-; CHECK-NEXT:    ret i8 [[TMP0]]
+; CHECK-NEXT:    ret i8 [[CONTAIN]]
 ;
 entry:
   br label %loop
