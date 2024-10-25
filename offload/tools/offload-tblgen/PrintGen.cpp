@@ -115,7 +115,7 @@ static void EmitFunctionParamStructPrint(const FunctionRec &Func,
   }
 
   OS << formatv(R"(
-inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct {0} *params) {{
+inline std::ostream &operator<<(std::ostream &os, const struct {0} *params) {{
 )",
                 Func.getParamStructName());
 

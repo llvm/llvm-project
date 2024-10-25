@@ -10,6 +10,16 @@ global:
   offloadDeviceGet;
   offloadDeviceGetInfo;
   offloadDeviceGetInfoSize;
+  offloadInitWithCodeLoc;
+  offloadShutDownWithCodeLoc;
+  offloadPlatformGetWithCodeLoc;
+  offloadPlatformGetCountWithCodeLoc;
+  offloadPlatformGetInfoWithCodeLoc;
+  offloadPlatformGetInfoSizeWithCodeLoc;
+  offloadDeviceGetCountWithCodeLoc;
+  offloadDeviceGetWithCodeLoc;
+  offloadDeviceGetInfoWithCodeLoc;
+  offloadDeviceGetInfoSizeWithCodeLoc;
 local:
   *;
 };

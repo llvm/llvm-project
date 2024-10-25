@@ -290,9 +290,9 @@ inline std::ostream &operator<<(std::ostream &os,
   return os;
 }
 
-inline std::ostream &operator<<(
-    std::ostream &os,
-    [[maybe_unused]] const struct offload_platform_get_params_t *params) {
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct offload_platform_get_params_t *params) {
   os << ".NumEntries = ";
   os << *params->pNumEntries;
   os << ", ";
@@ -308,17 +308,17 @@ inline std::ostream &operator<<(
   return os;
 }
 
-inline std::ostream &operator<<(
-    std::ostream &os,
-    [[maybe_unused]] const struct offload_platform_get_count_params_t *params) {
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct offload_platform_get_count_params_t *params) {
   os << ".NumPlatforms = ";
   printPtr(os, *params->pNumPlatforms);
   return os;
 }
 
-inline std::ostream &operator<<(
-    std::ostream &os,
-    [[maybe_unused]] const struct offload_platform_get_info_params_t *params) {
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct offload_platform_get_info_params_t *params) {
   os << ".Platform = ";
   printPtr(os, *params->pPlatform);
   os << ", ";
@@ -335,8 +335,7 @@ inline std::ostream &operator<<(
 
 inline std::ostream &
 operator<<(std::ostream &os,
-           [[maybe_unused]] const struct offload_platform_get_info_size_params_t
-               *params) {
+           const struct offload_platform_get_info_size_params_t *params) {
   os << ".Platform = ";
   printPtr(os, *params->pPlatform);
   os << ", ";
@@ -348,9 +347,9 @@ operator<<(std::ostream &os,
   return os;
 }
 
-inline std::ostream &operator<<(
-    std::ostream &os,
-    [[maybe_unused]] const struct offload_device_get_count_params_t *params) {
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct offload_device_get_count_params_t *params) {
   os << ".Platform = ";
   printPtr(os, *params->pPlatform);
   os << ", ";
@@ -360,8 +359,7 @@ inline std::ostream &operator<<(
 }
 
 inline std::ostream &
-operator<<(std::ostream &os,
-           [[maybe_unused]] const struct offload_device_get_params_t *params) {
+operator<<(std::ostream &os, const struct offload_device_get_params_t *params) {
   os << ".Platform = ";
   printPtr(os, *params->pPlatform);
   os << ", ";
@@ -380,9 +378,9 @@ operator<<(std::ostream &os,
   return os;
 }
 
-inline std::ostream &operator<<(
-    std::ostream &os,
-    [[maybe_unused]] const struct offload_device_get_info_params_t *params) {
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct offload_device_get_info_params_t *params) {
   os << ".Device = ";
   printPtr(os, *params->pDevice);
   os << ", ";
@@ -399,8 +397,7 @@ inline std::ostream &operator<<(
 
 inline std::ostream &
 operator<<(std::ostream &os,
-           [[maybe_unused]] const struct offload_device_get_info_size_params_t
-               *params) {
+           const struct offload_device_get_info_size_params_t *params) {
   os << ".Device = ";
   printPtr(os, *params->pDevice);
   os << ", ";
