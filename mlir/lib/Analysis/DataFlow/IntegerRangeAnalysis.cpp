@@ -42,7 +42,7 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   // If the integer range can be narrowed to a constant, update the constant
   // value of the SSA value.
   std::optional<APInt> constant = getValue().getValue().getConstantValue();
-  auto value = point.get<Value>();
+  auto value = anchor.get<Value>();
   auto *cv = solver->getOrCreateState<Lattice<ConstantValue>>(value);
   if (!constant)
     return solver->propagateIfChanged(
@@ -111,7 +111,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
 
     auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
-      return getLatticeElementFor(op, value)->getValue();
+      return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
     });
 
     auto joinCallback = [&](Value v, const IntegerValueRange &attrs) {
@@ -159,7 +159,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
           return bound.getValue();
       } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =
-            getLatticeElementFor(op, value);
+            getLatticeElementFor(getProgramPointAfter(op), value);
         if (lattice != nullptr && !lattice->getValue().isUninitialized())
           return getUpper ? lattice->getValue().getValue().smax()
                           : lattice->getValue().getValue().smin();

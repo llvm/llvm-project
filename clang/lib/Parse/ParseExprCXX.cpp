@@ -1344,9 +1344,13 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
-  Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
-                           ? diag::warn_cxx98_compat_lambda
-                           : diag::ext_lambda);
+  if (getLangOpts().HLSL)
+    Diag(LambdaBeginLoc, diag::ext_hlsl_lambda) << /*HLSL*/ 1;
+  else
+    Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
+                             ? diag::warn_cxx98_compat_lambda
+                             : diag::ext_lambda)
+        << /*C++*/ 0;
 
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(), LambdaBeginLoc,
                                 "lambda expression parsing");
@@ -1575,9 +1579,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       DynamicExceptionRanges.data(), DynamicExceptions.size(),
                       NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
                       /*ExceptionSpecTokens*/ nullptr,
-                      /*DeclsInPrototype=*/std::nullopt, LParenLoc,
-                      FunLocalRangeEnd, D, TrailingReturnType,
-                      TrailingReturnTypeLoc, &DS),
+                      /*DeclsInPrototype=*/{}, LParenLoc, FunLocalRangeEnd, D,
+                      TrailingReturnType, TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
 
     // We have called ActOnLambdaClosureQualifiers for parentheses-less cases

@@ -247,6 +247,61 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
 }
 
 #ifndef _WIN32
+#ifdef _AIX
+// Compute the time difference from GMT/UTC to get around the behavior of
+// strfname on AIX that requires setting an environment variable for numeric
+// value for ZONE.
+// The ZONE and the VALUES(4) arguments of the DATE_AND_TIME intrinsic has
+// the resolution to the minute.
+static int computeUTCDiff(const tm &localTime, bool *err) {
+  tm utcTime;
+  const time_t timer{mktime(const_cast<tm *>(&localTime))};
+  if (timer < 0) {
+    *err = true;
+    return 0;
+  }
+
+  // Get the GMT/UTC time
+  if (gmtime_r(&timer, &utcTime) == nullptr) {
+    *err = true;
+    return 0;
+  }
+
+  // Adjust for day difference
+  auto dayDiff{localTime.tm_mday - utcTime.tm_mday};
+  auto localHr{localTime.tm_hour};
+  if (dayDiff > 0) {
+    if (dayDiff == 1) {
+      localHr += 24;
+    } else {
+      utcTime.tm_hour += 24;
+    }
+  } else if (dayDiff < 0) {
+    if (dayDiff == -1) {
+      utcTime.tm_hour += 24;
+    } else {
+      localHr += 24;
+    }
+  }
+  return (localHr * 60 + localTime.tm_min) -
+      (utcTime.tm_hour * 60 + utcTime.tm_min);
+}
+#endif
+
+static std::size_t getUTCOffsetToBuffer(
+    char *buffer, const std::size_t &buffSize, tm *localTime) {
+#ifdef _AIX
+  // format: +HHMM or -HHMM
+  bool err{false};
+  auto utcOffset{computeUTCDiff(*localTime, &err)};
+  auto hour{utcOffset / 60};
+  auto hrMin{hour * 100 + (utcOffset - hour * 60)};
+  auto n{sprintf(buffer, "%+05d", hrMin)};
+  return err ? 0 : n + 1;
+#else
+  return std::strftime(buffer, buffSize, "%z", localTime);
+#endif
+}
 
 // SFINAE helper to return the struct tm.tm_gmtoff which is not a POSIX standard
 // field.
@@ -263,8 +318,19 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   // tm.tm_gmtoff is not available, there may be platform dependent alternatives
   // (such as using timezone from <time.h> when available), but so far just
   // return -HUGE to report that this information is not available.
-  return -std::numeric_limits<Fortran::runtime::CppTypeFor<
-      Fortran::common::TypeCategory::Integer, KIND>>::max();
+  const auto negHuge{-std::numeric_limits<Fortran::runtime::CppTypeFor<
+      Fortran::common::TypeCategory::Integer, KIND>>::max()};
+#ifdef _AIX
+  bool err{false};
+  auto diff{computeUTCDiff(tm, &err)};
+  if (err) {
+    return negHuge;
+  } else {
+    return diff;
+  }
+#else
+  return negHuge;
+#endif
 }
 template <typename TM = struct tm> struct GmtOffsetHelper {
   template <int KIND> struct StoreGmtOffset {
@@ -317,7 +383,7 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
     // Note: this may leave the buffer empty on many platforms. Classic flang
     // has a much more complex way of doing this (see __io_timezone in classic
     // flang).
-    auto len{std::strftime(buffer, buffSize, "%z", &localTime)};
+    auto len{getUTCOffsetToBuffer(buffer, buffSize, &localTime)};
     copyBufferAndPad(zone, zoneChars, len);
   }
   if (values) {
@@ -424,16 +490,20 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
     auto typeCode{values->type().GetCategoryAndKind()};
     // ETIME values argument must have decimal range == 2.
     RUNTIME_CHECK(terminator,
-        values->rank() == 1 && values->GetDimension(0).Extent() == 2 &&
-            typeCode && typeCode->first == Fortran::common::TypeCategory::Real);
+        values->rank() == 1 && typeCode &&
+            typeCode->first == Fortran::common::TypeCategory::Real);
     // Only accept KIND=4 here.
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind == 4);
-
-    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
-        kind, terminator, *values, /* atIndex = */ 0, usrTime);
-    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
-        kind, terminator, *values, /* atIndex = */ 1, sysTime);
+    auto extent{values->GetDimension(0).Extent()};
+    if (extent >= 1) {
+      ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+          kind, terminator, *values, /* atIndex = */ 0, usrTime);
+    }
+    if (extent >= 2) {
+      ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+          kind, terminator, *values, /* atIndex = */ 1, sysTime);
+    }
   }
 
   if (time) {

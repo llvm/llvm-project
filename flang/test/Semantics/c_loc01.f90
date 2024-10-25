@@ -21,6 +21,7 @@ module m
     type(hasLen(*)), target :: nclen
     integer, intent(in) :: n
     character(2), target :: ch
+    character(1,4), target :: unicode
     real :: arr1(purefun1(c_loc(targ))) ! ok
     real :: arr2(purefun2(c_funloc(subr))) ! ok
     character(:), allocatable, target :: deferred
@@ -40,8 +41,10 @@ module m
     cp = c_loc(nclen)
     !ERROR: C_LOC() argument may not be zero-length character
     cp = c_loc(ch(2:1))
-    !WARNING: C_LOC() argument has non-interoperable intrinsic type, kind, or length
+    !WARNING: C_LOC() argument has non-interoperable character length
     cp = c_loc(ch)
+    !WARNING: C_LOC() argument has non-interoperable intrinsic type or kind
+    cp = c_loc(unicode)
     cp = c_loc(ch(1:1)) ! ok
     cp = c_loc(deferred) ! ok
     cp = c_loc(p2ch) ! ok

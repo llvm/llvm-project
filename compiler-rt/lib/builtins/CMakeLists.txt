@@ -192,6 +192,7 @@ set(GENERIC_SOURCES
 set(BF16_SOURCES
     extendbfsf2.c
     truncdfbf2.c
+    truncxfbf2.c
     truncsfbf2.c
 )
 
@@ -868,10 +869,12 @@ else ()
           endif()
         endif()
       endif()
-      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }"
+      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
+                               int main(void) { return 0; }"
                               COMPILER_RT_HAS_${arch}_FLOAT16)
       append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
-      check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }"
+      check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }
+                               int main(void) { return 0; }"
                               COMPILER_RT_HAS_${arch}_BFLOAT16)
       # Build BF16 files only when "__bf16" is available.
       if(COMPILER_RT_HAS_${arch}_BFLOAT16)

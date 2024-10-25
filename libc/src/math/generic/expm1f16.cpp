@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
@@ -99,7 +100,7 @@ LLVM_LIBC_FUNCTION(float16, expm1f16, (float16 x)) {
             FPBits::one(Sign::NEG).get_val());
       // When x <= -0x1.0ap+3, round(expm1(x), HP, RN) = -0x1.ffcp-1.
       return fputil::round_result_slightly_down(
-          static_cast<float16>(-0x1.ffcp-1));
+          fputil::cast<float16>(-0x1.ffcp-1));
     }
 
     // When 0 < |x| <= 2^(-3).
@@ -114,7 +115,7 @@ LLVM_LIBC_FUNCTION(float16, expm1f16, (float16 x)) {
       //   > display = hexadecimal;
       //   > P = fpminimax(expm1(x)/x, 4, [|SG...|], [-2^-3, 2^-3]);
       //   > x * P;
-      return static_cast<float16>(
+      return fputil::cast<float16>(
           xf * fputil::polyeval(xf, 0x1p+0f, 0x1.fffff8p-2f, 0x1.555556p-3f,
                                 0x1.55905ep-5f, 0x1.1124c2p-7f));
     }
@@ -126,7 +127,7 @@ LLVM_LIBC_FUNCTION(float16, expm1f16, (float16 x)) {
   // exp(x) = exp(hi + mid) * exp(lo)
   auto [exp_hi_mid, exp_lo] = exp_range_reduction(x);
   // expm1(x) = exp(hi + mid) * exp(lo) - 1
-  return static_cast<float16>(fputil::multiply_add(exp_hi_mid, exp_lo, -1.0f));
+  return fputil::cast<float16>(fputil::multiply_add(exp_hi_mid, exp_lo, -1.0f));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

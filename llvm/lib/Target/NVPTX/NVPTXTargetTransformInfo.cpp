@@ -14,8 +14,12 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 using namespace llvm;
 
@@ -134,6 +138,7 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   // simplify.
   enum SpecialCase {
     SPC_Reciprocal,
+    SCP_FunnelShiftClamp,
   };
 
   // SimplifyAction is a poor-man's variant (plus an additional flag) that
@@ -290,15 +295,16 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     case Intrinsic::nvvm_d2ull_rz:
     case Intrinsic::nvvm_f2ull_rz:
       return {Instruction::FPToUI};
-    case Intrinsic::nvvm_i2d_rz:
-    case Intrinsic::nvvm_i2f_rz:
-    case Intrinsic::nvvm_ll2d_rz:
-    case Intrinsic::nvvm_ll2f_rz:
+    // Integer to floating-point uses RN rounding, not RZ
+    case Intrinsic::nvvm_i2d_rn:
+    case Intrinsic::nvvm_i2f_rn:
+    case Intrinsic::nvvm_ll2d_rn:
+    case Intrinsic::nvvm_ll2f_rn:
       return {Instruction::SIToFP};
-    case Intrinsic::nvvm_ui2d_rz:
-    case Intrinsic::nvvm_ui2f_rz:
-    case Intrinsic::nvvm_ull2d_rz:
-    case Intrinsic::nvvm_ull2f_rz:
+    case Intrinsic::nvvm_ui2d_rn:
+    case Intrinsic::nvvm_ui2f_rn:
+    case Intrinsic::nvvm_ull2d_rn:
+    case Intrinsic::nvvm_ull2f_rn:
       return {Instruction::UIToFP};
 
     // NVVM intrinsics that map to LLVM binary ops.
@@ -312,6 +318,10 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     // as well.
     case Intrinsic::nvvm_rcp_rn_d:
       return {SPC_Reciprocal, FTZ_Any};
+
+    case Intrinsic::nvvm_fshl_clamp:
+    case Intrinsic::nvvm_fshr_clamp:
+      return {SCP_FunnelShiftClamp, FTZ_Any};
 
       // We do not currently simplify intrinsics that give an approximate
       // answer. These include:
@@ -359,7 +369,8 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};
     return CallInst::Create(
-        Intrinsic::getDeclaration(II->getModule(), *Action.IID, Tys), Args);
+        Intrinsic::getOrInsertDeclaration(II->getModule(), *Action.IID, Tys),
+        Args);
   }
 
   // Simplify to target-generic binary op.
@@ -382,6 +393,22 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     return BinaryOperator::Create(
         Instruction::FDiv, ConstantFP::get(II->getArgOperand(0)->getType(), 1),
         II->getArgOperand(0), II->getName());
+
+  case SCP_FunnelShiftClamp: {
+    // Canonicalize a clamping funnel shift to the generic llvm funnel shift
+    // when possible, as this is easier for llvm to optimize further.
+    if (const auto *ShiftConst = dyn_cast<ConstantInt>(II->getArgOperand(2))) {
+      const bool IsLeft = II->getIntrinsicID() == Intrinsic::nvvm_fshl_clamp;
+      if (ShiftConst->getZExtValue() >= II->getType()->getIntegerBitWidth())
+        return IC.replaceInstUsesWith(*II, II->getArgOperand(IsLeft ? 1 : 0));
+
+      const unsigned FshIID = IsLeft ? Intrinsic::fshl : Intrinsic::fshr;
+      return CallInst::Create(Intrinsic::getOrInsertDeclaration(
+                                  II->getModule(), FshIID, II->getType()),
+                              SmallVector<Value *, 3>(II->args()));
+    }
+    return nullptr;
+  }
   }
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }

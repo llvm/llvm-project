@@ -744,6 +744,12 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     bool InMicroMipsMode = STI.inMicroMipsMode();
     const MipsInstrInfo *TII = STI.getInstrInfo();
     unsigned Opcode = (*Slot).getOpcode();
+
+    // In mips1-4, should not put mflo into the delay slot for the return.
+    if ((IsMFLOMFHI(CurrI->getOpcode())) &&
+        (!STI.hasMips32() && !STI.hasMips5()))
+      continue;
+
     // This is complicated by the tail call optimization. For non-PIC code
     // there is only a 32bit sized unconditional branch which can be assumed
     // to be able to reach the target. b16 only has a range of +/- 1 KB.

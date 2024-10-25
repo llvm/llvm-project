@@ -697,7 +697,7 @@ std::string ManualDWARFIndex::GetCacheKey() {
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   strm << objfile->GetModule()->GetCacheKey() << "-dwarf-index-"
       << llvm::format_hex(objfile->GetCacheHash(), 10);
-  return strm.str();
+  return key;
 }
 
 bool ManualDWARFIndex::LoadFromCache() {

@@ -79,7 +79,17 @@ TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",    phases
 TYPE("ada",                      Ada,          INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("assembler",                PP_Asm,       INVALID,         "s",      phases::Assemble, phases::Link)
 TYPE("assembler-with-cpp",       Asm,          PP_Asm,          "S",      phases::Preprocess, phases::Assemble, phases::Link)
-TYPE("f95",                      PP_Fortran,   INVALID,         "i",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+
+// Note: The `phases::Preprocess` phase is added to ".i" (i.e. Fortran
+// pre-processed) files. The reason is that the pre-processor "phase" has to be
+// re-run to make sure that e.g. the include flags (i.e. `-I <dir>`) are
+// preserved. That's because these include paths will contain module files and,
+// unlike C header files, these module files wouldn't be included in the
+// pre-processed file. In particular, we need to add the search paths for these
+// modules when Flang needs to emit pre-processed files. Therefore, the
+// `PP_TYPE` is set to `PP_Fortran` so that the driver is fine with
+// "pre-processing a pre-processed file".
+TYPE("f95",                      PP_Fortran,   PP_Fortran,      "i",      phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("f95-cpp-input",            Fortran,      PP_Fortran,      nullptr,  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("java",                     Java,         INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 

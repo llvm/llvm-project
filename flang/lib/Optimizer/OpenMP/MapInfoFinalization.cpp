@@ -50,6 +50,14 @@ class MapInfoFinalizationPass
     : public flangomp::impl::MapInfoFinalizationPassBase<
           MapInfoFinalizationPass> {
 
+  /// Tracks any intermediate function/subroutine local allocations we
+  /// generate for the descriptors of box type dummy arguments, so that
+  /// we can retrieve it for subsequent reuses within the functions
+  /// scope
+  std::map</*descriptor opaque pointer=*/void *,
+           /*corresponding local alloca=*/fir::AllocaOp>
+      localBoxAllocas;
+
   void genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
                                fir::FirOpBuilder &builder,
                                mlir::Operation *target) {
@@ -74,14 +82,26 @@ class MapInfoFinalizationPass
     // perform an alloca and then store to it and retrieve the data from the new
     // alloca.
     if (mlir::isa<fir::BaseBoxType>(descriptor.getType())) {
-      mlir::OpBuilder::InsertPoint insPt = builder.saveInsertionPoint();
-      mlir::Block *allocaBlock = builder.getAllocaBlock();
-      assert(allocaBlock && "No alloca block found for this top level op");
-      builder.setInsertionPointToStart(allocaBlock);
-      auto alloca = builder.create<fir::AllocaOp>(loc, descriptor.getType());
-      builder.restoreInsertionPoint(insPt);
-      builder.create<fir::StoreOp>(loc, descriptor, alloca);
-      descriptor = alloca;
+      // If we have already created a local allocation for this BoxType,
+      // we must be sure to re-use it so that we end up with the same
+      // allocations being utilised for the same descriptor across all map uses,
+      // this prevents runtime issues such as not appropriately releasing or
+      // deleting all mapped data.
+      auto find = localBoxAllocas.find(descriptor.getAsOpaquePointer());
+      if (find != localBoxAllocas.end()) {
+        builder.create<fir::StoreOp>(loc, descriptor, find->second);
+        descriptor = find->second;
+      } else {
+        mlir::OpBuilder::InsertPoint insPt = builder.saveInsertionPoint();
+        mlir::Block *allocaBlock = builder.getAllocaBlock();
+        assert(allocaBlock && "No alloca block found for this top level op");
+        builder.setInsertionPointToStart(allocaBlock);
+        auto alloca = builder.create<fir::AllocaOp>(loc, descriptor.getType());
+        builder.restoreInsertionPoint(insPt);
+        builder.create<fir::StoreOp>(loc, descriptor, alloca);
+        localBoxAllocas[descriptor.getAsOpaquePointer()] = alloca;
+        descriptor = alloca;
+      }
     }
 
     mlir::Value baseAddrAddr = builder.create<fir::BoxOffsetOp>(
@@ -105,13 +125,12 @@ class MapInfoFinalizationPass
     // TODO: map the addendum segment of the descriptor, similarly to the
     // above base address/data pointer member.
 
-    if (auto mapClauseOwner =
-            llvm::dyn_cast<mlir::omp::MapClauseOwningOpInterface>(target)) {
+    auto addOperands = [&](mlir::OperandRange &operandsArr,
+                           mlir::MutableOperandRange &mutableOpRange,
+                           auto directiveOp) {
       llvm::SmallVector<mlir::Value> newMapOps;
-      mlir::OperandRange mapVarsArr = mapClauseOwner.getMapVars();
-
-      for (size_t i = 0; i < mapVarsArr.size(); ++i) {
-        if (mapVarsArr[i] == op) {
+      for (size_t i = 0; i < operandsArr.size(); ++i) {
+        if (operandsArr[i] == op) {
           // Push new implicit maps generated for the descriptor.
           newMapOps.push_back(baseAddr);
 
@@ -119,13 +138,29 @@ class MapInfoFinalizationPass
           // new additional map operand with an appropriate BlockArgument,
           // as the printing and later processing currently requires a 1:1
           // mapping of BlockArgs to MapInfoOp's at the same placement in
-          // each array (BlockArgs and MapVars).
-          if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target))
-            targetOp.getRegion().insertArgument(i, baseAddr.getType(), loc);
+          // each array (BlockArgs and MapOperands).
+          if (directiveOp) {
+            directiveOp.getRegion().insertArgument(i, baseAddr.getType(), loc);
+          }
         }
-        newMapOps.push_back(mapVarsArr[i]);
+        newMapOps.push_back(operandsArr[i]);
       }
-      mapClauseOwner.getMapVarsMutable().assign(newMapOps);
+      mutableOpRange.assign(newMapOps);
+    };
+    if (auto mapClauseOwner =
+            llvm::dyn_cast<mlir::omp::MapClauseOwningOpInterface>(target)) {
+      mlir::OperandRange mapOperandsArr = mapClauseOwner.getMapVars();
+      mlir::MutableOperandRange mapMutableOpRange =
+          mapClauseOwner.getMapVarsMutable();
+      mlir::omp::TargetOp targetOp =
+          llvm::dyn_cast<mlir::omp::TargetOp>(target);
+      addOperands(mapOperandsArr, mapMutableOpRange, targetOp);
+    }
+    if (auto targetDataOp = llvm::dyn_cast<mlir::omp::TargetDataOp>(target)) {
+      mlir::OperandRange useDevAddrArr = targetDataOp.getUseDeviceAddrVars();
+      mlir::MutableOperandRange useDevAddrMutableOpRange =
+          targetDataOp.getUseDeviceAddrVarsMutable();
+      addOperands(useDevAddrArr, useDevAddrMutableOpRange, targetDataOp);
     }
 
     mlir::Value newDescParentMapOp = builder.create<mlir::omp::MapInfoOp>(
@@ -234,27 +269,41 @@ class MapInfoFinalizationPass
     fir::KindMapping kindMap = fir::getKindMapping(module);
     fir::FirOpBuilder builder{module, std::move(kindMap)};
 
-    getOperation()->walk([&](mlir::omp::MapInfoOp op) {
-      // TODO: Currently only supports a single user for the MapInfoOp, this
-      // is fine for the moment as the Fortran Frontend will generate a
-      // new MapInfoOp per Target operation for the moment. However, when/if
-      // we optimise/cleanup the IR, it likely isn't too difficult to
-      // extend this function, it would require some modification to create a
-      // single new MapInfoOp per new MapInfoOp generated and share it across
-      // all users appropriately, making sure to only add a single member link
-      // per new generation for the original originating descriptor MapInfoOp.
-      assert(llvm::hasSingleElement(op->getUsers()) &&
-             "MapInfoFinalization currently only supports single users "
-             "of a MapInfoOp");
+    // We wish to maintain some function level scope (currently
+    // just local function scope variables used to load and store box
+    // variables into so we can access their base address, an
+    // quirk of box_offset requires us to have an in memory box, but Fortran
+    // in certain cases does not provide this) whilst not subjecting
+    // ourselves to the possibility of race conditions while this pass
+    // undergoes frequent re-iteration for the near future. So we loop
+    // over function in the module and then map.info inside of those.
+    getOperation()->walk([&](mlir::func::FuncOp func) {
+      // clear all local allocations we made for any boxes in any prior
+      // iterations from previous function scopes.
+      localBoxAllocas.clear();
 
-      if (!op.getMembers().empty()) {
-        addImplicitMembersToTarget(op, builder, *op->getUsers().begin());
-      } else if (fir::isTypeWithDescriptor(op.getVarType()) ||
-                 mlir::isa_and_present<fir::BoxAddrOp>(
-                     op.getVarPtr().getDefiningOp())) {
-        builder.setInsertionPoint(op);
-        genDescriptorMemberMaps(op, builder, *op->getUsers().begin());
-      }
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        // TODO: Currently only supports a single user for the MapInfoOp, this
+        // is fine for the moment as the Fortran Frontend will generate a
+        // new MapInfoOp per Target operation for the moment. However, when/if
+        // we optimise/cleanup the IR, it likely isn't too difficult to
+        // extend this function, it would require some modification to create a
+        // single new MapInfoOp per new MapInfoOp generated and share it across
+        // all users appropriately, making sure to only add a single member link
+        // per new generation for the original originating descriptor MapInfoOp.
+        assert(llvm::hasSingleElement(op->getUsers()) &&
+               "OMPMapInfoFinalization currently only supports single users "
+               "of a MapInfoOp");
+
+        if (!op.getMembers().empty()) {
+          addImplicitMembersToTarget(op, builder, *op->getUsers().begin());
+        } else if (fir::isTypeWithDescriptor(op.getVarType()) ||
+                   mlir::isa_and_present<fir::BoxAddrOp>(
+                       op.getVarPtr().getDefiningOp())) {
+          builder.setInsertionPoint(op);
+          genDescriptorMemberMaps(op, builder, *op->getUsers().begin());
+        }
+      });
     });
   }
 };

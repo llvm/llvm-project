@@ -7,3 +7,6 @@
 
 # RUN: not %lld -o /dev/null --compression-sort=malformed 2>&1 | FileCheck %s --check-prefix=COMPRESSION-MALFORM
 # COMPRESSION-MALFORM: unknown value `malformed` for --compression-sort=
+
+# RUN: not %lld -o /dev/null --compression-sort-startup-functions 2>&1 | FileCheck %s --check-prefix=STARTUP
+# STARTUP: --compression-sort-startup-functions must be used with --irpgo-profile-sort

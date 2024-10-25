@@ -50,7 +50,7 @@
 /// each of the preceding fields which are relevant for a given instruction
 /// in the opcode space.
 ///
-/// Currently, the policy is represented via the following instrinsic families:
+/// Currently, the policy is represented via the following intrinsic families:
 /// * _MASK - Can represent all three policy states for both tail and mask.  If
 ///   passthrough is IMPLICIT_DEF (or NoReg), then represents "undefined".
 ///   Otherwise, policy operand and tablegen flags drive the interpretation.
@@ -232,11 +232,12 @@ class octuple_to_str<int octuple> {
 def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 
 // Output pattern for X0 used to represent VLMAX in the pseudo instructions.
-// We can't use X0 register becuase the AVL operands use GPRNoX0.
+// We can't use X0 register because the AVL operands use GPRNoX0.
 // This must be kept in sync with RISCV::VLMaxSentinel.
 def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
 
-def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
+def SelectScalarFPAsInt : ComplexPattern<fAny, 1, "selectScalarFPAsInt", [], [],
+                                         1>;
 
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];
@@ -2475,9 +2476,11 @@ multiclass VPseudoUnaryVMV_V_X_I {
         def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
                          SchedUnary<"WriteVIMovV", "ReadVIMovV", mx,
                                     forcePassthruRead=true>;
+        let isReMaterializable = 1 in
         def "_X_" # mx : VPseudoUnaryNoMask<m.vrclass, GPR>,
                          SchedUnary<"WriteVIMovX", "ReadVIMovX", mx,
                                     forcePassthruRead=true>;
+        let isReMaterializable = 1 in
         def "_I_" # mx : VPseudoUnaryNoMask<m.vrclass, simm5>,
                          SchedNullary<"WriteVIMovI", mx,
                                       forcePassthruRead=true>;
@@ -6116,15 +6119,6 @@ foreach lmul = MxList in {
   }
 }
 
-/// Empty pseudo for RISCVInitUndefPass
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 0,
-    isCodeGenOnly = 1 in {
-  def PseudoRVVInitUndefM1 : Pseudo<(outs VR:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM2 : Pseudo<(outs VRM2:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM4 : Pseudo<(outs VRM4:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM8 : Pseudo<(outs VRM8:$vd), (ins), [], "">;
-}
-
 //===----------------------------------------------------------------------===//
 // 6. Configuration-Setting Instructions
 //===----------------------------------------------------------------------===//
@@ -6565,6 +6559,7 @@ defm PseudoVFMERGE : VPseudoVMRG_FM;
 //===----------------------------------------------------------------------===//
 // 13.16. Vector Floating-Point Move Instruction
 //===----------------------------------------------------------------------===//
+let isReMaterializable = 1 in
 defm PseudoVFMV_V : VPseudoVMV_F;
 
 //===----------------------------------------------------------------------===//
@@ -6770,7 +6765,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     Pseudo<(outs GPR:$rd), (ins VR:$rs2, ixlenimm:$sew), []>,
     Sched<[WriteVMovXS, ReadVMovXS]>,
     RISCVVPseudo;
-  let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
+  let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X, isReMaterializable = 1,
       Constraints = "$rd = $rs1" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
                             (ins VR:$rs1, GPR:$rs2, AVL:$vl, ixlenimm:$sew),
@@ -6793,7 +6788,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
              (ins VR:$rs2, ixlenimm:$sew), []>,
       Sched<[WriteVMovFS, ReadVMovFS]>,
       RISCVVPseudo;
-    let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
+    let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, isReMaterializable = 1,
         Constraints = "$rd = $rs1" in
     def "PseudoVFMV_S_" # f.FX :
       Pseudo<(outs VR:$rd),

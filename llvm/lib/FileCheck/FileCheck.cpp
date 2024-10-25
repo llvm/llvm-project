@@ -298,7 +298,7 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
     ++I;
 
   if (I == Str.size())
-    return ErrorDiagnostic::get(SM, Str.slice(I, StringRef::npos),
+    return ErrorDiagnostic::get(SM, Str.substr(I),
                                 StringRef("empty ") +
                                     (IsPseudo ? "pseudo " : "global ") +
                                     "variable name");

@@ -70,6 +70,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasStrictFP = false;
   PointerWidth = PointerAlign = 32;
   BoolWidth = BoolAlign = 8;
+  ShortWidth = ShortAlign = 16;
   IntWidth = IntAlign = 32;
   LongWidth = LongAlign = 32;
   LongLongWidth = LongLongAlign = 64;
@@ -195,6 +196,22 @@ void TargetInfo::resetDataLayout(StringRef DL, const char *ULP) {
 bool
 TargetInfo::checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const {
   Diags.Report(diag::err_opt_not_valid_on_target) << "cf-protection=branch";
+  return false;
+}
+
+CFBranchLabelSchemeKind TargetInfo::getDefaultCFBranchLabelScheme() const {
+  // if this hook is called, the target should override it to return a
+  // non-default scheme
+  llvm::report_fatal_error("not implemented");
+}
+
+bool TargetInfo::checkCFBranchLabelSchemeSupported(
+    const CFBranchLabelSchemeKind Scheme, DiagnosticsEngine &Diags) const {
+  if (Scheme != CFBranchLabelSchemeKind::Default)
+    Diags.Report(diag::err_opt_not_valid_on_target)
+        << (Twine("mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(Scheme))
+               .str();
   return false;
 }
 
@@ -421,6 +438,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     // what these normally are for the target.
     // We also define long long and long double here, although the
     // OpenCL standard only mentions these as "reserved".
+    ShortWidth = ShortAlign = 16;
     IntWidth = IntAlign = 32;
     LongWidth = LongAlign = 64;
     LongLongWidth = LongLongAlign = 128;

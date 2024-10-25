@@ -1018,10 +1018,16 @@ public:
   /// The source and destination registers may overlap, which may require a
   /// careful implementation when multiple copy instructions are required for
   /// large registers. See for example the ARM target.
+  ///
+  /// If RenamableDest is true, the copy instruction's destination operand is
+  /// marked renamable.
+  /// If RenamableSrc is true, the copy instruction's source operand is
+  /// marked renamable.
   virtual void copyPhysReg(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                           MCRegister DestReg, MCRegister SrcReg,
-                           bool KillSrc) const {
+                           MCRegister DestReg, MCRegister SrcReg, bool KillSrc,
+                           bool RenamableDest = false,
+                           bool RenamableSrc = false) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");
   }
 
@@ -2001,7 +2007,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<int, const char *>>
   getSerializableTargetIndices() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Decompose the machine operand's target flags into two values - the direct
@@ -2018,7 +2024,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Return an array that contains the bitmask target flag values and their
@@ -2028,7 +2034,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<unsigned, const char *>>
   getSerializableBitmaskMachineOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Return an array that contains the MMO target flag values and their
@@ -2038,7 +2044,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Determines whether \p Inst is a tail call instruction. Override this
@@ -2088,10 +2094,13 @@ public:
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
   /// information for a set of outlining candidates. Returns std::nullopt if the
-  /// candidates are not suitable for outlining.
-  virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+  /// candidates are not suitable for outlining. \p MinRepeats is the minimum
+  /// number of times the instruction sequence must be repeated.
+  virtual std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
   }
@@ -2269,15 +2278,6 @@ public:
     llvm_unreachable("unknown number of operands necessary");
   }
 
-  /// Gets the opcode for the Pseudo Instruction used to initialize
-  /// the undef value. If no Instruction is available, this will
-  /// fail compilation.
-  virtual unsigned getUndefInitOpcode(unsigned RegClassID) const {
-    (void)RegClassID;
-
-    llvm_unreachable("Unexpected register class.");
-  }
-
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
@@ -2287,29 +2287,29 @@ private:
 
 /// Provide DenseMapInfo for TargetInstrInfo::RegSubRegPair.
 template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
-  using RegInfo = DenseMapInfo<unsigned>;
+  using RegInfo = DenseMapInfo<Register>;
+  using SubRegInfo = DenseMapInfo<unsigned>;
 
   static inline TargetInstrInfo::RegSubRegPair getEmptyKey() {
     return TargetInstrInfo::RegSubRegPair(RegInfo::getEmptyKey(),
-                                          RegInfo::getEmptyKey());
+                                          SubRegInfo::getEmptyKey());
   }
 
   static inline TargetInstrInfo::RegSubRegPair getTombstoneKey() {
     return TargetInstrInfo::RegSubRegPair(RegInfo::getTombstoneKey(),
-                                          RegInfo::getTombstoneKey());
+                                          SubRegInfo::getTombstoneKey());
   }
 
   /// Reuse getHashValue implementation from
   /// std::pair<unsigned, unsigned>.
   static unsigned getHashValue(const TargetInstrInfo::RegSubRegPair &Val) {
-    std::pair<unsigned, unsigned> PairVal = std::make_pair(Val.Reg, Val.SubReg);
-    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
+    return DenseMapInfo<std::pair<Register, unsigned>>::getHashValue(
+        std::make_pair(Val.Reg, Val.SubReg));
   }
 
   static bool isEqual(const TargetInstrInfo::RegSubRegPair &LHS,
                       const TargetInstrInfo::RegSubRegPair &RHS) {
-    return RegInfo::isEqual(LHS.Reg, RHS.Reg) &&
-           RegInfo::isEqual(LHS.SubReg, RHS.SubReg);
+    return LHS == RHS;
   }
 };
 

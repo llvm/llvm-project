@@ -154,6 +154,7 @@
 // MVP-NOT: #define __wasm_sign_ext__ 1{{$}}
 // MVP-NOT: #define __wasm_simd128__ 1{{$}}
 // MVP-NOT: #define __wasm_tail_call__ 1{{$}}
+// MVP-NOT: #define __wasm_wide_arithmetic__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=generic \
@@ -184,6 +185,7 @@
 // GENERIC-NOT: #define __wasm_relaxed_simd__ 1{{$}}
 // GENERIC-NOT: #define __wasm_simd128__ 1{{$}}
 // GENERIC-NOT: #define __wasm_tail_call__ 1{{$}}
+// GENERIC-NOT: #define __wasm_wide_arithmetic__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=bleeding-edge \
@@ -206,6 +208,7 @@
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_sign_ext__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_simd128__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_tail_call__ 1{{$}}
+// BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_wide_arithmetic__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=bleeding-edge -mno-simd128 \
@@ -215,3 +218,12 @@
 // RUN:   | FileCheck %s -check-prefix=BLEEDING-EDGE-NO-SIMD128
 //
 // BLEEDING-EDGE-NO-SIMD128-NOT: #define __wasm_simd128__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -mwide-arithmetic \
+// RUN:   | FileCheck %s -check-prefix=WIDE-ARITHMETIC
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -mwide-arithmetic \
+// RUN:   | FileCheck %s -check-prefix=WIDE-ARITHMETIC
+//
+// WIDE-ARITHMETIC: #define __wasm_wide_arithmetic__ 1{{$}}

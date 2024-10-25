@@ -63,7 +63,7 @@ static void insertCall(Function &CurFn, StringRef Func,
         Func, FunctionType::get(Type::getVoidTy(C), ArgTypes, false));
 
     Instruction *RetAddr = CallInst::Create(
-        Intrinsic::getDeclaration(&M, Intrinsic::returnaddress),
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::returnaddress),
         ArrayRef<Value *>(ConstantInt::get(Type::getInt32Ty(C), 0)), "",
         InsertionPt);
     RetAddr->setDebugLoc(DL);

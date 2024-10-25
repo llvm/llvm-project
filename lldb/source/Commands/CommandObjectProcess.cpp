@@ -25,6 +25,7 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -452,7 +453,7 @@ protected:
       switch (short_option) {
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore))
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid value for ignore option: \"%s\", should be a number.",
               option_arg.str().c_str());
         break;
@@ -743,8 +744,8 @@ public:
         bool success;
         tmp_result = OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
-          error.SetErrorStringWithFormat("invalid boolean option: \"%s\"",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean option: \"%s\"", option_arg.str().c_str());
         else {
           if (tmp_result)
             m_keep_stopped = eLazyBoolYes;
@@ -1419,7 +1420,7 @@ protected:
 
       PlatformSP platform_sp = process->GetTarget().GetPlatform();
       if (!platform_sp) {
-        result.AppendError("Couldn'retrieve the target's platform");
+        result.AppendError("Couldn't retrieve the target's platform");
         return;
       }
 

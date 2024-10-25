@@ -24,7 +24,7 @@ namespace {
 // by the MergeFunctions pass.
 
 class StructuralHashImpl {
-  uint64_t Hash;
+  uint64_t Hash = 4;
 
   void hash(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
 
@@ -43,7 +43,7 @@ class StructuralHashImpl {
   }
 
 public:
-  StructuralHashImpl() : Hash(4) {}
+  StructuralHashImpl() = default;
 
   void updateOperand(Value *Operand) {
     hashType(Operand->getType());
