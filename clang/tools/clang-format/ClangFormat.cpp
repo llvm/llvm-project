@@ -707,8 +707,11 @@ int main(int argc, const char **argv) {
     errs() << "Clang-formatting " << LineNo << " files\n";
   }
 
-  if (FileNames.empty())
+  if (FileNames.empty()) {
+    if (isIgnored(AssumeFileName))
+      return 0;
     return clang::format::format("-", FailOnIncompleteFormat);
+  }
 
   if (FileNames.size() > 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {

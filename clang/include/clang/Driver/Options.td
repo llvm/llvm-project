@@ -5400,9 +5400,9 @@ def mfrecipe : Flag<["-"], "mfrecipe">, Group<m_loongarch_Features_Group>,
 def mno_frecipe : Flag<["-"], "mno-frecipe">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable frecipe.{s/d} and frsqrte.{s/d}">;
 def mlam_bh : Flag<["-"], "mlam-bh">, Group<m_loongarch_Features_Group>,
-  HelpText<"Enable amswap_[db].{b/h} and amadd_[db].{b/h}">;
+  HelpText<"Enable amswap[_db].{b/h} and amadd[_db].{b/h}">;
 def mno_lam_bh : Flag<["-"], "mno-lam-bh">, Group<m_loongarch_Features_Group>,
-  HelpText<"Disable amswap_[db].{b/h} and amadd_[db].{b/h}">;
+  HelpText<"Disable amswap[_db].{b/h} and amadd[_db].{b/h}">;
 def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
 def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,
@@ -6424,6 +6424,8 @@ def mmovdiri : Flag<["-"], "mmovdiri">, Group<m_x86_Features_Group>;
 def mno_movdiri : Flag<["-"], "mno-movdiri">, Group<m_x86_Features_Group>;
 def mmovdir64b : Flag<["-"], "mmovdir64b">, Group<m_x86_Features_Group>;
 def mno_movdir64b : Flag<["-"], "mno-movdir64b">, Group<m_x86_Features_Group>;
+def mmovrs : Flag<["-"], "mmovrs">, Group<m_x86_Features_Group>;
+def mno_movrs : Flag<["-"], "mno-movrs">, Group<m_x86_Features_Group>;
 def mmwaitx : Flag<["-"], "mmwaitx">, Group<m_x86_Features_Group>;
 def mno_mwaitx : Flag<["-"], "mno-mwaitx">, Group<m_x86_Features_Group>;
 def mpku : Flag<["-"], "mpku">, Group<m_x86_Features_Group>;
@@ -6779,10 +6781,6 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
 def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
-
-def flang_experimental_integer_overflow : Flag<["-"], "flang-experimental-integer-overflow">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Add nsw flag to internal operations such as do-variable increment (experimental)">;
 
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
