@@ -251,7 +251,7 @@ private:
     // `TargetMachine`.
     if (!AnyDefinedFuncs) {
       Features =
-	  WasmTM
+          WasmTM
               ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
                                  std::string(WasmTM->getTargetFeatureString()))
               ->getFeatureBits();
