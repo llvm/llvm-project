@@ -2,7 +2,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal -S < %s | FileCheck %s
 
 define float @phi_select(i1 %c, float nofpclass(inf) %base, float nofpclass(inf) %arg) {
-; CHECK-LABEL: define float @phi_select
+; CHECK-LABEL: define nofpclass(inf) float @phi_select
 ; CHECK-SAME: (i1 [[C:%.*]], float nofpclass(inf) [[BASE:%.*]], float nofpclass(inf) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
