@@ -16,7 +16,7 @@
 // EMPTY-NEXT: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit <undeserialized declarations> class AppendStructuredBuffer
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
-// There should be no more occurrances of AppendStructuredBuffer
+// There should be no more occurrences of AppendStructuredBuffer
 // EMPTY-NOT: {{[^[:alnum:]]}}AppendStructuredBuffer
 
 #ifndef EMPTY

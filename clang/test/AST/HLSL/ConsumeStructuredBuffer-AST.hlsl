@@ -16,7 +16,7 @@
 // EMPTY-NEXT: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit <undeserialized declarations> class ConsumeStructuredBuffer
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
-// There should be no more occurrances of ConsumeStructuredBuffer
+// There should be no more occurrences of ConsumeStructuredBuffer
 // EMPTY-NOT: {{[^[:alnum:]]}}ConsumeStructuredBuffer
 
 #ifndef EMPTY
