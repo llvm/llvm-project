@@ -472,12 +472,12 @@ static bool violatesPrivateInclude(Module *RequestingModule,
     // as obtained from the lookup and as obtained from the module.
     // This check is not cheap, so enable it only for debugging.
     bool IsPrivate = false;
-    SmallVectorImpl<Module::Header> *HeaderList[] = {
-        &Header.getModule()->Headers[Module::HK_Private],
-        &Header.getModule()->Headers[Module::HK_PrivateTextual]};
-    for (auto *Hs : HeaderList)
+    ArrayRef<Module::Header> HeaderList[] = {
+        Header.getModule()->getHeaders(Module::HK_Private),
+        Header.getModule()->getHeaders(Module::HK_PrivateTextual)};
+    for (auto Hs : HeaderList)
       IsPrivate |= llvm::any_of(
-          *Hs, [&](const Module::Header &H) { return H.Entry == IncFileEnt; });
+          Hs, [&](const Module::Header &H) { return H.Entry == IncFileEnt; });
     assert(IsPrivate && "inconsistent headers and roles");
   }
 #endif
@@ -1296,27 +1296,28 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
                           ModuleHeaderRole Role, bool Imported) {
   KnownHeader KH(Mod, Role);
 
+  FileEntryRef HeaderEntry = Header.Entry;
+
   // Only add each header to the headers list once.
   // FIXME: Should we diagnose if a header is listed twice in the
   // same module definition?
-  auto &HeaderList = Headers[Header.Entry];
+  auto &HeaderList = Headers[HeaderEntry];
   if (llvm::is_contained(HeaderList, KH))
     return;
 
   HeaderList.push_back(KH);
-  Mod->Headers[headerRoleToKind(Role)].push_back(Header);
+  Mod->addHeader(headerRoleToKind(Role), std::move(Header));
 
   bool isCompilingModuleHeader = Mod->isForBuilding(LangOpts);
   if (!Imported || isCompilingModuleHeader) {
     // When we import HeaderFileInfo, the external source is expected to
     // set the isModuleHeader flag itself.
-    HeaderInfo.MarkFileModuleHeader(Header.Entry, Role,
-                                    isCompilingModuleHeader);
+    HeaderInfo.MarkFileModuleHeader(HeaderEntry, Role, isCompilingModuleHeader);
   }
 
   // Notify callbacks that we just added a new header.
   for (const auto &Cb : Callbacks)
-    Cb->moduleMapAddHeader(Header.Entry.getName());
+    Cb->moduleMapAddHeader(HeaderEntry.getName());
 }
 
 FileID ModuleMap::getContainingModuleMapFileID(const Module *Module) const {

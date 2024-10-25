@@ -528,7 +528,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
 
   for (auto &K : Kinds) {
     assert(&K == &Kinds[K.Kind] && "kinds in wrong order");
-    for (auto &H : Headers[K.Kind]) {
+    for (auto &H : getHeaders(K.Kind)) {
       OS.indent(Indent + 2);
       OS << K.Prefix << "header \"";
       OS.write_escaped(H.NameAsWritten);
