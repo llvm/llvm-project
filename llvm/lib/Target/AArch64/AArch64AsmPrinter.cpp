@@ -2300,6 +2300,15 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
                      .addImm(0));
 
   assert(GAMO.isGlobal());
+  MCSymbol *UndefWeakSym;
+  if (GAMO.getGlobal()->hasExternalWeakLinkage()) {
+    UndefWeakSym = createTempSymbol("undef_weak");
+    EmitToStreamer(
+        MCInstBuilder(AArch64::CBZX)
+            .addReg(DstReg)
+            .addExpr(MCSymbolRefExpr::create(UndefWeakSym, OutContext)));
+  }
+
   assert(GAMO.getGlobal()->getValueType() != nullptr);
   unsigned AuthOpcode = GAMO.getGlobal()->getValueType()->isFunctionTy()
                             ? AArch64::AUTIA
@@ -2308,6 +2317,9 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
                      .addReg(DstReg)
                      .addReg(DstReg)
                      .addReg(AArch64::X16));
+
+  if (GAMO.getGlobal()->hasExternalWeakLinkage())
+    OutStreamer->emitLabel(UndefWeakSym);
 }
 
 const MCExpr *

@@ -19,7 +19,9 @@ define ptr @foo() {
 ; CHECK:         adrp  x16, :got_auth:var
 ; CHECK-NEXT:    add   x16, x16, :got_auth_lo12:var
 ; CHECK-NEXT:    ldr   x0,  [x16]
+; CHECK-NEXT:    cbz   x0, .Lundef_weak0
 ; CHECK-NEXT:    autia x0,  x16
+; CHECK-NEXT:  .Lundef_weak0:
 ; CHECK-NEXT:    ret
 }
 
@@ -33,7 +35,9 @@ define ptr @bar() {
 ; CHECK:         adrp  x16, :got_auth:arr_var
 ; CHECK-NEXT:    add   x16, x16, :got_auth_lo12:arr_var
 ; CHECK-NEXT:    ldr   x8,  [x16]
+; CHECK-NEXT:    cbz   x8, .Lundef_weak1
 ; CHECK-NEXT:    autda x8,  x16
+; CHECK-NEXT:  .Lundef_weak1:
 ; CHECK-NEXT:    add   x0,  x8, #20
 ; CHECK-NEXT:    ret
 }
