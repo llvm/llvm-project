@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCAST_H
-#define LLDB_CORE_VALUEOBJECTCAST_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTCAST_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTCAST_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -27,8 +27,7 @@ class ValueObjectCast : public ValueObject {
 public:
   ~ValueObjectCast() override;
 
-  static lldb::ValueObjectSP Create(ValueObject &parent,
-                                    ConstString name,
+  static lldb::ValueObjectSP Create(ValueObject &parent, ConstString name,
                                     const CompilerType &cast_type);
 
   std::optional<uint64_t> GetByteSize() override;
@@ -64,4 +63,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCAST_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTCAST_H
