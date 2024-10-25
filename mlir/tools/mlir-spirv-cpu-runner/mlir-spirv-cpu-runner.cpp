@@ -12,18 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
-#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
-#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Pass/Pass.h"
@@ -75,23 +69,6 @@ convertMLIRModule(Operation *op, llvm::LLVMContext &context) {
   return mainModule;
 }
 
-static LogicalResult runMLIRPasses(Operation *module,
-                                   JitRunnerOptions &options) {
-  PassManager passManager(module->getContext(),
-                          module->getName().getStringRef());
-  if (failed(applyPassManagerCLOptions(passManager)))
-    return failure();
-  passManager.addPass(createGpuKernelOutliningPass());
-  passManager.addPass(createConvertGPUToSPIRVPass(/*mapMemorySpace=*/true));
-
-  OpPassManager &nestedPM = passManager.nest<spirv::ModuleOp>();
-  nestedPM.addPass(spirv::createSPIRVLowerABIAttributesPass());
-  nestedPM.addPass(spirv::createSPIRVUpdateVCEPass());
-  passManager.addPass(createLowerHostCodeToLLVMPass());
-  passManager.addPass(createConvertSPIRVToLLVMPass());
-  return passManager.run(module);
-}
-
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
 
@@ -99,7 +76,6 @@ int main(int argc, char **argv) {
   llvm::InitializeNativeTargetAsmPrinter();
 
   mlir::JitRunnerConfig jitRunnerConfig;
-  jitRunnerConfig.mlirTransformer = runMLIRPasses;
   jitRunnerConfig.llvmModuleBuilder = convertMLIRModule;
 
   mlir::DialectRegistry registry;
