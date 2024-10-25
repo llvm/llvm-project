@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
-#define LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTCHILD_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTCHILD_H
 
-#include "lldb/Core/ValueObjectChild.h"
-#include "lldb/Core/ValueObjectConstResultImpl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObjectChild.h"
+#include "lldb/ValueObject/ValueObjectConstResultImpl.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
@@ -28,14 +28,11 @@ class ValueObject;
 // A child of a ValueObjectConstResult.
 class ValueObjectConstResultChild : public ValueObjectChild {
 public:
-  ValueObjectConstResultChild(ValueObject &parent,
-                              const CompilerType &compiler_type,
-                              ConstString name, uint32_t byte_size,
-                              int32_t byte_offset, uint32_t bitfield_bit_size,
-                              uint32_t bitfield_bit_offset, bool is_base_class,
-                              bool is_deref_of_parent,
-                              lldb::addr_t live_address,
-                              uint64_t language_flags);
+  ValueObjectConstResultChild(
+      ValueObject &parent, const CompilerType &compiler_type, ConstString name,
+      uint32_t byte_size, int32_t byte_offset, uint32_t bitfield_bit_size,
+      uint32_t bitfield_bit_offset, bool is_base_class, bool is_deref_of_parent,
+      lldb::addr_t live_address, uint64_t language_flags);
 
   ~ValueObjectConstResultChild() override;
 
@@ -81,4 +78,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTCHILD_H

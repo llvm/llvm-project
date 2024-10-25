@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ValueObjectSyntheticFilter.h"
+#include "lldb/ValueObject/ValueObjectSyntheticFilter.h"
 
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -143,11 +143,9 @@ lldb::ValueType ValueObjectSynthetic::GetValueType() const {
 
 void ValueObjectSynthetic::CreateSynthFilter() {
   ValueObject *valobj_for_frontend = m_parent;
-  if (m_synth_sp->WantsDereference())
-  {
+  if (m_synth_sp->WantsDereference()) {
     CompilerType type = m_parent->GetCompilerType();
-    if (type.IsValid() && type.IsPointerOrReferenceType())
-    {
+    if (type.IsValid() && type.IsPointerOrReferenceType()) {
       Status error;
       lldb::ValueObjectSP deref_sp = m_parent->Dereference(error);
       if (error.Success())
