@@ -184,7 +184,7 @@ static bool ShouldDiagnoseAvailabilityInContext(
 
   if (K == AR_Deprecated) {
     if (const auto *VD = dyn_cast<VarDecl>(OffendingDecl))
-      if (VD->isLocalVarDecl() && VD->isDeprecated())
+      if (VD->isLocalVarDeclOrParm() && VD->isDeprecated())
         return true;
   }
 
