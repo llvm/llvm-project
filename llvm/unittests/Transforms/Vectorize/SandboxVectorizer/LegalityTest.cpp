@@ -52,16 +52,8 @@ define void @foo(ptr %ptr) {
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
   sandboxir::LegalityAnalysis Legality;
-  const auto &Result = Legality.canVectorize({St0, St1});
+  auto Result = Legality.canVectorize({St0, St1});
   EXPECT_TRUE(isa<sandboxir::Widen>(Result));
-
-  {
-    // Check NotInstructions
-    auto &Result = Legality.canVectorize({F, St0});
-    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
-    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
-              sandboxir::ResultReason::NotInstructions);
-  }
 }
 
 #ifndef NDEBUG
@@ -76,9 +68,6 @@ TEST_F(LegalityTest, LegalityResultDump) {
   sandboxir::LegalityAnalysis Legality;
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
-  EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
-                          sandboxir::ResultReason::NotInstructions),
-                      "Pack Reason: NotInstructions"));
   EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
                           sandboxir::ResultReason::DiffOpcodes),
                       "Pack Reason: DiffOpcodes"));

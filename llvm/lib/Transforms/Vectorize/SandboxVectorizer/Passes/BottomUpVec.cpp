@@ -40,7 +40,7 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
 }
 
 void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
-  const auto &LegalityRes = Legality.canVectorize(Bndl);
+  auto LegalityRes = Legality.canVectorize(Bndl);
   switch (LegalityRes.getSubclassID()) {
   case LegalityResultID::Widen: {
     auto *I = cast<Instruction>(Bndl[0]);
