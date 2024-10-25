@@ -699,7 +699,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   LLVMContext &Ctx = SE.getContext();
   auto *BOC =
       new VPInstruction(VPInstruction::BranchOnCond,
-                        {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))});
+                        {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
 
   SmallVector<VPValue *> PossiblyDead(Term->operands());
   Term->eraseFromParent();
