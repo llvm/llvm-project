@@ -66,9 +66,44 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
   llvm_unreachable("unsupported variant scheduling class");
 }
 
+/// Gets latency information for \p Inst from the itinerary
+/// scheduling model.
+/// \return The maximum expected latency over all the operands or -1
+/// if no information is available.
+static int getItineraryLatency(const MCSubtargetInfo &STI,
+                               const MCInstrInfo &MCII, const MCInst &Inst) {
+  static const int NoInformationAvailable = -1;
+
+  llvm::StringRef CPU = STI.getCPU();
+
+  // Check if we have a CPU to get the itinerary information.
+  if (CPU.empty())
+    return NoInformationAvailable;
+
+  // Get itinerary information.
+  InstrItineraryData IID = STI.getInstrItineraryForCPU(CPU);
+  // Get the scheduling class of the requested instruction.
+  const MCInstrDesc &Desc = MCII.get(Inst.getOpcode());
+  unsigned SCClass = Desc.getSchedClass();
+
+  unsigned Latency = 0;
+
+  for (unsigned Idx = 0, IdxEnd = Inst.getNumOperands(); Idx != IdxEnd; ++Idx)
+    if (std::optional<unsigned> OperCycle = IID.getOperandCycle(SCClass, Idx))
+      Latency = std::max(Latency, *OperCycle);
+
+  return int(Latency);
+}
+
 int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
                                       const MCInstrInfo &MCII,
                                       const MCInst &Inst) const {
+  // Check if we have a scheduling model for instructions.
+  if (!hasInstrSchedModel())
+    // Try to fall back to the itinerary model if the scheduling model doesn't
+    // have a scheduling table.  Note the default does not have a table.
+    return getItineraryLatency(STI, MCII, Inst);
+
   unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
   const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
   if (!SCDesc->isValid())

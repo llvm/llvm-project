@@ -162,70 +162,19 @@ static void emitComments(LLVMDisasmContext *DC,
   DC->CommentsToEmit.clear();
 }
 
-/// Gets latency information for \p Inst from the itinerary
-/// scheduling model, based on \p DC information.
-/// \return The maximum expected latency over all the operands or -1
-/// if no information is available.
-static std::optional<int> getItineraryLatency(const MCSubtargetInfo *STI,
-                                              const MCInstrInfo *MCII,
-                                              const MCInst &Inst) {
-  llvm::StringRef CPU = STI->getCPU();
-
-  // Check if we have a CPU to get the itinerary information.
-  if (CPU.empty())
-    return std::nullopt;
-
-  // Get itinerary information.
-  InstrItineraryData IID = STI->getInstrItineraryForCPU(CPU);
-  // Get the scheduling class of the requested instruction.
-  const MCInstrDesc& Desc = MCII->get(Inst.getOpcode());
-  unsigned SCClass = Desc.getSchedClass();
-
-  unsigned Latency = 0;
-
-  for (unsigned Idx = 0, IdxEnd = Inst.getNumOperands(); Idx != IdxEnd; ++Idx)
-    if (std::optional<unsigned> OperCycle = IID.getOperandCycle(SCClass, Idx))
-      Latency = std::max(Latency, *OperCycle);
-
-  return int(Latency);
-}
-
-/// Gets latency information for \p Inst, based on \p DC information.
-/// \return The maximum expected latency over all the definitions or -1
-/// if no information is available.
-static std::optional<int> getLatency(const MCSubtargetInfo *STI, const MCInstrInfo *MCII, const MCInst &Inst) {
-  // Try to compute scheduling information.
-  const MCSchedModel &SCModel = STI->getSchedModel();
-
-  // Check if we have a scheduling model for instructions.
-  if (!SCModel.hasInstrSchedModel())
-    // Try to fall back to the itinerary model if the scheduling model doesn't
-    // have a scheduling table.  Note the default does not have a table.
-    return getItineraryLatency(STI, MCII, Inst);
-
-  // Get the scheduling class of the requested instruction.
-  const MCInstrDesc &Desc = MCII->get(Inst.getOpcode());
-  unsigned SCClass = Desc.getSchedClass();
-  int Latency = SCModel.computeInstrLatency(*STI, SCClass);
-  if (Latency <= 0)
-    return std::nullopt;
-  return Latency;
-}
-
 /// Emits latency information in DC->CommentStream for \p Inst, based
 /// on the information available in \p DC.
 static void emitLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
   const MCSubtargetInfo *STI = DC->getSubtargetInfo();
   const MCInstrInfo *MCII =  DC->getInstrInfo();
-  std::optional<int> Latency = getLatency(STI, MCII, Inst);
-  if (!Latency)
-    return;
+  const MCSchedModel &SCModel = STI->getSchedModel();
+  int Latency = SCModel.computeInstrLatency(*STI, *MCII, Inst);
 
   // Report only interesting latencies.
-  if (*Latency < 2)
+  if (Latency < 2)
     return;
 
-  DC->CommentStream << "Latency: " << *Latency << '\n';
+  DC->CommentStream << "Latency: " << Latency << '\n';
 }
 
 //
