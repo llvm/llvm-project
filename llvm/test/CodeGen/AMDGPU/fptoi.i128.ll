@@ -1604,8 +1604,8 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; GISEL:       ; %bb.0: ; %fp-to-i-entry
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v4, v0
-; GISEL-NEXT:    v_and_b32_e32 v5, 0xffff, v4
 ; GISEL-NEXT:    v_mov_b32_e32 v6, 0
+; GISEL-NEXT:    v_and_b32_e32 v5, 0xffff, v4
 ; GISEL-NEXT:    v_lshrrev_b64 v[0:1], 7, v[5:6]
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x7f
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0
@@ -1955,8 +1955,8 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; GISEL:       ; %bb.0: ; %fp-to-i-entry
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v4, v0
-; GISEL-NEXT:    v_and_b32_e32 v5, 0xffff, v4
 ; GISEL-NEXT:    v_mov_b32_e32 v6, 0
+; GISEL-NEXT:    v_and_b32_e32 v5, 0xffff, v4
 ; GISEL-NEXT:    v_lshrrev_b64 v[0:1], 7, v[5:6]
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x7f
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0

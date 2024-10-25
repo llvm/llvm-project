@@ -420,7 +420,7 @@ def binop_right_undef_to_undef: GICombineRule<
 
 def unary_undef_to_zero: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ABS):$root,
+  (match (wip_match_opcode G_ABS, G_ZEXT):$root,
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 

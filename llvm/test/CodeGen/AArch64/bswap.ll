@@ -45,24 +45,14 @@ define i64 @bswap_i16_to_i64_anyext(i16 %a) {
 
 ; The zext here is optimised to an any_extend during isel..
 define i128 @bswap_i16_to_i128_anyext(i16 %a) {
-; CHECK-SD-LABEL: bswap_i16_to_i128_anyext:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w0
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    rev w8, w8
-; CHECK-SD-NEXT:    lsr w8, w8, #16
-; CHECK-SD-NEXT:    lsl x1, x8, #48
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bswap_i16_to_i128_anyext:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    mov x0, xzr
-; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    and x8, x8, #0xffff
-; CHECK-GI-NEXT:    lsl x1, x8, #48
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bswap_i16_to_i128_anyext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    rev w8, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    lsl x1, x8, #48
+; CHECK-NEXT:    ret
     %3 = call i16 @llvm.bswap.i16(i16 %a)
     %4 = zext i16 %3 to i128
     %5 = shl i128 %4, 112

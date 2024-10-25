@@ -2944,8 +2944,11 @@ void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
 
 void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, int64_t C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
-  Builder.buildConstant(MI.getOperand(0), C);
-  MI.eraseFromParent();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {DstTy}})) {
+    Builder.buildConstant(MI.getOperand(0), C);
+    MI.eraseFromParent();
+  }
 }
 
 void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
