@@ -1352,6 +1352,17 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
     }
     assert(NodeContextIds == CalleeEdgeContextIds);
   }
+  // FIXME: Since this checking is only invoked under an option, we should
+  // change the error checking from using assert to something that will trigger
+  // an error on a release build.
+#ifndef NDEBUG
+  // Make sure we don't end up with duplicate edges between the same caller and
+  // callee.
+  DenseSet<ContextNode<DerivedCCG, FuncTy, CallTy> *> NodeSet;
+  for (const auto &E : Node->CalleeEdges)
+    NodeSet.insert(E->Callee);
+  assert(NodeSet.size() == Node->CalleeEdges.size());
+#endif
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -3125,7 +3136,15 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     // from the same callers as the old node. That should be true in the current
     // use case, where we will remove None-type edges after copying over all
     // caller edges from the callee.
-    assert(IsNewNode || NewCaller->findEdgeFromCaller(OldCallerEdge->Caller));
+    auto *ExistingCallerEdge =
+        NewCaller->findEdgeFromCaller(OldCallerEdge->Caller);
+    assert(IsNewNode || ExistingCallerEdge);
+    if (ExistingCallerEdge) {
+      ExistingCallerEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
+                                                 EdgeContextIdsToMove.end());
+      ExistingCallerEdge->AllocTypes |= computeAllocType(EdgeContextIdsToMove);
+      continue;
+    }
     auto NewEdge = std::make_shared<ContextEdge>(
         NewCaller, OldCallerEdge->Caller,
         computeAllocType(EdgeContextIdsToMove), EdgeContextIdsToMove);
