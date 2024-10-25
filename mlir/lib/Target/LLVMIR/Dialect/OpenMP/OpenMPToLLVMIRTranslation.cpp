@@ -536,6 +536,7 @@ convertIgnoredWrapper(omp::LoopWrapperInterface &opInst,
         forwardArgs(blockArgIface.getPrivateBlockArgs(), op.getPrivateVars());
         forwardArgs(blockArgIface.getReductionBlockArgs(),
                     op.getReductionVars());
+        op.emitWarning() << "simd information on composite construct discarded";
         return success();
       })
       .Default([&](Operation *op) {
