@@ -305,7 +305,7 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(SemaObjC &S, SourceLocation Loc,
         ParmVarDecl::Create(S.SemaRef.Context, Method, SourceLocation(),
                             SourceLocation(), &CX.Idents.get("value"),
                             NumberType, /*TInfo=*/nullptr, SC_None, nullptr);
-    Method->setMethodParams(S.SemaRef.Context, value, std::nullopt);
+    Method->setMethodParams(S.SemaRef.Context, value, {});
   }
 
   if (!validateBoxingMethod(S.SemaRef, Loc, S.NSNumberDecl, Sel, Method))
@@ -586,7 +586,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
                                 Context.getPointerType(ConstCharType),
                                 /*TInfo=*/nullptr,
                                 SC_None, nullptr);
-          M->setMethodParams(Context, value, std::nullopt);
+          M->setMethodParams(Context, value, {});
           BoxingMethod = M;
         }
 
@@ -710,7 +710,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
                             SC_None, nullptr);
         Params.push_back(type);
 
-        M->setMethodParams(Context, Params, std::nullopt);
+        M->setMethodParams(Context, Params, {});
         BoxingMethod = M;
       }
 
@@ -840,7 +840,7 @@ ExprResult SemaObjC::BuildObjCArrayLiteral(SourceRange SR,
                                              /*TInfo=*/nullptr, SC_None,
                                              nullptr);
       Params.push_back(cnt);
-      Method->setMethodParams(Context, Params, std::nullopt);
+      Method->setMethodParams(Context, Params, {});
     }
 
     if (!validateBoxingMethod(SemaRef, Loc, NSArrayDecl, Sel, Method))
@@ -1009,7 +1009,7 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
                                              /*TInfo=*/nullptr, SC_None,
                                              nullptr);
       Params.push_back(cnt);
-      Method->setMethodParams(Context, Params, std::nullopt);
+      Method->setMethodParams(Context, Params, {});
     }
 
     if (!validateBoxingMethod(SemaRef, SR.getBegin(), NSDictionaryDecl, Sel,
@@ -4373,7 +4373,7 @@ bool SemaObjC::CheckObjCBridgeRelatedConversions(SourceLocation Loc,
 
         ExprResult msg = BuildInstanceMessageImplicit(
             SrcExpr, SrcType, InstanceMethod->getLocation(),
-            InstanceMethod->getSelector(), InstanceMethod, std::nullopt);
+            InstanceMethod->getSelector(), InstanceMethod, {});
         SrcExpr = msg.get();
       }
       return true;
