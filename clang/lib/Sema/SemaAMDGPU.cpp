@@ -64,11 +64,11 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     ScopeIndex = 1;
     break;
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
-    return CheckMovDPPFunctionCall(TheCall, 5, 1);
+    return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
-    return CheckMovDPPFunctionCall(TheCall, 2, 1);
+    return checkMovDPPFunctionCall(TheCall, 2, 1);
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
-    return CheckMovDPPFunctionCall(TheCall, 6, 2);
+    return checkMovDPPFunctionCall(TheCall, 6, 2);
   }
   default:
     return false;
@@ -115,7 +115,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   return false;
 }
 
-bool SemaAMDGPU::CheckMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
+bool SemaAMDGPU::checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
                                          unsigned NumDataArgs) {
   assert(NumDataArgs <= 2);
   if (SemaRef.checkArgCountRange(TheCall, NumArgs, NumArgs))

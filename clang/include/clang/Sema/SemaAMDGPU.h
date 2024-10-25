@@ -26,7 +26,7 @@ public:
 
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
-  bool CheckMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
+  bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
                                unsigned NumDataArgs);
 
   /// Create an AMDGPUWavesPerEUAttr attribute.
