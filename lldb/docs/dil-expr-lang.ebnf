@@ -1,0 +1,36 @@
+(* LLDB Debug Expressions, a subset of C++ *)
+(* Insired by https://www.nongnu.org/hcb *)
+
+expression =  unary_expression;
+
+unary_expression = postfix_expression
+                 | unary_operator unary_expression;
+
+unary_operator = "*" | "&" | "-" ;
+
+postfix_expression = primary_expression
+                   | postfix_expression "[" expression "]"
+                   | postfix_expression "." id_expression
+                   | postfix_expression "->" id_expression
+
+primary_expression = numeric_literal
+                   | boolean_literal
+                   | pointer_literal
+                   | id_expression;
+
+nested_name_specifier = namespace_name '::'
+                      | nested_name_specifier identifier "::";
+
+namespace_name = identifier ;
+
+id_expression = unqualified_id
+              | qualified_id ;
+
+unqualified_id = identifier ;
+
+qualified_id = [nested_name_specifier] unqualified_id
+             | identifier ;
+
+identifier = ? clang::tok::identifier ? ;
+
+numeric_literal = ? clang::tok::numeric_constant ? ;
