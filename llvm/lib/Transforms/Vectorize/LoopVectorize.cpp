@@ -7626,16 +7626,16 @@ static void createAndCollectMergePhiForReduction(
 
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
-    InnerLoopVectorizer &ILV, DominatorTree *DT, bool IsEpilogueVectorization,
+    InnerLoopVectorizer &ILV, DominatorTree *DT, bool VectorizingEpilogue,
     const DenseMap<const SCEV *, Value *> *ExpandedSCEVs) {
   assert(BestVPlan.hasVF(BestVF) &&
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
          "Trying to execute plan with unsupported UF");
   assert(
-      (IsEpilogueVectorization || !ExpandedSCEVs) &&
+      ((VectorizingEpilogue && ExpandedSCEVs) ||
+       (!VectorizingEpilogue && !ExpandedSCEVs)) &&
       "expanded SCEVs to reuse can only be used during epilogue vectorization");
-  (void)IsEpilogueVectorization;
 
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
@@ -7661,8 +7661,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (!ILV.getTripCount())
     ILV.setTripCount(State.get(BestVPlan.getTripCount(), VPLane(0)));
   else
-    assert(IsEpilogueVectorization && "should only re-use the existing trip "
-                                      "count during epilogue vectorization");
+    assert(VectorizingEpilogue && "should only re-use the existing trip "
+                                  "count during epilogue vectorization");
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
@@ -7715,7 +7715,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   for (VPRecipeBase &R : *ExitVPBB) {
     createAndCollectMergePhiForReduction(
         dyn_cast<VPInstruction>(&R), State, OrigLoop,
-        State.CFG.VPBB2IRBB[ExitVPBB], ExpandedSCEVs);
+        State.CFG.VPBB2IRBB[ExitVPBB], VectorizingEpilogue);
   }
 
   // 2.6. Maintain Loop Hints
@@ -10233,7 +10233,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
         std::unique_ptr<VPlan> BestMainPlan(BestPlan.duplicate());
         auto ExpandedSCEVs = LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF,
-                                             *BestMainPlan, MainILV, DT, true);
+                                             *BestMainPlan, MainILV, DT, false);
         ++LoopsVectorized;
 
         // Second pass vectorizes the epilogue and adjusts the control flow
