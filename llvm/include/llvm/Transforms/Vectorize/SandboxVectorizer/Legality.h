@@ -41,6 +41,7 @@ struct ToStr {
     case LegalityResultID::Widen:
       return "Widen";
     }
+    llvm_unreachable("Unknown LegalityResultID enum");
   }
 
   static const char *getVecReason(ResultReason Reason) {
@@ -50,6 +51,7 @@ struct ToStr {
     case ResultReason::DiffTypes:
       return "DiffTypes";
     }
+    llvm_unreachable("Unknown ResultReason enum");
   }
 };
 #endif // NDEBUG

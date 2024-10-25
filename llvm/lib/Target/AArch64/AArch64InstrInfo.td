@@ -287,6 +287,10 @@ def HasSMEF16F16orSMEF8F16
 def HasNEONandIsStreamingSafe
     : Predicate<"Subtarget->hasNEON()">,
       AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
+// A subset of NEON instructions are legal in Streaming SVE mode only with +sme2p2.
+def HasNEONandIsSME2p2StreamingSafe
+    : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->hasSME2p2())">,
+    AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
@@ -6315,8 +6319,7 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
@@ -6326,8 +6329,7 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON, HasFullFP16] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
@@ -6350,8 +6352,7 @@ def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 
 // fp16: integer extraction from vector must be at least 32-bits to be legal.
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
-// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
-let Predicates = [HasNEON, HasFullFP16] in {
+let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract
                 (v8i16 FPR128:$Rn), (i64 0))), i16)))),
           (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
@@ -10422,6 +10423,57 @@ defm : PromoteBinaryv8f16Tov4f32<any_fadd, FADDv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
+
+let Predicates = [HasCMPBR] in {
+ defm CBGT : CmpBranchRegister<0b000, "cbgt">;
+ defm CBGE : CmpBranchRegister<0b001, "cbge">;
+ defm CBHI : CmpBranchRegister<0b010, "cbhi">;
+ defm CBHS : CmpBranchRegister<0b011, "cbhs">;
+ defm CBEQ : CmpBranchRegister<0b110, "cbeq">;
+ defm CBNE : CmpBranchRegister<0b111, "cbne">;
+
+ def CBHGTWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b000, 0b11, "cbhgt">;
+ def CBHGEWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b001, 0b11, "cbhge">;
+ def CBHHIWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b010, 0b11, "cbhhi">;
+ def CBHHSWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b011, 0b11, "cbhhs">;
+ def CBHEQWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b110, 0b11, "cbheq">;
+ def CBHNEWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b111, 0b11, "cbhne">;
+
+ def CBBGTWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b000, 0b10, "cbbgt">;
+ def CBBGEWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b001, 0b10, "cbbge">;
+ def CBBHIWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b010, 0b10, "cbbhi">;
+ def CBBHSWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b011, 0b10, "cbbhs">;
+ def CBBEQWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b110, 0b10, "cbbeq">;
+ def CBBNEWrr : BaseCmpBranchRegister<GPR32, 0b0, 0b111, 0b10, "cbbne">;
+
+ defm CBGT : CmpBranchImmediate<0b000, "uimm6", "cbgt">;
+ defm CBLT : CmpBranchImmediate<0b001, "uimm6", "cblt">;
+ defm CBHI : CmpBranchImmediate<0b010, "uimm6", "cbhi">;
+ defm CBLO : CmpBranchImmediate<0b011, "uimm6", "cblo">;
+ defm CBEQ : CmpBranchImmediate<0b110, "uimm6", "cbeq">;
+ defm CBNE : CmpBranchImmediate<0b111, "uimm6", "cbne">;
+
+ defm : CmpBranchImmediateAlias<"cbge", "CBGT", "uimm6p1">;
+ defm : CmpBranchImmediateAlias<"cbhs", "CBHI", "uimm6p1">;
+ defm : CmpBranchImmediateAlias<"cble", "CBLT", "uimm6m1">;
+ defm : CmpBranchImmediateAlias<"cbls", "CBLO", "uimm6m1">;
+
+ defm : CmpBranchRegisterAlias<"cble", "CBGE">;
+ defm : CmpBranchRegisterAlias<"cblo", "CBHI">;
+ defm : CmpBranchRegisterAlias<"cbls", "CBHS">;
+ defm : CmpBranchRegisterAlias<"cblt", "CBGT">;
+
+ defm : CmpBranchWRegisterAlias<"cbble", "CBBGE">;
+ defm : CmpBranchWRegisterAlias<"cbblo", "CBBHI">;
+ defm : CmpBranchWRegisterAlias<"cbbls", "CBBHS">;
+ defm : CmpBranchWRegisterAlias<"cbblt", "CBBGT">;
+
+ defm : CmpBranchWRegisterAlias<"cbhle", "CBHGE">;
+ defm : CmpBranchWRegisterAlias<"cbhlo", "CBHHI">;
+ defm : CmpBranchWRegisterAlias<"cbhls", "CBHHS">;
+ defm : CmpBranchWRegisterAlias<"cbhlt", "CBHGT">;
+} // HasCMPBR
+
 
 //===-----------------------------------------------------===//
 // Atomic floating-point in-memory instructions (FEAT_LSFE)

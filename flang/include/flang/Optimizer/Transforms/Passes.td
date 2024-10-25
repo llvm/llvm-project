@@ -153,7 +153,7 @@ def CFGConversion : Pass<"cfg-conversion"> {
            /*default=*/"false",
            "force the body of a loop to execute at least once">,
     Option<"setNSW", "set-nsw", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
            "set nsw on loop variable increment">
   ];
 }
@@ -440,6 +440,13 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
     "cuf::CUFDialect", "mlir::func::FuncDialect"
+  ];
+}
+
+def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
+  let summary = "Convert some GPU operations lowered from CUF to runtime calls";
+  let dependentDialects = [
+    "mlir::LLVM::LLVMDialect"
   ];
 }
 

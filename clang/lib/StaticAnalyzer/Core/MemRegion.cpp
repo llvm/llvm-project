@@ -1079,7 +1079,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
             T = getContext().VoidTy;
           if (!T->getAs<FunctionType>()) {
             FunctionProtoType::ExtProtoInfo Ext;
-            T = getContext().getFunctionType(T, std::nullopt, Ext);
+            T = getContext().getFunctionType(T, {}, Ext);
           }
           T = getContext().getBlockPointerType(T);
 
