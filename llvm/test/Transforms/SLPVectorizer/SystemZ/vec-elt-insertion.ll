@@ -9,8 +9,10 @@
 ; getGatherCost().
 define void @fun0(ptr nocapture %0, double %1) {
 ; CHECK-LABEL: define void @fun0(
-; CHECK:    fmul <2 x double>
-; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
+; CHECK:         fmul <2 x double>
+; CHECK-NEXT:    call <2 x double> @llvm.fmuladd.v2f64(
+; CHECK-NEXT:    call <2 x double> @llvm.fmuladd.v2f64(
+; CHECK-NEXT:    call <2 x double> @llvm.sqrt.v2f64(
 ;
 ; REMARK-LABEL: Function: fun0
 ; REMARK: Args:
@@ -36,13 +38,19 @@ define void @fun0(ptr nocapture %0, double %1) {
 ; getVectorInstrCost().
 define void @fun1(double %0) {
 ; CHECK-LABEL: define void @fun1(
-; CHECK:    fsub <2 x double>
-; CHECK:    fsub <2 x double>
-; CHECK:    fsub <2 x double>
-; CHECK:    fmul <2 x double>
-; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
-; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
-; CHECK:    %14 = fcmp olt <2 x double> %13, %2
+; CHECK:         phi <2 x double>
+; CHECK-NEXT:    phi <2 x double>
+; CHECK-NEXT:    phi <2 x double>
+; CHECK-NEXT:    fsub <2 x double>
+; CHECK-NEXT:    fsub <2 x double>
+; CHECK-NEXT:    fsub <2 x double>
+; CHECK:         fmul <2 x double>
+; CHECK-NEXT:    call <2 x double> @llvm.fmuladd.v2f64(
+; CHECK-NEXT:    call <2 x double> @llvm.fmuladd.v2f64(
+; CHECK-NEXT:    fcmp olt <2 x double>
+; CHECK-NEXT:    extractelement <2 x i1>
+; CHECK-NEXT:    extractelement <2 x i1>
+; CHECK-NEXT:    or i1
 ;
 ; REMARK-LABEL: Function: fun1
 ; REMARK: Args:
@@ -83,7 +91,8 @@ declare double @llvm.fmuladd.f64(double, double, double)
 ; which is recognized in SystemZTTImpl::getScalarizationOverhead().
 define void @fun2(ptr %0, ptr %Dst) {
 ; CHECK-LABEL: define void @fun2(
-; CHECK-NOT: store <2 x i64>
+; CHECK: store i64
+; CHECK: store i64
 ;
 ; REMARK-NOT: Function: fun2
 
