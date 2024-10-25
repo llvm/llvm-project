@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03
 // ADDITIONAL_COMPILE_FLAGS: -Wno-pessimizing-move -Wno-unused-variable
 
+#include <set>
 #include <utility>
 
 #include "test_macros.h"
@@ -25,4 +26,10 @@ void func() {
 #if TEST_STD_VER >= 23
   auto&& v5 = std::forward_like<int&&>(int{});               // expected-warning {{temporary bound to local reference 'v5' will be destroyed at the end of the full-expression}}
 #endif
+
+  // expected-warning@+1 {{temporary whose address is used as value of local variable 'v6' will be destroyed at the end of the full-expression}}
+  auto v6 = std::set<int>({0}).equal_range(0);
+
+  // expected-warning@+1 {{temporary whose address is used as value of local variable 'v7' will be destroyed at the end of the full-expression}}
+  auto v7 = std::set<int>().insert(0);
 }

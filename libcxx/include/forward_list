@@ -740,7 +740,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT { return allocator_type(__base::__alloc()); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return iterator(__base::__before_begin()->__next_); }
+  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
+    return iterator(__base::__before_begin()->__next_);
+  }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return const_iterator(__base::__before_begin()->__next_);
   }
@@ -752,7 +754,9 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_iterator(nullptr); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator before_begin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return iterator(__base::__before_begin()); }
+  _LIBCPP_HIDE_FROM_ABI iterator before_begin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
+    return iterator(__base::__before_begin());
+  }
   _LIBCPP_HIDE_FROM_ABI const_iterator before_begin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return const_iterator(__base::__before_begin());
   }
@@ -767,8 +771,12 @@ public:
     return std::min<size_type>(__node_traits::max_size(__base::__alloc()), numeric_limits<difference_type>::max());
   }
 
-  _LIBCPP_HIDE_FROM_ABI reference front() _LIBCPP_LIFETIMEBOUND { return __base::__before_begin()->__next_->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference front() const _LIBCPP_LIFETIMEBOUND { return __base::__before_begin()->__next_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference front() _LIBCPP_LIFETIMEBOUND {
+    return __base::__before_begin()->__next_->__get_value();
+  }
+  _LIBCPP_HIDE_FROM_ABI const_reference front() const _LIBCPP_LIFETIMEBOUND {
+    return __base::__before_begin()->__next_->__get_value();
+  }
 
 #ifndef _LIBCPP_CXX03_LANG
 #  if _LIBCPP_STD_VER >= 17
@@ -796,14 +804,17 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator emplace_after(const_iterator __p, _Args&&... __args) _LIBCPP_LIFETIMEBOUND;
 
   _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, value_type&& __v) _LIBCPP_LIFETIMEBOUND;
-  _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, initializer_list<value_type> __il) _LIBCPP_LIFETIMEBOUND {
+  _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, initializer_list<value_type> __il)
+      _LIBCPP_LIFETIMEBOUND {
     return insert_after(__p, __il.begin(), __il.end());
   }
 #endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, const value_type& __v) _LIBCPP_LIFETIMEBOUND;
-  _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, size_type __n, const value_type& __v) _LIBCPP_LIFETIMEBOUND;
+  _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, size_type __n, const value_type& __v)
+      _LIBCPP_LIFETIMEBOUND;
   template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, _InputIterator __f, _InputIterator __l) _LIBCPP_LIFETIMEBOUND;
+  _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, _InputIterator __f, _InputIterator __l)
+      _LIBCPP_LIFETIMEBOUND;
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>

@@ -766,7 +766,8 @@ public:
   template <class _Up,
             class... _Args,
             class = enable_if_t< is_constructible_v<value_type, initializer_list<_Up>&, _Args...> > >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) _LIBCPP_LIFETIMEBOUND {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp&
+  emplace(initializer_list<_Up> __il, _Args&&... __args) _LIBCPP_LIFETIMEBOUND {
     reset();
     this->__construct(__il, std::forward<_Args>(__args)...);
     return this->__get();

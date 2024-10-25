@@ -733,14 +733,22 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
+    return const_reverse_iterator(end());
+  }
   _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return reverse_iterator(begin()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
+    return const_reverse_iterator(begin());
+  }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return end(); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND { return const_reverse_iterator(begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
+    return const_reverse_iterator(end());
+  }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
+    return const_reverse_iterator(begin());
+  }
 
   // capacity:
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __size(); }
@@ -811,7 +819,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InputIter __f, _InputIter __l) _LIBCPP_LIFETIMEBOUND;
   template <class _ForwardIterator,
             __enable_if_t<__has_exactly_forward_iterator_category<_ForwardIterator>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _ForwardIterator __f, _ForwardIterator __l) _LIBCPP_LIFETIMEBOUND;
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _ForwardIterator __f, _ForwardIterator __l)
+      _LIBCPP_LIFETIMEBOUND;
   template <class _BiIter, __enable_if_t<__has_bidirectional_iterator_category<_BiIter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _BiIter __f, _BiIter __l) _LIBCPP_LIFETIMEBOUND;
 
