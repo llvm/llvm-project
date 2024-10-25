@@ -8901,6 +8901,22 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
   return AMDGPU::COPY;
 }
 
+bool SIInstrInfo::isPrologueOperandReload(const MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  if ((isSGPRSpill(MI) &&
+       (MI.mayLoad() || Opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)) ||
+      (isWWMRegSpillOpcode(Opcode) && MI.mayLoad())) {
+    Register Reg = MI.defs().begin()->getReg();
+    const MachineBasicBlock *MBB = MI.getParent();
+    MachineBasicBlock::const_instr_iterator I(MI), E = MBB->instr_end();
+    while (++I != E) {
+      if (I->readsRegister(Reg, &RI) && isBasicBlockPrologue(*I))
+        return true;
+    }
+  }
+  return false;
+}
+
 bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
                                        Register Reg) const {
   // We need to handle instructions which may be inserted during register
@@ -8917,8 +8933,7 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
 
   uint16_t Opcode = MI.getOpcode();
   return IsNullOrVectorRegister &&
-         (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode) ||
-          Opcode == AMDGPU::IMPLICIT_DEF ||
+         (isPrologueOperandReload(MI) || Opcode == AMDGPU::IMPLICIT_DEF ||
           (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
            MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
