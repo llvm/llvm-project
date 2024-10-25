@@ -34,7 +34,8 @@ public:
     EXPECT_FP_EQ(func(CFPT(2141.2352 + max_normal * 1.0i)), max_normal);
     EXPECT_FP_EQ(func(CFPT(341.134 + neg_max_normal * 1.0i)), neg_max_normal);
     EXPECT_FP_EQ(func(CFPT(781.142 + min_denormal * 1.0i)), min_denormal);
-    EXPECT_FP_EQ(func(CFPT(781.134 + neg_min_denormal * 1.0i)), neg_min_denormal);
+    EXPECT_FP_EQ(func(CFPT(781.134 + neg_min_denormal * 1.0i)),
+                 neg_min_denormal);
     EXPECT_FP_EQ(func(CFPT(1241.112 + max_denormal * 1.0i)), max_denormal);
     EXPECT_FP_EQ(func(CFPT(121.121 + zero * 1.0i)), zero);
     EXPECT_FP_EQ(func(CFPT(neg_zero + zero * 1.0i)), zero);
