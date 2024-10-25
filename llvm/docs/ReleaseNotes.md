@@ -196,6 +196,8 @@ Changes to the X86 Backend
 
 * Support ISA of `AVX10.2-256` and `AVX10.2-512`.
 
+* Supported instructions of `MOVRS AND AVX10.2`
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -267,6 +269,10 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
+  files.
+
 
 Changes to BOLT
 ---------------------------------

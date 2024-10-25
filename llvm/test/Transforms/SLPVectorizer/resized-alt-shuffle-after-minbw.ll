@@ -80,7 +80,7 @@ define void @func(i32 %0) {
 ; CHECK-NEXT:    [[TMP75:%.*]] = extractelement <32 x i1> [[TMP20]], i32 4
 ; CHECK-NEXT:    [[TMP76:%.*]] = and i1 false, [[TMP75]]
 ; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <32 x i32> [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP78:%.*]] = sext i32 [[TMP77]] to i64
+; CHECK-NEXT:    [[TMP78:%.*]] = zext i32 [[TMP77]] to i64
 ; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr float, ptr addrspace(1) null, i64 [[TMP78]]
 ; CHECK-NEXT:    ret void
 ;

@@ -1622,20 +1622,12 @@ define zeroext i1 @ICmpSLTZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 [[TMP7]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP11]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i32 [[TMP14]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP4]], -2147483648
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP5]], -2147483648
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -1646,20 +1638,12 @@ define zeroext i1 @ICmpSLTZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP5]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp slt i32 [[TMP8]], 0
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP12]], -1
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp slt i32 [[TMP15]], 0
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP5]], -2147483648
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ult i32 [[TMP6]], -2147483648
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp slt i32 [[X]], 0
 ; ORIGIN-NEXT:    store i1 [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -1671,20 +1655,12 @@ define zeroext i1 @ICmpSLTZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; CALLS-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
-; CALLS-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP5]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp slt i32 [[TMP8]], 0
-; CALLS-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; CALLS-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP12]], -1
-; CALLS-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP11]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp slt i32 [[TMP15]], 0
+; CALLS-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; CALLS-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CALLS-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP5]], -2147483648
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp ult i32 [[TMP6]], -2147483648
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = icmp slt i32 [[X]], 0
 ; CALLS-NEXT:    store i1 [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -1701,20 +1677,12 @@ define zeroext i1 @ICmpSGEZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sge i32 [[TMP7]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP11]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp sge i32 [[TMP14]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp uge i32 [[TMP4]], -2147483648
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge i32 [[TMP5]], -2147483648
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i32 [[X]], 0
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -1725,20 +1693,12 @@ define zeroext i1 @ICmpSGEZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP5]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp sge i32 [[TMP8]], 0
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP12]], -1
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp sge i32 [[TMP15]], 0
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp uge i32 [[TMP5]], -2147483648
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp uge i32 [[TMP6]], -2147483648
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp sge i32 [[X]], 0
 ; ORIGIN-NEXT:    store i1 [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -1750,20 +1710,12 @@ define zeroext i1 @ICmpSGEZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; CALLS-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
-; CALLS-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP5]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp sge i32 [[TMP8]], 0
-; CALLS-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; CALLS-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP12]], -1
-; CALLS-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP11]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp sge i32 [[TMP15]], 0
+; CALLS-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; CALLS-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CALLS-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp uge i32 [[TMP5]], -2147483648
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp uge i32 [[TMP6]], -2147483648
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = icmp sge i32 [[X]], 0
 ; CALLS-NEXT:    store i1 [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -1780,20 +1732,12 @@ define zeroext i1 @ICmpSGTZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 0, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP10]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp sgt i32 0, [[TMP14]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 -2147483648, [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ugt i32 -2147483648, [[TMP4]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp sgt i32 0, [[X]]
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -1804,20 +1748,12 @@ define zeroext i1 @ICmpSGTZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP5]], -1
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp sgt i32 0, [[TMP8]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP11]], -1
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP12]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp sgt i32 0, [[TMP15]]
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ugt i32 -2147483648, [[TMP6]]
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ugt i32 -2147483648, [[TMP5]]
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP1]], 0
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP2]], i32 0
@@ -1831,20 +1767,12 @@ define zeroext i1 @ICmpSGTZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; CALLS-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP5]], -1
-; CALLS-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP4]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp sgt i32 0, [[TMP8]]
-; CALLS-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; CALLS-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP11]], -1
-; CALLS-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP12]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp sgt i32 0, [[TMP15]]
+; CALLS-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; CALLS-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CALLS-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp ugt i32 -2147483648, [[TMP6]]
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp ugt i32 -2147483648, [[TMP5]]
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CALLS-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP2]], i32 0
@@ -1863,20 +1791,12 @@ define zeroext i1 @ICmpSLEZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sle i32 0, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP10]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp sle i32 0, [[TMP14]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ule i32 -2147483648, [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule i32 -2147483648, [[TMP4]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp sle i32 0, [[X]]
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -1887,20 +1807,12 @@ define zeroext i1 @ICmpSLEZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP5]], -1
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp sle i32 0, [[TMP8]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP11]], -1
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP12]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp sle i32 0, [[TMP15]]
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ule i32 -2147483648, [[TMP6]]
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ule i32 -2147483648, [[TMP5]]
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP1]], 0
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP2]], i32 0
@@ -1914,20 +1826,12 @@ define zeroext i1 @ICmpSLEZero(i32 %x) nounwind uwtable readnone sanitize_memory
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; CALLS-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP5]], -1
-; CALLS-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP4]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp sle i32 0, [[TMP8]]
-; CALLS-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; CALLS-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP11]], -1
-; CALLS-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP12]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp sle i32 0, [[TMP15]]
+; CALLS-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; CALLS-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CALLS-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp ule i32 -2147483648, [[TMP6]]
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp ule i32 -2147483648, [[TMP5]]
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CALLS-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP2]], i32 0
@@ -1949,20 +1853,12 @@ define zeroext i1 @ICmpSLTAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 -1, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP10]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i32 -1, [[TMP14]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 2147483647, [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i32 2147483647, [[TMP4]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp slt i32 -1, [[X]]
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -1973,20 +1869,12 @@ define zeroext i1 @ICmpSLTAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP5]], -1
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp slt i32 -1, [[TMP8]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP11]], -1
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP12]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp slt i32 -1, [[TMP15]]
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ult i32 2147483647, [[TMP6]]
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ult i32 2147483647, [[TMP5]]
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP1]], 0
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP2]], i32 0
@@ -2000,20 +1888,12 @@ define zeroext i1 @ICmpSLTAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; CALLS-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP5]], -1
-; CALLS-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP4]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp slt i32 -1, [[TMP8]]
-; CALLS-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; CALLS-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP11]], -1
-; CALLS-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP12]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp slt i32 -1, [[TMP15]]
+; CALLS-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; CALLS-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CALLS-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp ult i32 2147483647, [[TMP6]]
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp ult i32 2147483647, [[TMP5]]
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CALLS-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP2]], i32 0
@@ -2032,20 +1912,12 @@ define zeroext i1 @ICmpSGEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sge i32 -1, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP10]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp sge i32 -1, [[TMP14]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp uge i32 2147483647, [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge i32 2147483647, [[TMP4]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i32 -1, [[X]]
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -2056,20 +1928,12 @@ define zeroext i1 @ICmpSGEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP5]], -1
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp sge i32 -1, [[TMP8]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP11]], -1
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP12]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp sge i32 -1, [[TMP15]]
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp uge i32 2147483647, [[TMP6]]
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp uge i32 2147483647, [[TMP5]]
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP1]], 0
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP2]], i32 0
@@ -2083,20 +1947,12 @@ define zeroext i1 @ICmpSGEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; CALLS-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP5]], -1
-; CALLS-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP4]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp sge i32 -1, [[TMP8]]
-; CALLS-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; CALLS-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP11]], -1
-; CALLS-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP12]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp sge i32 -1, [[TMP15]]
+; CALLS-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; CALLS-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CALLS-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp uge i32 2147483647, [[TMP6]]
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp uge i32 2147483647, [[TMP5]]
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CALLS-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP2]], i32 0
@@ -2115,20 +1971,12 @@ define zeroext i1 @ICmpSGTAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP7]], -1
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP11]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp sgt i32 [[TMP14]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[TMP4]], 2147483647
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ugt i32 [[TMP5]], 2147483647
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp sgt i32 [[X]], -1
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -2139,20 +1987,12 @@ define zeroext i1 @ICmpSGTAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP5]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[TMP8]], -1
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP12]], -1
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp sgt i32 [[TMP15]], -1
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ugt i32 [[TMP5]], 2147483647
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ugt i32 [[TMP6]], 2147483647
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp sgt i32 [[X]], -1
 ; ORIGIN-NEXT:    store i1 [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -2164,20 +2004,12 @@ define zeroext i1 @ICmpSGTAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; CALLS-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
-; CALLS-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP5]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[TMP8]], -1
-; CALLS-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; CALLS-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP12]], -1
-; CALLS-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP11]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp sgt i32 [[TMP15]], -1
+; CALLS-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; CALLS-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CALLS-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp ugt i32 [[TMP5]], 2147483647
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp ugt i32 [[TMP6]], 2147483647
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = icmp sgt i32 [[X]], -1
 ; CALLS-NEXT:    store i1 [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -2194,20 +2026,12 @@ define zeroext i1 @ICmpSLEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sle i32 [[TMP7]], -1
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP11]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp sle i32 [[TMP14]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[X]], -2147483648
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ule i32 [[TMP4]], 2147483647
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule i32 [[TMP5]], 2147483647
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp sle i32 [[X]], -1
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -2218,20 +2042,12 @@ define zeroext i1 @ICmpSLEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP5]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp sle i32 [[TMP8]], -1
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP12]], -1
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp sle i32 [[TMP15]], -1
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ule i32 [[TMP5]], 2147483647
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ule i32 [[TMP6]], 2147483647
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp sle i32 [[X]], -1
 ; ORIGIN-NEXT:    store i1 [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -2243,20 +2059,12 @@ define zeroext i1 @ICmpSLEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 1
-; CALLS-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
-; CALLS-NEXT:    [[TMP7:%.*]] = and i32 [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP5]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp sle i32 [[TMP8]], -1
-; CALLS-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP1]], 1
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP10]], 1
-; CALLS-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor i32 [[TMP12]], -1
-; CALLS-NEXT:    [[TMP14:%.*]] = and i32 [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or i32 [[TMP14]], [[TMP11]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp sle i32 [[TMP15]], -1
+; CALLS-NEXT:    [[TMP3:%.*]] = xor i32 [[X]], -2147483648
+; CALLS-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CALLS-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp ule i32 [[TMP5]], 2147483647
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp ule i32 [[TMP6]], 2147483647
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = icmp sle i32 [[X]], -1
 ; CALLS-NEXT:    store i1 [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -2278,20 +2086,12 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x ptr> [[X]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i64> [[TMP1]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP3]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <2 x i64> [[TMP4]], <i64 -1, i64 -1>
-; CHECK-NEXT:    [[TMP7:%.*]] = and <2 x i64> [[TMP2]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or <2 x i64> [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt <2 x i64> [[TMP8]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = shl <2 x i64> [[TMP1]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP11:%.*]] = lshr <2 x i64> [[TMP10]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <2 x i64> [[TMP1]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = xor <2 x i64> [[TMP12]], <i64 -1, i64 -1>
-; CHECK-NEXT:    [[TMP14:%.*]] = and <2 x i64> [[TMP2]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or <2 x i64> [[TMP14]], [[TMP11]]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt <2 x i64> [[TMP15]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i64> [[TMP2]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i64> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i64> [[TMP5]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 -9223372036854775808, i64 -9223372036854775808>
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP9]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; CHECK-NEXT:    store <2 x i1> [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -2303,20 +2103,12 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x ptr> [[X]] to <2 x i64>
-; ORIGIN-NEXT:    [[TMP4:%.*]] = shl <2 x i64> [[TMP1]], <i64 1, i64 1>
-; ORIGIN-NEXT:    [[TMP5:%.*]] = lshr <2 x i64> [[TMP4]], <i64 1, i64 1>
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor <2 x i64> [[TMP1]], [[TMP5]]
-; ORIGIN-NEXT:    [[TMP7:%.*]] = xor <2 x i64> [[TMP5]], <i64 -1, i64 -1>
-; ORIGIN-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP3]], [[TMP7]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = or <2 x i64> [[TMP8]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp slt <2 x i64> [[TMP9]], zeroinitializer
-; ORIGIN-NEXT:    [[TMP11:%.*]] = shl <2 x i64> [[TMP1]], <i64 1, i64 1>
-; ORIGIN-NEXT:    [[TMP12:%.*]] = lshr <2 x i64> [[TMP11]], <i64 1, i64 1>
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor <2 x i64> [[TMP1]], [[TMP12]]
-; ORIGIN-NEXT:    [[TMP14:%.*]] = xor <2 x i64> [[TMP13]], <i64 -1, i64 -1>
-; ORIGIN-NEXT:    [[TMP15:%.*]] = and <2 x i64> [[TMP3]], [[TMP14]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = or <2 x i64> [[TMP15]], [[TMP12]]
-; ORIGIN-NEXT:    [[TMP17:%.*]] = icmp slt <2 x i64> [[TMP16]], zeroinitializer
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP3]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; ORIGIN-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; ORIGIN-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP4]], [[TMP5]]
+; ORIGIN-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP4]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; ORIGIN-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], <i64 -9223372036854775808, i64 -9223372036854775808>
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = xor <2 x i1> [[TMP10]], [[TMP17]]
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; ORIGIN-NEXT:    store <2 x i1> [[TMP18]], ptr @__msan_retval_tls, align 8
@@ -2329,20 +2121,12 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x ptr> [[X]] to <2 x i64>
-; CALLS-NEXT:    [[TMP4:%.*]] = shl <2 x i64> [[TMP1]], <i64 1, i64 1>
-; CALLS-NEXT:    [[TMP5:%.*]] = lshr <2 x i64> [[TMP4]], <i64 1, i64 1>
-; CALLS-NEXT:    [[TMP6:%.*]] = xor <2 x i64> [[TMP1]], [[TMP5]]
-; CALLS-NEXT:    [[TMP7:%.*]] = xor <2 x i64> [[TMP5]], <i64 -1, i64 -1>
-; CALLS-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP3]], [[TMP7]]
-; CALLS-NEXT:    [[TMP9:%.*]] = or <2 x i64> [[TMP8]], [[TMP6]]
-; CALLS-NEXT:    [[TMP10:%.*]] = icmp slt <2 x i64> [[TMP9]], zeroinitializer
-; CALLS-NEXT:    [[TMP11:%.*]] = shl <2 x i64> [[TMP1]], <i64 1, i64 1>
-; CALLS-NEXT:    [[TMP12:%.*]] = lshr <2 x i64> [[TMP11]], <i64 1, i64 1>
-; CALLS-NEXT:    [[TMP13:%.*]] = xor <2 x i64> [[TMP1]], [[TMP12]]
-; CALLS-NEXT:    [[TMP14:%.*]] = xor <2 x i64> [[TMP13]], <i64 -1, i64 -1>
-; CALLS-NEXT:    [[TMP15:%.*]] = and <2 x i64> [[TMP3]], [[TMP14]]
-; CALLS-NEXT:    [[TMP16:%.*]] = or <2 x i64> [[TMP15]], [[TMP12]]
-; CALLS-NEXT:    [[TMP17:%.*]] = icmp slt <2 x i64> [[TMP16]], zeroinitializer
+; CALLS-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP3]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; CALLS-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; CALLS-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP4]], [[TMP5]]
+; CALLS-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP4]], [[TMP1]]
+; CALLS-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; CALLS-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], <i64 -9223372036854775808, i64 -9223372036854775808>
 ; CALLS-NEXT:    [[TMP18:%.*]] = xor <2 x i1> [[TMP10]], [[TMP17]]
 ; CALLS-NEXT:    [[TMP19:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; CALLS-NEXT:    store <2 x i1> [[TMP18]], ptr @__msan_retval_tls, align 8
@@ -2362,20 +2146,12 @@ define <2 x i1> @ICmpSLT_vector_AllOnes(<2 x i32> %x) nounwind uwtable readnone 
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[TMP2]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP4]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[X]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr <2 x i32> [[TMP9]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i32> [[TMP1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <2 x i32> [[TMP10]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP13:%.*]] = and <2 x i32> [[X]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i32> [[TMP13]], [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[TMP14]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[X]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP4]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <2 x i1> [[TMP8]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[X]]
 ; CHECK-NEXT:    store <2 x i1> [[TMP16]], ptr @__msan_retval_tls, align 8
@@ -2386,20 +2162,12 @@ define <2 x i1> @ICmpSLT_vector_AllOnes(<2 x i32> %x) nounwind uwtable readnone 
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 1>
-; ORIGIN-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP3]], <i32 1, i32 1>
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP1]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP6:%.*]] = xor <2 x i32> [[TMP5]], <i32 -1, i32 -1>
-; ORIGIN-NEXT:    [[TMP7:%.*]] = and <2 x i32> [[X]], [[TMP6]]
-; ORIGIN-NEXT:    [[TMP8:%.*]] = or <2 x i32> [[TMP7]], [[TMP4]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[TMP8]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 1>
-; ORIGIN-NEXT:    [[TMP11:%.*]] = lshr <2 x i32> [[TMP10]], <i32 1, i32 1>
-; ORIGIN-NEXT:    [[TMP12:%.*]] = xor <2 x i32> [[TMP1]], [[TMP11]]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = xor <2 x i32> [[TMP11]], <i32 -1, i32 -1>
-; ORIGIN-NEXT:    [[TMP14:%.*]] = and <2 x i32> [[X]], [[TMP13]]
-; ORIGIN-NEXT:    [[TMP15:%.*]] = or <2 x i32> [[TMP14]], [[TMP12]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[TMP15]]
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[X]], <i32 -2147483648, i32 -2147483648>
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; ORIGIN-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP3]], [[TMP4]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP3]], [[TMP1]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP6]]
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP5]]
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP18]], 0
@@ -2414,20 +2182,12 @@ define <2 x i1> @ICmpSLT_vector_AllOnes(<2 x i32> %x) nounwind uwtable readnone 
 ; CALLS-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CALLS-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP3]], <i32 1, i32 1>
-; CALLS-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP1]], [[TMP4]]
-; CALLS-NEXT:    [[TMP6:%.*]] = xor <2 x i32> [[TMP5]], <i32 -1, i32 -1>
-; CALLS-NEXT:    [[TMP7:%.*]] = and <2 x i32> [[X]], [[TMP6]]
-; CALLS-NEXT:    [[TMP8:%.*]] = or <2 x i32> [[TMP7]], [[TMP4]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[TMP8]]
-; CALLS-NEXT:    [[TMP10:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CALLS-NEXT:    [[TMP11:%.*]] = lshr <2 x i32> [[TMP10]], <i32 1, i32 1>
-; CALLS-NEXT:    [[TMP12:%.*]] = xor <2 x i32> [[TMP1]], [[TMP11]]
-; CALLS-NEXT:    [[TMP13:%.*]] = xor <2 x i32> [[TMP11]], <i32 -1, i32 -1>
-; CALLS-NEXT:    [[TMP14:%.*]] = and <2 x i32> [[X]], [[TMP13]]
-; CALLS-NEXT:    [[TMP15:%.*]] = or <2 x i32> [[TMP14]], [[TMP12]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[TMP15]]
+; CALLS-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[X]], <i32 -2147483648, i32 -2147483648>
+; CALLS-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CALLS-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP3]], [[TMP4]]
+; CALLS-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP3]], [[TMP1]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP6]]
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP5]]
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
 ; CALLS-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP18]], 0
@@ -2454,8 +2214,8 @@ define zeroext i1 @ICmpUGTConst(i32 %x) nounwind uwtable readnone sanitize_memor
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[TMP0]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[TMP2]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[TMP2]], 7
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i32 [[TMP4]], 7
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], 7
@@ -2470,8 +2230,8 @@ define zeroext i1 @ICmpUGTConst(i32 %x) nounwind uwtable readnone sanitize_memor
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP0]], -1
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = and i32 [[X]], [[TMP2]]
-; ORIGIN-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 7
 ; ORIGIN-NEXT:    [[TMP5:%.*]] = or i32 [[X]], [[TMP0]]
+; ORIGIN-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 7
 ; ORIGIN-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[TMP5]], 7
 ; ORIGIN-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP4]], [[TMP6]]
 ; ORIGIN-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], 7
@@ -2487,8 +2247,8 @@ define zeroext i1 @ICmpUGTConst(i32 %x) nounwind uwtable readnone sanitize_memor
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP0]], -1
 ; CALLS-NEXT:    [[TMP3:%.*]] = and i32 [[X]], [[TMP2]]
-; CALLS-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 7
 ; CALLS-NEXT:    [[TMP5:%.*]] = or i32 [[X]], [[TMP0]]
+; CALLS-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 7
 ; CALLS-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[TMP5]], 7
 ; CALLS-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP4]], [[TMP6]]
 ; CALLS-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], 7
