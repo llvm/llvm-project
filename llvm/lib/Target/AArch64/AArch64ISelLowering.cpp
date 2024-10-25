@@ -11867,6 +11867,36 @@ const char *AArch64TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
 
 enum class PredicateConstraint { Uph, Upl, Upa };
 
+// Returns a {Reg, RegisterClass} tuple if the constraint is
+// a specific predicate register.
+//
+// For some constraint like "{pn3}" the default path in
+// TargetLowering::getRegForInlineAsmConstraint() leads it to determine that a
+// suitable register class for this register is "PPRorPNR", after which it
+// determines that nxv16i1 is an appropriate type for the constraint, which is
+// not what we want. The code here pre-empts this by matching the register
+// explicitly.
+static std::optional<std::pair<unsigned, const TargetRegisterClass *>>
+parsePredicateRegAsConstraint(StringRef Constraint) {
+  if (!Constraint.starts_with('{') || !Constraint.ends_with('}') ||
+      Constraint[1] != 'p')
+    return std::nullopt;
+
+  Constraint = Constraint.substr(2, Constraint.size() - 3);
+  bool IsPredicateAsCount = Constraint.starts_with("n");
+  if (IsPredicateAsCount)
+    Constraint = Constraint.drop_front(1);
+
+  unsigned V;
+  if (Constraint.getAsInteger(10, V) || V > 31)
+    return std::nullopt;
+
+  if (IsPredicateAsCount)
+    return std::make_pair(AArch64::PN0 + V, &AArch64::PNRRegClass);
+  else
+    return std::make_pair(AArch64::P0 + V, &AArch64::PPRRegClass);
+}
+
 static std::optional<PredicateConstraint>
 parsePredicateConstraint(StringRef Constraint) {
   return StringSwitch<std::optional<PredicateConstraint>>(Constraint)
@@ -12114,6 +12144,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       break;
     }
   } else {
+    if (const auto P = parsePredicateRegAsConstraint(Constraint))
+      return *P;
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
         return std::make_pair(0U, RegClass);
@@ -14520,7 +14552,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
+                      cast<BuildVectorSDNode>(Op)->isConstantSequence();
+  if (useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
   // Try to build a simple constant vector.

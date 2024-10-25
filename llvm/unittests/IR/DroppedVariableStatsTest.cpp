@@ -84,7 +84,7 @@ TEST(DroppedVariableStats, BothDeleted) {
                       llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
-  for (auto &F : *M.get()) {
+  for (auto &F : *M) {
     for (auto &I : instructions(&F)) {
       I.dropDbgRecords();
       I.eraseFromParent();
@@ -141,7 +141,7 @@ TEST(DroppedVariableStats, DbgValLost) {
                       llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
-  for (auto &F : *M.get()) {
+  for (auto &F : *M) {
     for (auto &I : instructions(&F)) {
       I.dropDbgRecords();
       break;
@@ -198,7 +198,7 @@ TEST(DroppedVariableStats, UnrelatedScopes) {
                       llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
-  for (auto &F : *M.get()) {
+  for (auto &F : *M) {
     for (auto &I : instructions(&F)) {
       I.dropDbgRecords();
       break;
@@ -255,7 +255,7 @@ TEST(DroppedVariableStats, ChildScopes) {
                       llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
-  for (auto &F : *M.get()) {
+  for (auto &F : *M) {
     for (auto &I : instructions(&F)) {
       I.dropDbgRecords();
       break;
@@ -313,7 +313,7 @@ TEST(DroppedVariableStats, InlinedAt) {
                       llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
-  for (auto &F : *M.get()) {
+  for (auto &F : *M) {
     for (auto &I : instructions(&F)) {
       I.dropDbgRecords();
       break;
@@ -371,7 +371,7 @@ TEST(DroppedVariableStats, InlinedAtShared) {
                       llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
-  for (auto &F : *M.get()) {
+  for (auto &F : *M) {
     for (auto &I : instructions(&F)) {
       I.dropDbgRecords();
       break;
@@ -430,7 +430,7 @@ TEST(DroppedVariableStats, InlinedAtChild) {
                       llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
-  for (auto &F : *M.get()) {
+  for (auto &F : *M) {
     for (auto &I : instructions(&F)) {
       I.dropDbgRecords();
       break;

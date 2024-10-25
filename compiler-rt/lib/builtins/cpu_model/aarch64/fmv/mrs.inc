@@ -33,8 +33,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_DIT);
   if (hwcap & HWCAP_ASIMDRDM)
     setCPUFeature(FEAT_RDM);
-  if (hwcap & HWCAP_AES)
-    setCPUFeature(FEAT_AES);
   if (hwcap & HWCAP_SHA2)
     setCPUFeature(FEAT_SHA2);
   if (hwcap & HWCAP_JSCVT)
@@ -49,8 +47,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_MEMTAG2);
   if (hwcap2 & HWCAP2_MTE3)
     setCPUFeature(FEAT_MEMTAG3);
-  if (hwcap2 & HWCAP2_SVEAES)
-    setCPUFeature(FEAT_SVE_AES);
   if (hwcap2 & HWCAP2_SVEPMULL)
     setCPUFeature(FEAT_SVE_PMULL128);
   if (hwcap2 & HWCAP2_SVEBITPERM)

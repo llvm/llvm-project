@@ -17,6 +17,7 @@ RUN: llvm-lib -machine:arm64ec -out:sym-arm64ec.lib sym-arm64ec.obj nsym-aarch64
 RUN: llvm-lib -machine:amd64 -out:sym-x86_64.lib sym-x86_64.obj
 RUN: llvm-lib -machine:arm64ec -out:func.lib func.obj
 RUN: llvm-lib -machine:arm64ec -out:func-x86_64.lib func-x86_64.obj
+RUN: llvm-lib -machine:arm64ec -out:func-imp.lib -def:func.def
 
 Verify that a symbol can be referenced from ECSYMBOLS.
 RUN: lld-link -machine:arm64ec -dll -noentry -out:test.dll symref-arm64ec.obj sym-arm64ec.lib loadconfig-arm64ec.obj
@@ -57,6 +58,15 @@ RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-thunk-2.dll func.lib ref-t
 RUN: llvm-objdump -d ref-thunk-2.dll | FileCheck -check-prefix=DISASM %s
 RUN: llvm-readobj --hex-dump=.test ref-thunk-2.dll | FileCheck -check-prefix=TESTSEC %s
 
+Pass multiple libraries containing `func` with different manglings and ensure they don't conflict with each other.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-thunk-3.dll func.lib loadconfig-arm64ec.obj func-x86_64.lib func-imp.lib ref-thunk.obj
+RUN: llvm-objdump -d ref-thunk-3.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-thunk-3.dll | FileCheck -check-prefix=TESTSEC %s
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-thunk-4.dll ref-thunk.obj func.lib loadconfig-arm64ec.obj func-x86_64.lib func-imp.lib
+RUN: llvm-objdump -d ref-thunk-4.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-thunk-4.dll | FileCheck -check-prefix=TESTSEC %s
+
 Test linking against an x86_64 library (which uses a demangled function name).
 RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-x86-1.dll ref-thunk.obj func-x86_64.lib loadconfig-arm64ec.obj
 RUN: llvm-objdump -d ref-x86-1.dll | FileCheck -check-prefix=DISASM-X86 %s
@@ -79,6 +89,11 @@ A similar test using -start-lib for linking.
 RUN: lld-link -machine:arm64ec -dll -noentry -out:start-lib-1.dll ref-thunk.obj -start-lib func.obj -end-lib loadconfig-arm64ec.obj
 RUN: llvm-objdump -d start-lib-1.dll | FileCheck -check-prefix=DISASM %s
 RUN: llvm-readobj --hex-dump=.test start-lib-1.dll | FileCheck -check-prefix=TESTSEC %s
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:start-lib-2.dll ref-thunk.obj -start-lib func.obj -end-lib loadconfig-arm64ec.obj \
+RUN:          -start-lib func-x86_64.obj -end-lib func-imp.lib
+RUN: llvm-objdump -d ref-thunk-3.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-thunk-3.dll | FileCheck -check-prefix=TESTSEC %s
 
 #--- symref.s
     .data
@@ -135,3 +150,8 @@ thunksym:
     .globl func
 func:
     ret
+
+#--- func.def
+LIBRARY func.dll
+EXPORTS
+        func

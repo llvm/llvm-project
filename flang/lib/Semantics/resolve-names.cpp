@@ -1432,6 +1432,7 @@ public:
   void AddOmpSourceRange(const parser::CharBlock &);
 
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
+  static bool NeedsScope(const parser::OmpClause &);
 
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
@@ -1547,6 +1548,17 @@ public:
   void Post(const parser::OpenMPAtomicConstruct &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::OmpClause &x) {
+    if (NeedsScope(x)) {
+      PushScope(Scope::Kind::OtherClause, nullptr);
+    }
+    return true;
+  }
+  void Post(const parser::OmpClause &x) {
+    if (NeedsScope(x)) {
+      PopScope();
+    }
+  }
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1560,6 +1572,12 @@ bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
   default:
     return true;
   }
+}
+
+bool OmpVisitor::NeedsScope(const parser::OmpClause &x) {
+  // Iterators contain declarations, whose scope extends until the end
+  // the clause.
+  return llvm::omp::canHaveIterator(x.Id());
 }
 
 void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
@@ -2422,7 +2440,7 @@ void ScopeHandler::PushScope(Scope &scope) {
   currScope_ = &scope;
   auto kind{currScope_->kind()};
   if (kind != Scope::Kind::BlockConstruct &&
-      kind != Scope::Kind::OtherConstruct) {
+      kind != Scope::Kind::OtherConstruct && kind != Scope::Kind::OtherClause) {
     BeginScope(scope);
   }
   // The name of a module or submodule cannot be "used" in its scope,
@@ -7696,6 +7714,23 @@ public:
       Hide(*maybeName);
     }
     return true;
+  }
+
+  // Iterator-modifiers contain variable declarations, and do introduce
+  // a new scope. These variables can only have integer types, and their
+  // scope only extends until the end of the clause. A potential alternative
+  // to the code below may be to ignore OpenMP clauses, but it's not clear
+  // if OMP-specific checks can be avoided altogether.
+  bool Pre(const parser::OmpClause &x) {
+    if (OmpVisitor::NeedsScope(x)) {
+      PushScope();
+    }
+    return true;
+  }
+  void Post(const parser::OmpClause &x) {
+    if (OmpVisitor::NeedsScope(x)) {
+      PopScope();
+    }
   }
 
 protected:
