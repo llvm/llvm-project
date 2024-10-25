@@ -34,6 +34,7 @@ def deprecated_driver_command : F<"deprecated-driver-command", "use a single dri
 defm resource_dir_recipe : Eq<"resource-dir-recipe", "How to produce missing '-resource-dir' argument">;
 
 def print_timing : F<"print-timing", "Print timing information">;
+def no_print_timing_header : F<"no-print-timing-header", "Do not print the timing information header">;
 
 def verbose : F<"v", "Use verbose output">;
 
