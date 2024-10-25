@@ -71,7 +71,7 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   OS << ") {\n";
 
   // Emit pre-call prints
-  OS << TAB_1 "if (std::getenv(\"OFFLOAD_TRACE\")) {\n";
+  OS << TAB_1 "if (offloadConfig().TracingEnabled) {\n";
   OS << formatv(TAB_2 "std::cout << \"---> {0}\";\n", F.getName());
   OS << TAB_1 "}\n\n";
 
@@ -81,7 +81,7 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
                 F.getName(), ParamNameList);
 
   // Emit post-call prints
-  OS << TAB_1 "if (std::getenv(\"OFFLOAD_TRACE\")) {\n";
+  OS << TAB_1 "if (offloadConfig().TracingEnabled) {\n";
   if (F.getParams().size() > 0) {
     OS << formatv(TAB_2 "{0} Params = {{ ", F.getParamStructName());
     for (const auto &Param : F.getParams()) {
