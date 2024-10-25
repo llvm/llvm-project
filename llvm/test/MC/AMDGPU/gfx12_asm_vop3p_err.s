@@ -131,3 +131,420 @@ v_dot4_f32_bf8_bf8 v0, v1, v2, v3 neg_hi:[1,0,0]
 
 v_dot4_f32_bf8_bf8 v0, v1, v2, v3 neg_hi:[0,1,0]
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+
+
+// op_sel/op_sel_hi: in VOP3P dot, op_sel must be 0 if specified, op_sel_hi cannot appear
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f32_bf16 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_i32_iu8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_i32_iu4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
