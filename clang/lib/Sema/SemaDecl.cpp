@@ -8714,6 +8714,31 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
+  // zero sized static arrays are not allowed in HIP device functions
+  if (LangOpts.CUDAIsDevice && LangOpts.HIP) {
+    if (FunctionDecl *FD = getCurFunctionDecl();
+        FD &&
+        (FD->hasAttr<CUDADeviceAttr>() || FD->hasAttr<CUDAGlobalAttr>())) {
+
+      auto Check = [&](QualType TypeToCheck, const VarDecl *VD) {
+        if (const ConstantArrayType *ArrayT =
+                getASTContext().getAsConstantArrayType(TypeToCheck);
+            ArrayT && ArrayT->isZeroSize()) {
+          Diag(VD->getLocation(), diag::err_typecheck_zero_array_size) << 2;
+        }
+      };
+      QualType NextTy = NewVD->getType();
+      while (NextTy->isAnyPointerType() || NextTy->isArrayType() ||
+             NextTy->isReferenceType()) {
+        if (NextTy->isArrayType()) {
+          Check(NextTy, NewVD);
+          break;
+        } else
+          NextTy = NextTy->getPointeeType();
+      }
+    }
+  }
+
   bool isVM = T->isVariablyModifiedType();
   if (isVM || NewVD->hasAttr<CleanupAttr>() ||
       NewVD->hasAttr<BlocksAttr>())
