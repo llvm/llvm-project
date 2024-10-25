@@ -455,6 +455,16 @@ protected:
     return true;    // Conservative answer
   }
 
+  // Return true if the relocation R may require allocating a DLL import stub.
+  virtual bool relocationNeedsDLLImportStub(const RelocationRef &R) const {
+    return false;
+  }
+
+  // Add the size of a DLL import stub to the buffer size
+  virtual unsigned sizeAfterAddingDLLImportStub(unsigned Size) const {
+    return Size;
+  }
+
 public:
   RuntimeDyldImpl(RuntimeDyld::MemoryManager &MemMgr,
                   JITSymbolResolver &Resolver)

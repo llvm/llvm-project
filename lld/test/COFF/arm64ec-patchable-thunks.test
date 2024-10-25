@@ -27,12 +27,18 @@ PATCH-DISASM-NEXT: 18000200e: cc                           int3
 PATCH-DISASM-NEXT: 18000200f: cc                           int3
 
 RUN: llvm-readobj --hex-dump=.test test.dll | FileCheck -check-prefix=RVA %s
-RVA: 0x180005000 00200000
+RVA: 0x180006000 00200000
 
 RUN: llvm-readobj --coff-load-config test.dll | FileCheck -check-prefix=PATCH-CHPE %s
 PATCH-CHPE:       CodeMap [
 PATCH-CHPE-NEXT:    0x1000 - 0x1008  ARM64EC
 PATCH-CHPE-NEXT:    0x2000 - 0x2010  X64
+PATCH-CHPE-NEXT:  ]
+PATCH-CHPE-NEXT:  CodeRangesToEntryPoints [
+PATCH-CHPE-NEXT:    0x2000 - 0x2010 -> 0x2000
+PATCH-CHPE-NEXT:  ]
+PATCH-CHPE-NEXT:  RedirectionMetadata [
+PATCH-CHPE-NEXT:    0x2000 -> 0x1000
 PATCH-CHPE-NEXT:  ]
 
 

@@ -195,7 +195,7 @@ def SSAI : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins uimm5:$imm),
 //===----------------------------------------------------------------------===//
 
 // Load instructions
-let mayLoad = 1 in {
+let mayLoad = 1, usesCustomInserter = 1 in {
 
   class Load_RRI8<bits<4> oper, string instrAsm, SDPatternOperator opNode,
         ComplexPattern addrOp, Operand memOp>
@@ -216,7 +216,7 @@ def L16UI : Load_RRI8<0x01, "l16ui", zextloadi16, addr_ish2, mem16>;
 def L32I  : Load_RRI8<0x02, "l32i", load, addr_ish4, mem32>;
 
 // Store instructions
-let mayStore = 1 in {
+let mayStore = 1, usesCustomInserter = 1 in {
   class Store_II8<bits<4> oper, string instrAsm, SDPatternOperator opNode,
         ComplexPattern addrOp, Operand memOp>
 	  : RRI8_Inst<0x02, (outs), (ins AR:$t, memOp:$addr),
@@ -416,6 +416,8 @@ def BBSI : RRI8_Inst<0x07, (outs),
   let t{3-0} = imm{3-0};
   let imm8 = target;
 }
+
+def : Pat<(brcond AR:$s, bb:$target), (BNEZ AR:$s, bb:$target)>;
 
 //===----------------------------------------------------------------------===//
 // Call and jump instructions

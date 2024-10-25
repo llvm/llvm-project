@@ -1945,7 +1945,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
                                   replaceUndef(CGM, isPattern, constant));
     }
 
-    if (D.getType()->isBitIntType() &&
+    if (constant && D.getType()->isBitIntType() &&
         CGM.getTypes().typeRequiresSplitIntoByteArray(D.getType())) {
       // Constants for long _BitInt types are split into individual bytes.
       // Try to fold these back into an integer constant so it can be stored
@@ -2509,8 +2509,8 @@ void CodeGenFunction::pushRegularPartialArrayCleanup(llvm::Value *arrayBegin,
 llvm::Function *CodeGenModule::getLLVMLifetimeStartFn() {
   if (LifetimeStartFn)
     return LifetimeStartFn;
-  LifetimeStartFn = llvm::Intrinsic::getDeclaration(&getModule(),
-    llvm::Intrinsic::lifetime_start, AllocaInt8PtrTy);
+  LifetimeStartFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::lifetime_start, AllocaInt8PtrTy);
   return LifetimeStartFn;
 }
 
@@ -2518,8 +2518,8 @@ llvm::Function *CodeGenModule::getLLVMLifetimeStartFn() {
 llvm::Function *CodeGenModule::getLLVMLifetimeEndFn() {
   if (LifetimeEndFn)
     return LifetimeEndFn;
-  LifetimeEndFn = llvm::Intrinsic::getDeclaration(&getModule(),
-    llvm::Intrinsic::lifetime_end, AllocaInt8PtrTy);
+  LifetimeEndFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::lifetime_end, AllocaInt8PtrTy);
   return LifetimeEndFn;
 }
 

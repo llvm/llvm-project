@@ -19,6 +19,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -445,7 +446,7 @@ private:
   DiagnosticsEngine &Diags;
   // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
   // has its own version.
-  bool WarnedStackExhausted = false;
+  StackExhaustionHandler StackHandler;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
@@ -531,6 +532,18 @@ private:
   /// reading. So we need to apply the offset immediately after we read the
   /// namespace as if it is not delayed.
   DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
+
+  /// Mapping from FunctionDecl IDs to the corresponding lambda IDs.
+  ///
+  /// These lambdas have to be loaded right after the function they belong to.
+  /// It is required to have canonical declaration for lambda class from the
+  /// same module as enclosing function. This is required to correctly resolve
+  /// captured variables in the lambda. Without this, due to lazy
+  /// deserialization, canonical declarations for the function and lambdas can
+  /// be selected from different modules and DeclRefExprs may refer to the AST
+  /// nodes that don't exist in the function.
+  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>>
+      FunctionToLambdasMap;
 
   struct PendingUpdateRecord {
     Decl *D;
@@ -647,6 +660,12 @@ private:
   /// Definitions for which we have added merged definitions but not yet
   /// performed deduplication.
   llvm::SetVector<NamedDecl *> PendingMergedDefinitionsToDeduplicate;
+
+  /// The duplicated definitions in module units which are pending to be warned.
+  /// We need to delay it to wait for the loading of definitions since we don't
+  /// want to warn for forward declarations.
+  llvm::SmallVector<std::pair<Decl *, Decl *>>
+      PendingWarningForDuplicatedDefsInModuleUnits;
 
   /// Read the record that describes the lexical contents of a DC.
   bool ReadLexicalDeclContextStorage(ModuleFile &M,
@@ -965,6 +984,9 @@ private:
   ///
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<GlobalDeclID, 4> DeclsToCheckForDeferredDiags;
+
+  /// The IDs of all decls with function effects to be checked.
+  SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
 
 private:
   struct ImportedSubmodule {
@@ -2143,7 +2165,7 @@ public:
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
 
-  void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) override;
+  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);
@@ -2159,7 +2181,8 @@ public:
   /// Report a diagnostic.
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID) const;
 
-  void warnStackExhausted(SourceLocation Loc);
+  void runWithSufficientStackSpace(SourceLocation Loc,
+                                   llvm::function_ref<void()> Fn);
 
   IdentifierInfo *DecodeIdentifierInfo(serialization::IdentifierID ID);
 
@@ -2506,7 +2529,7 @@ private:
 
 inline bool shouldSkipCheckingODR(const Decl *D) {
   return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
-         D->isFromGlobalModule();
+         (D->isFromGlobalModule() || D->isFromHeaderUnit());
 }
 
 } // namespace clang

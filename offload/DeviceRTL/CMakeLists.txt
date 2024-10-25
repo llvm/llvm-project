@@ -46,7 +46,7 @@ set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
                              "gfx908;gfx90a;gfx90c;gfx940;gfx941;gfx942;gfx1010"
                              "gfx1030;gfx1031;gfx1032;gfx1033;gfx1034;gfx1035"
                              "gfx1036;gfx1100;gfx1101;gfx1102;gfx1103;gfx1150"
-                             "gfx1151;gfx1152")
+                             "gfx1151;gfx1152;gfx1153")
 set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
                             "sm_70;sm_72;sm_75;sm_80;sm_86;sm_87;sm_89;sm_90")
 set(all_gpu_architectures
@@ -60,10 +60,10 @@ if(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "all")
 elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto" OR
        LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "native")
   if(NOT LIBOMPTARGET_NVPTX_ARCH AND NOT LIBOMPTARGET_AMDGPU_ARCH)
-    libomptarget_error_say(
+    message(FATAL_ERROR
       "Could not find 'amdgpu-arch' and 'nvptx-arch' tools required for 'auto'")
   elseif(NOT LIBOMPTARGET_FOUND_NVIDIA_GPU AND NOT LIBOMPTARGET_FOUND_AMDGPU_GPU)
-    libomptarget_error_say("No AMD or NVIDIA GPU found on the system when using 'auto'")
+    message(FATAL_ERROR "No AMD or NVIDIA GPU found on the system when using 'auto'")
   endif()
   set(LIBOMPTARGET_DEVICE_ARCHITECTURES
       "${LIBOMPTARGET_NVPTX_DETECTED_ARCH_LIST};${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}")
@@ -80,8 +80,8 @@ set(include_files
   ${include_directory}/Profiling.h
   ${include_directory}/State.h
   ${include_directory}/Synchronization.h
-  ${include_directory}/Types.h
-  ${include_directory}/Utils.h
+  ${include_directory}/DeviceTypes.h
+  ${include_directory}/DeviceUtils.h
   ${include_directory}/Workshare.h
 )
 
@@ -99,7 +99,7 @@ set(src_files
   ${source_directory}/State.cpp
   ${source_directory}/Synchronization.cpp
   ${source_directory}/Tasking.cpp
-  ${source_directory}/Utils.cpp
+  ${source_directory}/DeviceUtils.cpp
   ${source_directory}/Workshare.cpp
 )
 
@@ -125,7 +125,7 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
-             -nocudalib -nogpulib -nostdinc
+             -nocudalib -nogpulib -nogpuinc -nostdlibinc
              -fopenmp -fopenmp-cuda-mode
              -Wno-unknown-cuda-version
              -DOMPTARGET_DEVICE_RUNTIME
@@ -270,7 +270,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       -fopenmp --offload-arch=${target_cpu} -fopenmp-cuda-mode
       -mllvm -openmp-opt-disable
       -foffload-lto -fvisibility=hidden --offload-device-only
-      -nocudalib -nogpulib -nostdinc -Wno-unknown-cuda-version
+      -nocudalib -nogpulib -nogpuinc -nostdlibinc -Wno-unknown-cuda-version
     )
     target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)
     target_include_directories(${ide_target_name} PRIVATE
@@ -291,7 +291,7 @@ foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
   elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
     compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
   else()
-    libomptarget_error_say("Unknown GPU architecture '${gpu_arch}'")
+    message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
   endif()
 endforeach()
 

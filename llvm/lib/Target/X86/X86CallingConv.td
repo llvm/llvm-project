@@ -13,14 +13,14 @@
 
 /// CCIfSubtarget - Match if the current subtarget has a feature F.
 class CCIfSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("static_cast<const X86Subtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).", F),
+    : CCIf<!strconcat("State.getMachineFunction()."
+                      "getSubtarget<X86Subtarget>().", F),
            A>;
 
 /// CCIfNotSubtarget - Match if the current subtarget doesn't has a feature F.
 class CCIfNotSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("!static_cast<const X86Subtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).", F),
+    : CCIf<!strconcat("!State.getMachineFunction()."
+                      "getSubtarget<X86Subtarget>().", F),
            A>;
 
 /// CCIfRegCallv4 - Match if RegCall ABIv4 is respected.
@@ -1103,6 +1103,9 @@ def CC_X86 : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
+
+def CSR_IPRA_32 : CalleeSavedRegs<(add EBP, ESI)>;
+def CSR_IPRA_64 : CalleeSavedRegs<(add RBP, RBX)>;
 
 def CSR_32 : CalleeSavedRegs<(add ESI, EDI, EBX, EBP)>;
 def CSR_64 : CalleeSavedRegs<(add RBX, R12, R13, R14, R15, RBP)>;

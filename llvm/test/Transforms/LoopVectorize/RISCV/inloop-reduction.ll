@@ -314,6 +314,77 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; INLOOP-NEXT:    [[SMIN_LCSSA:%.*]] = phi i32 [ [[SMIN]], [[FOR_BODY]] ], [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ]
 ; INLOOP-NEXT:    ret i32 [[SMIN_LCSSA]]
 ;
+; IF-EVL-OUTLOOP-LABEL: @smin(
+; IF-EVL-OUTLOOP-NEXT:  entry:
+; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_BODY:%.*]]
+; IF-EVL-OUTLOOP:       for.body:
+; IF-EVL-OUTLOOP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-OUTLOOP-NEXT:    [[RDX:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY]] ], [ [[SMIN:%.*]], [[FOR_BODY]] ]
+; IF-EVL-OUTLOOP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IV]]
+; IF-EVL-OUTLOOP-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; IF-EVL-OUTLOOP-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[TMP0]], [[RDX]]
+; IF-EVL-OUTLOOP-NEXT:    [[SMIN]] = select i1 [[CMP_I]], i32 [[TMP0]], i32 [[RDX]]
+; IF-EVL-OUTLOOP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; IF-EVL-OUTLOOP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; IF-EVL-OUTLOOP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; IF-EVL-OUTLOOP:       for.end:
+; IF-EVL-OUTLOOP-NEXT:    [[SMIN_LCSSA:%.*]] = phi i32 [ [[SMIN]], [[FOR_BODY]] ]
+; IF-EVL-OUTLOOP-NEXT:    ret i32 [[SMIN_LCSSA]]
+;
+; IF-EVL-INLOOP-LABEL: @smin(
+; IF-EVL-INLOOP-NEXT:  entry:
+; IF-EVL-INLOOP-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N:%.*]]
+; IF-EVL-INLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-INLOOP-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
+; IF-EVL-INLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
+; IF-EVL-INLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-INLOOP:       vector.ph:
+; IF-EVL-INLOOP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-INLOOP-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; IF-EVL-INLOOP-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
+; IF-EVL-INLOOP-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
+; IF-EVL-INLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
+; IF-EVL-INLOOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; IF-EVL-INLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-INLOOP-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
+; IF-EVL-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
+; IF-EVL-INLOOP:       vector.body:
+; IF-EVL-INLOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-INLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-INLOOP-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[START:%.*]], [[VECTOR_PH]] ], [ [[RDX_MINMAX:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-INLOOP-NEXT:    [[TMP9:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
+; IF-EVL-INLOOP-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP9]], i32 4, i1 true)
+; IF-EVL-INLOOP-NEXT:    [[TMP11:%.*]] = add i64 [[EVL_BASED_IV]], 0
+; IF-EVL-INLOOP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP11]]
+; IF-EVL-INLOOP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 0
+; IF-EVL-INLOOP-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP10]])
+; IF-EVL-INLOOP-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vp.reduce.smin.nxv4i32(i32 2147483647, <vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP10]])
+; IF-EVL-INLOOP-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.smin.i32(i32 [[TMP14]], i32 [[VEC_PHI]])
+; IF-EVL-INLOOP-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP10]] to i64
+; IF-EVL-INLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
+; IF-EVL-INLOOP-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
+; IF-EVL-INLOOP-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-INLOOP-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-INLOOP:       middle.block:
+; IF-EVL-INLOOP-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-INLOOP:       scalar.ph:
+; IF-EVL-INLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-INLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-INLOOP-NEXT:    br label [[FOR_BODY:%.*]]
+; IF-EVL-INLOOP:       for.body:
+; IF-EVL-INLOOP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-INLOOP-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SMIN:%.*]], [[FOR_BODY]] ]
+; IF-EVL-INLOOP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; IF-EVL-INLOOP-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; IF-EVL-INLOOP-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[TMP17]], [[RDX]]
+; IF-EVL-INLOOP-NEXT:    [[SMIN]] = select i1 [[CMP_I]], i32 [[TMP17]], i32 [[RDX]]
+; IF-EVL-INLOOP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; IF-EVL-INLOOP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; IF-EVL-INLOOP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-INLOOP:       for.end:
+; IF-EVL-INLOOP-NEXT:    [[SMIN_LCSSA:%.*]] = phi i32 [ [[SMIN]], [[FOR_BODY]] ], [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ]
+; IF-EVL-INLOOP-NEXT:    ret i32 [[SMIN_LCSSA]]
+;
 ; IF-EVL-LABEL: @smin(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[N:%.*]]
@@ -375,7 +446,6 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    [[SMIN_LCSSA:%.*]] = phi i32 [ [[SMIN]], [[FOR_BODY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
 ; IF-EVL-NEXT:    ret i32 [[SMIN_LCSSA]]
-;
 entry:
   br label %for.body
 

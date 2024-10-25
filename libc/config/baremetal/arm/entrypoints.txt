@@ -203,6 +203,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     # time.h entrypoints
     libc.src.time.asctime
     libc.src.time.asctime_r
+    libc.src.time.ctime
+    libc.src.time.ctime_r
     libc.src.time.difftime
     libc.src.time.gmtime
     libc.src.time.gmtime_r

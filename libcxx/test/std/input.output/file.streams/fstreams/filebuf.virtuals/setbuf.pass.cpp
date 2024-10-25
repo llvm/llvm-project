@@ -10,6 +10,9 @@
 
 // basic_streambuf<charT, traits>* setbuf(char_type* s, streamsize n) override;
 
+// In C++23 and later, this test requires support for P2467R1 in the dylib (a3f17ba3febbd546f2342ffc780ac93b694fdc8d)
+// XFAIL: (!c++03 && !c++11 && !c++14 && !c++17 && !c++20) && using-built-library-before-llvm-18
+
 #include <fstream>
 #include <cstddef>
 #include <cassert>

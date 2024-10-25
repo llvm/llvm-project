@@ -173,7 +173,7 @@ bool ValueObjectMemory::UpdateValue() {
 
     switch (value_type) {
     case Value::ValueType::Invalid:
-      m_error.SetErrorString("Invalid value");
+      m_error = Status::FromErrorString("Invalid value");
       return false;
     case Value::ValueType::Scalar:
       // The variable value is in the Scalar value inside the m_value. We can

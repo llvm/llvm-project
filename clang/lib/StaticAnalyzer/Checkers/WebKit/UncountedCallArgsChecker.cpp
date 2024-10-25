@@ -18,6 +18,8 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
 using namespace clang;
@@ -44,7 +46,11 @@ public:
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+      using Base = RecursiveASTVisitor<LocalVisitor>;
+
       const UncountedCallArgsChecker *Checker;
+      Decl *DeclWithIssue{nullptr};
+
       explicit LocalVisitor(const UncountedCallArgsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
@@ -56,12 +62,18 @@ public:
       bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
         if (isRefType(safeGetName(Decl)))
           return true;
-        return RecursiveASTVisitor<LocalVisitor>::TraverseClassTemplateDecl(
-            Decl);
+        return Base::TraverseClassTemplateDecl(Decl);
+      }
+
+      bool TraverseDecl(Decl *D) {
+        llvm::SaveAndRestore SavedDecl(DeclWithIssue);
+        if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
+          DeclWithIssue = D;
+        return Base::TraverseDecl(D);
       }
 
       bool VisitCallExpr(const CallExpr *CE) {
-        Checker->visitCallExpr(CE);
+        Checker->visitCallExpr(CE, DeclWithIssue);
         return true;
       }
     };
@@ -70,7 +82,7 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitCallExpr(const CallExpr *CE) const {
+  void visitCallExpr(const CallExpr *CE, const Decl *D) const {
     if (shouldSkipCall(CE))
       return;
 
@@ -86,11 +98,10 @@ public:
             return;
         }
         auto *E = MemberCallExpr->getImplicitObjectArgument();
-        QualType ArgType = MemberCallExpr->getObjectType();
-        std::optional<bool> IsUncounted =
-            isUncounted(ArgType->getAsCXXRecordDecl());
+        QualType ArgType = MemberCallExpr->getObjectType().getCanonicalType();
+        std::optional<bool> IsUncounted = isUncounted(ArgType);
         if (IsUncounted && *IsUncounted && !isPtrOriginSafe(E))
-          reportBugOnThis(E);
+          reportBugOnThis(E, D);
       }
 
       for (auto P = F->param_begin();
@@ -103,10 +114,7 @@ public:
         // if ((*P)->hasAttr<SafeRefCntblRawPtrAttr>())
         //  continue;
 
-        const auto *ArgType = (*P)->getType().getTypePtrOrNull();
-        if (!ArgType)
-          continue; // FIXME? Should we bail?
-
+        QualType ArgType = (*P)->getType().getCanonicalType();
         // FIXME: more complex types (arrays, references to raw pointers, etc)
         std::optional<bool> IsUncounted = isUncountedPtr(ArgType);
         if (!IsUncounted || !(*IsUncounted))
@@ -120,7 +128,7 @@ public:
         if (isPtrOriginSafe(Arg))
           continue;
 
-        reportBug(Arg, *P);
+        reportBug(Arg, *P, D);
       }
     }
   }
@@ -241,7 +249,8 @@ public:
             ClsName.ends_with("String"));
   }
 
-  void reportBug(const Expr *CallArg, const ParmVarDecl *Param) const {
+  void reportBug(const Expr *CallArg, const ParmVarDecl *Param,
+                 const Decl *DeclWithIssue) const {
     assert(CallArg);
 
     SmallString<100> Buf;
@@ -262,10 +271,11 @@ public:
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(CallArg->getSourceRange());
+    Report->setDeclWithIssue(DeclWithIssue);
     BR->emitReport(std::move(Report));
   }
 
-  void reportBugOnThis(const Expr *CallArg) const {
+  void reportBugOnThis(const Expr *CallArg, const Decl *DeclWithIssue) const {
     assert(CallArg);
 
     const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();
@@ -275,6 +285,7 @@ public:
         Bug, "Call argument for 'this' parameter is uncounted and unsafe.",
         BSLoc);
     Report->addRange(CallArg->getSourceRange());
+    Report->setDeclWithIssue(DeclWithIssue);
     BR->emitReport(std::move(Report));
   }
 };

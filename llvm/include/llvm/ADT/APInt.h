@@ -17,6 +17,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/float128.h"
 #include <cassert>
 #include <climits>
 #include <cstring>
@@ -105,11 +106,33 @@ public:
   /// \param numBits the bit width of the constructed APInt
   /// \param val the initial value of the APInt
   /// \param isSigned how to treat signedness of val
-  APInt(unsigned numBits, uint64_t val, bool isSigned = false)
+  /// \param implicitTrunc allow implicit truncation of non-zero/sign bits of
+  ///                      val beyond the range of numBits
+  APInt(unsigned numBits, uint64_t val, bool isSigned = false,
+        bool implicitTrunc = true)
       : BitWidth(numBits) {
+    if (!implicitTrunc) {
+      if (isSigned) {
+        if (BitWidth == 0) {
+          assert((val == 0 || val == uint64_t(-1)) &&
+                 "Value must be 0 or -1 for signed 0-bit APInt");
+        } else {
+          assert(llvm::isIntN(BitWidth, val) &&
+                 "Value is not an N-bit signed value");
+        }
+      } else {
+        if (BitWidth == 0) {
+          assert(val == 0 && "Value must be zero for unsigned 0-bit APInt");
+        } else {
+          assert(llvm::isUIntN(BitWidth, val) &&
+                 "Value is not an N-bit unsigned value");
+        }
+      }
+    }
     if (isSingleWord()) {
       U.VAL = val;
-      clearUnusedBits();
+      if (implicitTrunc || isSigned)
+        clearUnusedBits();
     } else {
       initSlowCase(val, isSigned);
     }
@@ -1675,6 +1698,13 @@ public:
   /// re-interprets the bits as a double. Note that it is valid to do this on
   /// any bit width. Exactly 64 bits will be translated.
   double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
+
+#ifdef HAS_IEE754_FLOAT128
+  float128 bitsToQuad() const {
+    __uint128_t ul = ((__uint128_t)U.pVal[1] << 64) + U.pVal[0];
+    return llvm::bit_cast<float128>(ul);
+  }
+#endif
 
   /// Converts APInt bits to a float
   ///

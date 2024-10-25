@@ -151,9 +151,9 @@ bool ValueObjectChild::UpdateValue() {
       case Value::ValueType::HostAddress: {
         lldb::addr_t addr = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
         if (addr == LLDB_INVALID_ADDRESS) {
-          m_error.SetErrorString("parent address is invalid.");
+          m_error = Status::FromErrorString("parent address is invalid.");
         } else if (addr == 0) {
-          m_error.SetErrorString("parent is NULL");
+          m_error = Status::FromErrorString("parent is NULL");
         } else {
           // If a bitfield doesn't fit into the child_byte_size'd window at
           // child_byte_offset, move the window forward until it fits.  The
@@ -208,11 +208,12 @@ bool ValueObjectChild::UpdateValue() {
       }
 
     } else {
-      m_error.SetErrorStringWithFormat("parent failed to evaluate: %s",
-                                       parent->GetError().AsCString());
+      m_error = Status::FromErrorStringWithFormat(
+          "parent failed to evaluate: %s", parent->GetError().AsCString());
     }
   } else {
-    m_error.SetErrorString("ValueObjectChild has a NULL parent ValueObject.");
+    m_error = Status::FromErrorString(
+        "ValueObjectChild has a NULL parent ValueObject.");
   }
 
   return m_error.Success();

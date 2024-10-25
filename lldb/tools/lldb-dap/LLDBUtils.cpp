@@ -45,7 +45,8 @@ bool RunLLDBCommands(llvm::StringRef prefix,
       // RunTerminateCommands.
       static std::mutex handle_command_mutex;
       std::lock_guard<std::mutex> locker(handle_command_mutex);
-      interp.HandleCommand(command.str().c_str(), result);
+      interp.HandleCommand(command.str().c_str(), result,
+                           /*add_to_history=*/true);
     }
 
     const bool got_error = !result.Succeeded();
@@ -84,7 +85,6 @@ std::string RunLLDBCommands(llvm::StringRef prefix,
   llvm::raw_string_ostream strm(s);
   required_command_failed =
       !RunLLDBCommands(prefix, commands, strm, parse_command_directives);
-  strm.flush();
   return s;
 }
 
@@ -133,6 +133,31 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id) {
 int64_t MakeDAPFrameID(lldb::SBFrame &frame) {
   return ((int64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
          frame.GetFrameID();
+}
+
+lldb::SBEnvironment
+GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
+  lldb::SBEnvironment envs{};
+  constexpr llvm::StringRef env_key = "env";
+  const llvm::json::Value *raw_json_env = arguments.get(env_key);
+
+  if (!raw_json_env)
+    return envs;
+
+  if (raw_json_env->kind() == llvm::json::Value::Object) {
+    auto env_map = GetStringMap(arguments, env_key);
+    for (const auto &[key, value] : env_map)
+      envs.Set(key.c_str(), value.c_str(), true);
+
+  } else if (raw_json_env->kind() == llvm::json::Value::Array) {
+    const auto envs_strings = GetStrings(&arguments, env_key);
+    lldb::SBStringList entries{};
+    for (const auto &env : envs_strings)
+      entries.AppendString(env.c_str());
+
+    envs.SetEntries(entries, true);
+  }
+  return envs;
 }
 
 } // namespace lldb_dap

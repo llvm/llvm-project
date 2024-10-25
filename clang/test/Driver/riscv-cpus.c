@@ -502,3 +502,29 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr5-rv64 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR5-RV64 %s
 // MTUNE-SYNTACORE-SCR5-RV64: "-tune-cpu" "syntacore-scr5-rv64"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=syntacore-scr7 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR7 %s
+// MCPU-SYNTACORE-SCR7: "-target-cpu" "syntacore-scr7"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+a"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+f"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+d"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+v"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zba"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zbb"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zbc"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zbkb"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zbkc"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zbkx"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zbs"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zkn"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zknd"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zkne"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-feature" "+zknh"
+// MCPU-SYNTACORE-SCR7-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr7 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR7 %s
+// MTUNE-SYNTACORE-SCR7: "-tune-cpu" "syntacore-scr7"

@@ -980,6 +980,7 @@ R"(All available -march extensions for RISC-V
     za64rs               1.0
     zaamo                1.0
     zabha                1.0
+    zacas                1.0
     zalrsc               1.0
     zama16b              1.0
     zawrs                1.0
@@ -1116,7 +1117,6 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
-    zacas                1.0
     zalasr               0.1
     zvbc32e              0.7
     zvkgs                0.7

@@ -1,4 +1,5 @@
-# Instructions that are correctly rejected but emit a wrong or misleading error.
+# Instructions that were correctly rejected but used to emit a wrong or 
+# misleading error.
 # RUN: not llvm-mc %s -triple=mips -show-encoding -mcpu=mips32r6 -mattr=micromips 2>%t1
 # RUN: FileCheck %s < %t1
 
@@ -28,7 +29,7 @@
   sc $4, -513($5)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   ll $4, 512($5)           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   ll $4, -513($5)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
-  lwr $4, 1($5)            # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
-  lwl $4, 1($5)            # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
-  swr $4, 1($5)            # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
-  swl $4, 1($5)            # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  lwr $4, 1($5)            # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
+  lwl $4, 1($5)            # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
+  swr $4, 1($5)            # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
+  swl $4, 1($5)            # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled

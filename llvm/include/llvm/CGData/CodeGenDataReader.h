@@ -54,8 +54,11 @@ public:
   /// Extract the cgdata embedded in sections from the given object file and
   /// merge them into the GlobalOutlineRecord. This is a static helper that
   /// is used by `llvm-cgdata --merge` or ThinLTO's two-codegen rounds.
+  /// Optionally, \p CombinedHash can be used to compuate the combined hash of
+  /// the merged data.
   static Error mergeFromObjectFile(const object::ObjectFile *Obj,
-                                   OutlinedHashTreeRecord &GlobalOutlineRecord);
+                                   OutlinedHashTreeRecord &GlobalOutlineRecord,
+                                   stable_hash *CombinedHash = nullptr);
 
 protected:
   /// The outlined hash tree that has been read. When it's released by

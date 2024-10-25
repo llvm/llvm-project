@@ -54,7 +54,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/float128.h"
 #include <cassert>
 #include <cerrno>
 #include <cfenv>
@@ -83,7 +82,7 @@ static Constant *foldConstVectorToAPInt(APInt &Result, Type *DestTy,
     else
       Element = C->getAggregateElement(i);
 
-    if (Element && isa<UndefValue>(Element)) {
+    if (isa_and_nonnull<UndefValue>(Element)) {
       Result <<= BitShift;
       continue;
     }
@@ -146,7 +145,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If this is a scalar -> vector cast, convert the input into a <1 x scalar>
   // vector so the code below can handle it uniformly.
-  if (isa<ConstantFP>(C) || isa<ConstantInt>(C)) {
+  if (!isa<VectorType>(C->getType()) &&
+      (isa<ConstantFP>(C) || isa<ConstantInt>(C))) {
     Constant *Ops = C; // don't take the address of C!
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }
@@ -219,7 +219,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize*(Ratio-1);
       for (unsigned j = 0; j != Ratio; ++j) {
         Constant *Src = C->getAggregateElement(SrcElt++);
-        if (Src && isa<UndefValue>(Src))
+        if (isa_and_nonnull<UndefValue>(Src))
           Src = Constant::getNullValue(
               cast<VectorType>(C->getType())->getElementType());
         else
@@ -888,7 +888,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   APInt Offset = APInt(
       BitWidth,
       DL.getIndexedOffsetInType(
-          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)));
+          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)),
+      /*isSigned=*/true, /*implicitTrunc=*/true);
 
   std::optional<ConstantRange> InRange = GEP->getInRange();
   if (InRange)
@@ -923,7 +924,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     Ptr = cast<Constant>(GEP->getOperand(0));
     SrcElemTy = GEP->getSourceElementType();
     Offset = Offset.sadd_ov(
-        APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps)),
+        APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps),
+              /*isSigned=*/true, /*implicitTrunc=*/true),
         Overflow);
   }
 
@@ -1670,16 +1672,19 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "cos" || Name == "cosf" ||
            Name == "cosh" || Name == "coshf";
   case 'e':
-    return Name == "exp" || Name == "expf" ||
-           Name == "exp2" || Name == "exp2f";
+    return Name == "exp" || Name == "expf" || Name == "exp2" ||
+           Name == "exp2f" || Name == "erf" || Name == "erff";
   case 'f':
     return Name == "fabs" || Name == "fabsf" ||
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
+  case 'i':
+    return Name == "ilogb" || Name == "ilogbf";
   case 'l':
-    return Name == "log" || Name == "logf" || Name == "log2" ||
-           Name == "log2f" || Name == "log10" || Name == "log10f" ||
-           Name == "logl";
+    return Name == "log" || Name == "logf" || Name == "logl" ||
+           Name == "log2" || Name == "log2f" || Name == "log10" ||
+           Name == "log10f" || Name == "logb" || Name == "logbf" ||
+           Name == "log1p" || Name == "log1pf";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -1742,7 +1747,7 @@ Constant *GetConstantFoldFPValue(double V, Type *Ty) {
   llvm_unreachable("Can only constant fold half/float/double");
 }
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
 Constant *GetConstantFoldFPValue128(float128 V, Type *Ty) {
   if (Ty->isFP128Ty())
     return ConstantFP::get(Ty, V);
@@ -1782,25 +1787,11 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
   return GetConstantFoldFPValue(Result, Ty);
 }
 
-#if defined(HAS_IEE754_FLOAT128)
-float128 ConvertToQuad(const APFloat &Apf) {
-  APInt Api = Apf.bitcastToAPInt();
-  __uint128_t Uint128 =
-      ((__uint128_t)Api.extractBitsAsZExtValue(64, 64) << 64) +
-      Api.extractBitsAsZExtValue(64, 0);
-  return llvm::bit_cast<float128>(Uint128);
-}
-#endif
-
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
 Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
                             Type *Ty) {
   llvm_fenv_clearexcept();
-  if (!V.isValidIEEEQuad())
-    return nullptr;
-
-  float128 Result = NativeFP(ConvertToQuad(V));
-
+  float128 Result = NativeFP(V.convertToQuad());
   if (llvm_fenv_testexcept()) {
     llvm_fenv_clearexcept();
     return nullptr;
@@ -2129,24 +2120,22 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
     if (Ty->isFP128Ty()) {
       if (IntrinsicID == Intrinsic::log) {
-        APFloat Value = Op->getValueAPF();
-        if (!Value.isValidIEEEQuad())
-          return nullptr;
-
-        float128 Result = logf128(ConvertToQuad(Value));
+        float128 Result = logf128(Op->getValueAPF().convertToQuad());
         return GetConstantFoldFPValue128(Result, Ty);
       }
+
       LibFunc Fp128Func = NotLibFunc;
-      if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
+      if (TLI && TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
           Fp128Func == LibFunc_logl)
         return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
     }
 #endif
 
-    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
+    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy() &&
+        !Ty->isIntegerTy())
       return nullptr;
 
     // Use internal versions of these intrinsics.
@@ -2406,8 +2395,28 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
       break;
+    case LibFunc_ilogb:
+    case LibFunc_ilogbf:
+      if (!APF.isZero() && TLI->has(Func))
+        return ConstantInt::get(Ty, ilogb(APF), true);
+      break;
+    case LibFunc_logb:
+    case LibFunc_logbf:
+      if (!APF.isZero() && TLI->has(Func))
+        return ConstantFoldFP(logb, APF, Ty);
+      break;
+    case LibFunc_log1p:
+    case LibFunc_log1pf:
+      if (APF > APFloat::getOne(APF.getSemantics(), true) && TLI->has(Func))
+        return ConstantFoldFP(log1p, APF, Ty);
+      break;
     case LibFunc_logl:
       return nullptr;
+    case LibFunc_erf:
+    case LibFunc_erff:
+      if (TLI->has(Func))
+        return ConstantFoldFP(erf, APF, Ty);
+      break;
     case LibFunc_nearbyint:
     case LibFunc_nearbyintf:
     case LibFunc_rint:
@@ -3593,15 +3602,14 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         // Per POSIX, this MAY fail if Op is denormal. We choose not failing.
         return true;
 
-
       case LibFunc_asinl:
       case LibFunc_asin:
       case LibFunc_asinf:
       case LibFunc_acosl:
       case LibFunc_acos:
       case LibFunc_acosf:
-        return !(Op < APFloat(Op.getSemantics(), "-1") ||
-                 Op > APFloat(Op.getSemantics(), "1"));
+        return !(Op < APFloat::getOne(Op.getSemantics(), true) ||
+                 Op > APFloat::getOne(Op.getSemantics()));
 
       case LibFunc_sinh:
       case LibFunc_cosh:

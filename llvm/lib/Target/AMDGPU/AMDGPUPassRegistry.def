@@ -20,6 +20,7 @@ MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
             AMDGPULowerBufferFatPointersPass(*this))
 MODULE_PASS("amdgpu-lower-ctor-dtor", AMDGPUCtorDtorLoweringPass())
+MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
 MODULE_PASS("amdgpu-lower-module-lds", AMDGPULowerModuleLDSPass(*this))
 MODULE_PASS("amdgpu-perf-hint",
             AMDGPUPerfHintAnalysisPass(
@@ -96,4 +97,11 @@ FUNCTION_PASS_WITH_PARAMS(
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
+MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
+MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
+MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
+MACHINE_FUNCTION_PASS("si-lower-sgpr-spills", SILowerSGPRSpillsPass())
+MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
+MACHINE_FUNCTION_PASS("si-pre-allocate-wwm-regs", SIPreAllocateWWMRegsPass())
+MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
 #undef MACHINE_FUNCTION_PASS

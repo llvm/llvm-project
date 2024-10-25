@@ -11,7 +11,7 @@ define double @test() {
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, double [[TMP3]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP17]], double [[TMP2]], i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul double [[TMP6]], 0.000000e+00
 ; CHECK-NEXT:    store double [[TMP7]], ptr null, align 16
 ; CHECK-NEXT:    br label [[BB:%.*]]

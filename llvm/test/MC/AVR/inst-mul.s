@@ -1,7 +1,6 @@
 ; RUN: llvm-mc -triple avr -mattr=mul -show-encoding < %s | FileCheck %s
 ; RUN: llvm-mc -filetype=obj -triple avr -mattr=mul < %s \
-; RUN:     | llvm-objdump -d --mattr=mul - | FileCheck --check-prefix=INST %s
-
+; RUN:     | llvm-objdump -dr --mattr=mul - | FileCheck --check-prefix=INST %s
 
 foo:
   mul r0,  r15

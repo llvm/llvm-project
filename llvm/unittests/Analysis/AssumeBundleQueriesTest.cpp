@@ -430,7 +430,8 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   BB->insertInto(F);
   Instruction *Ret = ReturnInst::Create(C);
   Ret->insertInto(BB, BB->begin());
-  Function *FnAssume = Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume);
+  Function *FnAssume =
+      Intrinsic::getOrInsertDeclaration(Mod.get(), Intrinsic::assume);
 
   std::vector<Argument *> ShuffledArgs;
   BitVector HasArg;
@@ -462,7 +463,7 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
     if (count > 1)
       Args.push_back(ConstantInt::get(Type::getInt32Ty(C), value));
 
-    OpBundle.push_back(OperandBundleDef{ss.str().c_str(), std::move(Args)});
+    OpBundle.push_back(OperandBundleDef{str.c_str(), std::move(Args)});
   }
 
   auto *Assume = cast<AssumeInst>(CallInst::Create(

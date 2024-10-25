@@ -1528,7 +1528,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
-
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD];
   list<SubtargetFeature> ZN4Tuning =
     !listconcat(ZN3Tuning, ZN4AdditionalTuning);
@@ -1549,6 +1548,17 @@ def ProcessorFeatures {
                                                   FeatureVPOPCNTDQ];
   list<SubtargetFeature> ZN4Features =
     !listconcat(ZN3Features, ZN4AdditionalFeatures);
+
+  list<SubtargetFeature> ZN5Tuning = ZN4Tuning;
+  list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureVNNI,
+                                                  FeatureMOVDIRI,
+                                                  FeatureMOVDIR64B,
+                                                  FeatureVP2INTERSECT,
+                                                  FeaturePREFETCHI,
+                                                  FeatureAVXVNNI
+                                                  ];
+  list<SubtargetFeature> ZN5Features =
+    !listconcat(ZN4Features, ZN5AdditionalFeatures);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1897,7 +1907,9 @@ def : ProcModel<"znver2", Znver2Model, ProcessorFeatures.ZN2Features,
 def : ProcModel<"znver3", Znver3Model, ProcessorFeatures.ZN3Features,
                 ProcessorFeatures.ZN3Tuning>;
 def : ProcModel<"znver4", Znver4Model, ProcessorFeatures.ZN4Features,
-           ProcessorFeatures.ZN4Tuning>;
+                ProcessorFeatures.ZN4Tuning>;
+def : ProcModel<"znver5", Znver4Model, ProcessorFeatures.ZN5Features,
+                ProcessorFeatures.ZN5Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;

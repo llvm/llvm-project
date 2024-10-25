@@ -254,7 +254,7 @@ struct LandingPadInfo {
       : LandingPadBlock(MBB) {}
 };
 
-class LLVM_EXTERNAL_VISIBILITY MachineFunction {
+class LLVM_ABI MachineFunction {
   Function &F;
   const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;
@@ -376,6 +376,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool HasFakeUses = false;
   bool IsOutlined = false;
 
   /// BBID to assign to the next basic block of this function.
@@ -699,11 +700,6 @@ public:
             BBSectionsType == BasicBlockSection::Preset);
   }
 
-  /// Returns true if basic block labels are to be generated for this function.
-  bool hasBBLabels() const {
-    return BBSectionsType == BasicBlockSection::Labels;
-  }
-
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
@@ -897,13 +893,14 @@ public:
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
-              bool AbortOnError = true) const;
+              raw_ostream *OS = nullptr, bool AbortOnError = true) const;
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
-              const char *Banner = nullptr, bool AbortOnError = true) const;
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
+              bool AbortOnError = true) const;
 
   // Provide accessors for the MachineBasicBlock list...
   using iterator = BasicBlockListType::iterator;
@@ -1198,6 +1195,9 @@ public:
 
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }
+
+  bool hasFakeUses() const { return HasFakeUses; }
+  void setHasFakeUses(bool V) { HasFakeUses = V; }
 
   bool isOutlined() const { return IsOutlined; }
   void setIsOutlined(bool V) { IsOutlined = V; }

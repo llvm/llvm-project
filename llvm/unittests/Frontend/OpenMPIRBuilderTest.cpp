@@ -175,8 +175,7 @@ protected:
                                std::optional<StringRef>("/src/test.dbg"));
     auto CU =
         DIB.createCompileUnit(dwarf::DW_LANG_C, File, "llvm-C", true, "", 0);
-    auto Type =
-        DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+    auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
@@ -6006,6 +6005,10 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   BasicBlock *FallbackBlock = Branch->getSuccessor(0);
   Iter = FallbackBlock->rbegin();
   CallInst *FCall = dyn_cast<CallInst>(&*(++Iter));
+  // 'F' has a dummy DISubprogram which causes OutlinedFunc to also
+  // have a DISubprogram. In this case, the call to OutlinedFunc needs
+  // to have a debug loc, otherwise verifier will complain.
+  FCall->setDebugLoc(DL);
   EXPECT_NE(FCall, nullptr);
 
   // Check that the correct aguments are passed in
@@ -6884,25 +6887,15 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
   OpenMPIRBuilder::TargetDataRTArgs RTArgs;
   OpenMPIRBuilder::TargetDataInfo Info(true, false);
 
-  auto VoidPtrTy = PointerType::getUnqual(Builder.getContext());
   auto VoidPtrPtrTy = PointerType::getUnqual(Builder.getContext());
-  auto Int64Ty = Type::getInt64Ty(Builder.getContext());
   auto Int64PtrTy = PointerType::getUnqual(Builder.getContext());
-  auto Array4VoidPtrTy = ArrayType::get(VoidPtrTy, 4);
-  auto Array4Int64PtrTy = ArrayType::get(Int64Ty, 4);
 
-  Info.RTArgs.BasePointersArray =
-      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo(0));
-  Info.RTArgs.PointersArray =
-      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
-  Info.RTArgs.SizesArray =
-      ConstantPointerNull::get(Array4Int64PtrTy->getPointerTo());
-  Info.RTArgs.MapTypesArray =
-      ConstantPointerNull::get(Array4Int64PtrTy->getPointerTo());
-  Info.RTArgs.MapNamesArray =
-      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
-  Info.RTArgs.MappersArray =
-      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
+  Info.RTArgs.BasePointersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.PointersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.SizesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.MapTypesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.MapNamesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.MappersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
   Info.NumberOfPtrs = 4;
   Info.EmitDebug = false;
   OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info, false);
