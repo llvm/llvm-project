@@ -117,7 +117,7 @@ public:
   }
 
   StringRef first() const {
-    return StringRef(getKeyData(), this->getKeyLength());
+    return getKey();
   }
 
   /// Create a StringMapEntry for the specified key construct the value using
