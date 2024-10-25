@@ -485,7 +485,7 @@ class sme_quarter_outer_product_i8_i32<bits<2> zn_u_pair, bits<2> zm_u_pair, bit
   let Constraints = "$ZAda = $_ZAda";
 }
 
-class sme_quarter_outer_product_i16_i32<bit unsigned, bit N, bit M, bit subtr, RegisterOperand zn_ty, RegisterOperand zm_ty, string mnemonic>
+class sme_quarter_outer_product_i16_i32<bit u0, bit N, bit M, bit subtr, RegisterOperand zn_ty, RegisterOperand zm_ty, string mnemonic>
     : I<(outs TileOp32:$ZAda),
         (ins  TileOp32:$_ZAda, zn_ty:$Zn, zm_ty:$Zm),
         mnemonic, "\t$ZAda, $Zn, $Zm",
@@ -495,7 +495,7 @@ class sme_quarter_outer_product_i16_i32<bit unsigned, bit N, bit M, bit subtr, R
   bits<3> Zn;
   bits<3> Zm;
   let Inst{31-25} = 0b1000000;
-  let Inst{24}    = unsigned; // u0
+  let Inst{24}    = u0;
   let Inst{23-21} = 0b000;
   let Inst{20}    = M;
   let Inst{19-17} = Zm;
