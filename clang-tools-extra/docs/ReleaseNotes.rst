@@ -119,6 +119,13 @@ New checks
   Warns about code that tries to cast between pointers by means of
   ``std::bit_cast`` or ``memcpy``.
 
+- New :doc:`bugprone-incorrect-enable-shared-from-this
+  <clang-tidy/checks/bugprone/incorrect-enable-shared-from-this>` check.
+
+  Detects if a class or struct publicly inherits from 
+  ``std::enable_shared_from_this``, because unintended behavior will 
+  otherwise occur when calling ``shared_from_this``.
+
 - New :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
 
@@ -130,13 +137,6 @@ New checks
 
   Finds cases when an uninstantiated virtual member function in a template class 
   causes cross-compiler incompatibility.
-
-- New :doc:`bugprone-incorrect-enable-shared-from-this
-  <clang-tidy/checks/bugprone/incorrect-enable-shared-from-this>` check.
-
-  Detects if a class or struct publicly inherits from 
-  ``std::enable_shared_from_this``, because unintended behavior will 
-  otherwise occur when calling ``shared_from_this``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
