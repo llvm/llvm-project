@@ -110,6 +110,9 @@ Changes to the AArch64 Backend
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
 
+* Assembler/disassembler support has been added for Armv9.6-A (2024)
+  architecture extensions.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -171,6 +174,8 @@ Changes to the RISC-V Backend
 * Added `Smctr` and `Ssctr` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
+  are no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------

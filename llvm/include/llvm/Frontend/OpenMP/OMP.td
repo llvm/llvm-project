@@ -893,7 +893,7 @@ def OMP_Scan : Directive<"scan"> {
   let association = AS_Separating;
   let category = CA_Subsidiary;
 }
-def OMP_scope : Directive<"scope"> {
+def OMP_Scope : Directive<"scope"> {
   let allowedClauses = [
     VersionedClause<OMPC_Private, 51>,
     VersionedClause<OMPC_Reduction, 51>,
@@ -905,6 +905,14 @@ def OMP_scope : Directive<"scope"> {
   ];
   let association = AS_Block;
   let category = CA_Executable;
+}
+def OMP_EndScope : Directive<"end scope"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>,
+  ];
+  let leafConstructs = OMP_Scope.leafConstructs;
+  let association = OMP_Scope.association;
+  let category = OMP_Scope.category;
 }
 def OMP_Section : Directive<"section"> {
   let association = AS_Separating;
