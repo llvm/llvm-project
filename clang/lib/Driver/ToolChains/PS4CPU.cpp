@@ -250,6 +250,20 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pie");
 
   if (!Relocatable) {
+    CmdArgs.push_back("--eh-frame-hdr");
+    CmdArgs.push_back("--hash-style=sysv");
+
+    // Add a build-id by default to allow the PlayStation symbol server to
+    // index the symbols. `uuid` is the cheapest fool-proof method.
+    // (The non-determinism and alternative methods are noted in the downstream
+    // PlayStation docs).
+    CmdArgs.push_back("--build-id=uuid");
+
+    // All references are expected to be resolved at static link time for both
+    // executables and dynamic libraries. This has been the default linking
+    // behaviour for numerous PlayStation generations.
+    CmdArgs.push_back("--unresolved-symbols=report-all");
+
     // Lazy binding of PLTs is not supported on PlayStation. They are placed in
     // the RelRo segment.
     CmdArgs.push_back("-z");
