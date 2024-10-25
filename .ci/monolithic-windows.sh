@@ -20,14 +20,23 @@ MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
 
 rm -rf "${BUILD_DIR}"
+mkdir -p ${BUILD_DIR}
 
 if [[ -n "${CLEAR_CACHE:-}" ]]; then
   echo "clearing sccache"
   rm -rf "$SCCACHE_DIR"
 fi
 
+# This will capture each time lit results out results and put each in its own file.
+test_result_path="${BUILD_DIR}"/test-results.xml
+mkfifo $test_result_path
+python "${MONOREPO_ROOT}"/.ci/fifo_read.py $test_result_path &
+fifo_pid=$!
+
 sccache --zero-stats
 function at-exit {
+  kill $fifo_pid
+  rm $test_result_path
   python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
     "windows-x64-test-results" "${BUILD_DIR}"/test-results*.xml
 
