@@ -501,7 +501,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // previous frame pointer (R7) and return address (LR) are adjacent on the
   // stack, to form a valid frame record.
   if (getFramePointerReg() == ARM::R7 &&
-      MF.getTarget().Options.DisableFramePointerElim(MF))
+      MF.getTarget().Options.FramePointerIsReserved(MF))
     return SplitR7;
 
   // Returns SplitR11WindowsSEH when the stack pointer needs to be
@@ -519,7 +519,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // requiring R12 to be on the stack.
   if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
       getFramePointerReg() == ARM::R11 &&
-      MF.getTarget().Options.DisableFramePointerElim(MF))
+      MF.getTarget().Options.FramePointerIsReserved(MF))
     return SplitR11AAPCSSignRA;
   return NoSplit;
 }
