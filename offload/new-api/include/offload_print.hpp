@@ -281,11 +281,11 @@ inline void printTagged(std::ostream &os, const void *ptr,
 }
 
 inline std::ostream &operator<<(std::ostream &os,
-                                const offload_error_struct_t *err) {
-  if (err == nullptr) {
+                                const offload_error_struct_t *Err) {
+  if (Err == nullptr) {
     os << "OFFLOAD_RESULT_SUCCESS";
   } else {
-    os << err->code;
+    os << Err->Code;
   }
   return os;
 }
@@ -296,13 +296,13 @@ inline std::ostream &operator<<(
   os << ".NumEntries = ";
   os << *params->pNumEntries;
   os << ", ";
-  os << ".phPlatforms = ";
+  os << ".Platforms = ";
   os << "{";
   for (size_t i = 0; i < *params->pNumEntries; i++) {
     if (i > 0) {
       os << ", ";
     }
-    printPtr(os, (*params->pphPlatforms)[i]);
+    printPtr(os, (*params->pPlatforms)[i]);
   }
   os << "}";
   return os;
@@ -311,25 +311,25 @@ inline std::ostream &operator<<(
 inline std::ostream &operator<<(
     std::ostream &os,
     [[maybe_unused]] const struct offload_platform_get_count_params_t *params) {
-  os << ".pNumPlatforms = ";
-  printPtr(os, *params->ppNumPlatforms);
+  os << ".NumPlatforms = ";
+  printPtr(os, *params->pNumPlatforms);
   return os;
 }
 
 inline std::ostream &operator<<(
     std::ostream &os,
     [[maybe_unused]] const struct offload_platform_get_info_params_t *params) {
-  os << ".hPlatform = ";
-  printPtr(os, *params->phPlatform);
+  os << ".Platform = ";
+  printPtr(os, *params->pPlatform);
   os << ", ";
-  os << ".propName = ";
-  os << *params->ppropName;
+  os << ".PropName = ";
+  os << *params->pPropName;
   os << ", ";
-  os << ".propSize = ";
-  os << *params->ppropSize;
+  os << ".PropSize = ";
+  os << *params->pPropSize;
   os << ", ";
-  os << ".pPropValue = ";
-  printTagged(os, *params->ppPropValue, *params->ppropName, *params->ppropSize);
+  os << ".PropValue = ";
+  printTagged(os, *params->pPropValue, *params->pPropName, *params->pPropSize);
   return os;
 }
 
@@ -337,44 +337,44 @@ inline std::ostream &
 operator<<(std::ostream &os,
            [[maybe_unused]] const struct offload_platform_get_info_size_params_t
                *params) {
-  os << ".hPlatform = ";
-  printPtr(os, *params->phPlatform);
+  os << ".Platform = ";
+  printPtr(os, *params->pPlatform);
   os << ", ";
-  os << ".propName = ";
-  os << *params->ppropName;
+  os << ".PropName = ";
+  os << *params->pPropName;
   os << ", ";
-  os << ".pPropSizeRet = ";
-  printPtr(os, *params->ppPropSizeRet);
+  os << ".PropSizeRet = ";
+  printPtr(os, *params->pPropSizeRet);
   return os;
 }
 
 inline std::ostream &operator<<(
     std::ostream &os,
     [[maybe_unused]] const struct offload_device_get_count_params_t *params) {
-  os << ".hPlatform = ";
-  printPtr(os, *params->phPlatform);
+  os << ".Platform = ";
+  printPtr(os, *params->pPlatform);
   os << ", ";
-  os << ".pNumDevices = ";
-  printPtr(os, *params->ppNumDevices);
+  os << ".NumDevices = ";
+  printPtr(os, *params->pNumDevices);
   return os;
 }
 
 inline std::ostream &
 operator<<(std::ostream &os,
            [[maybe_unused]] const struct offload_device_get_params_t *params) {
-  os << ".hPlatform = ";
-  printPtr(os, *params->phPlatform);
+  os << ".Platform = ";
+  printPtr(os, *params->pPlatform);
   os << ", ";
   os << ".NumEntries = ";
   os << *params->pNumEntries;
   os << ", ";
-  os << ".phDevices = ";
+  os << ".Devices = ";
   os << "{";
   for (size_t i = 0; i < *params->pNumEntries; i++) {
     if (i > 0) {
       os << ", ";
     }
-    printPtr(os, (*params->pphDevices)[i]);
+    printPtr(os, (*params->pDevices)[i]);
   }
   os << "}";
   return os;
@@ -383,17 +383,17 @@ operator<<(std::ostream &os,
 inline std::ostream &operator<<(
     std::ostream &os,
     [[maybe_unused]] const struct offload_device_get_info_params_t *params) {
-  os << ".hDevice = ";
-  printPtr(os, *params->phDevice);
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
   os << ", ";
-  os << ".propName = ";
-  os << *params->ppropName;
+  os << ".PropName = ";
+  os << *params->pPropName;
   os << ", ";
-  os << ".propSize = ";
-  os << *params->ppropSize;
+  os << ".PropSize = ";
+  os << *params->pPropSize;
   os << ", ";
-  os << ".pPropValue = ";
-  printTagged(os, *params->ppPropValue, *params->ppropName, *params->ppropSize);
+  os << ".PropValue = ";
+  printTagged(os, *params->pPropValue, *params->pPropName, *params->pPropSize);
   return os;
 }
 
@@ -401,14 +401,14 @@ inline std::ostream &
 operator<<(std::ostream &os,
            [[maybe_unused]] const struct offload_device_get_info_size_params_t
                *params) {
-  os << ".hDevice = ";
-  printPtr(os, *params->phDevice);
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
   os << ", ";
-  os << ".propName = ";
-  os << *params->ppropName;
+  os << ".PropName = ";
+  os << *params->pPropName;
   os << ", ";
-  os << ".pPropSizeRet = ";
-  printPtr(os, *params->ppPropSizeRet);
+  os << ".PropSizeRet = ";
+  printPtr(os, *params->pPropSizeRet);
   return os;
 }
 
