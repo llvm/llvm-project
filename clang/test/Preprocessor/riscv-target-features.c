@@ -1719,10 +1719,10 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICFISS-EXT %s
 // CHECK-ZICFISS-EXT: __riscv_zicfiss 1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_ssnpm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSNPM-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_ssnpm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSNPM-EXT %s
 // CHECK-SSNPM-EXT: __riscv_ssnpm 1000000{{$}}
@@ -1735,26 +1735,26 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMNPM-EXT %s
 // CHECK-SMNPM-EXT: __riscv_smnpm 1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_smmpm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMMPM-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_smmpm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMMPM-EXT %s
 // CHECK-SMMPM-EXT: __riscv_smmpm 1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_sspm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSPM-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_sspm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSPM-EXT %s
 // CHECK-SSPM-EXT: __riscv_sspm 1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_supm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SUPM-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64i_supm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SUPM-EXT %s
 // CHECK-SUPM-EXT: __riscv_supm 1000000{{$}}

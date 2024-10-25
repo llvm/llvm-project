@@ -129,11 +129,11 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+a,+zabha %s -o - | FileCheck --check-prefix=RV32ZABHA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zve32x -mattr=+experimental-zvbc32e  %s -o - | FileCheck --check-prefix=RV32ZVBC32E %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zve32x -mattr=+experimental-zvkgs  %s -o - | FileCheck --check-prefix=RV32ZVKGS %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssnpm  %s -o - | FileCheck --check-prefix=RV32SSNPM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-smnpm  %s -o - | FileCheck --check-prefix=RV32SMNPM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-smmpm %s -o - | FileCheck --check-prefix=RV32SMMPM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-sspm %s -o - | FileCheck --check-prefix=RV32SSPM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-supm %s -o - | FileCheck --check-prefix=RV32SUPM %s
+; RUN: llc -mtriple=riscv32 -mattr=+ssnpm  %s -o - | FileCheck --check-prefix=RV32SSNPM %s
+; RUN: llc -mtriple=riscv32 -mattr=+smnpm  %s -o - | FileCheck --check-prefix=RV32SMNPM %s
+; RUN: llc -mtriple=riscv32 -mattr=+smmpm %s -o - | FileCheck --check-prefix=RV32SMMPM %s
+; RUN: llc -mtriple=riscv32 -mattr=+sspm %s -o - | FileCheck --check-prefix=RV32SSPM %s
+; RUN: llc -mtriple=riscv32 -mattr=+supm %s -o - | FileCheck --check-prefix=RV32SUPM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-smctr  %s -o - | FileCheck --check-prefix=RV32SMCTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssctr  %s -o - | FileCheck --check-prefix=RV32SSCTR %s
 
@@ -272,11 +272,11 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+zabha %s -o - | FileCheck --check-prefix=RV64ZABHA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvbc32e  %s -o - | FileCheck --check-prefix=RV64ZVBC32E %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvkgs  %s -o - | FileCheck --check-prefix=RV64ZVKGS %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssnpm  %s -o - | FileCheck --check-prefix=RV64SSNPM %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-smnpm  %s -o - | FileCheck --check-prefix=RV64SMNPM %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-smmpm %s -o - | FileCheck --check-prefix=RV64SMMPM %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-sspm %s -o - | FileCheck --check-prefix=RV64SSPM %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-supm %s -o - | FileCheck --check-prefix=RV64SUPM %s
+; RUN: llc -mtriple=riscv64 -mattr=+ssnpm  %s -o - | FileCheck --check-prefix=RV64SSNPM %s
+; RUN: llc -mtriple=riscv64 -mattr=+smnpm  %s -o - | FileCheck --check-prefix=RV64SMNPM %s
+; RUN: llc -mtriple=riscv64 -mattr=+smmpm %s -o - | FileCheck --check-prefix=RV64SMMPM %s
+; RUN: llc -mtriple=riscv64 -mattr=+sspm %s -o - | FileCheck --check-prefix=RV64SSPM %s
+; RUN: llc -mtriple=riscv64 -mattr=+supm %s -o - | FileCheck --check-prefix=RV64SUPM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-smctr  %s -o - | FileCheck --check-prefix=RV64SMCTR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssctr  %s -o - | FileCheck --check-prefix=RV64SSCTR %s
 
