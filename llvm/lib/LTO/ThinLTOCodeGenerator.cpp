@@ -92,8 +92,6 @@ extern cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
 extern cl::opt<std::string> RemarksFormat;
 }
 
-namespace {
-
 // Default to using all available threads in the system, but using only one
 // thred per core, as indicated by the usage of
 // heavyweight_hardware_concurrency() below.
@@ -364,8 +362,8 @@ computeGUIDPreservedSymbols(const lto::InputFile &File,
   return GUIDPreservedSymbols;
 }
 
-std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
-                                            TargetMachine &TM) {
+static std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
+                                                   TargetMachine &TM) {
   SmallVector<char, 128> OutputBuffer;
 
   // CodeGen
@@ -384,6 +382,8 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
   return std::make_unique<SmallVectorMemoryBuffer>(
       std::move(OutputBuffer), /*RequiresNullTerminator=*/false);
 }
+
+namespace {
 
 struct NullModuleCacheEntry : ModuleCacheEntry {
   std::string getEntryPath() override { return "<null>"; }
@@ -872,6 +872,7 @@ private:
   std::optional<std::string> WrittenCASID;
   std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger;
 };
+} // end anonymous namespace
 
 static std::unique_ptr<MemoryBuffer>
 ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
@@ -988,8 +989,6 @@ static void initTMBuilder(TargetMachineBuilder &TMBuilder,
     TMBuilder.MCpu = lto::getThinLTODefaultCPU(TheTriple);
   TMBuilder.TheTriple = std::move(TheTriple);
 }
-
-} // end anonymous namespace
 
 std::optional<std::string> ModuleCacheEntry::computeCacheKey(
     const ModuleSummaryIndex &Index, StringRef ModuleID,
