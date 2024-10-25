@@ -265,6 +265,15 @@ namespace fpclassify {
   char classify_subnorm [__builtin_fpclassify(-1, -1, -1, +1, -1, 1.0e-38f)];
 }
 
+namespace fma {
+  static_assert(__builtin_fma(1.0, 1.0, 1.0) == 2.0);
+  static_assert(__builtin_fma(1.0, -1.0, 1.0) == 0.0);
+  static_assert(__builtin_fmaf(1.0f, 1.0f, 1.0f) == 2.0f);
+  static_assert(__builtin_fmaf(1.0f, -1.0f, 1.0f) == 0.0f);
+  static_assert(__builtin_fmal(1.0L, 1.0L, 1.0L) == 2.0L);
+  static_assert(__builtin_fmal(1.0L, -1.0L, 1.0L) == 0.0L);
+} // namespace fma
+
 namespace abs {
   static_assert(__builtin_abs(14) == 14, "");
   static_assert(__builtin_labs(14L) == 14L, "");

@@ -203,6 +203,13 @@ public:
     return R->F.divide(B.F, RM);
   }
 
+  static APFloat::opStatus fma(const Floating &A, const Floating &B,
+                               const Floating &C, llvm::RoundingMode RM,
+                               Floating *R) {
+    *R = Floating(A.F);
+    return R->F.fusedMultiplyAdd(B.F, C.F, RM);
+  }
+
   static bool neg(const Floating &A, Floating *R) {
     *R = -A;
     return false;

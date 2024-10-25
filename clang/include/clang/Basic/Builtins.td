@@ -199,7 +199,7 @@ def FloorF16F128 : Builtin, F16F128MathTemplate {
 
 def FmaF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_fma"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "T(T, T, T)";
 }
 
@@ -3723,6 +3723,7 @@ def Fma : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, T, T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Fmax : FPMathTemplate, LibBuiltin<"math.h"> {

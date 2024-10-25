@@ -273,6 +273,7 @@ Non-comprehensive list of changes in this release
 - Plugins can now define custom attributes that apply to statements
   as well as declarations.
 - ``__builtin_abs`` function can now be used in constant expressions.
+- ``__builtin_fma`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
