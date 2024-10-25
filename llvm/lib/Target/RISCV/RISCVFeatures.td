@@ -931,6 +931,13 @@ def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
 
+def FeatureStdExtSmrnmi
+    : RISCVExtension<"smrnmi", 1, 0,
+                     "'Smrnmi' (Resumable Non-Maskable Interrupts)">;
+def HasStdExtSmrnmi : Predicate<"Subtarget->hasStdExtSmrnmi()">,
+                       AssemblerPredicate<(all_of FeatureStdExtSmrnmi),
+                           "'Smrnmi' (Resumable Non-Maskable Interrupts)">; 
+
 def FeatureStdExtSmcdeleg
     : RISCVExtension<"smcdeleg", 1, 0,
                      "'Smcdeleg' (Counter Delegation Machine Level)">;

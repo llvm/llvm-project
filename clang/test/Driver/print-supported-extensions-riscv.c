@@ -120,6 +120,7 @@
 // CHECK-NEXT:     smcdeleg             1.0       'Smcdeleg' (Counter Delegation Machine Level)
 // CHECK-NEXT:     smcsrind             1.0       'Smcsrind' (Indirect CSR Access Machine Level)
 // CHECK-NEXT:     smepmp               1.0       'Smepmp' (Enhanced Physical Memory Protection)
+// CHECK-NEXT:     smrnmi               1.0       'Smrnmi' (Resumable Non-Maskable Interrupts)
 // CHECK-NEXT:     smstateen            1.0       'Smstateen' (Machine-mode view of the state-enable extension)
 // CHECK-NEXT:     ssaia                1.0       'Ssaia' (Advanced Interrupt Architecture Supervisor Level)
 // CHECK-NEXT:     ssccfg               1.0       'Ssccfg' (Counter Configuration Supervisor Level)
