@@ -16,7 +16,7 @@ static constexpr llvm::StringRef cudaDeviceModuleName = "cuda_device_mod";
 
 namespace cuf {
 
-/// Retrieve or create the CUDA Fortran GPU module in the give in \p mod.
+/// Retrieve or create the CUDA Fortran GPU module in the given \p mod.
 mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
                                             mlir::SymbolTable &symTab);
 
