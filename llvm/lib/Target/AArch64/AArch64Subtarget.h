@@ -125,7 +125,7 @@ public:
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
-                   unsigned StreamingHazardSize = 0, bool HasMinSize = false);
+                   bool HasMinSize = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
