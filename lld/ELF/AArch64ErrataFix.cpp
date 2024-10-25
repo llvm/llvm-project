@@ -417,7 +417,7 @@ void Patch843419Section::writeTo(uint8_t *buf) {
 
   // Return address is the next instruction after the one we have just copied.
   uint64_t s = getLDSTAddr() + 4;
-  uint64_t p = patchSym->getVA() + 4;
+  uint64_t p = patchSym->getVA(ctx) + 4;
   ctx.target->relocateNoSym(buf + 4, R_AARCH64_JUMP26, s - p);
 }
 

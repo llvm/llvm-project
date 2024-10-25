@@ -14,11 +14,10 @@ define <4 x i8> @concat1(<2 x i8> %A, <2 x i8> %B) {
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov w9, v1.s[1]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v0.h[1], w8
 ; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.b[2], w8
-; CHECK-GI-NEXT:    mov v0.b[3], w9
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    mov v0.h[3], w9
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
    %v4i8 = shufflevector <2 x i8> %A, <2 x i8> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

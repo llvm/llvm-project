@@ -798,7 +798,7 @@ private:
     if (Slot == Record.size())
       return true;
     unsigned ValID = Record[Slot++];
-    if (ValID != bitc::OB_METADATA) {
+    if (ValID != static_cast<unsigned>(bitc::OB_METADATA)) {
       unsigned TypeId;
       return getValueTypePair(Record, --Slot, InstNum, ResVal, TypeId,
                               ConstExprInsertBB);

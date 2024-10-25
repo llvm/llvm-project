@@ -5233,8 +5233,35 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL,
     }
   }
 
+  if (Bases.size() == VL.size())
+    return false;
+
+  if (Bases.size() == 1 && (Bases.front().second.size() == 1 ||
+                            Bases.front().second.size() == VL.size()))
+    return false;
+
   // For each of the bases sort the pointers by Offset and check if any of the
   // base become consecutively allocated.
+  auto ComparePointers = [](Value *Ptr1, Value *Ptr2) {
+    SmallPtrSet<Value *, 13> FirstPointers;
+    SmallPtrSet<Value *, 13> SecondPointers;
+    Value *P1 = Ptr1;
+    Value *P2 = Ptr2;
+    if (P1 == P2)
+      return false;
+    unsigned Depth = 0;
+    while (!FirstPointers.contains(P2) && !SecondPointers.contains(P1) &&
+           Depth <= RecursionMaxDepth) {
+      FirstPointers.insert(P1);
+      SecondPointers.insert(P2);
+      P1 = getUnderlyingObject(P1, /*MaxLookup=*/1);
+      P2 = getUnderlyingObject(P2, /*MaxLookup=*/1);
+      ++Depth;
+    }
+    assert((FirstPointers.contains(P2) || SecondPointers.contains(P1)) &&
+           "Unable to find matching root.");
+    return FirstPointers.contains(P2) && !SecondPointers.contains(P1);
+  };
   for (auto &Base : Bases) {
     for (auto &Vec : Base.second) {
       if (Vec.size() > 1) {
@@ -5253,8 +5280,8 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL,
           return false;
       }
     }
-    sort(Base.second, [](const auto &V1, const auto &V2) {
-      return std::get<2>(V1.front()) < std::get<2>(V2.front());
+    stable_sort(Base.second, [&](const auto &V1, const auto &V2) {
+      return ComparePointers(std::get<0>(V1.front()), std::get<0>(V2.front()));
     });
   }
 
@@ -5286,7 +5313,8 @@ BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
   }
 
   BoUpSLP::OrdersType Order;
-  if (clusterSortPtrAccesses(Ptrs, BBs, ScalarTy, *DL, *SE, Order))
+  if (!LoadEntriesToVectorize.contains(TE.Idx) &&
+      clusterSortPtrAccesses(Ptrs, BBs, ScalarTy, *DL, *SE, Order))
     return std::move(Order);
   return std::nullopt;
 }
@@ -9048,14 +9076,14 @@ protected:
           continue;
         ExtMask[Idx] = SV->getMaskValue(I);
       }
-      bool IsOp1Undef =
-          isUndefVector(SV->getOperand(0),
-                        buildUseMask(LocalVF, ExtMask, UseMask::FirstArg))
-              .all();
-      bool IsOp2Undef =
-          isUndefVector(SV->getOperand(1),
-                        buildUseMask(LocalVF, ExtMask, UseMask::SecondArg))
-              .all();
+      bool IsOp1Undef = isUndefVector</*isPoisonOnly=*/true>(
+                            SV->getOperand(0),
+                            buildUseMask(LocalVF, ExtMask, UseMask::FirstArg))
+                            .all();
+      bool IsOp2Undef = isUndefVector</*isPoisonOnly=*/true>(
+                            SV->getOperand(1),
+                            buildUseMask(LocalVF, ExtMask, UseMask::SecondArg))
+                            .all();
       if (!IsOp1Undef && !IsOp2Undef) {
         // Update mask and mark undef elems.
         for (int &I : Mask) {
@@ -9812,13 +9840,14 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             ::getShuffleCost(TTI, *RegShuffleKind,
                              getWidenedType(ScalarTy, EltsPerVector), SubMask);
       }
+      const unsigned BaseVF = getFullVectorNumberOfElements(
+          *R.TTI, VL.front()->getType(), alignTo(NumElts, EltsPerVector));
       for (unsigned Idx : Indices) {
-        assert((Idx + EltsPerVector) <= alignTo(NumElts, EltsPerVector) &&
+        assert((Idx + EltsPerVector) <= BaseVF &&
                "SK_ExtractSubvector index out of range");
-        Cost += ::getShuffleCost(
-            TTI, TTI::SK_ExtractSubvector,
-            getWidenedType(ScalarTy, alignTo(NumElts, EltsPerVector)), {},
-            CostKind, Idx, getWidenedType(ScalarTy, EltsPerVector));
+        Cost += ::getShuffleCost(TTI, TTI::SK_ExtractSubvector,
+                                 getWidenedType(ScalarTy, BaseVF), {}, CostKind,
+                                 Idx, getWidenedType(ScalarTy, EltsPerVector));
       }
       // Second attempt to check, if just a permute is better estimated than
       // subvector extract.
@@ -11560,7 +11589,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 
   if (VectorizableTree.back()->isGather() &&
       VectorizableTree.back()->isAltShuffle() &&
-      VectorizableTree.back()->getVectorFactor() > 2)
+      VectorizableTree.back()->getVectorFactor() > 2 &&
+      allSameBlock(VectorizableTree.back()->Scalars))
     return false;
 
   assert(VectorizableTree.empty()
@@ -12038,8 +12068,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     auto It = MinBWs.find(Entry);
     if (It != MinBWs.end()) {
       auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
-      unsigned Extend =
-          It->second.second ? Instruction::SExt : Instruction::ZExt;
+      unsigned Extend = isKnownNonNegative(EU.Scalar, SimplifyQuery(*DL))
+                            ? Instruction::ZExt
+                            : Instruction::SExt;
       VecTy = getWidenedType(MinTy, BundleWidth);
       ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
                                                 VecTy, EU.Lane);
@@ -12551,7 +12582,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // Build a list of tree entries where V is used.
     SmallPtrSet<const TreeEntry *, 4> VToTEs;
     for (const TreeEntry *TEPtr : ValueToGatherNodes.find(V)->second) {
-      if (TEPtr == TE)
+      if (TEPtr == TE || TEPtr->Idx == 0)
         continue;
       assert(any_of(TEPtr->Scalars,
                     [&](Value *V) { return GatheredScalars.contains(V); }) &&
@@ -13275,8 +13306,17 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     return Vec;
   };
   auto *VecTy = getWidenedType(ScalarTy, VL.size());
-  Value *Vec = Root ? Root : PoisonValue::get(VecTy);
+  Value *Vec = PoisonValue::get(VecTy);
   SmallVector<int> NonConsts;
+  SmallVector<int> Mask(VL.size());
+  std::iota(Mask.begin(), Mask.end(), 0);
+  Value *OriginalRoot = Root;
+  if (auto *SV = dyn_cast_or_null<ShuffleVectorInst>(Root);
+      SV && isa<PoisonValue>(SV->getOperand(1)) &&
+      SV->getOperand(0)->getType() == VecTy) {
+    Root = SV->getOperand(0);
+    Mask.assign(SV->getShuffleMask().begin(), SV->getShuffleMask().end());
+  }
   // Insert constant values at first.
   for (int I = 0, E = VL.size(); I < E; ++I) {
     if (PostponedIndices.contains(I))
@@ -13285,19 +13325,20 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
       NonConsts.push_back(I);
       continue;
     }
-    if (Root) {
-      if (!isa<UndefValue>(VL[I])) {
-        NonConsts.push_back(I);
-        continue;
-      }
-      if (isa<PoisonValue>(VL[I]))
-        continue;
-      if (auto *SV = dyn_cast<ShuffleVectorInst>(Root)) {
-        if (SV->getMaskValue(I) == PoisonMaskElem)
-          continue;
-      }
-    }
+    if (isa<PoisonValue>(VL[I]))
+      continue;
     Vec = CreateInsertElement(Vec, VL[I], I, ScalarTy);
+    Mask[I] = I + E;
+  }
+  if (Root) {
+    if (isa<PoisonValue>(Vec)) {
+      Vec = OriginalRoot;
+    } else {
+      Vec = Builder.CreateShuffleVector(Root, Vec, Mask);
+      if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
+          OI && OI->hasNUses(0))
+        eraseInstruction(OI);
+    }
   }
   // Insert non-constant values.
   for (int I : NonConsts)
@@ -14011,7 +14052,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   if (!ReorderMask.empty())
     reorderScalars(GatheredScalars, ReorderMask);
   auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF,
-                             unsigned I, unsigned SliceSize) {
+                             unsigned I, unsigned SliceSize,
+                             bool IsNotPoisonous) {
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
@@ -14020,14 +14062,29 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     unsigned EdgeIdx = E->UserTreeIndices.back().EdgeIdx;
     if (UserTE->getNumOperands() != 2)
       return false;
-    auto *It =
-        find_if(VectorizableTree, [=](const std::unique_ptr<TreeEntry> &TE) {
-          return find_if(TE->UserTreeIndices, [=](const EdgeInfo &EI) {
-                   return EI.UserTE == UserTE && EI.EdgeIdx != EdgeIdx;
-                 }) != TE->UserTreeIndices.end();
-        });
-    if (It == VectorizableTree.end())
-      return false;
+    if (!IsNotPoisonous) {
+      auto *It =
+          find_if(VectorizableTree, [=](const std::unique_ptr<TreeEntry> &TE) {
+            return find_if(TE->UserTreeIndices, [=](const EdgeInfo &EI) {
+                     return EI.UserTE == UserTE && EI.EdgeIdx != EdgeIdx;
+                   }) != TE->UserTreeIndices.end();
+          });
+      if (It == VectorizableTree.end())
+        return false;
+      SmallVector<Value *> GS((*It)->Scalars.begin(), (*It)->Scalars.end());
+      if (!(*It)->ReorderIndices.empty()) {
+        inversePermutation((*It)->ReorderIndices, ReorderMask);
+        reorderScalars(GS, ReorderMask);
+      }
+      if (!all_of(zip(GatheredScalars, GS), [&](const auto &P) {
+            Value *V0 = std::get<0>(P);
+            Value *V1 = std::get<1>(P);
+            return !isa<UndefValue>(V0) || isa<PoisonValue>(V0) ||
+                   (isa<UndefValue>(V0) && !isa<PoisonValue>(V0) &&
+                    is_contained(E->Scalars, V1));
+          }))
+        return false;
+    }
     int Idx;
     if ((Mask.size() < InputVF &&
          ShuffleVectorInst::isExtractSubvectorMask(Mask, InputVF, Idx) &&
@@ -14300,12 +14357,13 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             isGuaranteedNotToBePoison(Vec1) && isGuaranteedNotToBePoison(Vec2);
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
+        bool IsNotPoisonedVec = isGuaranteedNotToBePoison(Vec1);
         IsUsedInExpr &= FindReusedSplat(
             ExtractMask,
             cast<FixedVectorType>(Vec1->getType())->getNumElements(), 0,
-            ExtractMask.size());
+            ExtractMask.size(), IsNotPoisonedVec);
         ShuffleBuilder.add(Vec1, ExtractMask, /*ForExtracts=*/true);
-        IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1);
+        IsNonPoisoned &= IsNotPoisonedVec;
       } else {
         IsUsedInExpr = false;
         ShuffleBuilder.add(PoisonValue::get(VecTy), ExtractMask,
@@ -14328,12 +14386,15 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         VecMask.assign(VecMask.size(), PoisonMaskElem);
         copy(SubMask, std::next(VecMask.begin(), I * SliceSize));
         if (TEs.size() == 1) {
-          IsUsedInExpr &= FindReusedSplat(
-              VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
+          bool IsNotPoisonedVec =
+              TEs.front()->VectorizedValue
+                  ? isGuaranteedNotToBePoison(TEs.front()->VectorizedValue)
+                  : true;
+          IsUsedInExpr &=
+              FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I,
+                              SliceSize, IsNotPoisonedVec);
           ShuffleBuilder.add(*TEs.front(), VecMask);
-          if (TEs.front()->VectorizedValue)
-            IsNonPoisoned &=
-                isGuaranteedNotToBePoison(TEs.front()->VectorizedValue);
+          IsNonPoisoned &= IsNotPoisonedVec;
         } else {
           IsUsedInExpr = false;
           ShuffleBuilder.add(*TEs.front(), *TEs.back(), VecMask);
@@ -15724,8 +15785,9 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           // to the larger type.
           ExV = Ex;
           if (Scalar->getType() != Ex->getType())
-            ExV = Builder.CreateIntCast(Ex, Scalar->getType(),
-                                        MinBWs.find(E)->second.second);
+            ExV = Builder.CreateIntCast(
+                Ex, Scalar->getType(),
+                !isKnownNonNegative(Scalar, SimplifyQuery(*DL)));
           auto *I = dyn_cast<Instruction>(Ex);
           ScalarToEEs[Scalar].try_emplace(I ? I->getParent()
                                             : &F->getEntryBlock(),
@@ -16058,7 +16120,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     for (Instruction *I : RemovedInsts) {
       const TreeEntry *IE = getTreeEntry(I);
       if (IE->Idx != 0 &&
-          !(VectorizableTree.front()->isGather() && isa<LoadInst>(I) &&
+          !(VectorizableTree.front()->isGather() &&
             !IE->UserTreeIndices.empty() &&
             any_of(IE->UserTreeIndices,
                    [&](const EdgeInfo &EI) {
