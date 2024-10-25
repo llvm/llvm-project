@@ -1352,12 +1352,17 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
     }
     assert(NodeContextIds == CalleeEdgeContextIds);
   }
+  // FIXME: Since this checking is only invoked under an option, we should
+  // change the error checking from using assert to something that will trigger
+  // an error on a release build.
+#ifndef NDEBUG
   // Make sure we don't end up with duplicate edges between the same caller and
   // callee.
   DenseSet<ContextNode<DerivedCCG, FuncTy, CallTy> *> NodeSet;
   for (const auto &E : Node->CalleeEdges)
     NodeSet.insert(E->Callee);
   assert(NodeSet.size() == Node->CalleeEdges.size());
+#endif
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
