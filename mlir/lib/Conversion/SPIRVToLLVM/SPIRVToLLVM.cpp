@@ -1148,6 +1148,12 @@ public:
     if (loopOp.getLoopControl() != spirv::LoopControl::None)
       return failure();
 
+    // `spirv.mlir.loop` with empty region is redundant and should be erased.
+    if (loopOp.getBody().empty()) {
+      rewriter.eraseOp(loopOp);
+      return success();
+    }
+
     Location loc = loopOp.getLoc();
 
     // Split the current block after `spirv.mlir.loop`. The remaining ops will
