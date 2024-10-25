@@ -13,7 +13,6 @@
 // RUN: %clang_cc1 -std=c++20 %t/b.cppm -emit-module-interface -o %t/b.v1.pcm \
 // RUN:     -fmodule-file=a=%t/a.v1.pcm
 // RUN: diff %t/b.pcm %t/b.v1.pcm &> /dev/null
-
 //--- a.cppm
 export module a;
 export int a();
@@ -23,7 +22,7 @@ export module b;
 import a;
 export int b();
 
-// CHECK: <DECL_FUNCTION {{.*}} op8=4104
+// CHECK: <DECL_FUNCTION {{.*}} op8=4112
 // CHECK: <TYPE_FUNCTION_PROTO
 
 //--- a.v1.cppm
