@@ -4946,13 +4946,13 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        (TargetDeviceOffloadKind == Action::OFK_SYCL ||
-         (((Input->getOffloadingToolChain() &&
-            Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
-           TargetDeviceOffloadKind == Action::OFK_HIP) &&
-          (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                        false) ||
-           TargetDeviceOffloadKind == Action::OFK_OpenMP)))) {
+        TargetDeviceOffloadKind == Action::OFK_SYCL ||
+        (((Input->getOffloadingToolChain() &&
+           Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
+          TargetDeviceOffloadKind == Action::OFK_HIP) &&
+         (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                       false) ||
+          TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) &&
                   (TargetDeviceOffloadKind == Action::OFK_None ||
