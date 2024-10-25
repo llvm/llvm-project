@@ -582,9 +582,9 @@ public:
   /// @name Helper Methods
   /// @{
 
-  /// MakeSYCLDeviceTriple - Returns the SYCL device triple for the
+  /// getSYCLDeviceTriple - Returns the SYCL device triple for the
   /// specified ArchType.
-  llvm::Triple MakeSYCLDeviceTriple(StringRef TargetArch = "spir64") const;
+  llvm::Triple getSYCLDeviceTriple(StringRef TargetArch = "spir64") const;
 
   /// PrintActions - Print the list of actions.
   void PrintActions(const Compilation &C) const;

@@ -770,7 +770,7 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
 
 static const char *getDefaultSYCLArch(Compilation &C) {
   // If -fsycl is supplied we will assume SPIR-V
-  if (C.getDefaultToolChain().getTriple().getArch() == llvm::Triple::x86)
+  if (C.getDefaultToolChain().getTriple().isArch32Bit())
     return "spirv32";
   return "spirv64";
 }
@@ -784,7 +784,7 @@ static bool addSYCLDefaultTriple(Compilation &C,
   }
   // Add the default triple as it was not found.
   llvm::Triple DefaultTriple =
-      C.getDriver().MakeSYCLDeviceTriple(getDefaultSYCLArch(C));
+      C.getDriver().getSYCLDeviceTriple(getDefaultSYCLArch(C));
   SYCLTriples.insert(SYCLTriples.begin(), DefaultTriple);
   return true;
 }
@@ -2059,7 +2059,7 @@ void Driver::PrintHelp(bool ShowHidden) const {
                       VisibilityMask);
 }
 
-llvm::Triple Driver::MakeSYCLDeviceTriple(StringRef TargetArch) const {
+llvm::Triple Driver::getSYCLDeviceTriple(StringRef TargetArch) const {
   SmallVector<StringRef, 5> SYCLAlias = { "spir", "spir64", "spirv32", "spirv64"};
   if (std::find(SYCLAlias.begin(), SYCLAlias.end(), TargetArch) !=
       SYCLAlias.end()) {

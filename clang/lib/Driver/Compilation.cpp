@@ -219,7 +219,7 @@ static bool ActionFailed(const Action *A,
 
   // CUDA/HIP/SYCL can have the same input source code compiled multiple times
   // so do not compile again if there are already failures. It is OK to abort
-  // the CUDA pipeline on errors.
+  // the CUDA/HIP/SYCL pipeline on errors.
   if (A->isOffloading(Action::OFK_Cuda) || A->isOffloading(Action::OFK_HIP) ||
       A->isOffloading(Action::OFK_SYCL))
     return true;

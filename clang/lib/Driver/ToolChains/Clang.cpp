@@ -1066,10 +1066,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_MP);
   Args.AddLastArg(CmdArgs, options::OPT_MV);
 
-  // Add offload include arguments specific for CUDA/HIP.  This must happen
+  // Add offload include arguments specific for CUDA/HIP/SYCL. This must happen
   // before we -I or -include anything else, because we must pick up the
-  // CUDA/HIP headers from the particular CUDA/ROCm installation, rather than
-  // from e.g. /usr/local/include.
+  // CUDA/HIP/SYCL headers from the particular CUDA/ROCm/SYCL installation,
+  // rather than from e.g. /usr/local/include.
   if (JA.isOffloading(Action::OFK_Cuda))
     getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
   if (JA.isOffloading(Action::OFK_HIP))
