@@ -1,5 +1,5 @@
 ! Test internal procedure host association lowering.
-! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false -fwrapv %s -o - | FileCheck %s
 
 ! -----------------------------------------------------------------------------
 !     Test non character intrinsic scalars
