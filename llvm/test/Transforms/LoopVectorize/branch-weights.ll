@@ -75,8 +75,8 @@ exit:
 
 ; CHECK: [[PROF_F0_ENTRY]] = !{!"branch_weights", i32 12, i32 1}
 ; CHECK: [[PROF_F0_UNLIKELY]] = !{!"branch_weights", i32 1, i32 127}
-; CEHCK: [[PROF_F0_VECTOR_BODY]] = !{!"branch_weights", i32 1, i32 307}
+; CHECK: [[PROF_F0_VECTOR_BODY]] = !{!"branch_weights", i32 1, i32 307}
 ; CHECK: [[PROF_F0_MIDDLE_BLOCKS]] =  !{!"branch_weights", i32 1, i32 3}
 ; CHECK: [[PROF_F0_VEC_EPILOGUE_SKIP]] = !{!"branch_weights", i32 4, i32 0}
 ; CHECK: [[PROF_F0_VEC_EPILOG_VECTOR_BODY]] = !{!"branch_weights", i32 0, i32 0}
-; CEHCK: [[PROF_F0_LOOP]] = !{!"branch_weights", i32 2, i32 1}
+; CHECK: [[PROF_F0_LOOP]] = !{!"branch_weights", i32 2, i32 1}
