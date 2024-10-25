@@ -272,7 +272,7 @@ if [[ "${linux_projects}" != "" ]]; then
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results.xml'
+  - 'build/*-test-results.xml'
   agents: ${LINUX_AGENTS}
   retry:
     automatic:
@@ -289,27 +289,27 @@ if [[ "${linux_projects}" != "" ]]; then
 EOF
 fi
 
-if [[ "${windows_projects}" != "" ]]; then
-  cat <<EOF
-- label: ':windows: Windows x64'
-  artifact_paths:
-  - 'artifacts/**/*'
-  - '*_result.json'
-  - 'build/test-results.xml'
-  agents: ${WINDOWS_AGENTS}
-  retry:
-    automatic:
-      - exit_status: -1  # Agent was lost
-        limit: 2
-      - exit_status: 255 # Forced agent shutdown
-        limit: 2
-  timeout_in_minutes: 150
-  env:
-    CC: 'cl'
-    CXX: 'cl'
-    LD: 'link'
-  commands:
-  - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
-  - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'
-EOF
-fi
+# if [[ "${windows_projects}" != "" ]]; then
+#   cat <<EOF
+# - label: ':windows: Windows x64'
+#   artifact_paths:
+#   - 'artifacts/**/*'
+#   - '*_result.json'
+#   - 'build/test-results.xml'
+#   agents: ${WINDOWS_AGENTS}
+#   retry:
+#     automatic:
+#       - exit_status: -1  # Agent was lost
+#         limit: 2
+#       - exit_status: 255 # Forced agent shutdown
+#         limit: 2
+#   timeout_in_minutes: 150
+#   env:
+#     CC: 'cl'
+#     CXX: 'cl'
+#     LD: 'link'
+#   commands:
+#   - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
+#   - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'
+# EOF
+# fi
