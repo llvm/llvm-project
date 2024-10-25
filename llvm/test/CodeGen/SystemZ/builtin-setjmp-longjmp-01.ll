@@ -1,3 +1,4 @@
+; Test output of setjmp/longjmp.
 ; RUN: clang -o %t %s
 ; RUN: %t | FileCheck %s
 ; CHECK: call foo

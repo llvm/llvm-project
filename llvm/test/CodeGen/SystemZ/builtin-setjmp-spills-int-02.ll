@@ -1,4 +1,13 @@
+; Simulate register pressure  around setjmp call for integer arguments. 
+; Test assembly of funtion call foo in func() in setjmp if and else part.
+; extern foo has 20 argument pointer to int.
+; Test setjmp  store jmp_buf.
+; Return address in slot 2.
+; Stack Pointer in slot 4.
+; Clobber %r6-%r15, %f8-%f15.
+
 ; RUN: llc < %s | FileCheck %s
+
 ; ModuleID = 'builtin-setjmp-spills-int-02.c'
 source_filename = "builtin-setjmp-spills-int-02.c"
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
@@ -30,10 +39,6 @@ target triple = "s390x-unknown-linux-gnu"
 ; Function Attrs: nounwind
 define dso_local signext i32 @func() local_unnamed_addr #0 {
 entry:
-  %0 = tail call ptr @llvm.frameaddress.p0(i32 0)
-  store ptr %0, ptr @buf, align 8
-  %1 = tail call ptr @llvm.stacksave.p0()
-  store ptr %1, ptr getelementptr inbounds (i8, ptr @buf, i64 16), align 8
 ; CHECK: stmg    %r6, %r15, 48(%r15)
 ; CHECK: ghi     %r15, -344
 ; CHECK: std     %f8, 336(%r15)
@@ -44,15 +49,12 @@ entry:
 ; CHECK: std     %f13, 296(%r15)
 ; CHECK: std     %f14, 288(%r15)
 ; CHECK: std     %f15, 280(%r15)
-; CHECK: la      %r0, 344(%r15)
-; CHECK: stgrl   %r0, buf
-; CHECK: stgrl   %r15, buf+16
 ; CHECK: larl    %r1, buf
 ; CHECK: larl    %r0, .LBB0_2
 ; CHECK: stg     %r0, 8(%r1)
 ; CHECK: stg     %r15, 24(%r1)
-  %2 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf)
-  %cmp = icmp eq i32 %2, 0
+  %0 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf)
+  %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
@@ -80,69 +82,61 @@ if.then:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
-  tail call void @foo(ptr noundef nonnull @a, ptr noundef nonnull @b, ptr noundef nonnull @c, ptr noundef nonnull @d, ptr noundef nonnull @e, ptr noundef nonnull @f, ptr noundef nonnull @g, ptr noundef nonnull @h, ptr noundef nonnull @i, ptr noundef nonnull @j, ptr noundef nonnull @k, ptr noundef nonnull @l, ptr noundef nonnull @m, ptr noundef nonnull @n, ptr noundef nonnull @o, ptr noundef nonnull @p, ptr noundef nonnull @q, ptr noundef nonnull @r, ptr noundef nonnull @s, ptr noundef nonnull @t) #3
-  %3 = load i32, ptr @a, align 4, !tbaa !4
-  %4 = load i32, ptr @b, align 4, !tbaa !4
-  %add = add nsw i32 %4, %3
-  %5 = load i32, ptr @c, align 4, !tbaa !4
-  %add1 = add nsw i32 %add, %5
-  %6 = load i32, ptr @d, align 4, !tbaa !4
-  %add2 = add nsw i32 %add1, %6
-  %7 = load i32, ptr @e, align 4, !tbaa !4
-  %add3 = add nsw i32 %add2, %7
-  %8 = load i32, ptr @f, align 4, !tbaa !4
-  %add4 = add nsw i32 %add3, %8
-  %9 = load i32, ptr @g, align 4, !tbaa !4
-  %add5 = add nsw i32 %add4, %9
-  %10 = load i32, ptr @h, align 4, !tbaa !4
-  %add6 = add nsw i32 %add5, %10
-  %11 = load i32, ptr @i, align 4, !tbaa !4
-  %add7 = add nsw i32 %add6, %11
-  %12 = load i32, ptr @j, align 4, !tbaa !4
-  %add8 = add nsw i32 %add7, %12
-  %13 = load i32, ptr @k, align 4, !tbaa !4
-  %add9 = add nsw i32 %add8, %13
-  %14 = load i32, ptr @l, align 4, !tbaa !4
-  %add10 = add nsw i32 %add9, %14
-  %15 = load i32, ptr @m, align 4, !tbaa !4
-  %add11 = add nsw i32 %add10, %15
-  %16 = load i32, ptr @n, align 4, !tbaa !4
-  %add12 = add nsw i32 %add11, %16
-  %17 = load i32, ptr @o, align 4, !tbaa !4
-  %add13 = add nsw i32 %add12, %17
-  %18 = load i32, ptr @p, align 4, !tbaa !4
-  %add14 = add nsw i32 %add13, %18
-  %19 = load i32, ptr @q, align 4, !tbaa !4
-  %add15 = add nsw i32 %add14, %19
-  %20 = load i32, ptr @r, align 4, !tbaa !4
-  %add16 = add nsw i32 %add15, %20
-  %21 = load i32, ptr @s, align 4, !tbaa !4
-  %add17 = add nsw i32 %add16, %21
-  %22 = load i32, ptr @t, align 4, !tbaa !4
-  %add18 = add nsw i32 %add17, %22
+  tail call void @foo(ptr noundef nonnull @a, ptr noundef nonnull @b, ptr noundef nonnull @c, ptr noundef nonnull @d, ptr noundef nonnull @e, ptr noundef nonnull @f, ptr noundef nonnull @g, ptr noundef nonnull @h, ptr noundef nonnull @i, ptr noundef nonnull @j, ptr noundef nonnull @k, ptr noundef nonnull @l, ptr noundef nonnull @m, ptr noundef nonnull @n, ptr noundef nonnull @o, ptr noundef nonnull @p, ptr noundef nonnull @q, ptr noundef nonnull @r, ptr noundef nonnull @s, ptr noundef nonnull @t) #1
+  %1 = load i32, ptr @a, align 4, !tbaa !4
+  %2 = load i32, ptr @b, align 4, !tbaa !4
+  %add = add nsw i32 %2, %1
+  %3 = load i32, ptr @c, align 4, !tbaa !4
+  %add1 = add nsw i32 %add, %3
+  %4 = load i32, ptr @d, align 4, !tbaa !4
+  %add2 = add nsw i32 %add1, %4
+  %5 = load i32, ptr @e, align 4, !tbaa !4
+  %add3 = add nsw i32 %add2, %5
+  %6 = load i32, ptr @f, align 4, !tbaa !4
+  %add4 = add nsw i32 %add3, %6
+  %7 = load i32, ptr @g, align 4, !tbaa !4
+  %add5 = add nsw i32 %add4, %7
+  %8 = load i32, ptr @h, align 4, !tbaa !4
+  %add6 = add nsw i32 %add5, %8
+  %9 = load i32, ptr @i, align 4, !tbaa !4
+  %add7 = add nsw i32 %add6, %9
+  %10 = load i32, ptr @j, align 4, !tbaa !4
+  %add8 = add nsw i32 %add7, %10
+  %11 = load i32, ptr @k, align 4, !tbaa !4
+  %add9 = add nsw i32 %add8, %11
+  %12 = load i32, ptr @l, align 4, !tbaa !4
+  %add10 = add nsw i32 %add9, %12
+  %13 = load i32, ptr @m, align 4, !tbaa !4
+  %add11 = add nsw i32 %add10, %13
+  %14 = load i32, ptr @n, align 4, !tbaa !4
+  %add12 = add nsw i32 %add11, %14
+  %15 = load i32, ptr @o, align 4, !tbaa !4
+  %add13 = add nsw i32 %add12, %15
+  %16 = load i32, ptr @p, align 4, !tbaa !4
+  %add14 = add nsw i32 %add13, %16
+  %17 = load i32, ptr @q, align 4, !tbaa !4
+  %add15 = add nsw i32 %add14, %17
+  %18 = load i32, ptr @r, align 4, !tbaa !4
+  %add16 = add nsw i32 %add15, %18
+  %19 = load i32, ptr @s, align 4, !tbaa !4
+  %add17 = add nsw i32 %add16, %19
+  %20 = load i32, ptr @t, align 4, !tbaa !4
+  %add18 = add nsw i32 %add17, %20
   ret i32 %add18
 }
 
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare ptr @llvm.frameaddress.p0(i32 immarg) #1
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
-declare ptr @llvm.stacksave.p0() #2
-
 ; Function Attrs: nounwind
-declare i32 @llvm.eh.sjlj.setjmp(ptr) #3
+declare i32 @llvm.eh.sjlj.setjmp(ptr) #1
 
-declare void @foo(ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef) local_unnamed_addr #4
+declare void @foo(ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef) local_unnamed_addr #2
 
 ; Function Attrs: nofree nounwind
-declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #5
+declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #3
 
 attributes #0 = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(none) }
-attributes #2 = { mustprogress nocallback nofree nosync nounwind willreturn }
-attributes #3 = { nounwind }
-attributes #4 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #5 = { nofree nounwind }
+attributes #1 = { nounwind }
+attributes #2 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #3 = { nofree nounwind }
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}

@@ -3,6 +3,12 @@
 ; Test assembly for nested setjmp for alloa.
 ; This test case takes input from stdin for size of alloca
 ; and produce the right result.
+; Frame Pointer in slot 1.
+; Return address in slot 2.
+; Backchain value in slot 3.
+; Stack Pointer in slot 4.
+; Clobber %r6-%r15, %f8-%f15.
+
 
 ; RUN: llc < %s | FileCheck %s
 

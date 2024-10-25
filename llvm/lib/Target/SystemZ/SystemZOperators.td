@@ -320,9 +320,9 @@ def z_stckf            : SDNode<"SystemZISD::STCKF", SDT_ZStoreInherent,
 
 def z_tdc               : SDNode<"SystemZISD::TDC", SDT_ZTest>;
 
-def z_eh_sjlj_setjmp    : SDNode<"SystemZISD::EH_SJLJ_SETJMP", SDT_ZSetJmp,
+def z_eh_sjlj_setjmp    : SDNode<"ISD::EH_SJLJ_SETJMP", SDT_ZSetJmp,
                                  [SDNPHasChain, SDNPSideEffect]>;
-def z_eh_sjlj_longjmp   : SDNode<"SystemZISD::EH_SJLJ_LONGJMP", SDT_ZLongJmp,
+def z_eh_sjlj_longjmp   : SDNode<"ISD::EH_SJLJ_LONGJMP", SDT_ZLongJmp,
                                  [SDNPHasChain, SDNPSideEffect]>;
 
 

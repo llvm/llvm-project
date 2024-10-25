@@ -1,9 +1,11 @@
-; Producing wrong result.
 ; llvm-lit does not take input from stdin, test case produces right result.
 ; This test case produces right result when alloca size is unknown.
 ; Test output of setjmp/longjmp with nested setjmp for alloca
 ; Test for Frame Pointer in first slot in jmp_buf.
-; sum(regsiter pressure).
+
+; FIXME: Take input from stdin for size of alloca.
+; TODO: -mbackchain
+
 ; RUN: clang -o %t %s
 ; RUN: %t | FileCheck %s
 
@@ -71,17 +73,30 @@ if.then:                                          ; preds = %entry
 
 if.then7:                                         ; preds = %if.then
   %puts82 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
+; CHECK: First __builtin_setjmp in func1
+; CHECK: Second __builtin_setjmp in func1
+; CHECK: Returned from func4
+; CHECK: arr: 0
+; CHECK: arr: 2
+; CHECK: arr: 6
+; CHECK: arr: 12
+; CHECK: arr: 20
+; CHECK: arr: 30
+; CHECK: arr: 42
+; CHECK: arr: 56
+; CHECK: arr: 72
+; CHECK: arr: 90
 ; CHECK: Returned from func3
 ; CHECK: arr: 0
-; CHECK: arr: 3
-; CHECK: arr: 14
+; CHECK: arr: 3 
+; CHECK: arr: 14 
 ; CHECK: arr: 39
-; CHECK: arr: 84
-; CHECK: arr: 155
-; CHECK: arr: 258
-; CHECK: arr: 399
-; CHECK: arr: 584
-; CHECK: arr: 819
+; CHECK: arr: 84 
+; CHECK: arr: 155 
+; CHECK: arr: 258 
+; CHECK: arr: 399 
+; CHECK: arr: 584 
+; CHECK: arr: 819 
 
   tail call void @func4()
   unreachable

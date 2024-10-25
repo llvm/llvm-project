@@ -304,11 +304,6 @@ enum NodeType : unsigned {
   // Operand 2: the offset (0 for the first and 8 for the second element in the
   // function descriptor)
   ADA_ENTRY,
-    // EH_SJLJ_SETJMP - SjLj exception handling setjmp.
-  EH_SJLJ_SETJMP,
-
-  // EH_SJLJ_LONGJMP - SjLj exception handling longjmp.
-  EH_SJLJ_LONGJMP,
 
 
 

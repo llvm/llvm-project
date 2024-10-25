@@ -221,6 +221,8 @@ static unsigned getInstSizeInBytes(const MachineInstr &MI,
           // These have a size that may be zero:
           MI.isInlineAsm() || MI.getOpcode() == SystemZ::STACKMAP ||
           MI.getOpcode() == SystemZ::PATCHPOINT || 
+          // EH_SjLj_Setup is a dummy terminator instruction of size 0,
+          // It is used to handle the clobber register for builtin setjmp.
 	  MI.getOpcode() == SystemZ::EH_SjLj_Setup) &&
          "Missing size value for instruction.");
   return Size;

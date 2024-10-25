@@ -3,6 +3,10 @@
 ; This test case takes input from stdin for size of alloca 
 ; and produce the right result.
 
+; Frame Pointer in slot 1.
+; Return address in slot 2.
+; Stack Pointer in slot 4.
+
 ; RUN: llc < %s | FileCheck %s
 
 ; ModuleID = 'builtin-setjmp-longjmp-alloca-01.c'

@@ -1872,7 +1872,7 @@ let mayLoad = 1, mayStore = 1, Defs = [CC] in {
 }
 
 //--------------------------------------------------------------------------
-// Setjmp/Longjmp
+// Setjmp/Longjmp.
 //--------------------------------------------------------------------------
 let isTerminator = 1, isBarrier = 1, isCodeGenOnly = 1,  hasNoSchedulingInfo = 1, Size = 0 in {
   def EH_SjLj_Setup : Pseudo<(outs), (ins brtarget32:$dst), []>;

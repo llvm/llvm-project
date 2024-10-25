@@ -1,3 +1,5 @@
+; Check output of setjmp/longjmp.
+
 ; RUN: clang -mbackchain -o %t %s
 ; RUN: %t | FileCheck %s
 ; CHECK: call foo

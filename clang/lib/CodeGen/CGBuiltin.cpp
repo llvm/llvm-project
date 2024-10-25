@@ -4542,6 +4542,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Buffer is a void**.
     Address Buf = EmitPointerWithAlignment(E->getArg(0));
 
+    if (getTarget().getTriple().getArch() == llvm::Triple::systemz) {
+      // Call LLVM's EH setjmp, which is lightweight.
+      Function *F = CGM.getIntrinsic(Intrinsic::eh_sjlj_setjmp);
+      return RValue::get(Builder.CreateCall(F, Buf.emitRawPointer(*this)));
+    }
+
     // Store the frame pointer to the setjmp buffer.
     Value *FrameAddr = Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::frameaddress, AllocaInt8PtrTy),
@@ -4552,9 +4558,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *StackAddr = Builder.CreateStackSave();
     assert(Buf.emitRawPointer(*this)->getType() == StackAddr->getType());
 
-    //StackSaveSlot no is hard coded here. For compatility with gcc,
-    // we are changing slot 3 to slot 4(offset 3) for __builtin_setjmp
-    Address StackSaveSlot = Builder.CreateConstInBoundsGEP(Buf, 3);
+    Address StackSaveSlot = Builder.CreateConstInBoundsGEP(Buf, 2);
     Builder.CreateStore(StackAddr, StackSaveSlot);
 
     // Call LLVM's EH setjmp, which is lightweight.
