@@ -133,21 +133,18 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP13:%.*]] = sdiv i64 [[M]], [[CONV6]]
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE4]]
 ; CHECK:       [[PRED_SDIV_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = phi i64 [ poison, %[[PRED_SDIV_CONTINUE]] ], [ [[TMP13]], %[[PRED_SDIV_IF3]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP8]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_SDIV_IF5:.*]], label %[[PRED_SDIV_CONTINUE6:.*]]
 ; CHECK:       [[PRED_SDIV_IF5]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = sdiv i64 [[M]], [[CONV6]]
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE6]]
 ; CHECK:       [[PRED_SDIV_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = phi i64 [ poison, %[[PRED_SDIV_CONTINUE4]] ], [ [[TMP16]], %[[PRED_SDIV_IF5]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP8]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_SDIV_IF7:.*]], label %[[PRED_SDIV_CONTINUE8]]
 ; CHECK:       [[PRED_SDIV_IF7]]:
 ; CHECK-NEXT:    [[TMP19:%.*]] = sdiv i64 [[M]], [[CONV6]]
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE8]]
 ; CHECK:       [[PRED_SDIV_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi i64 [ poison, %[[PRED_SDIV_CONTINUE6]] ], [ [[TMP19]], %[[PRED_SDIV_IF7]] ]
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc i64 [[TMP11]] to i32
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP11]], [[CONV61]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP5]], [[TMP22]]

@@ -286,7 +286,7 @@ public:
     bool operator==(const PHI_iterator& x) const { return idx == x.idx; }
     bool operator!=(const PHI_iterator& x) const { return !operator==(x); }
 
-    unsigned getIncomingValue() { return PHI->getOperand(idx).getReg(); }
+    Register getIncomingValue() { return PHI->getOperand(idx).getReg(); }
 
     MachineBasicBlock *getIncomingBlock() {
       return PHI->getOperand(idx+1).getMBB();

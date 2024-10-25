@@ -2468,7 +2468,7 @@ LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
                                          size_t ParamCount) {
   ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
   auto IID = llvm_map_to_intrinsic_id(ID);
-  return wrap(llvm::Intrinsic::getDeclaration(unwrap(Mod), IID, Tys));
+  return wrap(llvm::Intrinsic::getOrInsertDeclaration(unwrap(Mod), IID, Tys));
 }
 
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
@@ -2508,7 +2508,7 @@ const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
 }
 
 unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen) {
-  return Function::lookupIntrinsicID({Name, NameLen});
+  return Intrinsic::lookupIntrinsicID({Name, NameLen});
 }
 
 LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID) {

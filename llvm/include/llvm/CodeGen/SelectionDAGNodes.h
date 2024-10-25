@@ -1678,6 +1678,7 @@ class ConstantSDNode : public SDNode {
       : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DebugLoc(),
                VTs),
         Value(val) {
+    assert(!isa<VectorType>(val->getType()) && "Unexpected vector type!");
     ConstantSDNodeBits.IsOpaque = isOpaque;
   }
 
@@ -1730,7 +1731,9 @@ class ConstantFPSDNode : public SDNode {
   ConstantFPSDNode(bool isTarget, const ConstantFP *val, SDVTList VTs)
       : SDNode(isTarget ? ISD::TargetConstantFP : ISD::ConstantFP, 0,
                DebugLoc(), VTs),
-        Value(val) {}
+        Value(val) {
+    assert(!isa<VectorType>(val->getType()) && "Unexpected vector type!");
+  }
 
 public:
   const APFloat& getValueAPF() const { return Value->getValueAPF(); }
@@ -2935,8 +2938,8 @@ public:
   const SDValue &getScale()   const { return getOperand(5); }
 
   static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::MGATHER ||
-           N->getOpcode() == ISD::MSCATTER;
+    return N->getOpcode() == ISD::MGATHER || N->getOpcode() == ISD::MSCATTER ||
+           N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM;
   }
 };
 
@@ -2991,17 +2994,15 @@ public:
   }
 };
 
-class MaskedHistogramSDNode : public MemSDNode {
+class MaskedHistogramSDNode : public MaskedGatherScatterSDNode {
 public:
   friend class SelectionDAG;
 
   MaskedHistogramSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs,
                         EVT MemVT, MachineMemOperand *MMO,
                         ISD::MemIndexType IndexType)
-      : MemSDNode(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, Order, DL, VTs, MemVT,
-                  MMO) {
-    LSBaseSDNodeBits.AddressingMode = IndexType;
-  }
+      : MaskedGatherScatterSDNode(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, Order, DL,
+                                  VTs, MemVT, MMO, IndexType) {}
 
   ISD::MemIndexType getIndexType() const {
     return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);

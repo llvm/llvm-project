@@ -294,8 +294,21 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       default:
         break;
       }
-      if (SpvType)
+      if (SpvType) {
+        // check if the address space needs correction
+        LLT RegType = MRI.getType(Reg);
+        if (SpvType->getOpcode() == SPIRV::OpTypePointer &&
+            RegType.isPointer() &&
+            storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
+                RegType.getAddressSpace()) {
+          const SPIRVSubtarget &ST =
+              MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
+          SpvType = GR->getOrCreateSPIRVPointerType(
+              GR->getPointeeType(SpvType), *MI, *ST.getInstrInfo(),
+              addressSpaceToStorageClass(RegType.getAddressSpace(), ST));
+        }
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
+      }
       if (!MRI.getRegClassOrNull(Reg))
         MRI.setRegClass(Reg, SpvType ? GR->getRegClass(SpvType)
                                      : &SPIRV::iIDRegClass);
@@ -341,6 +354,17 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
   return {Reg, GetIdOp};
 }
 
+static void setInsertPtAfterDef(MachineIRBuilder &MIB, MachineInstr *Def) {
+  MachineBasicBlock &MBB = *Def->getParent();
+  MachineBasicBlock::iterator DefIt =
+      Def->getNextNode() ? Def->getNextNode()->getIterator() : MBB.end();
+  // Skip all the PHI and debug instructions.
+  while (DefIt != MBB.end() &&
+         (DefIt->isPHI() || DefIt->isDebugOrPseudoInstr()))
+    DefIt = std::next(DefIt);
+  MIB.setInsertPt(MBB, DefIt);
+}
+
 // Insert ASSIGN_TYPE instuction between Reg and its definition, set NewReg as
 // a dst of the definition, assign SPIRVType to both registers. If SpvType is
 // provided, use it as SPIRVType in ASSIGN_TYPE, otherwise create it from Ty.
@@ -350,11 +374,9 @@ namespace llvm {
 Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
                            SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
                            MachineRegisterInfo &MRI) {
-  MachineInstr *Def = MRI.getVRegDef(Reg);
   assert((Ty || SpvType) && "Either LLVM or SPIRV type is expected.");
-  MIB.setInsertPt(*Def->getParent(),
-                  (Def->getNextNode() ? Def->getNextNode()->getIterator()
-                                      : Def->getParent()->end()));
+  MachineInstr *Def = MRI.getVRegDef(Reg);
+  setInsertPtAfterDef(MIB, Def);
   SpvType = SpvType ? SpvType : GR->getOrCreateSPIRVType(Ty, MIB);
   Register NewReg = MRI.createGenericVirtualRegister(MRI.getType(Reg));
   if (auto *RC = MRI.getRegClassOrNull(Reg)) {
@@ -376,7 +398,13 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
       .addUse(NewReg)
       .addUse(GR->getSPIRVTypeID(SpvType))
       .setMIFlags(Flags);
-  Def->getOperand(0).setReg(NewReg);
+  for (unsigned I = 0, E = Def->getNumDefs(); I != E; ++I) {
+    MachineOperand &MO = Def->getOperand(I);
+    if (MO.getReg() == Reg) {
+      MO.setReg(NewReg);
+      break;
+    }
+  }
   return NewReg;
 }
 
@@ -389,9 +417,7 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
       createNewIdReg(nullptr, MI.getOperand(0).getReg(), MRI, *GR).first;
   AssignTypeInst.getOperand(1).setReg(NewReg);
   MI.getOperand(0).setReg(NewReg);
-  MIB.setInsertPt(*MI.getParent(),
-                  (MI.getNextNode() ? MI.getNextNode()->getIterator()
-                                    : MI.getParent()->end()));
+  MIB.setInsertPt(*MI.getParent(), MI.getIterator());
   for (auto &Op : MI.operands()) {
     if (!Op.isReg() || Op.isDef())
       continue;
@@ -462,6 +488,25 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             Def->getOpcode() != SPIRV::ASSIGN_TYPE)
           insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
+      } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
+        MachineInstr *MdMI = MI.getPrevNode();
+        if (MdMI && isSpvIntrinsic(*MdMI, Intrinsic::spv_value_md)) {
+          // It's an internal service info from before IRTranslator passes.
+          MachineInstr *Def = getVRegDef(MRI, MI.getOperand(0).getReg());
+          for (unsigned I = 1, E = MI.getNumOperands(); I != E && Def; ++I)
+            if (getVRegDef(MRI, MI.getOperand(I).getReg()) != Def)
+              Def = nullptr;
+          if (Def) {
+            const MDNode *MD = MdMI->getOperand(1).getMetadata();
+            StringRef ValueName =
+                cast<MDString>(MD->getOperand(1))->getString();
+            const MDNode *TypeMD = cast<MDNode>(MD->getOperand(0));
+            Type *ValueTy = getMDOperandAsType(TypeMD, 0);
+            GR->addValueAttrs(Def, std::make_pair(ValueTy, ValueName.str()));
+          }
+          ToErase.push_back(MdMI);
+        }
+        ToErase.push_back(&MI);
       } else if (MIOp == TargetOpcode::G_CONSTANT ||
                  MIOp == TargetOpcode::G_FCONSTANT ||
                  MIOp == TargetOpcode::G_BUILD_VECTOR) {
@@ -487,6 +532,14 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                    ? MI.getOperand(1).getCImm()->getType()
                    : TargetExtIt->second;
           const ConstantInt *OpCI = MI.getOperand(1).getCImm();
+          // TODO: we may wish to analyze here if OpCI is zero and LLT RegType =
+          // MRI.getType(Reg); RegType.isPointer() is true, so that we observe
+          // at this point not i64/i32 constant but null pointer in the
+          // corresponding address space of RegType.getAddressSpace(). This may
+          // help to successfully validate the case when a OpConstantComposite's
+          // constituent has type that does not match Result Type of
+          // OpConstantComposite (see, for example,
+          // pointers/PtrCast-null-in-OpSpecConstantOp.ll).
           Register PrimaryReg = GR->find(OpCI, &MF);
           if (!PrimaryReg.isValid()) {
             GR->add(OpCI, &MF, Reg);

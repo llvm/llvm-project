@@ -400,6 +400,11 @@ RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
                       FREXP_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getFSINCOS(EVT RetVT) {
+  return getFPLibCall(RetVT, SINCOS_F32, SINCOS_F64, SINCOS_F80, SINCOS_F128,
+                      SINCOS_PPCF128);
+}
+
 RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
                                              AtomicOrdering Order,
                                              uint64_t MemSize) {
@@ -778,7 +783,7 @@ void TargetLoweringBase::initActions() {
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
            ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::LROUND,
            ISD::LLROUND, ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN,
-           ISD::FCOSH, ISD::FSINH, ISD::FTANH},
+           ISD::FCOSH, ISD::FSINH, ISD::FTANH, ISD::FATAN2},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -837,7 +842,8 @@ void TargetLoweringBase::initActions() {
                       ISD::FEXP,       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR,
                       ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT,  ISD::FTRUNC,
                       ISD::FROUNDEVEN, ISD::FTAN,  ISD::FACOS,  ISD::FASIN,
-                      ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH},
+                      ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH,
+                      ISD::FATAN2},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // FIXME: Query RuntimeLibCalls to make the decision.
@@ -845,7 +851,7 @@ void TargetLoweringBase::initActions() {
                      {MVT::f32, MVT::f64, MVT::f128}, LibCall);
 
   setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
-                      ISD::FSINH, ISD::FTANH},
+                      ISD::FSINH, ISD::FTANH, ISD::FATAN2},
                      MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);

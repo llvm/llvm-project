@@ -44,6 +44,7 @@ class InputSectionBase;
 class EhInputSection;
 class Defined;
 class Symbol;
+class SymbolTable;
 class BitcodeCompiler;
 class OutputSection;
 class LinkerScript;
@@ -172,9 +173,12 @@ private:
 
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<InputFile *> files;
-  InputFile *armCmseImpLib = nullptr;
 
 public:
+  // See InputFile::groupId.
+  uint32_t nextGroupId;
+  bool isInGroup;
+  InputFile *armCmseImpLib = nullptr;
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
 };
 
@@ -541,7 +545,7 @@ struct Ctx {
   Config arg;
   LinkerDriver driver;
   LinkerScript *script;
-  TargetInfo *target;
+  std::unique_ptr<TargetInfo> target;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
@@ -600,6 +604,7 @@ struct Ctx {
     Defined *tlsModuleBase;
   };
   ElfSym sym;
+  std::unique_ptr<SymbolTable> symtab;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -663,7 +668,7 @@ LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.
-static inline ArrayRef<VersionDefinition> namedVersionDefs() {
+static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
   return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 

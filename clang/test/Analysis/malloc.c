@@ -4,7 +4,7 @@
 // RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintPropagation \
 // RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 #include "Inputs/system-header-simulator.h"

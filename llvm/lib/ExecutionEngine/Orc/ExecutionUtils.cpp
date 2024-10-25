@@ -273,9 +273,24 @@ Error DynamicLibrarySearchGenerator::tryToGenerate(
   return JD.define(absoluteSymbols(std::move(NewSymbols)));
 }
 
+StaticLibraryDefinitionGenerator::VisitMembersFunction
+StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(ObjectLayer &L,
+                                                           JITDylib &JD) {
+  return [&](MemoryBufferRef Buf) -> Error {
+    switch (identify_magic(Buf.getBuffer())) {
+    case file_magic::elf_relocatable:
+    case file_magic::macho_object:
+    case file_magic::coff_object:
+      return L.add(JD, MemoryBuffer::getMemBuffer(Buf));
+    default:
+      return Error::success();
+    }
+  };
+}
+
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Load(
-    ObjectLayer &L, const char *FileName,
+    ObjectLayer &L, const char *FileName, VisitMembersFunction VisitMembers,
     GetObjectFileInterface GetObjFileInterface) {
 
   const auto &TT = L.getExecutionSession().getTargetTriple();
@@ -283,16 +298,32 @@ StaticLibraryDefinitionGenerator::Load(
   if (!Linkable)
     return Linkable.takeError();
 
-  return Create(L, std::move(Linkable->first), std::move(GetObjFileInterface));
+  return Create(L, std::move(Linkable->first), std::move(VisitMembers),
+                std::move(GetObjFileInterface));
 }
 
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Create(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
-    std::unique_ptr<object::Archive> Archive,
+    std::unique_ptr<object::Archive> Archive, VisitMembersFunction VisitMembers,
     GetObjectFileInterface GetObjFileInterface) {
 
   Error Err = Error::success();
+
+  if (VisitMembers) {
+    for (auto Child : Archive->children(Err)) {
+      if (auto ChildBuf = Child.getMemoryBufferRef()) {
+        if (auto Err2 = VisitMembers(*ChildBuf))
+          return std::move(Err2);
+      } else {
+        // We silently allow non-object archive members. This matches the
+        // behavior of ld.
+        consumeError(ChildBuf.takeError());
+      }
+    }
+    if (Err)
+      return std::move(Err);
+  }
 
   std::unique_ptr<StaticLibraryDefinitionGenerator> ADG(
       new StaticLibraryDefinitionGenerator(
@@ -308,6 +339,7 @@ StaticLibraryDefinitionGenerator::Create(
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Create(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+    VisitMembersFunction VisitMembers,
     GetObjectFileInterface GetObjFileInterface) {
 
   auto B = object::createBinary(ArchiveBuffer->getMemBufferRef());
@@ -319,7 +351,7 @@ StaticLibraryDefinitionGenerator::Create(
     return Create(L, std::move(ArchiveBuffer),
                   std::unique_ptr<object::Archive>(
                       static_cast<object::Archive *>(B->release())),
-                  std::move(GetObjFileInterface));
+                  std::move(VisitMembers), std::move(GetObjFileInterface));
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
@@ -341,7 +373,7 @@ StaticLibraryDefinitionGenerator::Create(
       return Archive.takeError();
 
     return Create(L, std::move(ArchiveBuffer), std::move(*Archive),
-                  std::move(GetObjFileInterface));
+                  std::move(VisitMembers), std::move(GetObjFileInterface));
   }
 
   return make_error<StringError>(Twine("Unrecognized file type for ") +

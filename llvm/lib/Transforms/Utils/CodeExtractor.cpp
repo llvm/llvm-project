@@ -917,6 +917,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NoFPClass:
       case Attribute::CoroDestroyOnlyWhenComplete:
       case Attribute::CoroElideSafe:
+      case Attribute::NoDivergenceSource:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
@@ -1124,7 +1125,8 @@ static void insertLifetimeMarkersSurroundingCall(
                                             TheCall->getFunction()) &&
              "Input memory not defined in original function");
 
-      Function *Func = Intrinsic::getDeclaration(M, MarkerFunc, Mem->getType());
+      Function *Func =
+          Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
       auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
         Marker->insertBefore(TheCall);

@@ -135,7 +135,7 @@ public:
   }
 
   /// Returns true if the value has more than one unique user.
-  bool hasMoreThanOneUniqueUser() {
+  bool hasMoreThanOneUniqueUser() const {
     if (getNumUsers() == 0)
       return false;
 
@@ -350,6 +350,7 @@ public:
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
+    VPWidenIntrinsicSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,
@@ -358,6 +359,7 @@ public:
     VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
+    VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,

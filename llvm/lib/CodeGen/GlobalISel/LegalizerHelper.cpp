@@ -457,6 +457,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(ACOS_F);
   case TargetOpcode::G_FATAN:
     RTLIBCASE(ATAN_F);
+  case TargetOpcode::G_FATAN2:
+    RTLIBCASE(ATAN2_F);
   case TargetOpcode::G_FSINH:
     RTLIBCASE(SINH_F);
   case TargetOpcode::G_FCOSH:
@@ -1202,6 +1204,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FACOS:
   case TargetOpcode::G_FASIN:
   case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FATAN2:
   case TargetOpcode::G_FCOSH:
   case TargetOpcode::G_FSINH:
   case TargetOpcode::G_FTANH:
@@ -3122,6 +3125,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FACOS:
   case TargetOpcode::G_FASIN:
   case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FATAN2:
   case TargetOpcode::G_FCOSH:
   case TargetOpcode::G_FSINH:
   case TargetOpcode::G_FTANH:
@@ -3274,6 +3278,33 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
     Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    GInsertSubvector &IS = cast<GInsertSubvector>(MI);
+    Register BigVec = IS.getBigVec();
+    Register SubVec = IS.getSubVec();
+
+    LLT SubVecTy = MRI.getType(SubVec);
+    LLT SubVecWideTy = SubVecTy.changeElementType(WideTy.getElementType());
+
+    // Widen the G_INSERT_SUBVECTOR
+    auto BigZExt = MIRBuilder.buildZExt(WideTy, BigVec);
+    auto SubZExt = MIRBuilder.buildZExt(SubVecWideTy, SubVec);
+    auto WideInsert = MIRBuilder.buildInsertSubvector(WideTy, BigZExt, SubZExt,
+                                                      IS.getIndexImm());
+
+    // Truncate back down
+    auto SplatZero = MIRBuilder.buildSplatVector(
+        WideTy, MIRBuilder.buildConstant(WideTy.getElementType(), 0));
+    MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_NE, IS.getReg(0), WideInsert,
+                         SplatZero);
+
+    MI.eraseFromParent();
+
     return Legalized;
   }
   }
@@ -3666,6 +3697,136 @@ LegalizerHelper::bitcastConcatVector(MachineInstr &MI, unsigned TypeIdx,
   return Legalized;
 }
 
+/// This attempts to bitcast G_EXTRACT_SUBVECTOR to CastTy.
+///
+///  <vscale x 8 x i1> = G_EXTRACT_SUBVECTOR <vscale x 16 x i1>, N
+///
+/// ===>
+///
+///  <vscale x 2 x i1> = G_BITCAST <vscale x 16 x i1>
+///  <vscale x 1 x i8> = G_EXTRACT_SUBVECTOR <vscale x 2 x i1>, N / 8
+///  <vscale x 8 x i1> = G_BITCAST <vscale x 1 x i8>
+LegalizerHelper::LegalizeResult
+LegalizerHelper::bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT CastTy) {
+  auto ES = cast<GExtractSubvector>(&MI);
+
+  if (!CastTy.isVector())
+    return UnableToLegalize;
+
+  if (TypeIdx != 0)
+    return UnableToLegalize;
+
+  Register Dst = ES->getReg(0);
+  Register Src = ES->getSrcVec();
+  uint64_t Idx = ES->getIndexImm();
+
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  ElementCount DstTyEC = DstTy.getElementCount();
+  ElementCount SrcTyEC = SrcTy.getElementCount();
+  auto DstTyMinElts = DstTyEC.getKnownMinValue();
+  auto SrcTyMinElts = SrcTyEC.getKnownMinValue();
+
+  if (DstTy == CastTy)
+    return Legalized;
+
+  if (DstTy.getSizeInBits() != CastTy.getSizeInBits())
+    return UnableToLegalize;
+
+  unsigned CastEltSize = CastTy.getElementType().getSizeInBits();
+  unsigned DstEltSize = DstTy.getElementType().getSizeInBits();
+  if (CastEltSize < DstEltSize)
+    return UnableToLegalize;
+
+  auto AdjustAmt = CastEltSize / DstEltSize;
+  if (Idx % AdjustAmt != 0 || DstTyMinElts % AdjustAmt != 0 ||
+      SrcTyMinElts % AdjustAmt != 0)
+    return UnableToLegalize;
+
+  Idx /= AdjustAmt;
+  SrcTy = LLT::vector(SrcTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
+  auto CastVec = MIRBuilder.buildBitcast(SrcTy, Src);
+  auto PromotedES = MIRBuilder.buildExtractSubvector(CastTy, CastVec, Idx);
+  MIRBuilder.buildBitcast(Dst, PromotedES);
+
+  ES->eraseFromParent();
+  return Legalized;
+}
+
+/// This attempts to bitcast G_INSERT_SUBVECTOR to CastTy.
+///
+///  <vscale x 16 x i1> = G_INSERT_SUBVECTOR <vscale x 16 x i1>,
+///                                          <vscale x 8 x i1>,
+///                                          N
+///
+/// ===>
+///
+///  <vscale x 2 x i8> = G_BITCAST <vscale x 16 x i1>
+///  <vscale x 1 x i8> = G_BITCAST <vscale x 8 x i1>
+///  <vscale x 2 x i8> = G_INSERT_SUBVECTOR <vscale x 2 x i8>,
+///                                         <vscale x 1 x i8>, N / 8
+///  <vscale x 16 x i1> = G_BITCAST <vscale x 2 x i8>
+LegalizerHelper::LegalizeResult
+LegalizerHelper::bitcastInsertSubvector(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT CastTy) {
+  auto ES = cast<GInsertSubvector>(&MI);
+
+  if (!CastTy.isVector())
+    return UnableToLegalize;
+
+  if (TypeIdx != 0)
+    return UnableToLegalize;
+
+  Register Dst = ES->getReg(0);
+  Register BigVec = ES->getBigVec();
+  Register SubVec = ES->getSubVec();
+  uint64_t Idx = ES->getIndexImm();
+
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT BigVecTy = MRI.getType(BigVec);
+  LLT SubVecTy = MRI.getType(SubVec);
+
+  if (DstTy == CastTy)
+    return Legalized;
+
+  if (DstTy.getSizeInBits() != CastTy.getSizeInBits())
+    return UnableToLegalize;
+
+  ElementCount DstTyEC = DstTy.getElementCount();
+  ElementCount BigVecTyEC = BigVecTy.getElementCount();
+  ElementCount SubVecTyEC = SubVecTy.getElementCount();
+  auto DstTyMinElts = DstTyEC.getKnownMinValue();
+  auto BigVecTyMinElts = BigVecTyEC.getKnownMinValue();
+  auto SubVecTyMinElts = SubVecTyEC.getKnownMinValue();
+
+  unsigned CastEltSize = CastTy.getElementType().getSizeInBits();
+  unsigned DstEltSize = DstTy.getElementType().getSizeInBits();
+  if (CastEltSize < DstEltSize)
+    return UnableToLegalize;
+
+  auto AdjustAmt = CastEltSize / DstEltSize;
+  if (Idx % AdjustAmt != 0 || DstTyMinElts % AdjustAmt != 0 ||
+      BigVecTyMinElts % AdjustAmt != 0 || SubVecTyMinElts % AdjustAmt != 0)
+    return UnableToLegalize;
+
+  Idx /= AdjustAmt;
+  BigVecTy = LLT::vector(BigVecTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
+  SubVecTy = LLT::vector(SubVecTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
+  auto CastBigVec = MIRBuilder.buildBitcast(BigVecTy, BigVec);
+  auto CastSubVec = MIRBuilder.buildBitcast(SubVecTy, SubVec);
+  auto PromotedIS =
+      MIRBuilder.buildInsertSubvector(CastTy, CastBigVec, CastSubVec, Idx);
+  MIRBuilder.buildBitcast(Dst, PromotedIS);
+
+  ES->eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   // Lower to a memory-width G_LOAD and a G_SEXT/G_ZEXT/G_ANYEXT
   Register DstReg = LoadMI.getDstReg();
@@ -3972,6 +4133,10 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     return bitcastInsertVectorElt(MI, TypeIdx, CastTy);
   case TargetOpcode::G_CONCAT_VECTORS:
     return bitcastConcatVector(MI, TypeIdx, CastTy);
+  case TargetOpcode::G_EXTRACT_SUBVECTOR:
+    return bitcastExtractSubvector(MI, TypeIdx, CastTy);
+  case TargetOpcode::G_INSERT_SUBVECTOR:
+    return bitcastInsertSubvector(MI, TypeIdx, CastTy);
   default:
     return UnableToLegalize;
   }
@@ -4051,12 +4216,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     auto [Res, SubByReg] = MI.getFirst2Regs();
     LLT Ty = MRI.getType(Res);
 
-    // TODO: Handle vector types once we are able to
-    // represent them.
-    if (Ty.isVector())
-      return UnableToLegalize;
-    auto SignMask =
-        MIRBuilder.buildConstant(Ty, APInt::getSignMask(Ty.getSizeInBits()));
+    auto SignMask = MIRBuilder.buildConstant(
+        Ty, APInt::getSignMask(Ty.getScalarSizeInBits()));
     MIRBuilder.buildXor(Res, SubByReg, SignMask);
     MI.eraseFromParent();
     return Legalized;
@@ -4984,6 +5145,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FACOS:
   case G_FASIN:
   case G_FATAN:
+  case G_FATAN2:
   case G_FCOSH:
   case G_FSINH:
   case G_FTANH:
@@ -7169,6 +7331,78 @@ LegalizerHelper::lowerU64ToF32BitOps(MachineInstr &MI) {
   return Legalized;
 }
 
+// Expand s32 = G_UITOFP s64 to an IEEE float representation using bit
+// operations and G_SITOFP
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerU64ToF32WithSITOFP(MachineInstr &MI) {
+  auto [Dst, Src] = MI.getFirst2Regs();
+  const LLT S64 = LLT::scalar(64);
+  const LLT S32 = LLT::scalar(32);
+  const LLT S1 = LLT::scalar(1);
+
+  assert(MRI.getType(Src) == S64 && MRI.getType(Dst) == S32);
+
+  // For i64 < INT_MAX we simply reuse SITOFP.
+  // Otherwise, divide i64 by 2, round result by ORing with the lowest bit
+  // saved before division, convert to float by SITOFP, multiply the result
+  // by 2.
+  auto One = MIRBuilder.buildConstant(S64, 1);
+  auto Zero = MIRBuilder.buildConstant(S64, 0);
+  // Result if Src < INT_MAX
+  auto SmallResult = MIRBuilder.buildSITOFP(S32, Src);
+  // Result if Src >= INT_MAX
+  auto Halved = MIRBuilder.buildLShr(S64, Src, One);
+  auto LowerBit = MIRBuilder.buildAnd(S64, Src, One);
+  auto RoundedHalved = MIRBuilder.buildOr(S64, Halved, LowerBit);
+  auto HalvedFP = MIRBuilder.buildSITOFP(S32, RoundedHalved);
+  auto LargeResult = MIRBuilder.buildFAdd(S32, HalvedFP, HalvedFP);
+  // Check if the original value is larger than INT_MAX by comparing with
+  // zero to pick one of the two conversions.
+  auto IsLarge =
+      MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_SLT, S1, Src, Zero);
+  MIRBuilder.buildSelect(Dst, IsLarge, LargeResult, SmallResult);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+// Expand s64 = G_UITOFP s64 using bit and float arithmetic operations to an
+// IEEE double representation.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerU64ToF64BitFloatOps(MachineInstr &MI) {
+  auto [Dst, Src] = MI.getFirst2Regs();
+  const LLT S64 = LLT::scalar(64);
+  const LLT S32 = LLT::scalar(32);
+
+  assert(MRI.getType(Src) == S64 && MRI.getType(Dst) == S64);
+
+  // We create double value from 32 bit parts with 32 exponent difference.
+  // Note that + and - are float operations that adjust the implicit leading
+  // one, the bases 2^52 and 2^84 are for illustrative purposes.
+  //
+  // X = 2^52 * 1.0...LowBits
+  // Y = 2^84 * 1.0...HighBits
+  // Scratch = 2^84 * 1.0...HighBits - 2^84 * 1.0 - 2^52 * 1.0
+  //         = - 2^52 * 1.0...HighBits
+  // Result = - 2^52 * 1.0...HighBits + 2^52 * 1.0...LowBits
+  auto TwoP52 = MIRBuilder.buildConstant(S64, UINT64_C(0x4330000000000000));
+  auto TwoP84 = MIRBuilder.buildConstant(S64, UINT64_C(0x4530000000000000));
+  auto TwoP52P84 = llvm::bit_cast<double>(UINT64_C(0x4530000000100000));
+  auto TwoP52P84FP = MIRBuilder.buildFConstant(S64, TwoP52P84);
+  auto HalfWidth = MIRBuilder.buildConstant(S64, 32);
+
+  auto LowBits = MIRBuilder.buildTrunc(S32, Src);
+  LowBits = MIRBuilder.buildZExt(S64, LowBits);
+  auto LowBitsFP = MIRBuilder.buildOr(S64, TwoP52, LowBits);
+  auto HighBits = MIRBuilder.buildLShr(S64, Src, HalfWidth);
+  auto HighBitsFP = MIRBuilder.buildOr(S64, TwoP84, HighBits);
+  auto Scratch = MIRBuilder.buildFSub(S64, HighBitsFP, TwoP52P84FP);
+  MIRBuilder.buildFAdd(Dst, Scratch, LowBitsFP);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
 
@@ -7183,13 +7417,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
   if (SrcTy != LLT::scalar(64))
     return UnableToLegalize;
 
-  if (DstTy == LLT::scalar(32)) {
+  if (DstTy == LLT::scalar(32))
     // TODO: SelectionDAG has several alternative expansions to port which may
-    // be more reasonble depending on the available instructions. If a target
-    // has sitofp, does not have CTLZ, or can efficiently use f64 as an
-    // intermediate type, this is probably worse.
-    return lowerU64ToF32BitOps(MI);
-  }
+    // be more reasonable depending on the available instructions. We also need
+    // a more advanced mechanism to choose an optimal version depending on
+    // target features such as sitofp or CTLZ availability.
+    return lowerU64ToF32WithSITOFP(MI);
+
+  if (DstTy == LLT::scalar(64))
+    return lowerU64ToF64BitFloatOps(MI);
 
   return UnableToLegalize;
 }

@@ -12,7 +12,6 @@
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 
 using ModeFlags = LIBC_NAMESPACE::File::ModeFlags;

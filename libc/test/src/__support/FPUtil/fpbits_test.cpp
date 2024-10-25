@@ -13,6 +13,7 @@
 #include "src/__support/sign.h" // Sign
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::FPBits;
 using LIBC_NAMESPACE::fputil::FPType;
 using LIBC_NAMESPACE::fputil::internal::FPRep;

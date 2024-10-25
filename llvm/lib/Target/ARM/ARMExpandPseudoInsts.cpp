@@ -2178,12 +2178,13 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         } else {
           // Use move to satisfy constraints
           unsigned MoveOpc = Opcode == ARM::VBSPd ? ARM::VORRd : ARM::VORRq;
+          unsigned MO1Flags = getRegState(MI.getOperand(1)) & ~RegState::Kill;
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MoveOpc))
               .addReg(DstReg,
                       RegState::Define |
                           getRenamableRegState(MI.getOperand(0).isRenamable()))
-              .add(MI.getOperand(1))
-              .add(MI.getOperand(1))
+              .addReg(MI.getOperand(1).getReg(), MO1Flags)
+              .addReg(MI.getOperand(1).getReg(), MO1Flags)
               .addImm(MI.getOperand(4).getImm())
               .add(MI.getOperand(5));
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))

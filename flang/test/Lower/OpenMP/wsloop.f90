@@ -22,7 +22,6 @@ subroutine simple_loop
     print*, i
   end do
   ! CHECK:          omp.yield
-  ! CHECK:        omp.terminator
   !$OMP END DO
   ! CHECK:      omp.terminator
   !$OMP END PARALLEL
@@ -48,7 +47,6 @@ subroutine simple_loop_with_step
     print*, i
   end do
   ! CHECK:          omp.yield
-  ! CHECK:        omp.terminator
   !$OMP END DO
   ! CHECK:      omp.terminator
   !$OMP END PARALLEL
@@ -74,7 +72,6 @@ subroutine loop_with_schedule_nowait
     print*, i
   end do
   ! CHECK:          omp.yield
-  ! CHECK:        omp.terminator
   !$OMP END DO NOWAIT
   ! CHECK:      omp.terminator
   !$OMP END PARALLEL

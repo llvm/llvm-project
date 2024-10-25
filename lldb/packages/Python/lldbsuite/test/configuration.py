@@ -118,6 +118,9 @@ test_result = None
 # same base name.
 all_tests = set()
 
+# Path to LLVM tools to be used by tests.
+llvm_tools_dir = None
+
 # LLDB library directory.
 lldb_libs_dir = None
 lldb_obj_root = None

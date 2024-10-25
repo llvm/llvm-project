@@ -19,6 +19,7 @@ static_library("Passes") {
     "BinaryPasses.cpp",
     "CMOVConversion.cpp",
     "CacheMetrics.cpp",
+    "ContinuityStats.cpp",
     "DataflowAnalysis.cpp",
     "DataflowInfoManager.cpp",
     "FixRISCVCallsPass.cpp",

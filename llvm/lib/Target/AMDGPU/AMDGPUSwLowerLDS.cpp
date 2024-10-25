@@ -336,8 +336,8 @@ static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
   BasicBlock *Entry = &Func->getEntryBlock();
   IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
 
-  Function *Decl =
-      Intrinsic::getDeclaration(Func->getParent(), Intrinsic::donothing, {});
+  Function *Decl = Intrinsic::getOrInsertDeclaration(Func->getParent(),
+                                                     Intrinsic::donothing, {});
 
   Value *UseInstance[1] = {
       Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
@@ -368,7 +368,7 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
       LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
     return;
   // Create new global pointer variable
-  auto emptyCharArray = ArrayType::get(IRB.getInt8Ty(), 0);
+  auto *emptyCharArray = ArrayType::get(IRB.getInt8Ty(), 0);
   LDSParams.SwDynLDS = new GlobalVariable(
       M, emptyCharArray, false, GlobalValue::ExternalLinkage, nullptr,
       "llvm.amdgcn." + Func->getName() + ".dynlds", nullptr,
@@ -921,8 +921,8 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
       StringRef("__asan_free_impl"),
       FunctionType::get(IRB.getVoidTy(), {Int64Ty, Int64Ty}, false));
-  Value *ReturnAddr = IRB.CreateCall(
-      Intrinsic::getDeclaration(&M, Intrinsic::returnaddress), IRB.getInt32(0));
+  Value *ReturnAddr =
+      IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
   Value *RAPToInt = IRB.CreatePtrToInt(ReturnAddr, Int64Ty);
   Value *MallocPtrToInt = IRB.CreatePtrToInt(LoadMallocPtr, Int64Ty);
   IRB.CreateCall(AsanFreeFunc, {MallocPtrToInt, RAPToInt});
@@ -952,8 +952,7 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
       ArrayType::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), Variables.size());
 
   SmallVector<Constant *> Elements;
-  for (size_t i = 0; i < Variables.size(); i++) {
-    GlobalVariable *GV = Variables[i];
+  for (auto *GV : Variables) {
     if (!LDSParams.LDSToReplacementIndicesMap.contains(GV)) {
       Elements.push_back(
           PoisonValue::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS)));
@@ -1056,9 +1055,7 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
   SetVector<Instruction *> LDSInstructions;
   getLDSMemoryInstructions(Func, LDSInstructions);
 
-  Function *Decl =
-      Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
-  auto *KernelId = IRB.CreateCall(Decl, {});
+  auto *KernelId = IRB.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
   GlobalVariable *LDSBaseTable = NKLDSParams.LDSBaseTable;
   GlobalVariable *LDSOffsetTable = NKLDSParams.LDSOffsetTable;
   auto &OrdereLDSGlobals = NKLDSParams.OrdereLDSGlobals;
@@ -1070,7 +1067,8 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
       IRB.CreateLoad(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), BaseLoad);
 
   for (GlobalVariable *GV : LDSGlobals) {
-    auto GVIt = std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
+    const auto *GVIt =
+        std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
     assert(GVIt != OrdereLDSGlobals.end());
     uint32_t GVOffset = std::distance(OrdereLDSGlobals.begin(), GVIt);
 

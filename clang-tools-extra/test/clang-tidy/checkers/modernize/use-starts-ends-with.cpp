@@ -32,14 +32,9 @@ struct prefer_underscore_version_flip {
   size_t find(const char *s, size_t pos = 0) const;
 };
 
-struct prefer_underscore_version_inherit : public string_like {
-  bool startsWith(const char *s) const;
-};
-
 void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
           string_like sl, string_like_camel slc, prefer_underscore_version puv,
-          prefer_underscore_version_flip puvf,
-          prefer_underscore_version_inherit puvi) {
+          prefer_underscore_version_flip puvf) {
   s.find("a") == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of find() == 0
   // CHECK-FIXES: s.starts_with("a");
@@ -153,12 +148,6 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
   // CHECK-FIXES: puvf.starts_with("a");
 
-  // Here, the subclass has startsWith, the superclass has starts_with.
-  // We prefer the version from the subclass.
-  puvi.find("a") == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use startsWith
-  // CHECK-FIXES: puvi.startsWith("a");
-
   s.compare(0, 1, "a") == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare() == 0
   // CHECK-FIXES: s.starts_with("a");
@@ -208,6 +197,62 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
   // CHECK-FIXES: !s.starts_with(sv);
 
+  s.compare(s.size() - 6, 6, "suffix") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with("suffix");
+
+  s.compare(s.size() - 6, strlen("abcdef"), "suffix") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with("suffix");
+
+  std::string suffix = "suffix";
+  s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind("suffix") == s.size() - 6;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with("suffix");
+
+  s.rfind("suffix") == s.size() - strlen("suffix");
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with("suffix");
+
+  s.rfind(suffix) == s.size() - suffix.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix, std::string::npos) == s.size() - suffix.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix) == (s.size() - suffix.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix, s.npos) == (s.size() - suffix.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix, s.npos) == (((s.size()) - (suffix.size())));
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix) != s.size() - suffix.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: !s.ends_with(suffix);
+
+  (s.size() - suffix.size()) == s.rfind(suffix);
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  struct S {
+    std::string s;
+  } t;
+  t.s.rfind(suffix) == (t.s.size() - suffix.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: t.s.ends_with(suffix);
+
   // Expressions that don't trigger the check are here.
   #define EQ(x, y) ((x) == (y))
   EQ(s.find("a"), 0);
@@ -219,4 +264,5 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   STARTS_WITH_COMPARE(s, s) == 0;
 
   s.compare(0, 1, "ab") == 0;
+  s.rfind(suffix, 1) == s.size() - suffix.size();
 }

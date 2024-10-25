@@ -232,7 +232,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 // [ios.syn]
 #  include <iosfwd>
 
-#  if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#  if _LIBCPP_HAS_ATOMIC_HEADER
 #    include <__atomic/atomic.h> // for __xindex_
 #  endif
 
@@ -441,7 +441,7 @@ public:
 };
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_failure(char const* __msg) {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw ios_base::failure(__msg);
 #  else
   _LIBCPP_VERBOSE_ABORT("ios_base::failure was thrown in -fno-exceptions mode with message \"%s\"", __msg);
@@ -524,7 +524,10 @@ template <class _Traits>
 // Attribute 'packed' is used to keep the layout compatible with the previous
 // definition of the '__fill_' and '_set_' pair in basic_ios on AIX & z/OS.
 struct _LIBCPP_PACKED _FillHelper {
-  _LIBCPP_HIDE_FROM_ABI void __init() { __set_ = false; }
+  _LIBCPP_HIDE_FROM_ABI void __init() {
+    __set_      = false;
+    __fill_val_ = _Traits::eof();
+  }
   _LIBCPP_HIDE_FROM_ABI _FillHelper& operator=(typename _Traits::int_type __x) {
     __set_      = true;
     __fill_val_ = __x;
