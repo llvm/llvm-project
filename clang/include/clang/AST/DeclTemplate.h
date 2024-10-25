@@ -199,7 +199,7 @@ public:
 
   bool hasAssociatedConstraints() const;
 
-  /// Get the template argument lisr of the template parameter list.
+  /// Get the template argument list of the template parameter list.
   ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
   SourceLocation getTemplateLoc() const { return TemplateLoc; }
@@ -2131,7 +2131,7 @@ public:
     return TemplateParams;
   }
 
-  /// Get the template argument lisr of the template parameter list.
+  /// Get the template argument list of the template parameter list.
   ArrayRef<TemplateArgument> getInjectedTemplateArgs() const {
     return getTemplateParameters()->getInjectedTemplateArgs();
   }
@@ -2906,7 +2906,7 @@ public:
     return TemplateParams;
   }
 
-  /// Get the template argument lisr of the template parameter list.
+  /// Get the template argument list of the template parameter list.
   ArrayRef<TemplateArgument> getInjectedTemplateArgs() const {
     return getTemplateParameters()->getInjectedTemplateArgs();
   }
