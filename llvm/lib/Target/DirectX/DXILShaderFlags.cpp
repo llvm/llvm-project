@@ -13,43 +13,114 @@
 
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-static void updateFlags(DXILModuleShaderFlagsInfo &MSFI, const Instruction &I) {
-  ComputedShaderFlags &FSF = MSFI.FuncShaderFlagsMap[I.getFunction()];
+namespace {
+/// A simple Wrapper DiagnosticInfo that generates Module-level diagnostic
+/// for ShaderFlagsAnalysis pass
+class DiagnosticInfoShaderFlags : public DiagnosticInfo {
+private:
+  const Twine &Msg;
+  const Module &Mod;
+
+public:
+  /// \p M is the module for which the diagnostic is being emitted. \p Msg is
+  /// the message to show. Note that this class does not copy this message, so
+  /// this reference must be valid for the whole life time of the diagnostic.
+  DiagnosticInfoShaderFlags(const Module &M, const Twine &Msg,
+                            DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
+
+  void print(DiagnosticPrinter &DP) const override {
+    DP << Mod.getName() << ": " << Msg << '\n';
+  }
+};
+} // namespace
+
+static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
   Type *Ty = I.getType();
-  if (Ty->isDoubleTy()) {
-    FSF.Doubles = true;
+  bool DoubleTyInUse = Ty->isDoubleTy();
+  for (Value *Op : I.operands()) {
+    DoubleTyInUse |= Op->getType()->isDoubleTy();
+  }
+
+  if (DoubleTyInUse) {
+    CSF.Doubles = true;
     switch (I.getOpcode()) {
     case Instruction::FDiv:
     case Instruction::UIToFP:
     case Instruction::SIToFP:
     case Instruction::FPToUI:
     case Instruction::FPToSI:
-      FSF.DX11_1_DoubleExtensions = true;
+      // TODO: To be set if I is a call to DXIL intrinsic DXIL::Opcode::Fma
+      CSF.DX11_1_DoubleExtensions = true;
       break;
     }
   }
 }
 
+static bool compareFuncSFPairs(const FuncShaderFlagsMask &First,
+                               const FuncShaderFlagsMask &Second) {
+  // Construct string representation of the functions in each pair
+  // as "retTypefunctionNamearg1Typearg2Ty..." where the function signature is
+  // retType functionName(arg1Type, arg2Ty,...).  Spaces, braces and commas are
+  //  omitted in the string representation of the signature. This allows
+  // determining a consistent lexicographical order of all functions by their
+  // signatures.
+  std::string FirstFunSig;
+  std::string SecondFunSig;
+  raw_string_ostream FRSO(FirstFunSig);
+  raw_string_ostream SRSO(SecondFunSig);
+
+  // Return type
+  First.first->getReturnType()->print(FRSO);
+  Second.first->getReturnType()->print(SRSO);
+  // Function name
+  FRSO << First.first->getName();
+  SRSO << Second.first->getName();
+  // Argument types
+  for (const Argument &Arg : First.first->args()) {
+    Arg.getType()->print(FRSO);
+  }
+  for (const Argument &Arg : Second.first->args()) {
+    Arg.getType()->print(SRSO);
+  }
+  FRSO.flush();
+  SRSO.flush();
+
+  return FRSO.str().compare(SRSO.str()) < 0;
+}
+
 static DXILModuleShaderFlagsInfo computeFlags(Module &M) {
   DXILModuleShaderFlagsInfo MSFI;
-  for (const auto &F : M) {
+  for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    if (!MSFI.FuncShaderFlagsMap.contains(&F)) {
-      ComputedShaderFlags CSF{};
-      MSFI.FuncShaderFlagsMap[&F] = CSF;
+    // Each of the functions in a module are unique. Hence no prior shader flags
+    // mask of the function should be present.
+    if (MSFI.hasShaderFlagsMask(&F)) {
+      M.getContext().diagnose(DiagnosticInfoShaderFlags(
+          M, "Shader Flags mask for Function '" + Twine(F.getName()) +
+                 "' already exits"));
     }
+    ComputedShaderFlags CSF{};
     for (const auto &BB : F)
       for (const auto &I : BB)
-        updateFlags(MSFI, I);
+        updateFlags(CSF, I);
+    // Insert shader flag mask for function F
+    MSFI.FuncShaderFlagsVec.push_back({&F, CSF});
   }
+  // Sort MSFI.FuncShaderFlagsVec for later lookup that uses binary search
+  llvm::sort(MSFI.FuncShaderFlagsVec, compareFuncSFPairs);
   return MSFI;
 }
 
@@ -71,6 +142,38 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
   OS << ";\n";
 }
 
+void DXILModuleShaderFlagsInfo::print(raw_ostream &OS) const {
+  OS << "; Shader Flags mask for Module:\n";
+  ModuleFlags.print(OS);
+  for (auto SF : FuncShaderFlagsVec) {
+    OS << "; Shader Flags mask for Function: " << SF.first->getName() << "\n";
+    SF.second.print(OS);
+  }
+}
+
+const ComputedShaderFlags
+DXILModuleShaderFlagsInfo::getShaderFlagsMask(const Function *Func) const {
+  FuncShaderFlagsMask V{Func, {}};
+  auto Iter = llvm::lower_bound(FuncShaderFlagsVec, V, compareFuncSFPairs);
+  if (Iter == FuncShaderFlagsVec.end()) {
+    Func->getContext().diagnose(DiagnosticInfoShaderFlags(
+        *(Func->getParent()), "Shader Flags information of Function '" +
+                                  Twine(Func->getName()) + "' not found"));
+  }
+  if (Iter->first != Func) {
+    Func->getContext().diagnose(DiagnosticInfoShaderFlags(
+        *(Func->getParent()),
+        "Inconsistent Shader Flags information of Function '" +
+            Twine(Func->getName()) + "' retrieved"));
+  }
+  return Iter->second;
+}
+
+bool DXILModuleShaderFlagsInfo::hasShaderFlagsMask(const Function *Func) const {
+  FuncShaderFlagsMask V{Func, {}};
+  return llvm::binary_search(FuncShaderFlagsVec, V);
+}
+
 AnalysisKey ShaderFlagsAnalysis::Key;
 
 DXILModuleShaderFlagsInfo ShaderFlagsAnalysis::run(Module &M,
@@ -86,12 +189,7 @@ bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
 PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
   DXILModuleShaderFlagsInfo Flags = AM.getResult<ShaderFlagsAnalysis>(M);
-  OS << "; Shader Flags mask for Module:\n";
-  Flags.ModuleFlags.print(OS);
-  for (auto SF : Flags.FuncShaderFlagsMap) {
-    OS << "; Shader Flags mash for Function: " << SF.first->getName() << "\n";
-    SF.second.print(OS);
-  }
+  Flags.print(OS);
   return PreservedAnalyses::all();
 }
 

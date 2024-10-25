@@ -14,7 +14,6 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 #define LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -66,14 +65,18 @@ struct ComputedShaderFlags {
   LLVM_DUMP_METHOD void dump() const { print(); }
 };
 
-using FunctionShaderFlagsMap =
-    SmallDenseMap<Function const *, ComputedShaderFlags>;
+using FuncShaderFlagsMask = std::pair<Function const *, ComputedShaderFlags>;
+using FunctionShaderFlagsVec = SmallVector<FuncShaderFlagsMask>;
 struct DXILModuleShaderFlagsInfo {
   // Shader Flag mask representing module-level properties
   ComputedShaderFlags ModuleFlags;
-  // Map representing shader flag mask representing properties of each of the
-  // functions in the module
-  FunctionShaderFlagsMap FuncShaderFlagsMap;
+  // Vector of Function-Shader Flag mask pairs representing properties of each
+  // of the functions in the module
+  FunctionShaderFlagsVec FuncShaderFlagsVec;
+
+  const ComputedShaderFlags getShaderFlagsMask(const Function *Func) const;
+  bool hasShaderFlagsMask(const Function *Func) const;
+  void print(raw_ostream &OS = dbgs()) const;
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {

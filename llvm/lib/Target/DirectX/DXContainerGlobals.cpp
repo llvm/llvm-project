@@ -84,7 +84,7 @@ GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
   // of the shader flags of all functions in the module. Need to verify
   // and modify the computation of feature flags to be used.
   uint64_t ConsolidatedFeatureFlags = 0;
-  for (const auto &FuncFlags : MSFI.FuncShaderFlagsMap) {
+  for (const auto &FuncFlags : MSFI.FuncShaderFlagsVec) {
     ConsolidatedFeatureFlags |= FuncFlags.second.getFeatureFlags();
   }
 
