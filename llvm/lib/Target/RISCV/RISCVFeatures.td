@@ -1035,33 +1035,33 @@ def FeatureStdExtSvpbmt
 // privilege mode (U-mode), and for VS- and VU-modes if the H extension is
 // present.
 def FeatureStdExtSsnpm
-    : RISCVExperimentalExtension<"ssnpm", 1, 0,
-                                 "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
+    : RISCVExtension<"ssnpm", 1, 0,
+                     "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for the next lower
 // privilege mode (S/HS if S-mode is implemented, or U-mode otherwise).
 def FeatureStdExtSmnpm
-    : RISCVExperimentalExtension<"smnpm", 1, 0,
-                                 "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
+    : RISCVExtension<"smnpm", 1, 0,
+                     "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for M-mode.
 def FeatureStdExtSmmpm
-    : RISCVExperimentalExtension<"smmpm", 1, 0,
-                                 "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
+    : RISCVExtension<"smmpm", 1, 0,
+                     "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
 
 // An extension that indicates that there is pointer-masking support available
 // in supervisor mode, with some facility provided in the supervisor execution
 // environment to control pointer masking.
 def FeatureStdExtSspm
-    : RISCVExperimentalExtension<"sspm", 1, 0,
-                                 "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
+    : RISCVExtension<"sspm", 1, 0,
+                     "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
 
 // An extension that indicates that there is pointer-masking support available
 // in user mode, with some facility provided in the application execution
 // environment to control pointer masking.
 def FeatureStdExtSupm
-    : RISCVExperimentalExtension<"supm", 1, 0,
-                                 "'Supm' (Indicates User-mode Pointer Masking)">;
+    : RISCVExtension<"supm", 1, 0,
+                     "'Supm' (Indicates User-mode Pointer Masking)">;
 
 def FeatureStdExtSmctr
     : RISCVExperimentalExtension<"smctr", 1, 0,
