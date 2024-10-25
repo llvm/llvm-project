@@ -783,6 +783,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
     {
+      if (BT->getKind() == BuiltinType::MFloat8) {
+        Encoding = llvm::dwarf::DW_ATE_unsigned_char;
+        BTName = BT->getName(CGM.getLangOpts());
+        // Bit size and offset of the type.
+        uint64_t Size = CGM.getContext().getTypeSize(BT);
+        return DBuilder.createBasicType(BTName, Size, Encoding);
+      }
       ASTContext::BuiltinVectorTypeInfo Info =
           // For svcount_t, only the lower 2 bytes are relevant.
           BT->getKind() == BuiltinType::SveCount
