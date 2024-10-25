@@ -126,7 +126,8 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     auto *FnTy = FunctionType::get(Type::getVoidTy(C), Builder.getPtrTy(0),
                                    /*isVarArg=*/false);
     auto *FnPtrTy = Builder.getPtrTy(0);
-    StructType *FrameTy = StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
+    StructType *FrameTy =
+        StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
 
     // Create a Noop function that does nothing.
     Function *NoopFn =
