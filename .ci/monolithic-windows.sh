@@ -29,7 +29,7 @@ fi
 sccache --zero-stats
 function at-exit {
   python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
-    "windows-x64-test-results" "${BUILD_DIR}"/test-results*.xml
+    "windows-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
 
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
@@ -67,6 +67,10 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
       -D LLVM_PARALLEL_COMPILE_JOBS=16 \
       -D LLVM_PARALLEL_LINK_JOBS=4
+
+# Configure installs llvm-lit into bin. Replace this with the wrapper script.
+mv "${BUILD_DIR}"/bin/llvm-lit.py "${BUILD_DIR}"/bin/llvm-lit-actual.py
+cp "${MONOREPO_ROOT}"/.ci/lit-wrapper.py "${BUILD_DIR}"/bin/llvm-lit.py
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.

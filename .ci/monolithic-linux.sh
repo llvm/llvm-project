@@ -30,7 +30,7 @@ fi
 
 function at-exit {
   python3 "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":linux: Linux x64 Test Results" \
-    "linux-x64-test-results" "${BUILD_DIR}"/test-results*.xml
+    "linux-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
 
   mkdir -p artifacts
   ccache --print-stats > artifacts/ccache_stats.txt
@@ -39,6 +39,7 @@ trap at-exit EXIT
 
 projects="${1}"
 targets="${2}"
+llvm_lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --timeout=1200 --time-tests"
 
 echo "--- cmake"
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
@@ -51,12 +52,17 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
       -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
-      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --timeout=1200 --time-tests" \
+      -D LLVM_LIT_ARGS="$llvm_lit_args" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D LLVM_CCACHE_BUILD=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+
+# Configure installs llvm-lit into bin. Replace this with the wrapper script.
+# TODO: make a function for this
+mv "${BUILD_DIR}"/bin/llvm-lit "${BUILD_DIR}"/bin/llvm-lit-actual.py
+cp "${MONOREPO_ROOT}"/.ci/lit-wrapper.py "${BUILD_DIR}"/bin/llvm-lit
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
@@ -91,7 +97,11 @@ if [[ "${runtimes}" != "" ]]; then
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D LIBCXX_TEST_PARAMS="std=c++03" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++03"
+      -D LIBCXXABI_TEST_PARAMS="std=c++03" \
+      -D LLVM_LIT_ARGS="$llvm_lit_args"
+
+  mv "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit-actual.py
+  cp "${MONOREPO_ROOT}"/.ci/lit-wrapper.py "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit
 
   echo "--- ninja runtimes C++03"
 
@@ -108,7 +118,11 @@ if [[ "${runtimes}" != "" ]]; then
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D LIBCXX_TEST_PARAMS="std=c++26" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++26"
+      -D LIBCXXABI_TEST_PARAMS="std=c++26" \
+      -D LLVM_LIT_ARGS="$llvm_lit_args"
+
+  mv "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit-actual.py
+  cp "${MONOREPO_ROOT}"/.ci/lit-wrapper.py "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit
 
   echo "--- ninja runtimes C++26"
 
@@ -125,7 +139,11 @@ if [[ "${runtimes}" != "" ]]; then
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
-      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang"
+      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
+      -D LLVM_LIT_ARGS="$llvm_lit_args"
+
+  mv "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit-actual.py
+  cp "${MONOREPO_ROOT}"/.ci/lit-wrapper.py "${RUNTIMES_BUILD_DIR}"/bin/llvm-lit
 
   echo "--- ninja runtimes clang modules"
   
