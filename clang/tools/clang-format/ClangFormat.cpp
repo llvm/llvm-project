@@ -419,7 +419,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
           ? MemoryBuffer::getFileAsStream(FileName)
           : MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError()) {
-    errs() << EC.message() << "\n";
+    errs() << FileName << ": " << EC.message() << "\n";
     return true;
   }
   std::unique_ptr<llvm::MemoryBuffer> Code = std::move(CodeOrErr.get());
