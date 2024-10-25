@@ -26,13 +26,14 @@
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 // Type aliases to the address spaces used by the AMDGPU backend.
-#define _Private __attribute__((opencl_private))
-#define _Constant __attribute__((opencl_constant))
-#define _Local __attribute__((opencl_local))
-#define _Global __attribute__((opencl_global))
+#define __private __attribute__((opencl_private))
+#define __constant __attribute__((opencl_constant))
+#define __local __attribute__((opencl_local))
+#define __global __attribute__((opencl_global))
+#define __generic __attribute__((opencl_generic))
 
 // Attribute to declare a function as a kernel.
-#define _Kernel __attribute__((amdgpu_kernel, visibility("protected")))
+#define __kernel __attribute__((amdgpu_kernel, visibility("protected")))
 
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_ATTRS static inline uint32_t __gpu_num_blocks_x() {
