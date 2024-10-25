@@ -84,14 +84,11 @@ static cl::opt<bool> SpecializeOnAddress(
     "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
     "Enable function specialization on the address of global values"));
 
-// Disabled by default as it can significantly increase compilation times.
-//
-// https://llvm-compile-time-tracker.com
-// https://github.com/nikic/llvm-compile-time-tracker
 static cl::opt<bool> SpecializeLiteralConstant(
-    "funcspec-for-literal-constant", cl::init(false), cl::Hidden, cl::desc(
-    "Enable specialization of functions that take a literal constant as an "
-    "argument"));
+    "funcspec-for-literal-constant", cl::init(true), cl::Hidden,
+    cl::desc(
+        "Enable specialization of functions that take a literal constant as an "
+        "argument"));
 
 bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
                                          DenseSet<BasicBlock *> &DeadBlocks) {
@@ -682,10 +679,11 @@ bool FunctionSpecializer::run() {
         (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
       continue;
 
-    // TODO: For now only consider recursive functions when running multiple
-    // times. This should change if specialization on literal constants gets
-    // enabled.
-    if (!Inserted && !Metrics.isRecursive && !SpecializeLiteralConstant)
+    // When specialization on literal constants is disabled, only consider
+    // recursive functions when running multiple times to save wasted analysis,
+    // as we will not be able to specialize on any newly found literal constant
+    // return values.
+    if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
       continue;
 
     int64_t Sz = *Metrics.NumInsts.getValue();
