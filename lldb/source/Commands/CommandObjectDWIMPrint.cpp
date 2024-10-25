@@ -194,7 +194,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     // Record the position of the expression in the command.
     std::optional<uint16_t> indent;
     if (fixed_expression.empty()) {
-      size_t pos = m_original_command.find(expr);
+      size_t pos = m_original_command.rfind(expr);
       if (pos != llvm::StringRef::npos)
         indent = pos;
     }

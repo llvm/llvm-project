@@ -1,9 +1,9 @@
-; RUN: sed -s 's/_MD_/, !callees !{ptr @CallCandidate0}/' %s | llvm-split -o %t -j 3 -mtriple amdgcn-amd-amdhsa
+; RUN: sed 's/_MD_/, !callees !{ptr @CallCandidate0}/g' %s | llvm-split -o %t -j 3 -mtriple amdgcn-amd-amdhsa
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 --implicit-check-not=define %s
 
-; RUN: sed -s 's/_MD_//g' %s | llvm-split -o %t-nomd -j 3 -mtriple amdgcn-amd-amdhsa
+; RUN: sed 's/_MD_//g' %s | llvm-split -o %t-nomd -j 3 -mtriple amdgcn-amd-amdhsa
 ; RUN: llvm-dis -o - %t-nomd0 | FileCheck --check-prefix=CHECK-NOMD0 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t-nomd1 | FileCheck --check-prefix=CHECK-NOMD1 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t-nomd2 | FileCheck --check-prefix=CHECK-NOMD2 --implicit-check-not=define %s

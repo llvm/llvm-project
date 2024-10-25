@@ -689,6 +689,17 @@ define i1 @sge_and_max_logical(i8 %x, i8 %y)  {
   ret i1 %r
 }
 
+define i1 @sge_and_max_logical_samesign(i8 %x, i8 %y)  {
+; CHECK-LABEL: @sge_and_max_logical_samesign(
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X:%.*]], 127
+; CHECK-NEXT:    ret i1 [[CMPEQ]]
+;
+  %cmp = icmp sge i8 %x, %y
+  %cmpeq = icmp samesign eq i8 %x, 127
+  %r = select i1 %cmp, i1 %cmpeq, i1 false
+  ret i1 %r
+}
+
 define i1 @sge_and_max_commute(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sge_and_max_commute(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X:%.*]], 127

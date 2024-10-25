@@ -36,6 +36,8 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
     bool isNestedInIncludeDirective)
     : messages_{that.messages_}, cooked_{that.cooked_}, preprocessor_{prepro},
       allSources_{that.allSources_}, features_{that.features_},
+      preprocessingOnly_{that.preprocessingOnly_},
+      expandIncludeLines_{that.expandIncludeLines_},
       isNestedInIncludeDirective_{isNestedInIncludeDirective},
       backslashFreeFormContinuation_{that.backslashFreeFormContinuation_},
       inFixedForm_{that.inFixedForm_},
@@ -288,8 +290,8 @@ void Prescanner::Statement() {
       break;
     case LineClassification::Kind::Source:
       if (inFixedForm_) {
-        if (preprocessed->HasBlanks(/*after column*/ 6)) {
-          preprocessed->RemoveBlanks(/*after column*/ 6);
+        if (!preprocessingOnly_ && preprocessed->HasBlanks()) {
+          preprocessed->RemoveBlanks();
         }
       } else {
         while (SourceLineContinuation(*preprocessed)) {
@@ -622,7 +624,7 @@ const char *Prescanner::SkipCComment(const char *p) const {
 
 bool Prescanner::NextToken(TokenSequence &tokens) {
   CHECK(at_ >= start_ && at_ < limit_);
-  if (InFixedFormSource()) {
+  if (InFixedFormSource() && !preprocessingOnly_) {
     SkipSpaces();
   } else {
     if (*at_ == '/' && IsCComment(at_)) {

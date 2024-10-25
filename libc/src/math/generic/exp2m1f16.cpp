@@ -126,7 +126,7 @@ LLVM_LIBC_FUNCTION(float16, exp2m1f16, (float16 x)) {
       case FE_DOWNWARD:
         return FPBits::one(Sign::NEG).get_val();
       default:
-        return -0x1.ffcp-1;
+        return fputil::cast<float16>(-0x1.ffcp-1);
       }
     }
 

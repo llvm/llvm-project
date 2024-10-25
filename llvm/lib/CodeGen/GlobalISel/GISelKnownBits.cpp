@@ -514,15 +514,12 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
-    if (DstTy.isVector())
-      break;
     unsigned NumOps = MI.getNumOperands();
     Register SrcReg = MI.getOperand(NumOps - 1).getReg();
-    if (MRI.getType(SrcReg).isVector())
-      return; // TODO: Handle vectors.
+    LLT SrcTy = MRI.getType(SrcReg);
 
-    KnownBits SrcOpKnown;
-    computeKnownBitsImpl(SrcReg, SrcOpKnown, DemandedElts, Depth + 1);
+    if (SrcTy.isVector() && SrcTy.getScalarType() != DstTy.getScalarType())
+      return; // TODO: Handle vector->subelement unmerges
 
     // Figure out the result operand index
     unsigned DstIdx = 0;
@@ -530,7 +527,20 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
          ++DstIdx)
       ;
 
-    Known = SrcOpKnown.extractBits(BitWidth, BitWidth * DstIdx);
+    APInt SubDemandedElts = DemandedElts;
+    if (SrcTy.isVector()) {
+      unsigned DstLanes = DstTy.isVector() ? DstTy.getNumElements() : 1;
+      SubDemandedElts =
+          DemandedElts.zext(SrcTy.getNumElements()).shl(DstIdx * DstLanes);
+    }
+
+    KnownBits SrcOpKnown;
+    computeKnownBitsImpl(SrcReg, SrcOpKnown, SubDemandedElts, Depth + 1);
+
+    if (SrcTy.isVector())
+      Known = SrcOpKnown;
+    else
+      Known = SrcOpKnown.extractBits(BitWidth, BitWidth * DstIdx);
     break;
   }
   case TargetOpcode::G_BSWAP: {

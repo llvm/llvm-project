@@ -157,6 +157,26 @@ struct AliasAnalysis {
     bool isData() const;
     bool isBoxData() const;
 
+    /// @name Dummy Argument Aliasing
+    ///
+    /// Check conditions related to dummy argument aliasing.
+    ///
+    /// For all uses, a result of false can prevent MayAlias from being
+    /// reported, so the list of cases where false is returned is conservative.
+
+    ///@{
+    /// The address of a (possibly host associated) dummy argument of the
+    /// current function?
+    bool mayBeDummyArgOrHostAssoc() const;
+    /// \c mayBeDummyArgOrHostAssoc and the address of a pointer?
+    bool mayBePtrDummyArgOrHostAssoc() const;
+    /// The address of an actual argument of the current function?
+    bool mayBeActualArg() const;
+    /// \c mayBeActualArg and the address of either a pointer or a composite
+    /// with a pointer component?
+    bool mayBeActualArgWithPtr(const mlir::Value *val) const;
+    ///@}
+
     mlir::Type getType() const;
   };
 

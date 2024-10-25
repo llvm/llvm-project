@@ -41,6 +41,18 @@ func.func @rocdl.sched_barrier() {
   llvm.return
 }
 
+func.func @rocdl_sched_group_barrier() {
+  // CHECK: rocdl.sched.group.barrier
+  rocdl.sched.group.barrier 8, 1, 0
+  llvm.return
+}
+
+func.func @rocdl_iglp_opt() {
+  // CHECK: rocdl.iglp.opt
+  rocdl.iglp.opt 0
+  llvm.return
+}
+
 func.func @rocdl.setprio() {
   // CHECK: rocdl.s.setprio
   rocdl.s.setprio 0
