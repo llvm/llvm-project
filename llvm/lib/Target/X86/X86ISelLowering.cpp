@@ -18831,10 +18831,11 @@ X86TargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   return LowerGlobalOrExternal(Op, DAG, /*ForCall=*/false);
 }
 
-static SDValue
-GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
-           SDValue *InGlue, const EVT PtrVT, unsigned ReturnReg,
-           unsigned char OperandFlags, bool LocalDynamic = false) {
+static SDValue GetTLSADDR(SelectionDAG &DAG, SDValue Chain,
+                          GlobalAddressSDNode *GA, const EVT PtrVT,
+                          unsigned ReturnReg, unsigned char OperandFlags,
+                          bool LoadGlobalBaseReg = false,
+                          bool LocalDynamic = false) {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDLoc dl(GA);
@@ -18844,8 +18845,25 @@ GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
     TGA = DAG.getTargetExternalSymbol("_TLS_MODULE_BASE_", PtrVT, OperandFlags);
     auto UI = TGA->use_begin();
     // Reuse existing GetTLSADDR node if we can find it.
-    if (UI != TGA->use_end())
-      return SDValue(*UI->use_begin()->use_begin(), 0);
+    if (UI != TGA->use_end()) {
+      // TLSDESC uses TGA.
+      auto TLSDescOp = UI;
+      assert(TLSDescOp->getOpcode() == X86ISD::TLSDESC &&
+             "Unexpected TLSDESC DAG");
+      // CALLSEQ_END uses TGA via a chain and glue.
+      auto CallSeqEndOp = TLSDescOp->use_begin();
+      assert(CallSeqEndOp->getOpcode() == ISD::CALLSEQ_END &&
+             "Unexpected TLSDESC DAG");
+      // CopyFromReg uses CALLSEQ_END via a chain and glue.
+      auto CopyFromRegOp = CallSeqEndOp->use_begin();
+      assert(CopyFromRegOp->getOpcode() == ISD::CopyFromReg &&
+             "Unexpected TLSDESC DAG");
+      // The Add generated at the final return of this function uses
+      // CopyFromReg.
+      auto AddOp = CopyFromRegOp->use_begin();
+      assert(AddOp->getOpcode() == ISD::ADD && "Unexpected TLSDESC DAG");
+      return SDValue(*AddOp, 0);
+    }
   } else {
     TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl, GA->getValueType(0),
                                      GA->getOffset(), OperandFlags);
@@ -18855,13 +18873,20 @@ GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
                               : LocalDynamic ? X86ISD::TLSBASEADDR
                                              : X86ISD::TLSADDR;
 
-  if (InGlue) {
-    SDValue Ops[] = { Chain,  TGA, *InGlue };
+  Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
+  if (LoadGlobalBaseReg) {
+    SDValue InGlue;
+    Chain = DAG.getCopyToReg(Chain, dl, X86::EBX,
+                             DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), PtrVT),
+                             InGlue);
+    InGlue = Chain.getValue(1);
+    SDValue Ops[] = {Chain, TGA, InGlue};
     Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
   } else {
-    SDValue Ops[]  = { Chain, TGA };
+    SDValue Ops[] = {Chain, TGA};
     Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
   }
+  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, Chain.getValue(1), dl);
 
   // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
   MFI.setAdjustsStack(true);
@@ -18887,30 +18912,24 @@ GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
 static SDValue
 LowerToTLSGeneralDynamicModel32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                 const EVT PtrVT) {
-  SDValue InGlue;
-  SDLoc dl(GA);  // ? function entry point might be better
-  SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, X86::EBX,
-                                   DAG.getNode(X86ISD::GlobalBaseReg,
-                                               SDLoc(), PtrVT), InGlue);
-  InGlue = Chain.getValue(1);
-
-  return GetTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, PtrVT, X86::EAX,
+                    X86II::MO_TLSGD, /*LoadGlobalBaseReg=*/true);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit LP64
 static SDValue
 LowerToTLSGeneralDynamicModel64(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                 const EVT PtrVT) {
-  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
-                    X86::RAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, PtrVT, X86::RAX,
+                    X86II::MO_TLSGD);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit ILP32
 static SDValue
 LowerToTLSGeneralDynamicModelX32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                  const EVT PtrVT) {
-  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
-                    X86::EAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, PtrVT, X86::EAX,
+                    X86II::MO_TLSGD);
 }
 
 static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
@@ -18919,22 +18938,20 @@ static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
   SDLoc dl(GA);
 
   // Get the start address of the TLS block for this module.
-  X86MachineFunctionInfo *MFI = DAG.getMachineFunction()
-      .getInfo<X86MachineFunctionInfo>();
+  X86MachineFunctionInfo *MFI =
+      DAG.getMachineFunction().getInfo<X86MachineFunctionInfo>();
   MFI->incNumLocalDynamicTLSAccesses();
 
   SDValue Base;
   if (Is64Bit) {
     unsigned ReturnReg = Is64BitLP64 ? X86::RAX : X86::EAX;
-    Base = GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT, ReturnReg,
-                      X86II::MO_TLSLD, /*LocalDynamic=*/true);
+    Base = GetTLSADDR(DAG, DAG.getEntryNode(), GA, PtrVT, ReturnReg,
+                      X86II::MO_TLSLD, /*LoadGlobalBaseReg=*/false,
+                      /*LocalDynamic=*/true);
   } else {
-    SDValue InGlue;
-    SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, X86::EBX,
-        DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), PtrVT), InGlue);
-    InGlue = Chain.getValue(1);
-    Base = GetTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX,
-                      X86II::MO_TLSLDM, /*LocalDynamic=*/true);
+    Base = GetTLSADDR(DAG, DAG.getEntryNode(), GA, PtrVT, X86::EAX,
+                      X86II::MO_TLSLDM, /*LoadGlobalBaseReg=*/true,
+                      /*LocalDynamic=*/true);
   }
 
   // Note: the CleanupLocalDynamicTLSPass will remove redundant computations
@@ -36060,36 +36077,6 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-X86TargetLowering::EmitLoweredTLSAddr(MachineInstr &MI,
-                                      MachineBasicBlock *BB) const {
-  // So, here we replace TLSADDR with the sequence:
-  // adjust_stackdown -> TLSADDR -> adjust_stackup.
-  // We need this because TLSADDR is lowered into calls
-  // inside MC, therefore without the two markers shrink-wrapping
-  // may push the prologue/epilogue pass them.
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  const MIMetadata MIMD(MI);
-  MachineFunction &MF = *BB->getParent();
-
-  // Emit CALLSEQ_START right before the instruction.
-  MF.getFrameInfo().setAdjustsStack(true);
-  unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
-  MachineInstrBuilder CallseqStart =
-      BuildMI(MF, MIMD, TII.get(AdjStackDown)).addImm(0).addImm(0).addImm(0);
-  BB->insert(MachineBasicBlock::iterator(MI), CallseqStart);
-
-  // Emit CALLSEQ_END right after the instruction.
-  // We don't call erase from parent because we want to keep the
-  // original instruction around.
-  unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
-  MachineInstrBuilder CallseqEnd =
-      BuildMI(MF, MIMD, TII.get(AdjStackUp)).addImm(0).addImm(0);
-  BB->insertAfter(MachineBasicBlock::iterator(MI), CallseqEnd);
-
-  return BB;
-}
-
-MachineBasicBlock *
 X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
                                       MachineBasicBlock *BB) const {
   // This is pretty easy.  We're taking the value that we received from
@@ -37091,16 +37078,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return X86::TMM0_TMM1 + Imm / 2;
   };
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unexpected instr type to insert");
-  case X86::TLS_addr32:
-  case X86::TLS_addr64:
-  case X86::TLS_addrX32:
-  case X86::TLS_base_addr32:
-  case X86::TLS_base_addr64:
-  case X86::TLS_base_addrX32:
-  case X86::TLS_desc32:
-  case X86::TLS_desc64:
-    return EmitLoweredTLSAddr(MI, BB);
+  default:
+    llvm_unreachable("Unexpected instr type to insert");
   case X86::INDIRECT_THUNK_CALL32:
   case X86::INDIRECT_THUNK_CALL64:
   case X86::INDIRECT_THUNK_TCRETURN32:
