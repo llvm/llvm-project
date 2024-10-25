@@ -15,10 +15,6 @@
 #  include <__locale_dir/locale_base_api/ibm.h>
 #elif defined(__ANDROID__)
 #  include <__locale_dir/locale_base_api/android.h>
-#elif defined(__sun__)
-#  include <__locale_dir/locale_base_api/solaris.h>
-#elif defined(_NEWLIB_VERSION)
-#  include <__locale_dir/locale_base_api/newlib.h>
 #elif defined(__OpenBSD__)
 #  include <__locale_dir/locale_base_api/openbsd.h>
 #elif defined(__Fuchsia__)
