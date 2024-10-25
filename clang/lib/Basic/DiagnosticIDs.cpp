@@ -575,6 +575,12 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       DiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
     Result = diag::Severity::Error;
 
+  // Rest of the mappings are only applicable for diagnostics associated with a
+  // SourceLocation, bail out early for others.
+  if (!Diag.hasSourceManager())
+    return Result;
+
+  const auto &SM = Diag.getSourceManager();
   // Custom diagnostics always are emitted in system headers.
   bool ShowInSystemHeader =
       !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
@@ -582,17 +588,28 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // If we are in a system header, we ignore it. We look at the diagnostic class
   // because we also want to ignore extensions and warnings in -Werror and
   // -pedantic-errors modes, which *map* warnings/extensions to errors.
-  if (State->SuppressSystemWarnings && !ShowInSystemHeader && Loc.isValid() &&
-      Diag.getSourceManager().isInSystemHeader(
-          Diag.getSourceManager().getExpansionLoc(Loc)))
+  if (State->SuppressSystemWarnings && !ShowInSystemHeader &&
+      SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
     return diag::Severity::Ignored;
 
   // We also ignore warnings due to system macros
   bool ShowInSystemMacro =
       !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemMacro;
-  if (State->SuppressSystemWarnings && !ShowInSystemMacro && Loc.isValid() &&
-      Diag.getSourceManager().isInSystemMacro(Loc))
+  if (State->SuppressSystemWarnings && !ShowInSystemMacro &&
+      SM.isInSystemMacro(Loc))
     return diag::Severity::Ignored;
+
+  // Apply suppression mappings if severity wasn't explicitly mapped with a
+  // clang-diagnostics pragma to ensure pragmas always take precedence over
+  // mappings.
+  // We also use presumed locations here to improve reproducibility for
+  // preprocessed inputs.
+  if (!Mapping.isPragma()) {
+    if (auto PLoc = SM.getPresumedLoc(Loc);
+        PLoc.isValid() &&
+        Diag.isSuppressedViaMapping(DiagID, PLoc.getFilename()))
+      return diag::Severity::Ignored;
+  }
 
   return Result;
 }
