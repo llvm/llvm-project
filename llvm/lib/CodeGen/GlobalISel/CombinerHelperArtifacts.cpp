@@ -45,14 +45,14 @@ bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
   //
   // ->
   //
-  //   %0:_(s16) = G_ZEXT %bits_0_7:(s8)
+  //   %0:_(s16) = G_ANYEXT %bits_0_7:(s8)
   //
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ANYEXT, {DstTy, SrcTy}}))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildZExt(Dst, Merge->getSourceReg(0));
+    B.buildAnyExt(Dst, Merge->getSourceReg(0));
   };
   return true;
 }
