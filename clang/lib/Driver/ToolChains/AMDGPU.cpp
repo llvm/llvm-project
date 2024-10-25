@@ -306,15 +306,18 @@ RocmInstallationDetector::getInstallationPathCandidates() {
       LatestVer = Ver;
     }
   }
+
+ if (!isHostWindows()) {
   if (!LatestROCm.empty())
     ROCmSearchDirs.emplace_back(D.SysRoot + "/opt/" + LatestROCm,
                                 /*StrictChecking=*/true);
 
-  ROCmSearchDirs.emplace_back(D.SysRoot + "/usr/local",
-                              /*StrictChecking=*/true);
-  ROCmSearchDirs.emplace_back(D.SysRoot + "/usr",
-                              /*StrictChecking=*/true);
-
+    ROCmSearchDirs.emplace_back(D.SysRoot + "/usr/local",
+                                /*StrictChecking=*/true);
+    ROCmSearchDirs.emplace_back(D.SysRoot + "/usr",
+                                /*StrictChecking=*/true);
+ }
+  
   DoPrintROCmSearchDirs();
   return ROCmSearchDirs;
 }
@@ -376,10 +379,15 @@ RocmInstallationDetector::RocmInstallationDetector(
                           .str();
   }
 
-  if (DetectHIPRuntime)
-    detectHIPRuntime();
-  if (DetectDeviceLib)
-    detectDeviceLibrary();
+  // Windows needs to exclude linux style paths from the list of paths to search,
+  // so delay these detection functions until after the constructor
+  if (!isHostWindows() && !HostTriple.isWindowsMSVCEnvironment()) {
+    if (DetectHIPRuntime)
+      detectHIPRuntime();
+    if (DetectDeviceLib)
+      detectDeviceLibrary();
+    }
+
 }
 
 void RocmInstallationDetector::detectDeviceLibrary() {
@@ -835,8 +843,11 @@ bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
 
 /// ROCM Toolchain
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
-                             const ArgList &Args)
+                             const ArgList &Args, bool isHostTCMSVC)
     : AMDGPUToolChain(D, Triple, Args) {
+  RocmInstallation->setHostWindows(isHostTCMSVC);
+  if (isHostTCMSVC) 
+    RocmInstallation->init(true, false);
   RocmInstallation->detectDeviceLibrary();
 }
 
@@ -1047,6 +1058,9 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
       options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
       options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
   bool Wave64 = isWave64(DriverArgs, Kind);
+
+  /* SALINASif (getTriple().isWindowsMSVCEnvironment())
+    RocmInstallation->init(true,true); */
 
   return RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,

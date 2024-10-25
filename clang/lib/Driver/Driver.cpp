@@ -6440,7 +6440,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       TC = std::make_unique<toolchains::NVPTXToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::AMDHSA:
-      TC = std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args);
+      TC = std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args, Target.isWindowsMSVCEnvironment());
       break;
     case llvm::Triple::AMDPAL:
     case llvm::Triple::Mesa3D:
@@ -6582,8 +6582,8 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
         TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
                                                            HostTC, Args);
       else if (Target.getArch() == llvm::Triple::spirv64 &&
-               Target.getVendor() == llvm::Triple::UnknownVendor &&
-               Target.getOS() == llvm::Triple::UnknownOS)
+                 Target.getVendor() == llvm::Triple::UnknownVendor &&
+                 Target.getOS() == llvm::Triple::UnknownOS)
         TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target,
                                                            HostTC, Args);
       break;
