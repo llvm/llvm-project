@@ -250,10 +250,11 @@ private:
     // If we have no defined functions, use the target CPU from the
     // `TargetMachine`.
     if (!AnyDefinedFuncs) {
-      Features = WasmTM
-          ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                             std::string(WasmTM->getTargetFeatureString()))
-          ->getFeatureBits();
+      Features =
+	  WasmTM
+              ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
+                                 std::string(WasmTM->getTargetFeatureString()))
+              ->getFeatureBits();
     }
 
     return Features;
