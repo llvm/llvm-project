@@ -1782,7 +1782,15 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"nofp", "jscvt"}, {"fp-armv8", "jsconv"}, {}},
         {AArch64::ARMV8A, {"jscvt", "nofp"}, {}, {"fp-armv8", "jsconv"}},
 
-        // simd -> {aes, sha2, sha3, sm4}
+        // fp -> lsfe
+        {AArch64::ARMV9_6A, {"nofp", "lsfe"}, {"fp-armv8", "lsfe"}, {}},
+        {AArch64::ARMV9_6A, {"lsfe", "nofp"}, {}, {"fp-armv8", "lsfe"}},
+
+        // fp -> fprcvt
+        {AArch64::ARMV9_6A, {"nofp", "fprcvt"}, {"fp-armv8", "fprcvt"}, {}},
+        {AArch64::ARMV9_6A, {"fprcvt", "nofp"}, {}, {"fp-armv8", "fprcvt"}},
+
+        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm}
         {AArch64::ARMV8A, {"nosimd", "aes"}, {"neon", "aes"}, {}},
         {AArch64::ARMV8A, {"aes", "nosimd"}, {}, {"neon", "aes"}},
         {AArch64::ARMV8A, {"nosimd", "sha2"}, {"neon", "sha2"}, {}},
@@ -1791,6 +1799,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sha3", "nosimd"}, {}, {"neon", "sha3"}},
         {AArch64::ARMV8A, {"nosimd", "sm4"}, {"neon", "sm4"}, {}},
         {AArch64::ARMV8A, {"sm4", "nosimd"}, {}, {"neon", "sm4"}},
+        {AArch64::ARMV9_6A, {"nosimd", "f8f16mm"}, {"neon", "f8f16mm"}, {}},
+        {AArch64::ARMV9_6A, {"f8f16mm", "nosimd"}, {}, {"neon", "f8f16mm"}},
+        {AArch64::ARMV9_6A, {"nosimd", "f8f32mm"}, {"neon", "f8f32mm"}, {}},
+        {AArch64::ARMV9_6A, {"f8f32mm", "nosimd"}, {}, {"neon", "f8f32mm"}},
 
         // simd -> {rdm, dotprod, fcma}
         {AArch64::ARMV8A, {"nosimd", "rdm"}, {"neon", "rdm"}, {}},
@@ -1810,13 +1822,21 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"nobf16", "sme"}, {"bf16", "sme"}, {}},
         {AArch64::ARMV8A, {"sme", "nobf16"}, {}, {"bf16", "sme"}},
 
-        // sve -> {sve2, f32mm, f64mm}
+        // sve -> {sve2, f32mm, f64mm, sve-f16f32mm}
         {AArch64::ARMV8A, {"nosve", "sve2"}, {"sve", "sve2"}, {}},
         {AArch64::ARMV8A, {"sve2", "nosve"}, {}, {"sve", "sve2"}},
         {AArch64::ARMV8A, {"nosve", "f32mm"}, {"sve", "f32mm"}, {}},
         {AArch64::ARMV8A, {"f32mm", "nosve"}, {}, {"sve", "f32mm"}},
         {AArch64::ARMV8A, {"nosve", "f64mm"}, {"sve", "f64mm"}, {}},
         {AArch64::ARMV8A, {"f64mm", "nosve"}, {}, {"sve", "f64mm"}},
+        {AArch64::ARMV9_6A,
+         {"nosve", "sve-f16f32mm"},
+         {"sve", "sve-f16f32mm"},
+         {}},
+        {AArch64::ARMV9_6A,
+         {"sve-f16f32mm", "nosve"},
+         {},
+         {"sve", "sve-f16f32mm"}},
 
         // sve2 -> {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4}
         {AArch64::ARMV8A, {"nosve2", "sve2p1"}, {"sve2", "sve2p1"}, {}},
@@ -1861,7 +1881,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sme-fa64", "nosme"}, {}, {"sme", "sme-fa64"}},
 
         // sme2 -> {sme2p1, ssve-fp8fma, ssve-fp8dot2, ssve-fp8dot4, sme-f8f16,
-        // sme-f8f32, sme-b16b16}
+        // sme-f8f32, sme-b16b16, ssve-aes}
         {AArch64::ARMV8A, {"nosme2", "sme2p1"}, {"sme2", "sme2p1"}, {}},
         {AArch64::ARMV8A, {"sme2p1", "nosme2"}, {}, {"sme2", "sme2p1"}},
         {AArch64::ARMV8A,
@@ -1894,16 +1914,22 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sme-f8f32", "nosme2"}, {}, {"sme2", "sme-f8f32"}},
         {AArch64::ARMV8A, {"nosme2", "sme-b16b16"}, {"sme2", "sme-b16b16"}, {}},
         {AArch64::ARMV8A, {"sme-b16b16", "nosme2"}, {}, {"sme2", "sme-b16b16"}},
+        {AArch64::ARMV9_6A, {"nosme2", "ssve-aes"}, {"sme2", "ssve-aes"}, {}},
+        {AArch64::ARMV9_6A, {"ssve-aes", "nosme2"}, {}, {"ssve-aes", "sme2"}},
 
         // sme2p1 -> {sme2p2}
         {AArch64::ARMV9_6A, {"nosme2p1", "sme2p2"}, {"sme2p2", "sme2p1"}, {}},
         {AArch64::ARMV9_6A, {"sme2p2", "nosme2p1"}, {}, {"sme2p1", "sme2p2"}},
 
-        // fp8 -> {sme-f8f16, sme-f8f32}
+        // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm}
         {AArch64::ARMV8A, {"nofp8", "sme-f8f16"}, {"fp8", "sme-f8f16"}, {}},
         {AArch64::ARMV8A, {"sme-f8f16", "nofp8"}, {}, {"fp8", "sme-f8f16"}},
         {AArch64::ARMV8A, {"nofp8", "sme-f8f32"}, {"fp8", "sme-f8f32"}, {}},
         {AArch64::ARMV8A, {"sme-f8f32", "nofp8"}, {}, {"fp8", "sme-f8f32"}},
+        {AArch64::ARMV9_6A, {"nofp8", "f8f16mm"}, {"fp8", "f8f16mm"}, {}},
+        {AArch64::ARMV9_6A, {"f8f16mm", "nofp8"}, {}, {"fp8", "f8f16mm"}},
+        {AArch64::ARMV9_6A, {"nofp8", "f8f32mm"}, {"fp8", "f8f32mm"}, {}},
+        {AArch64::ARMV9_6A, {"f8f32mm", "nofp8"}, {}, {"fp8", "f8f32mm"}},
 
         // lse -> lse128
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
@@ -1926,6 +1952,16 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // rcpc -> rcpc3
         {AArch64::ARMV8A, {"norcpc", "rcpc3"}, {"rcpc", "rcpc3"}, {}},
         {AArch64::ARMV8A, {"rcpc3", "norcpc"}, {}, {"rcpc", "rcpc3"}},
+
+        // sve2-aes -> ssve-aes
+        {AArch64::ARMV9_6A,
+         {"nosve2-aes", "ssve-aes"},
+         {"sve2-aes", "ssve-aes"},
+         {}},
+        {AArch64::ARMV9_6A,
+         {"ssve-aes", "nosve2-aes"},
+         {},
+         {"ssve-aes", "sve2-aes"}},
 };
 
 INSTANTIATE_TEST_SUITE_P(
