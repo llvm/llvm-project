@@ -934,13 +934,14 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
-    RelType gotRel = target->gotRel;
+    RelType gotRel = ctx.target->gotRel;
     if (sym.hasFlag(NEEDS_GOT_AUTH)) {
       assert(ctx.arg.emachine == EM_AARCH64);
       gotRel = R_AARCH64_AUTH_GLOB_DAT;
     }
-    ctx.mainPart->relaDyn->addReloc({gotRel, in.got.get(), off,
-                                 DynamicReloc::AgainstSymbol, sym, 0, R_ABS});
+    ctx.mainPart->relaDyn->addReloc({gotRel, ctx.in.got.get(), off,
+                                     DynamicReloc::AgainstSymbol, sym, 0,
+                                     R_ABS});
     return;
   }
 
