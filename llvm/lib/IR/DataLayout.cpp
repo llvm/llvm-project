@@ -228,6 +228,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   AllocaAddrSpace = Other.AllocaAddrSpace;
   ProgramAddrSpace = Other.ProgramAddrSpace;
   DefaultGlobalsAddrSpace = Other.DefaultGlobalsAddrSpace;
+  UndesirableAddressSpace = Other.UndesirableAddressSpace;
   StackNaturalAlign = Other.StackNaturalAlign;
   FunctionPtrAlign = Other.FunctionPtrAlign;
   TheFunctionPtrAlignType = Other.TheFunctionPtrAlignType;
@@ -250,6 +251,7 @@ bool DataLayout::operator==(const DataLayout &Other) const {
          AllocaAddrSpace == Other.AllocaAddrSpace &&
          ProgramAddrSpace == Other.ProgramAddrSpace &&
          DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
+         UndesirableAddressSpace == Other.UndesirableAddressSpace &&
          StackNaturalAlign == Other.StackNaturalAlign &&
          FunctionPtrAlign == Other.FunctionPtrAlign &&
          TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
@@ -566,6 +568,15 @@ Error DataLayout::parseSpecification(StringRef Spec) {
       return createSpecFormatError("G<address space>");
     if (Error Err = parseAddrSpace(Rest, DefaultGlobalsAddrSpace))
       return Err;
+    break;
+  }
+  case 'U': { // Flat address space.
+    if (Rest.empty())
+      return createSpecFormatError("U<address space>");
+    unsigned AS = ~0U;
+    if (Error Err = parseAddrSpace(Rest, AS))
+      return Err;
+    UndesirableAddressSpace.emplace(AS);
     break;
   }
   case 'm':
