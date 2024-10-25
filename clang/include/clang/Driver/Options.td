@@ -5400,9 +5400,9 @@ def mfrecipe : Flag<["-"], "mfrecipe">, Group<m_loongarch_Features_Group>,
 def mno_frecipe : Flag<["-"], "mno-frecipe">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable frecipe.{s/d} and frsqrte.{s/d}">;
 def mlam_bh : Flag<["-"], "mlam-bh">, Group<m_loongarch_Features_Group>,
-  HelpText<"Enable amswap_[db].{b/h} and amadd_[db].{b/h}">;
+  HelpText<"Enable amswap[_db].{b/h} and amadd[_db].{b/h}">;
 def mno_lam_bh : Flag<["-"], "mno-lam-bh">, Group<m_loongarch_Features_Group>,
-  HelpText<"Disable amswap_[db].{b/h} and amadd_[db].{b/h}">;
+  HelpText<"Disable amswap[_db].{b/h} and amadd[_db].{b/h}">;
 def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
 def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,
