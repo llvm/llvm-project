@@ -1709,6 +1709,30 @@ void SBDebugger::SetDestroyCallback(
   }
 }
 
+lldb::callback_token_t SBDebugger::AddNotificationCallback(
+    lldb::NotificationType type,
+    lldb::SBNotificationCallback notification_callback, void *baton) {
+  LLDB_INSTRUMENT_VA(type, notification_callback, baton);
+
+  NotificationCallback callback = [](lldb::NotificationType type,
+                                     lldb::DebuggerSP debugger,
+                                     lldb::ExecutionContextRefSP exe_ctx,
+                                     void *baton, void *original_callback) {
+    SBDebugger sb_debugger(debugger);
+    lldb::SBNotificationCallback original_callback_func =
+        (lldb::SBNotificationCallback)original_callback;
+    SBExecutionContext sb_exe_ctx(exe_ctx);
+    original_callback_func(type, sb_debugger, sb_exe_ctx, baton);
+  };
+  return Debugger::AddNotificationCallback(type, callback, baton,
+                                           (void *)notification_callback);
+}
+
+bool SBDebugger::RemoveNotificationCallback(lldb::callback_token_t token) {
+  LLDB_INSTRUMENT_VA(token);
+  return Debugger::RemoveNotificationCallback(token);
+}
+
 lldb::callback_token_t
 SBDebugger::AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
                                void *baton) {

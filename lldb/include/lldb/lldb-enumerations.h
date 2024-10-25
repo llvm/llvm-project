@@ -1362,6 +1362,12 @@ enum Severity {
   eSeverityInfo, // Equivalent to Remark used in clang.
 };
 
+enum NotificationType {
+  eDebuggerWillBeCreated = (1 << 0),
+  eDebuggerWillBeDestroyed =
+      (1 << 1), // Call before debugger object is destroyed
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H
