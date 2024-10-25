@@ -128,12 +128,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0);
 
-  auto &IntegerArithmeticActions =
-      getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR});
-  if (HasSVE)
-    IntegerArithmeticActions.legalFor({nxv16s8, nxv8s16, nxv4s32, nxv2s64});
-  IntegerArithmeticActions
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
+      .legalFor(HasSVE, {nxv16s8, nxv8s16, nxv4s32, nxv2s64})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampMaxNumElements(0, s8, 16)
