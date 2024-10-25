@@ -329,8 +329,8 @@ bool LiveRegOptimizer::optimizeLiveType(
         Type *NewType = calculateConvertType(Phi->getType());
         NewPhi->addIncoming(ConstantInt::get(NewType, 0, false),
                             Phi->getIncomingBlock(I));
-      } else if (ValMap.contains(IncVal) && ValMap[IncVal])
-        NewPhi->addIncoming(ValMap[IncVal], Phi->getIncomingBlock(I));
+      } else if (Value *Val = ValMap.lookup(IncVal))
+        NewPhi->addIncoming(Val, Phi->getIncomingBlock(I));
       else
         MissingIncVal = true;
     }

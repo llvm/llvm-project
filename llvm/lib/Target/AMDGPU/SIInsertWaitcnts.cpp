@@ -2997,35 +2997,56 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
   // instructions.
 #endif /* LLPC_BUILD_GFX12 */
-  for (MachineInstr *MI : ReleaseVGPRInsts) {
+  // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
+  // waveslot limited kernel runs slower with the deallocation.
 #if LLPC_BUILD_GFX12
-    if (ST->isDynamicVGPREnabled())
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-              TII->get(AMDGPU::S_ALLOC_VGPR))
+  if (ST->isDynamicVGPREnabled()) {
 #else /* LLPC_BUILD_GFX12 */
-    if (ST->requiresNopBeforeDeallocVGPRs()) {
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
+  if (!ReleaseVGPRInsts.empty() &&
+      (MF.getFrameInfo().hasCalls() ||
+       ST->getOccupancyWithNumVGPRs(
+           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+           AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
 #endif /* LLPC_BUILD_GFX12 */
-          .addImm(0);
+    for (MachineInstr *MI : ReleaseVGPRInsts) {
 #if LLPC_BUILD_GFX12
-    else {
+#else /* LLPC_BUILD_GFX12 */
       if (ST->requiresNopBeforeDeallocVGPRs()) {
         BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
                 TII->get(AMDGPU::S_NOP))
             .addImm(0);
       }
+#endif /* LLPC_BUILD_GFX12 */
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+#if LLPC_BUILD_GFX12
+              TII->get(AMDGPU::S_ALLOC_VGPR))
+          .addImm(0);
+#else /* LLPC_BUILD_GFX12 */
               TII->get(AMDGPU::S_SENDMSG))
           .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
 #endif /* LLPC_BUILD_GFX12 */
-    }
+      Modified = true;
 #if LLPC_BUILD_GFX12
-#else /* LLPC_BUILD_GFX12 */
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::S_SENDMSG))
-        .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+    }
+  } else {
+    if (!ReleaseVGPRInsts.empty() &&
+        (MF.getFrameInfo().hasCalls() ||
+         ST->getOccupancyWithNumVGPRs(
+             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+             AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+      for (MachineInstr *MI : ReleaseVGPRInsts) {
+        if (ST->requiresNopBeforeDeallocVGPRs()) {
+          BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                  TII->get(AMDGPU::S_NOP))
+              .addImm(0);
+        }
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_SENDMSG))
+            .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+        Modified = true;
+      }
 #endif /* LLPC_BUILD_GFX12 */
-    Modified = true;
+    }
   }
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();

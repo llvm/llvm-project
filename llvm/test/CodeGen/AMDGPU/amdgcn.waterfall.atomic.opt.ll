@@ -165,8 +165,6 @@ define dllexport amdgpu_cs void @atomic_add_before(ptr addrspace(1) %arg, i32 in
 ; GFX11-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; GFX11-NEXT:    s_cbranch_execnz .LBB1_3
 ; GFX11-NEXT:  ; %bb.4:
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %getelementptr = getelementptr i8, ptr addrspace(1) %arg, i32 %arg1
@@ -278,8 +276,6 @@ define dllexport amdgpu_cs void @atomic_add_after(ptr addrspace(1) %arg, i32 inr
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_add_u32 v1, v0, s[0:3], 0 idxen
 ; GFX11-NEXT:  .LBB2_4:
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %getelementptr = getelementptr i8, ptr addrspace(1) %arg, i32 %arg1
@@ -377,8 +373,6 @@ define dllexport amdgpu_cs void @atomic_add_in_wf_partial(ptr addrspace(1) %arg,
 ; GFX11-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; GFX11-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX11-NEXT:  ; %bb.2:
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %getelementptr = getelementptr i8, ptr addrspace(1) %arg, i32 %arg1

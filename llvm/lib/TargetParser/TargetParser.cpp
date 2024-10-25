@@ -125,6 +125,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1150"},   {"gfx1150"}, GK_GFX1150, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1152"},   {"gfx1152"}, GK_GFX1152, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1153"},   {"gfx1153"}, GK_GFX1153, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
 #if LLPC_BUILD_GFX12
     {{"gfx115F"},   {"gfx115F"}, GK_GFX115F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
 #endif /* LLPC_BUILD_GFX12 */
@@ -285,6 +286,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1150: return {11, 5, 0};
   case GK_GFX1151: return {11, 5, 1};
   case GK_GFX1152: return {11, 5, 2};
+  case GK_GFX1153: return {11, 5, 3};
 #if LLPC_BUILD_GFX12
   case GK_GFX115F: return {11, 5, 0xFFFF};
 #endif /* LLPC_BUILD_GFX12 */
@@ -405,6 +407,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
 #if LLPC_BUILD_GFX12
     case GK_GFX115F:
 #endif /* LLPC_BUILD_GFX12 */
+    case GK_GFX1153:
     case GK_GFX1152:
     case GK_GFX1151:
     case GK_GFX1150:
@@ -614,6 +617,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
 #if LLPC_BUILD_GFX12
     case GK_GFX115F:
 #endif /* LLPC_BUILD_GFX12 */
+    case GK_GFX1153:
     case GK_GFX1152:
     case GK_GFX1151:
     case GK_GFX1150:

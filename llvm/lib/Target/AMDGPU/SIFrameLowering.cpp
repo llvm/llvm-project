@@ -845,26 +845,20 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
 #if LLPC_BUILD_GFX12
-  if (hasFP(MF) && !mayReserveScratchForCWSR(MF)) {
-#else /* LLPC_BUILD_GFX12 */
-  if (hasFP(MF)) {
-#endif /* LLPC_BUILD_GFX12 */
-    Register FPReg = MFI->getFrameOffsetReg();
-    assert(FPReg != AMDGPU::FP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
-  }
-
-#if LLPC_BUILD_GFX12
   unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
-#endif /* LLPC_BUILD_GFX12 */
-  if (requiresStackPointerReference(MF)) {
-    Register SPReg = MFI->getStackPtrOffsetReg();
-    assert(SPReg != AMDGPU::SP_REG);
-#if LLPC_BUILD_GFX12
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
-  }
+  if (!mayReserveScratchForCWSR(MF)) {
+    if (hasFP(MF)) {
+      Register FPReg = MFI->getFrameOffsetReg();
+      assert(FPReg != AMDGPU::FP_REG);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+    }
 
-  if (mayReserveScratchForCWSR(MF)) {
+    if (requiresStackPointerReference(MF)) {
+      Register SPReg = MFI->getStackPtrOffsetReg();
+      assert(SPReg != AMDGPU::SP_REG);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
+    }
+  } else {
     // We need to check if we're on a compute queue - if we are, then the CWSR
     // trap handler may need to store some VGPRs on the stack. The first VGPR
     // block is saved separately, so we only need to allocate space for any
@@ -872,10 +866,21 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // room for the theoretical maximum number of VGPRs that can be allocated.
     // FIXME: Figure out if the shader uses fewer VGPRs in practice.
     assert(hasFP(MF));
+#else /* LLPC_BUILD_GFX12 */
+  if (hasFP(MF)) {
+#endif /* LLPC_BUILD_GFX12 */
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
+#if LLPC_BUILD_GFX12
+#else /* LLPC_BUILD_GFX12 */
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+  }
+
+  if (requiresStackPointerReference(MF)) {
+#endif /* LLPC_BUILD_GFX12 */
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
+#if LLPC_BUILD_GFX12
     unsigned VGPRSize =
         llvm::alignTo((ST.getAddressableNumVGPRs() -
                        AMDGPU::IsaInfo::getVGPRAllocGranule(&ST)) *
@@ -890,13 +895,22 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
     // SCC, so we need to check for 0 manually.
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(FPReg);
-    // For the FP, we could use a s_cselect, since it's always 0 or VGPRSize.
-    // But for SP, the Offset could be anything, and we can't use 2 literal
-    // constants with s_cselect. For symmetry, we use s_cmovk for both.
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), FPReg).addImm(VGPRSize);
-    if (requiresStackPointerReference(MF))
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), SPReg)
-          .addImm(Offset + VGPRSize);
+    if (requiresStackPointerReference(MF)) {
+      // If at least one of the constants can be inlined, then we can use
+      // s_cselect. Otherwise, use a mov and cmovk.
+      if (AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm()) ||
+          AMDGPU::isInlinableLiteral32(Offset + VGPRSize,
+                                       ST.hasInv2PiInlineImm())) {
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CSELECT_B32), SPReg)
+            .addImm(Offset + VGPRSize)
+            .addImm(Offset);
+      } else {
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), SPReg)
+            .addImm(Offset + VGPRSize);
+      }
+    }
 #else /* LLPC_BUILD_GFX12 */
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
         .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
@@ -2208,7 +2222,7 @@ static bool frameTriviallyRequiresSP(const MachineFrameInfo &MFI) {
 // The FP for kernels is always known 0, so we never really need to setup an
 // explicit register for it. However, DisableFramePointerElim will force us to
 // use a register for it.
-bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
+bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // For entry & chain functions we can use an immediate offset in most cases,
