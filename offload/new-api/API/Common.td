@@ -72,8 +72,8 @@ def : Struct {
   let name = "offload_error_struct_t";
   let desc = "Details of the error condition returned by an API call";
   let members = [
-    StructMember<"offload_errc_t", "code", "The error code">,
-    StructMember<"const char*", "details", "String containing error details">
+    StructMember<"offload_errc_t", "Code", "The error code">,
+    StructMember<"const char*", "Details", "String containing error details">
   ];
 }
 

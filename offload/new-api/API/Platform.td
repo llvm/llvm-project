@@ -17,10 +17,10 @@ def : Function {
   ];
   let params = [
     Param<"uint32_t", "NumEntries",
-      "The number of platforms to be added to phPlatforms. NumEntries must be "
+      "The number of platforms to be added to Platforms. NumEntries must be "
       "greater than zero.",
       PARAM_IN>,
-    RangedParam<"offload_platform_handle_t*", "phPlatforms", 
+    RangedParam<"offload_platform_handle_t*", "Platforms", 
       "Array of handle of platforms. If NumEntries is less than the number of "
       "platforms available, then offloadPlatformGet shall only retrieve that "
       "number of platforms.",
@@ -38,7 +38,7 @@ def : Function {
   let desc = "Retrieves the number of available platforms";
   let params = [
     Param<"uint32_t*",
-      "pNumPlatforms", "returns the total number of platforms available.",
+      "NumPlatforms", "returns the total number of platforms available.",
       PARAM_OUT>
   ];
   let returns = [];
@@ -52,7 +52,7 @@ def : Enum {
     TaggedEtor<"NAME", "char[]", "The string denoting name of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VENDOR_NAME", "char[]","The string denoting name of the vendor of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VERSION", "char[]", "The string denoting the version of the platform. The size of the info needs to be dynamically queried.">,
-    TaggedEtor<"BACKEND", "offload_platform_backend_t", "The backend of the platform. Identifies the native backend adapter implementing this platform.">
+    TaggedEtor<"BACKEND", "offload_platform_backend_t", "The native backend of the platform.">
   ];
 }
 
@@ -76,21 +76,21 @@ def : Function {
     "The implementation of this function should be lock-free."
   ];
   let params = [
-    Param<"offload_platform_handle_t", "hPlatform", "handle of the platform", PARAM_IN>,
-    Param<"offload_platform_info_t", "propName", "type of the info to retrieve", PARAM_IN>,
-    Param<"size_t", "propSize", "the number of bytes pointed to by pPlatformInfo.", PARAM_IN>,
-    TypeTaggedParam<"void*", "pPropValue", "array of bytes holding the info. "
+    Param<"offload_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
+    Param<"offload_platform_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
+    Param<"size_t", "PropSize", "the number of bytes pointed to by pPlatformInfo.", PARAM_IN>,
+    TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. "
       "If Size is not equal to or greater to the real number of bytes needed to return the info "
       "then the OFFLOAD_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT,
-      TypeInfo<"propName" , "propSize">>
+      TypeInfo<"PropName" , "PropSize">>
   ];
   let returns = [
     Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
-      "If `propName` is not supported by the platform."
+      "If `PropName` is not supported by the platform."
     ]>,
     Return<"OFFLOAD_ERRC_INVALID_SIZE", [
-      "`propSize == 0`",
-      "If `propSize` is less than the real number of bytes needed to return the info."
+      "`PropSize == 0`",
+      "If `PropSize` is less than the real number of bytes needed to return the info."
     ]>,
     Return<"OFFLOAD_ERRC_INVALID_PLATFORM">
   ];
@@ -104,13 +104,13 @@ def : Function {
     "The implementation of this function should be lock-free."
   ];
   let params = [
-    Param<"offload_platform_handle_t", "hPlatform", "handle of the platform", PARAM_IN>,
-    Param<"offload_platform_info_t", "propName", "type of the info to query", PARAM_IN>,
-    Param<"size_t*", "pPropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
+    Param<"offload_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
+    Param<"offload_platform_info_t", "PropName", "type of the info to query", PARAM_IN>,
+    Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
   ];
   let returns = [
     Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
-      "If `propName` is not supported by the platform."
+      "If `PropName` is not supported by the platform."
     ]>,
     Return<"OFFLOAD_ERRC_INVALID_PLATFORM">
   ];

@@ -77,17 +77,17 @@ offload_impl_result_t offloadInit_impl() {
 }
 offload_impl_result_t offloadShutDown_impl() { return OFFLOAD_RESULT_SUCCESS; }
 
-offload_impl_result_t offloadPlatformGetCount_impl(uint32_t *pNumPlatforms) {
+offload_impl_result_t offloadPlatformGetCount_impl(uint32_t *NumPlatforms) {
   // It is expected that offloadPlatformGet is the first function to be called.
   // In future it may make sense to have a specific entry point for Offload
   // initialization, or expose explicit initialization of plugins.
-  *pNumPlatforms = Platforms().size();
+  *NumPlatforms = Platforms().size();
   return OFFLOAD_RESULT_SUCCESS;
 }
 
 offload_impl_result_t
 offloadPlatformGet_impl(uint32_t NumEntries,
-                        offload_platform_handle_t *phPlatforms) {
+                        offload_platform_handle_t *PlatformsOut) {
   if (NumEntries > Platforms().size()) {
     return {OFFLOAD_ERRC_INVALID_SIZE,
             std::string{formatv("{0} platform(s) available but {1} requested.",
@@ -96,20 +96,20 @@ offloadPlatformGet_impl(uint32_t NumEntries,
 
   for (uint32_t PlatformIndex = 0; PlatformIndex < NumEntries;
        PlatformIndex++) {
-    phPlatforms[PlatformIndex] = &(Platforms())[PlatformIndex];
+    PlatformsOut[PlatformIndex] = &(Platforms())[PlatformIndex];
   }
 
   return OFFLOAD_RESULT_SUCCESS;
 }
 
 offload_impl_result_t offloadPlatformGetInfoImplDetail(
-    offload_platform_handle_t hPlatform, offload_platform_info_t propName,
-    size_t propSize, void *pPropValue, size_t *pPropSizeRet) {
-  ReturnHelper ReturnValue(propSize, pPropValue, pPropSizeRet);
+    offload_platform_handle_t Platform, offload_platform_info_t PropName,
+    size_t PropSize, void *PropValue, size_t *PropSizeRet) {
+  ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
-  switch (propName) {
+  switch (PropName) {
   case OFFLOAD_PLATFORM_INFO_NAME:
-    return ReturnValue(hPlatform->Plugin->getName());
+    return ReturnValue(Platform->Plugin->getName());
   case OFFLOAD_PLATFORM_INFO_VENDOR_NAME:
     // TODO: Implement this
     return ReturnValue("Unknown platform vendor");
@@ -118,7 +118,7 @@ offload_impl_result_t offloadPlatformGetInfoImplDetail(
     return ReturnValue("v0.0.0");
   }
   case OFFLOAD_PLATFORM_INFO_BACKEND: {
-    auto PluginName = hPlatform->Plugin->getName();
+    auto PluginName = Platform->Plugin->getName();
     if (PluginName == StringRef("CUDA")) {
       return ReturnValue(OFFLOAD_PLATFORM_BACKEND_CUDA);
     } else if (PluginName == StringRef("AMDGPU")) {
@@ -135,59 +135,59 @@ offload_impl_result_t offloadPlatformGetInfoImplDetail(
 }
 
 offload_impl_result_t
-offloadPlatformGetInfo_impl(offload_platform_handle_t hPlatform,
-                            offload_platform_info_t propName, size_t propSize,
-                            void *pPropValue) {
-  return offloadPlatformGetInfoImplDetail(hPlatform, propName, propSize,
-                                          pPropValue, nullptr);
+offloadPlatformGetInfo_impl(offload_platform_handle_t Platform,
+                            offload_platform_info_t PropName, size_t PropSize,
+                            void *PropValue) {
+  return offloadPlatformGetInfoImplDetail(Platform, PropName, PropSize,
+                                          PropValue, nullptr);
 }
 
 offload_impl_result_t
-offloadPlatformGetInfoSize_impl(offload_platform_handle_t hPlatform,
-                                offload_platform_info_t propName,
-                                size_t *pPropSizeRet) {
-  return offloadPlatformGetInfoImplDetail(hPlatform, propName, 0, nullptr,
-                                          pPropSizeRet);
+offloadPlatformGetInfoSize_impl(offload_platform_handle_t Platform,
+                                offload_platform_info_t PropName,
+                                size_t *PropSizeRet) {
+  return offloadPlatformGetInfoImplDetail(Platform, PropName, 0, nullptr,
+                                          PropSizeRet);
 }
 
 offload_impl_result_t
-offloadDeviceGetCount_impl(offload_platform_handle_t hPlatform,
+offloadDeviceGetCount_impl(offload_platform_handle_t Platform,
                            uint32_t *pNumDevices) {
-  *pNumDevices = static_cast<uint32_t>(hPlatform->Devices.size());
+  *pNumDevices = static_cast<uint32_t>(Platform->Devices.size());
 
   return OFFLOAD_RESULT_SUCCESS;
 }
 
-offload_impl_result_t
-offloadDeviceGet_impl(offload_platform_handle_t hPlatform, uint32_t NumEntries,
-                      offload_device_handle_t *phDevices) {
-  if (NumEntries > hPlatform->Devices.size()) {
+offload_impl_result_t offloadDeviceGet_impl(offload_platform_handle_t Platform,
+                                            uint32_t NumEntries,
+                                            offload_device_handle_t *Devices) {
+  if (NumEntries > Platform->Devices.size()) {
     return OFFLOAD_ERRC_INVALID_SIZE;
   }
 
   for (uint32_t DeviceIndex = 0; DeviceIndex < NumEntries; DeviceIndex++) {
-    phDevices[DeviceIndex] = &(hPlatform->Devices[DeviceIndex]);
+    Devices[DeviceIndex] = &(Platform->Devices[DeviceIndex]);
   }
 
   return OFFLOAD_RESULT_SUCCESS;
 }
 
 offload_impl_result_t
-offloadDeviceGetInfoImplDetail(offload_device_handle_t hDevice,
-                               offload_device_info_t propName, size_t propSize,
-                               void *pPropValue, size_t *pPropSizeRet) {
+offloadDeviceGetInfoImplDetail(offload_device_handle_t Device,
+                               offload_device_info_t PropName, size_t PropSize,
+                               void *PropValue, size_t *PropSizeRet) {
 
-  ReturnHelper ReturnValue(propSize, pPropValue, pPropSizeRet);
+  ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   InfoQueueTy DevInfo;
-  if (auto Err = hDevice->Device.obtainInfoImpl(DevInfo))
+  if (auto Err = Device->Device.obtainInfoImpl(DevInfo))
     return OFFLOAD_ERRC_OUT_OF_RESOURCES;
 
   // Find the info if it exists under any of the given names
   auto GetInfo = [&DevInfo](std::vector<std::string> Names) {
     for (auto Name : Names) {
-      auto InfoKeyMatches = [&](const InfoQueueTy::InfoQueueEntryTy &info) {
-        return info.Key == Name;
+      auto InfoKeyMatches = [&](const InfoQueueTy::InfoQueueEntryTy &Info) {
+        return Info.Key == Name;
       };
       auto Item = std::find_if(DevInfo.getQueue().begin(),
                                DevInfo.getQueue().end(), InfoKeyMatches);
@@ -200,9 +200,9 @@ offloadDeviceGetInfoImplDetail(offload_device_handle_t hDevice,
     return std::string("");
   };
 
-  switch (propName) {
+  switch (PropName) {
   case OFFLOAD_DEVICE_INFO_PLATFORM:
-    return ReturnValue(hDevice->Platform);
+    return ReturnValue(Device->Platform);
   case OFFLOAD_DEVICE_INFO_TYPE:
     return ReturnValue(OFFLOAD_DEVICE_TYPE_GPU);
   case OFFLOAD_DEVICE_INFO_NAME:
@@ -219,18 +219,18 @@ offloadDeviceGetInfoImplDetail(offload_device_handle_t hDevice,
   return OFFLOAD_RESULT_SUCCESS;
 }
 
-offload_impl_result_t offloadDeviceGetInfo_impl(offload_device_handle_t hDevice,
-                                                offload_device_info_t propName,
-                                                size_t propSize,
-                                                void *pPropValue) {
-  return offloadDeviceGetInfoImplDetail(hDevice, propName, propSize, pPropValue,
+offload_impl_result_t offloadDeviceGetInfo_impl(offload_device_handle_t Device,
+                                                offload_device_info_t PropName,
+                                                size_t PropSize,
+                                                void *PropValue) {
+  return offloadDeviceGetInfoImplDetail(Device, PropName, PropSize, PropValue,
                                         nullptr);
 }
 
 offload_impl_result_t
-offloadDeviceGetInfoSize_impl(offload_device_handle_t hDevice,
-                              offload_device_info_t propName,
-                              size_t *pPropSizeRet) {
-  return offloadDeviceGetInfoImplDetail(hDevice, propName, 0, nullptr,
-                                        pPropSizeRet);
+offloadDeviceGetInfoSize_impl(offload_device_handle_t Device,
+                              offload_device_info_t PropName,
+                              size_t *PropSizeRet) {
+  return offloadDeviceGetInfoImplDetail(Device, PropName, 0, nullptr,
+                                        PropSizeRet);
 }

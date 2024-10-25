@@ -97,11 +97,11 @@ inline void printTagged(std::ostream &os, const void *ptr, {0} value, size_t siz
 static void EmitResultPrint(raw_ostream &OS) {
   OS << R""(
 inline std::ostream &operator<<(std::ostream &os,
-                                const offload_error_struct_t *err) {
-  if (err == nullptr) {
+                                const offload_error_struct_t *Err) {
+  if (Err == nullptr) {
     os << "OFFLOAD_RESULT_SUCCESS";
   } else {
-    os << err->code;
+    os << Err->Code;
   }
   return os;
 }

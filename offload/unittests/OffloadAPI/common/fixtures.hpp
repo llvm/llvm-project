@@ -23,7 +23,7 @@
 #define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \
   do {                                                                         \
     offload_result_t Res = ACTUAL;                                             \
-    ASSERT_TRUE(Res && (Res->code == EXPECTED));                               \
+    ASSERT_TRUE(Res && (Res->Code == EXPECTED));                               \
   } while (0)
 #endif
 

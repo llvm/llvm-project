@@ -16,17 +16,17 @@
 
 #include <iostream>
 
-llvm::StringSet<> &ErrorStrs() {
+llvm::StringSet<> &errorStrs() {
   static llvm::StringSet<> ErrorStrs;
   return ErrorStrs;
 }
 
-ErrSetT &Errors() {
+ErrSetT &errors() {
   static ErrSetT Errors{};
   return Errors;
 }
 
-offload_code_location_t *&CodeLocation() {
+offload_code_location_t *&currentCodeLocation() {
   thread_local offload_code_location_t *CodeLoc = nullptr;
   return CodeLoc;
 }

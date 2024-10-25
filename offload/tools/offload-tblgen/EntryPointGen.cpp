@@ -77,7 +77,7 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
 
   // Perform actual function call to the validation wrapper
   ParamNameList = ParamNameList.substr(0, ParamNameList.size() - 2);
-  OS << formatv(TAB_1 "{0}_result_t result = {1}_val({2});\n\n", PrefixLower,
+  OS << formatv(TAB_1 "{0}_result_t Result = {1}_val({2});\n\n", PrefixLower,
                 F.getName(), ParamNameList);
 
   // Emit post-call prints
@@ -95,14 +95,14 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   } else {
     OS << TAB_2 "std::cout << \"()\";\n";
   }
-  OS << TAB_2 "std::cout << \"-> \" << result << \"\\n\";\n";
-  OS << TAB_2 "if (result && result->details) {\n";
-  OS << TAB_3 "std::cout << \"     *Error Details* \" << result->details "
+  OS << TAB_2 "std::cout << \"-> \" << Result << \"\\n\";\n";
+  OS << TAB_2 "if (Result && Result->Details) {\n";
+  OS << TAB_3 "std::cout << \"     *Error Details* \" << Result->Details "
               "<< \" \\n\";\n";
   OS << TAB_2 "}\n";
   OS << TAB_1 "}\n";
 
-  OS << TAB_1 "return result;\n";
+  OS << TAB_1 "return Result;\n";
   OS << "}\n";
 }
 
@@ -118,13 +118,13 @@ static void EmitCodeLocWrapper(const FunctionRec &F, raw_ostream &OS) {
       ParamNameList += ", ";
     }
   }
-  OS << "offload_code_location_t *pCodeLocation";
+  OS << "offload_code_location_t *CodeLocation";
   OS << ") {\n";
-  OS << TAB_1 "CodeLocation() = pCodeLocation;\n";
-  OS << formatv(TAB_1 "{0}_result_t result = {1}({2});\n\n", PrefixLower,
+  OS << TAB_1 "currentCodeLocation() = CodeLocation;\n";
+  OS << formatv(TAB_1 "{0}_result_t Result = {1}({2});\n\n", PrefixLower,
                 F.getName(), ParamNameList);
-  OS << TAB_1 "CodeLocation() = nullptr;\n";
-  OS << TAB_1 "return result;\n";
+  OS << TAB_1 "currentCodeLocation() = nullptr;\n";
+  OS << TAB_1 "return Result;\n";
   OS << "}\n";
 }
 

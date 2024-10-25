@@ -113,8 +113,8 @@ typedef enum offload_errc_t {
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Details of the error condition returned by an API call
 typedef struct offload_error_struct_t {
-  offload_errc_t code; /// The error code
-  const char *details; /// String containing error details
+  offload_errc_t Code; /// The error code
+  const char *Details; /// String containing error details
 } offload_error_struct_t;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -184,15 +184,15 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadShutDown();
 ///         + `NumEntries == 0`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
-///         + `NULL == phPlatforms`
+///         + `NULL == Platforms`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGet(
-    // [in] The number of platforms to be added to phPlatforms. NumEntries must
-    // be greater than zero.
+    // [in] The number of platforms to be added to Platforms. NumEntries must be
+    // greater than zero.
     uint32_t NumEntries,
     // [out] Array of handle of platforms. If NumEntries is less than the number
     // of platforms available, then offloadPlatformGet shall only retrieve that
     // number of platforms.
-    offload_platform_handle_t *phPlatforms);
+    offload_platform_handle_t *Platforms);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Retrieves the number of available platforms
@@ -205,10 +205,10 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGet(
 ///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
-///         + `NULL == pNumPlatforms`
+///         + `NULL == NumPlatforms`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetCount(
     // [out] returns the total number of platforms available.
-    uint32_t *pNumPlatforms);
+    uint32_t *NumPlatforms);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Supported platform info
@@ -222,8 +222,7 @@ typedef enum offload_platform_info_t {
   /// The string denoting the version of the platform. The size of the info
   /// needs to be dynamically queried.
   OFFLOAD_PLATFORM_INFO_VERSION = 2,
-  /// The backend of the platform. Identifies the native backend adapter
-  /// implementing this platform.
+  /// The native backend of the platform.
   OFFLOAD_PLATFORM_INFO_BACKEND = 3,
   /// @cond
   OFFLOAD_PLATFORM_INFO_FORCE_UINT32 = 0x7fffffff
@@ -260,28 +259,28 @@ typedef enum offload_platform_backend_t {
 ///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
 ///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION
-///         + If `propName` is not supported by the platform.
+///         + If `PropName` is not supported by the platform.
 ///     - ::OFFLOAD_ERRC_INVALID_SIZE
-///         + `propSize == 0`
-///         + If `propSize` is less than the real number of bytes needed to
+///         + `PropSize == 0`
+///         + If `PropSize` is less than the real number of bytes needed to
 ///         return the info.
 ///     - ::OFFLOAD_ERRC_INVALID_PLATFORM
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == hPlatform`
+///         + `NULL == Platform`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
-///         + `NULL == pPropValue`
+///         + `NULL == PropValue`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfo(
     // [in] handle of the platform
-    offload_platform_handle_t hPlatform,
+    offload_platform_handle_t Platform,
     // [in] type of the info to retrieve
-    offload_platform_info_t propName,
+    offload_platform_info_t PropName,
     // [in] the number of bytes pointed to by pPlatformInfo.
-    size_t propSize,
+    size_t PropSize,
     // [out] array of bytes holding the info. If Size is not equal to or greater
     // to the real number of bytes needed to return the info then the
     // OFFLOAD_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not
     // used.
-    void *pPropValue);
+    void *PropValue);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Returns the storage size of the given platform query
@@ -295,19 +294,19 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfo(
 ///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
 ///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION
-///         + If `propName` is not supported by the platform.
+///         + If `PropName` is not supported by the platform.
 ///     - ::OFFLOAD_ERRC_INVALID_PLATFORM
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == hPlatform`
+///         + `NULL == Platform`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
-///         + `NULL == pPropSizeRet`
+///         + `NULL == PropSizeRet`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfoSize(
     // [in] handle of the platform
-    offload_platform_handle_t hPlatform,
+    offload_platform_handle_t Platform,
     // [in] type of the info to query
-    offload_platform_info_t propName,
+    offload_platform_info_t PropName,
     // [out] pointer to the number of bytes required to store the query
-    size_t *pPropSizeRet);
+    size_t *PropSizeRet);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Supported device types
@@ -355,14 +354,14 @@ typedef enum offload_device_info_t {
 ///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
 ///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == hPlatform`
+///         + `NULL == Platform`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
-///         + `NULL == pNumDevices`
+///         + `NULL == NumDevices`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetCount(
     // [in] handle of the platform instance
-    offload_platform_handle_t hPlatform,
+    offload_platform_handle_t Platform,
     // [out] pointer to the number of devices.
-    uint32_t *pNumDevices);
+    uint32_t *NumDevices);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Retrieves devices within a platform
@@ -380,19 +379,19 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetCount(
 ///     - ::OFFLOAD_ERRC_INVALID_SIZE
 ///         + `NumEntries == 0`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == hPlatform`
+///         + `NULL == Platform`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
-///         + `NULL == phDevices`
+///         + `NULL == Devices`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGet(
     // [in] handle of the platform instance
-    offload_platform_handle_t hPlatform,
+    offload_platform_handle_t Platform,
     // [in] the number of devices to be added to phDevices, which must be
     // greater than zero
     uint32_t NumEntries,
     // [out] Array of device handles. If NumEntries is less than the number of
     // devices available, then this function shall only retrieve that number of
     // devices.
-    offload_device_handle_t *phDevices);
+    offload_device_handle_t *Devices);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Queries the given property of the device
@@ -406,27 +405,27 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGet(
 ///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
 ///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION
-///         + If `propName` is not supported by the device.
+///         + If `PropName` is not supported by the device.
 ///     - ::OFFLOAD_ERRC_INVALID_SIZE
-///         + `propSize == 0`
-///         + If `propSize` is less than the real number of bytes needed to
+///         + `PropSize == 0`
+///         + If `PropSize` is less than the real number of bytes needed to
 ///         return the info.
 ///     - ::OFFLOAD_ERRC_INVALID_DEVICE
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == hDevice`
+///         + `NULL == Device`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
-///         + `NULL == pPropValue`
+///         + `NULL == PropValue`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetInfo(
     // [in] handle of the device instance
-    offload_device_handle_t hDevice,
+    offload_device_handle_t Device,
     // [in] type of the info to retrieve
-    offload_device_info_t propName,
-    // [in] the number of bytes pointed to by pPropValue.
-    size_t propSize,
-    // [out] array of bytes holding the info. If propSize is not equal to or
+    offload_device_info_t PropName,
+    // [in] the number of bytes pointed to by PropValue.
+    size_t PropSize,
+    // [out] array of bytes holding the info. If PropSize is not equal to or
     // greater than the real number of bytes needed to return the info then the
-    // OFFLOAD_ERRC_INVALID_SIZE error is returned and pPropValue is not used.
-    void *pPropValue);
+    // OFFLOAD_ERRC_INVALID_SIZE error is returned and PropValue is not used.
+    void *PropValue);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Returns the storage size of the given device query
@@ -440,88 +439,88 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetInfo(
 ///     - ::OFFLOAD_RESULT_ERROR_UNINITIALIZED
 ///     - ::OFFLOAD_RESULT_ERROR_DEVICE_LOST
 ///     - ::OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION
-///         + If `propName` is not supported by the device.
+///         + If `PropName` is not supported by the device.
 ///     - ::OFFLOAD_ERRC_INVALID_DEVICE
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == hDevice`
+///         + `NULL == Device`
 ///     - ::OFFLOAD_ERRC_INVALID_NULL_POINTER
-///         + `NULL == pPropSizeRet`
+///         + `NULL == PropSizeRet`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetInfoSize(
     // [in] handle of the device instance
-    offload_device_handle_t hDevice,
+    offload_device_handle_t Device,
     // [in] type of the info to retrieve
-    offload_device_info_t propName,
+    offload_device_info_t PropName,
     // [out] pointer to the number of bytes required to store the query
-    size_t *pPropSizeRet);
+    size_t *PropSizeRet);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadPlatformGet
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct offload_platform_get_params_t {
   uint32_t *pNumEntries;
-  offload_platform_handle_t **pphPlatforms;
+  offload_platform_handle_t **pPlatforms;
 } offload_platform_get_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadPlatformGetCount
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct offload_platform_get_count_params_t {
-  uint32_t **ppNumPlatforms;
+  uint32_t **pNumPlatforms;
 } offload_platform_get_count_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadPlatformGetInfo
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct offload_platform_get_info_params_t {
-  offload_platform_handle_t *phPlatform;
-  offload_platform_info_t *ppropName;
-  size_t *ppropSize;
-  void **ppPropValue;
+  offload_platform_handle_t *pPlatform;
+  offload_platform_info_t *pPropName;
+  size_t *pPropSize;
+  void **pPropValue;
 } offload_platform_get_info_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadPlatformGetInfoSize
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct offload_platform_get_info_size_params_t {
-  offload_platform_handle_t *phPlatform;
-  offload_platform_info_t *ppropName;
-  size_t **ppPropSizeRet;
+  offload_platform_handle_t *pPlatform;
+  offload_platform_info_t *pPropName;
+  size_t **pPropSizeRet;
 } offload_platform_get_info_size_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadDeviceGetCount
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct offload_device_get_count_params_t {
-  offload_platform_handle_t *phPlatform;
-  uint32_t **ppNumDevices;
+  offload_platform_handle_t *pPlatform;
+  uint32_t **pNumDevices;
 } offload_device_get_count_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadDeviceGet
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct offload_device_get_params_t {
-  offload_platform_handle_t *phPlatform;
+  offload_platform_handle_t *pPlatform;
   uint32_t *pNumEntries;
-  offload_device_handle_t **pphDevices;
+  offload_device_handle_t **pDevices;
 } offload_device_get_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadDeviceGetInfo
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct offload_device_get_info_params_t {
-  offload_device_handle_t *phDevice;
-  offload_device_info_t *ppropName;
-  size_t *ppropSize;
-  void **ppPropValue;
+  offload_device_handle_t *pDevice;
+  offload_device_info_t *pPropName;
+  size_t *pPropSize;
+  void **pPropValue;
 } offload_device_get_info_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadDeviceGetInfoSize
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct offload_device_get_info_size_params_t {
-  offload_device_handle_t *phDevice;
-  offload_device_info_t *ppropName;
-  size_t **ppPropSizeRet;
+  offload_device_handle_t *pDevice;
+  offload_device_info_t *pPropName;
+  size_t **pPropSizeRet;
 } offload_device_get_info_size_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -529,14 +528,14 @@ typedef struct offload_device_get_info_size_params_t {
 /// information
 /// @details See also ::offloadInit
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadInitWithCodeLoc(offload_code_location_t *pCodeLocation);
+offloadInitWithCodeLoc(offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadShutDown that also sets source code location
 /// information
 /// @details See also ::offloadShutDown
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadShutDownWithCodeLoc(offload_code_location_t *pCodeLocation);
+offloadShutDownWithCodeLoc(offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadPlatformGet that also sets source code location
@@ -544,73 +543,73 @@ offloadShutDownWithCodeLoc(offload_code_location_t *pCodeLocation);
 /// @details See also ::offloadPlatformGet
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
 offloadPlatformGetWithCodeLoc(uint32_t NumEntries,
-                              offload_platform_handle_t *phPlatforms,
-                              offload_code_location_t *pCodeLocation);
+                              offload_platform_handle_t *Platforms,
+                              offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadPlatformGetCount that also sets source code
 /// location information
 /// @details See also ::offloadPlatformGetCount
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadPlatformGetCountWithCodeLoc(uint32_t *pNumPlatforms,
-                                   offload_code_location_t *pCodeLocation);
+offloadPlatformGetCountWithCodeLoc(uint32_t *NumPlatforms,
+                                   offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadPlatformGetInfo that also sets source code location
 /// information
 /// @details See also ::offloadPlatformGetInfo
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadPlatformGetInfoWithCodeLoc(offload_platform_handle_t hPlatform,
-                                  offload_platform_info_t propName,
-                                  size_t propSize, void *pPropValue,
-                                  offload_code_location_t *pCodeLocation);
+offloadPlatformGetInfoWithCodeLoc(offload_platform_handle_t Platform,
+                                  offload_platform_info_t PropName,
+                                  size_t PropSize, void *PropValue,
+                                  offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadPlatformGetInfoSize that also sets source code
 /// location information
 /// @details See also ::offloadPlatformGetInfoSize
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadPlatformGetInfoSizeWithCodeLoc(offload_platform_handle_t hPlatform,
-                                      offload_platform_info_t propName,
-                                      size_t *pPropSizeRet,
-                                      offload_code_location_t *pCodeLocation);
+offloadPlatformGetInfoSizeWithCodeLoc(offload_platform_handle_t Platform,
+                                      offload_platform_info_t PropName,
+                                      size_t *PropSizeRet,
+                                      offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadDeviceGetCount that also sets source code location
 /// information
 /// @details See also ::offloadDeviceGetCount
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadDeviceGetCountWithCodeLoc(offload_platform_handle_t hPlatform,
-                                 uint32_t *pNumDevices,
-                                 offload_code_location_t *pCodeLocation);
+offloadDeviceGetCountWithCodeLoc(offload_platform_handle_t Platform,
+                                 uint32_t *NumDevices,
+                                 offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadDeviceGet that also sets source code location
 /// information
 /// @details See also ::offloadDeviceGet
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetWithCodeLoc(
-    offload_platform_handle_t hPlatform, uint32_t NumEntries,
-    offload_device_handle_t *phDevices, offload_code_location_t *pCodeLocation);
+    offload_platform_handle_t Platform, uint32_t NumEntries,
+    offload_device_handle_t *Devices, offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadDeviceGetInfo that also sets source code location
 /// information
 /// @details See also ::offloadDeviceGetInfo
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadDeviceGetInfoWithCodeLoc(offload_device_handle_t hDevice,
-                                offload_device_info_t propName, size_t propSize,
-                                void *pPropValue,
-                                offload_code_location_t *pCodeLocation);
+offloadDeviceGetInfoWithCodeLoc(offload_device_handle_t Device,
+                                offload_device_info_t PropName, size_t PropSize,
+                                void *PropValue,
+                                offload_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of offloadDeviceGetInfoSize that also sets source code
 /// location information
 /// @details See also ::offloadDeviceGetInfoSize
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
-offloadDeviceGetInfoSizeWithCodeLoc(offload_device_handle_t hDevice,
-                                    offload_device_info_t propName,
-                                    size_t *pPropSizeRet,
-                                    offload_code_location_t *pCodeLocation);
+offloadDeviceGetInfoSizeWithCodeLoc(offload_device_handle_t Device,
+                                    offload_device_info_t PropName,
+                                    size_t *PropSizeRet,
+                                    offload_code_location_t *CodeLocation);
 
 #if defined(__cplusplus)
 } // extern "C"
