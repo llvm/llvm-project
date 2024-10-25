@@ -1,9 +1,17 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=0         -relocation-model=pic \
-; RUN:   -mattr=+pauth -mattr=+fpac -o - %s | FileCheck %s
+; RUN:   -mattr=+pauth -mattr=+fpac -o - %s | FileCheck --check-prefixes=CHECK,NOTRAP %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=0         -relocation-model=pic \
+; RUN:   -mattr=+pauth              -o - %s | FileCheck --check-prefixes=CHECK,TRAP %s
+
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=1         -relocation-model=pic \
-; RUN:   -mattr=+pauth -mattr=+fpac -o - %s | FileCheck %s
+; RUN:   -mattr=+pauth -mattr=+fpac -o - %s | FileCheck --check-prefixes=CHECK,NOTRAP %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=1         -relocation-model=pic \
+; RUN:   -mattr=+pauth              -o - %s | FileCheck --check-prefixes=CHECK,TRAP %s
+
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=1 -global-isel-abort=1 -relocation-model=pic \
-; RUN:   -mattr=+pauth -mattr=+fpac -o - %s | FileCheck %s
+; RUN:   -mattr=+pauth -mattr=+fpac -o - %s | FileCheck --check-prefixes=CHECK,NOTRAP %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=1 -global-isel-abort=1 -relocation-model=pic \
+; RUN:   -mattr=+pauth              -o - %s | FileCheck --check-prefixes=CHECK,TRAP %s
 
 ;; Note: for FastISel, we fall back to SelectionDAG
 
@@ -16,12 +24,22 @@ define ptr @foo() {
   ret ptr @var
 
 ; CHECK-LABEL: foo:
-; CHECK:         adrp  x16, :got_auth:var
-; CHECK-NEXT:    add   x16, x16, :got_auth_lo12:var
-; CHECK-NEXT:    ldr   x0,  [x16]
-; CHECK-NEXT:    cbz   x0, .Lundef_weak0
-; CHECK-NEXT:    autia x0,  x16
+; CHECK:         adrp  x17, :got_auth:var
+; CHECK-NEXT:    add   x17, x17, :got_auth_lo12:var
+; NOTRAP-NEXT:   ldr   x0,  [x17]
+; NOTRAP-NEXT:   cbz   x0,  .Lundef_weak0
+; NOTRAP-NEXT:   autia x0,  x17
+; TRAP-NEXT:     ldr   x16, [x17]
+; TRAP-NEXT:     cbz   x16, .Lundef_weak0
+; TRAP-NEXT:     autia x16, x17
 ; CHECK-NEXT:  .Lundef_weak0:
+; TRAP-NEXT:     mov   x17, x16
+; TRAP-NEXT:     xpaci x17
+; TRAP-NEXT:     cmp   x16, x17
+; TRAP-NEXT:     b.eq  .Lauth_success_0
+; TRAP-NEXT:     brk   #0xc470
+; TRAP-NEXT:   .Lauth_success_0:
+; TRAP-NEXT:     mov   x0,  x16
 ; CHECK-NEXT:    ret
 }
 
@@ -32,12 +50,22 @@ define ptr @bar() {
   ret ptr %addr
 
 ; CHECK-LABEL: bar:
-; CHECK:         adrp  x16, :got_auth:arr_var
-; CHECK-NEXT:    add   x16, x16, :got_auth_lo12:arr_var
-; CHECK-NEXT:    ldr   x8,  [x16]
-; CHECK-NEXT:    cbz   x8, .Lundef_weak1
-; CHECK-NEXT:    autda x8,  x16
+; CHECK:         adrp  x17, :got_auth:arr_var
+; CHECK-NEXT:    add   x17, x17, :got_auth_lo12:arr_var
+; NOTRAP-NEXT:   ldr   x8,  [x17]
+; NOTRAP-NEXT:   cbz   x8,  .Lundef_weak1
+; NOTRAP-NEXT:   autda x8,  x17
+; TRAP-NEXT:     ldr   x16, [x17]
+; TRAP-NEXT:     cbz   x16, .Lundef_weak1
+; TRAP-NEXT:     autda x16, x17
 ; CHECK-NEXT:  .Lundef_weak1:
+; TRAP-NEXT:     mov   x17, x16
+; TRAP-NEXT:     xpacd x17
+; TRAP-NEXT:     cmp   x16, x17
+; TRAP-NEXT:     b.eq  .Lauth_success_1
+; TRAP-NEXT:     brk   #0xc472
+; TRAP-NEXT:   .Lauth_success_1:
+; TRAP-NEXT:     mov   x8,  x16
 ; CHECK-NEXT:    add   x0,  x8, #20
 ; CHECK-NEXT:    ret
 }

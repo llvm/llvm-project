@@ -2273,6 +2273,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
   Register DstReg = MI.getOperand(0).getReg();
+  Register AuthResultReg = STI->hasFPAC() ? DstReg : AArch64::X16;
   const MachineOperand &GAMO = MI.getOperand(1);
   assert(GAMO.getOffset() == 0);
 
@@ -2286,17 +2287,17 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
   MCInstLowering.lowerOperand(GALoOp, GAMCLo);
 
   EmitToStreamer(
-      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X16).addOperand(GAMCHi));
+      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X17).addOperand(GAMCHi));
 
   EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
-                     .addReg(AArch64::X16)
-                     .addReg(AArch64::X16)
+                     .addReg(AArch64::X17)
+                     .addReg(AArch64::X17)
                      .addOperand(GAMCLo)
                      .addImm(0));
 
   EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
-                     .addReg(DstReg)
-                     .addReg(AArch64::X16)
+                     .addReg(AuthResultReg)
+                     .addReg(AArch64::X17)
                      .addImm(0));
 
   assert(GAMO.isGlobal());
@@ -2305,7 +2306,7 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
     UndefWeakSym = createTempSymbol("undef_weak");
     EmitToStreamer(
         MCInstBuilder(AArch64::CBZX)
-            .addReg(DstReg)
+            .addReg(AuthResultReg)
             .addExpr(MCSymbolRefExpr::create(UndefWeakSym, OutContext)));
   }
 
@@ -2314,12 +2315,23 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
                             ? AArch64::AUTIA
                             : AArch64::AUTDA;
   EmitToStreamer(MCInstBuilder(AuthOpcode)
-                     .addReg(DstReg)
-                     .addReg(DstReg)
-                     .addReg(AArch64::X16));
+                     .addReg(AuthResultReg)
+                     .addReg(AuthResultReg)
+                     .addReg(AArch64::X17));
 
   if (GAMO.getGlobal()->hasExternalWeakLinkage())
     OutStreamer->emitLabel(UndefWeakSym);
+
+  if (!STI->hasFPAC()) {
+    auto AuthKey =
+        (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA : AArch64PACKey::DA);
+
+    emitPtrauthCheckAuthenticatedValue(AuthResultReg, AArch64::X17, AuthKey,
+                                       /*ShouldTrap=*/true,
+                                       /*OnFailure=*/nullptr);
+
+    emitMovXReg(DstReg, AuthResultReg);
+  }
 }
 
 const MCExpr *
