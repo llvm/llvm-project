@@ -1104,6 +1104,30 @@ struct CodeAction {
 };
 llvm::json::Value toJSON(const CodeAction &);
 
+enum class SymbolTag { 
+  Deprecated = 1 ,
+  Private = 2,
+  Package = 3,
+  Protected = 4,
+  Public = 5,
+  Internal= 6,
+  File = 7,
+  Static = 8,
+  Abstract = 9,
+  Final = 10,
+  Sealed = 11,
+  Constant = 12,
+  Transient = 13,
+  Volatile = 14,
+  Synchronized = 15,
+  Virtual = 16,
+  Nullable = 17,
+  NonNull = 18,
+  Declaration = 19,
+  Definition = 20,
+  ReadOnly = 21,
+};
+llvm::json::Value toJSON(SymbolTag);
 /// Represents programming constructs like variables, classes, interfaces etc.
 /// that appear in a document. Document symbols can be hierarchical and they
 /// have two ranges: one that encloses its definition and one that points to its
@@ -1120,6 +1144,9 @@ struct DocumentSymbol {
 
   /// Indicates if this symbol is deprecated.
   bool deprecated = false;
+
+  /// Tags for this symbol, e.g public, private, static, const etc.
+  std::vector<SymbolTag> tags;
 
   /// The range enclosing this symbol not including leading/trailing whitespace
   /// but everything else like comments. This information is typically used to
@@ -1572,8 +1599,6 @@ struct ResolveTypeHierarchyItemParams {
 bool fromJSON(const llvm::json::Value &, ResolveTypeHierarchyItemParams &,
               llvm::json::Path);
 
-enum class SymbolTag { Deprecated = 1 };
-llvm::json::Value toJSON(SymbolTag);
 
 /// The parameter of a `textDocument/prepareCallHierarchy` request.
 struct CallHierarchyPrepareParams : public TextDocumentPositionParams {};
