@@ -180,6 +180,15 @@ Changes to the RISC-V Backend
 Changes to the WebAssembly Backend
 ----------------------------------
 
+The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+and [Non-trapping float-to-int Conversions] language features, which are
+[widely implemented in engines].
+
+[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
+[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[widely implemented in engines]: https://webassembly.org/features/
+
 Changes to the Windows Target
 -----------------------------
 
