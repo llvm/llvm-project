@@ -2807,7 +2807,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_atan2l:
     case Builtin::BI__builtin_atan2f128:
       return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
-          *this, E, Intrinsic::atan2, Intrinsic::experimental_constrained_atan2));
+          *this, E, Intrinsic::atan2,
+          Intrinsic::experimental_constrained_atan2));
 
     case Builtin::BIceil:
     case Builtin::BIceilf:
