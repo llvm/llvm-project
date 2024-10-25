@@ -196,6 +196,8 @@ Changes to the X86 Backend
 
 * Support ISA of `AVX10.2-256` and `AVX10.2-512`.
 
+* Supported instructions of `MOVRS AND AVX10.2`
+
 Changes to the OCaml bindings
 -----------------------------
 
