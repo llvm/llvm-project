@@ -929,7 +929,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
   mlir::arith::IntegerOverflowFlags flags{};
-  if (converter.getLoweringOptions().getNSWOnLoopVarInc())
+  if (!converter.getLoweringOptions().getIntegerWrapAround())
     flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
   auto iofAttr =
       mlir::arith::IntegerOverflowFlagsAttr::get(builder.getContext(), flags);
