@@ -1052,7 +1052,7 @@ ASTContext::getModulesWithMergedDefinition(const NamedDecl *Def) {
   auto MergedIt =
       MergedDefModules.find(cast<NamedDecl>(Def->getCanonicalDecl()));
   if (MergedIt == MergedDefModules.end())
-    return std::nullopt;
+    return {};
   return MergedIt->second;
 }
 
@@ -1111,7 +1111,7 @@ void ASTContext::addLazyModuleInitializers(Module *M,
 ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
   auto It = ModuleInitializers.find(M);
   if (It == ModuleInitializers.end())
-    return std::nullopt;
+    return {};
 
   auto *Inits = It->second;
   Inits->resolve(*this);
