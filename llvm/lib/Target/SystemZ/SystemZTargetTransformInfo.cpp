@@ -468,11 +468,9 @@ bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
 }
 
-InstructionCost SystemZTTIImpl::
-getScalarizationOverhead(VectorType *Ty,
-                         const APInt &DemandedElts,
-                         bool Insert, bool Extract,
-                         TTI::TargetCostKind CostKind) {
+InstructionCost SystemZTTIImpl::getScalarizationOverhead(
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind) {
   unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
   InstructionCost Cost = 0;
 
@@ -490,8 +488,8 @@ getScalarizationOverhead(VectorType *Ty,
     Insert = false;
   }
 
-  Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert,
-                                          Extract, CostKind);
+  Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                          CostKind);
   return Cost;
 }
 

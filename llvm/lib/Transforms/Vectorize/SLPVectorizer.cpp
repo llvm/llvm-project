@@ -3111,8 +3111,8 @@ private:
       unsigned NumParts, bool ForOrder = false);
 
   /// \returns the cost of gathering (inserting) the values in \p VL into a
-  /// vector.  \param ForPoisonSrc true if initial vector is poison, false
-  /// otherwise.
+  /// vector.
+  /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
 

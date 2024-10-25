@@ -1,4 +1,6 @@
-; RUN: opt -S --passes=slp-vectorizer -mtriple=s390x-unknown-linux -mcpu=z16 < %s | FileCheck %s
+; RUN: opt < %s -mtriple=s390x-unknown-linux -mcpu=z16 -S -passes=slp-vectorizer \
+; RUN:   -pass-remarks-output=%t | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=REMARK %s
 ;
 ; Test functions that (at least currently) only gets vectorized if the
 ; insertion cost for an element load is counted as free.
@@ -9,6 +11,11 @@ define void @fun0(ptr nocapture %0, double %1) {
 ; CHECK-LABEL: define void @fun0(
 ; CHECK:    fmul <2 x double>
 ; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
+;
+; REMARK-LABEL: Function: fun0
+; REMARK: Args:
+; REMARK-NEXT: - String:          'SLP vectorized with cost '
+; REMARK-NEXT: - Cost:            '-1'
 
   %3 = fmul double %1, 2.000000e+00
   %4 = tail call double @llvm.fmuladd.f64(double %3, double %3, double 0.000000e+00)
@@ -36,6 +43,11 @@ define void @fun1(double %0) {
 ; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
 ; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
 ; CHECK:    %14 = fcmp olt <2 x double> %13, %2
+;
+; REMARK-LABEL: Function: fun1
+; REMARK: Args:
+; REMARK:      - String:          'SLP vectorized with cost '
+; REMARK-NEXT: - Cost:            '-1'
 
   br label %2
 
@@ -72,6 +84,9 @@ declare double @llvm.fmuladd.f64(double, double, double)
 define void @fun2(ptr %0, ptr %Dst) {
 ; CHECK-LABEL: define void @fun2(
 ; CHECK-NOT: store <2 x i64>
+;
+; REMARK-NOT: Function: fun2
+
   %3 = load i64, ptr %0, align 8
   %4 = icmp eq i64 %3, 0
   br i1 %4, label %5, label %6
