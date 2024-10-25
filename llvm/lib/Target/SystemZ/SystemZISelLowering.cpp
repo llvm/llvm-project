@@ -1080,18 +1080,6 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
           .addReg(0);
   }
 
-  // LP Literal Pool register in fifth slot. 
-  if (MBB->isLiveIn(SystemZ::R13D)) {
-     // If R13 is not live, and It is non-reserved physical register, we get
-     // assertion - Using an undefined physical register. 
-     const int64_t LPOffset    = 4 * PVT.getStoreSize(); // Slot 5.
-     BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(SystemZ::R13D)
-          .addReg(BufReg)
-          .addImm(LPOffset)
-          .addReg(0);
-  }
-
   // Setup.  
   MIB = BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::EH_SjLj_Setup))
           .addMBB(restoreMBB);
