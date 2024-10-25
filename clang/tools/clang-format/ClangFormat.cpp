@@ -410,7 +410,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   const bool IsSTDIN = FileName == "-";
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
-    return false;
+    return true;
   }
   // On Windows, overwriting a file with an open file mapping doesn't work,
   // so read the whole file into memory when formatting in-place.
