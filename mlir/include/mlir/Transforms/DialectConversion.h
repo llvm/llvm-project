@@ -435,15 +435,20 @@ private:
         // directly.
         result = callback(builder, resultTypes, inputs, loc, originalType);
       } else if constexpr (std::is_assignable<Type, T>::value) {
-        // This is a 1:1 target materialization. Invoke it only if the result
-        // type class of the callback matches the requested result type.
-        if (T derivedType = dyn_cast<T>(resultTypes.front())) {
-          // 1:1 materializations produce single values, but we store 1:N
-          // target materialization functions in the type converter. Wrap the
-          // result value in a SmallVector<Value>.
-          Value val = callback(builder, derivedType, inputs, loc, originalType);
-          if (val)
-            result.push_back(val);
+        // This is a 1:1 target materialization. Invoke the callback only if a
+        // single SSA value is requested.
+        if (resultTypes.size() == 1) {
+          // Invoke the callback only if the type class of the callback matches
+          // the requested result type.
+          if (T derivedType = dyn_cast<T>(resultTypes.front())) {
+            // 1:1 materializations produce single values, but we store 1:N
+            // target materialization functions in the type converter. Wrap the
+            // result value in a SmallVector<Value>.
+            Value val =
+                callback(builder, derivedType, inputs, loc, originalType);
+            if (val)
+              result.push_back(val);
+          }
         }
       } else {
         static_assert(sizeof(T) == 0, "T must be a Type or a TypeRange");
