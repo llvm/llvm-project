@@ -10302,13 +10302,15 @@ public:
                               bool MissingImplicitThis = false);
 
   /// Emit diagnostics for the diagnose_if attributes on Function, ignoring any
-  /// non-ArgDependent DiagnoseIfAttrs.
+  /// non-ArgDependent DiagnoseIfAttrs. Function should be a function, a
+  /// C++ method, or an Objective-C method. ThisArg should be non-NULL only for
+  /// C++ methods.
   ///
   /// Argument-dependent diagnose_if attributes should be checked each time a
   /// function is used as a direct callee of a function call.
   ///
   /// Returns true if any errors were emitted.
-  bool diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
+  bool diagnoseArgDependentDiagnoseIfAttrs(const NamedDecl *Function,
                                            const Expr *ThisArg,
                                            ArrayRef<const Expr *> Args,
                                            SourceLocation Loc);

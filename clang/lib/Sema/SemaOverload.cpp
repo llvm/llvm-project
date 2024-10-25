@@ -7360,7 +7360,7 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
   return false;
 }
 
-bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
+bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const NamedDecl *Function,
                                                const Expr *ThisArg,
                                                ArrayRef<const Expr *> Args,
                                                SourceLocation Loc) {
@@ -7372,7 +7372,7 @@ bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
         // EvaluateWithSubstitution only cares about the position of each
         // argument in the arg list, not the ParmVarDecl* it maps to.
         if (!DIA->getCond()->EvaluateWithSubstitution(
-                Result, Context, cast<FunctionDecl>(DIA->getParent()), Args, ThisArg))
+                Result, Context, DIA->getParent(), Args, ThisArg))
           return false;
         return Result.isInt() && Result.getInt().getBoolValue();
       });

@@ -742,6 +742,10 @@ public:
     Parms.insert(FD->param_begin(), FD->param_end());
   }
 
+  ArgumentDependenceChecker(const ObjCMethodDecl *MD) {
+    Parms.insert(MD->param_begin(), MD->param_end());
+  }
+
   bool referencesArgs(Expr *E) {
     Result = false;
     TraverseStmt(E);
@@ -866,6 +870,8 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool ArgDependent = false;
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
+  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+    ArgDependent = ArgumentDependenceChecker(MD).referencesArgs(Cond);
   D->addAttr(::new (S.Context) DiagnoseIfAttr(
       S.Context, AL, Cond, Msg, DiagType, ArgDependent, cast<NamedDecl>(D)));
 }

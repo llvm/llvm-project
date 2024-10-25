@@ -515,10 +515,76 @@ namespace {
     Call
   };
 
+  /// Either a FunctionDecl or an ObjCMethodDecl. This struct papers over the
+  /// fact that their common ancestors are DeclContext and NamedDecl, which
+  /// does not allow the enumeration of their parameters very easily.
+  class CallableDecl {
+  public:
+    using param_const_iterator = const ParmVarDecl *const *;
+
+    CallableDecl(std::nullptr_t) : DC(nullptr) {}
+    CallableDecl(const ObjCMethodDecl *MD) : DC(MD) {}
+    CallableDecl(const FunctionDecl *MD) : DC(MD) {}
+    CallableDecl() : CallableDecl(nullptr) {}
+
+    operator bool() const { return DC; }
+
+    const NamedDecl *getAsNamedDecl() const {
+      if (auto Func = dyn_cast<FunctionDecl>(DC))
+        return Func;
+      return cast<ObjCMethodDecl>(DC);
+    }
+
+    const DeclContext *getAsDeclContext() const { return DC; }
+
+    const FunctionDecl *getAsFunctionDecl() const {
+      return dyn_cast_or_null<FunctionDecl>(DC);
+    }
+
+    const CXXMethodDecl *getAsCXXMethodDecl() const {
+      return dyn_cast_or_null<CXXMethodDecl>(DC);
+    }
+
+    const ObjCMethodDecl *getAsObjCMethodDecl() const {
+      return dyn_cast_or_null<ObjCMethodDecl>(DC);
+    }
+
+    unsigned getNumParams() const {
+      if (auto Func = dyn_cast_or_null<FunctionDecl>(DC))
+        return Func->getNumParams();
+      return cast<ObjCMethodDecl>(DC)->param_size();
+    }
+
+    const ParmVarDecl *getParamDecl(unsigned I) const {
+      if (auto Func = dyn_cast_or_null<FunctionDecl>(DC))
+        return Func->getParamDecl(I);
+      return cast<ObjCMethodDecl>(DC)->getParamDecl(I);
+    }
+
+    param_const_iterator param_begin() const {
+      if (auto Func = dyn_cast_or_null<FunctionDecl>(DC))
+        return Func->param_begin();
+      return cast<ObjCMethodDecl>(DC)->param_begin();
+    }
+
+    param_const_iterator param_end() const {
+      if (auto Func = dyn_cast_or_null<FunctionDecl>(DC))
+        return Func->param_end();
+      return cast<ObjCMethodDecl>(DC)->param_end();
+    }
+
+  private:
+    const DeclContext *DC;
+  };
+
+  inline bool operator!=(CallableDecl A, CallableDecl B) {
+    return A.getAsDeclContext() != B.getAsDeclContext();
+  }
+
   /// A reference to a particular call and its arguments.
   struct CallRef {
     CallRef() : OrigCallee(), CallIndex(0), Version() {}
-    CallRef(const FunctionDecl *Callee, unsigned CallIndex, unsigned Version)
+    CallRef(CallableDecl Callee, unsigned CallIndex, unsigned Version)
         : OrigCallee(Callee), CallIndex(CallIndex), Version(Version) {}
 
     explicit operator bool() const { return OrigCallee; }
@@ -526,15 +592,17 @@ namespace {
     /// Get the parameter that the caller initialized, corresponding to the
     /// given parameter in the callee.
     const ParmVarDecl *getOrigParam(const ParmVarDecl *PVD) const {
-      return OrigCallee ? OrigCallee->getParamDecl(PVD->getFunctionScopeIndex())
-                        : PVD;
+      if (OrigCallee != nullptr && PVD != nullptr) {
+        return OrigCallee.getParamDecl(PVD->getFunctionScopeIndex());
+      }
+      return PVD;
     }
 
     /// The callee at the point where the arguments were evaluated. This might
     /// be different from the actual callee (a different redeclaration, or a
     /// virtual override), but this function's parameters are the ones that
     /// appear in the parameter map.
-    const FunctionDecl *OrigCallee;
+    CallableDecl OrigCallee;
     /// The call index of the frame that holds the argument values.
     unsigned CallIndex;
     /// The version of the parameters corresponding to this call.
@@ -549,8 +617,9 @@ namespace {
     /// Parent - The caller of this stack frame.
     CallStackFrame *Caller;
 
-    /// Callee - The function which was called.
-    const FunctionDecl *Callee;
+    /// Callee - The function which was called. Wraps a Function or an
+    /// ObjCMethod.
+    CallableDecl Callee;
 
     /// This - The binding for the this pointer in this call, if any.
     const LValue *This;
@@ -598,6 +667,10 @@ namespace {
       return {Callee, Index, ++CurTempVersion};
     }
 
+    CallRef createCall(const ObjCMethodDecl *Callee) {
+      return {Callee, Index, ++CurTempVersion};
+    }
+
     // FIXME: Adding this to every 'CallStackFrame' may have a nontrivial impact
     // on the overall stack usage of deeply-recursing constexpr evaluations.
     // (We should cache this map rather than recomputing it repeatedly.)
@@ -609,9 +682,14 @@ namespace {
     llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
     FieldDecl *LambdaThisCaptureField = nullptr;
 
-    CallStackFrame(EvalInfo &Info, SourceRange CallRange,
-                   const FunctionDecl *Callee, const LValue *This,
-                   const Expr *CallExpr, CallRef Arguments);
+    CallStackFrame(EvalInfo &Info, SourceRange CallRange, CallableDecl Callable,
+                   const LValue *This, const Expr *CallExpr, CallRef Arguments);
+
+    CallStackFrame(EvalInfo &Info, SourceRange CallRange, std::nullptr_t,
+                   const LValue *This, const Expr *CallExpr, CallRef Arguments)
+        : CallStackFrame(Info, CallRange, CallableDecl(), This, CallExpr,
+                         Arguments) {}
+
     ~CallStackFrame();
 
     // Return the temporary for Key whose version number is Version.
@@ -654,10 +732,13 @@ namespace {
 
     Frame *getCaller() const override { return Caller; }
     SourceRange getCallRange() const override { return CallRange; }
-    const FunctionDecl *getCallee() const override { return Callee; }
+    const FunctionDecl *getCallee() const override {
+      return Callee.getAsFunctionDecl();
+    }
 
     bool isStdFunction() const {
-      for (const DeclContext *DC = Callee; DC; DC = DC->getParent())
+      for (const DeclContext *DC = Callee.getAsDeclContext(); DC;
+           DC = DC->getParent())
         if (DC->isStdNamespace())
           return true;
       return false;
@@ -1139,7 +1220,7 @@ namespace {
     StdAllocatorCaller getStdAllocatorCaller(StringRef FnName) const {
       for (const CallStackFrame *Call = CurrentCall; Call != &BottomFrame;
            Call = Call->Caller) {
-        const auto *MD = dyn_cast_or_null<CXXMethodDecl>(Call->Callee);
+        const auto *MD = Call->Callee.getAsCXXMethodDecl();
         if (!MD)
           continue;
         const IdentifierInfo *FnII = MD->getIdentifier();
@@ -1509,7 +1590,7 @@ void SubobjectDesignator::diagnosePointerArithmetic(EvalInfo &Info,
 }
 
 CallStackFrame::CallStackFrame(EvalInfo &Info, SourceRange CallRange,
-                               const FunctionDecl *Callee, const LValue *This,
+                               CallableDecl Callee, const LValue *This,
                                const Expr *CallExpr, CallRef Call)
     : Info(Info), Caller(Info.CurrentCall), Callee(Callee), This(This),
       CallExpr(CallExpr), Arguments(Call), CallRange(CallRange),
@@ -1995,13 +2076,15 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 /// Produce a string describing the given constexpr call.
 void CallStackFrame::describe(raw_ostream &Out) const {
   unsigned ArgIndex = 0;
-  bool IsMemberCall =
-      isa<CXXMethodDecl>(Callee) && !isa<CXXConstructorDecl>(Callee) &&
-      cast<CXXMethodDecl>(Callee)->isImplicitObjectMemberFunction();
+  bool IsMemberCall = false;
+  const NamedDecl *ND = Callee.getAsNamedDecl();
+  if (auto MD = Callee.getAsCXXMethodDecl())
+    IsMemberCall =
+        !isa<CXXConstructorDecl>(MD) && MD->isImplicitObjectMemberFunction();
 
   if (!IsMemberCall)
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
-                                 /*Qualified=*/false);
+    ND->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+                             /*Qualified=*/false);
 
   if (This && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
@@ -2026,15 +2109,16 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
     }
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
-                                 /*Qualified=*/false);
+    ND->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+                             /*Qualified=*/false);
     IsMemberCall = false;
   }
 
   Out << '(';
 
-  for (FunctionDecl::param_const_iterator I = Callee->param_begin(),
-       E = Callee->param_end(); I != E; ++I, ++ArgIndex) {
+  for (CallableDecl::param_const_iterator I = Callee.param_begin(),
+                                          E = Callee.param_end();
+       I != E; ++I, ++ArgIndex) {
     if (ArgIndex > (unsigned)IsMemberCall)
       Out << ", ";
 
@@ -2046,7 +2130,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
       Out << "<...>";
 
     if (ArgIndex == 0 && IsMemberCall)
-      Out << "->" << *Callee << '(';
+      Out << "->" << *ND << '(';
   }
 
   Out << ')';
@@ -2280,8 +2364,8 @@ static void NoteLValueLocation(EvalInfo &Info, APValue::LValueBase Base) {
     for (CallStackFrame *F = Info.CurrentCall; F; F = F->Caller) {
       if (F->Arguments.CallIndex == Base.getCallIndex() &&
           F->Arguments.Version == Base.getVersion() && F->Callee &&
-          Idx < F->Callee->getNumParams()) {
-        VD = F->Callee->getParamDecl(Idx);
+          Idx < F->Callee.getNumParams()) {
+        VD = F->Callee.getParamDecl(Idx);
         break;
       }
     }
@@ -3460,8 +3544,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
       // not declared within the call operator are captures and during checking
       // of a potential constant expression, assume they are unknown constant
       // expressions.
-      assert(isLambdaCallOperator(Frame->Callee) &&
-             (VD->getDeclContext() != Frame->Callee || VD->isInitCapture()) &&
+      const auto *FD = Frame->Callee.getAsFunctionDecl();
+      assert(isLambdaCallOperator(FD) &&
+             (VD->getDeclContext() != FD || VD->isInitCapture()) &&
              "missing value for local variable");
       if (Info.checkingPotentialConstantExpression())
         return false;
@@ -3486,7 +3571,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     // constant expressions.
     if (!Info.checkingPotentialConstantExpression() ||
         !Info.CurrentCall->Callee ||
-        !Info.CurrentCall->Callee->Equals(VD->getDeclContext())) {
+        !Info.CurrentCall->Callee.getAsDeclContext()->Equals(
+            VD->getDeclContext())) {
       if (Info.getLangOpts().CPlusPlus11) {
         Info.FFDiag(E, diag::note_constexpr_function_param_value_unknown)
             << VD;
@@ -8832,7 +8918,8 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
   // to within 'E' actually represents a lambda-capture that maps to a
   // data-member/field within the closure object, and if so, evaluate to the
   // field or what the field refers to.
-  if (Info.CurrentCall && isLambdaCallOperator(Info.CurrentCall->Callee) &&
+  if (Info.CurrentCall &&
+      isLambdaCallOperator(Info.CurrentCall->Callee.getAsFunctionDecl()) &&
       isa<DeclRefExpr>(E) &&
       cast<DeclRefExpr>(E)->refersToEnclosingVariableOrCapture()) {
     // We don't always have a complete capture-map when checking or inferring if
@@ -8843,7 +8930,7 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
       return false;
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
-      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+      const auto *MD = Info.CurrentCall->Callee.getAsCXXMethodDecl();
       return HandleLambdaCapture(Info, E, Result, MD, FD,
                                  FD->getType()->isReferenceType());
     }
@@ -8859,7 +8946,8 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
     // variable) or be ill-formed (and trigger an appropriate evaluation
     // diagnostic)).
     CallStackFrame *CurrFrame = Info.CurrentCall;
-    if (CurrFrame->Callee && CurrFrame->Callee->Equals(VD->getDeclContext())) {
+    if (CurrFrame->Callee &&
+        CurrFrame->Callee.getAsDeclContext()->Equals(VD->getDeclContext())) {
       // Function parameters are stored in some caller's frame. (Usually the
       // immediate caller, but for an inherited constructor they may be more
       // distant.)
@@ -9382,8 +9470,8 @@ public:
     if (Info.checkingPotentialConstantExpression())
       return false;
 
-    bool IsExplicitLambda =
-        isLambdaCallWithExplicitObjectParameter(Info.CurrentCall->Callee);
+    bool IsExplicitLambda = isLambdaCallWithExplicitObjectParameter(
+        Info.CurrentCall->Callee.getAsFunctionDecl());
     if (!IsExplicitLambda) {
       if (!Info.CurrentCall->This) {
         DiagnoseInvalidUseOfThis();
@@ -9393,7 +9481,7 @@ public:
       Result = *Info.CurrentCall->This;
     }
 
-    if (isLambdaCallOperator(Info.CurrentCall->Callee)) {
+    if (isLambdaCallOperator(Info.CurrentCall->Callee.getAsFunctionDecl())) {
       // Ensure we actually have captured 'this'. If something was wrong with
       // 'this' capture, the error would have been previously reported.
       // Otherwise we can be inside of a default initialization of an object
@@ -9407,7 +9495,7 @@ public:
         return true;
       }
 
-      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+      const auto *MD = Info.CurrentCall->Callee.getAsCXXMethodDecl();
       return HandleLambdaCapture(
           Info, E, Result, MD, Info.CurrentCall->LambdaThisCaptureField,
           Info.CurrentCall->LambdaThisCaptureField->getType()->isPointerType());
@@ -9539,7 +9627,8 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       //    that back to `const __impl*` in its body.
       if (VoidPtrCastMaybeOK &&
           (Info.getStdAllocatorCaller("allocate") ||
-           IsDeclSourceLocationCurrent(Info.CurrentCall->Callee) ||
+           IsDeclSourceLocationCurrent(
+               Info.CurrentCall->Callee.getAsFunctionDecl()) ||
            Info.getLangOpts().CPlusPlus26)) {
         // Permitted.
       } else {
@@ -17403,11 +17492,14 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
 }
 
 bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
-                                    const FunctionDecl *Callee,
-                                    ArrayRef<const Expr*> Args,
+                                    const NamedDecl *Callee,
+                                    ArrayRef<const Expr *> Args,
                                     const Expr *This) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
+
+  assert(Callee != nullptr ||
+         Args.empty() && "substitutions always fail when Callee is nullptr");
 
   llvm::TimeTraceScope TimeScope("EvaluateWithSubstitution", [&] {
     std::string Name;
@@ -17440,13 +17532,19 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
     Info.EvalStatus.HasSideEffects = false;
   }
 
-  CallRef Call = Info.CurrentCall->createCall(Callee);
+  CallRef Call;
+  if (Callee != nullptr) {
+    if (auto Func = dyn_cast<FunctionDecl>(Callee))
+      Call = Info.CurrentCall->createCall(Func);
+    else if (auto Method = dyn_cast<ObjCMethodDecl>(Callee))
+      Call = Info.CurrentCall->createCall(Method);
+  }
   for (ArrayRef<const Expr*>::iterator I = Args.begin(), E = Args.end();
        I != E; ++I) {
     unsigned Idx = I - Args.begin();
-    if (Idx >= Callee->getNumParams())
+    if (Idx >= Call.OrigCallee.getNumParams())
       break;
-    const ParmVarDecl *PVD = Callee->getParamDecl(Idx);
+    const ParmVarDecl *PVD = Call.OrigCallee.getParamDecl(Idx);
     if ((*I)->isValueDependent() ||
         !EvaluateCallArg(PVD, *I, Call, Info) ||
         Info.EvalStatus.HasSideEffects) {
@@ -17466,8 +17564,8 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
   Info.EvalStatus.HasSideEffects = false;
 
   // Build fake call to Callee.
-  CallStackFrame Frame(Info, Callee->getLocation(), Callee, ThisPtr, This,
-                       Call);
+  CallStackFrame Frame(Info, Callee->getLocation(), Call.OrigCallee, ThisPtr,
+                       This, Call);
   // FIXME: Missing ExprWithCleanups in enable_if conditions?
   FullExpressionRAII Scope(Info);
   return Evaluate(Value, Info, this) && Scope.destroy() &&
