@@ -14,6 +14,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOP_LATTICE_H
 
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/Any.h"
 #include <ostream>
 
