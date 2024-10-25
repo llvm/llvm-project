@@ -53,16 +53,14 @@ llvm.func @target_allocatable_(%arg0: !llvm.ptr {fir.bindc_name = "lb"}, %arg1: 
     %65 = llvm.alloca %64 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
     %67 = llvm.alloca %64 x i32 : (i32) -> !llvm.ptr
     %66 = llvm.mlir.constant(19 : i32) : i32
-    %68 = llvm.mlir.constant(18 : i32) : i32
     %69 = llvm.mlir.constant(10 : i32) : i32
-    %70 = llvm.mlir.constant(5 : i32) : i32
-    llvm.store %70, %arg3 : i32, !llvm.ptr
+    llvm.store %64, %arg3 : i32, !llvm.ptr
     llvm.store %69, %67 : i32, !llvm.ptr
     %75 = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
     %90 = llvm.insertvalue %67, %75[0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
     llvm.store %90, %65 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
     %91 = llvm.mlir.zero : !llvm.ptr
-    %92 = llvm.call @_FortranAAssign(%arg6, %65, %91, %68) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32) -> !llvm.struct<()>
+    %92 = llvm.call @_FortranAAssign(%arg6, %65, %91, %66) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32) -> !llvm.struct<()>
     %93 = llvm.call @_FortranAAssign(%arg7, %65, %91, %66) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32) -> !llvm.struct<()>
     omp.terminator
   }

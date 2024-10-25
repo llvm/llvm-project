@@ -135,6 +135,17 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
       auto &region = getDeallocRegion();
       return region.empty() ? nullptr : region.getArgument(0);
     }
+    /// privatizer is a PrivateClauseOp that privatizes an MLIR value.
+    /// privatizerNeedsMap returns true if the value being privatized in an
+    /// omp.target p should additionally be mapped to the target region
+    /// using a MapInfoOp. This is most common when an allocatable is privatized.
+    /// In such cases, the descriptor is use in privatization and needs to be
+    /// mapped on to the device.
+    bool needsMap() {
+      Value blockArg0 = getAllocRegion().getArgument(0);
+      return !blockArg0.use_empty();
+    }
+
   }];
 
   let hasRegionVerifier = 1;

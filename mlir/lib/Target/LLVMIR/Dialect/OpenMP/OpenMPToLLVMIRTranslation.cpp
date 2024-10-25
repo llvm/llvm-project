@@ -3316,19 +3316,25 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
 
   return builder.saveIP();
 }
-static bool privatizerNeedsMap(omp::PrivateClauseOp &privatizer) {
-  Region &allocRegion = privatizer.getAllocRegion();
-  Value blockArg0 = allocRegion.getArgument(0);
-  return !blockArg0.use_empty();
-}
+/// privatizer is a PrivateClauseOp that privatizes an MLIR value.
+/// privatizerNeedsMap returns true if the value being privatized in an
+/// omp.target p should additionally be mapped to the target region
+/// using a MapInfoOp. This is most common when an allocatable is privatized.
+/// In such cases, the descriptor is use in privatization and needs to be
+/// mapped on to the device.
+// static bool privatizerNeedsMap(omp::PrivateClauseOp &privatizer) {
+//   Region &allocRegion = privatizer.getAllocRegion();
+//   Value blockArg0 = allocRegion.getArgument(0);
+//   return !blockArg0.use_empty();
+// }
 
-// Return the llvm::Value * corresponding to the privateVar that
-// is being privatized. It isn't always as simple as looking up
-// moduleTranslation with privateVar. For instance, in case of
-// an allocatable, the descriptor for the allocatable is privatized.
-// This descriptor is mapped using an MapInfoOp. So, this function
-// will return a pointer to the llvm::Value corresponding to the
-// block argument for the mapped descriptor.
+/// Return the llvm::Value * corresponding to the privateVar that
+/// is being privatized. It isn't always as simple as looking up
+/// moduleTranslation with privateVar. For instance, in case of
+/// an allocatable, the descriptor for the allocatable is privatized.
+/// This descriptor is mapped using an MapInfoOp. So, this function
+/// will return a pointer to the llvm::Value corresponding to the
+/// block argument for the mapped descriptor.
 static llvm::Value *
 findHostAssociatedValue(Value privateVar, omp::TargetOp targetOp,
                         llvm::DenseMap<Value, int> &mappedPrivateVars,
@@ -3414,7 +3420,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       SymbolRefAttr privatizerName = llvm::cast<SymbolRefAttr>(privSym);
       omp::PrivateClauseOp privatizer =
           findPrivatizer(targetOp, privatizerName);
-      if (!privatizerNeedsMap(privatizer))
+      if (!privatizer.needsMap())
         continue;
 
       // The MapInfoOp defining the map var isn't really needed later.
