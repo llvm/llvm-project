@@ -644,7 +644,7 @@ bool ABISysV_s390x::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
 bool ABISysV_s390x::GetFallbackRegisterLocation(
     const RegisterInfo *reg_info,
-    UnwindPlan::Row::RegisterLocation &unwind_regloc) {
+    UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc) {
   // If a volatile register is being requested, we don't want to forward the
   // next frame's register contents up the stack -- the register is not
   // retrievable at this frame.

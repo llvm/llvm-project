@@ -258,7 +258,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
         StreamString feedback_stream;
         if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
           Stream &s = GetErrorStream();
-          for (auto error : errors) {
+          for (auto &error : errors) {
             s.Printf("%s\n", error.AsCString());
           }
           if (feedback_stream.GetSize())
@@ -592,7 +592,18 @@ lldb::DWIMPrintVerbosity Debugger::GetDWIMPrintVerbosity() const {
   const uint32_t idx = ePropertyDWIMPrintVerbosity;
   return GetPropertyAtIndexAs<lldb::DWIMPrintVerbosity>(
       idx, static_cast<lldb::DWIMPrintVerbosity>(
-               g_debugger_properties[idx].default_uint_value));
+               g_debugger_properties[idx].default_uint_value != 0));
+}
+
+bool Debugger::GetShowInlineDiagnostics() const {
+  const uint32_t idx = ePropertyShowInlineDiagnostics;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value);
+}
+
+bool Debugger::SetShowInlineDiagnostics(bool b) {
+  const uint32_t idx = ePropertyShowInlineDiagnostics;
+  return SetPropertyAtIndex(idx, b);
 }
 
 #pragma mark Debugger
@@ -773,9 +784,10 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
     CommandReturnObject result(debugger_sp->GetUseColor());
     cmd_interpreter.SaveTranscript(result);
     if (result.Succeeded())
-      (*debugger_sp->GetAsyncOutputStream()) << result.GetOutputData() << '\n';
+      (*debugger_sp->GetAsyncOutputStream())
+          << result.GetOutputString() << '\n';
     else
-      (*debugger_sp->GetAsyncErrorStream()) << result.GetErrorData() << '\n';
+      (*debugger_sp->GetAsyncErrorStream()) << result.GetErrorString() << '\n';
   }
 
   debugger_sp->Clear();

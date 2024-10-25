@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___MATH_HYPOT_H
 #define _LIBCPP___MATH_HYPOT_H
 
-#include <__algorithm/max.h>
 #include <__config>
 #include <__math/abs.h>
 #include <__math/exponential_functions.h>
+#include <__math/min_max.h>
 #include <__math/roots.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_arithmetic.h>
@@ -62,7 +62,7 @@ _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
   const _Real __overflow_scale     = __math::ldexp(_Real(1), -(__exp + 20));
 
   // Scale arguments depending on their size
-  const _Real __max_abs = std::max(__math::fabs(__x), std::max(__math::fabs(__y), __math::fabs(__z)));
+  const _Real __max_abs = __math::fmax(__math::fabs(__x), __math::fmax(__math::fabs(__y), __math::fabs(__z)));
   _Real __scale;
   if (__max_abs > __overflow_threshold) { // x*x + y*y + z*z might overflow
     __scale = __overflow_scale;

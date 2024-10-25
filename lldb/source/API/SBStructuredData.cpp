@@ -133,7 +133,7 @@ lldb::SBError SBStructuredData::GetDescription(lldb::SBStream &stream) const {
 
   Status error = m_impl_up->GetDescription(stream.ref());
   SBError sb_error;
-  sb_error.SetError(error);
+  sb_error.SetError(std::move(error));
   return sb_error;
 }
 

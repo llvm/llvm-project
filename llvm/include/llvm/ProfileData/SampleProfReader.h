@@ -424,6 +424,16 @@ public:
     if (It != Profiles.end())
       return &It->second;
 
+    if (FuncNameToProfNameMap && !FuncNameToProfNameMap->empty()) {
+      auto R = FuncNameToProfNameMap->find(FunctionId(Fname));
+      if (R != FuncNameToProfNameMap->end()) {
+        Fname = R->second.stringRef();
+        auto It = Profiles.find(FunctionId(Fname));
+        if (It != Profiles.end())
+          return &It->second;
+      }
+    }
+
     if (Remapper) {
       if (auto NameInProfile = Remapper->lookUpNameInProfile(Fname)) {
         auto It = Profiles.find(FunctionId(*NameInProfile));
@@ -505,6 +515,11 @@ public:
 
   void setModule(const Module *Mod) { M = Mod; }
 
+  void setFuncNameToProfNameMap(
+      const HashKeyMap<std::unordered_map, FunctionId, FunctionId> &FPMap) {
+    FuncNameToProfNameMap = &FPMap;
+  }
+
 protected:
   /// Map every function to its associated profile.
   ///
@@ -540,6 +555,12 @@ protected:
   }
 
   std::unique_ptr<SampleProfileReaderItaniumRemapper> Remapper;
+
+  // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
+  // which maps the function name to the matched profile name. This is used
+  // for sample loader to look up profile using the new name.
+  const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+      *FuncNameToProfNameMap = nullptr;
 
   // A map from a function's context hash to its meta data section range, used
   // for on-demand read function profile metadata.

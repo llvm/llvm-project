@@ -249,7 +249,7 @@ bool ValueObjectVariable::UpdateValue() {
 
       SetValueIsValid(m_error.Success());
     } else {
-      m_error = maybe_value.takeError();
+      m_error = Status::FromError(maybe_value.takeError());
       // could not find location, won't allow editing
       m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
     }

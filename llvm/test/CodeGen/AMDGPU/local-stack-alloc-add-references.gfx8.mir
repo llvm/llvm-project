@@ -39,7 +39,7 @@ body:             |
     ; GFX940-LABEL: name: local_stack_alloc__v_add_co_u32_e32__literal_offsets
     ; GFX940: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 256
     ; GFX940-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 %stack.0
-    ; GFX940-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def $scc
+    ; GFX940-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
     ; GFX940-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
     ; GFX940-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX940-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
@@ -60,7 +60,7 @@ body:             |
     ; GFX12-LABEL: name: local_stack_alloc__v_add_co_u32_e32__literal_offsets
     ; GFX12: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 256
     ; GFX12-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 %stack.0
-    ; GFX12-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def $scc
+    ; GFX12-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
     ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
@@ -162,7 +162,7 @@ body:             |
     ; GFX940-LABEL: name: local_stack_alloc__v_add_co_u32_e32__inline_imm_offsets
     ; GFX940: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 8
     ; GFX940-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 %stack.0
-    ; GFX940-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def $scc
+    ; GFX940-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
     ; GFX940-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
     ; GFX940-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX940-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
@@ -183,7 +183,7 @@ body:             |
     ; GFX12-LABEL: name: local_stack_alloc__v_add_co_u32_e32__inline_imm_offsets
     ; GFX12: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 8
     ; GFX12-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 %stack.0
-    ; GFX12-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def $scc
+    ; GFX12-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
     ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
@@ -232,7 +232,7 @@ body:             |
     ; GFX940-LABEL: name: local_stack_alloc__v_add_co_u32_e64__inline_imm_offsets
     ; GFX940: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 8
     ; GFX940-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 %stack.0
-    ; GFX940-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def $scc
+    ; GFX940-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
     ; GFX940-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
     ; GFX940-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX940-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 8, [[S_ADD_I32_]], 0, implicit $exec
@@ -252,7 +252,7 @@ body:             |
     ; GFX12-LABEL: name: local_stack_alloc__v_add_co_u32_e64__inline_imm_offsets
     ; GFX12: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 8
     ; GFX12-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 %stack.0
-    ; GFX12-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def $scc
+    ; GFX12-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 killed [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
     ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX12-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 8, [[S_ADD_I32_]], 0, implicit $exec
@@ -421,6 +421,160 @@ body:             |
     INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:SREG_32 */, %0
     %1:sreg_32 = S_ADD_I32 16, %stack.0, implicit-def dead $scc
     INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:SREG_32 */, %1
+    SI_RETURN
+
+...
+
+---
+name:            local_stack_alloc__s_add_i32__reg_offsets
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 64, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr4, $sgpr5
+    ; GFX803-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets
+    ; GFX803: liveins: $sgpr4, $sgpr5
+    ; GFX803-NEXT: {{  $}}
+    ; GFX803-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX803-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX803-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], %stack.0, implicit-def dead $scc
+    ; GFX803-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX803-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], %stack.0, implicit-def dead $scc
+    ; GFX803-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX803-NEXT: SI_RETURN
+    ;
+    ; GFX900-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets
+    ; GFX900: liveins: $sgpr4, $sgpr5
+    ; GFX900-NEXT: {{  $}}
+    ; GFX900-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX900-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX900-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], %stack.0, implicit-def dead $scc
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX900-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], %stack.0, implicit-def dead $scc
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX900-NEXT: SI_RETURN
+    ;
+    ; GFX940-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets
+    ; GFX940: liveins: $sgpr4, $sgpr5
+    ; GFX940-NEXT: {{  $}}
+    ; GFX940-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX940-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX940-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], %stack.0, implicit-def dead $scc
+    ; GFX940-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX940-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], %stack.0, implicit-def dead $scc
+    ; GFX940-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX940-NEXT: SI_RETURN
+    ;
+    ; GFX10-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets
+    ; GFX10: liveins: $sgpr4, $sgpr5
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX10-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], %stack.0, implicit-def dead $scc
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX10-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], %stack.0, implicit-def dead $scc
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX10-NEXT: SI_RETURN
+    ;
+    ; GFX12-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets
+    ; GFX12: liveins: $sgpr4, $sgpr5
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX12-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], %stack.0, implicit-def dead $scc
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX12-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], %stack.0, implicit-def dead $scc
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX12-NEXT: SI_RETURN
+    %0:sreg_32 = COPY $sgpr4
+    %1:sreg_32 = COPY $sgpr5
+
+    %2:sreg_32 = S_ADD_I32 %0, %stack.0, implicit-def dead $scc
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:SREG_32 */, %2
+    %3:sreg_32 = S_ADD_I32 %1, %stack.0, implicit-def dead $scc
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:SREG_32 */, %3
+    SI_RETURN
+
+...
+
+---
+name:            local_stack_alloc__s_add_i32__reg_offsets_commute
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 64, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr4, $sgpr5
+    ; GFX803-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets_commute
+    ; GFX803: liveins: $sgpr4, $sgpr5
+    ; GFX803-NEXT: {{  $}}
+    ; GFX803-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX803-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX803-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY]], implicit-def dead $scc
+    ; GFX803-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX803-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY1]], implicit-def dead $scc
+    ; GFX803-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX803-NEXT: SI_RETURN
+    ;
+    ; GFX900-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets_commute
+    ; GFX900: liveins: $sgpr4, $sgpr5
+    ; GFX900-NEXT: {{  $}}
+    ; GFX900-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX900-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX900-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY]], implicit-def dead $scc
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX900-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY1]], implicit-def dead $scc
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX900-NEXT: SI_RETURN
+    ;
+    ; GFX940-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets_commute
+    ; GFX940: liveins: $sgpr4, $sgpr5
+    ; GFX940-NEXT: {{  $}}
+    ; GFX940-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX940-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX940-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY]], implicit-def dead $scc
+    ; GFX940-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX940-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY1]], implicit-def dead $scc
+    ; GFX940-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX940-NEXT: SI_RETURN
+    ;
+    ; GFX10-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets_commute
+    ; GFX10: liveins: $sgpr4, $sgpr5
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX10-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY]], implicit-def dead $scc
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX10-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY1]], implicit-def dead $scc
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX10-NEXT: SI_RETURN
+    ;
+    ; GFX12-LABEL: name: local_stack_alloc__s_add_i32__reg_offsets_commute
+    ; GFX12: liveins: $sgpr4, $sgpr5
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
+    ; GFX12-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY]], implicit-def dead $scc
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_]]
+    ; GFX12-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[COPY1]], implicit-def dead $scc
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, [[S_ADD_I32_1]]
+    ; GFX12-NEXT: SI_RETURN
+    %0:sreg_32 = COPY $sgpr4
+    %1:sreg_32 = COPY $sgpr5
+
+    %2:sreg_32 = S_ADD_I32 %stack.0, %0, implicit-def dead $scc
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:SREG_32 */, %2
+    %3:sreg_32 = S_ADD_I32 %stack.0, %1, implicit-def dead $scc
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:SREG_32 */, %3
     SI_RETURN
 
 ...

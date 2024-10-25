@@ -52,7 +52,7 @@ define void @h(float %i) {
 ; CHECK-NEXT:    fildl 12(%esi)
 ; CHECK-NEXT:    movl _c, %edx
 ; CHECK-NEXT:    jmp LBB0_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_5: # %for.inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    fxch %st(5)

@@ -615,7 +615,17 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
       m_synthetic_value->UpdateValueIfNeeded(); // the summary might depend on
                                                 // the synthetic children being
                                                 // up-to-date (e.g. ${svar%#})
-    summary_ptr->FormatObject(this, destination, actual_options);
+
+    if (TargetSP target_sp = GetExecutionContextRef().GetTargetSP()) {
+      SummaryStatisticsSP stats_sp =
+          target_sp->GetSummaryStatisticsCache()
+              .GetSummaryStatisticsForProvider(*summary_ptr);
+
+      // Construct RAII types to time and collect data on summary creation.
+      SummaryStatistics::SummaryInvocation invocation(stats_sp);
+      summary_ptr->FormatObject(this, destination, actual_options);
+    } else
+      summary_ptr->FormatObject(this, destination, actual_options);
   }
   m_flags.m_is_getting_summary = false;
   return !destination.empty();
@@ -2763,7 +2773,7 @@ ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {
   if (!valobj_sp) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     valobj_sp = ValueObjectConstResult::Create(
-        exe_ctx.GetBestExecutionContextScope(), m_error);
+        exe_ctx.GetBestExecutionContextScope(), m_error.Clone());
   }
   return valobj_sp;
 }
@@ -2901,6 +2911,15 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 
   AddressType address_type = eAddressTypeInvalid;
   const bool scalar_is_load_address = false;
+
+  // For reference type we need to get the address of the object that
+  // it refers to.
+  if (GetCompilerType().IsReferenceType()) {
+    ValueObjectSP deref_obj = Dereference(error);
+    if (error.Fail() || !deref_obj)
+      return ValueObjectSP();
+    return deref_obj->AddressOf(error);
+  }
   addr_t addr = GetAddressOf(scalar_is_load_address, &address_type);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {
@@ -2974,7 +2993,7 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
 
   return ValueObjectConstResult::Create(
       ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope(),
-                       error);
+      std::move(error));
 }
 
 lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {

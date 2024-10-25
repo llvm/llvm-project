@@ -96,11 +96,9 @@ static bool isStaticallyPresent(const fir::ExtendedValue &exv) {
 }
 
 /// IEEE module procedure names not yet implemented for genModuleProcTODO.
-static constexpr char ieee_int[] = "ieee_int";
 static constexpr char ieee_get_underflow_mode[] = "ieee_get_underflow_mode";
 static constexpr char ieee_real[] = "ieee_real";
 static constexpr char ieee_rem[] = "ieee_rem";
-static constexpr char ieee_rint[] = "ieee_rint";
 static constexpr char ieee_set_underflow_mode[] = "ieee_set_underflow_mode";
 
 using I = IntrinsicLibrary;
@@ -265,6 +263,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
+    {"free", &I::genFree},
     {"get_command",
      &I::genGetCommand,
      {{{"command", asBox, handleDynamicOptional},
@@ -293,7 +292,9 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genGetCwd,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
+    {"getuid", &I::genGetUID},
     {"iachar", &I::genIchar},
     {"iall",
      &I::genIall,
@@ -330,7 +331,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"ieee_get_status", &I::genIeeeGetOrSetStatus</*isGet=*/true>},
     {"ieee_get_underflow_mode", &I::genModuleProcTODO<ieee_get_underflow_mode>},
-    {"ieee_int", &I::genModuleProcTODO<ieee_int>},
+    {"ieee_int", &I::genIeeeInt},
     {"ieee_is_finite", &I::genIeeeIsFinite},
     {"ieee_is_nan", &I::genIeeeIsNan},
     {"ieee_is_negative", &I::genIeeeIsNegative},
@@ -363,7 +364,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_quiet_ne", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::UNE>},
     {"ieee_real", &I::genModuleProcTODO<ieee_real>},
     {"ieee_rem", &I::genModuleProcTODO<ieee_rem>},
-    {"ieee_rint", &I::genModuleProcTODO<ieee_rint>},
+    {"ieee_rint", &I::genIeeeRint},
     {"ieee_round_eq", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::eq>},
     {"ieee_round_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
     {"ieee_set_flag", &I::genIeeeSetFlagOrHaltingMode</*isFlag=*/true>},
@@ -436,6 +437,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
     {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
     {"loc", &I::genLoc, {{{"x", asBox}}}, /*isElemental=*/false},
+    {"malloc", &I::genMalloc},
     {"maskl", &I::genMask<mlir::arith::ShLIOp>},
     {"maskr", &I::genMask<mlir::arith::ShRUIOp>},
     {"matmul",
@@ -750,7 +752,7 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
 
 // Generate a call to the Fortran runtime library providing
 // support for 128-bit float math.
-// On 'LDBL_MANT_DIG == 113' targets the implementation
+// On 'HAS_LDBL128' targets the implementation
 // is provided by FortranRuntime, otherwise, it is done via
 // FortranFloat128Math library. In the latter case the compiler
 // has to be built with FLANG_RUNTIME_F128_MATH_LIB to guarantee
@@ -772,6 +774,13 @@ mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
                        mlir::FunctionType libFuncType,
                        llvm::ArrayRef<mlir::Value> args) {
   llvm::StringRef libFuncName = mathOp.runtimeFunc;
+
+  // On AIX, __clog is used in libm.
+  if (fir::getTargetTriple(builder.getModule()).isOSAIX() &&
+      libFuncName == "clog") {
+    libFuncName = "__clog";
+  }
+
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << libFuncName
                           << "' call with type ";
              libFuncType.dump(); llvm::dbgs() << "\n");
@@ -836,24 +845,7 @@ mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
 
   auto getSplitComplexArgsType = [&builder, &args]() -> mlir::FunctionType {
     mlir::Type ctype = args[0].getType();
-    auto fKind = mlir::cast<fir::ComplexType>(ctype).getFKind();
-    mlir::Type ftype;
-
-    if (fKind == 2)
-      ftype = builder.getF16Type();
-    else if (fKind == 3)
-      ftype = builder.getBF16Type();
-    else if (fKind == 4)
-      ftype = builder.getF32Type();
-    else if (fKind == 8)
-      ftype = builder.getF64Type();
-    else if (fKind == 10)
-      ftype = builder.getF80Type();
-    else if (fKind == 16)
-      ftype = builder.getF128Type();
-    else
-      assert(0 && "Unsupported Complex Type");
-
+    auto ftype = mlir::cast<mlir::ComplexType>(ctype).getElementType();
     return builder.getFunctionType({ftype, ftype, ftype, ftype}, {ctype});
   };
 
@@ -944,25 +936,16 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
                           << "' operation with type ";
              mathLibFuncType.dump(); llvm::dbgs() << "\n");
-  auto type = mlir::cast<fir::ComplexType>(mathLibFuncType.getInput(0));
-  auto kind = mlir::cast<fir::RealType>(type.getElementType()).getFKind();
-  auto realTy = builder.getRealType(kind);
-  auto mComplexTy = mlir::ComplexType::get(realTy);
-
-  llvm::SmallVector<mlir::Value, 2> cargs;
-  for (const mlir::Value &arg : args) {
-    // Convert the fir.complex to a mlir::complex
-    cargs.push_back(builder.createConvert(loc, mComplexTy, arg));
-  }
-
   // Builder expects an extra return type to be provided if different to
   // the argument types for an operation
   if constexpr (T::template hasTrait<
                     mlir::OpTrait::SameOperandsAndResultType>()) {
-    result = builder.create<T>(loc, cargs);
+    result = builder.create<T>(loc, args);
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   } else {
-    result = builder.create<T>(loc, realTy, cargs);
+    auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));
+    auto realTy = complexTy.getElementType();
+    result = builder.create<T>(loc, realTy, args);
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   }
 
@@ -1238,6 +1221,14 @@ static constexpr MathOperation mathOperations[] = {
     {"log_gamma", "lgamma", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"log_gamma", RTNAME_STRING(LgammaF128), FuncTypeReal16Real16,
      genLibF128Call},
+    {"nearbyint", "llvm.nearbyint.f32", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genLibCall},
+    {"nearbyint", "llvm.nearbyint.f64", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"nearbyint", "llvm.nearbyint.f80", genFuncType<Ty::Real<10>, Ty::Real<10>>,
+     genLibCall},
+    {"nearbyint", RTNAME_STRING(NearbyintF128), FuncTypeReal16Real16,
+     genLibF128Call},
     // llvm.lround behaves the same way as libm's lround.
     {"nint", "llvm.lround.i64.f64", genFuncType<Ty::Integer<8>, Ty::Real<8>>,
      genLibCall},
@@ -1448,17 +1439,12 @@ private:
     }
   }
 
-  // Floating point can be mlir::FloatType or fir::real
+  // Floating point can be mlir Float or Complex Type.
   static unsigned getFloatingPointWidth(mlir::Type t) {
     if (auto f{mlir::dyn_cast<mlir::FloatType>(t)})
       return f.getWidth();
-    // FIXME: Get width another way for fir.real/complex
-    // - use fir/KindMapping.h and llvm::Type
-    // - or use evaluate/type.h
-    if (auto r{mlir::dyn_cast<fir::RealType>(t)})
-      return r.getFKind() * 4;
-    if (auto cplx{mlir::dyn_cast<fir::ComplexType>(t)})
-      return cplx.getFKind() * 4;
+    if (auto cplx{mlir::dyn_cast<mlir::ComplexType>(t)})
+      return mlir::cast<mlir::FloatType>(cplx.getElementType()).getWidth();
     llvm_unreachable("not a floating-point type");
   }
 
@@ -1479,13 +1465,10 @@ private:
                  : Conversion::Extend;
     }
 
-    if (auto fromCplxTy{mlir::dyn_cast<fir::ComplexType>(from)}) {
-      if (auto toCplxTy{mlir::dyn_cast<fir::ComplexType>(to)}) {
-        return getFloatingPointWidth(fromCplxTy) >
-                       getFloatingPointWidth(toCplxTy)
-                   ? Conversion::Narrow
-                   : Conversion::Extend;
-      }
+    if (fir::isa_complex(from) && fir::isa_complex(to)) {
+      return getFloatingPointWidth(from) > getFloatingPointWidth(to)
+                 ? Conversion::Narrow
+                 : Conversion::Extend;
     }
     // Notes:
     // - No conversion between character types, specialization of runtime
@@ -1999,11 +1982,9 @@ static std::string typeToString(mlir::Type t) {
   if (auto i{mlir::dyn_cast<mlir::IntegerType>(t)}) {
     return "i" + std::to_string(i.getWidth());
   }
-  if (auto cplx{mlir::dyn_cast<fir::ComplexType>(t)}) {
-    return "z" + std::to_string(cplx.getFKind());
-  }
-  if (auto real{mlir::dyn_cast<fir::RealType>(t)}) {
-    return "r" + std::to_string(real.getFKind());
+  if (auto cplx{mlir::dyn_cast<mlir::ComplexType>(t)}) {
+    auto eleTy = mlir::cast<mlir::FloatType>(cplx.getElementType());
+    return "z" + std::to_string(eleTy.getWidth());
   }
   if (auto f{mlir::dyn_cast<mlir::FloatType>(t)}) {
     return "f" + std::to_string(f.getWidth());
@@ -3581,6 +3562,12 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
 }
 
+void IntrinsicLibrary::genFree(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  fir::runtime::genFree(builder, loc, fir::getBase(args[0]));
+}
+
 // GETCWD
 fir::ExtendedValue
 IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
@@ -3650,12 +3637,28 @@ void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
   }
 }
 
+// GETGID
+mlir::Value IntrinsicLibrary::genGetGID(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "getgid takes no input");
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genGetGID(builder, loc));
+}
+
 // GETPID
 mlir::Value IntrinsicLibrary::genGetPID(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 0 && "getpid takes no input");
   return builder.createConvert(loc, resultType,
                                fir::runtime::genGetPID(builder, loc));
+}
+
+// GETUID
+mlir::Value IntrinsicLibrary::genGetUID(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "getgid takes no input");
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genGetUID(builder, loc));
 }
 
 // GET_COMMAND_ARGUMENT
@@ -3821,7 +3824,7 @@ IntrinsicLibrary::genReduction(FN func, FD funcDim, llvm::StringRef errMsg,
   if (absentDim || rank == 1) {
     mlir::Type ty = array.getType();
     mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
     if (fir::isa_complex(eleTy)) {
       mlir::Value result = builder.createTemporary(loc, eleTy);
       func(builder, loc, array, mask, result);
@@ -4461,6 +4464,62 @@ void IntrinsicLibrary::genIeeeGetOrSetStatus(
   genRuntimeCall(isGet ? "fegetenv" : "fesetenv", i32Ty, addr);
 }
 
+// IEEE_INT
+mlir::Value IntrinsicLibrary::genIeeeInt(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  // Convert real argument A to an integer, with rounding according to argument
+  // ROUND. Signal IEEE_INVALID if A is a NaN, an infinity, or out of range,
+  // and return either the largest or smallest integer result value (*).
+  // For valid results (when IEEE_INVALID is not signaled), signal IEEE_INEXACT
+  // if A is not an exact integral value (*). The (*) choices are processor
+  // dependent implementation choices not mandated by the standard.
+  // The primary result is generated with a call to IEEE_RINT.
+  assert(args.size() == 3);
+  mlir::FloatType realType = mlir::cast<mlir::FloatType>(args[0].getType());
+  mlir::Value realResult = genIeeeRint(realType, {args[0], args[1]});
+  int intWidth = mlir::cast<mlir::IntegerType>(resultType).getWidth();
+  mlir::Value intLBound = builder.create<mlir::arith::ConstantOp>(
+      loc, resultType,
+      builder.getIntegerAttr(resultType,
+                             llvm::APInt::getBitsSet(intWidth,
+                                                     /*lo=*/intWidth - 1,
+                                                     /*hi=*/intWidth)));
+  mlir::Value intUBound = builder.create<mlir::arith::ConstantOp>(
+      loc, resultType,
+      builder.getIntegerAttr(resultType,
+                             llvm::APInt::getBitsSet(intWidth, /*lo=*/0,
+                                                     /*hi=*/intWidth - 1)));
+  mlir::Value realLBound =
+      builder.create<fir::ConvertOp>(loc, realType, intLBound);
+  mlir::Value realUBound = builder.create<mlir::arith::NegFOp>(loc, realLBound);
+  mlir::Value aGreaterThanLBound = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::OGE, realResult, realLBound);
+  mlir::Value aLessThanUBound = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::OLT, realResult, realUBound);
+  mlir::Value resultIsValid = builder.create<mlir::arith::AndIOp>(
+      loc, aGreaterThanLBound, aLessThanUBound);
+
+  // Result is valid. It may be exact or inexact.
+  mlir::Value result;
+  fir::IfOp ifOp = builder.create<fir::IfOp>(loc, resultType, resultIsValid,
+                                             /*withElseRegion=*/true);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  mlir::Value inexact = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::ONE, args[0], realResult);
+  genRaiseExcept(_FORTRAN_RUNTIME_IEEE_INEXACT, inexact);
+  result = builder.create<fir::ConvertOp>(loc, resultType, realResult);
+  builder.create<fir::ResultOp>(loc, result);
+
+  // Result is invalid.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  genRaiseExcept(_FORTRAN_RUNTIME_IEEE_INVALID);
+  result = builder.create<mlir::arith::SelectOp>(loc, aGreaterThanLBound,
+                                                 intUBound, intLBound);
+  builder.create<fir::ResultOp>(loc, result);
+  builder.setInsertionPointAfter(ifOp);
+  return ifOp.getResult(0);
+}
+
 // IEEE_IS_FINITE
 mlir::Value
 IntrinsicLibrary::genIeeeIsFinite(mlir::Type resultType,
@@ -4738,6 +4797,37 @@ IntrinsicLibrary::genIeeeQuietCompare(mlir::Type resultType,
       builder.create<mlir::arith::CmpFOp>(loc, pred, args[0], args[1]);
   genRaiseExcept(_FORTRAN_RUNTIME_IEEE_INVALID, hasSNaNOp);
   return builder.create<fir::ConvertOp>(loc, resultType, res);
+}
+
+// IEEE_RINT
+mlir::Value IntrinsicLibrary::genIeeeRint(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  // Return the value of real argument A rounded to an integer value according
+  // to argument ROUND if present, otherwise according to the current rounding
+  // mode. If ROUND is not present, signal IEEE_INEXACT if A is not an exact
+  // integral value.
+  assert(args.size() == 2);
+  mlir::Value a = args[0];
+  mlir::func::FuncOp getRound = fir::factory::getLlvmGetRounding(builder);
+  mlir::func::FuncOp setRound = fir::factory::getLlvmSetRounding(builder);
+  mlir::Value mode;
+  if (isStaticallyPresent(args[1])) {
+    mode = builder.create<fir::CallOp>(loc, getRound).getResult(0);
+    genIeeeSetRoundingMode({args[1]});
+  }
+  if (mlir::cast<mlir::FloatType>(resultType).getWidth() == 16)
+    a = builder.create<fir::ConvertOp>(
+        loc, mlir::FloatType::getF32(builder.getContext()), a);
+  mlir::Value result = builder.create<fir::ConvertOp>(
+      loc, resultType, genRuntimeCall("nearbyint", a.getType(), a));
+  if (isStaticallyPresent(args[1])) {
+    builder.create<fir::CallOp>(loc, setRound, mode);
+  } else {
+    mlir::Value inexact = builder.create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::ONE, args[0], result);
+    genRaiseExcept(_FORTRAN_RUNTIME_IEEE_INEXACT, inexact);
+  }
+  return result;
 }
 
 // IEEE_SET_FLAG, IEEE_SET_HALTING_MODE
@@ -5305,6 +5395,13 @@ IntrinsicLibrary::genLoc(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, zero);
       })
       .getResults()[0];
+}
+
+mlir::Value IntrinsicLibrary::genMalloc(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genMalloc(builder, loc, args[0]));
 }
 
 // MASKL, MASKR
@@ -6040,7 +6137,7 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
 
   mlir::Type ty = array.getType();
   mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
 
   // Handle optional arguments
   bool absentDim = isStaticallyAbsent(args[2]);

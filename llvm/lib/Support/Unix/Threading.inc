@@ -33,6 +33,13 @@
 #include <pthread_np.h> // For pthread_getthreadid_np() / pthread_set_name_np()
 #endif
 
+// Must be included after Threading.inc to provide definition for llvm::thread
+// because FreeBSD's condvar.h (included by user.h) misuses the "thread"
+// keyword.
+#ifndef __FreeBSD__
+#include "llvm/Support/thread.h"
+#endif
+
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #include <errno.h>
 #include <sys/cpuset.h>
@@ -53,6 +60,10 @@
 #include <sched.h>       // For sched_getaffinity
 #include <sys/syscall.h> // For syscall codes
 #include <unistd.h>      // For syscall()
+#endif
+
+#if defined(__HAIKU__)
+#include <OS.h> // For B_OS_NAME_LENGTH
 #endif
 
 namespace llvm {
@@ -139,6 +150,8 @@ uint64_t llvm::get_threadid() {
 static constexpr uint32_t get_max_thread_name_length_impl() {
 #if defined(PTHREAD_MAX_NAMELEN_NP)
   return PTHREAD_MAX_NAMELEN_NP;
+#elif defined(__HAIKU__)
+  return B_OS_NAME_LENGTH;
 #elif defined(__APPLE__)
   return 64;
 #elif defined(__sun__) && defined(__svr4__)
@@ -231,14 +244,14 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   char Buffer[len] = {'\0'}; // FIXME: working around MSan false positive.
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, len))
     Name.append(Buffer, Buffer + strlen(Buffer));
-#elif defined(HAVE_PTHREAD_GET_NAME_NP)
+#elif defined(HAVE_PTHREAD_GET_NAME_NP) && HAVE_PTHREAD_GET_NAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
   char buf[len];
   ::pthread_get_name_np(::pthread_self(), buf, len);
 
   Name.append(buf, buf + strlen(buf));
 
-#elif defined(HAVE_PTHREAD_GETNAME_NP)
+#elif defined(HAVE_PTHREAD_GETNAME_NP) && HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
   char buf[len];
   ::pthread_getname_np(::pthread_self(), buf, len);

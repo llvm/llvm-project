@@ -789,6 +789,15 @@ public:
     return Cost;
   }
 
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
+    return false;
+  }
+
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const {
+    return false;
+  }
+
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
   InstructionCost getScalarizationOverhead(VectorType *InTy, bool Insert,
                                            bool Extract,
@@ -893,8 +902,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = std::nullopt,
-      const Instruction *CxtI = nullptr) {
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr) {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1019,7 +1027,7 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr) {
     switch (improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp)) {
     case TTI::SK_Broadcast:
@@ -1219,10 +1227,12 @@ public:
     return BaseT::getCFInstrCost(Opcode, CostKind, I);
   }
 
-  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                     CmpInst::Predicate VecPred,
-                                     TTI::TargetCostKind CostKind,
-                                     const Instruction *I = nullptr) {
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) {
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
@@ -1230,7 +1240,7 @@ public:
     // TODO: Handle other cost kinds.
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                       I);
+                                       Op1Info, Op2Info, I);
 
     // Selects on vectors are actually vector selects.
     if (ISD == ISD::SELECT) {
@@ -1257,8 +1267,9 @@ public:
       unsigned Num = cast<FixedVectorType>(ValVTy)->getNumElements();
       if (CondTy)
         CondTy = CondTy->getScalarType();
-      InstructionCost Cost = thisT()->getCmpSelInstrCost(
-          Opcode, ValVTy->getScalarType(), CondTy, VecPred, CostKind, I);
+      InstructionCost Cost =
+          thisT()->getCmpSelInstrCost(Opcode, ValVTy->getScalarType(), CondTy,
+                                      VecPred, CostKind, Op1Info, Op2Info, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
@@ -1549,7 +1560,7 @@ public:
 
     // Assume that target intrinsics are cheap.
     Intrinsic::ID IID = ICA.getID();
-    if (Function::isTargetIntrinsic(IID))
+    if (Intrinsic::isTargetIntrinsic(IID))
       return TargetTransformInfo::TCC_Basic;
 
     if (ICA.isTypeBasedOnly())
@@ -1653,9 +1664,9 @@ public:
       if (isa<ScalableVectorType>(RetTy))
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
-      return thisT()->getShuffleCost(
-          TTI::SK_ExtractSubvector, cast<VectorType>(Args[0]->getType()),
-          std::nullopt, CostKind, Index, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
+                                     cast<VectorType>(Args[0]->getType()), {},
+                                     CostKind, Index, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_insert: {
       // FIXME: Handle case where a scalable vector is inserted into a scalable
@@ -1664,19 +1675,19 @@ public:
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
-          TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()),
-          std::nullopt, CostKind, Index, cast<VectorType>(Args[1]->getType()));
+          TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()), {},
+          CostKind, Index, cast<VectorType>(Args[1]->getType()));
     }
     case Intrinsic::vector_reverse: {
-      return thisT()->getShuffleCost(
-          TTI::SK_Reverse, cast<VectorType>(Args[0]->getType()), std::nullopt,
-          CostKind, 0, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(TTI::SK_Reverse,
+                                     cast<VectorType>(Args[0]->getType()), {},
+                                     CostKind, 0, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_splice: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
-      return thisT()->getShuffleCost(
-          TTI::SK_Splice, cast<VectorType>(Args[0]->getType()), std::nullopt,
-          CostKind, Index, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(TTI::SK_Splice,
+                                     cast<VectorType>(Args[0]->getType()), {},
+                                     CostKind, Index, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
@@ -1986,6 +1997,9 @@ public:
       break;
     case Intrinsic::atan:
       ISD = ISD::FATAN;
+      break;
+    case Intrinsic::atan2:
+      ISD = ISD::FATAN2;
       break;
     case Intrinsic::sinh:
       ISD = ISD::FSINH;
@@ -2451,7 +2465,8 @@ public:
                                       CmpIntrinsic::getLTPredicate(IID),
                                       CostKind);
 
-      if (TLI->shouldExpandCmpUsingSelects()) {
+      EVT VT = TLI->getValueType(DL, CmpTy, true);
+      if (TLI->shouldExpandCmpUsingSelects(VT)) {
         // x < y ? -1 : (x > y ? 1 : 0)
         Cost += 2 * thisT()->getCmpSelInstrCost(
                         BinaryOperator::Select, RetTy, CondTy,
@@ -2531,7 +2546,19 @@ public:
 
   unsigned getNumberOfParts(Type *Tp) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-    return LT.first.isValid() ? *LT.first.getValue() : 0;
+    if (!LT.first.isValid())
+      return 0;
+    // Try to find actual number of parts for non-power-of-2 elements as
+    // ceil(num-of-elements/num-of-subtype-elements).
+    if (auto *FTp = dyn_cast<FixedVectorType>(Tp);
+        Tp && LT.second.isFixedLengthVector() &&
+        !has_single_bit(FTp->getNumElements())) {
+      if (auto *SubTp = dyn_cast_if_present<FixedVectorType>(
+              EVT(LT.second).getTypeForEVT(Tp->getContext()));
+          SubTp && SubTp->getElementType() == FTp->getElementType())
+        return divideCeil(FTp->getNumElements(), SubTp->getNumElements());
+    }
+    return *LT.first.getValue();
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,
@@ -2595,9 +2622,8 @@ public:
     while (NumVecElts > MVTLen) {
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
-      ShuffleCost +=
-          thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
-                                  CostKind, NumVecElts, SubTy);
+      ShuffleCost += thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
+                                             CostKind, NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
       ++LongVectorCount;
@@ -2613,7 +2639,7 @@ public:
     // By default reductions need one shuffle per reduction level.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 std::nullopt, CostKind, 0, Ty);
+                                                 {}, CostKind, 0, Ty);
     ArithCost +=
         NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
@@ -2686,9 +2712,8 @@ public:
       NumVecElts /= 2;
       auto *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
 
-      ShuffleCost +=
-          thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
-                                  CostKind, NumVecElts, SubTy);
+      ShuffleCost += thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
+                                             CostKind, NumVecElts, SubTy);
 
       IntrinsicCostAttributes Attrs(IID, SubTy, {SubTy, SubTy}, FMF);
       MinMaxCost += getIntrinsicInstrCost(Attrs, CostKind);
@@ -2704,7 +2729,7 @@ public:
     // architecture-dependent length.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 std::nullopt, CostKind, 0, Ty);
+                                                 {}, CostKind, 0, Ty);
     IntrinsicCostAttributes Attrs(IID, Ty, {Ty, Ty}, FMF);
     MinMaxCost += NumReduxLevels * getIntrinsicInstrCost(Attrs, CostKind);
     // The last min/max should be in vector registers and we counted it above.

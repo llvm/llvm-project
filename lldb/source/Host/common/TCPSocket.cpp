@@ -137,7 +137,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
   Status error;
   llvm::Expected<HostAndPort> host_port = DecodeHostAndPort(name);
   if (!host_port)
-    return Status(host_port.takeError());
+    return Status::FromError(host_port.takeError());
 
   std::vector<SocketAddress> addresses =
       SocketAddress::GetAddressInfo(host_port->hostname.c_str(), nullptr,
@@ -176,7 +176,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   Status error;
   llvm::Expected<HostAndPort> host_port = DecodeHostAndPort(name);
   if (!host_port)
-    return Status(host_port.takeError());
+    return Status::FromError(host_port.takeError());
 
   if (host_port->hostname == "*")
     host_port->hostname = "0.0.0.0";
@@ -232,9 +232,9 @@ void TCPSocket::CloseListenSockets() {
   m_listen_sockets.clear();
 }
 
-llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> TCPSocket::Accept(
-    MainLoopBase &loop,
-    std::function<void(std::unique_ptr<TCPSocket> socket)> sock_cb) {
+llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
+TCPSocket::Accept(MainLoopBase &loop,
+                  std::function<void(std::unique_ptr<Socket> socket)> sock_cb) {
   if (m_listen_sockets.size() == 0)
     return llvm::createStringError("No open listening sockets!");
 
@@ -276,19 +276,6 @@ llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> TCPSocket::Accept(
   }
 
   return handles;
-}
-
-Status TCPSocket::Accept(Socket *&conn_socket) {
-  MainLoop accept_loop;
-  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> expected_handles =
-      Accept(accept_loop,
-             [&accept_loop, &conn_socket](std::unique_ptr<TCPSocket> sock) {
-               conn_socket = sock.release();
-               accept_loop.RequestTermination();
-             });
-  if (!expected_handles)
-    return Status(expected_handles.takeError());
-  return accept_loop.Run();
 }
 
 int TCPSocket::SetOptionNoDelay() {

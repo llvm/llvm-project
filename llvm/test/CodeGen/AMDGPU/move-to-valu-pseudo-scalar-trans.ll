@@ -7,7 +7,7 @@ define amdgpu_kernel void @exp_f32(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s32) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -27,7 +27,7 @@ define amdgpu_kernel void @exp_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -48,7 +48,7 @@ define amdgpu_kernel void @log_f32(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s32) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -68,7 +68,7 @@ define amdgpu_kernel void @log_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -89,7 +89,7 @@ define amdgpu_kernel void @rcp_f32(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s32) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -109,7 +109,7 @@ define amdgpu_kernel void @rcp_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -130,7 +130,7 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s32) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -150,7 +150,7 @@ define amdgpu_kernel void @rsq_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -171,7 +171,7 @@ define amdgpu_kernel void @sqrt_f32(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s32) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -191,7 +191,7 @@ define amdgpu_kernel void @sqrt_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF

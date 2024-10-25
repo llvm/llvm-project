@@ -544,7 +544,7 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
     return expr_error;
 
   if (result_valobj_sp->GetError().Fail())
-    return result_valobj_sp->GetError();
+    return result_valobj_sp->GetError().Clone();
   return Status();
 }
 
@@ -863,9 +863,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                  func_args_addr,
                                                  arguments,
                                                  diagnostics)) {
-    error = Status::FromErrorStringWithFormat(
-        "dlopen error: could not write function arguments: %s",
-        diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        lldb::eExpressionSetupError,
+        "dlopen error: could not write function arguments:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -906,9 +906,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   ExpressionResults results = do_dlopen_function->ExecuteFunction(
       exe_ctx, &func_args_addr, options, diagnostics, return_value);
   if (results != eExpressionCompleted) {
-    error = Status::FromErrorStringWithFormat(
-        "dlopen error: failed executing dlopen wrapper function: %s",
-        diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        lldb::eExpressionSetupError,
+        "dlopen error: failed executing dlopen wrapper function:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -976,7 +976,7 @@ Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
     return error;
 
   if (result_valobj_sp->GetError().Fail())
-    return result_valobj_sp->GetError();
+    return result_valobj_sp->GetError().Clone();
 
   Scalar scalar;
   if (result_valobj_sp->ResolveValue(scalar)) {

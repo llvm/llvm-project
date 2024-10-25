@@ -1527,8 +1527,8 @@ void PDBLinker::addImportFilesToPDB() {
     if (!file->thunkSym)
       continue;
 
-    if (!file->thunkLive)
-        continue;
+    if (!file->thunkSym->isLive())
+      continue;
 
     std::string dll = StringRef(file->dllName).lower();
     llvm::pdb::DbiModuleDescriptorBuilder *&mod = dllToModuleDbi[dll];

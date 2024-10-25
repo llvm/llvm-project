@@ -1,0 +1,6 @@
+Can't mute platform select command.
+UNSUPPORTED: remote-linux
+RUN: echo start >%t.file
+RUN: %lldb -x -b --source-quietly -s %S/Inputs/EchoCommandsTest.in >>%t.file
+RUN: echo done >>%t.file
+RUN: FileCheck  %S/Inputs/EchoCommandsQuiet.out <%t.file

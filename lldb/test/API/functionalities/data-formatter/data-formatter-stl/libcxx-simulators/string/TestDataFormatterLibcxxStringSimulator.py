@@ -22,15 +22,21 @@ class LibcxxStringDataFormatterSimulatorTestCase(TestBase):
         self.expect_var_path("shortstring", summary='"short"')
         self.expect_var_path("longstring", summary='"I am a very long string"')
 
+        self.expect_expr("shortstring", result_summary='"short"')
+        self.expect_expr("longstring", result_summary='"I am a very long string"')
+
 
 for v in [None, "ALTERNATE_LAYOUT"]:
-    for r in range(5):
-        name = "test_r%d" % r
-        defines = ["REVISION=%d" % r]
-        if v:
-            name += "_" + v
-            defines += [v]
-        f = functools.partialmethod(
-            LibcxxStringDataFormatterSimulatorTestCase._run_test, defines
-        )
-        setattr(LibcxxStringDataFormatterSimulatorTestCase, name, f)
+    for r in range(6):
+        for c in range(3):
+            name = "test_r%d_c%d" % (r, c)
+            defines = ["REVISION=%d" % r, "COMPRESSED_PAIR_REV=%d" % c]
+            if v:
+                name += "_" + v
+                defines += [v]
+
+            @functools.wraps(LibcxxStringDataFormatterSimulatorTestCase._run_test)
+            def test_method(self, defines=defines):
+                LibcxxStringDataFormatterSimulatorTestCase._run_test(self, defines)
+
+            setattr(LibcxxStringDataFormatterSimulatorTestCase, name, test_method)

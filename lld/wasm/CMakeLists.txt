@@ -28,6 +28,7 @@ add_lld_library(lldWasm
   Object
   Option
   Passes
+  ProfileData
   Support
   TargetParser
 

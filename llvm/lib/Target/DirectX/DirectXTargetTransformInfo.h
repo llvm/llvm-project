@@ -34,6 +34,9 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
   unsigned getMinVectorRegisterBitWidth() const { return 32; }
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx);
 };
 } // namespace llvm
 

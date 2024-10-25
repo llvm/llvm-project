@@ -129,6 +129,7 @@ group("test") {
     "//llvm/tools/llvm-ar:symlinks",
     "//llvm/tools/llvm-as",
     "//llvm/tools/llvm-bcanalyzer",
+    "//llvm/tools/llvm-cgdata",
     "//llvm/tools/llvm-cvtres",
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",

@@ -32,13 +32,21 @@
 
 // CHECK-LABEL: @test_svset4_b_0(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TUPLE:%.*]], <vscale x 16 x i1> [[X:%.*]], i64 0)
-// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]], <vscale x 16 x i1> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP2]], <vscale x 16 x i1> [[TUPLE_COERCE3:%.*]], 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP3]], <vscale x 16 x i1> [[X:%.*]], 0
+// CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svset4_b_010svboolx4_tu10__SVBool_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TUPLE:%.*]], <vscale x 16 x i1> [[X:%.*]], i64 0)
-// CPP-CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]], <vscale x 16 x i1> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP2]], <vscale x 16 x i1> [[TUPLE_COERCE3:%.*]], 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP3]], <vscale x 16 x i1> [[X:%.*]], 0
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP4]]
 //
 svboolx4_t test_svset4_b_0(svboolx4_t tuple, svbool_t x) ATTR
 {
@@ -47,13 +55,21 @@ svboolx4_t test_svset4_b_0(svboolx4_t tuple, svbool_t x) ATTR
 
 // CHECK-LABEL: @test_svset4_b_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TUPLE:%.*]], <vscale x 16 x i1> [[X:%.*]], i64 16)
-// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]], <vscale x 16 x i1> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP2]], <vscale x 16 x i1> [[TUPLE_COERCE3:%.*]], 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP3]], <vscale x 16 x i1> [[X:%.*]], 1
+// CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svset4_b_110svboolx4_tu10__SVBool_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TUPLE:%.*]], <vscale x 16 x i1> [[X:%.*]], i64 16)
-// CPP-CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]], <vscale x 16 x i1> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP2]], <vscale x 16 x i1> [[TUPLE_COERCE3:%.*]], 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP3]], <vscale x 16 x i1> [[X:%.*]], 1
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP4]]
 //
 svboolx4_t test_svset4_b_1(svboolx4_t tuple, svbool_t x) ATTR
 {
@@ -62,13 +78,21 @@ svboolx4_t test_svset4_b_1(svboolx4_t tuple, svbool_t x) ATTR
 
 // CHECK-LABEL: @test_svset4_b_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TUPLE:%.*]], <vscale x 16 x i1> [[X:%.*]], i64 48)
-// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]], <vscale x 16 x i1> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP2]], <vscale x 16 x i1> [[TUPLE_COERCE3:%.*]], 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP3]], <vscale x 16 x i1> [[X:%.*]], 3
+// CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svset4_b_310svboolx4_tu10__SVBool_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> [[TUPLE:%.*]], <vscale x 16 x i1> [[X:%.*]], i64 48)
-// CPP-CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]], <vscale x 16 x i1> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP2]], <vscale x 16 x i1> [[TUPLE_COERCE3:%.*]], 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP3]], <vscale x 16 x i1> [[X:%.*]], 3
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP4]]
 //
 svboolx4_t test_svset4_b_3(svboolx4_t tuple, svbool_t x) ATTR
 {

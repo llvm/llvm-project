@@ -36,6 +36,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
@@ -75,6 +76,80 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace {
+
+struct ExecutableInstaller {
+
+  ExecutableInstaller(PlatformSP platform, ModuleSP module)
+      : m_platform{platform}, m_module{module},
+        m_local_file{m_module->GetFileSpec()},
+        m_remote_file{m_module->GetRemoteInstallFileSpec()} {}
+
+  void setupRemoteFile() const { m_module->SetPlatformFileSpec(m_remote_file); }
+
+  PlatformSP m_platform;
+  ModuleSP m_module;
+  const FileSpec m_local_file;
+  const FileSpec m_remote_file;
+};
+
+struct MainExecutableInstaller {
+
+  MainExecutableInstaller(PlatformSP platform, ModuleSP module, TargetSP target,
+                          ProcessLaunchInfo &launch_info)
+      : m_platform{platform}, m_module{module},
+        m_local_file{m_module->GetFileSpec()},
+        m_remote_file{
+            getRemoteFileSpec(m_platform, target, m_module, m_local_file)},
+        m_launch_info{launch_info} {}
+
+  void setupRemoteFile() const {
+    m_module->SetPlatformFileSpec(m_remote_file);
+    m_launch_info.SetExecutableFile(m_remote_file,
+                                    /*add_exe_file_as_first_arg=*/false);
+    m_platform->SetFilePermissions(m_remote_file, 0700 /*-rwx------*/);
+  }
+
+  PlatformSP m_platform;
+  ModuleSP m_module;
+  const FileSpec m_local_file;
+  const FileSpec m_remote_file;
+
+private:
+  static FileSpec getRemoteFileSpec(PlatformSP platform, TargetSP target,
+                                    ModuleSP module,
+                                    const FileSpec &local_file) {
+    FileSpec remote_file = module->GetRemoteInstallFileSpec();
+    if (remote_file || !target->GetAutoInstallMainExecutable())
+      return remote_file;
+
+    if (!local_file)
+      return {};
+
+    remote_file = platform->GetRemoteWorkingDirectory();
+    remote_file.AppendPathComponent(local_file.GetFilename().GetCString());
+
+    return remote_file;
+  }
+
+  ProcessLaunchInfo &m_launch_info;
+};
+} // namespace
+
+template <typename Installer>
+static Status installExecutable(const Installer &installer) {
+  if (!installer.m_local_file || !installer.m_remote_file)
+    return Status();
+
+  Status error = installer.m_platform->Install(installer.m_local_file,
+                                               installer.m_remote_file);
+  if (error.Fail())
+    return error;
+
+  installer.setupRemoteFile();
+  return Status();
+}
 
 constexpr std::chrono::milliseconds EvaluateExpressionOptions::default_timeout;
 
@@ -1986,7 +2061,6 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
     result_error.Clear();
     // NULL out everything just to be safe
     memset(dst, 0, dst_max_len);
-    Status error;
     addr_t curr_addr = addr.GetLoadAddress(this);
     Address address(addr);
 
@@ -2003,11 +2077,12 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
           cache_line_size - (curr_addr % cache_line_size);
       addr_t bytes_to_read =
           std::min<addr_t>(bytes_left, cache_line_bytes_left);
+      Status error;
       size_t bytes_read = ReadMemory(address, curr_dst, bytes_to_read, error,
                                      force_live_memory);
 
       if (bytes_read == 0) {
-        result_error = error;
+        result_error = std::move(error);
         dst[total_cstr_len] = '\0';
         break;
       }
@@ -2401,7 +2476,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
     }
   }
   if (error_ptr)
-    *error_ptr = error;
+    *error_ptr = std::move(error);
   return module_sp;
 }
 
@@ -2605,7 +2680,8 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 
   DiagnosticManager diagnostics;
   if (!utility_fn->Install(diagnostics, exe_ctx))
-    return llvm::createStringError(diagnostics.GetString());
+    return diagnostics.GetAsError(lldb::eExpressionSetupError,
+                                  "Could not install utility function:");
 
   return std::move(utility_fn);
 }
@@ -2730,7 +2806,7 @@ ExpressionResults Target::EvaluateExpression(
     // Pass up the error by wrapping it inside an error result.
     if (error.Fail() && !result_valobj_sp)
       result_valobj_sp = ValueObjectConstResult::Create(
-          exe_ctx.GetBestExecutionContextScope(), error);
+          exe_ctx.GetBestExecutionContextScope(), std::move(error));
   }
 
   if (execution_results == eExpressionCompleted)
@@ -3076,48 +3152,28 @@ TargetProperties &Target::GetGlobalProperties() {
 Status Target::Install(ProcessLaunchInfo *launch_info) {
   Status error;
   PlatformSP platform_sp(GetPlatform());
-  if (platform_sp) {
-    if (platform_sp->IsRemote()) {
-      if (platform_sp->IsConnected()) {
-        // Install all files that have an install path when connected to a
-        // remote platform. If target.auto-install-main-executable is set then
-        // also install the main executable even if it does not have an explicit
-        // install path specified.
-        const ModuleList &modules = GetImages();
-        const size_t num_images = modules.GetSize();
-        for (size_t idx = 0; idx < num_images; ++idx) {
-          ModuleSP module_sp(modules.GetModuleAtIndex(idx));
-          if (module_sp) {
-            const bool is_main_executable = module_sp == GetExecutableModule();
-            FileSpec local_file(module_sp->GetFileSpec());
-            if (local_file) {
-              FileSpec remote_file(module_sp->GetRemoteInstallFileSpec());
-              if (!remote_file) {
-                if (is_main_executable && GetAutoInstallMainExecutable()) {
-                  // Automatically install the main executable.
-                  remote_file = platform_sp->GetRemoteWorkingDirectory();
-                  remote_file.AppendPathComponent(
-                      module_sp->GetFileSpec().GetFilename().GetCString());
-                }
-              }
-              if (remote_file) {
-                error = platform_sp->Install(local_file, remote_file);
-                if (error.Success()) {
-                  module_sp->SetPlatformFileSpec(remote_file);
-                  if (is_main_executable) {
-                    platform_sp->SetFilePermissions(remote_file, 0700);
-                    if (launch_info)
-                      launch_info->SetExecutableFile(remote_file, false);
-                  }
-                } else
-                  break;
-              }
-            }
-          }
-        }
-      }
+  if (!platform_sp || !platform_sp->IsRemote() || !platform_sp->IsConnected())
+    return error;
+
+  // Install all files that have an install path when connected to a
+  // remote platform. If target.auto-install-main-executable is set then
+  // also install the main executable even if it does not have an explicit
+  // install path specified.
+
+  for (auto module_sp : GetImages().Modules()) {
+    if (module_sp == GetExecutableModule()) {
+      MainExecutableInstaller installer{platform_sp, module_sp,
+                                        shared_from_this(), *launch_info};
+      error = installExecutable(installer);
+    } else {
+      ExecutableInstaller installer{platform_sp, module_sp};
+      error = installExecutable(installer);
     }
+
+    if (error.Fail())
+      return error;
   }
+
   return error;
 }
 
@@ -3203,6 +3259,16 @@ bool Target::SetSectionUnloaded(const lldb::SectionSP &section_sp,
 }
 
 void Target::ClearAllLoadedSections() { m_section_load_history.Clear(); }
+
+lldb_private::SummaryStatisticsSP Target::GetSummaryStatisticsSPForProviderName(
+    lldb_private::TypeSummaryImpl &summary_provider) {
+  return m_summary_statistics_cache.GetSummaryStatisticsForProvider(
+      summary_provider);
+}
+
+SummaryStatisticsCache &Target::GetSummaryStatisticsCache() {
+  return m_summary_statistics_cache;
+}
 
 void Target::SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info) {
   if (process_info.IsScriptedProcess()) {
@@ -3348,10 +3414,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     else
       error = m_process_sp->Resume();
     if (!error.Success()) {
-      Status error2;
-      error2 = Status::FromErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "process resume at entry point failed: %s", error.AsCString());
-      error = error2;
     }
   } break;
   case eStateExited: {
@@ -3554,7 +3618,7 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
       if (info.GetFileActionForFD(STDERR_FILENO) == nullptr)
         err_file_spec = GetStandardErrorPath();
 
-      LLDB_LOG(log, "target stdin='{0}', target stdout='{1}', stderr='{1}'",
+      LLDB_LOG(log, "target stdin='{0}', target stdout='{1}', stderr='{2}'",
                in_file_spec, out_file_spec, err_file_spec);
 
       if (in_file_spec) {
@@ -3860,13 +3924,32 @@ Status Target::StopHookScripted::SetScriptCallback(
     return error;
   }
 
+  m_interface_sp = script_interp->CreateScriptedStopHookInterface();
+  if (!m_interface_sp) {
+    error = Status::FromErrorStringWithFormat(
+        "ScriptedStopHook::%s () - ERROR: %s", __FUNCTION__,
+        "Script interpreter couldn't create Scripted Stop Hook Interface");
+    return error;
+  }
+
   m_class_name = class_name;
   m_extra_args.SetObjectSP(extra_args_sp);
 
-  m_implementation_sp = script_interp->CreateScriptedStopHook(
-      GetTarget(), m_class_name.c_str(), m_extra_args, error);
+  auto obj_or_err = m_interface_sp->CreatePluginObject(
+      m_class_name, GetTarget(), m_extra_args);
+  if (!obj_or_err) {
+    return Status::FromError(obj_or_err.takeError());
+  }
 
-  return error;
+  StructuredData::ObjectSP object_sp = *obj_or_err;
+  if (!object_sp || !object_sp->IsValid()) {
+    error = Status::FromErrorStringWithFormat(
+        "ScriptedStopHook::%s () - ERROR: %s", __FUNCTION__,
+        "Failed to create valid script object");
+    return error;
+  }
+
+  return {};
 }
 
 Target::StopHook::StopHookResult
@@ -3875,16 +3958,18 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   assert(exc_ctx.GetTargetPtr() && "Can't call HandleStop on a context "
                                    "with no target");
 
-  ScriptInterpreter *script_interp =
-      GetTarget()->GetDebugger().GetScriptInterpreter();
-  if (!script_interp)
+  if (!m_interface_sp)
     return StopHookResult::KeepStopped;
 
-  bool should_stop = script_interp->ScriptedStopHookHandleStop(
-      m_implementation_sp, exc_ctx, output_sp);
+  lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
+  auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
+  output_sp->PutCString(
+      reinterpret_cast<StreamString *>(stream.get())->GetData());
+  if (!should_stop_or_err)
+    return StopHookResult::KeepStopped;
 
-  return should_stop ? StopHookResult::KeepStopped
-                     : StopHookResult::RequestContinue;
+  return *should_stop_or_err ? StopHookResult::KeepStopped
+                             : StopHookResult::RequestContinue;
 }
 
 void Target::StopHookScripted::GetSubclassDescription(
@@ -4595,7 +4680,7 @@ void TargetProperties::CheckJITObjectsDir() {
   std::optional<lldb::user_id_t> debugger_id;
   if (m_target)
     debugger_id = m_target->GetDebugger().GetID();
-  Debugger::ReportError(os.str(), debugger_id);
+  Debugger::ReportError(buffer, debugger_id);
 }
 
 bool TargetProperties::GetEnableSyntheticValue() const {

@@ -49,6 +49,7 @@ public:
 }
 */
 
+#include <__config>
 #include <__functional/hash.h>
 #include <__functional/operations.h>
 #include <__type_traits/add_lvalue_reference.h>
@@ -57,7 +58,6 @@ public:
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
 #include <cstddef>
-#include <experimental/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
