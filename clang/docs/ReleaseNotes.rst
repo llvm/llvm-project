@@ -135,7 +135,7 @@ C++ Specific Potentially Breaking Changes
 
 - Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
   applied on a parameter of a function that returns void. This was previously 
-  gnored and had no effect.
+  ignored and had no effect. (#GH107556)
 
   .. code-block:: c++
 
