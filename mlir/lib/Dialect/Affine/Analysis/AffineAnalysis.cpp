@@ -491,6 +491,14 @@ LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
   IntegerRelation domainRel = domain;
   if (rel.getSpace().isUsingIds() && !domainRel.getSpace().isUsingIds())
     domainRel.resetIds();
+
+  if (!rel.getSpace().isUsingIds()) {
+    assert(rel.getNumVars() == 0);
+    rel.resetIds();
+    if (!domainRel.getSpace().isUsingIds())
+      domainRel.resetIds();
+  }
+
   domainRel.appendVar(VarKind::Range, accessValueMap.getNumResults());
   domainRel.mergeAndAlignSymbols(rel);
   domainRel.mergeLocalVars(rel);

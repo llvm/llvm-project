@@ -141,9 +141,14 @@ func.func @store_load_store_nested_no_fwd(%N : index) {
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to %N {
-      // CHECK: %{{[0-9]+}} = affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+      // CHECK:      %[[C7:.*]] = arith.constant 7.0{{.*}}
+      // CHECK:      %[[C9:.*]] = arith.constant 9.0{{.*}}
+      // CHECK:      %{{[0-9]+}} = affine.for %{{.*}} = 0 to %{{.*}} iter_args(%[[A:.*]] = %[[C7]]) -> (f32)
+      // CHECK-NEXT:    %[[R:.*]] = arith.addf %[[A]], %[[A]] : f32
+      // CHECK:    affine.yield %[[C9]] : f32
       %v0 = affine.load %m[%i0] : memref<10xf32>
       %v1 = arith.addf %v0, %v0 : f32
+      "use"(%v1) : (f32) -> ()
       affine.store %cf9, %m[%i0] : memref<10xf32>
     }
   }
@@ -423,7 +428,8 @@ func.func @load_load_store_2_loops_no_cse(%N : index, %m : memref<10xf32>) {
     // CHECK:       affine.load
     %v0 = affine.load %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to %N {
-      // CHECK:       affine.load
+      // CHECK:       iter_args
+      // CHECK-NOT:       affine.load
       %v1 = affine.load %m[%i0] : memref<10xf32>
       %v2 = arith.addf %v0, %v1 : f32
       affine.store %v2, %m[%i0] : memref<10xf32>
@@ -556,10 +562,11 @@ func.func @reduction_multi_store() -> memref<1xf32> {
    "test.foo"(%m) : (f32) -> ()
   }
 
-// CHECK:       affine.for
-// CHECK:         affine.load
-// CHECK:         affine.store %[[S:.*]],
-// CHECK-NEXT:    "test.foo"(%[[S]])
+// CHECK:       affine.for {{.*}}
+// CHECK-NEXT:    %[[A:.*]] = affine.load
+// CHECK-NEXT:    %[[X:.*]] = arith.addf %[[A]],
+// CHECK-NEXT:    affine.store %[[X]]
+// CHECK-NEXT:    "test.foo"(%[[X]])
 
   return %A : memref<1xf32>
 }
@@ -890,6 +897,34 @@ func.func @parallel_surrounding_for() {
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
 }
+
+// CHECK-LABEL: func @reduction_extraction
+func.func @reduction_extraction(%x : memref<10x10xf32>) -> f32 {
+  %b = memref.alloc() : memref<f32>
+  %cst = arith.constant 0.0 : f32
+  affine.store %cst, %b[] : memref<f32>
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 10 {
+      %v0 = affine.load %x[%i0,%i1] : memref<10x10xf32>
+      %acc = affine.load %b[] : memref<f32>
+      %v1 = arith.addf %acc, %v0 : f32
+      affine.store %v1, %b[] : memref<f32>
+    }
+  }
+  %x2 = affine.load %b[]: memref<f32>
+  return %x2 : f32
+// CHECK:       %[[I:.*]] = arith.constant 0{{.*}} : f32
+// CHECK-NEXT:  %[[SUM2:.*]] = affine.for %{{.*}} = 0 to 10 iter_args(%[[ACC2:.*]] = %[[I]]) -> (f32) {
+// CHECK-NEXT:    %[[SUM:.*]] = affine.for %{{.*}} = 0 to 10 iter_args(%[[ACC:.*]] = %[[ACC2]]) -> (f32) {
+// CHECK-NEXT:      %[[X:.*]] = affine.load {{.*}} : memref<10x10xf32>
+// CHECK-NEXT:      %[[Y:.*]] = arith.addf %[[ACC]], %[[X]] : f32
+// CHECK-NEXT:      affine.yield %[[Y]] : f32
+// CHECK-NEXT:    }
+// CHECK-NEXT:    affine.yield %[[SUM]] : f32
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return %[[SUM2]] : f32
+}
+
 
 // CHECK-LABEL: func.func @dead_affine_region_op
 func.func @dead_affine_region_op() {
