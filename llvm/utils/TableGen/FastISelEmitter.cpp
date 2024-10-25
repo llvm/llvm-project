@@ -725,7 +725,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
             Operands.PrintParameters(OS);
             OS << ") {\n";
 
-            emitInstructionCode(OS, Operands, PM, std::string(getEnumName(RetVT)));
+            emitInstructionCode(OS, Operands, PM,
+                                std::string(getEnumName(RetVT)));
           }
 
           // Emit one function for the type that demultiplexes on return type.
