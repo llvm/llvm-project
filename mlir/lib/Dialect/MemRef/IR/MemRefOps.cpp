@@ -11,18 +11,27 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/LogicalResult.h"
+#include <cstdint>
+#include <iterator>
 
 using namespace mlir;
 using namespace mlir::memref;
@@ -850,11 +859,40 @@ struct FoldEmptyCopy final : public OpRewritePattern<CopyOp> {
     return failure();
   }
 };
+
+struct DestructureSingleEltCopy final : public OpRewritePattern<CopyOp> {
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CopyOp copyOp,
+                                PatternRewriter &rewriter) const override {
+    if (copyOp.getSource().getType() == copyOp.getTarget().getType()) {
+      auto ty = copyOp.getSource().getType();
+      if (ty.hasRank() && ty.getNumElements() == 1 && ty.hasStaticShape()) {
+        // copy of one element
+        rewriter.setInsertionPoint(copyOp);
+        SmallVector<Value> indices;
+        if (!ty.getShape().empty()) {
+          Value cst0 = rewriter.create<arith::ConstantOp>(
+              copyOp->getLoc(), rewriter.getIndexAttr(0));
+          indices.append(ty.getShape().size(), cst0);
+        }
+        auto loaded = rewriter.create<memref::LoadOp>(
+            copyOp->getLoc(), copyOp.getSource(), indices);
+        rewriter.create<memref::StoreOp>(copyOp->getLoc(), loaded.getResult(),
+                                         copyOp.getTarget(), indices);
+        rewriter.eraseOp(copyOp);
+        return success();
+      }
+    }
+    return failure();
+  }
+};
 } // namespace
 
 void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldCopyOfCast, FoldEmptyCopy, FoldSelfCopy>(context);
+  results.add<FoldCopyOfCast, FoldEmptyCopy, FoldSelfCopy,
+              DestructureSingleEltCopy>(context);
 }
 
 LogicalResult CopyOp::fold(FoldAdaptor adaptor,
@@ -1676,6 +1714,35 @@ LogicalResult LoadOp::verify() {
 }
 
 OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
+
+  if (auto getCst = mlir::dyn_cast_or_null<GetGlobalOp>(getMemref().getDefiningOp())) {
+    auto global = mlir::dyn_cast_or_null<GlobalOp>(
+        SymbolTable::lookupNearestSymbolFrom(getCst, getCst.getNameAttr()));
+    if (global && global.getConstant() && global.getInitialValue()) {
+      auto constIndices = adaptor.getIndices();
+      if (llvm::all_of(constIndices, [](auto attr) {
+            return mlir::isa<IntegerAttr>(attr);
+          })) {
+        SmallVector<uint64_t> index;
+        for (auto attr : constIndices) {
+          index.push_back(cast<IntegerAttr>(attr).getUInt());
+        }
+        // all indices are constant, value is constant
+        if (auto constValue =
+                mlir::dyn_cast<ElementsAttr>(*global.getInitialValue())) {
+          if (constValue.isValidIndex(index)) {
+            auto flatIdx = constValue.getFlattenedIndex(index);
+            auto values = constValue.getValues<Attribute>();
+            auto iter = values.begin();
+            if (std::next(iter, flatIdx) < values.end()) {
+              return OpFoldResult(*iter);
+            }
+          }
+        }
+      }
+    }
+  }
+
   /// load(memrefcast) -> load
   if (succeeded(foldMemRefCast(*this)))
     return getResult();

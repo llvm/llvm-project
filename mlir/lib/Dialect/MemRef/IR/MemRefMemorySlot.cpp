@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -309,7 +310,7 @@ struct MemRefDestructurableTypeExternalModel
     constexpr int64_t maxMemrefSizeForDestructuring = 16;
     if (!memrefType.hasStaticShape() ||
         memrefType.getNumElements() > maxMemrefSizeForDestructuring ||
-        memrefType.getNumElements() == 1)
+        memrefType.getShape().empty())
       return {};
 
     DenseMap<Attribute, Type> destructured;
