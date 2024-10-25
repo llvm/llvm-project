@@ -223,6 +223,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setCondCodeAction(ISD::SETUNE, VT, Expand);
   }
 
+  if (Subtarget.hasAVX10_2()) {
+    for (auto VT : {MVT::f32, MVT::f64}) {
+      setCondCodeAction(ISD::SETOEQ, VT, Custom);
+      setCondCodeAction(ISD::SETUNE, VT, Custom);
+    }
+  }
   // Integer absolute.
   if (Subtarget.canUseCMOV()) {
     setOperationAction(ISD::ABS            , MVT::i16  , Custom);
@@ -2292,8 +2298,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_EXTEND,            MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Legal);
 
-    setCondCodeAction(ISD::SETOEQ, MVT::f16, Expand);
-    setCondCodeAction(ISD::SETUNE, MVT::f16, Expand);
+    setCondCodeAction(ISD::SETOEQ, MVT::f16,
+                      Subtarget.hasAVX10_2() ? Custom : Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f16,
+                      Subtarget.hasAVX10_2() ? Custom : Expand);
 
     if (Subtarget.useAVX512Regs()) {
       setGroup(MVT::v32f16);
@@ -2442,7 +2450,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
     }
   }
-
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
     setTruncStoreAction(MVT::v4i64, MVT::v4i8,  Legal);
     setTruncStoreAction(MVT::v4i64, MVT::v4i16, Legal);
@@ -24073,6 +24080,13 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
   }
 
+  if (Subtarget.hasAVX10_2()) {
+    if (CC == ISD::SETOEQ || CC == ISD::SETUNE) {
+      auto NewCC = (CC == ISD::SETOEQ) ? X86::COND_E : (X86::COND_NE);
+      return getSETCC(NewCC, DAG.getNode(X86ISD::UCOMX, dl, MVT::i32, Op0, Op1),
+                      dl, DAG);
+    }
+  }
   // Handle floating point.
   X86::CondCode CondCode = TranslateX86CC(CC, dl, /*IsFP*/ true, Op0, Op1, DAG);
   if (CondCode == X86::COND_INVALID)
