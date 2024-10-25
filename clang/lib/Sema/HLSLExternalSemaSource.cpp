@@ -162,14 +162,6 @@ struct BuiltinTypeDeclBuilder {
                                VD, false, NameInfo, Ty, VK_PRValue);
   }
 
-  static Expr *emitResourceClassExpr(ASTContext &AST, ResourceClass RC) {
-    return IntegerLiteral::Create(
-        AST,
-        llvm::APInt(AST.getIntWidth(AST.UnsignedCharTy),
-                    static_cast<uint8_t>(RC)),
-        AST.UnsignedCharTy, SourceLocation());
-  }
-
   BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S) {
     if (Record->isCompleteDefinition())
       return *this;
