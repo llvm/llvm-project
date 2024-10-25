@@ -178,8 +178,8 @@ func.func @div_bounds_negative(%arg0 : index) -> i1 {
 }
 
 // CHECK-LABEL: func @div_zero_undefined
-// CHECK: %[[ret:.*]] = arith.cmpi ule
-// CHECK: return %[[ret]]
+// CHECK: %[[true:.*]] = arith.constant true
+// CHECK: return %[[true]]
 func.func @div_zero_undefined(%arg0 : index) -> i1 {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -191,8 +191,8 @@ func.func @div_zero_undefined(%arg0 : index) -> i1 {
 }
 
 // CHECK-LABEL: func @div_refine_min
-// CHECK: %[[ret:.*]] = arith.cmpi uge
-// CHECK: return %[[ret]]
+// CHECK: %[[true:.*]] = arith.constant true
+// CHECK: return %[[true]]
 func.func @div_refine_min(%arg0 : index) -> i1 {
     %c0 = arith.constant 1 : index
     %c1 = arith.constant 2 : index
