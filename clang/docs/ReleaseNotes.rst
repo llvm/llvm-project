@@ -302,7 +302,7 @@ Modified Compiler Flags
   the ``promoted`` algorithm for complex division when possible rather than the
   less basic (limited range) algorithm.
 
-- The ``-fveclib`` option has been updated to enable ``-fno-fast-math`` for
+- The ``-fveclib`` option has been updated to enable ``-fno-math-errno`` for
   ``-fveclib=ArmPL`` and ``-fveclib=SLEEF``. This gives Clang more opportunities
   to utilize these vector libraries. The behavior for all other vector function
   libraries remains unchanged.
