@@ -110,6 +110,9 @@ Changes to the AArch64 Backend
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
 
+* Assembler/disassembler support has been added for Armv9.6-A (2024)
+  architecture extensions.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
