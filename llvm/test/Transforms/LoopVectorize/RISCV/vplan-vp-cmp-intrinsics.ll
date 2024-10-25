@@ -17,7 +17,7 @@ define void @vp_icmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL: <x1> vector loop: {
 ; IF-EVL-NEXT:   vector.body:
 ; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
-; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]>  = phi ir<0>, vp<[[IV_NEX:%[0-9]+]]>
+; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]>  = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT vp<[[AVL:%.+]]> = sub ir<%N>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:     EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
@@ -33,8 +33,8 @@ define void @vp_icmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[ZEXT]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
-; IF-EVL-NEXT:     EMIT vp<[[IV_NEX]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
-; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT_EXIT:%[0-9]+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
+; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
+; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:     EMIT branch-on-count vp<[[IV_NEXT_EXIT]]>,  vp<[[VTC]]>
 ; IF-EVL-NEXT:   No successors
 ; IF-EVL-NEXT: }
@@ -72,7 +72,7 @@ define void @vp_fcmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL: <x1> vector loop: {
 ; IF-EVL-NEXT:   vector.body:
 ; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
-; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]>  = phi ir<0>, vp<[[IV_NEX:%[0-9]+]]>
+; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]>  = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT vp<[[AVL:%.+]]> = sub ir<%N>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:     EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
@@ -88,8 +88,8 @@ define void @vp_fcmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[UITOFP]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
-; IF-EVL-NEXT:     EMIT vp<[[IV_NEX]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
-; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT_EXIT:%[0-9]+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
+; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
+; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:     EMIT branch-on-count vp<[[IV_NEXT_EXIT]]>,  vp<[[VTC]]>
 ; IF-EVL-NEXT:   No successors
 ; IF-EVL-NEXT: }

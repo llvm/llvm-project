@@ -1456,10 +1456,9 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
 
 void VPWidenEVLRecipe::execute(VPTransformState &State) {
   unsigned Opcode = getOpcode();
-  // TODO: Support other opcodes
   if (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) {
-    Value *Op1 = State.get(getOperand(0), 0);
-    Value *Op2 = State.get(getOperand(1), 0);
+    Value *Op1 = State.get(getOperand(0));
+    Value *Op2 = State.get(getOperand(1));
     auto &Ctx = State.Builder.getContext();
     Value *Pred = MetadataAsValue::get(
         Ctx, MDString::get(Ctx, CmpInst::getPredicateName(getPredicate())));
@@ -1472,46 +1471,45 @@ void VPWidenEVLRecipe::execute(VPTransformState &State) {
     VectorType *RetType = VectorType::get(Type::getInt1Ty(Ctx), State.VF);
     Value *VPInst = Builder.createVectorInstruction(Opcode, RetType,
                                                     {Op1, Op2, Pred}, "vp.op");
-    if (auto *VecOp = dyn_cast<CastInst>(VPInst))
-      VecOp->copyIRFlags(getUnderlyingInstr());
+    if (isa<FPMathOperator>(VPInst))
+      setFlags(cast<Instruction>(VPInst));
 
-    State.set(this, VPInst, 0);
+    State.set(this, VPInst);
     State.addMetadata(VPInst,
                       dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     return;
   }
 
-  if (!Instruction::isBinaryOp(Opcode) && !Instruction::isUnaryOp(Opcode))
-    llvm_unreachable("Unsupported opcode in VPWidenEVLRecipe::execute");
+  if (Instruction::isBinaryOp(Opcode) || Instruction::isUnaryOp(Opcode)) {
+    State.setDebugLocFrom(getDebugLoc());
 
-  State.setDebugLocFrom(getDebugLoc());
+    assert(State.get(getOperand(0))->getType()->isVectorTy() &&
+           "VPWidenEVLRecipe should not be used for scalars");
 
-  assert(State.get(getOperand(0))->getType()->isVectorTy() &&
-         "VPWidenEVLRecipe should not be used for scalars");
+    VPValue *EVL = getEVL();
+    Value *EVLArg = State.get(EVL, /*NeedsScalar=*/true);
+    IRBuilderBase &BuilderIR = State.Builder;
+    VectorBuilder Builder(BuilderIR);
+    Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
 
-  VPValue *EVL = getEVL();
-  Value *EVLArg = State.get(EVL, /*NeedsScalar=*/true);
-  IRBuilderBase &BuilderIR = State.Builder;
-  VectorBuilder Builder(BuilderIR);
-  Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
+    SmallVector<Value *, 4> Ops;
+    for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
+      VPValue *VPOp = getOperand(I);
+      Ops.push_back(State.get(VPOp));
+    }
 
-  SmallVector<Value *, 4> Ops;
-  for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
-    VPValue *VPOp = getOperand(I);
-    Ops.push_back(State.get(VPOp));
+    Builder.setMask(Mask).setEVL(EVLArg);
+    Value *VPInst = Builder.createVectorInstruction(Opcode, Ops[0]->getType(),
+                                                    Ops, "vp.op");
+    // Currently vp-intrinsics only accept FMF flags.
+    // TODO: Enable other flags when support is added.
+    if (isa<FPMathOperator>(VPInst))
+      setFlags(cast<Instruction>(VPInst));
+
+    State.set(this, VPInst);
+    State.addMetadata(VPInst,
+                      dyn_cast_or_null<Instruction>(getUnderlyingValue()));
   }
-
-  Builder.setMask(Mask).setEVL(EVLArg);
-  Value *VPInst =
-      Builder.createVectorInstruction(Opcode, Ops[0]->getType(), Ops, "vp.op");
-  // Currently vp-intrinsics only accept FMF flags.
-  // TODO: Enable other flags when support is added.
-  if (isa<FPMathOperator>(VPInst))
-    setFlags(cast<Instruction>(VPInst));
-
-  State.set(this, VPInst);
-  State.addMetadata(VPInst,
-                    dyn_cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
