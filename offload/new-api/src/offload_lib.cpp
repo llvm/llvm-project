@@ -31,6 +31,11 @@ offload_code_location_t *&currentCodeLocation() {
   return CodeLoc;
 }
 
+OffloadConfig &offloadConfig() {
+  static OffloadConfig Config{};
+  return Config;
+}
+
 // Pull in the declarations for the implementation funtions. The actual entry
 // points in this file wrap these.
 #include "offload_impl_func_decls.inc"

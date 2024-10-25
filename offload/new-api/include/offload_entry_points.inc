@@ -14,13 +14,13 @@ offload_impl_result_t offloadInit_val() {
   return offloadInit_impl();
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadInit() {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadInit";
   }
 
   offload_result_t Result = offloadInit_val();
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "()";
     std::cout << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -45,13 +45,13 @@ offload_impl_result_t offloadShutDown_val() {
   return offloadShutDown_impl();
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadShutDown() {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadShutDown";
   }
 
   offload_result_t Result = offloadShutDown_val();
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "()";
     std::cout << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -87,13 +87,13 @@ offloadPlatformGet_val(uint32_t NumEntries,
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
 offloadPlatformGet(uint32_t NumEntries, offload_platform_handle_t *Platforms) {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadPlatformGet";
   }
 
   offload_result_t Result = offloadPlatformGet_val(NumEntries, Platforms);
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     offload_platform_get_params_t Params = {&NumEntries, &Platforms};
     std::cout << "(" << &Params << ")";
     std::cout << "-> " << Result << "\n";
@@ -126,13 +126,13 @@ offload_impl_result_t offloadPlatformGetCount_val(uint32_t *NumPlatforms) {
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
 offloadPlatformGetCount(uint32_t *NumPlatforms) {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadPlatformGetCount";
   }
 
   offload_result_t Result = offloadPlatformGetCount_val(NumPlatforms);
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     offload_platform_get_count_params_t Params = {&NumPlatforms};
     std::cout << "(" << &Params << ")";
     std::cout << "-> " << Result << "\n";
@@ -176,14 +176,14 @@ offloadPlatformGetInfo_val(offload_platform_handle_t Platform,
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfo(
     offload_platform_handle_t Platform, offload_platform_info_t PropName,
     size_t PropSize, void *PropValue) {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadPlatformGetInfo";
   }
 
   offload_result_t Result =
       offloadPlatformGetInfo_val(Platform, PropName, PropSize, PropValue);
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     offload_platform_get_info_params_t Params = {&Platform, &PropName,
                                                  &PropSize, &PropValue};
     std::cout << "(" << &Params << ")";
@@ -225,14 +225,14 @@ offloadPlatformGetInfoSize_val(offload_platform_handle_t Platform,
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfoSize(
     offload_platform_handle_t Platform, offload_platform_info_t PropName,
     size_t *PropSizeRet) {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadPlatformGetInfoSize";
   }
 
   offload_result_t Result =
       offloadPlatformGetInfoSize_val(Platform, PropName, PropSizeRet);
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     offload_platform_get_info_size_params_t Params = {&Platform, &PropName,
                                                       &PropSizeRet};
     std::cout << "(" << &Params << ")";
@@ -272,13 +272,13 @@ offloadDeviceGetCount_val(offload_platform_handle_t Platform,
 }
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetCount(
     offload_platform_handle_t Platform, uint32_t *NumDevices) {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadDeviceGetCount";
   }
 
   offload_result_t Result = offloadDeviceGetCount_val(Platform, NumDevices);
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     offload_device_get_count_params_t Params = {&Platform, &NumDevices};
     std::cout << "(" << &Params << ")";
     std::cout << "-> " << Result << "\n";
@@ -322,13 +322,13 @@ offload_impl_result_t offloadDeviceGet_val(offload_platform_handle_t Platform,
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
 offloadDeviceGet(offload_platform_handle_t Platform, uint32_t NumEntries,
                  offload_device_handle_t *Devices) {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadDeviceGet";
   }
 
   offload_result_t Result = offloadDeviceGet_val(Platform, NumEntries, Devices);
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     offload_device_get_params_t Params = {&Platform, &NumEntries, &Devices};
     std::cout << "(" << &Params << ")";
     std::cout << "-> " << Result << "\n";
@@ -372,14 +372,14 @@ offload_impl_result_t offloadDeviceGetInfo_val(offload_device_handle_t Device,
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetInfo(
     offload_device_handle_t Device, offload_device_info_t PropName,
     size_t PropSize, void *PropValue) {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadDeviceGetInfo";
   }
 
   offload_result_t Result =
       offloadDeviceGetInfo_val(Device, PropName, PropSize, PropValue);
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     offload_device_get_info_params_t Params = {&Device, &PropName, &PropSize,
                                                &PropValue};
     std::cout << "(" << &Params << ")";
@@ -421,14 +421,14 @@ offloadDeviceGetInfoSize_val(offload_device_handle_t Device,
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL
 offloadDeviceGetInfoSize(offload_device_handle_t Device,
                          offload_device_info_t PropName, size_t *PropSizeRet) {
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     std::cout << "---> offloadDeviceGetInfoSize";
   }
 
   offload_result_t Result =
       offloadDeviceGetInfoSize_val(Device, PropName, PropSizeRet);
 
-  if (std::getenv("OFFLOAD_TRACE")) {
+  if (offloadConfig().TracingEnabled) {
     offload_device_get_info_size_params_t Params = {&Device, &PropName,
                                                     &PropSizeRet};
     std::cout << "(" << &Params << ")";

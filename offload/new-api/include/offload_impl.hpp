@@ -20,6 +20,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 
+struct OffloadConfig {
+  bool TracingEnabled = false;
+};
+
+OffloadConfig &offloadConfig();
+
 // Use the StringSet container to efficiently deduplicate repeated error
 // strings (e.g. if the same error is hit constantly in a long running program)
 llvm::StringSet<> &errorStrs();
