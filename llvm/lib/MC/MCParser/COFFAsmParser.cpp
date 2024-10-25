@@ -301,7 +301,7 @@ bool COFFAsmParser::parseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
 }
 
 bool COFFAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
-  return MCAsmParserExtension::ParseDirectiveCGProfile(S, Loc);
+  return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
 }
 
 bool COFFAsmParser::parseSectionSwitch(StringRef Section,
