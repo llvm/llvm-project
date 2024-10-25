@@ -544,6 +544,7 @@ Bug Fixes to C++ Support
 - Clang incorrectly considered a class with an anonymous union member to not be
   const-default-constructible even if a union member has a default member initializer.
   (#GH95854).
+- Fixed an assertion failure when evaluating an invalid expression in an array initializer (#GH112140)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -622,6 +623,9 @@ X86 Support
 - All intrinsics in bmi2intrin.h can now be used in constant expressions.
 
 - All intrinsics in tbmintrin.h can now be used in constant expressions.
+
+- Supported intrinsics for ``MOVRS AND AVX10.2``.
+  * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
