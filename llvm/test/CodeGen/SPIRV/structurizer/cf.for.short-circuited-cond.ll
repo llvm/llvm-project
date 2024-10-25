@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
-; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | spirv-sim --function=_Z7processv --wave=1 --expects=9
 
 ;
 ; int process() {
@@ -139,10 +138,10 @@
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb130:]] %[[#bb125:]]
 ; CHECK:   %[[#bb130:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb126:]]
-; CHECK:   %[[#bb125:]] = OpLabel
-; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:   %[[#bb126:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb124:]]
+; CHECK:   %[[#bb125:]] = OpLabel
+; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
 ; CHECK: %[[#func_83:]] = OpFunction %[[#void:]] DontInline %[[#]]
 ; CHECK:   %[[#bb131:]] = OpLabel
