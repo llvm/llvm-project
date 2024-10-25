@@ -200,8 +200,7 @@ std::optional<bool> isUncountedPtr(const QualType T) {
   return false;
 }
 
-std::optional<bool> isUncheckedPtr(const QualType T)
-{
+std::optional<bool> isUncheckedPtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl())
       return isUnchecked(CXXRD);

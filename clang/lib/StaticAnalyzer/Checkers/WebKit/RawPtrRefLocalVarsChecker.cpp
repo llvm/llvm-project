@@ -109,7 +109,7 @@ class RawPtrRefLocalVarsChecker
   mutable BugReporter *BR;
 
 public:
-  RawPtrRefLocalVarsChecker(const char* description)
+  RawPtrRefLocalVarsChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
   virtual std::optional<bool> isUnsafePtr(const QualType T) const = 0;
