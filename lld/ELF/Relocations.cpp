@@ -1328,6 +1328,36 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
+  auto fatalBothAuthAndNonAuth = [&sym]() {
+    fatal("both AUTH and non-AUTH TLSDESC entries for '" + sym.getName() +
+          "' requested, but only one type of TLSDESC entry per symbol is "
+          "supported");
+  };
+
+  // Do not optimize signed TLSDESC as described in pauthabielf64 to LE/IE.
+  // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
+  // > PAUTHELF64 only supports the descriptor based TLS (TLSDESC).
+  if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(
+          expr)) {
+    assert(ctx.arg.emachine == EM_AARCH64);
+    if (!sym.hasFlag(NEEDS_TLSDESC))
+      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
+    else if (!sym.hasFlag(NEEDS_TLSDESC_AUTH))
+      fatalBothAuthAndNonAuth();
+    sec->addReloc({expr, type, offset, addend, &sym});
+    return 1;
+  }
+
+  if (sym.hasFlag(NEEDS_TLSDESC_AUTH)) {
+    assert(ctx.arg.emachine == EM_AARCH64);
+    // TLSDESC_CALL hint relocation probably should not be emitted by compiler
+    // with signed TLSDESC enabled since it does not give any value, but leave a
+    // check against that just in case someone uses it.
+    if (expr != R_TLSDESC_CALL)
+      fatalBothAuthAndNonAuth();
+    return 1;
+  }
+
   bool isRISCV = ctx.arg.emachine == EM_RISCV;
 
   if (oneof<RE_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
@@ -1848,9 +1878,13 @@ void elf::postScanRelocations(Ctx &ctx) {
 
     if (flags & NEEDS_TLSDESC) {
       got->addTlsDescEntry(sym);
+      RelType tlsDescRel = ctx.target->tlsDescRel;
+      if (flags & NEEDS_TLSDESC_AUTH) {
+        assert(ctx.arg.emachine == EM_AARCH64);
+        tlsDescRel = ELF::R_AARCH64_AUTH_TLSDESC;
+      }
       ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          ctx.target->tlsDescRel, *got, got->getTlsDescOffset(sym), sym,
-          ctx.target->tlsDescRel);
+          tlsDescRel, *got, got->getTlsDescOffset(sym), sym, tlsDescRel);
     }
     if (flags & NEEDS_TLSGD) {
       got->addDynTlsEntry(sym);

@@ -53,6 +53,7 @@ enum {
   NEEDS_TLSIE = 1 << 8,
   NEEDS_GOT_AUTH = 1 << 9,
   NEEDS_GOT_NONAUTH = 1 << 10,
+  NEEDS_TLSDESC_AUTH = 1 << 11,
 };
 
 // The base class for real symbol classes.

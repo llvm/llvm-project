@@ -678,6 +678,11 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().tlsDescIdx = numEntries;
   numEntries += 2;
+  if (sym.hasFlag(NEEDS_TLSDESC_AUTH)) {
+    assert(ctx.arg.emachine == EM_AARCH64);
+    authEntries.push_back({(numEntries - 2) * ctx.arg.wordsize, true});
+    authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, false});
+  }
   return true;
 }
 
