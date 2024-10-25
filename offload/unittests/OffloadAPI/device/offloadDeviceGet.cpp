@@ -14,12 +14,10 @@ using offloadDeviceGetTest = offloadPlatformTest;
 
 TEST_F(offloadDeviceGetTest, Success) {
   uint32_t Count = 0;
-  ASSERT_SUCCESS(
-      offloadDeviceGet(Platform, OFFLOAD_DEVICE_TYPE_ALL, 0, nullptr, &Count));
+  ASSERT_SUCCESS(offloadDeviceGetCount(Platform, &Count));
   ASSERT_NE(Count, 0lu);
   std::vector<offload_device_handle_t> Devices(Count);
-  ASSERT_SUCCESS(offloadDeviceGet(Platform, OFFLOAD_DEVICE_TYPE_ALL, Count,
-                                  Devices.data(), nullptr));
+  ASSERT_SUCCESS(offloadDeviceGet(Platform, Count, Devices.data()));
   for (auto Device : Devices) {
     ASSERT_NE(nullptr, Device);
   }
@@ -27,14 +25,12 @@ TEST_F(offloadDeviceGetTest, Success) {
 
 TEST_F(offloadDeviceGetTest, SuccessSubsetOfDevices) {
   uint32_t Count;
-  ASSERT_SUCCESS(
-      offloadDeviceGet(Platform, OFFLOAD_DEVICE_TYPE_ALL, 0, nullptr, &Count));
+  ASSERT_SUCCESS(offloadDeviceGetCount(Platform, &Count));
   if (Count < 2) {
     GTEST_SKIP() << "Only one device is available on this platform.";
   }
   std::vector<offload_device_handle_t> Devices(Count - 1);
-  ASSERT_SUCCESS(offloadDeviceGet(Platform, OFFLOAD_DEVICE_TYPE_ALL, Count - 1,
-                                  Devices.data(), nullptr));
+  ASSERT_SUCCESS(offloadDeviceGet(Platform, Count - 1, Devices.data()));
   for (auto Device : Devices) {
     ASSERT_NE(nullptr, Device);
   }

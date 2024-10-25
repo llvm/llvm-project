@@ -35,40 +35,39 @@ def : Enum {
 }
 
 def : Function {
+  let name = "offloadDeviceGetCount";
+  let desc = "Retrieves the number of available devices within a platform";
+  let params = [
+    Param<"offload_platform_handle_t", "hPlatform", "handle of the platform instance", PARAM_IN>,
+    Param<"uint32_t*", "pNumDevices", "pointer to the number of devices.", PARAM_OUT>
+  ];
+  let returns = [];
+}
+
+def : Function {
   let name = "offloadDeviceGet";
   let desc = "Retrieves devices within a platform";
   let details = [
     "Multiple calls to this function will return identical device handles, in the same order.",
-    "The number and order of handles returned from this function can be affected by environment variables that filter devices exposed through API.",
-    "The returned devices are taken a reference of and must be released with a subsequent call to olDeviceRelease.",
     "The application may call this function from simultaneous threads, the implementation must be thread-safe"
   ];
   let params = [
     Param<"offload_platform_handle_t", "hPlatform", "handle of the platform instance", PARAM_IN>,
-    Param<"offload_device_type_t", "DeviceType", "the type of the devices.", PARAM_IN>,
-    Param<"uint32_t", "NumEntries", "the number of devices to be added to phDevices. "
-        "If phDevices is not NULL, then NumEntries should be greater than zero. Otherwise OFFLOAD_ERRC_INVALID_SIZE "
-        "will be returned.", PARAM_IN>,
+    Param<"uint32_t", "NumEntries", "the number of devices to be added to phDevices, which must be greater than zero", PARAM_IN>,
     RangedParam<"offload_device_handle_t*", "phDevices", "Array of device handles. "
-        "If NumEntries is less than the number of devices available, then platform shall only retrieve that number of devices.", PARAM_OUT_OPTIONAL,
-        Range<"0", "NumEntries">>,
-    Param<"uint32_t*", "pNumDevices", "pointer to the number of devices. "
-        "pNumDevices will be updated with the total number of devices available.", PARAM_OUT_OPTIONAL>
+        "If NumEntries is less than the number of devices available, then this function shall only retrieve that number of devices.", PARAM_OUT,
+        Range<"0", "NumEntries">>
   ];
   let returns = [
     Return<"OFFLOAD_ERRC_INVALID_SIZE", [
-      "`NumEntries == 0 && phDevices != NULL`"
-    ]>,
-    Return<"OFFLOAD_ERRC_INVALID_NULL_POINTER", [
-      "`NumEntries > 0 && phDevices == NULL`"
-    ]>,
-    Return<"OFFLOAD_ERRC_INVALID_VALUE">
+      "`NumEntries == 0`"
+    ]>
   ];
 }
 
 def : Function {
   let name = "offloadDeviceGetInfo";
-  let desc = "Retrieves various information about device";
+  let desc = "Queries the given property of the device";
   let details = [
     "The application may call this function from simultaneous threads.",
     "The implementation of this function should be lock-free."
@@ -79,23 +78,36 @@ def : Function {
     Param<"size_t", "propSize", "the number of bytes pointed to by pPropValue.", PARAM_IN>,
     TypeTaggedParam<"void*", "pPropValue", "array of bytes holding the info. If propSize is not equal to or greater than the real "
                     "number of bytes needed to return the info then the OFFLOAD_ERRC_INVALID_SIZE error is returned and "
-                    "pPropValue is not used.", PARAM_OUT_OPTIONAL, TypeInfo<"propName" , "propSize">>,
-    Param<"size_t*", "pPropSizeRet", "pointer to the actual size in bytes of the queried propName.", PARAM_OUT_OPTIONAL>
+                    "pPropValue is not used.", PARAM_OUT, TypeInfo<"propName" , "propSize">>
   ];
   let returns = [
     Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
-      "If `propName` is not supported by the adapter."
+      "If `propName` is not supported by the device."
     ]>,
     Return<"OFFLOAD_ERRC_INVALID_SIZE", [
-      "`propSize == 0 && pPropValue != NULL`",
+      "`propSize == 0`",
       "If `propSize` is less than the real number of bytes needed to return the info."
     ]>,
-    Return<"OFFLOAD_ERRC_INVALID_NULL_POINTER", [
-      "`propSize != 0 && pPropValue == NULL`",
-      "`pPropValue == NULL && pPropSizeRet == NULL`"
+    Return<"OFFLOAD_ERRC_INVALID_DEVICE">
+  ];
+}
+
+def : Function {
+  let name = "offloadDeviceGetInfoSize";
+  let desc = "Returns the storage size of the given device query";
+  let details = [
+    "The application may call this function from simultaneous threads.",
+    "The implementation of this function should be lock-free."
+  ];
+  let params = [
+    Param<"offload_device_handle_t", "hDevice", "handle of the device instance", PARAM_IN>,
+    Param<"offload_device_info_t", "propName", "type of the info to retrieve", PARAM_IN>,
+    Param<"size_t*", "pPropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
+      "If `propName` is not supported by the device."
     ]>,
-    Return<"OFFLOAD_ERRC_INVALID_DEVICE">,
-    Return<"OFFLOAD_ERRC_OUT_OF_RESOURCES">,
-    Return<"OFFLOAD_ERRC_OUT_OF_HOST_MEMORY">
+    Return<"OFFLOAD_ERRC_INVALID_DEVICE">
   ];
 }

@@ -99,7 +99,7 @@ static void EmitResultPrint(raw_ostream &OS) {
 inline std::ostream &operator<<(std::ostream &os,
                                 const offload_error_struct_t *err) {
   if (err == nullptr) {
-    os << "OFFLOAD_SUCCESS";
+    os << "OFFLOAD_RESULT_SUCCESS";
   } else {
     os << err->code;
   }
@@ -110,6 +110,10 @@ inline std::ostream &operator<<(std::ostream &os,
 
 static void EmitFunctionParamStructPrint(const FunctionRec &Func,
                                          raw_ostream &OS) {
+  if (Func.getParams().size() == 0) {
+    return;
+  }
+
   OS << formatv(R"(
 inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct {0} *params) {{
 )",
@@ -216,7 +220,7 @@ template <typename T> inline offload_result_t printPtr(std::ostream &os, const T
         os << ")";
     }
 
-    return OFFLOAD_SUCCESS;
+    return OFFLOAD_RESULT_SUCCESS;
 }
   )""";
 }

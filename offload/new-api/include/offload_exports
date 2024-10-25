@@ -1,9 +1,15 @@
 VERS1.0 {
 global:
+  offloadInit;
+  offloadShutDown;
   offloadPlatformGet;
+  offloadPlatformGetCount;
   offloadPlatformGetInfo;
+  offloadPlatformGetInfoSize;
+  offloadDeviceGetCount;
   offloadDeviceGet;
   offloadDeviceGetInfo;
+  offloadDeviceGetInfoSize;
 local:
   *;
 };

@@ -82,15 +82,19 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
 
   // Emit post-call prints
   OS << TAB_1 "if (std::getenv(\"OFFLOAD_TRACE\")) {\n";
-  OS << formatv(TAB_2 "{0} Params = {{ ", F.getParamStructName());
-  for (const auto &Param : F.getParams()) {
-    OS << "&" << Param.getName();
-    if (Param != F.getParams().back()) {
-      OS << ", ";
+  if (F.getParams().size() > 0) {
+    OS << formatv(TAB_2 "{0} Params = {{ ", F.getParamStructName());
+    for (const auto &Param : F.getParams()) {
+      OS << "&" << Param.getName();
+      if (Param != F.getParams().back()) {
+        OS << ", ";
+      }
     }
+    OS << formatv("};\n");
+    OS << TAB_2 "std::cout << \"(\" << &Params << \")\";\n";
+  } else {
+    OS << TAB_2 "std::cout << \"()\";\n";
   }
-  OS << formatv("};\n");
-  OS << TAB_2 "std::cout << \"(\" << &Params << \")\";\n";
   OS << TAB_2 "std::cout << \"-> \" << result << \"\\n\";\n";
   OS << TAB_2 "if (result && result->details) {\n";
   OS << TAB_3 "std::cout << \"     *Error Details* \" << result->details "

@@ -13,6 +13,14 @@
 
 using namespace llvm;
 
+// Wrapper so we don't have to constantly init and shutdown Offload in every
+// test, while having sensible lifetime for the platform environment
+struct OffloadInitWrapper {
+  OffloadInitWrapper() { offloadInit(); }
+  ~OffloadInitWrapper() { offloadShutDown(); }
+};
+static OffloadInitWrapper Wrapper{};
+
 static cl::opt<std::string>
     SelectedPlatform("platform", cl::desc("Only test the specified platform"),
                      cl::value_desc("platform"));
@@ -20,11 +28,10 @@ static cl::opt<std::string>
 std::ostream &operator<<(std::ostream &Out,
                          const offload_platform_handle_t &Platform) {
   size_t Size;
-  offloadPlatformGetInfo(Platform, OFFLOAD_PLATFORM_INFO_NAME, 0, nullptr,
-                         &Size);
+  offloadPlatformGetInfoSize(Platform, OFFLOAD_PLATFORM_INFO_NAME, &Size);
   std::vector<char> Name(Size);
   offloadPlatformGetInfo(Platform, OFFLOAD_PLATFORM_INFO_NAME, Size,
-                         Name.data(), nullptr);
+                         Name.data());
   Out << Name.data();
   return Out;
 }
@@ -43,10 +50,10 @@ const std::vector<offload_platform_handle_t> &TestEnvironment::getPlatforms() {
 
   if (Platforms.empty()) {
     uint32_t PlatformCount = 0;
-    offloadPlatformGet(0, nullptr, &PlatformCount);
+    offloadPlatformGetCount(&PlatformCount);
     if (PlatformCount > 0) {
       Platforms.resize(PlatformCount);
-      offloadPlatformGet(PlatformCount, Platforms.data(), nullptr);
+      offloadPlatformGet(PlatformCount, Platforms.data());
     }
   }
 
@@ -77,8 +84,8 @@ offload_platform_handle_t TestEnvironment::getPlatform() {
       Platform = Platforms[0];
       for (auto CandidatePlatform : Platforms) {
         uint32_t NumDevices = 0;
-        if (offloadDeviceGet(CandidatePlatform, OFFLOAD_DEVICE_TYPE_ALL, 0,
-                             nullptr, &NumDevices) == OFFLOAD_SUCCESS) {
+        if (offloadDeviceGetCount(CandidatePlatform, &NumDevices) ==
+            OFFLOAD_RESULT_SUCCESS) {
           if (NumDevices > 0) {
             Platform = CandidatePlatform;
             break;
