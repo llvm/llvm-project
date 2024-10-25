@@ -592,6 +592,18 @@ public:
   using BodyGenCallbackTy =
       function_ref<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
+  using LoopBodyCallbackTy =
+      function_ref<void(
+        BasicBlock *OuterAllocaBB, InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+        InsertPointTy PrologIP, InsertPointTy ReductionEpilogIP,
+        Value *IterationNum
+      )>;
+
+  using TripCountCallbackTy =
+      function_ref<
+        Value*(llvm::BasicBlock *AllocaBB, InsertPointTy CodeGenIP)
+      >;
+
   // This is created primarily for sections construct as llvm::function_ref
   // (BodyGenCallbackTy) is not storable (as described in the comments of
   // function_ref class - function_ref contains non-ownable reference
@@ -671,6 +683,13 @@ public:
   /// \returns The insertion point after the barrier.
   InsertPointTy createCancel(const LocationDescription &Loc, Value *IfCondition,
                              omp::Directive CanceledDirective);
+
+  IRBuilder<>::InsertPoint
+  createSimdLoop(const LocationDescription &Loc, InsertPointTy AllocaIP,
+                 LoopBodyCallbackTy BodyGenCB,
+                 TripCountCallbackTy DistanceCB,
+                 PrivatizeCallbackTy PrivCB,
+                 FinalizeCallbackTy FiniCB);
 
   /// Generator for '#omp parallel'
   ///
@@ -1876,6 +1895,7 @@ public:
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       bool IsNoWait = false, bool IsTeamsReduction = false,
       bool HasDistribute = false,
+      bool IsSimdReduction = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);

@@ -342,7 +342,8 @@ public:
       // like `omp for` or `omp simd` directives.
       llvm::SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
       getOpenMPCaptureRegions(CaptureRegions, D->getDirectiveKind());
-      if (CaptureRegions.size() == 1 && CaptureRegions.back() == OMPD_unknown) {
+      if (CaptureRegions.size() == 1 && CaptureRegions.back() == OMPD_unknown &&
+          D->getDirectiveKind() != OMPD_simd) {
         VisitStmt(S->getCapturedStmt());
         return;
       }
@@ -1661,6 +1662,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
   bool ParallelReduction = isOpenMPParallelDirective(Options.ReductionKind);
   bool DistributeReduction = isOpenMPDistributeDirective(Options.ReductionKind);
   bool TeamsReduction = isOpenMPTeamsDirective(Options.ReductionKind);
+  bool SimdReduction = isOpenMPSimdDirective(Options.ReductionKind);
 
   ASTContext &C = CGM.getContext();
 
@@ -1755,7 +1757,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
 
   CGF.Builder.restoreIP(OMPBuilder.createReductionsGPU(
       OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-      DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+      DistributeReduction, SimdReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
       CGF.getTarget().getGridValue(), C.getLangOpts().OpenMPCUDAReductionBufNum,
       RTLoc));
   return;
