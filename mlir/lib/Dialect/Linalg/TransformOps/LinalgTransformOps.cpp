@@ -253,6 +253,11 @@ void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
   linalg::populateFoldAddIntoDestPatterns(patterns);
 }
 
+void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populatePadOpVectorizationPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
