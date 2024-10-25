@@ -424,6 +424,8 @@ Improvements to Clang's diagnostics
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
 
+- Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
