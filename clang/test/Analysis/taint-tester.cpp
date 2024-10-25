@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,debug.TaintTest %s -verify
+// RUN: %clang_analyze_cc1  -analyzer-checker=optin.taint,debug.TaintTest %s -verify
 // expected-no-diagnostics
 
 typedef struct _FILE FILE;
@@ -32,4 +32,3 @@ void testOpaqueClass(opaque *obj) {
   char buf[20];
   snprintf(buf, 20, "%p", obj); // don't crash trying to load *obj
 }
-

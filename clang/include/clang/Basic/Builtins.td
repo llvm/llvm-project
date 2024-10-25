@@ -215,6 +215,18 @@ def FminF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T, T)";
 }
 
+def FmaximumNumF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_fmaximum_num"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
+  let Prototype = "T(T, T)";
+}
+
+def FminimumNumF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_fminimum_num"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
+  let Prototype = "T(T, T)";
+}
+
 def Atan2F128 : Builtin {
   let Spellings = ["__builtin_atan2f128"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
@@ -934,6 +946,12 @@ def IsConstantEvaluated : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool()";
 }
 
+def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_is_within_lifetime"];
+  let Attributes = [NoThrow, CustomTypeChecking, Consteval];
+  let Prototype = "bool(void*)";
+}
+
 // GCC exception builtins
 def EHReturn : Builtin {
   let Spellings = ["__builtin_eh_return"];
@@ -1180,13 +1198,13 @@ def AllowRuntimeCheck : Builtin {
 
 def ShuffleVector : Builtin {
   let Spellings = ["__builtin_shufflevector"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ConvertVector : Builtin {
   let Spellings = ["__builtin_convertvector"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1244,6 +1262,12 @@ def ElementwiseATan : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseATan2 : Builtin {
+  let Spellings = ["__builtin_elementwise_atan2"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseBitreverse : Builtin {
   let Spellings = ["__builtin_elementwise_bitreverse"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -1258,6 +1282,18 @@ def ElementwiseMax : Builtin {
 
 def ElementwiseMin : Builtin {
   let Spellings = ["__builtin_elementwise_min"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMaximum : Builtin {
+  let Spellings = ["__builtin_elementwise_maximum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinimum : Builtin {
+  let Spellings = ["__builtin_elementwise_minimum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1312,6 +1348,18 @@ def ElementwiseLog2 : Builtin {
 
 def ElementwiseLog10 : Builtin {
   let Spellings = ["__builtin_elementwise_log10"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwisePopcount : Builtin {
+  let Spellings = ["__builtin_elementwise_popcount"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFmod : Builtin {
+  let Spellings = ["__builtin_elementwise_fmod"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1420,6 +1468,18 @@ def ReduceMax : Builtin {
 
 def ReduceMin : Builtin {
   let Spellings = ["__builtin_reduce_min"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ReduceMaximum : Builtin {
+  let Spellings = ["__builtin_reduce_maximum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ReduceMinimum : Builtin {
+  let Spellings = ["__builtin_reduce_minimum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -2654,6 +2714,7 @@ def Abs : IntMathTemplate, LibBuiltin<"stdlib.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Calloc : LibBuiltin<"stdlib.h"> {
@@ -3680,6 +3741,22 @@ def Fmin : FPMathTemplate, LibBuiltin<"math.h"> {
   let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
+def FmaximumNum : FPMathTemplate, LibBuiltin<"math.h"> {
+  let Spellings = ["fmaximum_num"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "T(T, T)";
+  let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+}
+
+def FminimumNum : FPMathTemplate, LibBuiltin<"math.h"> {
+  let Spellings = ["fminimum_num"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "T(T, T)";
+  let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+}
+
 def Hypot : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["hypot"];
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
@@ -4679,16 +4756,34 @@ def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "unsigned int()";
 }
 
+def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_is_first_lane"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool()";
+}
+
+def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_read_lane_at"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
-def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_create_handle"];
+def HLSLCross: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_cross"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "void*(unsigned char)";
+  let Prototype = "void(...)";
+}
+
+def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_degrees"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
@@ -4747,6 +4842,31 @@ def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_saturate"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+
+def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_select"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSign : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_sign"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLStep: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_step"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_radians"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

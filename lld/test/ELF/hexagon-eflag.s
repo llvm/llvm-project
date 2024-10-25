@@ -5,3 +5,8 @@
 # RUN: llvm-readelf -h  %t3 | FileCheck %s
 # Verify that the largest arch in the input list is selected.
 # CHECK: Flags: 0x62
+
+# RUN: llvm-ar rcsD %t4
+# RUN: ld.lld -m hexagonelf %t4 -o %t5
+# RUN: llvm-readelf -h  %t5 | FileCheck --check-prefix=CHECK-EMPTYARCHIVE %s
+# CHECK-EMPTYARCHIVE: Flags: 0x60

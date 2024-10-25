@@ -140,7 +140,7 @@ define i1 @test_two_ranges(ptr nocapture readonly %arg1, ptr nocapture readonly 
 ; CHECK-LABEL: @test_two_ranges(
 ; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[ARG1:%.*]], align 4, !range [[RNG4:![0-9]+]]
 ; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr [[ARG2:%.*]], align 4, !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult i32 [[VAL2]], [[VAL1]]
 ; CHECK-NEXT:    ret i1 [[RVAL]]
 ;
   %val1 = load i32, ptr %arg1, !range !5
@@ -152,7 +152,7 @@ define i1 @test_two_ranges(ptr nocapture readonly %arg1, ptr nocapture readonly 
 ; Values' ranges overlap each other, so it can not be simplified.
 define i1 @test_two_attribute_ranges(i32 range(i32 5, 10) %arg1, i32 range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_two_attribute_ranges(
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[ARG2:%.*]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult i32 [[ARG2:%.*]], [[ARG1:%.*]]
 ; CHECK-NEXT:    ret i1 [[RVAL]]
 ;
   %rval = icmp ult i32 %arg2, %arg1
@@ -215,7 +215,7 @@ define <2 x i1> @test_two_ranges_vec(ptr nocapture readonly %arg1, ptr nocapture
 ; CHECK-LABEL: @test_two_ranges_vec(
 ; CHECK-NEXT:    [[VAL1:%.*]] = load <2 x i32>, ptr [[ARG1:%.*]], align 8, !range [[RNG4]]
 ; CHECK-NEXT:    [[VAL2:%.*]] = load <2 x i32>, ptr [[ARG2:%.*]], align 8, !range [[RNG5]]
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult <2 x i32> [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult <2 x i32> [[VAL2]], [[VAL1]]
 ; CHECK-NEXT:    ret <2 x i1> [[RVAL]]
 ;
   %val1 = load <2 x i32>, ptr %arg1, !range !5
@@ -249,7 +249,7 @@ define <2 x i1> @test_two_ranges_vec_true(ptr nocapture readonly %arg1, ptr noca
 ; Values' ranges overlap each other, so it can not be simplified.
 define <2 x i1> @test_two_argument_ranges_vec(<2 x i32> range(i32 5, 10) %arg1, <2 x i32> range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_two_argument_ranges_vec(
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult <2 x i32> [[ARG2:%.*]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult <2 x i32> [[ARG2:%.*]], [[ARG1:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[RVAL]]
 ;
   %rval = icmp ult <2 x i32> %arg2, %arg1
@@ -283,7 +283,7 @@ define i1 @test_two_return_attribute_ranges_not_simplified() {
 ; CHECK-LABEL: @test_two_return_attribute_ranges_not_simplified(
 ; CHECK-NEXT:    [[VAL1:%.*]] = call range(i32 5, 10) i32 @create_range1()
 ; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @create_range2()
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult i32 [[VAL2]], [[VAL1]]
 ; CHECK-NEXT:    ret i1 [[RVAL]]
 ;
   %val1 = call range(i32 5, 10) i32 @create_range1()

@@ -152,6 +152,7 @@ def HasCLZERO    : Predicate<"Subtarget->hasCLZERO()">;
 def HasCLDEMOTE  : Predicate<"Subtarget->hasCLDEMOTE()">;
 def HasMOVDIRI   : Predicate<"Subtarget->hasMOVDIRI()">;
 def HasMOVDIR64B : Predicate<"Subtarget->hasMOVDIR64B()">;
+def HasMOVRS     : Predicate<"Subtarget->hasMOVRS()">;
 def HasPTWRITE   : Predicate<"Subtarget->hasPTWRITE()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;

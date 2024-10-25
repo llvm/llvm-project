@@ -534,6 +534,27 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
   }
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromPrimary) {
+  auto *Allocator = this->Allocator.get();
+
+  for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
+    const scudo::uptr Size = 1U << SizeLog;
+    if (!isPrimaryAllocation<TestAllocator<TypeParam>>(Size, 0))
+      break;
+
+    // Verify that a double free results in a chunk state error.
+    EXPECT_DEATH(
+        {
+          // Allocate from primary
+          void *P = Allocator->allocate(Size, Origin);
+          ASSERT_TRUE(P != nullptr);
+          Allocator->deallocate(P, Origin);
+          Allocator->deallocate(P, Origin);
+        },
+        "invalid chunk state");
+  }
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
   auto *Allocator = this->Allocator.get();
 

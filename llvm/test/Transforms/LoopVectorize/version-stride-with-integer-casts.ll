@@ -163,6 +163,10 @@ define void @versioned_sext_use_in_gep(i32 %scale, ptr %dst, i64 %scale.2) {
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[SCALE]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
+; CHECK-NEXT:    [[TMP81:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
+; CHECK-NEXT:    [[TMP82:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
+; CHECK-NEXT:    [[TMP83:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -174,7 +178,6 @@ define void @versioned_sext_use_in_gep(i32 %scale, ptr %dst, i64 %scale.2) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
 ; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP11]], align 8
 ; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP15]], align 8
@@ -412,6 +415,7 @@ exit:
 
 ; Test case to make sure that uses of versioned strides of type i1 are properly
 ; extended. From https://github.com/llvm/llvm-project/issues/91369.
+; TODO: Better check (udiv i64 15, %g.64) after checking if %g == 1.
 define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-LABEL: define void @zext_of_i1_stride(
 ; CHECK-SAME: i1 [[G:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -420,8 +424,7 @@ define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:    [[G_64:%.*]] = zext i1 [[G]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 15, [[G_64]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i1 [[G]], true
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -486,8 +489,7 @@ define void @sext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], [[G_64]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i1 [[G]], true
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]

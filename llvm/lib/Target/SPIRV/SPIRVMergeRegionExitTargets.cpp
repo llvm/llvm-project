@@ -133,7 +133,7 @@ public:
   // Run the pass on the given convergence region, ignoring the sub-regions.
   // Returns true if the CFG changed, false otherwise.
   bool runOnConvergenceRegionNoRecurse(LoopInfo &LI,
-                                       const SPIRV::ConvergenceRegion *CR) {
+                                       SPIRV::ConvergenceRegion *CR) {
     // Gather all the exit targets for this region.
     SmallPtrSet<BasicBlock *, 4> ExitTargets;
     for (BasicBlock *Exit : CR->Exits) {
@@ -198,14 +198,19 @@ public:
     for (auto Exit : CR->Exits)
       replaceBranchTargets(Exit, ExitTargets, NewExitTarget);
 
+    CR = CR->Parent;
+    while (CR) {
+      CR->Blocks.insert(NewExitTarget);
+      CR = CR->Parent;
+    }
+
     return true;
   }
 
   /// Run the pass on the given convergence region and sub-regions (DFS).
   /// Returns true if a region/sub-region was modified, false otherwise.
   /// This returns as soon as one region/sub-region has been modified.
-  bool runOnConvergenceRegion(LoopInfo &LI,
-                              const SPIRV::ConvergenceRegion *CR) {
+  bool runOnConvergenceRegion(LoopInfo &LI, SPIRV::ConvergenceRegion *CR) {
     for (auto *Child : CR->Children)
       if (runOnConvergenceRegion(LI, Child))
         return true;
@@ -235,10 +240,10 @@ public:
 
   virtual bool runOnFunction(Function &F) override {
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    const auto *TopLevelRegion =
+    auto *TopLevelRegion =
         getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
             .getRegionInfo()
-            .getTopLevelRegion();
+            .getWritableTopLevelRegion();
 
     // FIXME: very inefficient method: each time a region is modified, we bubble
     // back up, and recompute the whole convergence region tree. Once the
@@ -246,9 +251,6 @@ public:
     // to be efficient instead of simple.
     bool modified = false;
     while (runOnConvergenceRegion(LI, TopLevelRegion)) {
-      TopLevelRegion = getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
-                           .getRegionInfo()
-                           .getTopLevelRegion();
       modified = true;
     }
 
@@ -262,6 +264,8 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
+
+    AU.addPreserved<SPIRVConvergenceRegionAnalysisWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 };

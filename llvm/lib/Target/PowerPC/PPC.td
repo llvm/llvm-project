@@ -719,7 +719,8 @@ def PPCAsmWriter : AsmWriter {
 }
 
 def PPCAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterName = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def PPCAsmParserVariant : AsmParserVariant {

@@ -29,7 +29,7 @@ define void @test() {
 define { <4 x i16>, <4 x i16> } @test_vld1x2_no_align(ptr align 16 %a) {
 ; CHECK-LABEL: define { <4 x i16>, <4 x i16> } @test_vld1x2_no_align(
 ; CHECK-SAME: ptr align 16 [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP:%.*]] = call { <4 x i16>, <4 x i16> } @llvm.arm.neon.vld1x2.v4i16.p0(ptr [[A]])
+; CHECK-NEXT:    [[TMP:%.*]] = call { <4 x i16>, <4 x i16> } @llvm.arm.neon.vld1x2.v4i16.p0(ptr align 16 [[A]])
 ; CHECK-NEXT:    ret { <4 x i16>, <4 x i16> } [[TMP]]
 ;
   %tmp = call { <4 x i16>, <4 x i16> } @llvm.arm.neon.vld1x2.v4i16.p0(ptr %a)
@@ -39,7 +39,7 @@ define { <4 x i16>, <4 x i16> } @test_vld1x2_no_align(ptr align 16 %a) {
 define { <4 x i16>, <4 x i16> } @test_vld1x2_lower_align(ptr align 16 %a) {
 ; CHECK-LABEL: define { <4 x i16>, <4 x i16> } @test_vld1x2_lower_align(
 ; CHECK-SAME: ptr align 16 [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP:%.*]] = call { <4 x i16>, <4 x i16> } @llvm.arm.neon.vld1x2.v4i16.p0(ptr align 8 [[A]])
+; CHECK-NEXT:    [[TMP:%.*]] = call { <4 x i16>, <4 x i16> } @llvm.arm.neon.vld1x2.v4i16.p0(ptr align 16 [[A]])
 ; CHECK-NEXT:    ret { <4 x i16>, <4 x i16> } [[TMP]]
 ;
   %tmp = call { <4 x i16>, <4 x i16> } @llvm.arm.neon.vld1x2.v4i16.p0(ptr align 8 %a)
@@ -59,7 +59,7 @@ define { <4 x i16>, <4 x i16> } @test_vld1x2_higher_align(ptr align 8 %a) {
 define void @test_vst1x2_no_align(ptr align 16 %a, <4 x i16> %b0, <4 x i16> %b1) {
 ; CHECK-LABEL: define void @test_vst1x2_no_align(
 ; CHECK-SAME: ptr align 16 [[A:%.*]], <4 x i16> [[B0:%.*]], <4 x i16> [[B1:%.*]]) {
-; CHECK-NEXT:    call void @llvm.arm.neon.vst1x2.p0.v4i16(ptr [[A]], <4 x i16> [[B0]], <4 x i16> [[B1]])
+; CHECK-NEXT:    call void @llvm.arm.neon.vst1x2.p0.v4i16(ptr align 16 [[A]], <4 x i16> [[B0]], <4 x i16> [[B1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.arm.neon.vst1x2.p0.v4i16(ptr %a, <4 x i16> %b0, <4 x i16> %b1)

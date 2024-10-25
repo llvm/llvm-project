@@ -348,6 +348,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     }
   }
 
+  // Don't allow breaking before a closing brace of a block-indented braced list
+  // initializer if there isn't already a break.
+  if (Current.is(tok::r_brace) && Current.MatchingParen &&
+      Current.isBlockIndentedInitRBrace(Style)) {
+    return CurrentState.BreakBeforeClosingBrace;
+  }
+
   // If binary operators are moved to the next line (including commas for some
   // styles of constructor initializers), that's always ok.
   if (!Current.isOneOf(TT_BinaryOperator, tok::comma) &&
@@ -809,13 +816,14 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     if (Tok.Previous->isIf())
       return Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
     return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
-                                  tok::kw_switch);
+                                  tok::kw_switch) &&
+           !(Style.isJavaScript() && Tok.Previous->is(Keywords.kw_await));
   };
   auto IsFunctionCallParen = [](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
   };
-  const auto IsInTemplateString = [this](const FormatToken &Tok) {
+  auto IsInTemplateString = [this](const FormatToken &Tok) {
     if (!Style.isJavaScript())
       return false;
     for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
@@ -827,7 +835,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return false;
   };
   // Identifies simple (no expression) one-argument function calls.
-  const auto IsSimpleFunction = [&](const FormatToken &Tok) {
+  auto StartsSimpleOneArgList = [&](const FormatToken &TokAfterLParen) {
+    assert(TokAfterLParen.isNot(tok::comment) || TokAfterLParen.Next);
+    const auto &Tok =
+        TokAfterLParen.is(tok::comment) ? *TokAfterLParen.Next : TokAfterLParen;
     if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
       return false;
     // Nested calls that involve `new` expressions also look like simple
@@ -836,6 +847,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // - foo(::new Bar())
     if (Tok.is(tok::kw_new) || Tok.startsSequence(tok::coloncolon, tok::kw_new))
       return true;
+    if (Tok.is(TT_UnaryOperator) ||
+        (Style.isJavaScript() &&
+         Tok.isOneOf(tok::ellipsis, Keywords.kw_await))) {
+      return true;
+    }
     const auto *Previous = Tok.Previous;
     if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
                                          TT_LambdaDefinitionLParen) &&
@@ -861,7 +877,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //  or
       //  caaaaaaaaaaaaaaaaaaaaal(
       //       new SomethingElseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee());
-      !IsSimpleFunction(Current)) {
+      !StartsSimpleOneArgList(Current)) {
     CurrentState.NoLineBreak = true;
   }
 
@@ -2455,7 +2471,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
           State.Line->InPPDirective, Encoding, Style);
     }
   } else if (Current.is(TT_BlockComment)) {
-    if (!Style.ReflowComments ||
+    if (Style.ReflowComments == FormatStyle::RCS_Never ||
         // If a comment token switches formatting, like
         // /* clang-format on */, we don't want to break it further,
         // but we may still want to adjust its indentation.
@@ -2476,7 +2492,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       }
       return true;
     }();
-    if (!Style.ReflowComments ||
+    if (Style.ReflowComments == FormatStyle::RCS_Never ||
         CommentPragmasRegex.match(Current.TokenText.substr(2)) ||
         switchesFormatting(Current) || !RegularComments) {
       return nullptr;

@@ -172,9 +172,9 @@ VARIABLES_DISPLAYED_CORRECTLY = "Variable(s) displayed correctly"
 WATCHPOINT_CREATED = "Watchpoint created successfully"
 
 
-def CMD_MSG(str):
+def CMD_MSG(command):
     """A generic "Command '%s' did not return successfully" message generator."""
-    return "Command '%s' did not return successfully" % str
+    return f"Command '{command}' did not return successfully"
 
 
 def COMPLETION_MSG(str_before, str_after, completions):
@@ -990,16 +990,14 @@ class Base(unittest.TestCase):
                     print("Command '" + cmd + "' failed!", file=sbuf)
 
         if check:
+            if not msg:
+                msg = CMD_MSG(cmd)
             output = ""
             if self.res.GetOutput():
                 output += "\nCommand output:\n" + self.res.GetOutput()
             if self.res.GetError():
                 output += "\nError output:\n" + self.res.GetError()
-            if msg:
-                msg += output
-            if cmd:
-                cmd += output
-            self.assertTrue(self.res.Succeeded(), msg if (msg) else CMD_MSG(cmd))
+            self.assertTrue(self.res.Succeeded(), msg + output)
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1317,7 +1315,18 @@ class Base(unittest.TestCase):
         # Need to do something different for non-Linux/Android targets
         cpuinfo_path = self.getBuildArtifact("cpuinfo")
         if configuration.lldb_platform_name:
-            self.runCmd('platform get-file "/proc/cpuinfo" ' + cpuinfo_path)
+            self.runCmd(
+                'platform get-file "/proc/cpuinfo" ' + cpuinfo_path, check=False
+            )
+            if not self.res.Succeeded():
+                if self.TraceOn():
+                    print(
+                        'Failed to get /proc/cpuinfo from remote: "{}"'.format(
+                            self.res.GetOutput().strip()
+                        )
+                    )
+                    print("All cpuinfo feature checks will fail.")
+                return ""
         else:
             cpuinfo_path = "/proc/cpuinfo"
 
@@ -1358,6 +1367,9 @@ class Base(unittest.TestCase):
         if self.getArchitecture() == "arm64e":
             return True
         return self.isAArch64() and "paca" in self.getCPUInfo()
+
+    def isAArch64FPMR(self):
+        return self.isAArch64() and "fpmr" in self.getCPUInfo()
 
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""

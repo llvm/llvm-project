@@ -118,9 +118,9 @@ struct ArchInfo {
   // Defines the following partial order, indicating when an architecture is
   // a superset of another:
   //
-  //   v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
-  //             v       v       v       v       v
-  //           v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
+  // v9.6a > v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
+  //                   v       v       v       v       v
+  //                 v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
   //
   // v8r has no relation to anything. This is used to determine which
   // features to enable for a given architecture. See

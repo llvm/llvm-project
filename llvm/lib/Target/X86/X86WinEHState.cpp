@@ -333,12 +333,10 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     // If using _except_handler4, the EHGuard contains: FramePtr xor Cookie.
     if (UseStackGuard) {
       Value *Val = Builder.CreateLoad(Int32Ty, Cookie);
-      Value *FrameAddr = Builder.CreateCall(
-          Intrinsic::getDeclaration(
-              TheModule, Intrinsic::frameaddress,
-              Builder.getPtrTy(
-                  TheModule->getDataLayout().getAllocaAddrSpace())),
-          Builder.getInt32(0), "frameaddr");
+      Value *FrameAddr = Builder.CreateIntrinsic(
+          Intrinsic::frameaddress,
+          Builder.getPtrTy(TheModule->getDataLayout().getAllocaAddrSpace()),
+          Builder.getInt32(0), /*FMFSource=*/nullptr, "frameaddr");
       Value *FrameAddrI32 = Builder.CreatePtrToInt(FrameAddr, Int32Ty);
       FrameAddrI32 = Builder.CreateXor(FrameAddrI32, Val);
       Builder.CreateStore(FrameAddrI32, EHGuardNode);
@@ -369,8 +367,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
 }
 
 Value *WinEHStatePass::emitEHLSDA(IRBuilder<> &Builder, Function *F) {
-  return Builder.CreateCall(
-      Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_lsda), F);
+  return Builder.CreateIntrinsic(Intrinsic::x86_seh_lsda, {}, F);
 }
 
 /// Generate a thunk that puts the LSDA of ParentFunc in EAX and then calls
@@ -423,7 +420,7 @@ void WinEHStatePass::linkExceptionRegistration(IRBuilder<> &Builder,
   // Handler = Handler
   Builder.CreateStore(Handler, Builder.CreateStructGEP(LinkTy, Link, 1));
   // Next = [fs:00]
-  Constant *FSZero = Constant::getNullValue(PointerType::get(C, 257));
+  Constant *FSZero = Constant::getNullValue(PointerType::get(C, X86AS::FS));
   Value *Next = Builder.CreateLoad(PointerType::getUnqual(C), FSZero);
   Builder.CreateStore(Next, Builder.CreateStructGEP(LinkTy, Link, 0));
   // [fs:00] = Link
@@ -443,7 +440,7 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
   // [fs:00] = Link->Next
   Value *Next = Builder.CreateLoad(PointerType::getUnqual(C),
                                    Builder.CreateStructGEP(LinkTy, Link, 0));
-  Constant *FSZero = Constant::getNullValue(PointerType::get(C, 257));
+  Constant *FSZero = Constant::getNullValue(PointerType::get(C, X86AS::FS));
   Builder.CreateStore(Next, FSZero);
 }
 
@@ -624,17 +621,13 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   // that it can recover the original frame pointer.
   IRBuilder<> Builder(RegNode->getNextNode());
   Value *RegNodeI8 = Builder.CreateBitCast(RegNode, Builder.getPtrTy());
-  Builder.CreateCall(
-      Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_ehregnode),
-      {RegNodeI8});
+  Builder.CreateIntrinsic(Intrinsic::x86_seh_ehregnode, {}, {RegNodeI8});
 
   if (EHGuardNode) {
     IRBuilder<> Builder(EHGuardNode->getNextNode());
     Value *EHGuardNodeI8 =
         Builder.CreateBitCast(EHGuardNode, Builder.getPtrTy());
-    Builder.CreateCall(
-        Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_ehguard),
-        {EHGuardNodeI8});
+    Builder.CreateIntrinsic(Intrinsic::x86_seh_ehguard, {}, {EHGuardNodeI8});
   }
 
   // Calculate state numbers.

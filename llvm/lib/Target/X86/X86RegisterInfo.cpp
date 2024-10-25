@@ -410,6 +410,11 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CallsEHReturn ? CSR_32EHRet_SaveList : CSR_32_SaveList;
 }
 
+const MCPhysReg *
+X86RegisterInfo::getIPRACSRegs(const MachineFunction *MF) const {
+  return Is64Bit ? CSR_IPRA_64_SaveList : CSR_IPRA_32_SaveList;
+}
+
 const MCPhysReg *X86RegisterInfo::getCalleeSavedRegsViaCopy(
     const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");

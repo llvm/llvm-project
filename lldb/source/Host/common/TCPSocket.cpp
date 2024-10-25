@@ -33,27 +33,8 @@
 #include <winsock2.h>
 #endif
 
-#ifdef _WIN32
-#define CLOSE_SOCKET closesocket
-typedef const char *set_socket_option_arg_type;
-#else
-#include <unistd.h>
-#define CLOSE_SOCKET ::close
-typedef const void *set_socket_option_arg_type;
-#endif
-
 using namespace lldb;
 using namespace lldb_private;
-
-static Status GetLastSocketError() {
-  std::error_code EC;
-#ifdef _WIN32
-  EC = llvm::mapWindowsError(WSAGetLastError());
-#else
-  EC = std::error_code(errno, std::generic_category());
-#endif
-  return EC;
-}
 
 static const int kType = SOCK_STREAM;
 
@@ -156,7 +137,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
   Status error;
   llvm::Expected<HostAndPort> host_port = DecodeHostAndPort(name);
   if (!host_port)
-    return Status(host_port.takeError());
+    return Status::FromError(host_port.takeError());
 
   std::vector<SocketAddress> addresses =
       SocketAddress::GetAddressInfo(host_port->hostname.c_str(), nullptr,
@@ -195,7 +176,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   Status error;
   llvm::Expected<HostAndPort> host_port = DecodeHostAndPort(name);
   if (!host_port)
-    return Status(host_port.takeError());
+    return Status::FromError(host_port.takeError());
 
   if (host_port->hostname == "*")
     host_port->hostname = "0.0.0.0";
@@ -208,12 +189,8 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
       continue;
 
     // enable local address reuse
-    int option_value = 1;
-    set_socket_option_arg_type option_value_p =
-        reinterpret_cast<set_socket_option_arg_type>(&option_value);
-    if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, option_value_p,
-                     sizeof(option_value)) == -1) {
-      CLOSE_SOCKET(fd);
+    if (SetOption(fd, SOL_SOCKET, SO_REUSEADDR, 1) == -1) {
+      CloseSocket(fd);
       continue;
     }
 
@@ -229,8 +206,8 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
       err = ::listen(fd, backlog);
 
     if (err == -1) {
-      error = GetLastSocketError();
-      CLOSE_SOCKET(fd);
+      error = GetLastError();
+      CloseSocket(fd);
       continue;
     }
 
@@ -251,13 +228,13 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
 
 void TCPSocket::CloseListenSockets() {
   for (auto socket : m_listen_sockets)
-    CLOSE_SOCKET(socket.first);
+    CloseSocket(socket.first);
   m_listen_sockets.clear();
 }
 
-llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> TCPSocket::Accept(
-    MainLoopBase &loop,
-    std::function<void(std::unique_ptr<TCPSocket> socket)> sock_cb) {
+llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
+TCPSocket::Accept(MainLoopBase &loop,
+                  std::function<void(std::unique_ptr<Socket> socket)> sock_cb) {
   if (m_listen_sockets.size() == 0)
     return llvm::createStringError("No open listening sockets!");
 
@@ -280,7 +257,7 @@ llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> TCPSocket::Accept(
 
       const lldb_private::SocketAddress &AddrIn = m_listen_sockets[fd];
       if (!AddrIn.IsAnyAddr() && AcceptAddr != AddrIn) {
-        CLOSE_SOCKET(sock);
+        CloseSocket(sock);
         LLDB_LOG(log, "rejecting incoming connection from {0} (expecting {1})",
                  AcceptAddr.GetIPAddress(), AddrIn.GetIPAddress());
         return;
@@ -299,19 +276,6 @@ llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> TCPSocket::Accept(
   }
 
   return handles;
-}
-
-Status TCPSocket::Accept(Socket *&conn_socket) {
-  MainLoop accept_loop;
-  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> expected_handles =
-      Accept(accept_loop,
-             [&accept_loop, &conn_socket](std::unique_ptr<TCPSocket> sock) {
-               conn_socket = sock.release();
-               accept_loop.RequestTermination();
-             });
-  if (!expected_handles)
-    return Status(expected_handles.takeError());
-  return accept_loop.Run();
 }
 
 int TCPSocket::SetOptionNoDelay() {

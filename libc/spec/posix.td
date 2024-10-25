@@ -80,10 +80,19 @@ def GetoptArgvT : NamedType<"__getoptargv_t">;
 
 def SAFamilyType : NamedType<"sa_family_t">;
 def SocklenType : NamedType<"socklen_t">;
+def SocklenPtr : PtrType<SocklenType>;
 
 def StructSockAddr : NamedType<"struct sockaddr">;
 def StructSockAddrPtr : PtrType<StructSockAddr>;
 def ConstStructSockAddrPtr : ConstType<StructSockAddrPtr>;
+
+def StructMsghdr : NamedType<"struct msghdr">;
+def StructMsghdrPtr : PtrType<StructMsghdr>;
+def ConstStructMsghdrPtr : ConstType<StructMsghdrPtr>;
+
+def StructIovec : NamedType<"struct iovec">;
+def StructIovecPtr : PtrType<StructIovec>;
+def ConstStructIovecPtr : ConstType<StructIovecPtr>;
 
 def StructSockAddrUn : NamedType<"struct sockaddr_un">;
 
@@ -1711,10 +1720,14 @@ def POSIX : StandardSpec<"POSIX"> {
         Macro<"SOCK_PACKET">,
       ], // Macros
       [
+        SizeTType,
+        SSizeTType,
         SAFamilyType,
         StructSockAddr,
         StructSockAddrUn,
         SocklenType,
+        StructIovec,
+        StructMsghdr,
       ], // Types
       [], // Enumerations
       [
@@ -1724,9 +1737,52 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntType>]
         >,
         FunctionSpec<
+          "socketpair",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntPtr>]
+        >,
+        FunctionSpec<
           "bind",
           RetValSpec<IntType>,
           [ArgSpec<IntType>, ArgSpec<ConstStructSockAddrPtr>, ArgSpec<SocklenType>]
+        >,
+        FunctionSpec<
+          "send",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "sendto",
+          RetValSpec<SSizeTType>,
+          [
+            ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>,
+            ArgSpec<IntType>, ArgSpec<ConstStructSockAddrPtr>,
+            ArgSpec<SocklenType>
+          ]
+        >,
+        FunctionSpec<
+          "sendmsg",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<ConstStructMsghdrPtr>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "recv",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "recvfrom",
+          RetValSpec<SSizeTType>,
+          [
+            ArgSpec<IntType>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>,
+            ArgSpec<IntType>, ArgSpec<StructSockAddrPtr>,
+            ArgSpec<SocklenPtr>
+          ]
+        >,
+        FunctionSpec<
+          "recvmsg",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<StructMsghdrPtr>, ArgSpec<IntType>]
         >,
       ]  // Functions
   >;

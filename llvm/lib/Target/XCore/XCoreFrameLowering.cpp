@@ -215,7 +215,7 @@ XCoreFrameLowering::XCoreFrameLowering(const XCoreSubtarget &sti)
   // Do nothing
 }
 
-bool XCoreFrameLowering::hasFP(const MachineFunction &MF) const {
+bool XCoreFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MF.getFrameInfo().hasVarSizedObjects();
 }

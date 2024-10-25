@@ -29,9 +29,9 @@ using llvm::RecordKeeper;
 
 namespace lldb_private {
 
-void EmitOptionDefs(RecordKeeper &RK, raw_ostream &OS);
-void EmitPropertyDefs(RecordKeeper &RK, raw_ostream &OS);
-void EmitPropertyEnumDefs(RecordKeeper &RK, raw_ostream &OS);
+void EmitOptionDefs(const RecordKeeper &RK, raw_ostream &OS);
+void EmitPropertyDefs(const RecordKeeper &RK, raw_ostream &OS);
+void EmitPropertyEnumDefs(const RecordKeeper &RK, raw_ostream &OS);
 int EmitSBAPIDWARFEnum(int argc, char **argv);
 
 } // namespace lldb_private

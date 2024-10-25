@@ -39,16 +39,13 @@ def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
 def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
   Alias<library_path>;
 
-def plugin : Joined<["--", "-"], "plugin">, 
+def plugin : JoinedOrSeparate<["--", "-"], "plugin">,
   Flags<[HelpHidden, WrapperOnlyOption]>;
 
 def arch : Separate<["--", "-"], "arch">,
   HelpText<"Specify the 'sm_' name of the target architecture.">;
 def : Joined<["--", "-"], "plugin-opt=mcpu=">,
   Flags<[HelpHidden, WrapperOnlyOption]>, Alias<arch>;
-
-def feature : Separate<["--", "-"], "feature">, Flags<[WrapperOnlyOption]>,
-  HelpText<"Specify the '+ptx' freature to use for LTO.">;
 
 def g : Flag<["-"], "g">, HelpText<"Specify that this was a debug compile.">;
 def debug : Flag<["--"], "debug">, Alias<g>;

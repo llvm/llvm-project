@@ -1065,29 +1065,31 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
-  for (Function &F : M) {
-    if (F.isIntrinsic())
-      continue;
-
-    A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
-    A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
-    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(F));
-    CallingConv::ID CC = F.getCallingConv();
+  for (auto *F : Functions) {
+    A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
+    CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {
-      A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
-      A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
+      A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
     } else if (CC == CallingConv::AMDGPU_KERNEL) {
-      addPreloadKernArgHint(F, TM);
+      addPreloadKernArgHint(*F, TM);
     }
 
     for (auto &I : instructions(F)) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*LI->getPointerOperand()));
-      }
-      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*SI->getPointerOperand()));
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*RMW->getPointerOperand()));
+      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*CmpX->getPointerOperand()));
       }
     }
   }

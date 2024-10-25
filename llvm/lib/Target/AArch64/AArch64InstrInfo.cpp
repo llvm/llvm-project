@@ -1994,6 +1994,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(AArch64::X0)
         .addMBB(TargetMBB)
         .addImm(0);
+    TargetMBB->setMachineBlockAddressTaken();
     return true;
   }
 
@@ -5559,10 +5560,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (PNRReg.isValid() && !PNRReg.isVirtual())
     MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
-
-  if (PNRReg.isValid() && PNRReg.isVirtual())
-    BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), PNRReg)
-        .addReg(DestReg);
 }
 
 bool llvm::isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,

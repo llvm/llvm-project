@@ -954,4 +954,36 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandNonIntegralPtrWithNullBase) {
   });
 }
 
+TEST_F(ScalarEvolutionExpanderTest, GEPFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  StringRef ModStr = R"(
+  define void @f(ptr %p, i64 %x) {
+    %gep_inbounds = getelementptr inbounds i8, ptr %p, i64 %x
+    ret void
+  })";
+  std::unique_ptr<Module> M = parseAssemblyString(ModStr, Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  Function *F = M->getFunction("f");
+  ASSERT_NE(F, nullptr) << "Could not find function 'f'";
+  BasicBlock &Entry = F->getEntryBlock();
+  auto *GEP = cast<GetElementPtrInst>(&Entry.front());
+
+  ScalarEvolution SE = buildSE(*F);
+  const SCEV *Ptr = SE.getSCEV(F->getArg(0));
+  const SCEV *X = SE.getSCEV(F->getArg(1));
+  const SCEV *PtrX = SE.getAddExpr(Ptr, X);
+
+  SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+  auto *I = cast<Instruction>(
+      Exp.expandCodeFor(PtrX, nullptr, Entry.getTerminator()));
+  // Check that the GEP is reused, but the inbounds flag cleared. We don't
+  // know that the newly introduced use is inbounds.
+  EXPECT_EQ(I, GEP);
+  EXPECT_EQ(GEP->getNoWrapFlags(), GEPNoWrapFlags::none());
+}
+
 } // end namespace llvm

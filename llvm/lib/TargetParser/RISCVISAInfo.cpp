@@ -1049,7 +1049,7 @@ constexpr static RISCVExtBit RISCVBitPositions[] = {
     {"zvksed", 0, 57},    {"zvksh", 0, 58},
     {"zvkt", 0, 59},      {"zve32x", 0, 60},
     {"zve32f", 0, 61},    {"zve64x", 0, 62},
-    {"zve64x", 0, 63},    {"zve64d", 1, 0},
+    {"zve64f", 0, 63},    {"zve64d", 1, 0},
     {"zimop", 1, 1},      {"zca", 1, 2},
     {"zcb", 1, 3},        {"zcd", 1, 4},
     {"zcf", 1, 5},        {"zcmop", 1, 6},

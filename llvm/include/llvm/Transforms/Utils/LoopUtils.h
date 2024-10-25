@@ -224,9 +224,9 @@ bool promoteLoopAccessesToScalars(
     bool AllowSpeculation, bool HasReadsOutsideSet);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of nodes includes the starting point.
-SmallVector<DomTreeNode *, 16> collectChildrenInLoop(DomTreeNode *N,
-                                                     const Loop *CurLoop);
+/// The returned vector of basic blocks includes the starting point.
+SmallVector<BasicBlock *, 16>
+collectChildrenInLoop(DominatorTree *DT, DomTreeNode *N, const Loop *CurLoop);
 
 /// Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
@@ -377,6 +377,14 @@ RecurKind getMinMaxReductionRecurKind(Intrinsic::ID RdxID);
 
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
+
+/// Given information about an @llvm.vector.reduce.* intrinsic, return
+/// the identity value for the reduction.
+Value *getReductionIdentity(Intrinsic::ID RdxID, Type *Ty, FastMathFlags FMF);
+
+/// Given information about an recurrence kind, return the identity
+/// for the @llvm.vector.reduce.* used to generate it.
+Value *getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.

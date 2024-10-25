@@ -501,7 +501,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
   FunctionDecl *DebugFunctionDecl = nullptr;
   if (!FO.UIntPtrCastRequired) {
     FunctionProtoType::ExtProtoInfo EPI;
-    QualType FunctionTy = Ctx.getFunctionType(Ctx.VoidTy, std::nullopt, EPI);
+    QualType FunctionTy = Ctx.getFunctionType(Ctx.VoidTy, {}, EPI);
     DebugFunctionDecl = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), FO.S->getBeginLoc(),
         SourceLocation(), DeclarationName(), FunctionTy,
@@ -2734,8 +2734,8 @@ GetAlignedMapping(const OMPLoopDirective &S, CodeGenFunction &CGF) {
 
 // Pass OMPLoopDirective (instead of OMPSimdDirective) to make this function
 // available for "loop bind(thread)", which maps to "simd".
-void emitOMPSimdDirective(const OMPLoopDirective &S, CodeGenFunction &CGF,
-                          CodeGenModule &CGM) {
+static void emitOMPSimdDirective(const OMPLoopDirective &S,
+                                 CodeGenFunction &CGF, CodeGenModule &CGM) {
   bool UseOMPIRBuilder =
       CGM.getLangOpts().OpenMPIRBuilder && isSimdSupportedByOpenMPIRBuilder(S);
   if (UseOMPIRBuilder) {
@@ -3987,8 +3987,8 @@ convertClauseKindToSchedKind(OpenMPScheduleClauseKind ScheduleClauseKind) {
 
 // Pass OMPLoopDirective (instead of OMPForDirective) to make this function
 // available for "loop bind(parallel)", which maps to "for".
-void emitOMPForDirective(const OMPLoopDirective &S, CodeGenFunction &CGF,
-                         CodeGenModule &CGM, bool HasCancel) {
+static void emitOMPForDirective(const OMPLoopDirective &S, CodeGenFunction &CGF,
+                                CodeGenModule &CGM, bool HasCancel) {
   bool HasLastprivates = false;
   bool UseOMPIRBuilder = CGM.getLangOpts().OpenMPIRBuilder &&
                          isForSupportedByOpenMPIRBuilder(S, HasCancel);
@@ -4221,6 +4221,32 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
     CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(),
                                            OMPD_unknown);
   }
+}
+
+void CodeGenFunction::EmitOMPScopeDirective(const OMPScopeDirective &S) {
+  {
+    // Emit code for 'scope' region
+    auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+      Action.Enter(CGF);
+      OMPPrivateScope PrivateScope(CGF);
+      (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
+      CGF.EmitOMPPrivateClause(S, PrivateScope);
+      CGF.EmitOMPReductionClauseInit(S, PrivateScope);
+      (void)PrivateScope.Privatize();
+      CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
+      CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_parallel);
+    };
+    auto LPCRegion =
+        CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+    OMPLexicalScope Scope(*this, S, OMPD_unknown);
+    CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_scope, CodeGen);
+  }
+  // Emit an implicit barrier at the end.
+  if (!S.getSingleClause<OMPNowaitClause>()) {
+    CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(), OMPD_scope);
+  }
+  // Check for outer lastprivate conditional update.
+  checkForLastprivateConditionalUpdate(*this, S);
 }
 
 void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
@@ -5421,7 +5447,7 @@ void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {
   CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
 }
 
-bool isSupportedByOpenMPIRBuilder(const OMPTaskgroupDirective &T) {
+static bool isSupportedByOpenMPIRBuilder(const OMPTaskgroupDirective &T) {
   return T.clauses().empty();
 }
 
@@ -5483,7 +5509,7 @@ void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
         if (const auto *FlushClause = S.getSingleClause<OMPFlushClause>())
           return llvm::ArrayRef(FlushClause->varlist_begin(),
                                 FlushClause->varlist_end());
-        return std::nullopt;
+        return {};
       }(),
       S.getBeginLoc(), AO);
 }
@@ -5942,8 +5968,9 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
 
 // Pass OMPLoopDirective (instead of OMPDistributeDirective) to make this
 // function available for "loop bind(teams)", which maps to "distribute".
-void emitOMPDistributeDirective(const OMPLoopDirective &S, CodeGenFunction &CGF,
-                                CodeGenModule &CGM) {
+static void emitOMPDistributeDirective(const OMPLoopDirective &S,
+                                       CodeGenFunction &CGF,
+                                       CodeGenModule &CGM) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
     CGF.EmitOMPDistributeLoop(S, emitOMPLoopBodyWithStopPoint, S.getInc());
   };
@@ -6172,7 +6199,7 @@ static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
   case llvm::AtomicOrdering::Acquire:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                          llvm::AtomicOrdering::Acquire);
     break;
   case llvm::AtomicOrdering::Monotonic:
@@ -6201,7 +6228,7 @@ static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
   case llvm::AtomicOrdering::Release:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                          llvm::AtomicOrdering::Release);
     break;
   case llvm::AtomicOrdering::Acquire:
@@ -6391,7 +6418,7 @@ static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF,
   case llvm::AtomicOrdering::Release:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                          llvm::AtomicOrdering::Release);
     break;
   case llvm::AtomicOrdering::Acquire:
@@ -6506,17 +6533,17 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
     // operation is also an acquire flush.
     switch (AO) {
     case llvm::AtomicOrdering::Release:
-      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                            llvm::AtomicOrdering::Release);
       break;
     case llvm::AtomicOrdering::Acquire:
-      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                            llvm::AtomicOrdering::Acquire);
       break;
     case llvm::AtomicOrdering::AcquireRelease:
     case llvm::AtomicOrdering::SequentiallyConsistent:
       CGF.CGM.getOpenMPRuntime().emitFlush(
-          CGF, std::nullopt, Loc, llvm::AtomicOrdering::AcquireRelease);
+          CGF, {}, Loc, llvm::AtomicOrdering::AcquireRelease);
       break;
     case llvm::AtomicOrdering::Monotonic:
       break;

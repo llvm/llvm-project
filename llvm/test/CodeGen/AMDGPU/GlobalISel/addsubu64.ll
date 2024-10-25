@@ -15,8 +15,6 @@ define amdgpu_kernel void @s_add_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: s_add_u64:
@@ -30,8 +28,6 @@ define amdgpu_kernel void @s_add_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %add = add i64 %a, %b
@@ -45,8 +41,6 @@ define amdgpu_ps void @v_add_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GCN-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v3, v5, vcc_lo
 ; GCN-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
   %add = add i64 %a, %b
@@ -67,8 +61,6 @@ define amdgpu_kernel void @s_sub_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: s_sub_u64:
@@ -82,8 +74,6 @@ define amdgpu_kernel void @s_sub_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %sub = sub i64 %a, %b
@@ -97,8 +87,6 @@ define amdgpu_ps void @v_sub_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GCN-NEXT:    v_sub_co_u32 v2, vcc_lo, v2, v4
 ; GCN-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v3, v5, vcc_lo
 ; GCN-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
   %sub = sub i64 %a, %b

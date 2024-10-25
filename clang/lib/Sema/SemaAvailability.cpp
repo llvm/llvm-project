@@ -1005,25 +1005,54 @@ bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
   return true;
 }
 
-bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
-  VersionTuple CondVersion;
-  if (auto *E = dyn_cast<ObjCAvailabilityCheckExpr>(If->getCond())) {
-    CondVersion = E->getVersion();
+struct ExtractedAvailabilityExpr {
+  const ObjCAvailabilityCheckExpr *E = nullptr;
+  bool isNegated = false;
+};
 
-    // If we're using the '*' case here or if this check is redundant, then we
-    // use the enclosing version to check both branches.
-    if (CondVersion.empty() || CondVersion <= AvailabilityStack.back())
-      return TraverseStmt(If->getThen()) && TraverseStmt(If->getElse());
-  } else {
+ExtractedAvailabilityExpr extractAvailabilityExpr(const Expr *IfCond) {
+  const auto *E = IfCond;
+  bool IsNegated = false;
+  while (true) {
+    E = E->IgnoreParens();
+    if (const auto *AE = dyn_cast<ObjCAvailabilityCheckExpr>(E)) {
+      return ExtractedAvailabilityExpr{AE, IsNegated};
+    }
+
+    const auto *UO = dyn_cast<UnaryOperator>(E);
+    if (!UO || UO->getOpcode() != UO_LNot) {
+      return ExtractedAvailabilityExpr{};
+    }
+    E = UO->getSubExpr();
+    IsNegated = !IsNegated;
+  }
+}
+
+bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
+  ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(If->getCond());
+  if (!IfCond.E) {
     // This isn't an availability checking 'if', we can just continue.
     return Base::TraverseIfStmt(If);
   }
 
+  VersionTuple CondVersion = IfCond.E->getVersion();
+  // If we're using the '*' case here or if this check is redundant, then we
+  // use the enclosing version to check both branches.
+  if (CondVersion.empty() || CondVersion <= AvailabilityStack.back()) {
+    return TraverseStmt(If->getThen()) && TraverseStmt(If->getElse());
+  }
+
+  auto *Guarded = If->getThen();
+  auto *Unguarded = If->getElse();
+  if (IfCond.isNegated) {
+    std::swap(Guarded, Unguarded);
+  }
+
   AvailabilityStack.push_back(CondVersion);
-  bool ShouldContinue = TraverseStmt(If->getThen());
+  bool ShouldContinue = TraverseStmt(Guarded);
   AvailabilityStack.pop_back();
 
-  return ShouldContinue && TraverseStmt(If->getElse());
+  return ShouldContinue && TraverseStmt(Unguarded);
 }
 
 } // end anonymous namespace

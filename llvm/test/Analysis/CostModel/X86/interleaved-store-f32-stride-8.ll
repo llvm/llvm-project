@@ -14,11 +14,13 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v7, ptr %out7, align 4
+; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v7, ptr %out7, align 4
 ; SSE2:  LV: Found an estimated cost of 24 for VF 2 For instruction: store float %v7, ptr %out7, align 4
 ; SSE2:  LV: Found an estimated cost of 56 for VF 4 For instruction: store float %v7, ptr %out7, align 4
 ; SSE2:  LV: Found an estimated cost of 112 for VF 8 For instruction: store float %v7, ptr %out7, align 4
 ;
 ; AVX1-LABEL: 'test'
+; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v7, ptr %out7, align 4
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v7, ptr %out7, align 4
 ; AVX1:  LV: Found an estimated cost of 24 for VF 2 For instruction: store float %v7, ptr %out7, align 4
 ; AVX1:  LV: Found an estimated cost of 56 for VF 4 For instruction: store float %v7, ptr %out7, align 4
@@ -27,12 +29,14 @@ define void @test() {
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v7, ptr %out7, align 4
+; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v7, ptr %out7, align 4
 ; AVX2:  LV: Found an estimated cost of 24 for VF 2 For instruction: store float %v7, ptr %out7, align 4
 ; AVX2:  LV: Found an estimated cost of 56 for VF 4 For instruction: store float %v7, ptr %out7, align 4
 ; AVX2:  LV: Found an estimated cost of 120 for VF 8 For instruction: store float %v7, ptr %out7, align 4
 ; AVX2:  LV: Found an estimated cost of 240 for VF 16 For instruction: store float %v7, ptr %out7, align 4
 ;
 ; AVX512-LABEL: 'test'
+; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v7, ptr %out7, align 4
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v7, ptr %out7, align 4
 ; AVX512:  LV: Found an estimated cost of 11 for VF 2 For instruction: store float %v7, ptr %out7, align 4
 ; AVX512:  LV: Found an estimated cost of 23 for VF 4 For instruction: store float %v7, ptr %out7, align 4

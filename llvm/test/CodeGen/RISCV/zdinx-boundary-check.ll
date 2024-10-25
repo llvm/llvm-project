@@ -493,3 +493,67 @@ entry:
   store double %d, ptr %add.ptr, align 8
   ret void
 }
+
+@f = global double 4.2, align 16
+
+define double @foo13(ptr nocapture %p) nounwind {
+; RV32ZDINX-LABEL: foo13:
+; RV32ZDINX:       # %bb.0: # %entry
+; RV32ZDINX-NEXT:    addi sp, sp, -16
+; RV32ZDINX-NEXT:    lui a0, %hi(f)
+; RV32ZDINX-NEXT:    lw a1, %lo(f+8)(a0)
+; RV32ZDINX-NEXT:    sw a1, 12(sp)
+; RV32ZDINX-NEXT:    lw a0, %lo(f+4)(a0)
+; RV32ZDINX-NEXT:    sw a0, 8(sp)
+; RV32ZDINX-NEXT:    lw a0, 8(sp)
+; RV32ZDINX-NEXT:    lw a1, 12(sp)
+; RV32ZDINX-NEXT:    addi sp, sp, 16
+; RV32ZDINX-NEXT:    ret
+;
+; RV32ZDINXUALIGNED-LABEL: foo13:
+; RV32ZDINXUALIGNED:       # %bb.0: # %entry
+; RV32ZDINXUALIGNED-NEXT:    lui a0, %hi(f)
+; RV32ZDINXUALIGNED-NEXT:    addi a0, a0, %lo(f)
+; RV32ZDINXUALIGNED-NEXT:    lw a1, 8(a0)
+; RV32ZDINXUALIGNED-NEXT:    lw a0, 4(a0)
+; RV32ZDINXUALIGNED-NEXT:    ret
+;
+; RV64ZDINX-LABEL: foo13:
+; RV64ZDINX:       # %bb.0: # %entry
+; RV64ZDINX-NEXT:    lui a0, %hi(f)
+; RV64ZDINX-NEXT:    lwu a1, %lo(f+8)(a0)
+; RV64ZDINX-NEXT:    lwu a0, %lo(f+4)(a0)
+; RV64ZDINX-NEXT:    slli a1, a1, 32
+; RV64ZDINX-NEXT:    or a0, a1, a0
+; RV64ZDINX-NEXT:    ret
+entry:
+  %add.ptr = getelementptr inbounds i8, ptr @f, i64 4
+  %0 = load double, ptr %add.ptr, align 4
+  ret double %0
+}
+
+define double @foo14(ptr nocapture %p) nounwind {
+; RV32ZDINX-LABEL: foo14:
+; RV32ZDINX:       # %bb.0: # %entry
+; RV32ZDINX-NEXT:    lui a0, %hi(f)
+; RV32ZDINX-NEXT:    lw a1, %lo(f+12)(a0)
+; RV32ZDINX-NEXT:    lw a0, %lo(f+8)(a0)
+; RV32ZDINX-NEXT:    ret
+;
+; RV32ZDINXUALIGNED-LABEL: foo14:
+; RV32ZDINXUALIGNED:       # %bb.0: # %entry
+; RV32ZDINXUALIGNED-NEXT:    lui a0, %hi(f)
+; RV32ZDINXUALIGNED-NEXT:    lw a1, %lo(f+12)(a0)
+; RV32ZDINXUALIGNED-NEXT:    lw a0, %lo(f+8)(a0)
+; RV32ZDINXUALIGNED-NEXT:    ret
+;
+; RV64ZDINX-LABEL: foo14:
+; RV64ZDINX:       # %bb.0: # %entry
+; RV64ZDINX-NEXT:    lui a0, %hi(f)
+; RV64ZDINX-NEXT:    ld a0, %lo(f+8)(a0)
+; RV64ZDINX-NEXT:    ret
+entry:
+  %add.ptr = getelementptr inbounds i8, ptr @f, i64 8
+  %0 = load double, ptr %add.ptr, align 8
+  ret double %0
+}

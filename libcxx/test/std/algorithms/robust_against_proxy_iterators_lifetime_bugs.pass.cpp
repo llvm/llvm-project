@@ -16,6 +16,8 @@
 #include <cassert>
 #include <random>
 #include <set>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 

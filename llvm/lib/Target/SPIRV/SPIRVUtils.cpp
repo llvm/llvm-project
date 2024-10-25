@@ -22,6 +22,8 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include <queue>
+#include <vector>
 
 namespace llvm {
 
@@ -44,8 +46,7 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 
 // Get length including padding and null terminator.
 static size_t getPaddedLen(const StringRef &Str) {
-  const size_t Len = Str.size() + 1;
-  return (Len % 4 == 0) ? Len : Len + (4 - (Len % 4));
+  return (Str.size() + 4) & ~3;
 }
 
 void addStringImm(const StringRef &Str, MCInst &Inst) {
@@ -161,31 +162,6 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
 }
 
-// TODO: maybe the following two functions should be handled in the subtarget
-// to allow for different OpenCL vs Vulkan handling.
-unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
-  switch (SC) {
-  case SPIRV::StorageClass::Function:
-    return 0;
-  case SPIRV::StorageClass::CrossWorkgroup:
-    return 1;
-  case SPIRV::StorageClass::UniformConstant:
-    return 2;
-  case SPIRV::StorageClass::Workgroup:
-    return 3;
-  case SPIRV::StorageClass::Generic:
-    return 4;
-  case SPIRV::StorageClass::DeviceOnlyINTEL:
-    return 5;
-  case SPIRV::StorageClass::HostOnlyINTEL:
-    return 6;
-  case SPIRV::StorageClass::Input:
-    return 7;
-  default:
-    report_fatal_error("Unable to get address space id");
-  }
-}
-
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
@@ -249,6 +225,32 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
     return SPIRV::MemorySemantics::None;
   }
   llvm_unreachable(nullptr);
+}
+
+SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+  // Named by
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
+  // We don't need aliases for Invocation and CrossDevice, as we already have
+  // them covered by "singlethread" and "" strings respectively (see
+  // implementation of LLVMContext::LLVMContext()).
+  static const llvm::SyncScope::ID SubGroup =
+      Ctx.getOrInsertSyncScopeID("subgroup");
+  static const llvm::SyncScope::ID WorkGroup =
+      Ctx.getOrInsertSyncScopeID("workgroup");
+  static const llvm::SyncScope::ID Device =
+      Ctx.getOrInsertSyncScopeID("device");
+
+  if (Id == llvm::SyncScope::SingleThread)
+    return SPIRV::Scope::Invocation;
+  else if (Id == llvm::SyncScope::System)
+    return SPIRV::Scope::CrossDevice;
+  else if (Id == SubGroup)
+    return SPIRV::Scope::Subgroup;
+  else if (Id == WorkGroup)
+    return SPIRV::Scope::Workgroup;
+  else if (Id == Device)
+    return SPIRV::Scope::Device;
+  return SPIRV::Scope::CrossDevice;
 }
 
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
@@ -432,6 +434,182 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
 
   // Unable to recognize SPIRV type name
   return nullptr;
+}
+
+std::unordered_set<BasicBlock *>
+PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
+  std::queue<BasicBlock *> ToVisit;
+  ToVisit.push(Start);
+
+  std::unordered_set<BasicBlock *> Output;
+  while (ToVisit.size() != 0) {
+    BasicBlock *BB = ToVisit.front();
+    ToVisit.pop();
+
+    if (Output.count(BB) != 0)
+      continue;
+    Output.insert(BB);
+
+    for (BasicBlock *Successor : successors(BB)) {
+      if (DT.dominates(Successor, BB))
+        continue;
+      ToVisit.push(Successor);
+    }
+  }
+
+  return Output;
+}
+
+size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Rank) {
+  if (Visited.count(BB) != 0)
+    return Rank;
+
+  Loop *L = LI.getLoopFor(BB);
+  const bool isLoopHeader = LI.isLoopHeader(BB);
+
+  if (BlockToOrder.count(BB) == 0) {
+    OrderInfo Info = {Rank, Visited.size()};
+    BlockToOrder.emplace(BB, Info);
+  } else {
+    BlockToOrder[BB].Rank = std::max(BlockToOrder[BB].Rank, Rank);
+  }
+
+  for (BasicBlock *Predecessor : predecessors(BB)) {
+    if (isLoopHeader && L->contains(Predecessor)) {
+      continue;
+    }
+
+    if (BlockToOrder.count(Predecessor) == 0) {
+      return Rank;
+    }
+  }
+
+  Visited.insert(BB);
+
+  SmallVector<BasicBlock *, 2> OtherSuccessors;
+  SmallVector<BasicBlock *, 2> LoopSuccessors;
+
+  for (BasicBlock *Successor : successors(BB)) {
+    // Ignoring back-edges.
+    if (DT.dominates(Successor, BB))
+      continue;
+
+    if (isLoopHeader && L->contains(Successor)) {
+      LoopSuccessors.push_back(Successor);
+    } else
+      OtherSuccessors.push_back(Successor);
+  }
+
+  for (BasicBlock *BB : LoopSuccessors)
+    Rank = std::max(Rank, visit(BB, Rank + 1));
+
+  size_t OutputRank = Rank;
+  for (BasicBlock *Item : OtherSuccessors)
+    OutputRank = std::max(OutputRank, visit(Item, Rank + 1));
+  return OutputRank;
+}
+
+PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
+  DT.recalculate(F);
+  LI = LoopInfo(DT);
+
+  visit(&*F.begin(), 0);
+
+  Order.reserve(F.size());
+  for (auto &[BB, Info] : BlockToOrder)
+    Order.emplace_back(BB);
+
+  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
+    return compare(LHS, RHS);
+  });
+}
+
+bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
+                                     const BasicBlock *RHS) const {
+  const OrderInfo &InfoLHS = BlockToOrder.at(const_cast<BasicBlock *>(LHS));
+  const OrderInfo &InfoRHS = BlockToOrder.at(const_cast<BasicBlock *>(RHS));
+  if (InfoLHS.Rank != InfoRHS.Rank)
+    return InfoLHS.Rank < InfoRHS.Rank;
+  return InfoLHS.TraversalIndex < InfoRHS.TraversalIndex;
+}
+
+void PartialOrderingVisitor::partialOrderVisit(
+    BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
+  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  assert(BlockToOrder.count(&Start) != 0);
+
+  // Skipping blocks with a rank inferior to |Start|'s rank.
+  auto It = Order.begin();
+  while (It != Order.end() && *It != &Start)
+    ++It;
+
+  // This is unexpected. Worst case |Start| is the last block,
+  // so It should point to the last block, not past-end.
+  assert(It != Order.end());
+
+  // By default, there is no rank limit. Setting it to the maximum value.
+  std::optional<size_t> EndRank = std::nullopt;
+  for (; It != Order.end(); ++It) {
+    if (EndRank.has_value() && BlockToOrder[*It].Rank > *EndRank)
+      break;
+
+    if (Reachable.count(*It) == 0) {
+      continue;
+    }
+
+    if (!Op(*It)) {
+      EndRank = BlockToOrder[*It].Rank;
+    }
+  }
+}
+
+bool sortBlocks(Function &F) {
+  if (F.size() == 0)
+    return false;
+
+  bool Modified = false;
+
+  std::vector<BasicBlock *> Order;
+  Order.reserve(F.size());
+
+  PartialOrderingVisitor Visitor(F);
+  Visitor.partialOrderVisit(*F.begin(), [&Order](BasicBlock *Block) {
+    Order.push_back(Block);
+    return true;
+  });
+
+  assert(&*F.begin() == Order[0]);
+  BasicBlock *LastBlock = &*F.begin();
+  for (BasicBlock *BB : Order) {
+    if (BB != LastBlock && &*LastBlock->getNextNode() != BB) {
+      Modified = true;
+      BB->moveAfter(LastBlock);
+    }
+    LastBlock = BB;
+  }
+
+  return Modified;
+}
+
+MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
+  MachineInstr *MaybeDef = MRI.getVRegDef(Reg);
+  if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
+    MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
+  return MaybeDef;
+}
+
+bool getVacantFunctionName(Module &M, std::string &Name) {
+  // It's a bit of paranoia, but still we don't want to have even a chance that
+  // the loop will work for too long.
+  constexpr unsigned MaxIters = 1024;
+  for (unsigned I = 0; I < MaxIters; ++I) {
+    std::string OrdName = Name + Twine(I).str();
+    if (!M.getFunction(OrdName)) {
+      Name = OrdName;
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace llvm
