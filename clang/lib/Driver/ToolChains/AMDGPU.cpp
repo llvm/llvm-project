@@ -651,7 +651,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
   if (Args.hasArg(options::OPT_startfiles)) {
-    auto IncludePath = getToolChain().getStdlibPath();
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
     if (!IncludePath)
       IncludePath = "/lib";
     SmallString<128> P(*IncludePath);
