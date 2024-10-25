@@ -2917,7 +2917,10 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     // to the block with the merged `invoke`.
     for (BasicBlock *OrigSuccBB : successors(II->getParent()))
       OrigSuccBB->removePredecessor(II->getParent());
-    BranchInst::Create(MergedInvoke->getParent(), II->getParent());
+    auto *BI = BranchInst::Create(MergedInvoke->getParent(), II->getParent());
+    // The unconditional branch is part of the replacement for the original
+    // invoke, so should use its DebugLoc.
+    BI->setDebugLoc(II->getDebugLoc());
     bool Success = MergedInvoke->tryIntersectAttributes(II);
     assert(Success && "Merged invokes with incompatible attributes");
     // For NDEBUG Compile
