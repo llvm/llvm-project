@@ -517,15 +517,17 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                       break;
                     }
                   }
+                  // If given operation does not reflect mapping item,
+                  // check private clause
+                  if (!ompValArg)
+                    ompValArg = getPrivateArg(*argIface, targetOp, op);
                 })
-                .template Case<omp::ParallelOp>([&](auto parallelOp) {
-                  // TODO private clause can be part of multiple
-                  // OpenMP directives( target, simd, etc.)
-                  // We should extend alias analysis when Flang
-                  // will handle private clause for different than parallel
-                  // directives.
-                  ompValArg = getPrivateArg(*argIface, parallelOp, op);
-                });
+                .template Case<omp::DistributeOp, omp::ParallelOp,
+                               omp::SectionsOp, omp::SimdOp, omp::SingleOp,
+                               omp::TaskloopOp, omp::TaskOp, omp::WsloopOp>(
+                    [&](auto privateOp) {
+                      ompValArg = getPrivateArg(*argIface, privateOp, op);
+                    });
             if (ompValArg) {
               v = ompValArg;
               defOp = ompValArg.getDefiningOp();
