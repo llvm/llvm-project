@@ -1081,6 +1081,16 @@ let TargetPrefix = "nvvm" in {
   }
 
 //
+// Funnel-shift
+//
+  foreach direction = ["l", "r"] in
+    def int_nvvm_fsh # direction # _clamp :
+      DefaultAttrsIntrinsic<[llvm_anyint_ty],
+        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+        [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+
+//
 // Convert
 //
 

@@ -3143,12 +3143,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
           SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal)));
     }
 
-    if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
-      if (auto *RHS = dyn_cast<FCmpInst>(FalseVal))
-        if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
-                                        /*IsSelectLogical*/ true))
-          return replaceInstUsesWith(SI, V);
-
     // (A && B) || (C && B) --> (A || C) && B
     if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
         match(FalseVal, m_LogicalAnd(m_Value(C), m_Value(D))) &&
@@ -3190,12 +3184,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       return replaceInstUsesWith(
           SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal)));
     }
-
-    if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
-      if (auto *RHS = dyn_cast<FCmpInst>(TrueVal))
-        if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true,
-                                        /*IsSelectLogical*/ true))
-          return replaceInstUsesWith(SI, V);
 
     // (A || B) && (C || B) --> (A && C) || B
     if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
@@ -3305,11 +3293,9 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       return replaceInstUsesWith(SI, Op1);
     }
 
-    if (auto *ICmp0 = dyn_cast<ICmpInst>(CondVal))
-      if (auto *ICmp1 = dyn_cast<ICmpInst>(Op1))
-        if (auto *V = foldAndOrOfICmps(ICmp0, ICmp1, SI, IsAnd,
-                                       /* IsLogical */ true))
-          return replaceInstUsesWith(SI, V);
+    if (auto *V = foldBooleanAndOr(CondVal, Op1, SI, IsAnd,
+                                   /*IsLogical=*/true))
+      return replaceInstUsesWith(SI, V);
   }
 
   // select (a || b), c, false -> select a, c, false

@@ -16,7 +16,7 @@ sys.path.append(sys.argv[1])
 from libcxx.header_information import lit_header_restrictions, public_headers, mandatory_inclusions
 
 for header in public_headers:
-  header_guard = lambda h: f"_LIBCPP_{h.upper().replace('.', '_').replace('/', '_')}"
+  header_guard = lambda h: f"_LIBCPP_{str(h).upper().replace('.', '_').replace('/', '_')}"
 
   # <cassert> has no header guards
   if header == 'cassert':

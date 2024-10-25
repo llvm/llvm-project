@@ -89,8 +89,11 @@ add_math_entrypoint_object(copysignf128)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
+
 add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
+add_math_entrypoint_object(coshf16)
+
 add_math_entrypoint_object(cospif)
 
 add_math_entrypoint_object(daddl)
@@ -331,15 +334,18 @@ add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
 add_math_entrypoint_object(log10f)
+add_math_entrypoint_object(log10f16)
 
 add_math_entrypoint_object(log1p)
 add_math_entrypoint_object(log1pf)
 
 add_math_entrypoint_object(log2)
 add_math_entrypoint_object(log2f)
+add_math_entrypoint_object(log2f16)
 
 add_math_entrypoint_object(log)
 add_math_entrypoint_object(logf)
+add_math_entrypoint_object(logf16)
 
 add_math_entrypoint_object(logb)
 add_math_entrypoint_object(logbf)
@@ -481,10 +487,12 @@ add_math_entrypoint_object(sinpif16)
 
 add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)
+add_math_entrypoint_object(sinhf16)
 
 add_math_entrypoint_object(sqrt)
 add_math_entrypoint_object(sqrtf)
 add_math_entrypoint_object(sqrtl)
+add_math_entrypoint_object(sqrtf16)
 add_math_entrypoint_object(sqrtf128)
 
 add_math_entrypoint_object(tan)
@@ -492,6 +500,7 @@ add_math_entrypoint_object(tanf)
 
 add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)
+add_math_entrypoint_object(tanhf16)
 
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)

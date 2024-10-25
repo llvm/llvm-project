@@ -725,12 +725,11 @@ define <4 x i64> @combine_vec4i64_ashr_clamped(<4 x i64> %x, <4 x i64> %y) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [9223372039002259456,9223372039002259456]
-; SSE41-NEXT:    movdqa %xmm3, %xmm0
-; SSE41-NEXT:    pxor %xmm7, %xmm0
+; SSE41-NEXT:    movdqa %xmm3, %xmm6
+; SSE41-NEXT:    pxor %xmm7, %xmm6
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [9223372039002259519,9223372039002259519]
-; SSE41-NEXT:    movdqa %xmm8, %xmm6
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm6
-; SSE41-NEXT:    pshufd {{.*#+}} xmm9 = xmm0[0,0,2,2]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm9 = xmm6[0,0,2,2]
+; SSE41-NEXT:    pcmpeqd %xmm8, %xmm6
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [2147483711,2147483711,2147483711,2147483711]
 ; SSE41-NEXT:    movdqa %xmm5, %xmm0
 ; SSE41-NEXT:    pcmpgtd %xmm9, %xmm0

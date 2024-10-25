@@ -4663,6 +4663,14 @@ the configuration (without a prefix: ``Auto``).
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
   This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
 
+.. _KeepFormFeed:
+
+**KeepFormFeed** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <KeepFormFeed>`
+  Keep the form feed character if it's immediately preceded and followed by
+  a newline. Multiple form feeds and newlines within a whitespace range are
+  replaced with a single newline and form feed followed by the remaining
+  newlines.
+
 .. _LambdaBodyIndentation:
 
 **LambdaBodyIndentation** (``LambdaBodyIndentationKind``) :versionbadge:`clang-format 13` :ref:`¶ <LambdaBodyIndentation>`
@@ -5503,6 +5511,31 @@ the configuration (without a prefix: ``Auto``).
       } else {                                   e();
         e();
       }
+    }
+
+.. _RemoveEmptyLinesInUnwrappedLines:
+
+**RemoveEmptyLinesInUnwrappedLines** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <RemoveEmptyLinesInUnwrappedLines>`
+  Remove empty lines within unwrapped lines.
+
+  .. code-block:: c++
+
+    false:                            true:
+
+    int c                  vs.        int c = a + b;
+
+        = a + b;
+
+    enum : unsigned        vs.        enum : unsigned {
+                                        AA = 0,
+    {                                   BB
+      AA = 0,                         } myEnum;
+      BB
+    } myEnum;
+
+    while (                vs.        while (true) {
+                                      }
+        true) {
     }
 
 .. _RemoveParentheses:

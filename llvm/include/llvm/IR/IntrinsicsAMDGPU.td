@@ -1115,7 +1115,7 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
 // it is const 0. A struct intrinsic with constant 0 index is different to the
 // corresponding raw intrinsic on gfx9+ because the behavior of bound checking
 // and swizzling changes depending on whether idxen is set in the instruction.
-// These instrinsics also keep the offset and soffset arguments separate as
+// These intrinsics also keep the offset and soffset arguments separate as
 // they behave differently in bounds checking and swizzling.
 
 // The versions of these intrinsics that take <4 x i32> arguments are deprecated

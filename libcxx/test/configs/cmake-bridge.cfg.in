@@ -20,7 +20,7 @@ config.name = os.path.basename('@LIBCXX_TEST_CONFIG@')
 config.test_source_root = os.path.join('@LIBCXX_SOURCE_DIR@', 'test')
 config.test_format = libcxx.test.format.CxxStandardLibraryTest()
 config.recursiveExpansionLimit = 10
-config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
+config.test_exec_root = os.path.join('@LIBCXX_BINARY_DIR@', 'test')
 
 # Add substitutions for bootstrapping the test suite configuration
 config.substitutions.append(('%{libcxx-dir}', '@LIBCXX_SOURCE_DIR@'))

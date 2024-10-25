@@ -3441,7 +3441,8 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                            : AMDGPU::V_MOV_B32_e32
                                  : Is64Bit ? AMDGPU::S_MOV_B64_IMM_PSEUDO
                                            : AMDGPU::S_MOV_B32;
-    APInt Imm(Is64Bit ? 64 : 32, getImmFor(UseMI.getOperand(1)));
+    APInt Imm(Is64Bit ? 64 : 32, getImmFor(UseMI.getOperand(1)),
+              /*isSigned=*/true, /*implicitTrunc=*/true);
 
     if (RI.isAGPR(*MRI, DstReg)) {
       if (Is64Bit || !isInlineConstant(Imm))
@@ -8917,6 +8918,7 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   uint16_t Opcode = MI.getOpcode();
   return IsNullOrVectorRegister &&
          (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode) ||
+          Opcode == AMDGPU::IMPLICIT_DEF ||
           (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
            MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
