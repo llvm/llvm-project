@@ -13,6 +13,7 @@
 // RUN: %clang_cc1 -std=c++20 %t/b.cppm -emit-module-interface -o %t/b.v1.pcm \
 // RUN:     -fmodule-file=a=%t/a.v1.pcm
 // RUN: diff %t/b.pcm %t/b.v1.pcm &> /dev/null
+
 //--- a.cppm
 export module a;
 export int a();
