@@ -10,7 +10,7 @@
 #define _LIBCPP___LOCALE_DIR_LOCALE_GUARD_H
 
 #include <__config>
-#include <__locale> // for locale_t
+#include <__locale>
 #include <clocale>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_MSVCRT_LIKE)
 struct __locale_guard {
-  __locale_guard(locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
+  __locale_guard(__locale::__locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
     // Setting the locale can be expensive even when the locale given is
     // already the current locale, so do an explicit check to see if the
     // current locale is already the one we want.
@@ -59,14 +59,14 @@ struct __locale_guard {
 };
 #else
 struct __locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(__locale::__locale_t& __loc) : __old_loc_(__locale::__uselocale(__loc)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
     if (__old_loc_)
-      uselocale(__old_loc_);
+      __locale::__uselocale(__old_loc_);
   }
 
-  locale_t __old_loc_;
+  __locale::__locale_t __old_loc_;
 
   __locale_guard(__locale_guard const&)            = delete;
   __locale_guard& operator=(__locale_guard const&) = delete;
