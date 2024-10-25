@@ -1360,27 +1360,25 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
   for (; this->__end_ != this->__end_cap() && __first != __last; ++__first) {
     __construct_one_at_end(*__first);
   }
-  __split_buffer<value_type, allocator_type&> __v(__a);
-  if (__first != __last) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
-      difference_type __old_size = __old_last - this->__begin_;
-      difference_type __old_p    = __p - this->__begin_;
-      reserve(__recommend(size() + __v.size()));
-      __p        = this->__begin_ + __old_p;
-      __old_last = this->__begin_ + __old_size;
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      erase(__make_iter(__old_last), end());
-      throw;
-    }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  if (__first == __last)
+    std::rotate(__p, __old_last, this->__end_);
+  else {
+    auto __guard =
+        std::__make_exception_guard(_AllocatorDestroyRangeReverse<allocator_type, pointer>(__a, __old_last, __end_));
+    __split_buffer<value_type, allocator_type&> __v(__a);
+    __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
+    __split_buffer<value_type, allocator_type&> __merged(__recommend(size() + __v.size()), __off, __a);
+    std::__uninitialized_allocator_relocate(
+        __a, std::__to_address(__old_last), std::__to_address(__end_), std::__to_address(__merged.__end_));
+    __merged.__end_ += __end_ - __old_last;
+    __end_ = __old_last;
+    __guard.__complete();
+    std::__uninitialized_allocator_relocate(
+        __a, std::__to_address(__v.__begin_), std::__to_address(__v.__end_), std::__to_address(__merged.__end_));
+    __merged.__end_ += __v.size();
+    __p = __swap_out_circular_buffer(__merged, __p);
   }
-  __p = std::rotate(__p, __old_last, this->__end_);
-  insert(__make_iter(__p), std::make_move_iterator(__v.begin()), std::make_move_iterator(__v.end()));
-  return begin() + __off;
+  return __make_iter(__p);
 }
 
 template <class _Tp, class _Allocator>

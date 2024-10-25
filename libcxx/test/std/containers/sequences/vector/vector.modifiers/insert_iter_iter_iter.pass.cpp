@@ -46,6 +46,46 @@ TEST_CONSTEXPR_CXX20 bool tests()
         for (; j < 105; ++j)
             assert(v[j] == 0);
     }
+    {   // Vector may or may not need to reallocate because of the insertion -- test both cases.
+      { // The input range is shorter than the remaining capacity of the vector -- ensure no reallocation happens.
+        typedef std::vector<int> V;
+        V v(100);
+        v.reserve(v.size() + 10);
+        int a[]     = {1, 2, 3, 4, 5};
+        const int N = sizeof(a) / sizeof(a[0]);
+        V::iterator i =
+            v.insert(v.cbegin() + 10, cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(a + N));
+        assert(v.size() == 100 + N);
+        assert(is_contiguous_container_asan_correct(v));
+        assert(i == v.begin() + 10);
+        int j;
+        for (j = 0; j < 10; ++j)
+          assert(v[j] == 0);
+        for (std::size_t k = 0; k < N; ++j, ++k)
+          assert(v[j] == a[k]);
+        for (; j < 105; ++j)
+          assert(v[j] == 0);
+      }
+      { // The input range is longer than the remaining capacity of the vector -- ensure reallocation happens.
+        typedef std::vector<int> V;
+        V v(100);
+        v.reserve(v.size() + 2);
+        int a[]     = {1, 2, 3, 4, 5};
+        const int N = sizeof(a) / sizeof(a[0]);
+        V::iterator i =
+            v.insert(v.cbegin() + 10, cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(a + N));
+        assert(v.size() == 100 + N);
+        assert(is_contiguous_container_asan_correct(v));
+        assert(i == v.begin() + 10);
+        int j;
+        for (j = 0; j < 10; ++j)
+          assert(v[j] == 0);
+        for (std::size_t k = 0; k < N; ++j, ++k)
+          assert(v[j] == a[k]);
+        for (; j < 105; ++j)
+          assert(v[j] == 0);
+      }
+    }
     {
         typedef std::vector<int> V;
         V v(100);
