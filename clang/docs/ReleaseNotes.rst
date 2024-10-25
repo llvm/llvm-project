@@ -133,6 +133,15 @@ C++ Specific Potentially Breaking Changes
     // Fixed version:
     unsigned operator""_udl_name(unsigned long long);
 
+- Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
+  applied on a parameter of a function that returns void. This was previously 
+  ignored and had no effect. (#GH107556)
+
+  .. code-block:: c++
+
+    // Now diagnoses with an error.
+    void f(int& i [[clang::lifetimebound]]);
+
 ABI Changes in This Version
 ---------------------------
 
@@ -302,6 +311,11 @@ Modified Compiler Flags
   the ``promoted`` algorithm for complex division when possible rather than the
   less basic (limited range) algorithm.
 
+- The ``-fveclib`` option has been updated to enable ``-fno-math-errno`` for
+  ``-fveclib=ArmPL`` and ``-fveclib=SLEEF``. This gives Clang more opportunities
+  to utilize these vector libraries. The behavior for all other vector function
+  libraries remains unchanged.
+
 Removed Compiler Flags
 -------------------------
 
@@ -423,6 +437,8 @@ Improvements to Clang's diagnostics
 - Clang now emits a ``-Wdepredcated-literal-operator`` diagnostic, even if the
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
+
+- Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
 Improvements to Clang's time-trace
 ----------------------------------
