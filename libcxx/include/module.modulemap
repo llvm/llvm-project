@@ -1523,6 +1523,7 @@ module std [system] {
     }
     module uninitialized_algorithms {
       header "__memory/uninitialized_algorithms.h"
+      export std.utility.pair
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
@@ -2006,7 +2007,39 @@ module std [system] {
   }
 
   module vector {
-    module fwd { header "__fwd/vector.h" }
+    module fwd                   { header "__fwd/vector.h" }
+
+    module comparison            { header "__vector/comparison.h" }
+    module container_traits      { header "__vector/container_traits.h" }
+    module erase                 { header "__vector/erase.h" }
+    module vector_bool_formatter {
+      header "__vector/vector_bool_formatter.h"
+
+      export std.format.formatter
+    }
+    module pmr                   {
+      header "__vector/pmr.h"
+
+      export std.memory_resource.polymorphic_allocator
+    }
+    module swap                  { header "__vector/swap.h" }
+    module vector_bool           {
+      header "__vector/vector_bool.h"
+      export std.bit_reference
+      export std.memory.allocator
+      export std.vector.comparison
+      export std.vector.fwd
+      export std.vector.swap
+    }
+    module vector                {
+      header "__vector/vector.h"
+      export std.iterator.bounded_iter
+      export std.iterator.wrap_iter
+      export std.memory.allocator
+      export std.vector.comparison
+      export std.vector.fwd
+      export std.vector.swap
+    }
 
     header "vector"
     export *
