@@ -47,3 +47,53 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
 )
+
+add_entrypoint_object(
+  cimag
+  SRCS
+    cimag.cpp
+  HDRS
+    ../cimag.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  cimagf
+  SRCS
+    cimagf.cpp
+  HDRS
+    ../cimagf.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  cimagl
+  SRCS
+    cimagl.cpp
+  HDRS
+    ../cimagl.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  cimagf16
+  SRCS
+    cimagf16.cpp
+  HDRS
+    ../cimagf16.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  cimagf128
+  SRCS
+    cimagf128.cpp
+  HDRS
+    ../cimagf128.h
+  COMPILE_OPTIONS
+    -O3
+)

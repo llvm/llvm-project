@@ -59,3 +59,63 @@ add_libc_test(
   LINK_LIBRARIES
     LibcFPTestHelpers
 )
+
+add_libc_test(
+  cimag_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimag_test.cpp
+  DEPENDS
+    libc.src.complex.cimag
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimagf_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimagf_test.cpp
+  DEPENDS
+    libc.src.complex.cimagf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimagl_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimagl_test.cpp
+  DEPENDS
+    libc.src.complex.cimagl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimagf16_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimagf16_test.cpp
+  DEPENDS
+    libc.src.complex.cimagf16
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimagf128_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimagf128_test.cpp
+  DEPENDS
+    libc.src.complex.cimagf128
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
