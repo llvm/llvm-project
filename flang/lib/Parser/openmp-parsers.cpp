@@ -376,7 +376,8 @@ TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
         construct<OmpDependClause>(
             construct<OmpDependClause::Source>("SOURCE"_tok)) ||
         construct<OmpDependClause>(construct<OmpDependClause::InOut>(
-            Parser<OmpTaskDependenceType>{}, ":" >> Parser<OmpObjectList>{})))
+            maybe(Parser<OmpIteratorModifier>{} / ","_tok),
+            Parser<OmpTaskDependenceType>{} / ":", Parser<OmpObjectList>{})))
 
 // 2.15.3.7 LINEAR (linear-list: linear-step)
 //          linear-list -> list | modifier(list)

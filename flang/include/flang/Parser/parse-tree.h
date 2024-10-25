@@ -3566,7 +3566,9 @@ struct OmpDependClause {
   WRAPPER_CLASS(Sink, std::list<OmpDependSinkVec>);
   struct InOut {
     TUPLE_CLASS_BOILERPLATE(InOut);
-    std::tuple<OmpTaskDependenceType, OmpObjectList> t;
+    std::tuple<std::optional<OmpIteratorModifier>, OmpTaskDependenceType,
+        OmpObjectList>
+        t;
   };
   std::variant<Source, Sink, InOut> u;
 };
