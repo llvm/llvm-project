@@ -84,6 +84,7 @@ Name prefix            Description
 ``performance-``       Checks that target performance-related issues.
 ``portability-``       Checks that target portability-related issues that don't
                        relate to any particular coding style.
+``qt-``                Checks related to Qt framework.
 ``readability-``       Checks that target readability-related issues that don't
                        relate to any particular coding style.
 ``zircon-``            Checks related to Zircon kernel coding conventions.
