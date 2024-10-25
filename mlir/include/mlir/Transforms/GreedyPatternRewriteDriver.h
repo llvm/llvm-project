@@ -91,6 +91,14 @@ public:
 
   /// An optional listener that should be notified about IR modifications.
   RewriterBase::Listener *listener = nullptr;
+
+  /// Whether this should fold while greedily rewriting. This also disables
+  /// CSE'ing constants.
+  bool fold = true;
+
+  /// If set to "true", constants are CSE'd (even across multiple regions that
+  /// are in a parent-ancestor relationship).
+  bool cseConstants = true;
 };
 
 //===----------------------------------------------------------------------===//
@@ -104,8 +112,8 @@ public:
 /// The greedy rewrite may prematurely stop after a maximum number of
 /// iterations, which can be configured in the configuration parameter.
 ///
-/// Also performs folding and simple dead-code elimination before attempting to
-/// match any of the provided patterns.
+/// Also performs simple dead-code elimination before attempting to match any of
+/// the provided patterns.
 ///
 /// A region scope can be set in the configuration parameter. By default, the
 /// scope is set to the specified region. Only in-scope ops are added to the
@@ -117,10 +125,18 @@ public:
 ///
 /// Note: This method does not apply patterns to the region's parent operation.
 LogicalResult
+applyPatternsGreedily(Region &region, const FrozenRewritePatternSet &patterns,
+                      GreedyRewriteConfig config = GreedyRewriteConfig(),
+                      bool *changed = nullptr);
+/// Same as `applyPatternsAndGreedily` above with folding.
+inline LogicalResult
 applyPatternsAndFoldGreedily(Region &region,
                              const FrozenRewritePatternSet &patterns,
                              GreedyRewriteConfig config = GreedyRewriteConfig(),
-                             bool *changed = nullptr);
+                             bool *changed = nullptr) {
+  config.fold = true;
+  return applyPatternsGreedily(region, patterns, config, changed);
+}
 
 /// Rewrite ops nested under the given operation, which must be isolated from
 /// above, by repeatedly applying the highest benefit patterns in a greedy
@@ -129,8 +145,8 @@ applyPatternsAndFoldGreedily(Region &region,
 /// The greedy rewrite may prematurely stop after a maximum number of
 /// iterations, which can be configured in the configuration parameter.
 ///
-/// Also performs folding and simple dead-code elimination before attempting to
-/// match any of the provided patterns.
+/// Also performs simple dead-code elimination before attempting to match any of
+/// the provided patterns.
 ///
 /// This overload runs a separate greedy rewrite for each region of the
 /// specified op. A region scope can be set in the configuration parameter. By
@@ -147,22 +163,29 @@ applyPatternsAndFoldGreedily(Region &region,
 ///
 /// Note: This method does not apply patterns to the given operation itself.
 inline LogicalResult
-applyPatternsAndFoldGreedily(Operation *op,
-                             const FrozenRewritePatternSet &patterns,
-                             GreedyRewriteConfig config = GreedyRewriteConfig(),
-                             bool *changed = nullptr) {
+applyPatternsGreedily(Operation *op, const FrozenRewritePatternSet &patterns,
+                      GreedyRewriteConfig config = GreedyRewriteConfig(),
+                      bool *changed = nullptr) {
   bool anyRegionChanged = false;
   bool failed = false;
   for (Region &region : op->getRegions()) {
     bool regionChanged;
-    failed |=
-        applyPatternsAndFoldGreedily(region, patterns, config, &regionChanged)
-            .failed();
+    failed |= applyPatternsGreedily(region, patterns, config, &regionChanged)
+                  .failed();
     anyRegionChanged |= regionChanged;
   }
   if (changed)
     *changed = anyRegionChanged;
   return failure(failed);
+}
+/// Same as `applyPatternsGreedily` above with folding.
+inline LogicalResult
+applyPatternsAndFoldGreedily(Operation *op,
+                             const FrozenRewritePatternSet &patterns,
+                             GreedyRewriteConfig config = GreedyRewriteConfig(),
+                             bool *changed = nullptr) {
+  config.fold = true;
+  return applyPatternsGreedily(op, patterns, config, changed);
 }
 
 /// Rewrite the specified ops by repeatedly applying the highest benefit
@@ -171,8 +194,8 @@ applyPatternsAndFoldGreedily(Operation *op,
 /// The greedy rewrite may prematurely stop after a maximum number of
 /// iterations, which can be configured in the configuration parameter.
 ///
-/// Also performs folding and simple dead-code elimination before attempting to
-/// match any of the provided patterns.
+/// Also performs simple dead-code elimination before attempting to match any of
+/// the provided patterns.
 ///
 /// Newly created ops and other pre-existing ops that use results of rewritten
 /// ops or supply operands to such ops are also processed, unless such ops are
@@ -194,10 +217,19 @@ applyPatternsAndFoldGreedily(Operation *op,
 /// the IR was modified at all. `allOpsErased` is set to "true" if all ops in
 /// `ops` were erased.
 LogicalResult
+applyOpPatternsGreedily(ArrayRef<Operation *> ops,
+                        const FrozenRewritePatternSet &patterns,
+                        GreedyRewriteConfig config = GreedyRewriteConfig(),
+                        bool *changed = nullptr, bool *allErased = nullptr);
+/// Same as `applyOpPatternsGreedily` with folding.
+inline LogicalResult
 applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                        const FrozenRewritePatternSet &patterns,
                        GreedyRewriteConfig config = GreedyRewriteConfig(),
-                       bool *changed = nullptr, bool *allErased = nullptr);
+                       bool *changed = nullptr, bool *allErased = nullptr) {
+  config.fold = true;
+  return applyOpPatternsGreedily(ops, patterns, config, changed, allErased);
+}
 
 } // namespace mlir
 
