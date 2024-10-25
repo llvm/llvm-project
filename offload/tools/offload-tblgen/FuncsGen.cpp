@@ -33,6 +33,10 @@ void EmitOffloadFuncNames(RecordKeeper &Records, raw_ostream &OS) {
     FunctionRec FR{R};
     OS << formatv("OFFLOAD_FUNC({0})", FR.getName()) << "\n";
   }
+  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    FunctionRec FR{R};
+    OS << formatv("OFFLOAD_FUNC({0}WithCodeLoc)", FR.getName()) << "\n";
+  }
 
   OS << "\n#undef OFFLOAD_FUNC\n";
 }
@@ -43,6 +47,9 @@ void EmitOffloadExports(RecordKeeper &Records, raw_ostream &OS) {
 
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     OS << formatv(TAB_2 "{0};\n", FunctionRec(R).getName());
+  }
+  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    OS << formatv(TAB_2 "{0}WithCodeLoc;\n", FunctionRec(R).getName());
   }
   OS << TAB_1 "local:\n";
   OS << TAB_2 "*;\n";

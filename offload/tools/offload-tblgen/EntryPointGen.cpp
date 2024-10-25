@@ -83,7 +83,7 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   // Emit post-call prints
   OS << TAB_1 "if (offloadConfig().TracingEnabled) {\n";
   if (F.getParams().size() > 0) {
-    OS << formatv(TAB_2 "{0} Params = {{ ", F.getParamStructName());
+    OS << formatv(TAB_2 "{0} Params = {{", F.getParamStructName());
     for (const auto &Param : F.getParams()) {
       OS << "&" << Param.getName();
       if (Param != F.getParams().back()) {
