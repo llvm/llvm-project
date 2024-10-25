@@ -23,21 +23,17 @@ SYCLInstallationDetector::SYCLInstallationDetector(const Driver &D)
 void SYCLInstallationDetector::AddSYCLIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   // Add the SYCL header search locations in the specified order.
-  //   ../include/sycl
   //   ../include/sycl/stl_wrappers
   //   ../include
   SmallString<128> IncludePath(D.Dir);
   llvm::sys::path::append(IncludePath, "..");
   llvm::sys::path::append(IncludePath, "include");
-  SmallString<128> SYCLPath(IncludePath);
-  llvm::sys::path::append(SYCLPath, "sycl");
   // This is used to provide our wrappers around STL headers that provide
   // additional functions/template specializations when the user includes those
   // STL headers in their programs (e.g., <complex>).
-  SmallString<128> STLWrappersPath(SYCLPath);
+  SmallString<128> STLWrappersPath(IncludePath);
+  llvm::sys::path::append(STLWrappersPath, "sycl");
   llvm::sys::path::append(STLWrappersPath, "stl_wrappers");
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(SYCLPath));
   CC1Args.push_back("-internal-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(STLWrappersPath));
   CC1Args.push_back("-internal-isystem");
