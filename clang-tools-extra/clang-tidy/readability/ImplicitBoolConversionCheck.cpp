@@ -26,6 +26,8 @@ AST_MATCHER(Stmt, isMacroExpansion) {
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
 
+AST_MATCHER(Stmt, isC23) { return Finder->getASTContext().getLangOpts().C23; }
+
 bool isNULLMacroExpansion(const Stmt *Statement, ASTContext &Context) {
   SourceManager &SM = Context.getSourceManager();
   const LangOptions &LO = Context.getLangOpts();
@@ -298,6 +300,11 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                          hasCastKind(CK_FloatingToBoolean),
                          hasCastKind(CK_PointerToBoolean),
                          hasCastKind(CK_MemberPointerToBoolean)),
+                   // Exclude cases of C23 comparison result.
+                   unless(allOf(
+                       isC23(),
+                       hasSourceExpression(binaryOperator(hasAnyOperatorName(
+                           ">", ">=", "==", "!=", "<", "<="))))),
                    // Exclude case of using if or while statements with variable
                    // declaration, e.g.:
                    //   if (int var = functionCall()) {}
