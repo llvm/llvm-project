@@ -1163,6 +1163,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_LIFETIMEBOUND
 #  endif
 
+#  if __has_cpp_attribute(_Clang::__noescape__)
+#    define _LIBCPP_NOESCAPE [[_Clang::__noescape__]]
+#  else
+#    define _LIBCPP_NOESCAPE
+#  endif
+
 #  if __has_attribute(__nodebug__)
 #    define _LIBCPP_NODEBUG __attribute__((__nodebug__))
 #  else
