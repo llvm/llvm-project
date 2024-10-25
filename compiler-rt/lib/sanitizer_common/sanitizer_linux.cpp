@@ -166,8 +166,8 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
 
 // Deletes the specified signal from newset, if it is not present in oldset
 // Equivalently: newset[signum] = newset[signum] & oldset[signum]
-void internal_sigandset_individual(__sanitizer_sigset_t *newset,
-                                   __sanitizer_sigset_t *oldset, int signum) {
+static void KeepUnblocked(__sanitizer_sigset_t &newset,
+                          __sanitizer_sigset_t &oldset, int signum) {
   if (!internal_sigismember(oldset, signum))
     internal_sigdelset(newset, signum);
 }
@@ -183,23 +183,23 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
   // on any thread, setuid call hangs.
   // See test/sanitizer_common/TestCases/Linux/setuid.c.
-  internal_sigdelset(&newset, 33);
+  KeepUnblocked(&newset, &currentset, 33);
 #  endif
 #  if SANITIZER_LINUX
   // Seccomp-BPF-sandboxed processes rely on SIGSYS to handle trapped syscalls.
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
-  internal_sigdelset(&newset, 31);
+  KeepUnblocked(&newset, &currentset, 31);
 
   // Don't block synchronous signals
   // but also don't unblock signals that the user had deliberately blocked.
-  internal_sigandset_individual(&newset, &currentset, SIGSEGV);
-  internal_sigandset_individual(&newset, &currentset, SIGBUS);
-  internal_sigandset_individual(&newset, &currentset, SIGILL);
-  internal_sigandset_individual(&newset, &currentset, SIGTRAP);
-  internal_sigandset_individual(&newset, &currentset, SIGABRT);
-  internal_sigandset_individual(&newset, &currentset, SIGFPE);
-  internal_sigandset_individual(&newset, &currentset, SIGPIPE);
+  KeepUnblocked(&newset, &currentset, SIGSEGV);
+  KeepUnblocked(&newset, &currentset, SIGBUS);
+  KeepUnblocked(&newset, &currentset, SIGILL);
+  KeepUnblocked(&newset, &currentset, SIGTRAP);
+  KeepUnblocked(&newset, &currentset, SIGABRT);
+  KeepUnblocked(&newset, &currentset, SIGFPE);
+  KeepUnblocked(&newset, &currentset, SIGPIPE);
 #  endif
 
   SetSigProcMask(&newset, oldset);
