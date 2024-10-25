@@ -69,7 +69,7 @@ public:
 //CHECK-NEXT:  | | `-CompoundStmt {{.*}}
 //CHECK-NEXT:  | |   `-ReturnStmt {{.*}}
 //CHECK-NEXT:  | |     `-ImplicitCastExpr {{.*}} '__mfp8':'__MFloat8_t' <LValueToRValue>
-//CHECK-NEXT:  | |       `-DeclRefExpr {{.*}} '__mfp8':'__MFloat8_t' lvalue ParmVar {{.*}}8 'arg' '__mfp8':'__MFloat8_t'
+//CHECK-NEXT:  | |       `-DeclRefExpr {{.*}} '__mfp8':'__MFloat8_t' lvalue ParmVar {{.*}} 'arg' '__mfp8':'__MFloat8_t'
 //CHECK-NEXT:  | `-CXXMethodDecl {{.*}} func2c '__mfp8 (__mfp8)' static implicit-inline
 //CHECK-NEXT:  |   |-ParmVarDecl {{.*}} arg '__mfp8':'__MFloat8_t'
 //CHECK-NEXT:  |   `-CompoundStmt {{.*}}
