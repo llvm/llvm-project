@@ -2946,7 +2946,6 @@ def Vector_StepOp : Vector_Op<"step", [Pure]> {
     %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
     ```
   }];
-  let hasFolder = 1;
   let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
 }

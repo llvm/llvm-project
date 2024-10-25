@@ -3448,3 +3448,13 @@ func.func @vector_step_scalable() -> vector<[4]xindex> {
   %0 = vector.step : vector<[4]xindex>
   return %0 : vector<[4]xindex>
 }
+
+// -----
+
+// CHECK-LABEL: @vector_step
+// CHECK: %[[CST:.+]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK: return %[[CST]] : vector<4xindex>
+func.func @vector_step() -> vector<4xindex> {
+  %0 = vector.step : vector<4xindex>
+  return %0 : vector<4xindex>
+}
