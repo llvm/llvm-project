@@ -84,8 +84,7 @@ def : Typedef {
 }
 
 def : Macro {
-  let name = "OFFLOAD_SUCCESS";
-  let condition = "!defined(OFFLOAD_SUCCESS)";
+  let name = "OFFLOAD_RESULT_SUCCESS";
   let desc = "Success condition";
   let value = "NULL";
 }
@@ -99,4 +98,26 @@ def : Struct {
     StructMember<"uint32_t", "LineNumber", "Source code line number">,
     StructMember<"uint32_t", "ColumnNumber", "Source code column number">
   ];
+}
+
+def : Function {
+  let name = "offloadInit";
+  let desc = "Perform initialization of the Offload library and plugins";
+  let details = [
+    "This must be the first API call made by a user of the Offload library",
+    "Each call will increment an internal reference count that is decremented by `offloadShutDown`"
+  ];
+  let params = [];
+  let returns = [];
+}
+
+def : Function {
+  let name = "offloadShutDown";
+  let desc = "Release the resources in use by Offload";
+  let details = [
+    "This decrements an internal reference count. When this reaches 0, all resources will be released",
+    "Subsequent API calls made after this are not valid"
+  ];
+  let params = [];
+  let returns = [];
 }
