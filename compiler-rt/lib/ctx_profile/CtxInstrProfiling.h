@@ -153,8 +153,8 @@ void __llvm_ctx_profile_release_context(__ctx_profile::ContextRoot *Root);
 /// called for any other function than entry points, in the entry BB of such
 /// function. Same consideration about LSB of returned value as .._start_context
 ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
-                                            uint32_t NrCounters,
-                                            uint32_t NrCallsites);
+                                            uint32_t NumCounters,
+                                            uint32_t NumCallsites);
 
 /// Prepares for collection. Currently this resets counter values but preserves
 /// internal context tree structure.

@@ -20,7 +20,8 @@ entry:
 
 define internal i32 @vararg(i32 %first, ...) {
 entry:
-  %vlist = alloca ptr, align 8
+  %vlist.alloca = alloca ptr, align 8, addrspace(5)
+  %vlist = addrspacecast ptr addrspace(5) %vlist.alloca to ptr
   call void @llvm.va_start.p0(ptr %vlist)
   %vlist.promoted = load ptr, ptr %vlist, align 8
   %argp.a = getelementptr inbounds i8, ptr %vlist.promoted, i64 4

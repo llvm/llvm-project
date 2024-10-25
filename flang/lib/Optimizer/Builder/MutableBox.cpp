@@ -199,8 +199,9 @@ class MutablePropertyWriter {
 public:
   MutablePropertyWriter(fir::FirOpBuilder &builder, mlir::Location loc,
                         const fir::MutableBoxValue &box,
-                        mlir::Value typeSourceBox = {})
-      : builder{builder}, loc{loc}, box{box}, typeSourceBox{typeSourceBox} {}
+                        mlir::Value typeSourceBox = {}, unsigned allocator = 0)
+      : builder{builder}, loc{loc}, box{box}, typeSourceBox{typeSourceBox},
+        allocator{allocator} {}
   /// Update MutableBoxValue with new address, shape and length parameters.
   /// Extents and lbounds must all have index type.
   /// lbounds can be empty in which case all ones is assumed.
@@ -242,7 +243,7 @@ public:
       // declared type, not retain the previous dynamic type.
       auto deallocatedBox = fir::factory::createUnallocatedBox(
           builder, loc, box.getBoxTy(), box.nonDeferredLenParams(),
-          typeSourceBox);
+          typeSourceBox, allocator);
       builder.create<fir::StoreOp>(loc, deallocatedBox, box.getAddr());
     }
   }
@@ -276,7 +277,8 @@ private:
   /// Update the IR box (fir.ref<fir.box<T>>) of the MutableBoxValue.
   void updateIRBox(mlir::Value addr, mlir::ValueRange lbounds,
                    mlir::ValueRange extents, mlir::ValueRange lengths,
-                   mlir::Value tdesc = {}) {
+                   mlir::Value tdesc = {},
+                   unsigned allocator = kDefaultAllocator) {
     mlir::Value irBox = createNewFirBox(builder, loc, box, addr, lbounds,
                                         extents, lengths, tdesc);
     builder.create<fir::StoreOp>(loc, irBox, box.getAddr());
@@ -322,13 +324,15 @@ private:
   mlir::Location loc;
   fir::MutableBoxValue box;
   mlir::Value typeSourceBox;
+  unsigned allocator;
 };
 
 } // namespace
 
 mlir::Value fir::factory::createUnallocatedBox(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type boxType,
-    mlir::ValueRange nonDeferredParams, mlir::Value typeSourceBox) {
+    mlir::ValueRange nonDeferredParams, mlir::Value typeSourceBox,
+    unsigned allocator) {
   auto baseBoxType = mlir::cast<fir::BaseBoxType>(boxType);
   // Giving unallocated/disassociated status to assumed-rank POINTER/
   // ALLOCATABLE is not directly possible to a Fortran user. But the
@@ -374,6 +378,8 @@ mlir::Value fir::factory::createUnallocatedBox(
   mlir::Value emptySlice;
   auto embox = builder.create<fir::EmboxOp>(
       loc, baseBoxType, nullAddr, shape, emptySlice, lenParams, typeSourceBox);
+  if (allocator != 0)
+    embox.setAllocatorIdx(allocator);
   if (isAssumedRank)
     return builder.createConvert(loc, boxType, embox);
   return embox;
@@ -691,7 +697,8 @@ void fir::factory::associateMutableBoxWithRemap(
 void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
                                           mlir::Location loc,
                                           const fir::MutableBoxValue &box,
-                                          bool polymorphicSetType) {
+                                          bool polymorphicSetType,
+                                          unsigned allocator) {
   if (box.isPolymorphic() && polymorphicSetType) {
     // 7.3.2.3 point 7. The dynamic type of a disassociated pointer is the
     // same as its declared type.
@@ -704,7 +711,8 @@ void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
       return;
     }
   }
-  MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
+  MutablePropertyWriter{builder, loc, box, {}, allocator}
+      .setUnallocatedStatus();
 }
 
 static llvm::SmallVector<mlir::Value>

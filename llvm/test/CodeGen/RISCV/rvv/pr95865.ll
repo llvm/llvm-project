@@ -169,7 +169,7 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %0 = tail call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   br label %for.cond1.preheader.i
 
 for.cond1.preheader.i:                            ; preds = %for.cond.cleanup3.i, %entry

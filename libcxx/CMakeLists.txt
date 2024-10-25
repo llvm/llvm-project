@@ -1,6 +1,3 @@
-# See https://libcxx.llvm.org/docs/BuildingLibcxx.html for instructions on how
-# to build libcxx with CMake.
-
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -22,7 +19,6 @@ set(CMAKE_FOLDER "libc++")
 
 set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
-set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
 
 include(GNUInstallDirs)
 include(WarningFlags)
@@ -97,6 +93,8 @@ option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
    embedded)." ON)
+option(LIBCXX_HAS_TERMINAL_AVAILABLE
+  "Build libc++ with support for checking whether a stream is a terminal." ON)
 option(LIBCXX_ENABLE_WIDE_CHARACTERS
   "Whether to include support for wide characters in the library. Disabling
    wide character support can be useful when porting to platforms that don't
@@ -444,8 +442,6 @@ else()
       "Path where target-specific libc++ headers should be installed.")
 endif()
 
-file(MAKE_DIRECTORY "${LIBCXX_BINARY_INCLUDE_DIR}")
-
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
@@ -460,7 +456,9 @@ set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+    "Additional compile flags to use when building libc++. This should be a CMake ;-delimited list of individual
+     compiler options to use. For options that must be passed as-is to the compiler without deduplication (e.g.
+     `-Xclang -foo` option groups), consider using `SHELL:` (https://cmake.org/cmake/help/latest/command/add_compile_options.html#option-de-duplication).")
 set(LIBCXX_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libc++ is linked to which can be provided in cache")
 
@@ -744,6 +742,7 @@ config_define_if(LIBCXX_ABI_FORCE_ITANIUM _LIBCPP_ABI_FORCE_ITANIUM)
 config_define_if(LIBCXX_ABI_FORCE_MICROSOFT _LIBCPP_ABI_FORCE_MICROSOFT)
 config_define_if_not(LIBCXX_ENABLE_THREADS _LIBCPP_HAS_NO_THREADS)
 config_define_if_not(LIBCXX_ENABLE_MONOTONIC_CLOCK _LIBCPP_HAS_NO_MONOTONIC_CLOCK)
+config_define_if_not(LIBCXX_HAS_TERMINAL_AVAILABLE _LIBCPP_HAS_NO_TERMINAL)
 if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "default")
   config_define("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION)
 endif()

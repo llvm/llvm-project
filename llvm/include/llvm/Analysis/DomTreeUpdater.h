@@ -14,12 +14,10 @@
 #ifndef LLVM_ANALYSIS_DOMTREEUPDATER_H
 #define LLVM_ANALYSIS_DOMTREEUPDATER_H
 
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
-#include <cstddef>
 #include <functional>
 #include <vector>
 

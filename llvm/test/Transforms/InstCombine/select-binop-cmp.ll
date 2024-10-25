@@ -552,12 +552,12 @@ define i32 @select_xor_icmp_bad_6(i32 %x, i32 %y, i32 %z) {
   ret i32 %C
 }
 
-; Value equivalence substitution is all-or-nothing, so needs a scalar compare.
+; Value equivalence substitution is valid.
 
-define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
-; CHECK-LABEL: @select_xor_icmp_vec_bad(
+define <2 x i8> @select_xor_icmp_vec_equivalence(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @select_xor_icmp_vec_equivalence(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 5, i8 3>
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[Z:%.*]], <i8 5, i8 3>
 ; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[B]], <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
@@ -567,7 +567,7 @@ define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) 
   ret <2 x i8>  %C
 }
 
-; Value equivalence substitution is all-or-nothing, so needs a scalar compare.
+; Value equivalence substitution is invalid due to lane-crossing shufflevector.
 
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x) {
 ; CHECK-LABEL: @vec_select_no_equivalence(
@@ -1210,7 +1210,7 @@ define i32 @select_replace_nested(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_nested(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i32 [[Z:%.*]], i32 0
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[Y:%.*]], [[ADD]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %c = icmp eq i32 %x, 0

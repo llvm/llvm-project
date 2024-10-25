@@ -35,15 +35,14 @@ Getting Started with libc++
    :maxdepth: 1
 
    ReleaseNotes
-   UsingLibcxx
-   BuildingLibcxx
-   TestingLibcxx
+   UserDocumentation
+   VendorDocumentation
    Contributing
+   TestingLibcxx
    ImplementationDefinedBehavior
    Modules
    Hardening
    ReleaseProcedure
-   Status/Cxx14
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
@@ -51,10 +50,6 @@ Getting Started with libc++
    Status/Format
    Status/Parallelism
    Status/PSTL
-   Status/Ranges
-   Status/Spaceship
-   Status/SpecialMath
-   Status/Zip
 
 
 .. toctree::
@@ -169,11 +164,16 @@ to be formally supported and listed here, please work with the libc++ team to se
 up testing for your configuration.
 
 
-C++ Dialect Support
-===================
+C++ Standards Conformance
+=========================
+
+Libc++ provides full support for C++11 and C++14, and provides most of newer standards
+with a few omissions. The conformance status of the library's tip is tracked in real-time
+using `this page <https://github.com/orgs/llvm/projects/31>`_. The conformance status of
+this release is described in the pages below:
 
 * C++11 - Complete
-* :ref:`C++14 - Complete <cxx14-status>`
+* C++14 - Complete
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++23 - In Progress <cxx23-status>`
@@ -181,18 +181,25 @@ C++ Dialect Support
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 
-Notes and Known Issues
-======================
+Getting Involved
+================
 
-This list contains known issues with libc++
+First please review our `Developer's Policy <https://llvm.org/docs/DeveloperPolicy.html>`__
+and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 
-* Building libc++ with ``-fno-rtti`` is not supported. However
-  linking against it with ``-fno-rtti`` is supported.
+**Bug Reports**
 
+If you think you've found a bug in libc++, please report it using the `LLVM bug tracker`_.
+If you're not sure, you can ask for support on the `libc++ forum`_ or in the `libc++ chat`_.
 
-A full list of currently open libc++ bugs can be `found here`__.
+**Patches**
 
-.. __:  https://github.com/llvm/llvm-project/labels/libc%2B%2B
+If you want to contribute a patch to libc++, please start by reviewing our
+:ref:`documentation about contributing <ContributingToLibcxx>`.
+
+**Discussion and Questions**
+
+Send discussions and questions to the `libc++ forum`_.
 
 
 Design Documents
@@ -228,33 +235,12 @@ Build Bots and Test Coverage
 * :ref:`Adding New CI Jobs <AddingNewCIJobs>`
 
 
-Getting Involved
-================
-
-First please review our `Developer's Policy <https://llvm.org/docs/DeveloperPolicy.html>`__
-and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
-
-**Bug Reports**
-
-If you think you've found a bug in libc++, please report it using
-the `LLVM bug tracker`_. If you're not sure, you
-can ask for support on the `libcxx forum`_ or on IRC.
-
-**Patches**
-
-If you want to contribute a patch to libc++, please start by reviewing our
-:ref:`documentation about contributing <ContributingToLibcxx>`.
-
-**Discussion and Questions**
-
-Send discussions and questions to the `libcxx forum`_.
-
-
 Quick Links
 ===========
 * `LLVM Homepage <https://llvm.org/>`_
 * `libc++abi Homepage <http://libcxxabi.llvm.org/>`_
 * `LLVM Bug Tracker <https://github.com/llvm/llvm-project/labels/libc++/>`_
 * `libcxx-commits Mailing List <http://lists.llvm.org/mailman/listinfo/libcxx-commits>`_
-* `libcxx Forum <https://discourse.llvm.org/c/runtimes/libcxx/>`_
+* `libc++ forum <https://discourse.llvm.org/c/runtimes/libcxx/>`_
+* `libc++ chat <https://discord.com/channels/636084430946959380/636732894974312448>`_
 * `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/main/libcxx/>`_

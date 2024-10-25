@@ -232,8 +232,10 @@ int main(int argc, const char **argv) {
       llvm::StringRef L = *Line;
       L = L.trim();
       if (L.ends_with("\\")) {
-        // FIXME: Support #ifdef X \ ...
         Input += L.drop_back(1);
+        // If it is a preprocessor directive, new lines matter.
+        if (L.starts_with('#'))
+          Input += "\n";
         LE.setPrompt("clang-repl...   ");
         continue;
       }

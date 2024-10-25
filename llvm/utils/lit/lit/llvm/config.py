@@ -57,6 +57,13 @@ class LLVMConfig(object):
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 
+        if platform.system() == "AIX":
+            # Diff on AIX doesn't have all the required features (see
+            # https://github.com/llvm/llvm-project/pull/108871 and
+            # https://github.com/llvm/llvm-project/pull/112997#issuecomment-2429656192)
+            # so always use the internal shell.
+            self.use_lit_shell = True
+
         if platform.system() == "OS/390":
             self.with_environment("_BPXK_AUTOCVT", "ON")
             self.with_environment("_TAG_REDIR_IN", "TXT")
@@ -83,6 +90,7 @@ class LLVMConfig(object):
                 "UBSAN_SYMBOLIZER_PATH" "ASAN_OPTIONS",
                 "HWASAN_OPTIONS",
                 "MSAN_OPTIONS",
+                "RTSAN_OPTIONS",
                 "TSAN_OPTIONS",
                 "UBSAN_OPTIONS",
             ]
@@ -186,10 +194,7 @@ class LLVMConfig(object):
 
     def _find_git_windows_unix_tools(self, tools_needed):
         assert sys.platform == "win32"
-        if sys.version_info.major >= 3:
-            import winreg
-        else:
-            import _winreg as winreg
+        import winreg
 
         # Search both the 64 and 32-bit hives, as well as HKLM + HKCU
         masks = [0, winreg.KEY_WOW64_64KEY]

@@ -59,10 +59,10 @@ bool PlatformUnpoisonStacks() {
 
   // Since we're on the signal alternate stack, we cannot find the DEFAULT
   // stack bottom using a local variable.
-  uptr default_bottom, tls_addr, tls_size, stack_size;
-  GetThreadStackAndTls(/*main=*/false, &default_bottom, &stack_size, &tls_addr,
-                       &tls_size);
-  UnpoisonStack(default_bottom, default_bottom + stack_size, "default");
+  uptr stack_begin, stack_end, tls_begin, tls_end;
+  GetThreadStackAndTls(/*main=*/false, &stack_begin, &stack_end, &tls_begin,
+                       &tls_end);
+  UnpoisonStack(stack_begin, stack_end, "default");
   return true;
 }
 
@@ -149,6 +149,7 @@ void PlatformTSDDtor(void *tsd) {
 #  endif
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   if (CAN_SANITIZE_LEAKS) {
     __lsan::LockGlobal();
   }
@@ -168,10 +169,15 @@ static void AfterFork(bool fork_child) {
   if (CAN_SANITIZE_LEAKS) {
     __lsan::UnlockGlobal();
   }
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void InstallAtForkHandler() {
-#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE || \
+      (SANITIZER_LINUX && SANITIZER_SPARC)
+  // While other Linux targets use clone in internal_fork which doesn't
+  // trigger pthread_atfork handlers, Linux/sparc64 uses __fork, causing a
+  // hang.
   return;  // FIXME: Implement FutexWait.
 #  endif
   pthread_atfork(

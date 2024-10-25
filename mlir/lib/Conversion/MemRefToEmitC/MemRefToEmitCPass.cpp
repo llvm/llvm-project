@@ -33,9 +33,9 @@ struct ConvertMemRefToEmitCPass
 
     // Fallback for other types.
     converter.addConversion([](Type type) -> std::optional<Type> {
-      if (isa<MemRefType>(type))
-        return {};
-      return type;
+      if (emitc::isSupportedEmitCType(type))
+        return type;
+      return {};
     });
 
     populateMemRefToEmitCTypeConversion(converter);

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFEFUNCTIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "../utils/Matchers.h"
 #include <optional>
 
 namespace clang::tidy::bugprone {
@@ -32,7 +33,18 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
   void onEndOfTranslationUnit() override;
 
+  struct CheckedFunction {
+    std::string Name;
+    matchers::MatchesAnyListedNameMatcher::NameMatcher Pattern;
+    std::string Replacement;
+    std::string Reason;
+  };
+
 private:
+  const std::vector<CheckedFunction> CustomFunctions;
+
+  // If true, the default set of functions are reported.
+  const bool ReportDefaultFunctions;
   /// If true, additional functions from widely used API-s (such as POSIX) are
   /// added to the list of reported functions.
   const bool ReportMoreUnsafeFunctions;

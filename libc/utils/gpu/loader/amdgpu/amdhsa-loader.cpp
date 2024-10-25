@@ -28,9 +28,11 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 #include <tuple>
 #include <utility>
 
@@ -180,7 +182,7 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
           if (hsa_status_t err =
                   hsa_amd_memory_pool_allocate(pool, size,
                                                /*flags=*/0, &dev_ptr))
-            handle_error(err);
+            dev_ptr = nullptr;
           hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_ptr);
           buffer->data[0] = reinterpret_cast<uintptr_t>(dev_ptr);
         };
@@ -231,8 +233,8 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   std::memcpy(args, &kernel_args, sizeof(args_t));
 
   // Initialize the necessary implicit arguments to the proper values.
-  bool dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
-              (params.num_blocks_z * params.num_threads_z != 1);
+  int dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
+             (params.num_blocks_z * params.num_threads_z != 1);
   implicit_args_t *implicit_args = reinterpret_cast<implicit_args_t *>(
       reinterpret_cast<uint8_t *>(args) + sizeof(args_t));
   implicit_args->grid_dims = dims;
@@ -281,6 +283,7 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   // Initialize the packet header and set the doorbell signal to begin execution
   // by the HSA runtime.
   uint16_t header =
+      1u << HSA_PACKET_HEADER_BARRIER |
       (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
@@ -288,18 +291,26 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   __atomic_store_n((uint32_t *)&packet->header, header_word, __ATOMIC_RELEASE);
   hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
+  std::atomic<bool> finished = false;
+  std::thread server(
+      [](std::atomic<bool> *finished, rpc_device_t device) {
+        while (!*finished) {
+          if (rpc_status_t err = rpc_handle_server(device))
+            handle_error(err);
+        }
+      },
+      &finished, device);
+
   // Wait until the kernel has completed execution on the device. Periodically
   // check the RPC client for work to be performed on the server.
-  while (hsa_signal_wait_scacquire(
-             packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0,
-             /*timeout_hint=*/1024, HSA_WAIT_STATE_ACTIVE) != 0)
-    if (rpc_status_t err = rpc_handle_server(device))
-      handle_error(err);
+  while (hsa_signal_wait_scacquire(packet->completion_signal,
+                                   HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
+                                   HSA_WAIT_STATE_BLOCKED) != 0)
+    ;
 
-  // Handle the server one more time in case the kernel exited with a pending
-  // send still in flight.
-  if (rpc_status_t err = rpc_handle_server(device))
-    handle_error(err);
+  finished = true;
+  if (server.joinable())
+    server.join();
 
   // Destroy the resources acquired to launch the kernel and return.
   if (hsa_status_t err = hsa_amd_memory_pool_free(args))
@@ -334,8 +345,9 @@ static hsa_status_t hsa_memcpy(void *dst, hsa_agent_t dst_agent,
   return HSA_STATUS_SUCCESS;
 }
 
-int load(int argc, char **argv, char **envp, void *image, size_t size,
-         const LaunchParameters &params, bool print_resource_usage) {
+int load(int argc, const char **argv, const char **envp, void *image,
+         size_t size, const LaunchParameters &params,
+         bool print_resource_usage) {
   // Initialize the HSA runtime used to communicate with the device.
   if (hsa_status_t err = hsa_init())
     handle_error(err);
@@ -539,11 +551,11 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     }
   }
 
-  // Obtain a queue with the minimum (power of two) size, used to send commands
+  // Obtain a queue with the maximum (power of two) size, used to send commands
   // to the HSA runtime and launch execution on the device.
   uint64_t queue_size;
   if (hsa_status_t err = hsa_agent_get_info(
-          dev_agent, HSA_AGENT_INFO_QUEUE_MIN_SIZE, &queue_size))
+          dev_agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size))
     handle_error(err);
   hsa_queue_t *queue = nullptr;
   if (hsa_status_t err =

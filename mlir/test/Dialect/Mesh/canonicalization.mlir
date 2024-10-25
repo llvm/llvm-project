@@ -31,7 +31,7 @@ func.func @all_reduce_default_reduction(
   %0 = mesh.all_reduce %arg0 on @mesh0
     mesh_axes = [0]
 // CHECK-NOT: reduction
-    reduction = <sum>
+    reduction = sum
     : tensor<4xf32> -> tensor<4xf64>
   return %0 : tensor<4xf64>
 }
@@ -159,7 +159,7 @@ func.func @reduce_scatter_default_reduction(
   %0 = mesh.reduce_scatter %arg0 on @mesh0
     mesh_axes = [0]
 // CHECK-NOT: reduction
-    reduction = <sum>
+    reduction = sum
     scatter_axis = 0
     : tensor<4xf32> -> tensor<2xf64>
   return %0 : tensor<2xf64>

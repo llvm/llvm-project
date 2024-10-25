@@ -375,6 +375,7 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   // numbering, shrink MBBNumbering now.
   assert(BlockNo <= MBBNumbering.size() && "Mismatch!");
   MBBNumbering.resize(BlockNo);
+  MBBNumberingEpoch++;
 }
 
 /// This method iterates over the basic blocks and assigns their IsBeginSection
@@ -464,11 +465,9 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
   MachineBasicBlock *MBB =
       new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
           MachineBasicBlock(*this, BB);
-  // Set BBID for `-basic-block=sections=labels` and
-  // `-basic-block-sections=list` to allow robust mapping of profiles to basic
-  // blocks.
-  if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
-      Target.Options.BBAddrMap ||
+  // Set BBID for `-basic-block-sections=list` and `-basic-block-address-map` to
+  // allow robust mapping of profiles to basic blocks.
+  if (Target.Options.BBAddrMap ||
       Target.getBBSectionsType() == BasicBlockSection::List)
     MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
   return MBB;

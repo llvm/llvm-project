@@ -254,7 +254,7 @@ struct LandingPadInfo {
       : LandingPadBlock(MBB) {}
 };
 
-class LLVM_EXTERNAL_VISIBILITY MachineFunction {
+class LLVM_ABI MachineFunction {
   Function &F;
   const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;
@@ -292,6 +292,10 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // MachineBasicBlock is inserted into a MachineFunction is it automatically
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
+
+  // MBBNumbering epoch, incremented after renumbering to detect use of old
+  // block numbers.
+  unsigned MBBNumberingEpoch = 0;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
@@ -372,6 +376,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool HasFakeUses = false;
   bool IsOutlined = false;
 
   /// BBID to assign to the next basic block of this function.
@@ -695,11 +700,6 @@ public:
             BBSectionsType == BasicBlockSection::Preset);
   }
 
-  /// Returns true if basic block labels are to be generated for this function.
-  bool hasBBLabels() const {
-    return BBSectionsType == BasicBlockSection::Labels;
-  }
-
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
@@ -856,6 +856,11 @@ public:
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
 
+  /// Return the numbering "epoch" of block numbers, incremented after each
+  /// numbering. Intended for asserting that no renumbering was performed when
+  /// used by, e.g., preserved analyses.
+  unsigned getBlockNumberEpoch() const { return MBBNumberingEpoch; }
+
   /// RenumberBlocks - This discards all of the MachineBasicBlock numbers and
   /// recomputes them.  This guarantees that the MBB numbers are sequential,
   /// dense, and match the ordering of the blocks within the function.  If a
@@ -888,13 +893,14 @@ public:
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
-              bool AbortOnError = true) const;
+              raw_ostream *OS = nullptr, bool AbortOnError = true) const;
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
-              const char *Banner = nullptr, bool AbortOnError = true) const;
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
+              bool AbortOnError = true) const;
 
   // Provide accessors for the MachineBasicBlock list...
   using iterator = BasicBlockListType::iterator;
@@ -1190,6 +1196,9 @@ public:
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }
 
+  bool hasFakeUses() const { return HasFakeUses; }
+  void setHasFakeUses(bool V) { HasFakeUses = V; }
+
   bool isOutlined() const { return IsOutlined; }
   void setIsOutlined(bool V) { IsOutlined = V; }
 
@@ -1404,6 +1413,13 @@ template <> struct GraphTraits<MachineFunction*> :
   }
 
   static unsigned       size       (MachineFunction *F) { return F->size(); }
+
+  static unsigned getMaxNumber(MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<const MachineFunction*> :
   public GraphTraits<const MachineBasicBlock*> {
@@ -1423,6 +1439,13 @@ template <> struct GraphTraits<const MachineFunction*> :
   static unsigned       size       (const MachineFunction *F)  {
     return F->size();
   }
+
+  static unsigned getMaxNumber(const MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 // Provide specializations of GraphTraits to be able to treat a function as a
@@ -1435,11 +1458,25 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
   static NodeRef getEntryNode(Inverse<MachineFunction *> G) {
     return &G.Graph->front();
   }
+
+  static unsigned getMaxNumber(MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   public GraphTraits<Inverse<const MachineBasicBlock*>> {
   static NodeRef getEntryNode(Inverse<const MachineFunction *> G) {
     return &G.Graph->front();
+  }
+
+  static unsigned getMaxNumber(const MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const MachineFunction *F) {
+    return F->getBlockNumberEpoch();
   }
 };
 

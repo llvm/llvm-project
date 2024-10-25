@@ -23,14 +23,14 @@ end subroutine
 ! CHECK-LABEL: sqrt_testc
 subroutine sqrt_testc(z)
   complex :: z
-! CHECK: fir.call @fir.sqrt.contract.z4.z4
+! CHECK: fir.call @fir.sqrt.contract.z32.z32
   z = sqrt(z)
 end subroutine
 
 ! CHECK-LABEL: sqrt_testcd
 subroutine sqrt_testcd(z)
   complex(kind=8) :: z
-! CHECK: fir.call @fir.sqrt.contract.z8.z8
+! CHECK: fir.call @fir.sqrt.contract.z64.z64
   z = sqrt(z)
 end subroutine
 
@@ -40,10 +40,10 @@ end subroutine
 ! CHECK-LABEL: @fir.sqrt.contract.f64.f64
 ! CHECK: math.sqrt %{{.*}} : f64
 
-! CHECK-LABEL: func private @fir.sqrt.contract.z4.z4
+! CHECK-LABEL: func private @fir.sqrt.contract.z32.z32
 ! CMPLX-FAST: complex.sqrt %{{.*}} : complex<f32>
 ! CMPLX-PRECISE: fir.call @csqrtf
 
-! CHECK-LABEL: @fir.sqrt.contract.z8.z8
+! CHECK-LABEL: @fir.sqrt.contract.z64.z64
 ! CMPLX-FAST: complex.sqrt %{{.*}} : complex<f64>
 ! CMPLX-PRECISE: fir.call @csqrt

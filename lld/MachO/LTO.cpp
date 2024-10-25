@@ -48,9 +48,6 @@ static lto::Config createConfig() {
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
   c.DiagHandler = diagnosticHandler;
-  c.PreCodeGenPassesHook = [](legacy::PassManager &pm) {
-    pm.add(createObjCARCContractPass());
-  };
 
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
 
@@ -90,6 +87,7 @@ BitcodeCompiler::BitcodeCompiler() {
   auto onIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
   if (config->thinLTOIndexOnly) {
     backend = lto::createWriteIndexesThinBackend(
+        llvm::hardware_concurrency(config->thinLTOJobs),
         std::string(config->thinLTOPrefixReplaceOld),
         std::string(config->thinLTOPrefixReplaceNew),
         std::string(config->thinLTOPrefixReplaceNativeObject),

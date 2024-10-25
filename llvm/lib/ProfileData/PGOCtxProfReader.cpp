@@ -33,23 +33,15 @@ using namespace llvm;
   if (auto Err = (EXPR))                                                       \
     return Err;
 
-Expected<PGOContextualProfile &>
-PGOContextualProfile::getOrEmplace(uint32_t Index, GlobalValue::GUID G,
-                                   SmallVectorImpl<uint64_t> &&Counters) {
-  auto [Iter, Inserted] = Callsites[Index].insert(
-      {G, PGOContextualProfile(G, std::move(Counters))});
+Expected<PGOCtxProfContext &>
+PGOCtxProfContext::getOrEmplace(uint32_t Index, GlobalValue::GUID G,
+                                SmallVectorImpl<uint64_t> &&Counters) {
+  auto [Iter, Inserted] =
+      Callsites[Index].insert({G, PGOCtxProfContext(G, std::move(Counters))});
   if (!Inserted)
     return make_error<InstrProfError>(instrprof_error::invalid_prof,
                                       "Duplicate GUID for same callsite.");
   return Iter->second;
-}
-
-void PGOContextualProfile::getContainedGuids(
-    DenseSet<GlobalValue::GUID> &Guids) const {
-  Guids.insert(GUID);
-  for (const auto &[_, Callsite] : Callsites)
-    for (const auto &[_, Callee] : Callsite)
-      Callee.getContainedGuids(Guids);
 }
 
 Expected<BitstreamEntry> PGOCtxProfileReader::advance() {
@@ -74,7 +66,7 @@ bool PGOCtxProfileReader::canReadContext() {
          Blk->ID == PGOCtxProfileBlockIDs::ContextNodeBlockID;
 }
 
-Expected<std::pair<std::optional<uint32_t>, PGOContextualProfile>>
+Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
 PGOCtxProfileReader::readContext(bool ExpectIndex) {
   RET_ON_ERR(Cursor.EnterSubBlock(PGOCtxProfileBlockIDs::ContextNodeBlockID));
 
@@ -125,7 +117,7 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
     }
   }
 
-  PGOContextualProfile Ret(*Guid, std::move(*Counters));
+  PGOCtxProfContext Ret(*Guid, std::move(*Counters));
 
   while (canReadContext()) {
     EXPECT_OR_RET(SC, readContext(true));
@@ -174,9 +166,9 @@ Error PGOCtxProfileReader::readMetadata() {
   return Error::success();
 }
 
-Expected<std::map<GlobalValue::GUID, PGOContextualProfile>>
+Expected<std::map<GlobalValue::GUID, PGOCtxProfContext>>
 PGOCtxProfileReader::loadContexts() {
-  std::map<GlobalValue::GUID, PGOContextualProfile> Ret;
+  std::map<GlobalValue::GUID, PGOCtxProfContext> Ret;
   RET_ON_ERR(readMetadata());
   while (canReadContext()) {
     EXPECT_OR_RET(E, readContext(false));

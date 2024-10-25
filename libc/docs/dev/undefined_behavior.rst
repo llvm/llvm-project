@@ -98,3 +98,11 @@ Unrecognized ``clockid_t`` values for ``pthread_rwlock_clock*`` APIs
 ----------------------------------------------------------------------
 POSIX.1-2024 only demands support for ``CLOCK_REALTIME`` and ``CLOCK_MONOTONIC``. Currently,
 as in LLVM libc, if other clock ids are used, they will be treated as monotonic clocks.
+
+PThread SpinLock Destroy
+------------------------
+POSIX.1 Issue 7 updates the spinlock destroy behavior description such that the return code for
+uninitialized spinlock and invalid spinlock is left undefined. We follow the recommendation as in
+POSIX.1-2024, where EINVAL is returned if the spinlock is invalid (here we only check for null pointers) or
+EBUSY is returned if the spinlock is currently locked. The lock is poisoned after a successful destroy. That is,
+subsequent operations on the lock object without any reinitialization will return EINVAL.

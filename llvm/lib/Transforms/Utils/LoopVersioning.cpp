@@ -42,10 +42,8 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
                                ArrayRef<RuntimePointerCheck> Checks, Loop *L,
                                LoopInfo *LI, DominatorTree *DT,
                                ScalarEvolution *SE)
-    : VersionedLoop(L), AliasChecks(Checks.begin(), Checks.end()),
-      Preds(LAI.getPSE().getPredicate()), LAI(LAI), LI(LI), DT(DT),
-      SE(SE) {
-}
+    : VersionedLoop(L), AliasChecks(Checks), Preds(LAI.getPSE().getPredicate()),
+      LAI(LAI), LI(LI), DT(DT), SE(SE) {}
 
 void LoopVersioning::versionLoop(
     const SmallVectorImpl<Instruction *> &DefsUsedOutside) {
@@ -139,7 +137,7 @@ void LoopVersioning::addPHINodes(
     // original loop.
     for (auto I = PHIBlock->begin(); (PN = dyn_cast<PHINode>(I)); ++I) {
       if (PN->getIncomingValue(0) == Inst) {
-        SE->forgetValue(PN);
+        SE->forgetLcssaPhiWithNewPredecessor(VersionedLoop, PN);
         break;
       }
     }

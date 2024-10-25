@@ -1,8 +1,9 @@
-// RUN: sed 's/DEFAULT_TYPE_PARSER/0/' %s | mlir-tblgen -gen-attrdef-defs -I %S/../../include | FileCheck %s --check-prefix=ATTR
-// RUN: sed 's/DEFAULT_TYPE_PARSER/0/' %s | mlir-tblgen -gen-typedef-defs -I %S/../../include | FileCheck %s --check-prefix=TYPE
-// RUN: sed 's/DEFAULT_TYPE_PARSER/1/' %s | mlir-tblgen -gen-typedef-defs -I %S/../../include | FileCheck %s --check-prefix=TYPE --check-prefix=DEFAULT_TYPE_PARSER
+// RUN: sed 's/DEFAULT_TYPE_PARSER/0/' %s | mlir-tblgen -gen-attrdef-defs -attrdefs-dialect=TestDialect -I %S/../../include | FileCheck %s --check-prefix=ATTR
+// RUN: sed 's/DEFAULT_TYPE_PARSER/0/' %s | mlir-tblgen -gen-typedef-defs -typedefs-dialect=TestDialect -I %S/../../include | FileCheck %s --check-prefix=TYPE
+// RUN: sed 's/DEFAULT_TYPE_PARSER/1/' %s | mlir-tblgen -gen-typedef-defs -typedefs-dialect=TestDialect -I %S/../../include | FileCheck %s --check-prefix=TYPE --check-prefix=DEFAULT_TYPE_PARSER
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributes.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
@@ -661,6 +662,78 @@ def TypeO : TestType<"TestQ"> {
   let parameters = (ins OptionalParameter<"int">:$a);
   let mnemonic = "type_o";
   let assemblyFormat = "(custom<AB>($a)^ `x`) : (`y`)?";
+}
+
+// Test attr / type verification.
+
+// TYPE: ::llvm::LogicalResult TestPType::verifyInvariantsImpl(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::Type a) {
+// TYPE:   if (!(((a.isSignlessInteger(16))) || ((a.isSignlessInteger(32))))) {
+// TYPE:     emitError() << "failed to verify 'a': 16-bit signless integer or 32-bit signless integer";
+// TYPE:     return ::mlir::failure();
+// TYPE:   }
+// TYPE:   return ::mlir::success();
+// TYPE: }
+
+// TYPE: ::llvm::LogicalResult TestPType::verifyInvariants(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::Type a) {
+// TYPE:   if (::mlir::failed(verifyInvariantsImpl(emitError, a)))
+// TYPE:     return ::mlir::failure();
+// TYPE:   if (::mlir::failed(verify(emitError, a)))
+// TYPE:     return ::mlir::failure();
+// TYPE:   return ::mlir::success();
+// TYPE: }
+
+def TypeP : TestType<"TestP"> {
+  let parameters = (ins AnyTypeOf<[I16, I32]>:$a);
+  let mnemonic = "type_p";
+  let genVerifyDecl = 1;
+  let assemblyFormat = "$a";
+}
+
+// ATTR: ::llvm::LogicalResult TestRAttr::verifyInvariantsImpl(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::IntegerType a) {
+// ATTR:   if (!((a.isSignlessInteger(32)))) {
+// ATTR:     emitError() << "failed to verify 'a': 32-bit signless integer";
+// ATTR:     return ::mlir::failure();
+// ATTR:   }
+// ATTR:   return ::mlir::success();
+// ATTR: }
+
+// ATTR: ::llvm::LogicalResult TestRAttr::verifyInvariants(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::IntegerType a) {
+// ATTR:   if (::mlir::failed(verifyInvariantsImpl(emitError, a)))
+// ATTR:     return ::mlir::failure();
+// ATTR:   if (::mlir::failed(verify(emitError, a)))
+// ATTR:     return ::mlir::failure();
+// ATTR:   return ::mlir::success();
+// ATTR: }
+
+def AttrR : TestAttr<"TestR"> {
+  let parameters = (ins I32:$a);
+  let mnemonic = "attr_r";
+  let genVerifyDecl = 1;
+  let assemblyFormat = "$a";
+}
+
+// TYPE: ::llvm::LogicalResult TestSType::verifyInvariantsImpl(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::ArrayAttr a) {
+// TYPE:   if (!((::llvm::isa<::mlir::ArrayAttr>(a)))) {
+// TYPE:     emitError() << "failed to verify 'a': A collection of other Attribute values";
+// TYPE:     return ::mlir::failure();
+// TYPE:   }
+// TYPE:   return ::mlir::success();
+// TYPE: }
+
+// TYPE: ::llvm::LogicalResult TestSType::verifyInvariants(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::ArrayAttr a) {
+// TYPE:   if (::mlir::failed(verifyInvariantsImpl(emitError, a)))
+// TYPE:     return ::mlir::failure();
+// TYPE:   if (::mlir::failed(verify(emitError, a)))
+// TYPE:     return ::mlir::failure();
+// TYPE:   return ::mlir::success();
+// TYPE: }
+
+def TypeS : TestType<"TestS"> {
+  // TODO: Support attribute constraints as parameters.
+  let parameters = (ins Builtin_ArrayAttr:$a);
+  let mnemonic = "type_s";
+  let genVerifyDecl = 1;
+  let assemblyFormat = "$a";
 }
 
 // DEFAULT_TYPE_PARSER: TestDialect::parseType(::mlir::DialectAsmParser &parser)

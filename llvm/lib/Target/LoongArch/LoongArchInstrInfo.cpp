@@ -17,6 +17,7 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCInstBuilder.h"
 
 using namespace llvm;
@@ -39,7 +40,9 @@ MCInst LoongArchInstrInfo::getNop() const {
 void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      const DebugLoc &DL, MCRegister DstReg,
-                                     MCRegister SrcReg, bool KillSrc) const {
+                                     MCRegister SrcReg, bool KillSrc,
+                                     bool RenamableDest,
+                                     bool RenamableSrc) const {
   if (LoongArch::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(LoongArch::OR), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
@@ -208,6 +211,14 @@ void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
           .addImm(Inst.Imm)
           .setMIFlag(Flag);
       break;
+    case LoongArch::BSTRINS_D:
+      BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
+          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, RegState::Kill)
+          .addImm(Inst.Imm >> 32)
+          .addImm(Inst.Imm & 0xFF)
+          .setMIFlag(Flag);
+      break;
     default:
       assert(false && "Unknown insn emitted by LoongArchMatInt");
     }
@@ -226,7 +237,25 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
   }
-  return MI.getDesc().getSize();
+
+  unsigned NumBytes = 0;
+  const MCInstrDesc &Desc = MI.getDesc();
+
+  // Size should be preferably set in
+  // llvm/lib/Target/LoongArch/LoongArch*InstrInfo.td (default case).
+  // Specific cases handle instructions of variable sizes.
+  switch (Desc.getOpcode()) {
+  default:
+    return Desc.getSize();
+  case TargetOpcode::STATEPOINT:
+    NumBytes = StatepointOpers(&MI).getNumPatchBytes();
+    assert(NumBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
+    // No patch bytes means a normal call inst (i.e. `bl`) is emitted.
+    if (NumBytes == 0)
+      NumBytes = 4;
+    break;
+  }
+  return NumBytes;
 }
 
 bool LoongArchInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {

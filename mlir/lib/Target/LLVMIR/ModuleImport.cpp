@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/ModuleImport.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
@@ -54,7 +55,7 @@ static std::string diag(const llvm::Value &value) {
   std::string str;
   llvm::raw_string_ostream os(str);
   os << value;
-  return os.str();
+  return str;
 }
 
 // Utility to print an LLVM metadata node as a string for passing
@@ -65,12 +66,17 @@ static std::string diagMD(const llvm::Metadata *node,
   std::string str;
   llvm::raw_string_ostream os(str);
   node->print(os, module, /*IsForDebug=*/true);
-  return os.str();
+  return str;
 }
 
 /// Returns the name of the global_ctors global variables.
 static constexpr StringRef getGlobalCtorsVarName() {
   return "llvm.global_ctors";
+}
+
+/// Prefix used for symbols of nameless llvm globals.
+static constexpr StringRef getNamelessGlobalPrefix() {
+  return "mlir.llvm.nameless_global";
 }
 
 /// Returns the name of the global_dtors global variables.
@@ -500,14 +506,48 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
     if (named.getName() != "llvm.linker.options")
       continue;
     // llvm.linker.options operands are lists of strings.
-    for (const llvm::MDNode *md : named.operands()) {
+    for (const llvm::MDNode *node : named.operands()) {
       SmallVector<StringRef> options;
-      options.reserve(md->getNumOperands());
-      for (const llvm::MDOperand &option : md->operands())
+      options.reserve(node->getNumOperands());
+      for (const llvm::MDOperand &option : node->operands())
         options.push_back(cast<llvm::MDString>(option)->getString());
       builder.create<LLVM::LinkerOptionsOp>(mlirModule.getLoc(),
                                             builder.getStrArrayAttr(options));
     }
+  }
+  return success();
+}
+
+LogicalResult ModuleImport::convertIdentMetadata() {
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    // llvm.ident should have a single operand. That operand is itself an
+    // MDNode with a single string operand.
+    if (named.getName() != LLVMDialect::getIdentAttrName())
+      continue;
+
+    if (named.getNumOperands() == 1)
+      if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
+        if (md->getNumOperands() == 1)
+          if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
+            mlirModule->setAttr(LLVMDialect::getIdentAttrName(),
+                                builder.getStringAttr(mdStr->getString()));
+  }
+  return success();
+}
+
+LogicalResult ModuleImport::convertCommandlineMetadata() {
+  for (const llvm::NamedMDNode &nmd : llvmModule->named_metadata()) {
+    // llvm.commandline should have a single operand. That operand is itself an
+    // MDNode with a single string operand.
+    if (nmd.getName() != LLVMDialect::getCommandlineAttrName())
+      continue;
+
+    if (nmd.getNumOperands() == 1)
+      if (auto *md = dyn_cast<llvm::MDNode>(nmd.getOperand(0)))
+        if (md->getNumOperands() == 1)
+          if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
+            mlirModule->setAttr(LLVMDialect::getCommandlineAttrName(),
+                                builder.getStringAttr(mdStr->getString()));
   }
   return success();
 }
@@ -539,6 +579,10 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertIdentMetadata()))
+    return failure();
+  if (failed(convertCommandlineMetadata()))
     return failure();
   return success();
 }
@@ -689,7 +733,7 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
   if (!isScalarType(elementType))
     return {};
 
-  SmallVector<int64_t> shape(arrayShape.begin(), arrayShape.end());
+  SmallVector<int64_t> shape(arrayShape);
   shape.push_back(numElements.getKnownMinValue());
   return VectorType::get(shape, elementType);
 }
@@ -766,10 +810,6 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
   // Convert scalar constants.
   if (Attribute scalarAttr = getScalarConstantAsAttr(builder, constant))
     return scalarAttr;
-
-  // Convert function references.
-  if (auto *func = dyn_cast<llvm::Function>(constant))
-    return SymbolRefAttr::get(builder.getContext(), func->getName());
 
   // Returns the static shape of the provided type if possible.
   auto getConstantShape = [&](llvm::Type *type) {
@@ -853,6 +893,24 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
   return {};
 }
 
+FlatSymbolRefAttr
+ModuleImport::getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar) {
+  assert(globalVar->getName().empty() &&
+         "expected to work with a nameless global");
+  auto [it, success] = namelessGlobals.try_emplace(globalVar);
+  if (!success)
+    return it->second;
+
+  // Make sure the symbol name does not clash with an existing symbol.
+  SmallString<128> globalName = SymbolTable::generateSymbolName<128>(
+      getNamelessGlobalPrefix(),
+      [this](StringRef newName) { return llvmModule->getNamedValue(newName); },
+      namelessGlobalId);
+  auto symbolRef = FlatSymbolRefAttr::get(context, globalName);
+  it->getSecond() = symbolRef;
+  return symbolRef;
+}
+
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
   OpBuilder::InsertionGuard guard(builder);
@@ -875,22 +933,29 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
 
   // Get the global expression associated with this global variable and convert
   // it.
-  DIGlobalVariableExpressionAttr globalExpressionAttr;
+  SmallVector<Attribute> globalExpressionAttrs;
   SmallVector<llvm::DIGlobalVariableExpression *> globalExpressions;
   globalVar->getDebugInfo(globalExpressions);
 
-  // There should only be a single global expression.
-  if (!globalExpressions.empty())
-    globalExpressionAttr =
-        debugImporter->translateGlobalVariableExpression(globalExpressions[0]);
+  for (llvm::DIGlobalVariableExpression *expr : globalExpressions) {
+    DIGlobalVariableExpressionAttr globalExpressionAttr =
+        debugImporter->translateGlobalVariableExpression(expr);
+    globalExpressionAttrs.push_back(globalExpressionAttr);
+  }
+
+  // Workaround to support LLVM's nameless globals. MLIR, in contrast to LLVM,
+  // always requires a symbol name.
+  StringRef globalName = globalVar->getName();
+  if (globalName.empty())
+    globalName = getOrCreateNamelessSymbolName(globalVar).getValue();
 
   GlobalOp globalOp = builder.create<GlobalOp>(
       mlirModule.getLoc(), type, globalVar->isConstant(),
-      convertLinkageFromLLVM(globalVar->getLinkage()), globalVar->getName(),
+      convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
-      /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExpr=*/globalExpressionAttr);
+      /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
 
   if (globalVar->hasInitializer() && !valueAttr) {
@@ -981,11 +1046,18 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
   workList.insert(constant);
   while (!workList.empty()) {
     llvm::Constant *current = workList.back();
+    // References of global objects are just pointers to the object. Avoid
+    // walking the elements of these here.
+    if (isa<llvm::GlobalObject>(current)) {
+      orderedSet.insert(current);
+      workList.pop_back();
+      continue;
+    }
+
     // Collect all dependencies of the current constant and add them to the
     // adjacency list if none has been computed before.
-    auto adjacencyIt = adjacencyLists.find(current);
-    if (adjacencyIt == adjacencyLists.end()) {
-      adjacencyIt = adjacencyLists.try_emplace(current).first;
+    auto [adjacencyIt, inserted] = adjacencyLists.try_emplace(current);
+    if (inserted) {
       // Add all constant operands to the adjacency list and skip any other
       // values such as basic block addresses.
       for (llvm::Value *operand : current->operands())
@@ -1059,9 +1131,16 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   }
 
   // Convert global variable accesses.
-  if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant)) {
-    Type type = convertType(globalVar->getType());
-    auto symbolRef = FlatSymbolRefAttr::get(context, globalVar->getName());
+  if (auto *globalObj = dyn_cast<llvm::GlobalObject>(constant)) {
+    Type type = convertType(globalObj->getType());
+    StringRef globalName = globalObj->getName();
+    FlatSymbolRefAttr symbolRef;
+    // Empty names are only allowed for global variables.
+    if (globalName.empty())
+      symbolRef =
+          getOrCreateNamelessSymbolName(cast<llvm::GlobalVariable>(globalObj));
+    else
+      symbolRef = FlatSymbolRefAttr::get(context, globalName);
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 
@@ -1232,7 +1311,8 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
 }
 
 LogicalResult ModuleImport::convertIntrinsicArguments(
-    ArrayRef<llvm::Value *> values, ArrayRef<unsigned> immArgPositions,
+    ArrayRef<llvm::Value *> values, ArrayRef<llvm::OperandBundleUse> opBundles,
+    bool requiresOpBundles, ArrayRef<unsigned> immArgPositions,
     ArrayRef<StringLiteral> immArgAttrNames, SmallVectorImpl<Value> &valuesOut,
     SmallVectorImpl<NamedAttribute> &attrsOut) {
   assert(immArgPositions.size() == immArgAttrNames.size() &&
@@ -1260,6 +1340,35 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
     if (failed(mlirValue))
       return failure();
     valuesOut.push_back(*mlirValue);
+  }
+
+  SmallVector<int> opBundleSizes;
+  SmallVector<Attribute> opBundleTagAttrs;
+  if (requiresOpBundles) {
+    opBundleSizes.reserve(opBundles.size());
+    opBundleTagAttrs.reserve(opBundles.size());
+
+    for (const llvm::OperandBundleUse &bundle : opBundles) {
+      opBundleSizes.push_back(bundle.Inputs.size());
+      opBundleTagAttrs.push_back(StringAttr::get(context, bundle.getTagName()));
+
+      for (const llvm::Use &opBundleOperand : bundle.Inputs) {
+        auto operandMlirValue = convertValue(opBundleOperand.get());
+        if (failed(operandMlirValue))
+          return failure();
+        valuesOut.push_back(*operandMlirValue);
+      }
+    }
+
+    auto opBundleSizesAttr = DenseI32ArrayAttr::get(context, opBundleSizes);
+    auto opBundleSizesAttrNameAttr =
+        StringAttr::get(context, LLVMDialect::getOpBundleSizesAttrName());
+    attrsOut.push_back({opBundleSizesAttrNameAttr, opBundleSizesAttr});
+
+    auto opBundleTagsAttr = ArrayAttr::get(context, opBundleTagAttrs);
+    auto opBundleTagsAttrNameAttr =
+        StringAttr::get(context, LLVMDialect::getOpBundleTagsAttrName());
+    attrsOut.push_back({opBundleTagsAttrNameAttr, opBundleTagsAttr});
   }
 
   return success();
@@ -2071,7 +2180,7 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
     return emitError(loc) << "failed to convert a debug intrinsic operand: "
                           << diag(*dbgIntr);
 
-  // Ensure that the debug instrinsic is inserted right after its operand is
+  // Ensure that the debug intrinsic is inserted right after its operand is
   // defined. Otherwise, the operand might not necessarily dominate the
   // intrinsic. If the defining operation is a terminator, insert the intrinsic
   // into a dominated block.

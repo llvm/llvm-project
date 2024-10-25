@@ -463,7 +463,7 @@ define half @vreduce_fmin_nxv1f16(<vscale x 1 x half> %v) {
   ret half %red
 }
 
-define half @vreduce_fmin_nxv1f16_nonans(<vscale x 1 x half> %v) #0 {
+define half @vreduce_fmin_nxv1f16_nonans(<vscale x 1 x half> %v) {
 ; CHECK-LABEL: 'vreduce_fmin_nxv1f16_nonans'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %red = call nnan half @llvm.vector.reduce.fmin.nxv1f16(<vscale x 1 x half> %v)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret half %red
@@ -721,7 +721,7 @@ define half @vreduce_fmax_nxv1f16(<vscale x 1 x half> %v) {
   ret half %red
 }
 
-define half @vreduce_fmax_nxv1f16_nonans(<vscale x 1 x half> %v) #0 {
+define half @vreduce_fmax_nxv1f16_nonans(<vscale x 1 x half> %v) {
 ; CHECK-LABEL: 'vreduce_fmax_nxv1f16_nonans'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %red = call nnan half @llvm.vector.reduce.fmax.nxv1f16(<vscale x 1 x half> %v)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret half %red

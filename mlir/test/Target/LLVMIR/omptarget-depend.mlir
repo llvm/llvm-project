@@ -1,4 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
     %0 = llvm.mlir.constant(39 : index) : i64
     %1 = llvm.mlir.constant(0 : index) : i64
@@ -45,8 +47,7 @@
     %11 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(from) capture(ByRef) bounds(%9) -> !llvm.ptr {name = "b"}
     %12 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
     %13 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) depend(taskdependin -> %4 : !llvm.ptr) {
-    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr):
+    omp.target depend(taskdependin -> %4 : !llvm.ptr) map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %14 = llvm.mlir.constant(0 : index) : i64
       %15 = llvm.mlir.constant(10 : i32) : i32
       %16 = llvm.mlir.constant(1 : index) : i64
@@ -117,17 +118,18 @@
     llvm.call @_FortranAProgramEndStatement() {fastmathFlags = #llvm.fastmath<contract>} : () -> ()
     llvm.return %0 : i32
   }
+}
 
 // %strucArg holds pointers to shared data.
 // CHECK: define void @_QQmain() {
 // CHECK-DAG: %[[STRUCTARG:.+]] = alloca { ptr, ptr, ptr }, align 8
 // CHECK-DAG:  %[[DEP_ARRAY:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
 // CHECK: %[[DEP_INFO:.+]]  = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARRAY]], i64 0, i64 0
-// CHECK: %[[PTR0:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_INFO]], i32 0, i32 0
+// CHECK: %[[PTR0:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_INFO]], i32 0, i32 0
 // CHECK: store i64 ptrtoint (ptr @_QFEa to i64), ptr %[[PTR0]], align 4
-// CHECK: %[[PTR1:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_INFO]], i32 0, i32 1
+// CHECK: %[[PTR1:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_INFO]], i32 0, i32 1
 // CHECK: store i64 8, ptr %[[PTR1]], align 4
-// CHECK: %[[PTR2:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_INFO]], i32 0, i32 2
+// CHECK: %[[PTR2:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_INFO]], i32 0, i32 2
 // CHECK: store i8 1, ptr %[[PTR2]], align 1
 
 // CHECK: %[[TASKDATA:.+]] = call ptr @__kmpc_omp_task_alloc({{.+}}, ptr @.omp_target_task_proxy_func)

@@ -29,6 +29,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -102,6 +103,10 @@ struct GPUSubgroupReduceOpLowering
 
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (op.getClusterSize())
+      return rewriter.notifyMatchFailure(
+          op, "lowering for clustered reduce not implemented");
+
     if (!op.getUniform())
       return rewriter.notifyMatchFailure(
           op, "cannot be lowered to redux as the op must be run "
@@ -205,7 +210,15 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     MLIRContext *context = rewriter.getContext();
-    Value newOp = rewriter.create<NVVM::LaneIdOp>(loc, rewriter.getI32Type());
+    LLVM::ConstantRangeAttr bounds = nullptr;
+    if (std::optional<APInt> upperBound = op.getUpperBound())
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/0, upperBound->getZExtValue());
+    else
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/0, /*upper=*/kWarpSize);
+    Value newOp =
+        rewriter.create<NVVM::LaneIdOp>(loc, rewriter.getI32Type(), bounds);
     // Truncate or extend the result depending on the index bitwidth specified
     // by the LLVMTypeConverter options.
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
@@ -316,47 +329,61 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
                       LLVM::SinOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
-  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
+  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
 }
 
 template <typename OpTy>
-static void populateOpPatterns(LLVMTypeConverter &converter,
+static void populateOpPatterns(const LLVMTypeConverter &converter,
                                RewritePatternSet &patterns, StringRef f32Func,
-                               StringRef f64Func,
-                               StringRef f32ApproxFunc = "") {
+                               StringRef f64Func, StringRef f32ApproxFunc = "",
+                               StringRef f16Func = "") {
   patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
   patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func,
-                                           f32ApproxFunc);
+                                           f32ApproxFunc, f16Func);
 }
 
 void mlir::populateGpuSubgroupReduceOpLoweringPattern(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<GPUSubgroupReduceOpLowering>(converter);
 }
 
-void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
-                                               RewritePatternSet &patterns) {
+void mlir::populateGpuToNVVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+  using gpu::index_lowering::IndexKind;
+  using gpu::index_lowering::IntrType;
   populateWithGenerated(patterns);
   patterns.add<GPUPrintfOpToVPrintfLowering>(converter);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
-                                      NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
+                                      NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>>(
+      converter, IndexKind::Block, IntrType::Id);
+  patterns.add<
       gpu::index_lowering::OpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
-                                      NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
+                                      NVVM::BlockDimYOp, NVVM::BlockDimZOp>>(
+      converter, IndexKind::Block, IntrType::Dim);
+  patterns.add<
       gpu::index_lowering::OpLowering<gpu::ClusterIdOp, NVVM::ClusterIdXOp,
-                                      NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>,
-      gpu::index_lowering::OpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
-                                      NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
-      gpu::index_lowering::OpLowering<
-          gpu::ClusterBlockIdOp, NVVM::BlockInClusterIdXOp,
-          NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>,
-      gpu::index_lowering::OpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
-                                      NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
-      gpu::index_lowering::OpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
-                                      NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
-      gpu::index_lowering::OpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
-                                      NVVM::GridDimYOp, NVVM::GridDimZOp>,
-      GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
+                                      NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>>(
+      converter, IndexKind::Other, IntrType::Id);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::ClusterDimOp, NVVM::ClusterDimXOp, NVVM::ClusterDimYOp,
+      NVVM::ClusterDimZOp>>(converter, IndexKind::Other, IntrType::Dim);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::ClusterBlockIdOp, NVVM::BlockInClusterIdXOp,
+      NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>>(
+      converter, IndexKind::Other, IntrType::Id);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::ClusterDimBlocksOp, NVVM::ClusterDimBlocksXOp,
+      NVVM::ClusterDimBlocksYOp, NVVM::ClusterDimBlocksZOp>>(
+      converter, IndexKind::Other, IntrType::Dim);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::BlockIdOp, NVVM::BlockIdXOp, NVVM::BlockIdYOp, NVVM::BlockIdZOp>>(
+      converter, IndexKind::Grid, IntrType::Id);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
+      converter, IndexKind::Grid, IntrType::Dim);
+  patterns.add<GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
+      converter);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
       converter, NVVM::kSharedMemoryAlignmentBit);
@@ -365,13 +392,15 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   // attributions since NVVM models it as `alloca`s in the default
   // memory space and does not support `alloca`s with addrspace(5).
   patterns.add<GPUFuncOpLowering>(
-      converter, /*allocaAddrSpace=*/0,
-      /*workgroupAddrSpace=*/
-      static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
-      StringAttr::get(&converter.getContext(),
-                      NVVM::NVVMDialect::getKernelFuncAttrName()),
-      StringAttr::get(&converter.getContext(),
-                      NVVM::NVVMDialect::getMaxntidAttrName()));
+      converter,
+      GPUFuncOpLoweringOptions{
+          /*allocaAddrSpace=*/0,
+          /*workgroupAddrSpace=*/
+          static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
+          StringAttr::get(&converter.getContext(),
+                          NVVM::NVVMDialect::getKernelFuncAttrName()),
+          StringAttr::get(&converter.getContext(),
+                          NVVM::NVVMDialect::getMaxntidAttrName())});
 
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
                                     "__nv_fmod");

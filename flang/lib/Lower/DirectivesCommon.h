@@ -58,38 +58,21 @@ struct AddrAndBoundsInfo {
   explicit AddrAndBoundsInfo(mlir::Value addr, mlir::Value rawInput,
                              mlir::Value isPresent)
       : addr(addr), rawInput(rawInput), isPresent(isPresent) {}
+  explicit AddrAndBoundsInfo(mlir::Value addr, mlir::Value rawInput,
+                             mlir::Value isPresent, mlir::Type boxType)
+      : addr(addr), rawInput(rawInput), isPresent(isPresent), boxType(boxType) {
+  }
   mlir::Value addr = nullptr;
   mlir::Value rawInput = nullptr;
   mlir::Value isPresent = nullptr;
+  mlir::Type boxType = nullptr;
+  void dump(llvm::raw_ostream &os) {
+    os << "AddrAndBoundsInfo addr: " << addr << "\n";
+    os << "AddrAndBoundsInfo rawInput: " << rawInput << "\n";
+    os << "AddrAndBoundsInfo isPresent: " << isPresent << "\n";
+    os << "AddrAndBoundsInfo boxType: " << boxType << "\n";
+  }
 };
-
-/// Checks if the assignment statement has a single variable on the RHS.
-static inline bool checkForSingleVariableOnRHS(
-    const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const Fortran::parser::Expr &expr{
-      std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const Fortran::common::Indirection<Fortran::parser::Designator> *designator =
-      std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &expr.u);
-  return designator != nullptr;
-}
-
-/// Checks if the symbol on the LHS of the assignment statement is present in
-/// the RHS expression.
-static inline bool
-checkForSymbolMatch(const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const auto &var{std::get<Fortran::parser::Variable>(assignmentStmt.t)};
-  const auto &expr{std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const auto *e{Fortran::semantics::GetExpr(expr)};
-  const auto *v{Fortran::semantics::GetExpr(var)};
-  auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
-  const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
-  for (const Fortran::semantics::Symbol &symbol :
-       Fortran::evaluate::GetSymbolVector(*e))
-    if (varSymbol == symbol)
-      return true;
-  return false;
-}
 
 /// Populates \p hint and \p memoryOrder with appropriate clause information
 /// if present on atomic construct.
@@ -143,13 +126,8 @@ static void processOmpAtomicTODO(mlir::Type elementType,
     return;
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
-    // Based on assertion for supported element types in OMPIRBuilder.cpp
-    // createAtomicRead
-    mlir::Type unwrappedEleTy = fir::unwrapRefType(elementType);
-    bool supportedAtomicType =
-        (!fir::isa_complex(unwrappedEleTy) && fir::isa_trivial(unwrappedEleTy));
-    if (!supportedAtomicType)
-      TODO(loc, "Unsupported atomic type");
+    assert(fir::isa_trivial(fir::unwrapRefType(elementType)) &&
+           "is supported type for omp atomic");
   }
 }
 
@@ -526,7 +504,7 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   stmt2LHSArg = fir::getBase(converter.genExprAddr(assign2.lhs, stmtCtx));
 
   // Operation specific RHS evaluations
-  if (checkForSingleVariableOnRHS(stmt1)) {
+  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
     // Atomic capture construct is of the form [capture-stmt, update-stmt] or
     // of the form [capture-stmt, write-stmt]
     stmt1RHSArg = fir::getBase(converter.genExprAddr(assign1.rhs, stmtCtx));
@@ -562,8 +540,8 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
-  if (checkForSingleVariableOnRHS(stmt1)) {
-    if (checkForSymbolMatch(stmt2)) {
+  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
+    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
           *Fortran::semantics::GetExpr(stmt1Expr);
@@ -674,27 +652,18 @@ getDataOperandBaseAddr(Fortran::lower::AbstractConverter &converter,
     if (mlir::isa<fir::RecordType>(boxTy.getEleTy()))
       TODO(loc, "derived type");
 
-    // Load the box when baseAddr is a `fir.ref<fir.box<T>>` or a
-    // `fir.ref<fir.class<T>>` type.
-    if (mlir::isa<fir::ReferenceType>(symAddr.getType())) {
-      if (Fortran::semantics::IsOptional(sym)) {
-        mlir::Value addr =
-            builder.genIfOp(loc, {boxTy}, isPresent, /*withElseRegion=*/true)
-                .genThen([&]() {
-                  mlir::Value load = builder.create<fir::LoadOp>(loc, symAddr);
-                  builder.create<fir::ResultOp>(loc, mlir::ValueRange{load});
-                })
-                .genElse([&] {
-                  mlir::Value absent =
-                      builder.create<fir::AbsentOp>(loc, boxTy);
-                  builder.create<fir::ResultOp>(loc, mlir::ValueRange{absent});
-                })
-                .getResults()[0];
-        return AddrAndBoundsInfo(addr, rawInput, isPresent);
-      }
+    // In case of a box reference, load it here to get the box value.
+    // This is preferrable because then the same box value can then be used for
+    // all address/dimension retrievals. For Fortran optional though, leave
+    // the load generation for later so it can be done in the appropriate
+    // if branches.
+    if (mlir::isa<fir::ReferenceType>(symAddr.getType()) &&
+        !Fortran::semantics::IsOptional(sym)) {
       mlir::Value addr = builder.create<fir::LoadOp>(loc, symAddr);
-      return AddrAndBoundsInfo(addr, rawInput, isPresent);
+      return AddrAndBoundsInfo(addr, rawInput, isPresent, boxTy);
     }
+
+    return AddrAndBoundsInfo(symAddr, rawInput, isPresent, boxTy);
   }
   return AddrAndBoundsInfo(symAddr, rawInput, isPresent);
 }
@@ -704,6 +673,7 @@ llvm::SmallVector<mlir::Value>
 gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, mlir::Location loc,
                           fir::ExtendedValue dataExv, mlir::Value box,
                           bool collectValuesOnly = false) {
+  assert(box && "box must exist");
   llvm::SmallVector<mlir::Value> values;
   mlir::Value byteStride;
   mlir::Type idxTy = builder.getIndexType();
@@ -748,8 +718,10 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
 
-  assert(mlir::isa<fir::BaseBoxType>(info.addr.getType()) &&
+  assert(mlir::isa<fir::BaseBoxType>(info.boxType) &&
          "expect fir.box or fir.class");
+  assert(fir::unwrapRefType(info.addr.getType()) == info.boxType &&
+         "expected box type consistency");
 
   if (info.isPresent) {
     llvm::SmallVector<mlir::Type> resTypes;
@@ -760,9 +732,13 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Operation::result_range ifRes =
         builder.genIfOp(loc, resTypes, info.isPresent, /*withElseRegion=*/true)
             .genThen([&]() {
+              mlir::Value box =
+                  !fir::isBoxAddress(info.addr.getType())
+                      ? info.addr
+                      : builder.create<fir::LoadOp>(loc, info.addr);
               llvm::SmallVector<mlir::Value> boundValues =
                   gatherBoundsOrBoundValues<BoundsOp, BoundsType>(
-                      builder, loc, dataExv, info.addr,
+                      builder, loc, dataExv, box,
                       /*collectValuesOnly=*/true);
               builder.create<fir::ResultOp>(loc, boundValues);
             })
@@ -790,8 +766,11 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
       bounds.push_back(bound);
     }
   } else {
-    bounds = gatherBoundsOrBoundValues<BoundsOp, BoundsType>(
-        builder, loc, dataExv, info.addr);
+    mlir::Value box = !fir::isBoxAddress(info.addr.getType())
+                          ? info.addr
+                          : builder.create<fir::LoadOp>(loc, info.addr);
+    bounds = gatherBoundsOrBoundValues<BoundsOp, BoundsType>(builder, loc,
+                                                             dataExv, box);
   }
   return bounds;
 }
@@ -894,7 +873,7 @@ struct PeelConvert {
   }
 };
 
-static Fortran::semantics::SomeExpr
+static inline Fortran::semantics::SomeExpr
 peelOuterConvert(Fortran::semantics::SomeExpr &expr) {
   if (auto peeled = PeelConvert::visit(expr))
     return *peeled;
@@ -941,10 +920,14 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
               builder
                   .genIfOp(loc, idxTy, info.isPresent, /*withElseRegion=*/true)
                   .genThen([&]() {
+                    mlir::Value box =
+                        !fir::isBoxAddress(info.addr.getType())
+                            ? info.addr
+                            : builder.create<fir::LoadOp>(loc, info.addr);
                     mlir::Value d =
                         builder.createIntegerConstant(loc, idxTy, dimension);
                     auto dimInfo = builder.create<fir::BoxDimsOp>(
-                        loc, idxTy, idxTy, idxTy, info.addr, d);
+                        loc, idxTy, idxTy, idxTy, box, d);
                     builder.create<fir::ResultOp>(loc, dimInfo.getByteStride());
                   })
                   .genElse([&] {
@@ -954,9 +937,12 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
                   })
                   .getResults()[0];
         } else {
+          mlir::Value box = !fir::isBoxAddress(info.addr.getType())
+                                ? info.addr
+                                : builder.create<fir::LoadOp>(loc, info.addr);
           mlir::Value d = builder.createIntegerConstant(loc, idxTy, dimension);
-          auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy,
-                                                        idxTy, info.addr, d);
+          auto dimInfo =
+              builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, d);
           stride = dimInfo.getByteStride();
         }
         strideInBytes = true;
@@ -1197,8 +1183,10 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     if (auto loadOp =
             mlir::dyn_cast_or_null<fir::LoadOp>(info.addr.getDefiningOp())) {
       if (fir::isAllocatableType(loadOp.getType()) ||
-          fir::isPointerType(loadOp.getType()))
+          fir::isPointerType(loadOp.getType())) {
+        info.boxType = info.addr.getType();
         info.addr = builder.create<fir::BoxAddrOp>(operandLocation, info.addr);
+      }
       info.rawInput = info.addr;
     }
 
@@ -1209,6 +1197,7 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     if (auto boxAddrOp =
             mlir::dyn_cast_or_null<fir::BoxAddrOp>(info.addr.getDefiningOp())) {
       info.addr = boxAddrOp.getVal();
+      info.boxType = info.addr.getType();
       info.rawInput = info.addr;
       bounds = genBoundsOpsFromBox<BoundsOp, BoundsType>(
           builder, operandLocation, compExv, info);
@@ -1227,6 +1216,7 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
           getDataOperandBaseAddr(converter, builder, *symRef, operandLocation);
       if (mlir::isa<fir::BaseBoxType>(
               fir::unwrapRefType(info.addr.getType()))) {
+        info.boxType = fir::unwrapRefType(info.addr.getType());
         bounds = genBoundsOpsFromBox<BoundsOp, BoundsType>(
             builder, operandLocation, dataExv, info);
       }

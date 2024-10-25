@@ -14,6 +14,6 @@
 
 #include <mutex>
 
-#include "../types.h"
+#include "checking_mutex.h"
 
-static_assert(!std::is_copy_assignable<std::lock_guard<MyMutex> >::value, "");
+static_assert(!std::is_copy_assignable<std::lock_guard<checking_mutex> >::value, "");

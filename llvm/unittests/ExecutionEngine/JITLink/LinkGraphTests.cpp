@@ -685,37 +685,44 @@ TEST(LinkGraphTest, SplitBlock) {
   B1.addEdge(Edge::FirstRelocation, 12, ES4, 0);
 
   // Split B1.
-  auto &B2 = G.splitBlock(B1, 8);
+  auto Blocks = G.splitBlock(B1, ArrayRef<int>({8}));
+
+  EXPECT_EQ(Blocks.size(), 2U);
+  EXPECT_EQ(Blocks[0], &B1);
+  auto &B2 = *Blocks[1];
 
   // Check that the block addresses and content matches what we would expect.
-  EXPECT_EQ(B1.getAddress(), B1Addr + 8);
-  EXPECT_EQ(B1.getContent(), BlockContent.slice(8));
+  EXPECT_EQ(B1.getAddress(), B1Addr);
+  EXPECT_EQ(B1.getContent(), BlockContent.slice(0, 8));
+  EXPECT_EQ(B1.edges_size(), 2U);
 
-  EXPECT_EQ(B2.getAddress(), B1Addr);
-  EXPECT_EQ(B2.getContent(), BlockContent.slice(0, 8));
+  EXPECT_EQ(B2.getAddress(), B1Addr + 8);
+  EXPECT_EQ(B2.getContent(), BlockContent.slice(8));
+  EXPECT_EQ(B2.edges_size(), 2U);
 
-  // Check that symbols in B1 were transferred as expected:
-  // We expect S1 and S2 to have been transferred to B2, and S3 and S4 to have
-  // remained attached to B1. Symbols S3 and S4 should have had their offsets
-  // slid to account for the change in address of B2.
-  EXPECT_EQ(&S1.getBlock(), &B2);
+  // Check that symbols in B2 were transferred as expected:
+  // We expect S1 and S2 to have been transferred to B1, and S3 and S4 to have
+  // remained attached to B2. Symbols S3 and S4 should have had their offsets
+  // slid to account for the change in address of B1.
+  EXPECT_EQ(&S1.getBlock(), &B1);
   EXPECT_EQ(S1.getOffset(), 0U);
 
-  EXPECT_EQ(&S2.getBlock(), &B2);
+  EXPECT_EQ(&S2.getBlock(), &B1);
   EXPECT_EQ(S2.getOffset(), 4U);
 
-  EXPECT_EQ(&S3.getBlock(), &B1);
+  EXPECT_EQ(&S3.getBlock(), &B2);
   EXPECT_EQ(S3.getOffset(), 0U);
 
-  EXPECT_EQ(&S4.getBlock(), &B1);
+  EXPECT_EQ(&S4.getBlock(), &B2);
   EXPECT_EQ(S4.getOffset(), 4U);
 
-  EXPECT_EQ(&S5.getBlock(), &B2);
+  EXPECT_EQ(&S5.getBlock(), &B1);
   EXPECT_EQ(S5.getOffset(), 0U);
+
   // Size shrinks to fit.
   EXPECT_EQ(S5.getSize(), 8U);
 
-  // Check that edges in B1 have been transferred as expected:
+  // Check that edges in B2 have been transferred as expected:
   // Both blocks should now have two edges each at offsets 0 and 4.
   EXPECT_EQ(llvm::size(B1.edges()), 2);
   if (size(B1.edges()) == 2) {

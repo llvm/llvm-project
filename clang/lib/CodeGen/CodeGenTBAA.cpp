@@ -16,6 +16,7 @@
 
 #include "CodeGenTBAA.h"
 #include "ABIInfoImpl.h"
+#include "CGCXXABI.h"
 #include "CGRecordLayout.h"
 #include "CodeGenTypes.h"
 #include "clang/AST/ASTContext.h"
@@ -36,10 +37,11 @@ using namespace CodeGen;
 
 CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes,
                          llvm::Module &M, const CodeGenOptions &CGO,
-                         const LangOptions &Features, MangleContext &MContext)
+                         const LangOptions &Features)
     : Context(Ctx), CGTypes(CGTypes), Module(M), CodeGenOpts(CGO),
-      Features(Features), MContext(MContext), MDHelper(M.getContext()),
-      Root(nullptr), Char(nullptr) {}
+      Features(Features),
+      MangleCtx(ItaniumMangleContext::create(Ctx, Ctx.getDiagnostics())),
+      MDHelper(M.getContext()), Root(nullptr), Char(nullptr) {}
 
 CodeGenTBAA::~CodeGenTBAA() {
 }
@@ -201,14 +203,6 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // Other qualifiers could theoretically be distinguished, especially if
   // they involve a significant representation difference.  We don't
   // currently do so, however.
-  //
-  // Computing the pointee type string recursively is implicitly more
-  // forgiving than the standards require.  Effectively, we are turning
-  // the question "are these types compatible/similar" into "are
-  // accesses to these types allowed to alias".  In both C and C++,
-  // the latter question has special carve-outs for signedness
-  // mismatches that only apply at the top level.  As a result, we are
-  // allowing e.g. `int *` l-values to access `unsigned *` objects.
   if (Ty->isPointerType() || Ty->isReferenceType()) {
     llvm::MDNode *AnyPtr = createScalarTypeNode("any pointer", getChar(), Size);
     if (!CodeGenOpts.PointerTBAA)
@@ -220,21 +214,34 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       PtrDepth++;
       Ty = Ty->getPointeeType().getTypePtr();
     } while (Ty->isPointerType());
-    // TODO: Implement C++'s type "similarity" and consider dis-"similar"
-    // pointers distinct for non-builtin types.
+    Ty = Context.getBaseElementType(QualType(Ty, 0)).getTypePtr();
+    assert(!isa<VariableArrayType>(Ty));
+    // When the underlying type is a builtin type, we compute the pointee type
+    // string recursively, which is implicitly more forgiving than the standards
+    // require.  Effectively, we are turning the question "are these types
+    // compatible/similar" into "are accesses to these types allowed to alias".
+    // In both C and C++, the latter question has special carve-outs for
+    // signedness mismatches that only apply at the top level.  As a result, we
+    // are allowing e.g. `int *` l-values to access `unsigned *` objects.
+    SmallString<256> TyName;
     if (isa<BuiltinType>(Ty)) {
       llvm::MDNode *ScalarMD = getTypeInfoHelper(Ty);
       StringRef Name =
           cast<llvm::MDString>(
               ScalarMD->getOperand(CodeGenOpts.NewStructPathTBAA ? 2 : 0))
               ->getString();
-      SmallString<256> OutName("p");
-      OutName += std::to_string(PtrDepth);
-      OutName += " ";
-      OutName += Name;
-      return createScalarTypeNode(OutName, AnyPtr, Size);
+      TyName = Name;
+    } else {
+      // For non-builtin types use the mangled name of the canonical type.
+      llvm::raw_svector_ostream TyOut(TyName);
+      MangleCtx->mangleCanonicalTypeName(QualType(Ty, 0), TyOut);
     }
-    return AnyPtr;
+
+    SmallString<256> OutName("p");
+    OutName += std::to_string(PtrDepth);
+    OutName += " ";
+    OutName += TyName;
+    return createScalarTypeNode(OutName, AnyPtr, Size);
   }
 
   // Accesses to arrays are accesses to objects of their element types.
@@ -256,7 +263,8 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
 
     SmallString<256> OutName;
     llvm::raw_svector_ostream Out(OutName);
-    MContext.mangleCanonicalTypeName(QualType(ETy, 0), Out);
+    CGTypes.getCXXABI().getMangleContext().mangleCanonicalTypeName(
+        QualType(ETy, 0), Out);
     return createScalarTypeNode(OutName, getChar(), Size);
   }
 
@@ -318,7 +326,7 @@ TBAAAccessInfo CodeGenTBAA::getAccessInfo(QualType AccessType) {
 }
 
 TBAAAccessInfo CodeGenTBAA::getVTablePtrAccessInfo(llvm::Type *VTablePtrType) {
-  llvm::DataLayout DL(&Module);
+  const llvm::DataLayout &DL = Module.getDataLayout();
   unsigned Size = DL.getPointerTypeSize(VTablePtrType);
   return TBAAAccessInfo(createScalarTypeNode("vtable pointer", getRoot(), Size),
                         Size);
@@ -481,7 +489,8 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
     if (Features.CPlusPlus) {
       // Don't use the mangler for C code.
       llvm::raw_svector_ostream Out(OutName);
-      MContext.mangleCanonicalTypeName(QualType(Ty, 0), Out);
+      CGTypes.getCXXABI().getMangleContext().mangleCanonicalTypeName(
+          QualType(Ty, 0), Out);
     } else {
       OutName = RD->getName();
     }

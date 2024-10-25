@@ -186,7 +186,7 @@ def FeatureJS : ExtensionWithMArch<"jsconv", "JS", "FEAT_JSCVT",
   [FeatureFPARMv8]>;
 
 def FeatureFPAC : Extension<"fpac", "FPAC", "FEAT_FPAC",
-  "Enable v8.3-A Pointer Authentication Faulting enhancement">;
+  "Enable Armv8.3-A Pointer Authentication Faulting enhancement">;
 
 def FeatureCCIDX : Extension<"ccidx", "CCIDX", "FEAT_CCIDX",
   "Enable Armv8.3-A Extend of the CCSIDR number of sets">;
@@ -435,8 +435,12 @@ def FeatureMEC : Extension<"mec", "MEC", "FEAT_MEC",
 def FeatureSVE2p1: ExtensionWithMArch<"sve2p1", "SVE2p1", "FEAT_SVE2p1",
   "Enable Scalable Vector Extension 2.1 instructions", [FeatureSVE2]>;
 
-def FeatureB16B16 : ExtensionWithMArch<"b16b16", "B16B16", "FEAT_SVE_B16B16",
-  "Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions", [FeatureBF16]>;
+def FeatureSVEB16B16: ExtensionWithMArch<"sve-b16b16", "SVEB16B16", "FEAT_SVE_B16B16",
+  "Enable SVE2 non-widening and SME2 Z-targeting non-widening BFloat16 instructions">;
+
+def FeatureSMEB16B16 : ExtensionWithMArch<"sme-b16b16", "SMEB16B16", "FEAT_SME_B16B16",
+  "Enable SME2.1 ZA-targeting non-widening BFloat16 instructions",
+  [FeatureSME2, FeatureSVEB16B16]>;
 
 def FeatureSMEF16F16 : ExtensionWithMArch<"sme-f16f16", "SMEF16F16", "FEAT_SME_F16F16",
   "Enable SME non-widening Float16 instructions", [FeatureSME2]>;
@@ -474,10 +478,10 @@ def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX", "FEAT_FAMINMAX",
 
 def FeatureLUT: ExtensionWithMArch<"lut", "LUT", "FEAT_LUT",
  "Enable Lookup Table instructions">;
-   
+
 def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
   "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
-  
+
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
   "Enable Armv9.5-A FP8 multiply-add instructions", [FeatureFP8]>;
 
@@ -486,7 +490,7 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
   "Enable FP8 4-way dot instructions", [FeatureFP8FMA]>;
-  
+
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
   "Enable FP8 2-way dot instructions", [FeatureFP8DOT4]>;
 
@@ -497,7 +501,7 @@ def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2", "FE
   "Enable SVE2 FP8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
 
 def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2", "FEAT_SME_LUTv2",
-  "Enable Scalable Matrix Extension (SME) LUTv2 instructions">;
+  "Enable Scalable Matrix Extension (SME) LUTv2 instructions", [FeatureSME2]>;
 
 def FeatureSMEF8F32 : ExtensionWithMArch<"sme-f8f32", "SMEF8F32", "FEAT_SME_F8F32",
   "Enable Scalable Matrix Extension (SME) F8F32 instructions", [FeatureSME2, FeatureFP8]>;
@@ -513,6 +517,56 @@ def FeaturePAuthLR : ExtensionWithMArch<"pauth-lr", "PAuthLR", "FEAT_PAuth_LR",
 
 def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
   "Enable Armv9.5-A TLBI VMALL for Dirty State">;
+
+//===----------------------------------------------------------------------===//
+//  Armv9.6 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
+def FeatureCMPBR : ExtensionWithMArch<"cmpbr", "CMPBR", "FEAT_CMPBR",
+  "Enable Armv9.6-A base compare and branch instructions">;
+
+def FeatureF8F32MM: ExtensionWithMArch<"f8f32mm", "F8F32MM", "FEAT_F8F32MM",
+  "Enable Armv9.6-A FP8 to Single-Precision Matrix Multiplication", [FeatureNEON, FeatureFP8]>;
+
+def FeatureF8F16MM: ExtensionWithMArch<"f8f16mm", "F8F16MM", "FEAT_F8F16MM",
+  "Enable Armv9.6-A FP8 to Half-Precision Matrix Multiplication", [FeatureNEON, FeatureFP8]>;
+
+def FeatureFPRCVT: ExtensionWithMArch<"fprcvt", "FPRCVT", "FEAT_FPRCVT",
+  "Enable Armv9.6-A base convert instructions for SIMD&FP scalar register operands of"
+  " different input and output sizes", [FeatureFPARMv8]>;
+
+def FeatureLSFE : ExtensionWithMArch<"lsfe", "LSFE", "FEAT_LSFE",
+  "Enable Armv9.6-A base Atomic floating-point in-memory instructions", [FeatureFPARMv8]>;
+
+def FeatureSME2p2: ExtensionWithMArch<"sme2p2", "SME2p2", "FEAT_SME2p2",
+  "Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions", [FeatureSME2p1]>;
+
+def FeatureSSVE_AES : ExtensionWithMArch<"ssve-aes", "SSVE_AES", "FEAT_SSVE_AES",
+  "Enable Armv9.6-A SVE2 AES support in streaming SVE mode", [FeatureSME2, FeatureSVE2AES]>;
+
+def FeatureSVE2p2 : ExtensionWithMArch<"sve2p2", "SVE2p2", "FEAT_SVE2p2",
+  "Enable Armv9.6-A Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
+
+def FeatureSVEAES2: ExtensionWithMArch<"sve-aes2", "SVE_AES2", "FEAT_SVE_AES2",
+  "Enable Armv9.6-A SVE multi-vector AES and 128-bit PMULL instructions">;
+
+def FeatureSVEBFSCALE: ExtensionWithMArch<"sve-bfscale", "SVE_BFSCALE", "FEAT_SVE_BFSCALE",
+  "Enable Armv9.6-A SVE BFloat16 scaling instructions">;
+
+def FeatureSVE_F16F32MM: ExtensionWithMArch<"sve-f16f32mm", "SVE_F16F32MM", "FEAT_SVE_F16F32MM",
+  "Enable Armv9.6-A FP16 to FP32 Matrix Multiply instructions", [FeatureSVE]>;
+
+def FeatureLSUI: ExtensionWithMArch<"lsui", "LSUI", "FEAT_LSUI",
+  "Enable Armv9.6-A unprivileged load/store instructions">;
+
+def FeatureOCCMO: ExtensionWithMArch<"occmo", "OCCMO", "FEAT_OCCMO",
+  "Enable Armv9.6-A Outer cacheable cache maintenance operations">;
+
+def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
+  "Enable Armv9.6-A Producer Consumer Data Placement hints">;
+
+def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
+  "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -717,9 +771,6 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
-def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
-  "Apple A7 (the CPU formerly known as Cyclone)">;
-
 def FeatureEL2VMSA : SubtargetFeature<"el2vmsa", "HasEL2VMSA", "true",
   "Enable Exception Level 2 Virtual Memory System Architecture">;
 
@@ -778,27 +829,26 @@ def HasV8_2aOps : Architecture64<8, 2, "a", "v8.2a",
   [HasV8_1aOps, FeaturePsUAO, FeaturePAN_RWV, FeatureRAS, FeatureCCPP],
   !listconcat(HasV8_1aOps.DefaultExts, [FeatureRAS])>;
 def HasV8_3aOps : Architecture64<8, 3, "a", "v8.3a",
-  [HasV8_2aOps, FeatureRCPC, FeaturePAuth, FeatureJS, FeatureCCIDX,
-    FeatureComplxNum],
+  [HasV8_2aOps, FeatureRCPC, FeaturePAuth, FeatureJS, FeatureComplxNum],
   !listconcat(HasV8_2aOps.DefaultExts, [FeatureComplxNum, FeatureJS,
-    FeaturePAuth, FeatureRCPC])>;
+    FeaturePAuth, FeatureRCPC,  FeatureCCIDX])>;
 def HasV8_4aOps : Architecture64<8, 4, "a", "v8.4a",
   [HasV8_3aOps, FeatureDotProd, FeatureNV, FeatureMPAM, FeatureDIT,
     FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI, FeatureFlagM,
     FeatureRCPC_IMMO, FeatureLSE2],
-  !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd])>;
+  !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd, FeatureDIT, FeatureFlagM])>;
 def HasV8_5aOps : Architecture64<8, 5, "a", "v8.5a",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
-    FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
+    FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
     FeatureBranchTargetId],
-  !listconcat(HasV8_4aOps.DefaultExts, [])>;
+  !listconcat(HasV8_4aOps.DefaultExts, [FeaturePredRes, FeatureSSBS, FeatureBranchTargetId, FeatureSB])>;
 def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
   [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
   [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
-  !listconcat(HasV8_6aOps.DefaultExts, [])>;
+  !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
   !listconcat(HasV8_7aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
@@ -816,7 +866,7 @@ def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",
   !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8, FeatureRME])>;
 def HasV9_2aOps : Architecture64<9, 2, "a", "v9.2a",
   [HasV8_7aOps, HasV9_1aOps],
-  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC])>;
+  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC, FeatureWFxT])>;
 def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
   [HasV8_8aOps, HasV9_2aOps],
   !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
@@ -827,13 +877,17 @@ def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
+def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
+  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2, FeatureLSUI, FeatureOCCMO],
+  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2,
+    FeatureLSUI, FeatureOCCMO])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
     //v8.2
     FeatureRAS, FeaturePsUAO, FeatureCCPP, FeaturePAN_RWV,
     //v8.3
-    FeatureCCIDX, FeaturePAuth, FeatureRCPC,
+    FeaturePAuth, FeatureRCPC,
     //v8.4
     FeatureTRACEV8_4, FeatureTLB_RMI, FeatureFlagM, FeatureDIT, FeatureSEL2,
     FeatureRCPC_IMMO,
@@ -844,7 +898,7 @@ def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   // For v8-R, we do not enable crypto and align with GCC that enables a more
   // minimal set of optional architecture extensions.
   !listconcat(
-    !listremove(HasV8_5aOps.DefaultExts, [FeatureLSE]),
+    !listremove(HasV8_5aOps.DefaultExts, [FeatureBranchTargetId, FeaturePredRes]),
     [FeatureSSBS, FeatureFullFP16, FeatureFP16FML, FeatureSB]
   )>;
 

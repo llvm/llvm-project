@@ -135,16 +135,21 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   // todo: this would be a lot more powerful if we used scev, but all the
   // plumbing is currently missing to pass a pointer in from the pass
   // Check for cmp (phi [x, preheader] ...), y where (pred x, y is known
+  ICmpInst::Predicate Pred = Cond->getPredicate();
   auto *LHS = dyn_cast<PHINode>(Cond->getOperand(0));
   auto *RHS = Cond->getOperand(1);
-  if (!LHS || LHS->getParent() != CurLoop->getHeader())
-    return false;
-  auto DL = ExitBlock->getDataLayout();
+  if (!LHS || LHS->getParent() != CurLoop->getHeader()) {
+    Pred = Cond->getSwappedPredicate();
+    LHS = dyn_cast<PHINode>(Cond->getOperand(1));
+    RHS = Cond->getOperand(0);
+    if (!LHS || LHS->getParent() != CurLoop->getHeader())
+      return false;
+  }
+
+  auto DL = ExitBlock->getModule()->getDataLayout();
   auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
-  auto *SimpleValOrNull = simplifyCmpInst(Cond->getPredicate(),
-                                          IVStart, RHS,
-                                          {DL, /*TLI*/ nullptr,
-                                              DT, /*AC*/ nullptr, BI});
+  auto *SimpleValOrNull = simplifyCmpInst(
+      Pred, IVStart, RHS, {DL, /*TLI*/ nullptr, DT, /*AC*/ nullptr, BI});
   auto *SimpleCst = dyn_cast_or_null<Constant>(SimpleValOrNull);
   if (!SimpleCst)
     return false;

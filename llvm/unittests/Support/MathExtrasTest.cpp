@@ -218,8 +218,11 @@ TEST(MathExtras, AlignToPowerOf2) {
   EXPECT_EQ(24u, alignToPowerOf2(17, 8));
   EXPECT_EQ(0u, alignToPowerOf2(~0LL, 8));
   EXPECT_EQ(240u, alignToPowerOf2(240, 16));
-  EXPECT_EQ(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1,
-            alignToPowerOf2(std::numeric_limits<uint32_t>::max(), 2));
+
+  // Overflow.
+  EXPECT_EQ(0u, alignToPowerOf2(static_cast<uint8_t>(200),
+                                static_cast<uint8_t>(128)));
+  EXPECT_EQ(0u, alignToPowerOf2(std::numeric_limits<uint32_t>::max(), 2));
 }
 
 TEST(MathExtras, AlignDown) {

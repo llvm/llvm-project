@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cassert>
 #include <list>
+#include <locale>
 #include <vector>
 
 #include "test_macros.h"

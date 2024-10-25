@@ -17,6 +17,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Attr.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"

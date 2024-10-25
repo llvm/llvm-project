@@ -21,7 +21,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/LocInfoType.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/Parser.h"
@@ -444,10 +446,6 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     Token OpToken = Tok;
     ConsumeToken();
 
-    if (OpToken.is(tok::caretcaret)) {
-      return ExprError(Diag(Tok, diag::err_opencl_logical_exclusive_or));
-    }
-
     // If we're potentially in a template-id, we may now be able to determine
     // whether we're actually in one or not.
     if (OpToken.isOneOf(tok::comma, tok::greater, tok::greatergreater,
@@ -605,7 +603,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
         RHS = ExprError();
       }
       // If this is left-associative, only parse things on the RHS that bind
-      // more tightly than the current operator.  If it is left-associative, it
+      // more tightly than the current operator.  If it is right-associative, it
       // is okay, to bind exactly as tightly.  For example, compile A=B=C=D as
       // A=(B=(C=D)), where each paren is a level of recursion here.
       // The function takes ownership of the RHS.
@@ -802,7 +800,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_assignable);
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_constructible);
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_destructible);
-    REVERTIBLE_TYPE_TRAIT(__is_nullptr);
     REVERTIBLE_TYPE_TRAIT(__is_object);
     REVERTIBLE_TYPE_TRAIT(__is_pod);
     REVERTIBLE_TYPE_TRAIT(__is_pointer);
@@ -1645,6 +1642,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw__Sat:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
   {
     if (!getLangOpts().CPlusPlus) {
       Diag(Tok, diag::err_expected_expression);
@@ -2479,7 +2478,19 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
       return ExprError();
     }
 
-    Operand = ParseCastExpression(UnaryExprOnly);
+    // If we're parsing a chain that consists of keywords that could be
+    // followed by a non-parenthesized expression, BalancedDelimiterTracker
+    // is not going to help when the nesting is too deep. In this corner case
+    // we continue to parse with sufficient stack space to avoid crashing.
+    if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
+                      tok::kw_alignof, tok::kw__Alignof) &&
+        Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
+                    tok::kw_alignof, tok::kw__Alignof))
+      Actions.runWithSufficientStackSpace(Tok.getLocation(), [&] {
+        Operand = ParseCastExpression(UnaryExprOnly);
+      });
+    else
+      Operand = ParseCastExpression(UnaryExprOnly);
   } else {
     // If it starts with a '(', we know that it is either a parenthesized
     // type-name, or it is a unary-expression that starts with a compound
@@ -3683,7 +3694,7 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       SawError = true;
       if (FailImmediatelyOnInvalidExpr)
         break;
-      SkipUntil(tok::comma, tok::r_paren, StopBeforeMatch);
+      SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
     } else {
       Exprs.push_back(Expr.get());
     }
@@ -3844,8 +3855,8 @@ ExprResult Parser::ParseBlockLiteralExpression() {
                                      /*NumExceptions=*/0,
                                      /*NoexceptExpr=*/nullptr,
                                      /*ExceptionSpecTokens=*/nullptr,
-                                     /*DeclsInPrototype=*/std::nullopt,
-                                     CaretLoc, CaretLoc, ParamInfo),
+                                     /*DeclsInPrototype=*/{}, CaretLoc,
+                                     CaretLoc, ParamInfo),
         CaretLoc);
 
     MaybeParseGNUAttributes(ParamInfo);

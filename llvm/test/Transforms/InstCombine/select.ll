@@ -221,7 +221,7 @@ define i32 @test11(i32 %a) {
 define i32 @test12(i1 %cond, i32 %a) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[B:%.*]] = zext i1 [[COND:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = or i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %b = or i32 %a, 1
@@ -232,7 +232,7 @@ define i32 @test12(i1 %cond, i32 %a) {
 define <2 x i32> @test12vec(<2 x i1> %cond, <2 x i32> %a) {
 ; CHECK-LABEL: @test12vec(
 ; CHECK-NEXT:    [[B:%.*]] = zext <2 x i1> [[COND:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i32> [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i32> [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %b = or <2 x i32> %a, <i32 1, i32 1>
@@ -686,7 +686,7 @@ define i1 @test40(i1 %cond) {
 
 define i32 @test41(i1 %cond, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test41(
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = and i32 %x, %y
@@ -699,7 +699,7 @@ define i32 @test42(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test42(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[B:%.*]] = sext i1 [[COND]] to i32
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[B]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[Y:%.*]], [[B]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %b = add i32 %y, -1
@@ -712,7 +712,7 @@ define <2 x i32> @test42vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @test42vec(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[B:%.*]] = sext <2 x i1> [[COND]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[Y:%.*]], [[B]]
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %b = add <2 x i32> %y, <i32 -1, i32 -1>
@@ -1569,7 +1569,7 @@ define i8 @test88(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
 ; select(C, Z, binop(W, select(C, X, Y))) -> select(C, binop(X, W), Z)
 define i8 @test89(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @test89(
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[W:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], i8 [[B]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
@@ -1582,7 +1582,7 @@ define i8 @test89(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
 ; select(C, Z, binop(W, select(C, X, Y))) -> select(C, Z, binop(W, Y))
 define i8 @test90(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @test90(
-; CHECK-NEXT:    [[B:%.*]] = or i8 [[Y:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[W:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], i8 [[Z:%.*]], i8 [[B]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
@@ -2889,7 +2889,7 @@ define i8 @select_replacement_sub_noundef(i8 %x, i8 noundef %y, i8 %z) {
 define i8 @select_replacement_sub_noundef_but_may_be_poison(i8 %x, i8 noundef %yy, i8 %z) {
 ; CHECK-LABEL: @select_replacement_sub_noundef_but_may_be_poison(
 ; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 [[YY:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
@@ -2975,7 +2975,7 @@ define i8 @select_replacement_loop3(i32 noundef %x) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[X:%.*]] to i8
 ; CHECK-NEXT:    [[REV:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[TRUNC]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[REV]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[EXT]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[EXT]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[TRUNC]], i8 0
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
@@ -3016,7 +3016,7 @@ define ptr @select_replacement_gep_inbounds(ptr %base, i64 %offset) {
 define i8 @replace_false_op_eq_shl_or_disjoint(i8 %x) {
 ; CHECK-LABEL: @replace_false_op_eq_shl_or_disjoint(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SHL]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[SHL]]
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %eq0 = icmp eq i8 %x, -1
@@ -3057,7 +3057,7 @@ define <2 x i1> @partial_false_undef_condval(<2 x i1> %x) {
 define i32 @mul_select_eq_zero(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_select_eq_zero(
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], [[Y_FR]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %c = icmp eq i32 %x, 0
@@ -3083,7 +3083,7 @@ define i32 @mul_select_eq_zero_commute(i32 %x, i32 %y) {
 define i32 @mul_select_eq_zero_copy_flags(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_select_eq_zero_copy_flags(
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X:%.*]], [[Y_FR]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %c = icmp eq i32 %x, 0
@@ -3098,7 +3098,7 @@ define i32 @mul_select_ne_zero(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_select_ne_zero(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y_FR]], [[X]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[Y_FR]]
 ; CHECK-NEXT:    call void @use(i1 [[C]])
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
@@ -3115,7 +3115,7 @@ define i32 @mul_select_ne_zero(i32 %x, i32 %y) {
 define i32 @mul_select_eq_zero_sel_undef(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_select_eq_zero_sel_undef(
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], [[Y_FR]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %c = icmp eq i32 %x, 0
@@ -3129,7 +3129,7 @@ define i32 @mul_select_eq_zero_sel_undef(i32 %x, i32 %y) {
 define i32 @mul_select_eq_zero_multiple_users(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_select_eq_zero_multiple_users(
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], [[Y_FR]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[M]])
 ; CHECK-NEXT:    call void @use_i32(i32 [[M]])
 ; CHECK-NEXT:    call void @use_i32(i32 [[M]])
@@ -3163,7 +3163,7 @@ define i32 @mul_select_eq_zero_unrelated_condition(i32 %x, i32 %y, i32 %z) {
 define <4 x i32> @mul_select_eq_zero_vector(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @mul_select_eq_zero_vector(
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <4 x i32> [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[X:%.*]], [[Y_FR]]
 ; CHECK-NEXT:    ret <4 x i32> [[M]]
 ;
   %c = icmp eq <4 x i32> %x, zeroinitializer
@@ -3194,7 +3194,7 @@ define <2 x i32> @mul_select_eq_poison_vector(<2 x i32> %x, <2 x i32> %y) {
 define <2 x i32> @mul_select_eq_zero_sel_poison_vector(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @mul_select_eq_zero_sel_poison_vector(
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <2 x i32> [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[X:%.*]], [[Y_FR]]
 ; CHECK-NEXT:    ret <2 x i32> [[M]]
 ;
   %c = icmp eq <2 x i32> %x, zeroinitializer
@@ -4028,7 +4028,7 @@ define i32 @src_or_eq_C_and_andnotxorC(i32 %x, i32 %y, i32 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[TMP0]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT]], [[C:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[C:%.*]], [[NOT]]
 ; CHECK-NEXT:    ret i32 [[AND1]]
 ;
 entry:
@@ -4064,7 +4064,7 @@ define i32 @src_or_eq_C_xor_andnotandC(i32 %x, i32 %y, i32 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[AND]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT]], [[C:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[C:%.*]], [[NOT]]
 ; CHECK-NEXT:    ret i32 [[AND1]]
 ;
 entry:

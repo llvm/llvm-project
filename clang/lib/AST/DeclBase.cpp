@@ -1124,28 +1124,52 @@ bool Decl::isInAnotherModuleUnit() const {
   if (!M)
     return false;
 
+  // FIXME or NOTE: maybe we need to be clear about the semantics
+  // of clang header modules. e.g., if this lives in a clang header
+  // module included by the current unit, should we return false
+  // here?
+  //
+  // This is clear for header units as the specification says the
+  // header units live in a synthesised translation unit. So we
+  // can return false here.
   M = M->getTopLevelModule();
-  // FIXME: It is problematic if the header module lives in another module
-  // unit. Consider to fix this by techniques like
-  // ExternalASTSource::hasExternalDefinitions.
-  if (M->isHeaderLikeModule())
+  if (!M->isNamedModule())
     return false;
 
-  // A global module without parent implies that we're parsing the global
-  // module. So it can't be in another module unit.
-  if (M->isGlobalModule())
-    return false;
-
-  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::isInCurrentModuleUnit() const {
+  auto *M = getOwningModule();
+
+  if (!M || !M->isNamedModule())
+    return false;
+
+  return M == getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::shouldEmitInExternalSource() const {
+  ExternalASTSource *Source = getASTContext().getExternalSource();
+  if (!Source)
+    return false;
+
+  return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
 }
 
 bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
 }
 
+bool Decl::isFromGlobalModule() const {
+  return getOwningModule() && getOwningModule()->isGlobalModule();
+}
+
 bool Decl::isInNamedModule() const {
   return getOwningModule() && getOwningModule()->isNamedModule();
+}
+
+bool Decl::isFromHeaderUnit() const {
+  return getOwningModule() && getOwningModule()->isHeaderUnit();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
@@ -1157,14 +1181,19 @@ int64_t Decl::getID() const {
 
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
-  if (isa<BindingDecl>(this))
-    return nullptr;
-  else if (const auto *D = dyn_cast<ValueDecl>(this))
+  if (const auto *D = dyn_cast<ValueDecl>(this))
     Ty = D->getType();
   else if (const auto *D = dyn_cast<TypedefNameDecl>(this))
     Ty = D->getUnderlyingType();
   else
     return nullptr;
+
+  if (Ty.isNull()) {
+    // BindingDecls do not have types during parsing, so return nullptr. This is
+    // the only known case where `Ty` is null.
+    assert(isa<BindingDecl>(this));
+    return nullptr;
+  }
 
   if (Ty->isFunctionPointerType())
     Ty = Ty->castAs<PointerType>()->getPointeeType();

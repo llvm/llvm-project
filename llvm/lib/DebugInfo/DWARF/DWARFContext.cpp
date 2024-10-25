@@ -1345,8 +1345,7 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
-DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
-                                                bool IsDWO) {
+DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint64_t Hash, bool IsDWO) {
   DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
     if (const auto *R = TUI.getFromHash(Hash))
@@ -1510,9 +1509,12 @@ DWARFUnitVector &DWARFContext::getDWOUnits(bool Lazy) {
   return State->getDWOUnits(Lazy);
 }
 
+DWARFUnit *DWARFContext::getUnitForOffset(uint64_t Offset) {
+  return State->getNormalUnits().getUnitForOffset(Offset);
+}
+
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint64_t Offset) {
-  return dyn_cast_or_null<DWARFCompileUnit>(
-      State->getNormalUnits().getUnitForOffset(Offset));
+  return dyn_cast_or_null<DWARFCompileUnit>(getUnitForOffset(Offset));
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForCodeAddress(uint64_t Address) {
@@ -1743,8 +1745,8 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   if (Spec.FLIKind != FileLineInfoKind::None) {
     if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
       LineTable->getFileLineInfoForAddress(
-          {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-          Spec.FLIKind, Result);
+          {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
+          CU->getCompilationDir(), Spec.FLIKind, Result);
     }
   }
 
@@ -1838,9 +1840,10 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
     if (Spec.FLIKind != FileLineInfoKind::None) {
       DILineInfo Frame;
       LineTable = getLineTableForUnit(CU);
-      if (LineTable && LineTable->getFileLineInfoForAddress(
-                           {Address.Address, Address.SectionIndex},
-                           CU->getCompilationDir(), Spec.FLIKind, Frame))
+      if (LineTable &&
+          LineTable->getFileLineInfoForAddress(
+              {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
+              CU->getCompilationDir(), Spec.FLIKind, Frame))
         InliningInfo.addFrame(Frame);
     }
     return InliningInfo;
@@ -1866,8 +1869,8 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
         // For the topmost routine, get file/line info from line table.
         if (LineTable)
           LineTable->getFileLineInfoForAddress(
-              {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-              Spec.FLIKind, Frame);
+              {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
+              CU->getCompilationDir(), Spec.FLIKind, Frame);
       } else {
         // Otherwise, use call file, call line and call column from
         // previous DIE in inlined chain.
@@ -2474,3 +2477,5 @@ uint8_t DWARFContext::getCUAddrSize() {
   auto CUs = compile_units();
   return CUs.empty() ? 0 : (*CUs.begin())->getAddressByteSize();
 }
+
+bool DWARFContext::isDWP() const { return !DObj->getCUIndexSection().empty(); }

@@ -867,6 +867,11 @@ void StmtPrinter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPAssumeDirective(OMPAssumeDirective *Node) {
+  Indent() << "#pragma omp assume";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPErrorDirective(OMPErrorDirective *Node) {
   Indent() << "#pragma omp error";
   PrintOMPExecutableDirective(Node);
@@ -1302,6 +1307,10 @@ void StmtPrinter::VisitSYCLUniqueStableNameExpr(
 
 void StmtPrinter::VisitPredefinedExpr(PredefinedExpr *Node) {
   OS << PredefinedExpr::getIdentKindName(Node->getIdentKind());
+}
+
+void StmtPrinter::VisitOpenACCAsteriskSizeExpr(OpenACCAsteriskSizeExpr *Node) {
+  OS << '*';
 }
 
 void StmtPrinter::VisitCharacterLiteral(CharacterLiteral *Node) {
@@ -2797,6 +2806,10 @@ void StmtPrinter::VisitAsTypeExpr(AsTypeExpr *Node) {
   OS << ", ";
   Node->getType().print(OS, Policy);
   OS << ")";
+}
+
+void StmtPrinter::VisitHLSLOutArgExpr(HLSLOutArgExpr *Node) {
+  PrintExpr(Node->getArgLValue());
 }
 
 //===----------------------------------------------------------------------===//

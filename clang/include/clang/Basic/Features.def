@@ -54,6 +54,8 @@ FEATURE(memtag_globals,
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
+FEATURE(realtime_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Realtime))
 FEATURE(coverage_sanitizer, LangOpts.SanitizeCoverage)
 FEATURE(assume_nonnull, true)
 FEATURE(attribute_analyzer_noreturn, true)
@@ -110,9 +112,10 @@ FEATURE(ptrauth_vtable_pointer_address_discrimination, LangOpts.PointerAuthVTPtr
 FEATURE(ptrauth_vtable_pointer_type_discrimination, LangOpts.PointerAuthVTPtrTypeDiscrimination)
 FEATURE(ptrauth_type_info_vtable_pointer_discrimination, LangOpts.PointerAuthTypeInfoVTPtrDiscrimination)
 FEATURE(ptrauth_member_function_pointer_type_discrimination, LangOpts.PointerAuthCalls)
-FEATURE(ptrauth_init_fini, LangOpts.PointerAuthInitFini)
 FEATURE(ptrauth_function_pointer_type_discrimination, LangOpts.PointerAuthFunctionTypeDiscrimination)
 FEATURE(ptrauth_indirect_gotos, LangOpts.PointerAuthIndirectGotos)
+FEATURE(ptrauth_init_fini, LangOpts.PointerAuthInitFini)
+FEATURE(ptrauth_init_fini_address_discrimination, LangOpts.PointerAuthInitFiniAddressDiscrimination)
 EXTENSION(swiftcc,
   PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
   clang::TargetInfo::CCCR_OK)

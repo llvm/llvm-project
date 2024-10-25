@@ -158,6 +158,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
   bool HasAtomicFMinFMaxF64GlobalInsts = false;
@@ -215,7 +216,6 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
-  bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
 
@@ -239,6 +239,7 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
+  bool HasVmemWriteVgprInOrder = false;
 
   bool RequiresCOV6 = false;
 
@@ -588,6 +589,10 @@ public:
 
   bool hasUnalignedScratchAccess() const {
     return UnalignedScratchAccess;
+  }
+
+  bool hasUnalignedScratchAccessEnabled() const {
+    return UnalignedScratchAccess && UnalignedAccessMode;
   }
 
   bool hasUnalignedAccessMode() const {
@@ -1246,6 +1251,8 @@ public:
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
@@ -1277,17 +1284,23 @@ public:
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
-  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
-
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
 
   bool hasRequiredExportPriority() const { return HasRequiredExportPriority; }
 
+  bool hasVmemWriteVgprInOrder() const { return HasVmemWriteVgprInOrder; }
+
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if inline constants are not supported for F16 pseudo
+  /// scalar transcendentals.
+  bool hasNoF16PseudoScalarTransInlineConstants() const {
+    return getGeneration() == GFX12;
+  }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
@@ -1344,7 +1357,7 @@ public:
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
-  bool hasCvtFP8VOP1Bug() const { return true; }
+  bool hasCvtFP8VOP1Bug() const { return HasCvtFP8Vop1Bug; }
 
   // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
   // no-return form.
@@ -1575,6 +1588,12 @@ public:
     // Currently all targets that support the dealloc VGPRs message also require
     // the nop.
     return true;
+  }
+
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
   }
 };
 

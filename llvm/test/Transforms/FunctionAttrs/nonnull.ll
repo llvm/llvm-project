@@ -1079,15 +1079,12 @@ define internal void @control(ptr dereferenceable(4) %a) {
 define internal void @naked(ptr dereferenceable(4) %a) naked {
 ; FNATTRS-LABEL: define internal void @naked(
 ; FNATTRS-SAME: ptr dereferenceable(4) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
-; FNATTRS-NEXT:    call void @use_i32_ptr(ptr [[A]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define internal void @naked(
 ; ATTRIBUTOR-SAME: ptr nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @use_i32_ptr(ptr [[A]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
-  call void @use_i32_ptr(ptr %a)
   ret void
 }
 ; Avoid nonnull as we do not touch optnone

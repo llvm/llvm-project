@@ -23,7 +23,11 @@ MODULE_ANALYSIS("dxil-resource-md", DXILResourceMDAnalysis())
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("dxil-data-scalarization", DXILDataScalarization())
+MODULE_PASS("dxil-intrinsic-expansion", DXILIntrinsicExpansion())
+MODULE_PASS("dxil-op-lower", DXILOpLowering())
+MODULE_PASS("dxil-pretty-printer", DXILPrettyPrinterPass(dbgs()))
+MODULE_PASS("dxil-translate-metadata", DXILTranslateMetadata())
 // TODO: rename to print<foo> after NPM switch
 MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinter(dbgs()))
-MODULE_PASS("print-dxil-resource-md", DXILResourceMDPrinterPass(dbgs()))
 #undef MODULE_PASS

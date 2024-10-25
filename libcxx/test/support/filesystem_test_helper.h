@@ -146,7 +146,7 @@ namespace utils {
         struct ::stat tmp;
         return ::stat(path.c_str(), &tmp) == 0;
     }
-} // end namespace utils
+} // namespace utils
 
 struct scoped_test_env
 {

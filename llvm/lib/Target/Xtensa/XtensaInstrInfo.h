@@ -49,7 +49,8 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
@@ -72,6 +73,37 @@ public:
   // physical register Reg.
   void loadImmediate(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      unsigned *Reg, int64_t Value) const;
+
+  bool
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                     MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond,
+                     bool AllowModify) const override;
+
+  unsigned removeBranch(MachineBasicBlock &MBB,
+                        int *BytesRemoved = nullptr) const override;
+
+  unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
+                        MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
+                        const DebugLoc &DL,
+                        int *BytesAdded = nullptr) const override;
+
+  unsigned insertBranchAtInst(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator I,
+                              MachineBasicBlock *TBB,
+                              ArrayRef<MachineOperand> Cond, const DebugLoc &DL,
+                              int *BytesAdded) const;
+
+  // Return true if MI is a conditional or unconditional branch.
+  // When returning true, set Cond to the mask of condition-code
+  // values on which the instruction will branch, and set Target
+  // to the operand that contains the branch target.  This target
+  // can be a register or a basic block.
+  bool isBranch(const MachineBasicBlock::iterator &MI,
+                SmallVectorImpl<MachineOperand> &Cond,
+                const MachineOperand *&Target) const;
 
   const XtensaSubtarget &getSubtarget() const { return STI; }
 };

@@ -37,9 +37,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -117,7 +117,7 @@ static cl::opt<bool>
 // Indirect call promotion pass will fall back to function-based comparison if
 // vtable-count / function-count is smaller than this threshold.
 static cl::opt<float> ICPVTablePercentageThreshold(
-    "icp-vtable-percentage-threshold", cl::init(0.99), cl::Hidden,
+    "icp-vtable-percentage-threshold", cl::init(0.995), cl::Hidden,
     cl::desc("The percentage threshold of vtable-count / function-count for "
              "cost-benefit analysis."));
 
@@ -131,6 +131,15 @@ static cl::opt<float> ICPVTablePercentageThreshold(
 static cl::opt<int> ICPMaxNumVTableLastCandidate(
     "icp-max-num-vtable-last-candidate", cl::init(1), cl::Hidden,
     cl::desc("The maximum number of vtable for the last candidate."));
+
+static cl::list<std::string> ICPIgnoredBaseTypes(
+    "icp-ignored-base-types", cl::Hidden,
+    cl::desc(
+        "A list of mangled vtable type info names. Classes specified by the "
+        "type info names and their derived ones will not be vtable-ICP'ed. "
+        "Useful when the profiled types and actual types in the optimized "
+        "binary could be different due to profiling limitations. Type info "
+        "names are those string literals used in LLVM type metadata"));
 
 namespace {
 
@@ -303,8 +312,6 @@ private:
   Function &F;
   Module &M;
 
-  ProfileSummaryInfo *PSI = nullptr;
-
   // Symtab that maps indirect call profile values to function names and
   // defines.
   InstrProfSymtab *const Symtab;
@@ -317,6 +324,8 @@ private:
   VTableAddressPointOffsetValMap &VTableAddressPointOffsetVal;
 
   OptimizationRemarkEmitter &ORE;
+
+  const DenseSet<StringRef> &IgnoredBaseTypes;
 
   // A struct that records the direct target and it's call count.
   struct PromotionCandidate {
@@ -366,8 +375,11 @@ private:
 
   // Return true if it's profitable to compare vtables for the callsite.
   bool isProfitableToCompareVTables(const CallBase &CB,
-                                    ArrayRef<PromotionCandidate> Candidates,
-                                    uint64_t TotalCount);
+                                    ArrayRef<PromotionCandidate> Candidates);
+
+  // Return true if the vtable corresponding to VTableGUID should be skipped
+  // for vtable-based comparison.
+  bool shouldSkipVTable(uint64_t VTableGUID);
 
   // Given an indirect callsite and the list of function candidates, compute
   // the following vtable information in output parameters and return vtable
@@ -391,14 +403,15 @@ private:
 
 public:
   IndirectCallPromoter(
-      Function &Func, Module &M, ProfileSummaryInfo *PSI,
-      InstrProfSymtab *Symtab, bool SamplePGO,
+      Function &Func, Module &M, InstrProfSymtab *Symtab, bool SamplePGO,
       const VirtualCallSiteTypeInfoMap &VirtualCSInfo,
       VTableAddressPointOffsetValMap &VTableAddressPointOffsetVal,
+      const DenseSet<StringRef> &IgnoredBaseTypes,
       OptimizationRemarkEmitter &ORE)
-      : F(Func), M(M), PSI(PSI), Symtab(Symtab), SamplePGO(SamplePGO),
+      : F(Func), M(M), Symtab(Symtab), SamplePGO(SamplePGO),
         VirtualCSInfo(VirtualCSInfo),
-        VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE) {}
+        VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE),
+        IgnoredBaseTypes(IgnoredBaseTypes) {}
   IndirectCallPromoter(const IndirectCallPromoter &) = delete;
   IndirectCallPromoter &operator=(const IndirectCallPromoter &) = delete;
 
@@ -821,7 +834,7 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
     Instruction *VPtr =
         computeVTableInfos(CB, VTableGUIDCounts, PromotionCandidates);
 
-    if (isProfitableToCompareVTables(*CB, PromotionCandidates, TotalCount))
+    if (isProfitableToCompareVTables(*CB, PromotionCandidates))
       Changed |= tryToPromoteWithVTableCmp(*CB, VPtr, PromotionCandidates,
                                            TotalCount, NumCandidates,
                                            ICallProfDataRef, VTableGUIDCounts);
@@ -836,13 +849,11 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
 // TODO: Return false if the function addressing and vtable load instructions
 // cannot sink to indirect fallback.
 bool IndirectCallPromoter::isProfitableToCompareVTables(
-    const CallBase &CB, ArrayRef<PromotionCandidate> Candidates,
-    uint64_t TotalCount) {
+    const CallBase &CB, ArrayRef<PromotionCandidate> Candidates) {
   if (!EnableVTableProfileUse || Candidates.empty())
     return false;
   LLVM_DEBUG(dbgs() << "\nEvaluating vtable profitability for callsite #"
                     << NumOfPGOICallsites << CB << "\n");
-  uint64_t RemainingVTableCount = TotalCount;
   const size_t CandidateSize = Candidates.size();
   for (size_t I = 0; I < CandidateSize; I++) {
     auto &Candidate = Candidates[I];
@@ -857,8 +868,13 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     LLVM_DEBUG(dbgs() << "\n");
 
     uint64_t CandidateVTableCount = 0;
-    for (auto &[GUID, Count] : VTableGUIDAndCounts)
+
+    for (auto &[GUID, Count] : VTableGUIDAndCounts) {
       CandidateVTableCount += Count;
+
+      if (shouldSkipVTable(GUID))
+        return false;
+    }
 
     if (CandidateVTableCount < Candidate.Count * ICPVTablePercentageThreshold) {
       LLVM_DEBUG(
@@ -867,8 +883,6 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
                  << " have discrepancies. Bail out vtable comparison.\n");
       return false;
     }
-
-    RemainingVTableCount -= Candidate.Count;
 
     // 'MaxNumVTable' limits the number of vtables to make vtable comparison
     // profitable. Comparing multiple vtables for one function candidate will
@@ -888,15 +902,28 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     }
   }
 
-  // If the indirect fallback is not cold, don't compare vtables.
-  if (PSI && PSI->hasProfileSummary() &&
-      !PSI->isColdCount(RemainingVTableCount)) {
-    LLVM_DEBUG(dbgs() << "    Indirect fallback basic block is not cold. Bail "
-                         "out for vtable comparison.\n");
-    return false;
-  }
-
   return true;
+}
+
+bool IndirectCallPromoter::shouldSkipVTable(uint64_t VTableGUID) {
+  if (IgnoredBaseTypes.empty())
+    return false;
+
+  auto *VTableVar = Symtab->getGlobalVariable(VTableGUID);
+
+  assert(VTableVar && "VTableVar must exist for GUID in VTableGUIDAndCounts");
+
+  SmallVector<MDNode *, 2> Types;
+  VTableVar->getMetadata(LLVMContext::MD_type, Types);
+
+  for (auto *Type : Types)
+    if (auto *TypeId = dyn_cast<MDString>(Type->getOperand(1).get()))
+      if (IgnoredBaseTypes.contains(TypeId->getString())) {
+        LLVM_DEBUG(dbgs() << "    vtable profiles should be ignored. Bail "
+                             "out of vtable comparison.");
+        return true;
+      }
+  return false;
 }
 
 // For virtual calls in the module, collect per-callsite information which will
@@ -917,7 +944,7 @@ computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
   // Find out virtual calls by looking at users of llvm.type.checked.load in
   // that case.
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   if (!TypeTestFunc || TypeTestFunc->use_empty())
     return;
 
@@ -972,8 +999,14 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
   bool Changed = false;
   VirtualCallSiteTypeInfoMap VirtualCSInfo;
 
-  if (EnableVTableProfileUse)
+  DenseSet<StringRef> IgnoredBaseTypes;
+
+  if (EnableVTableProfileUse) {
     computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
+
+    for (StringRef Str : ICPIgnoredBaseTypes)
+      IgnoredBaseTypes.insert(Str);
+  }
 
   // VTableAddressPointOffsetVal stores the vtable address points. The vtable
   // address point of a given <vtable, address point offset> is static (doesn't
@@ -992,9 +1025,9 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
         MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-    IndirectCallPromoter CallPromoter(F, M, PSI, &Symtab, SamplePGO,
-                                      VirtualCSInfo,
-                                      VTableAddressPointOffsetVal, ORE);
+    IndirectCallPromoter CallPromoter(F, M, &Symtab, SamplePGO, VirtualCSInfo,
+                                      VTableAddressPointOffsetVal,
+                                      IgnoredBaseTypes, ORE);
     bool FuncChanged = CallPromoter.processFunction(PSI);
     if (ICPDUMPAFTER && FuncChanged) {
       LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));

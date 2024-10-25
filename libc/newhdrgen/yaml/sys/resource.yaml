@@ -7,13 +7,13 @@ enums: []
 objects: []
 functions:
   - name: getrlimit
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: struct rlimit *
   - name: setrlimit
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:

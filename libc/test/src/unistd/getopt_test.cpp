@@ -13,8 +13,6 @@
 #include "src/stdio/fflush.h"
 #include "src/stdio/fopencookie.h"
 
-#include <stdio.h>
-
 using LIBC_NAMESPACE::cpp::array;
 
 namespace test_globals {

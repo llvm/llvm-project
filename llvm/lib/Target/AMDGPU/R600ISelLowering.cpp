@@ -15,7 +15,6 @@
 #include "AMDGPU.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
-#include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
 #include "R600TargetMachine.h"
@@ -1648,16 +1647,18 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
   BuildVector = CompactSwizzlableVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = Swz[i]->getAsZExtVal();
-    if (SwizzleRemap.contains(Idx))
-      Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
+    auto It = SwizzleRemap.find(Idx);
+    if (It != SwizzleRemap.end())
+      Swz[i] = DAG.getConstant(It->second, DL, MVT::i32);
   }
 
   SwizzleRemap.clear();
   BuildVector = ReorganizeVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = Swz[i]->getAsZExtVal();
-    if (SwizzleRemap.contains(Idx))
-      Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
+    auto It = SwizzleRemap.find(Idx);
+    if (It != SwizzleRemap.end())
+      Swz[i] = DAG.getConstant(It->second, DL, MVT::i32);
   }
 
   return BuildVector;
@@ -2175,14 +2176,33 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
 TargetLowering::AtomicExpansionKind
 R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
+  case AtomicRMWInst::Nand:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
+    return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
     // FIXME: Cayman at least appears to have instructions for this, but the
     // instruction defintions appear to be missing.
     return AtomicExpansionKind::CmpXChg;
+  case AtomicRMWInst::Xchg: {
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
+    unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
+    if (ValSize == 32 || ValSize == 64)
+      return AtomicExpansionKind::None;
+    return AtomicExpansionKind::CmpXChg;
+  }
   default:
-    break;
+    if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
+      unsigned Size = IntTy->getBitWidth();
+      if (Size == 32 || Size == 64)
+        return AtomicExpansionKind::None;
+    }
+
+    return AtomicExpansionKind::CmpXChg;
   }
 
-  return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
+  llvm_unreachable("covered atomicrmw op switch");
 }

@@ -647,65 +647,77 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
-=========================================== ================================================================ =========================================
-         Name                                Operation                                                        Supported element types
-=========================================== ================================================================ =========================================
- T __builtin_elementwise_abs(T x)            return the absolute value of a number x; the absolute value of   signed integer and floating point types
-                                             the most negative integer remains the most negative integer
- T __builtin_elementwise_fma(T x, T y, T z)  fused multiply add, (x * y) +  z.                                floating point types
- T __builtin_elementwise_ceil(T x)           return the smallest integral value greater than or equal to x    floating point types
- T __builtin_elementwise_sin(T x)            return the sine of x interpreted as an angle in radians          floating point types
- T __builtin_elementwise_cos(T x)            return the cosine of x interpreted as an angle in radians        floating point types
- T __builtin_elementwise_tan(T x)            return the tangent of x interpreted as an angle in radians       floating point types
- T __builtin_elementwise_asin(T x)           return the arcsine of x interpreted as an angle in radians       floating point types
- T __builtin_elementwise_acos(T x)           return the arccosine of x interpreted as an angle in radians     floating point types
- T __builtin_elementwise_atan(T x)           return the arctangent of x interpreted as an angle in radians    floating point types
- T __builtin_elementwise_sinh(T x)           return the hyperbolic sine of angle x in radians                 floating point types
- T __builtin_elementwise_cosh(T x)           return the hyperbolic cosine of angle x in radians               floating point types
- T __builtin_elementwise_tanh(T x)           return the hyperbolic tangent of angle x in radians              floating point types
- T __builtin_elementwise_floor(T x)          return the largest integral value less than or equal to x        floating point types
- T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
- T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
- T __builtin_elementwise_log10(T x)          return the base 10 logarithm of x                                floating point types
- T __builtin_elementwise_pow(T x, T y)       return x raised to the power of y                                floating point types
- T __builtin_elementwise_bitreverse(T x)     return the integer represented after reversing the bits of x     integer types
- T __builtin_elementwise_exp(T x)            returns the base-e exponential, e^x, of the specified value      floating point types
- T __builtin_elementwise_exp2(T x)           returns the base-2 exponential, 2^x, of the specified value      floating point types
+============================================== ====================================================================== =========================================
+         Name                                   Operation                                                             Supported element types
+============================================== ====================================================================== =========================================
+ T __builtin_elementwise_abs(T x)               return the absolute value of a number x; the absolute value of         signed integer and floating point types
+                                                the most negative integer remains the most negative integer
+ T __builtin_elementwise_fma(T x, T y, T z)     fused multiply add, (x * y) +  z.                                      floating point types
+ T __builtin_elementwise_ceil(T x)              return the smallest integral value greater than or equal to x          floating point types
+ T __builtin_elementwise_sin(T x)               return the sine of x interpreted as an angle in radians                floating point types
+ T __builtin_elementwise_cos(T x)               return the cosine of x interpreted as an angle in radians              floating point types
+ T __builtin_elementwise_tan(T x)               return the tangent of x interpreted as an angle in radians             floating point types
+ T __builtin_elementwise_asin(T x)              return the arcsine of x interpreted as an angle in radians             floating point types
+ T __builtin_elementwise_acos(T x)              return the arccosine of x interpreted as an angle in radians           floating point types
+ T __builtin_elementwise_atan(T x)              return the arctangent of x interpreted as an angle in radians          floating point types
+ T __builtin_elementwise_atan2(T y, T x)        return the arctangent of y/x                                           floating point types
+ T __builtin_elementwise_sinh(T x)              return the hyperbolic sine of angle x in radians                       floating point types
+ T __builtin_elementwise_cosh(T x)              return the hyperbolic cosine of angle x in radians                     floating point types
+ T __builtin_elementwise_tanh(T x)              return the hyperbolic tangent of angle x in radians                    floating point types
+ T __builtin_elementwise_floor(T x)             return the largest integral value less than or equal to x              floating point types
+ T __builtin_elementwise_log(T x)               return the natural logarithm of x                                      floating point types
+ T __builtin_elementwise_log2(T x)              return the base 2 logarithm of x                                       floating point types
+ T __builtin_elementwise_log10(T x)             return the base 10 logarithm of x                                      floating point types
+ T __builtin_elementwise_popcount(T x)          return the number of 1 bits in x                                       integer types
+ T __builtin_elementwise_pow(T x, T y)          return x raised to the power of y                                      floating point types
+ T __builtin_elementwise_bitreverse(T x)        return the integer represented after reversing the bits of x           integer types
+ T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
+ T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
 
- T __builtin_elementwise_sqrt(T x)           return the square root of a floating-point number                floating point types
- T __builtin_elementwise_roundeven(T x)      round x to the nearest integer value in floating point format,   floating point types
-                                             rounding halfway cases to even (that is, to the nearest value
-                                             that is an even integer), regardless of the current rounding
-                                             direction.
- T __builtin_elementwise_round(T x)          round x to the nearest  integer value in floating point format,      floating point types
-                                             rounding halfway cases away from zero, regardless of the
-                                             current rounding direction. May raise floating-point
-                                             exceptions.
- T __builtin_elementwise_trunc(T x)          return the integral value nearest to but no larger in            floating point types
-                                             magnitude than x
+ T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
+ T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
+                                                rounding halfway cases to even (that is, to the nearest value
+                                                that is an even integer), regardless of the current rounding
+                                                direction.
+ T __builtin_elementwise_round(T x)             round x to the nearest  integer value in floating point format,        floating point types
+                                                rounding halfway cases away from zero, regardless of the
+                                                current rounding direction. May raise floating-point
+                                                exceptions.
+ T __builtin_elementwise_trunc(T x)             return the integral value nearest to but no larger in                  floating point types
+                                                magnitude than x
 
-  T __builtin_elementwise_nearbyint(T x)     round x to the nearest  integer value in floating point format,      floating point types
-                                             rounding according to the current rounding direction.
-                                             May not raise the inexact floating-point exception. This is
-                                             treated the same as ``__builtin_elementwise_rint`` unless
-                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+  T __builtin_elementwise_nearbyint(T x)        round x to the nearest  integer value in floating point format,        floating point types
+                                                rounding according to the current rounding direction.
+                                                May not raise the inexact floating-point exception. This is
+                                                treated the same as ``__builtin_elementwise_rint`` unless
+                                                :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
 
- T __builtin_elementwise_rint(T x)           round x to the nearest  integer value in floating point format,      floating point types
-                                             rounding according to the current rounding
-                                             direction. May raise floating-point exceptions. This is treated
-                                             the same as ``__builtin_elementwise_nearbyint`` unless
-                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+ T __builtin_elementwise_rint(T x)              round x to the nearest  integer value in floating point format,        floating point types
+                                                rounding according to the current rounding
+                                                direction. May raise floating-point exceptions. This is treated
+                                                the same as ``__builtin_elementwise_nearbyint`` unless
+                                                :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
 
- T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
-                                             of a floating-point number
- T __builtin_elementwise_copysign(T x, T y)  return the magnitude of x with the sign of y.                    floating point types
- T __builtin_elementwise_max(T x, T y)       return x or y, whichever is larger                               integer and floating point types
- T __builtin_elementwise_min(T x, T y)       return x or y, whichever is smaller                              integer and floating point types
- T __builtin_elementwise_add_sat(T x, T y)   return the sum of x and y, clamped to the range of               integer types
-                                             representable values for the signed/unsigned integer type.
- T __builtin_elementwise_sub_sat(T x, T y)   return the difference of x and y, clamped to the range of        integer types
-                                             representable values for the signed/unsigned integer type.
-=========================================== ================================================================ =========================================
+ T __builtin_elementwise_canonicalize(T x)      return the platform specific canonical encoding                        floating point types
+                                                of a floating-point number
+ T __builtin_elementwise_copysign(T x, T y)     return the magnitude of x with the sign of y.                          floating point types
+ T __builtin_elementwise_fmod(T x, T y)         return The floating-point remainder of (x/y) whose sign                floating point types
+                                                matches the sign of x.
+ T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
+ T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
+ T __builtin_elementwise_add_sat(T x, T y)      return the sum of x and y, clamped to the range of                     integer types
+                                                representable values for the signed/unsigned integer type.
+ T __builtin_elementwise_sub_sat(T x, T y)      return the difference of x and y, clamped to the range of              integer types
+                                                representable values for the signed/unsigned integer type.
+ T __builtin_elementwise_maximum(T x, T y)      return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minimum(T x, T y)      return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+============================================== ====================================================================== =========================================
 
 
 *Reduction Builtins*
@@ -730,21 +742,29 @@ Example:
 
 Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
-======================================= ================================================================ ==================================
-         Name                            Operation                                                        Supported element types
-======================================= ================================================================ ==================================
- ET __builtin_reduce_max(VT a)           return x or y, whichever is larger; If exactly one argument is   integer and floating point types
+======================================= ====================================================================== ==================================
+         Name                            Operation                                                              Supported element types
+======================================= ====================================================================== ==================================
+ ET __builtin_reduce_max(VT a)           return x or y, whichever is larger; If exactly one argument is         integer and floating point types
                                          a NaN, return the other argument. If both arguments are NaNs,
                                          fmax() return a NaN.
- ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument     integer and floating point types
+ ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument           integer and floating point types
                                          is a NaN, return the other argument. If both arguments are
                                          NaNs, fmax() return a NaN.
- ET __builtin_reduce_add(VT a)           \+                                                               integer types
- ET __builtin_reduce_mul(VT a)           \*                                                               integer types
- ET __builtin_reduce_and(VT a)           &                                                                integer types
- ET __builtin_reduce_or(VT a)            \|                                                               integer types
- ET __builtin_reduce_xor(VT a)           ^                                                                integer types
-======================================= ================================================================ ==================================
+ ET __builtin_reduce_add(VT a)           \+                                                                     integer types
+ ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
+ ET __builtin_reduce_and(VT a)           &                                                                      integer types
+ ET __builtin_reduce_or(VT a)            \|                                                                     integer types
+ ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
+ ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
+                                         semantics, see `LangRef
+                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         for the comparison.
+ ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
+                                         semantics, see `LangRef
+                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         for the comparison.
+======================================= ====================================================================== ==================================
 
 Matrix Types
 ============
@@ -1483,6 +1503,7 @@ Generic lambda expressions                   __cpp_generic_lambdas            C+
 variable templates                           __cpp_variable_templates         C++14         C++03
 Binary literals                              __cpp_binary_literals            C++14         C++03
 Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
+Static assert with no message                __cpp_static_assert >= 201411L   C++17         C++11
 Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
 ``if constexpr``                             __cpp_if_constexpr               C++17         C++11
 fold expressions                             __cpp_fold_expressions           C++17         C++03
@@ -1503,13 +1524,56 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
+Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
+Pack Indexing                                __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
+Variadic Friends                             __cpp_variadic_friend            C++26         C++03
 -------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89
 Attributes (N2335)                                                            C23           C89
 ``#embed`` (N3017)                                                            C23           C89, C++
 ============================================ ================================ ============= =============
+
+Builtin type aliases
+====================
+
+Clang provides a few builtin aliases to improve the throughput of certain metaprogramming facilities.
+
+__builtin_common_type
+---------------------
+
+.. code-block:: c++
+
+  template <template <class... Args> class BaseTemplate,
+            template <class TypeMember> class HasTypeMember,
+            class HasNoTypeMember,
+            class... Ts>
+  using __builtin_common_type = ...;
+
+This alias is used for implementing ``std::common_type``. If ``std::common_type`` should contain a ``type`` member,
+it is an alias to ``HasTypeMember<TheCommonType>``. Otherwise it is an alias to ``HasNoTypeMember``. The
+``BaseTemplate`` is usually ``std::common_type``. ``Ts`` are the arguments to ``std::common_type``.
+
+__type_pack_element
+-------------------
+
+.. code-block:: c++
+
+  template <std::size_t Index, class... Ts>
+  using __type_pack_element = ...;
+
+This alias returns the type at ``Index`` in the parameter pack ``Ts``.
+
+__make_integer_seq
+------------------
+
+.. code-block:: c++
+
+  template <template <class IntSeqT, IntSeqT... Ints> class IntSeq, class T, T N>
+  using __make_integer_seq = ...;
+
+This alias returns ``IntSeq`` instantiated with ``IntSeqT = T``and ``Ints`` being the pack ``0, ..., N - 1``.
 
 Type Trait Primitives
 =====================
@@ -1546,6 +1610,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__array_extent(type, dim)`` (Embarcadero):
   The ``dim``'th array bound in the type ``type``, or ``0`` if
   ``dim >= __array_rank(type)``.
+* ``__builtin_is_implicit_lifetime`` (C++, GNU, Microsoft)
 * ``__builtin_is_virtual_base_of`` (C++, GNU, Microsoft)
 * ``__can_pass_in_regs`` (C++)
   Returns whether a class can be passed in registers under the current
@@ -1615,10 +1680,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_nothrow_assignable`` (C++, MSVC 2013)
 * ``__is_nothrow_constructible`` (C++, MSVC 2013)
 * ``__is_nothrow_destructible`` (C++, MSVC 2013)
-* ``__is_nullptr`` (C++, GNU, Microsoft, Embarcadero):
-  Returns true for ``std::nullptr_t`` and false for everything else. The
-  corresponding standard library feature is ``std::is_null_pointer``, but
-  ``__is_null_pointer`` is already in use by some implementations.
 * ``__is_object`` (C++, Embarcadero)
 * ``__is_pod`` (C++, GNU, Microsoft, Embarcadero):
   Note, the corresponding standard trait was deprecated in C++20.
@@ -3541,7 +3602,7 @@ the debugging experience.
 ``__builtin_allow_runtime_check``
 ---------------------------------
 
-``__builtin_allow_runtime_check`` return true if the check at the current
+``__builtin_allow_runtime_check`` returns true if the check at the current
 program location should be executed. It is expected to be used to implement
 ``assert`` like checks which can be safely removed by optimizer.
 
@@ -3561,28 +3622,25 @@ program location should be executed. It is expected to be used to implement
 
 **Description**
 
-``__builtin_allow_runtime_check`` is lowered to ` ``llvm.allow.runtime.check``
+``__builtin_allow_runtime_check`` is lowered to the `llvm.allow.runtime.check
 <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
-builtin.
+intrinsic.
 
-The ``__builtin_allow_runtime_check()`` is expected to be used with control
-flow conditions such as in ``if`` to guard expensive runtime checks. The
-specific rules for selecting permitted checks can differ and are controlled by
-the compiler options.
+The ``__builtin_allow_runtime_check()`` can be used within constrol structures
+like ``if`` to guard expensive runtime checks. The return value is determined
+by the following compiler options and may differ per call site:
 
-Flags to control checks:
-* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N`` where N is PGO hotness
-cutoff in range ``[0, 999999]`` to disallow checks in hot code.
-* ``-mllvm -lower-allow-check-random-rate=P`` where P is number in range
-``[0.0, 1.0]`` representation probability of keeping a check.
-* If both flags are specified, ``-lower-allow-check-random-rate`` takes
-precedence.
-* If none is specified, ``__builtin_allow_runtime_check`` is lowered as
-``true``, allowing all checks.
+* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N``: Disable checks in hot
+  code marked by the profile summary with a hotness cutoff in the range
+  ``[0, 999999]`` (a larger N disables more checks).
+* ``-mllvm -lower-allow-check-random-rate=P``: Keep a check with probability P,
+  a floating point number in the range ``[0.0, 1.0]``.
+* If both options are specified, a check is disabled if either condition is satisfied.
+* If neither is specified, all checks are allowed.
 
-Parameter ``kind`` is a string literal representing a user selected kind for
-guarded check. It's unused now. It will enable kind-specific lowering in future.
-E.g. a higher hotness cutoff can be used for more expensive kind of check.
+Parameter ``kind``, currently unused, is a string literal specifying the check
+kind. Future compiler versions may use this to allow for more granular control,
+such as applying different hotness cutoffs to different check kinds.
 
 Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
 
@@ -3991,7 +4049,7 @@ ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
-``__builin_va_list`` object.
+``__builtin_va_list`` object.
 
 * ``void __builtin_va_end(__builtin_va_list list)``
 
@@ -4325,7 +4383,7 @@ an appropriate value during the emission.
 
 Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
 automatically will insert one if the first argument to `llvm.coro.suspend` is
-token `none`. If a user calls `__builin_suspend`, clang will insert `token none`
+token `none`. If a user calls `__builtin_suspend`, clang will insert `token none`
 as the first argument to the intrinsic.
 
 Source location builtins
@@ -5718,6 +5776,8 @@ The following builtin intrinsics can be used in constant expressions:
 
 The following x86-specific intrinsics can be used in constant expressions:
 
+* ``_addcarry_u32``
+* ``_addcarry_u64``
 * ``_bit_scan_forward``
 * ``_bit_scan_reverse``
 * ``__bsfd``
@@ -5758,6 +5818,8 @@ The following x86-specific intrinsics can be used in constant expressions:
 * ``_rotwr``
 * ``_lrotl``
 * ``_lrotr``
+* ``_subborrow_u32``
+* ``_subborrow_u64``
 
 Debugging the Compiler
 ======================
@@ -5821,3 +5883,26 @@ specify the starting offset to begin embedding from. The resources is treated
 as being empty if the specified offset is larger than the number of bytes in
 the resource. The offset will be applied *before* any ``limit`` parameters are
 applied.
+
+Union and aggregate initialization in C
+=======================================
+
+In C23 (N2900), when an object is initialized from initializer ``= {}``, all
+elements of arrays, all members of structs, and the first members of unions are
+empty-initialized recursively. In addition, all padding bits are initialized to
+zero.
+
+Clang guarantees the following behaviors:
+
+* ``1:`` Clang supports initializer ``= {}`` mentioned above in all C
+  standards.
+
+* ``2:`` When unions are initialized from initializer ``= {}``, bytes outside
+  of the first members of unions are also initialized to zero.
+
+* ``3:`` When unions, structures and arrays are initialized from initializer
+  ``= { initializer-list }``, all members not explicitly initialized in
+  the initializer list are empty-initialized recursively. In addition, all
+  padding bits are initialized to zero.
+
+Currently, the above extension only applies to C source code, not C++.

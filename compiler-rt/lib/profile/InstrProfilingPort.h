@@ -54,7 +54,7 @@
 #endif
 
 #define COMPILER_RT_MAX_HOSTLEN 128
-#ifdef __ORBIS__
+#if defined(__ORBIS__) || defined(__wasi__)
 #define COMPILER_RT_GETHOSTNAME(Name, Len) ((void)(Name), (void)(Len), (-1))
 #else
 #define COMPILER_RT_GETHOSTNAME(Name, Len) lprofGetHostName(Name, Len)
@@ -111,7 +111,7 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-static inline size_t getpagesize() {
+static inline size_t getpagesize(void) {
   SYSTEM_INFO S;
   GetNativeSystemInfo(&S);
   return S.dwPageSize;

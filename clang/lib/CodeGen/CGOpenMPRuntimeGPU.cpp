@@ -985,8 +985,8 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
     getDistributeLastprivateVars(CGM.getContext(), D, LastPrivatesReductions);
     if (!LastPrivatesReductions.empty()) {
       GlobalizedRD = ::buildRecordForGlobalizedVars(
-          CGM.getContext(), std::nullopt, LastPrivatesReductions,
-          MappedDeclsFields, WarpSize);
+          CGM.getContext(), {}, LastPrivatesReductions, MappedDeclsFields,
+          WarpSize);
     }
   } else if (!LastPrivatesReductions.empty()) {
     assert(!TeamAndReductions.first &&
@@ -1073,9 +1073,8 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
         CGM.getContext().getTargetInfo().getNewAlign() / 8));
 
     // Cast the void pointer and get the address of the globalized variable.
-    llvm::PointerType *VarPtrTy = CGF.ConvertTypeForMem(VarTy)->getPointerTo();
     llvm::Value *CastedVoidPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        VoidPtr, VarPtrTy, VD->getName() + "_on_stack");
+        VoidPtr, Bld.getPtrTy(0), VD->getName() + "_on_stack");
     LValue VarAddr =
         CGF.MakeNaturalAlignPointeeRawAddrLValue(CastedVoidPtr, VarTy);
     Rec.second.PrivateAddr = VarAddr.getAddress();
@@ -1682,7 +1681,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
     ++Cnt;
   }
   const RecordDecl *ReductionRec = ::buildRecordForGlobalizedVars(
-      CGM.getContext(), PrivatesReductions, std::nullopt, VarFieldMap, 1);
+      CGM.getContext(), PrivatesReductions, {}, VarFieldMap, 1);
 
   if (TeamsReduction)
     TeamsReductions.push_back(ReductionRec);
@@ -1754,11 +1753,14 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
-  CGF.Builder.restoreIP(OMPBuilder.createReductionsGPU(
-      OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-      DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
-      CGF.getTarget().getGridValue(), C.getLangOpts().OpenMPCUDAReductionBufNum,
-      RTLoc));
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      OMPBuilder.createReductionsGPU(
+          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
+          DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          CGF.getTarget().getGridValue(),
+          C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc);
+  assert(AfterIP && "unexpected error creating GPU reductions");
+  CGF.Builder.restoreIP(*AfterIP);
   return;
 }
 
@@ -1930,7 +1932,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   if (isOpenMPLoopBoundSharingDirective(D.getDirectiveKind())) {
     Address Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
     Address TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        Src, CGF.SizeTy->getPointerTo(), CGF.SizeTy);
+        Src, Bld.getPtrTy(0), CGF.SizeTy);
     llvm::Value *LB = CGF.EmitLoadOfScalar(
         TypedAddress,
         /*Volatile=*/false,
@@ -1939,8 +1941,8 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
     Args.emplace_back(LB);
     ++Idx;
     Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
-    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        Src, CGF.SizeTy->getPointerTo(), CGF.SizeTy);
+    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(Src, Bld.getPtrTy(0),
+                                                           CGF.SizeTy);
     llvm::Value *UB = CGF.EmitLoadOfScalar(
         TypedAddress,
         /*Volatile=*/false,
@@ -2048,14 +2050,12 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
     const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
     auto AS = LangAS::Default;
     switch (A->getAllocatorType()) {
-      // Use the default allocator here as by default local vars are
-      // threadlocal.
     case OMPAllocateDeclAttr::OMPNullMemAlloc:
     case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
-    case OMPAllocateDeclAttr::OMPThreadMemAlloc:
     case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
     case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
-      // Follow the user decision - use default allocation.
+      break;
+    case OMPAllocateDeclAttr::OMPThreadMemAlloc:
       return Address::invalid();
     case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
       // TODO: implement aupport for user-defined allocators.
@@ -2081,7 +2081,7 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
     GV->setAlignment(Align.getAsAlign());
     return Address(
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            GV, VarTy->getPointerTo(CGM.getContext().getTargetAddressSpace(
+            GV, CGF.Builder.getPtrTy(CGM.getContext().getTargetAddressSpace(
                     VD->getType().getAddressSpace()))),
         VarTy, Align);
   }
@@ -2208,11 +2208,11 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   case OMPAllocateDeclAttr::OMPNullMemAlloc:
   case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
   // Not supported, fallback to the default mem space.
-  case OMPAllocateDeclAttr::OMPThreadMemAlloc:
   case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
   case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
   case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
   case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
+  case OMPAllocateDeclAttr::OMPThreadMemAlloc:
     AS = LangAS::Default;
     return true;
   case OMPAllocateDeclAttr::OMPConstMemAlloc:
@@ -2277,6 +2277,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_89:
       case OffloadArch::SM_90:
       case OffloadArch::SM_90a:
+      case OffloadArch::SM_100:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:
@@ -2324,6 +2325,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1150:
       case OffloadArch::GFX1151:
       case OffloadArch::GFX1152:
+      case OffloadArch::GFX1153:
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
@@ -2346,11 +2348,11 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUNumThreads(CodeGenFunction &CGF) {
   const char *LocSize = "__kmpc_get_hardware_num_threads_in_block";
   llvm::Function *F = M->getFunction(LocSize);
   if (!F) {
-    F = llvm::Function::Create(
-        llvm::FunctionType::get(CGF.Int32Ty, std::nullopt, false),
-        llvm::GlobalVariable::ExternalLinkage, LocSize, &CGF.CGM.getModule());
+    F = llvm::Function::Create(llvm::FunctionType::get(CGF.Int32Ty, {}, false),
+                               llvm::GlobalVariable::ExternalLinkage, LocSize,
+                               &CGF.CGM.getModule());
   }
-  return Bld.CreateCall(F, std::nullopt, "nvptx_num_threads");
+  return Bld.CreateCall(F, {}, "nvptx_num_threads");
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getGPUThreadID(CodeGenFunction &CGF) {

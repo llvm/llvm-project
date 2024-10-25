@@ -59,6 +59,9 @@ protected:
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
+  // Default scatter/gather overhead.
+  unsigned ScatterOverhead = 10;
+  unsigned GatherOverhead = 10;
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
@@ -185,10 +188,14 @@ public:
            (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
   }
 
-  /// Returns true if the target has access to either the full range of SVE instructions,
-  /// or the streaming-compatible subset of SVE instructions.
+  /// Returns true if the target has access to the streaming-compatible subset
+  /// of SVE instructions.
+  bool isStreamingSVEAvailable() const { return hasSME() && isStreaming(); }
+
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions.
   bool isSVEorStreamingSVEAvailable() const {
-    return hasSVE() || (hasSME() && isStreaming());
+    return hasSVE() || isStreamingSVEAvailable();
   }
 
   unsigned getMinVectorRegisterBitWidth() const {
@@ -225,6 +232,8 @@ public:
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }
+  unsigned getScatterOverhead() const { return ScatterOverhead; }
+  unsigned getGatherOverhead() const { return GatherOverhead; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,
                                 unsigned NumStridedMemAccesses,

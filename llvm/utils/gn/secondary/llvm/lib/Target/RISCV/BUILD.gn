@@ -112,7 +112,9 @@ static_library("LLVMRISCVCodeGen") {
     "GISel/RISCVPreLegalizerCombiner.cpp",
     "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
+    "RISCVCallingConv.cpp",
     "RISCVCodeGenPrepare.cpp",
+    "RISCVConstantPoolValue.cpp",
     "RISCVDeadRegisterDefinitions.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
@@ -120,10 +122,12 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVGatherScatterLowering.cpp",
     "RISCVISelDAGToDAG.cpp",
     "RISCVISelLowering.cpp",
+    "RISCVIndirectBranchTracking.cpp",
     "RISCVInsertReadWriteCSR.cpp",
     "RISCVInsertVSETVLI.cpp",
     "RISCVInsertWriteVXRM.cpp",
     "RISCVInstrInfo.cpp",
+    "RISCVLandingPadSetup.cpp",
     "RISCVMachineFunctionInfo.cpp",
     "RISCVMakeCompressible.cpp",
     "RISCVMergeBaseOffset.cpp",
@@ -137,7 +141,9 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVTargetMachine.cpp",
     "RISCVTargetObjectFile.cpp",
     "RISCVTargetTransformInfo.cpp",
+    "RISCVVLOptimizer.cpp",
     "RISCVVectorPeephole.cpp",
+    "RISCVZacasABIFix.cpp",
   ]
 }
 

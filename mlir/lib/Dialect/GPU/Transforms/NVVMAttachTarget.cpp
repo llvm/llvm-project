@@ -61,7 +61,7 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
 void NVVMAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
-  SmallVector<StringRef> filesToLink(libs.begin(), libs.end());
+  SmallVector<StringRef> filesToLink(libs);
   auto target = builder.getAttr<NVVMTargetAttr>(
       optLevel, triple, chip, features, getFlags(builder),
       filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));

@@ -38,9 +38,9 @@ def HasExtendedConst :
     Predicate<"Subtarget->hasExtendedConst()">,
     AssemblerPredicate<(all_of FeatureExtendedConst), "extended-const">;
 
-def HasHalfPrecision :
-    Predicate<"Subtarget->hasHalfPrecision()">,
-    AssemblerPredicate<(all_of FeatureHalfPrecision), "half-precision">;
+def HasFP16 :
+    Predicate<"Subtarget->hasFP16()">,
+    AssemblerPredicate<(all_of FeatureFP16), "fp16">;
 
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
@@ -83,6 +83,10 @@ def HasSIMD128 :
 def HasTailCall :
     Predicate<"Subtarget->hasTailCall()">,
     AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
+
+def HasWideArithmetic :
+    Predicate<"Subtarget->hasWideArithmetic()">,
+    AssemblerPredicate<(all_of FeatureWideArithmetic), "wide-arithmetic">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.

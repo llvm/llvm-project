@@ -6,7 +6,7 @@
 ; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-input-lowpc-ranges-other.s \
 ; RUN: -split-dwarf-file=mainOther.dwo -o other.o
 ; RUN: %clang %cflags main.o other.o -o main.exe
-; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-rnglists main.exe.bolt &> %t/foo.txt
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-addr main.exe.bolt >> %t/foo.txt
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt

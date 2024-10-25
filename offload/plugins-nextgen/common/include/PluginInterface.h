@@ -232,7 +232,7 @@ public:
 
   /// Get the image size.
   size_t getSize() const {
-    return getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
+    return utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
   }
 
   /// Get a memory buffer reference to the whole image.
@@ -539,7 +539,7 @@ class PinnedAllocationMapTy {
     --It;
 
     // The buffer is not contained in the pinned allocation.
-    if (advanceVoidPtr(It->HstPtr, It->Size) > HstPtr)
+    if (utils::advancePtr(It->HstPtr, It->Size) > HstPtr)
       return &(*It);
 
     // None found.
@@ -566,15 +566,15 @@ class PinnedAllocationMapTy {
 
   /// Indicate whether the first range A fully contains the second range B.
   static bool contains(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrB >= PtrA && EndB <= EndA);
   }
 
   /// Indicate whether the first range A intersects with the second range B.
   static bool intersects(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrA < EndB && PtrB < EndA);
   }
 
@@ -656,8 +656,8 @@ public:
     if (!Entry)
       return nullptr;
 
-    return advanceVoidPtr(Entry->DevAccessiblePtr,
-                          getPtrDiff(HstPtr, Entry->HstPtr));
+    return utils::advancePtr(Entry->DevAccessiblePtr,
+                             utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
   /// Check whether a buffer belongs to a registered host pinned allocation.
@@ -938,6 +938,42 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// been deallocated, both for error reporting purposes.
   ProtectedObj<DenseMap<void *, AllocationTraceInfoTy *>> AllocationTraces;
 
+  /// Return the allocation trace info for a device pointer, that is the
+  /// allocation into which this device pointer points to (or pointed into).
+  AllocationTraceInfoTy *getAllocationTraceInfoForAddr(void *DevicePtr) {
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    for (auto &It : *AllocationTraceMap) {
+      if (It.first <= DevicePtr &&
+          utils::advancePtr(It.first, It.second->Size) > DevicePtr)
+        return It.second;
+    }
+    return nullptr;
+  }
+
+  /// Return the allocation trace info for a device pointer, that is the
+  /// allocation into which this device pointer points to (or pointed into).
+  AllocationTraceInfoTy *
+  getClosestAllocationTraceInfoForAddr(void *DevicePtr, uintptr_t &Distance) {
+    Distance = 0;
+    if (auto *ATI = getAllocationTraceInfoForAddr(DevicePtr)) {
+      return ATI;
+    }
+
+    AllocationTraceInfoTy *ATI = nullptr;
+    uintptr_t DevicePtrI = uintptr_t(DevicePtr);
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    for (auto &It : *AllocationTraceMap) {
+      uintptr_t Begin = uintptr_t(It.second->DevicePtr);
+      uintptr_t End = Begin + It.second->Size - 1;
+      uintptr_t ItDistance = std::min(Begin - DevicePtrI, DevicePtrI - End);
+      if (ATI && ItDistance > Distance)
+        continue;
+      ATI = It.second;
+      Distance = ItDistance;
+    }
+    return ATI;
+  }
+
   /// Map to record kernel have been launchedl, for error reporting purposes.
   ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
 
@@ -945,6 +981,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// tracked.
   UInt32Envar OMPX_TrackNumKernelLaunches =
       UInt32Envar("OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES", 0);
+
+  /// Environment variable to determine if stack traces for allocations and
+  /// deallocations are tracked.
+  BoolEnvar OMPX_TrackAllocationTraces =
+      BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
@@ -995,11 +1036,6 @@ protected:
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
   UInt32Envar OMPX_InitialNumEvents;
-
-  /// Environment variable to determine if stack traces for allocations and
-  /// deallocations are tracked.
-  BoolEnvar OMPX_TrackAllocationTraces =
-      BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.

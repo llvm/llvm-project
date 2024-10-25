@@ -2048,6 +2048,18 @@ def GraphRegionOp : TEST_Op<"graph_region",  [
   let assemblyFormat = "attr-dict-with-keyword $region";
 }
 
+def IsolatedGraphRegionOp : TEST_Op<"isolated_graph_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>,
+    IsolatedFromAbove]> {
+  let summary =  "isolated from above operation with a graph region";
+  let description = [{
+    Test op that defines a graph region which is isolated from above.
+  }];
+
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
   let summary =  "affine scope operation";
   let description = [{
@@ -2992,6 +3004,11 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   let arguments = (ins
     MyStructProperty:$prop
   );
+}
+
+def TestOpWithEmptyProperties : TEST_Op<"empty_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins);
 }
 
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {

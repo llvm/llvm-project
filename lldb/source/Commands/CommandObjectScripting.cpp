@@ -56,8 +56,8 @@ public:
             option_arg, GetDefinitions()[option_idx].enum_values,
             eScriptLanguageNone, error);
         if (!error.Success())
-          error.SetErrorStringWithFormat("unrecognized value for language '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "unrecognized value for language '%s'", option_arg.str().c_str());
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -129,18 +129,18 @@ private:
   CommandOptions m_options;
 };
 
-#define LLDB_OPTIONS_scripting_template_list
+#define LLDB_OPTIONS_scripting_extension_list
 #include "CommandOptions.inc"
 
-class CommandObjectScriptingTemplateList : public CommandObjectParsed {
+class CommandObjectScriptingExtensionList : public CommandObjectParsed {
 public:
-  CommandObjectScriptingTemplateList(CommandInterpreter &interpreter)
+  CommandObjectScriptingExtensionList(CommandInterpreter &interpreter)
       : CommandObjectParsed(
-            interpreter, "scripting template list",
+            interpreter, "scripting extension list",
             "List all the available scripting extension templates. ",
             "scripting template list [--language <scripting-language> --]") {}
 
-  ~CommandObjectScriptingTemplateList() override = default;
+  ~CommandObjectScriptingExtensionList() override = default;
 
   Options *GetOptions() override { return &m_options; }
 
@@ -159,7 +159,7 @@ public:
             option_arg, GetDefinitions()[option_idx].enum_values,
             eScriptLanguageNone, error);
         if (!error.Success())
-          error.SetErrorStringWithFormatv(
+          error = Status::FromErrorStringWithFormatv(
               "unrecognized value for language '{0}'", option_arg);
         break;
       default:
@@ -174,7 +174,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_scripting_template_list_options);
+      return llvm::ArrayRef(g_scripting_extension_list_options);
     }
 
     lldb::ScriptLanguage m_language = lldb::eScriptLanguageDefault;
@@ -195,8 +195,8 @@ protected:
     };
 
     size_t num_listed_interface = 0;
-    size_t num_templates = PluginManager::GetNumScriptedInterfaces();
-    for (size_t i = 0; i < num_templates; i++) {
+    size_t num_extensions = PluginManager::GetNumScriptedInterfaces();
+    for (size_t i = 0; i < num_extensions; i++) {
       llvm::StringRef plugin_name =
           PluginManager::GetScriptedInterfaceNameAtIndex(i);
       if (plugin_name.empty())
@@ -223,7 +223,7 @@ protected:
       usages.Dump(s, ScriptedInterfaceUsages::UsageKind::API);
       usages.Dump(s, ScriptedInterfaceUsages::UsageKind::CommandInterpreter);
 
-      if (i != num_templates - 1)
+      if (i != num_extensions - 1)
         s.EOL();
     }
 
@@ -235,32 +235,32 @@ private:
   CommandOptions m_options;
 };
 
-class CommandObjectMultiwordScriptingTemplate : public CommandObjectMultiword {
+class CommandObjectMultiwordScriptingExtension : public CommandObjectMultiword {
 public:
-  CommandObjectMultiwordScriptingTemplate(CommandInterpreter &interpreter)
+  CommandObjectMultiwordScriptingExtension(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
-            interpreter, "scripting template",
-            "Commands for operating on the scripting templates.",
-            "scripting template [<subcommand-options>]") {
+            interpreter, "scripting extension",
+            "Commands for operating on the scripting extensions.",
+            "scripting extension [<subcommand-options>]") {
     LoadSubCommand(
         "list",
-        CommandObjectSP(new CommandObjectScriptingTemplateList(interpreter)));
+        CommandObjectSP(new CommandObjectScriptingExtensionList(interpreter)));
   }
 
-  ~CommandObjectMultiwordScriptingTemplate() override = default;
+  ~CommandObjectMultiwordScriptingExtension() override = default;
 };
 
 CommandObjectMultiwordScripting::CommandObjectMultiwordScripting(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
           interpreter, "scripting",
-          "Commands for operating on the scripting functionnalities.",
+          "Commands for operating on the scripting functionalities.",
           "scripting <subcommand> [<subcommand-options>]") {
   LoadSubCommand("run",
                  CommandObjectSP(new CommandObjectScriptingRun(interpreter)));
-  LoadSubCommand("template",
-                 CommandObjectSP(
-                     new CommandObjectMultiwordScriptingTemplate(interpreter)));
+  LoadSubCommand("extension",
+                 CommandObjectSP(new CommandObjectMultiwordScriptingExtension(
+                     interpreter)));
 }
 
 CommandObjectMultiwordScripting::~CommandObjectMultiwordScripting() = default;
