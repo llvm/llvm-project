@@ -288,8 +288,15 @@ public:
   /// It is up to the caller to verify that this is a valid entry to show.
   /// The current use of this is to distinguish among line entries from a
   /// virtual inlined call stack that all share the same address.
-  void SetPreferredLineEntry(const LineEntry &line_entry) {
-    m_preferred_line_entry = line_entry;
+  /// The line entry must have the same start address as the address for this
+  /// location. 
+  bool SetPreferredLineEntry(const LineEntry &line_entry) {
+    if (m_address == line_entry.range.GetBaseAddress()) {
+      m_preferred_line_entry = line_entry;
+      return true;
+    }
+    assert(0 && "Tried to set a preferred line entry with a different address");
+    return false;
   }
 
   const std::optional<LineEntry> GetPreferredLineEntry() {

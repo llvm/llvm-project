@@ -350,7 +350,11 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
     // FIXME: The function name will also be wrong here.  Do we need to record
     // that as well, or can we figure that out again when we report this
     // breakpoint location.
-    bp_loc_sp->SetPreferredLineEntry(sc.line_entry);
+    if (!bp_loc_sp->SetPreferredLineEntry(sc.line_entry)) {
+      LLDB_LOG(log, "Tried to add a preferred line entry that didn't have the "
+                    "same address as this location's address.");
+      
+    }
   }
   if (log && bp_loc_sp && !GetBreakpoint()->IsInternal()) {
     StreamString s;
