@@ -50,6 +50,8 @@ static StringRef getReplacementFor(StringRef FunctionName,
     StringRef AnnexKReplacementFunction =
         StringSwitch<StringRef>(FunctionName)
             .Cases("asctime", "asctime_r", "asctime_s")
+            .Cases("ctime", "ctime_r", "ctime_s")
+            .Cases("localtime", "localtime_r", "localtime_s")
             .Case("gets", "gets_s")
             .Default({});
     if (!AnnexKReplacementFunction.empty())
@@ -60,6 +62,8 @@ static StringRef getReplacementFor(StringRef FunctionName,
   // should be matched and suggested.
   return StringSwitch<StringRef>(FunctionName)
       .Cases("asctime", "asctime_r", "strftime")
+      .Cases("ctime", "ctime_r", "ctime_s")
+      .Cases("localtime", "localtime_r", "localtime_s")
       .Case("gets", "fgets")
       .Case("rewind", "fseek")
       .Case("setbuf", "setvbuf");
@@ -90,8 +94,8 @@ static StringRef getReplacementForAdditional(StringRef FunctionName,
 /// safer alternative.
 static StringRef getRationaleFor(StringRef FunctionName) {
   return StringSwitch<StringRef>(FunctionName)
-      .Cases("asctime", "asctime_r", "ctime",
-             "is not bounds-checking and non-reentrant")
+      .Cases("asctime", "asctime_r", "ctime", "ctime_r", "localtime",
+             "localtime_r", "is not bounds-checking and non-reentrant")
       .Cases("bcmp", "bcopy", "bzero", "is deprecated")
       .Cases("fopen", "freopen", "has no exclusive access to the opened file")
       .Case("gets", "is insecure, was deprecated and removed in C11 and C++14")
@@ -223,8 +227,9 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
     }
 
     // Matching functions with replacements without Annex K.
-    auto FunctionNamesMatcher =
-        hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf");
+    auto FunctionNamesMatcher = hasAnyName(
+        "::asctime", "asctime_r", "::ctime", "ctime_r", "::localtime",
+        "localtime_r", "::gets", "::rewind", "::setbuf");
     Finder->addMatcher(
         declRefExpr(
             to(functionDecl(FunctionNamesMatcher).bind(FunctionNamesId)))
