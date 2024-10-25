@@ -79,10 +79,14 @@ public:
     Align PrefAlign;
     uint32_t IndexBitWidth;
     /// Pointers in this address space don't have a well-defined bitwise
-    /// representation (e.g. may be relocated by a copying garbage collector).
-    /// Additionally, they may also be non-integral (i.e. containing additional
-    /// metadata such as bounds information/permissions).
-    bool IsNonIntegral;
+    /// representation (e.g. they may be relocated by a copying garbage
+    /// collector and thus have different addresses at different times).
+    bool HasUnstableRepresentation;
+    /// Pointers in this address spacs are non-integral, i.e. don't have a
+    /// integer representation that simply maps to the address. An example of
+    /// this would be fat pointers with bounds information or CHERI capabilities
+    /// that include metadata as well as one out-of-band validity bit.
+    bool HasNonIntegralRepresentation;
     bool operator==(const PointerSpec &Other) const;
   };
 
@@ -148,7 +152,7 @@ private:
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      bool IsNonIntegral);
+                      bool HasUnstableRepr, bool HasNonIntegralRepr);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -342,14 +346,63 @@ public:
   SmallVector<unsigned, 8> getNonIntegralAddressSpaces() const {
     SmallVector<unsigned, 8> AddrSpaces;
     for (const PointerSpec &PS : PointerSpecs) {
-      if (PS.IsNonIntegral)
+      if (PS.HasNonIntegralRepresentation || PS.HasUnstableRepresentation)
         AddrSpaces.push_back(PS.AddrSpace);
     }
     return AddrSpaces;
   }
 
+  /// Returns whether this address space is "non-integral" and "unstable".
+  /// This means that passes should not introduce inttoptr or ptrtoint
+  /// instructions operating on pointers of this address space.
+  /// TODO: remove this function after migrating to finer-grained properties.
   bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
-    return getPointerSpec(AddrSpace).IsNonIntegral;
+    const PointerSpec &PS = getPointerSpec(AddrSpace);
+    return PS.HasNonIntegralRepresentation || PS.HasUnstableRepresentation;
+  }
+
+  /// Returns whether this address space has an "unstable" pointer
+  /// representation. The bitwise pattern of such pointers is allowed to change
+  /// in a target-specific way. For example, this could be used for copying
+  /// garbage collection where the garbage collector could update the pointer
+  /// value as part of the collection sweep.
+  bool hasUnstableRepresentation(unsigned AddrSpace) const {
+    return getPointerSpec(AddrSpace).HasUnstableRepresentation;
+  }
+
+  /// Returns whether this address space has a non-integral pointer
+  /// representation, i.e. the pointer is not just an integer address but some
+  /// other bitwise representation. Examples include AMDGPU buffer descriptors
+  /// with a 128-bit fat pointer and a 32-bit offset or CHERI capabilities that
+  /// contain bounds, permissions and an out-of-band validity bit. In general,
+  /// these pointers cannot be re-created from just an integer value.
+  bool hasNonIntegralRepresentation(unsigned AddrSpace) const {
+    return getPointerSpec(AddrSpace).HasNonIntegralRepresentation;
+  }
+
+  /// Returns whether passes should avoid introducing `inttoptr` instructions
+  /// for this address space.
+  ///
+  /// This is currently the case "non-integral" pointer representations
+  /// (hasNonIntegralRepresentation()) since such pointers generally require
+  /// additional metadata beyond just an address.
+  /// New `inttoptr` instructions should also be avoided for "unstable" bitwise
+  /// representations (hasUnstableRepresentation()) unless the pass knows it is
+  /// within a critical section that retains the current representation.
+  bool shouldAvoidIntToPtr(unsigned AddrSpace) const {
+    const PointerSpec &PS = getPointerSpec(AddrSpace);
+    return PS.HasNonIntegralRepresentation || PS.HasUnstableRepresentation;
+  }
+
+  /// Returns whether passes should avoid introducing `ptrtoint` instructions
+  /// for this address space.
+  ///
+  /// This is currently the case for pointer address spaces that have an
+  /// "unstable" representation (hasUnstableRepresentation()) since the
+  /// bitwise pattern of such pointers could change unless the pass knows it is
+  /// within a critical section that retains the current representation.
+  bool shouldAvoidPtrToInt(unsigned AddrSpace) const {
+    return hasUnstableRepresentation(AddrSpace);
   }
 
   bool isNonIntegralPointerType(PointerType *PT) const {
@@ -359,6 +412,16 @@ public:
   bool isNonIntegralPointerType(Type *Ty) const {
     auto *PTy = dyn_cast<PointerType>(Ty);
     return PTy && isNonIntegralPointerType(PTy);
+  }
+
+  bool shouldAvoidPtrToInt(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty);
+    return PTy && shouldAvoidPtrToInt(PTy->getPointerAddressSpace());
+  }
+
+  bool shouldAvoidIntToPtr(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty);
+    return PTy && shouldAvoidIntToPtr(PTy->getPointerAddressSpace());
   }
 
   /// Layout pointer size, in bits

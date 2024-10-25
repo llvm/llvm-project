@@ -152,7 +152,8 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
   return AddrSpace == Other.AddrSpace && BitWidth == Other.BitWidth &&
          ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
          IndexBitWidth == Other.IndexBitWidth &&
-         IsNonIntegral == Other.IsNonIntegral;
+         HasUnstableRepresentation == Other.HasUnstableRepresentation &&
+         HasNonIntegralRepresentation == Other.HasNonIntegralRepresentation;
 }
 
 namespace {
@@ -419,9 +420,24 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
 
   // Address space. Optional, defaults to 0.
   unsigned AddrSpace = 0;
-  if (!Components[0].empty())
-    if (Error Err = parseAddrSpace(Components[0], AddrSpace))
+  bool UnstableRepr = false;
+  bool NonIntegralRepr = false;
+  StringRef AddrSpaceStr = Components[0].drop_while([&](char C) {
+    if (C == 'n') {
+      NonIntegralRepr = true;
+      return true;
+    } else if (C == 'u') {
+      UnstableRepr = true;
+      return true;
+    }
+    return false;
+  });
+  if (!AddrSpaceStr.empty()) {
+    if (Error Err = parseAddrSpace(AddrSpaceStr, AddrSpace))
       return Err;
+  }
+  if (AddrSpace == 0 && (NonIntegralRepr || UnstableRepr))
+    return createStringError("address space 0 cannot be non-integral");
 
   // Size. Required, cannot be zero.
   unsigned BitWidth;
@@ -455,7 +471,7 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
         "index size cannot be larger than the pointer size");
 
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
-                 false);
+                 UnstableRepr, NonIntegralRepr);
   return Error::success();
 }
 
@@ -631,7 +647,7 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
     // the spec for AS0, and we then update that to mark it non-integral.
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
-                   true);
+                   true, true);
   }
 
   return Error::success();
@@ -679,17 +695,20 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
 
 void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 Align ABIAlign, Align PrefAlign,
-                                uint32_t IndexBitWidth, bool IsNonIntegral) {
+                                uint32_t IndexBitWidth, bool HasUnstableRepr,
+                                bool HasNonIntegralRepr) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
-                                       IndexBitWidth, IsNonIntegral});
+                                       IndexBitWidth, HasUnstableRepr,
+                                       HasNonIntegralRepr});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
     I->IndexBitWidth = IndexBitWidth;
-    I->IsNonIntegral = IsNonIntegral;
+    I->HasUnstableRepresentation = HasUnstableRepr;
+    I->HasNonIntegralRepresentation = HasNonIntegralRepr;
   }
 }
 
