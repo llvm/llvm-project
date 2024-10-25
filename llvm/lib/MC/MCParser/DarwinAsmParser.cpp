@@ -1212,7 +1212,7 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
 /// parseDirectiveCGProfile
 ///   ::= .cg_profile from, to, count
 bool DarwinAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
-  return MCAsmParserExtension::ParseDirectiveCGProfile(S, Loc);
+  return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
 }
 
 /// parsePtrAuthABIVersion
