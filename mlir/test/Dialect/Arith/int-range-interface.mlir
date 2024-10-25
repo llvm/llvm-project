@@ -190,6 +190,19 @@ func.func @div_zero_undefined(%arg0 : index) -> i1 {
     func.return %2 : i1
 }
 
+// CHECK-LABEL: func @div_refine_min
+// CHECK: %[[ret:.*]] = arith.cmpi uge
+// CHECK: return %[[ret]]
+func.func @div_refine_min(%arg0 : index) -> i1 {
+    %c0 = arith.constant 1 : index
+    %c1 = arith.constant 2 : index
+    %c4 = arith.constant 4 : index
+    %0 = arith.andi %arg0, %c1 : index
+    %1 = arith.divui %c4, %0 : index
+    %2 = arith.cmpi uge, %1, %c0 : index
+    func.return %2 : i1
+}
+
 // CHECK-LABEL: func @ceil_divui
 // CHECK: %[[ret:.*]] = arith.cmpi eq
 // CHECK: return %[[ret]]
@@ -271,13 +284,13 @@ func.func @remui_base(%arg0 : index, %arg1 : index ) -> i1 {
 // CHECK: return %[[true]]
 func.func @remui_base_maybe_zero(%arg0 : index, %arg1 : index ) -> i1 {
     %c4 = arith.constant 4 : index
-    %c5 = arith.constant 5 : index    
+    %c5 = arith.constant 5 : index
 
     %0 = arith.minui %arg1, %c4 : index
     %1 = arith.remui %arg0, %0 : index
     %2 = arith.cmpi ult, %1, %c5 : index
     func.return %2 : i1
-}    
+}
 
 // CHECK-LABEL: func @remsi_base
 // CHECK: %[[ret:.*]] = arith.cmpi sge
