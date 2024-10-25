@@ -75,9 +75,11 @@ private:
   DIVariableAttr translateImpl(llvm::DIVariable *node);
   DIModuleAttr translateImpl(llvm::DIModule *node);
   DINamespaceAttr translateImpl(llvm::DINamespace *node);
+  DIImportedEntityAttr translateImpl(llvm::DIImportedEntity *node);
   DIScopeAttr translateImpl(llvm::DIScope *node);
   DISubprogramAttr translateImpl(llvm::DISubprogram *node);
   DISubrangeAttr translateImpl(llvm::DISubrange *node);
+  DICommonBlockAttr translateImpl(llvm::DICommonBlock *node);
   DISubroutineTypeAttr translateImpl(llvm::DISubroutineType *node);
   DITypeAttr translateImpl(llvm::DIType *node);
 

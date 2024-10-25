@@ -2282,8 +2282,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       elog("incomingCalls failed to convert location: {0}", Loc.takeError());
       return;
     }
-    auto It = CallsIn.try_emplace(R.Container, std::vector<Range>{}).first;
-    It->second.push_back(Loc->range);
+    CallsIn[R.Container].push_back(Loc->range);
 
     ContainerLookup.IDs.insert(R.Container);
   });

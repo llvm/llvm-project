@@ -9,6 +9,8 @@ set( LLVM_LINK_COMPONENTS
 
 add_clang_tool(clang-repl
   ClangRepl.cpp
+
+  EXPORT_SYMBOLS
   )
 
 if(MSVC)
@@ -46,11 +48,9 @@ if(MSVC)
   endif()
 
   # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
-  foreach(sym ${clang_repl_exports})
-    set(clang_repl_link_str "${clang_repl_link_str} /EXPORT:${sym}")
-  endforeach(sym ${clang_repl_exports})
+  list(TRANSFORM clang_repl_exports PREPEND "LINKER:/EXPORT:")
 
-  set_property(TARGET clang-repl APPEND_STRING PROPERTY LINK_FLAGS ${clang_repl_link_str})
+  set_property(TARGET clang-repl APPEND PROPERTY LINK_OPTIONS ${clang_repl_exports})
 
 endif(MSVC)
 
@@ -60,8 +60,6 @@ clang_target_link_libraries(clang-repl PRIVATE
   clangFrontend
   clangInterpreter
   )
-
-export_executable_symbols_for_plugins(clang-repl)
 
 # The clang-repl binary can get huge with static linking in debug mode.
 # Some 32-bit targets use PLT slots with limited branch range by default and we

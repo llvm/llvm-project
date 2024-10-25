@@ -432,9 +432,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// temp symbols inside DWARF sections.
   bool UseSectionsAsReferences = false;
 
-  ///Allow emission of the .debug_loc section.
-  bool UseLocSection = true;
-
   /// Allow emission of .debug_aranges section
   bool UseARangesSection = false;
 
@@ -724,8 +721,10 @@ public:
   /// Emit all Dwarf sections that should come after the content.
   void endModule() override;
 
-  /// Emits inital debug location directive.
-  DebugLoc emitInitialLocDirective(const MachineFunction &MF, unsigned CUID);
+  /// Emits inital debug location directive. Returns instruction at which
+  /// the function prologue ends.
+  const MachineInstr *emitInitialLocDirective(const MachineFunction &MF,
+                                              unsigned CUID);
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
@@ -788,9 +787,6 @@ public:
   bool useSectionsAsReferences() const {
     return UseSectionsAsReferences;
   }
-
-  /// Returns whether .debug_loc section should be emitted.
-  bool useLocSection() const { return UseLocSection; }
 
   /// Returns whether to generate DWARF v4 type units.
   bool generateTypeUnits() const { return GenerateTypeUnits; }

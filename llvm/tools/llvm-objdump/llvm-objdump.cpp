@@ -2244,27 +2244,28 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           return false;
         };
 
+        // When -z or --disassemble-zeroes are given we always dissasemble
+        // them. Otherwise we might want to skip zero bytes we see.
+        if (!DisassembleZeroes) {
+          uint64_t MaxOffset = End - Index;
+          // For --reloc: print zero blocks patched by relocations, so that
+          // relocations can be shown in the dump.
+          if (InlineRelocs && RelCur != RelEnd)
+            MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
+                                 MaxOffset);
+
+          if (size_t N =
+                  countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
+            FOS << "\t\t..." << '\n';
+            Index += N;
+            continue;
+          }
+        }
+
         if (DumpARMELFData) {
           Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
                                 MappingSymbols, *DT->SubtargetInfo, FOS);
         } else {
-          // When -z or --disassemble-zeroes are given we always dissasemble
-          // them. Otherwise we might want to skip zero bytes we see.
-          if (!DisassembleZeroes) {
-            uint64_t MaxOffset = End - Index;
-            // For --reloc: print zero blocks patched by relocations, so that
-            // relocations can be shown in the dump.
-            if (InlineRelocs && RelCur != RelEnd)
-              MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
-                                   MaxOffset);
-
-            if (size_t N =
-                    countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
-              FOS << "\t\t..." << '\n';
-              Index += N;
-              continue;
-            }
-          }
 
           if (DumpTracebackTableForXCOFFFunction &&
               doesXCOFFTracebackTableBegin(Bytes.slice(Index, 4))) {

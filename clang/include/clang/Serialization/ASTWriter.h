@@ -233,6 +233,14 @@ private:
   /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
   llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
 
+  /// Mapping from FunctionDecl ID to the list of lambda IDs inside the
+  /// function.
+  ///
+  /// These lambdas have to be loaded right after the function they belong to.
+  /// In order to have canonical declaration for lambda class from the same
+  /// module as enclosing function during deserialization.
+  llvm::DenseMap<LocalDeclID, SmallVector<LocalDeclID, 4>> FunctionToLambdasMap;
+
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
   std::vector<serialization::DeclOffset> DeclOffsets;
@@ -500,8 +508,8 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
-  /// A list of classes which need to emit the VTable in the corresponding
-  /// object file.
+  /// A list of classes in named modules which need to emit the VTable in
+  /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
 
   /// Computes input files that didn't affect compilation of the current module,
@@ -596,6 +604,7 @@ private:
   void WriteMSPointersToMembersPragmaOptions(Sema &SemaRef);
   void WritePackPragmaOptions(Sema &SemaRef);
   void WriteFloatControlPragmaOptions(Sema &SemaRef);
+  void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
 

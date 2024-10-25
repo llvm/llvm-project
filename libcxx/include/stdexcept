@@ -209,66 +209,66 @@ public:
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // in the dylib
-_LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_runtime_error(const char*);
+[[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void __throw_runtime_error(const char*);
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_logic_error(const char* __msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_logic_error(const char* __msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw logic_error(__msg);
 #else
   _LIBCPP_VERBOSE_ABORT("logic_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_domain_error(const char* __msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_domain_error(const char* __msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw domain_error(__msg);
 #else
   _LIBCPP_VERBOSE_ABORT("domain_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_invalid_argument(const char* __msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_invalid_argument(const char* __msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw invalid_argument(__msg);
 #else
   _LIBCPP_VERBOSE_ABORT("invalid_argument was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_length_error(const char* __msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_length_error(const char* __msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw length_error(__msg);
 #else
   _LIBCPP_VERBOSE_ABORT("length_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range(const char* __msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range(const char* __msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw out_of_range(__msg);
 #else
   _LIBCPP_VERBOSE_ABORT("out_of_range was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_range_error(const char* __msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_range_error(const char* __msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw range_error(__msg);
 #else
   _LIBCPP_VERBOSE_ABORT("range_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_overflow_error(const char* __msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_overflow_error(const char* __msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw overflow_error(__msg);
 #else
   _LIBCPP_VERBOSE_ABORT("overflow_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_underflow_error(const char* __msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_underflow_error(const char* __msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw underflow_error(__msg);
 #else
   _LIBCPP_VERBOSE_ABORT("underflow_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);

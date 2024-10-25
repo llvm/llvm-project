@@ -208,8 +208,8 @@ constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
 
 // Default pointer type specifications.
 constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
-    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64,
-     false} // p0:64:64:64:64
+    // p0:64:64:64:64
+    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false},
 };
 
 DataLayout::DataLayout()
@@ -643,6 +643,8 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
   // to be done later since the non-integral property is not part of the data
   // layout pointer specification.
   for (unsigned AS : NonIntegralAddressSpaces) {
+    // If there is no special spec for a given AS, getPointerSpec(AS) returns
+    // the spec for AS0, and we then update that to mark it non-integral.
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
                    true, true);

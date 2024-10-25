@@ -86,7 +86,7 @@ define i1 @compare_and_call_after() {
 ; CHECK-NEXT:    call void @escape(ptr [[M]])
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       just_return:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call ptr @malloc(i64 24)
   %lgp = load ptr, ptr @gp, align 8, !nonnull !0

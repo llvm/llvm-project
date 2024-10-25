@@ -26,7 +26,7 @@
 #   define _LIBCXXABI_USE_CRASHREPORTER_CLIENT
 #endif
 
-void abort_message(const char* format, ...)
+void __abort_message(const char* format, ...)
 {
     // Write message to stderr. We do this before formatting into a
     // variable-size buffer so that we still get some information if

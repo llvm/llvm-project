@@ -306,6 +306,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX10_1_512 = true;
     } else if (Feature == "+avx10.2-256") {
       HasAVX10_2 = true;
+      HasFullBFloat16 = true;
     } else if (Feature == "+avx10.2-512") {
       HasAVX10_2_512 = true;
     } else if (Feature == "+avx512cd") {
@@ -347,6 +348,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     } else if (Feature == "+movbe") {
       HasMOVBE = true;
+    } else if (Feature == "+movrs") {
+      HasMOVRS = true;
     } else if (Feature == "+sgx") {
       HasSGX = true;
     } else if (Feature == "+cx8") {
@@ -727,6 +730,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_ZNVER4:
     defineCPUMacros(Builder, "znver4");
     break;
+  case CK_ZNVER5:
+    defineCPUMacros(Builder, "znver5");
+    break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
     break;
@@ -911,6 +917,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MOVDIRI__");
   if (HasMOVDIR64B)
     Builder.defineMacro("__MOVDIR64B__");
+  if (HasMOVRS)
+    Builder.defineMacro("__MOVRS__");
   if (HasPCONFIG)
     Builder.defineMacro("__PCONFIG__");
   if (HasPTWRITE)
@@ -1112,6 +1120,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("lzcnt", true)
       .Case("mmx", true)
       .Case("movbe", true)
+      .Case("movrs", true)
       .Case("movdiri", true)
       .Case("movdir64b", true)
       .Case("mwaitx", true)
@@ -1229,6 +1238,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("lzcnt", HasLZCNT)
       .Case("mmx", HasMMX)
       .Case("movbe", HasMOVBE)
+      .Case("movrs", HasMOVRS)
       .Case("movdiri", HasMOVDIRI)
       .Case("movdir64b", HasMOVDIR64B)
       .Case("mwaitx", HasMWAITX)
@@ -1625,6 +1635,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER2:
     case CK_ZNVER3:
     case CK_ZNVER4:
+    case CK_ZNVER5:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:

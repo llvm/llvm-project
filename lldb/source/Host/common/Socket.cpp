@@ -10,6 +10,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/common/UDPSocket.h"
@@ -56,10 +57,12 @@ using namespace lldb_private;
 typedef const char *set_socket_option_arg_type;
 typedef char *get_socket_option_arg_type;
 const NativeSocket Socket::kInvalidSocketValue = INVALID_SOCKET;
+const shared_fd_t SharedSocket::kInvalidFD = LLDB_INVALID_PIPE;
 #else  // #if defined(_WIN32)
 typedef const void *set_socket_option_arg_type;
 typedef void *get_socket_option_arg_type;
 const NativeSocket Socket::kInvalidSocketValue = -1;
+const shared_fd_t SharedSocket::kInvalidFD = Socket::kInvalidSocketValue;
 #endif // #if defined(_WIN32)
 
 static bool IsInterrupted() {
@@ -67,6 +70,81 @@ static bool IsInterrupted() {
   return ::WSAGetLastError() == WSAEINTR;
 #else
   return errno == EINTR;
+#endif
+}
+
+SharedSocket::SharedSocket(const Socket *socket, Status &error) {
+#ifdef _WIN32
+  m_socket = socket->GetNativeSocket();
+  m_fd = kInvalidFD;
+
+  // Create a pipe to transfer WSAPROTOCOL_INFO to the child process.
+  error = m_socket_pipe.CreateNew(true);
+  if (error.Fail())
+    return;
+
+  m_fd = m_socket_pipe.GetReadPipe();
+#else
+  m_fd = socket->GetNativeSocket();
+  error = Status();
+#endif
+}
+
+Status SharedSocket::CompleteSending(lldb::pid_t child_pid) {
+#ifdef _WIN32
+  // Transfer WSAPROTOCOL_INFO to the child process.
+  m_socket_pipe.CloseReadFileDescriptor();
+
+  WSAPROTOCOL_INFO protocol_info;
+  if (::WSADuplicateSocket(m_socket, child_pid, &protocol_info) ==
+      SOCKET_ERROR) {
+    int last_error = ::WSAGetLastError();
+    return Status::FromErrorStringWithFormat(
+        "WSADuplicateSocket() failed, error: %d", last_error);
+  }
+
+  size_t num_bytes;
+  Status error =
+      m_socket_pipe.WriteWithTimeout(&protocol_info, sizeof(protocol_info),
+                                     std::chrono::seconds(10), num_bytes);
+  if (error.Fail())
+    return error;
+  if (num_bytes != sizeof(protocol_info))
+    return Status::FromErrorStringWithFormatv(
+        "WriteWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes", num_bytes);
+#endif
+  return Status();
+}
+
+Status SharedSocket::GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
+#ifdef _WIN32
+  socket = Socket::kInvalidSocketValue;
+  // Read WSAPROTOCOL_INFO from the parent process and create NativeSocket.
+  WSAPROTOCOL_INFO protocol_info;
+  {
+    Pipe socket_pipe(fd, LLDB_INVALID_PIPE);
+    size_t num_bytes;
+    Status error =
+        socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
+                                    std::chrono::seconds(10), num_bytes);
+    if (error.Fail())
+      return error;
+    if (num_bytes != sizeof(protocol_info)) {
+      return Status::FromErrorStringWithFormatv(
+          "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes",
+          num_bytes);
+    }
+  }
+  socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
+                       FROM_PROTOCOL_INFO, &protocol_info, 0, 0);
+  if (socket == INVALID_SOCKET) {
+    return Status::FromErrorStringWithFormatv(
+        "WSASocket(FROM_PROTOCOL_INFO) failed: error {0}", ::WSAGetLastError());
+  }
+  return Status();
+#else
+  socket = fd;
+  return Status();
 #endif
 }
 
@@ -155,7 +233,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     socket_up =
         std::make_unique<DomainSocket>(true, child_processes_inherit);
 #else
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "Unix domain sockets are not supported on this platform.");
 #endif
     break;
@@ -164,7 +242,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     socket_up =
         std::make_unique<AbstractSocket>(child_processes_inherit);
 #else
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "Abstract domain sockets are not supported on this platform.");
 #endif
     break;
@@ -309,11 +387,7 @@ Status Socket::Close() {
   LLDB_LOGF(log, "%p Socket::Close (fd = %" PRIu64 ")",
             static_cast<void *>(this), static_cast<uint64_t>(m_socket));
 
-#if defined(_WIN32)
-  bool success = closesocket(m_socket) == 0;
-#else
-  bool success = ::close(m_socket) == 0;
-#endif
+  bool success = CloseSocket(m_socket) == 0;
   // A reference to a FD was passed in, set it to an invalid value
   m_socket = kInvalidSocketValue;
   if (!success) {
@@ -323,18 +397,20 @@ Status Socket::Close() {
   return error;
 }
 
-int Socket::GetOption(int level, int option_name, int &option_value) {
+int Socket::GetOption(NativeSocket sockfd, int level, int option_name,
+                      int &option_value) {
   get_socket_option_arg_type option_value_p =
       reinterpret_cast<get_socket_option_arg_type>(&option_value);
   socklen_t option_value_size = sizeof(int);
-  return ::getsockopt(m_socket, level, option_name, option_value_p,
+  return ::getsockopt(sockfd, level, option_name, option_value_p,
                       &option_value_size);
 }
 
-int Socket::SetOption(int level, int option_name, int option_value) {
+int Socket::SetOption(NativeSocket sockfd, int level, int option_name,
+                      int option_value) {
   set_socket_option_arg_type option_value_p =
-      reinterpret_cast<get_socket_option_arg_type>(&option_value);
-  return ::setsockopt(m_socket, level, option_name, option_value_p,
+      reinterpret_cast<set_socket_option_arg_type>(&option_value);
+  return ::setsockopt(sockfd, level, option_name, option_value_p,
                       sizeof(option_value));
 }
 
@@ -344,9 +420,27 @@ size_t Socket::Send(const void *buf, const size_t num_bytes) {
 
 void Socket::SetLastError(Status &error) {
 #if defined(_WIN32)
-  error.SetError(::WSAGetLastError(), lldb::eErrorTypeWin32);
+  error = Status(::WSAGetLastError(), lldb::eErrorTypeWin32);
 #else
-  error.SetErrorToErrno();
+  error = Status::FromErrno();
+#endif
+}
+
+Status Socket::GetLastError() {
+  std::error_code EC;
+#ifdef _WIN32
+  EC = llvm::mapWindowsError(WSAGetLastError());
+#else
+  EC = std::error_code(errno, std::generic_category());
+#endif
+  return EC;
+}
+
+int Socket::CloseSocket(NativeSocket sockfd) {
+#ifdef _WIN32
+  return ::closesocket(sockfd);
+#else
+  return ::close(sockfd);
 #endif
 }
 
@@ -364,6 +458,19 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
     SetLastError(error);
 
   return sock;
+}
+
+Status Socket::Accept(Socket *&socket) {
+  MainLoop accept_loop;
+  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> expected_handles =
+      Accept(accept_loop,
+             [&accept_loop, &socket](std::unique_ptr<Socket> sock) {
+               socket = sock.release();
+               accept_loop.RequestTermination();
+             });
+  if (!expected_handles)
+    return Status::FromError(expected_handles.takeError());
+  return accept_loop.Run();
 }
 
 NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,

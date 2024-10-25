@@ -229,10 +229,10 @@ TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
   mlir::Type i32Ty = mlir::IntegerType::get(&context, 32);
   mlir::Type f32Ty = mlir::FloatType::getF32(&context);
   mlir::Type l1Ty = fir::LogicalType::get(&context, 1);
-  mlir::Type cplx4Ty = fir::ComplexType::get(&context, 4);
+  mlir::Type cplx32Ty = mlir::ComplexType::get(f32Ty);
   mlir::Type char1Ty = fir::CharacterType::get(&context, 1, 10);
   llvm::SmallVector<mlir::Type> intrinsicTypes = {
-      i32Ty, f32Ty, l1Ty, cplx4Ty, char1Ty};
+      i32Ty, f32Ty, l1Ty, cplx32Ty, char1Ty};
 
   for (mlir::Type ty : intrinsicTypes) {
     // `ty` -> none

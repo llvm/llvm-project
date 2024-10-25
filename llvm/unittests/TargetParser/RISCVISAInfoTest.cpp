@@ -980,6 +980,7 @@ R"(All available -march extensions for RISC-V
     za64rs               1.0
     zaamo                1.0
     zabha                1.0
+    zacas                1.0
     zalrsc               1.0
     zama16b              1.0
     zawrs                1.0
@@ -1064,6 +1065,9 @@ R"(All available -march extensions for RISC-V
     smcdeleg             1.0
     smcsrind             1.0
     smepmp               1.0
+    smmpm                1.0
+    smnpm                1.0
+    smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
     ssccfg               1.0
@@ -1071,6 +1075,8 @@ R"(All available -march extensions for RISC-V
     sscofpmf             1.0
     sscounterenw         1.0
     sscsrind             1.0
+    ssnpm                1.0
+    sspm                 1.0
     ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
@@ -1078,6 +1084,7 @@ R"(All available -march extensions for RISC-V
     sstvala              1.0
     sstvecd              1.0
     ssu64xl              1.0
+    supm                 1.0
     svade                1.0
     svadu                1.0
     svbare               1.0
@@ -1116,17 +1123,11 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
-    zacas                1.0
     zalasr               0.1
     zvbc32e              0.7
     zvkgs                0.7
     smctr                1.0
-    smmpm                1.0
-    smnpm                1.0
     ssctr                1.0
-    ssnpm                1.0
-    sspm                 1.0
-    supm                 1.0
 
 Supported Profiles
     rva20s64

@@ -929,10 +929,16 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         DiagnoseErrors);
   }
 
-  SharedRuntime =
-      Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
-                   TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
-                       TC.getTriple().isOSDarwin());
+  SharedRuntime = Args.hasFlag(
+      options::OPT_shared_libsan, options::OPT_static_libsan,
+      TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
+          TC.getTriple().isOSDarwin() || TC.getTriple().isOSWindows());
+  if (!SharedRuntime && TC.getTriple().isOSWindows()) {
+    Arg *A =
+        Args.getLastArg(options::OPT_shared_libsan, options::OPT_static_libsan);
+    D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << TC.getTriple().str();
+  }
 
   ImplicitCfiRuntime = TC.getTriple().isAndroid();
 
@@ -1457,9 +1463,12 @@ static int parseOverflowPatternExclusionValues(const Driver &D,
         llvm::StringSwitch<int>(Value)
             .Case("none", LangOptionsBase::None)
             .Case("all", LangOptionsBase::All)
-            .Case("add-overflow-test", LangOptionsBase::AddOverflowTest)
+            .Case("add-unsigned-overflow-test",
+                  LangOptionsBase::AddUnsignedOverflowTest)
+            .Case("add-signed-overflow-test",
+                  LangOptionsBase::AddSignedOverflowTest)
             .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
-            .Case("post-decr-while", LangOptionsBase::PostDecrInWhile)
+            .Case("unsigned-post-decr-while", LangOptionsBase::PostDecrInWhile)
             .Default(0);
     if (E == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)

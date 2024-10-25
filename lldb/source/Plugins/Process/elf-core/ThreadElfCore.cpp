@@ -33,6 +33,7 @@
 #include "RegisterContextLinuxCore_x86_64.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
+#include "RegisterContextPOSIXCore_loongarch64.h"
 #include "RegisterContextPOSIXCore_mips64.h"
 #include "RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextPOSIXCore_ppc64le.h"
@@ -171,6 +172,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     if (!reg_interface && arch.GetMachine() != llvm::Triple::aarch64 &&
         arch.GetMachine() != llvm::Triple::arm &&
+        arch.GetMachine() != llvm::Triple::loongarch64 &&
         arch.GetMachine() != llvm::Triple::riscv64) {
       LLDB_LOGF(log, "elf-core::%s:: Architecture(%d) or OS(%d) not supported",
                 __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
@@ -186,6 +188,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm>(
           *this, std::make_unique<RegisterInfoPOSIX_arm>(arch), m_gpregset_data,
           m_notes);
+      break;
+    case llvm::Triple::loongarch64:
+      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_loongarch64::Create(
+          *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::riscv64:
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv64::Create(
@@ -280,7 +286,7 @@ Status ELFLinuxPrStatus::Parse(const DataExtractor &data,
                                const ArchSpec &arch) {
   Status error;
   if (GetSize(arch) > data.GetByteSize()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NT_PRSTATUS size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;
@@ -376,7 +382,7 @@ Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
   Status error;
   ByteOrder byteorder = data.GetByteOrder();
   if (GetSize(arch) > data.GetByteSize()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NT_PRPSINFO size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;
@@ -544,7 +550,7 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
 Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   Status error;
   if (GetSize(arch) > data.GetByteSize()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;

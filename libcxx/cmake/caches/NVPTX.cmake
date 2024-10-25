@@ -1,5 +1,4 @@
 # Configuration options for libcxx.
-set(LIBCXX_ABI_VERSION 2 CACHE STRING "")
 set(LIBCXX_CXX_ABI libcxxabi CACHE STRING "")
 set(LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
 set(LIBCXX_ENABLE_FILESYSTEM OFF CACHE BOOL "")
@@ -33,4 +32,4 @@ set(LIBCXX_ADDITIONAL_COMPILE_FLAGS
     "-nogpulib;-flto;-fconvergent-functions;--cuda-feature=+ptx63" CACHE STRING "")
 set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS
     "-nogpulib;-flto;-fconvergent-functions;--cuda-feature=+ptx63" CACHE STRING "")
-set(CMAKE_REQUIRED_FLAGS "-nogpulib -nodefaultlibs -flto -c" CACHE STRING "")
+set(CMAKE_REQUIRED_FLAGS "-nogpulib -flto -c" CACHE STRING "")

@@ -81,12 +81,12 @@ public:
     /// Pointers in this address space don't have a well-defined bitwise
     /// representation (e.g. they may be relocated by a copying garbage
     /// collector and thus have different addresses at different times).
-    bool HasUnstableRepresentation = false;
+    bool HasUnstableRepresentation;
     /// Pointers in this address spacs are non-integral, i.e. don't have a
     /// integer representation that simply maps to the address. An example of
     /// this would be fat pointers with bounds information or CHERI capabilities
     /// that include metadata as well as one out-of-band validity bit.
-    bool HasNonIntegralRepresentation = false;
+    bool HasNonIntegralRepresentation;
     bool operator==(const PointerSpec &Other) const;
   };
 
@@ -226,15 +226,9 @@ public:
 
   bool isIllegalInteger(uint64_t Width) const { return !isLegalInteger(Width); }
 
-  /// Returns true if the given alignment exceeds the natural stack alignment.
-  bool exceedsNaturalStackAlignment(Align Alignment) const {
-    return StackNaturalAlign && (Alignment > *StackNaturalAlign);
-  }
-
-  Align getStackAlignment() const {
-    assert(StackNaturalAlign && "StackNaturalAlign must be defined");
-    return *StackNaturalAlign;
-  }
+  /// Returns the natural stack alignment, or MaybeAlign() if one wasn't
+  /// specified.
+  MaybeAlign getStackAlignment() const { return StackNaturalAlign; }
 
   unsigned getAllocaAddrSpace() const { return AllocaAddrSpace; }
 
@@ -496,8 +490,9 @@ public:
   ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
   TypeSize getTypeStoreSize(Type *Ty) const {
-    TypeSize BaseSize = getTypeSizeInBits(Ty);
-    return {divideCeil(BaseSize.getKnownMinValue(), 8), BaseSize.isScalable()};
+    TypeSize StoreSizeInBits = getTypeStoreSizeInBits(Ty);
+    return {StoreSizeInBits.getKnownMinValue() / 8,
+            StoreSizeInBits.isScalable()};
   }
 
   /// Returns the maximum number of bits that may be overwritten by
@@ -508,7 +503,10 @@ public:
   ///
   /// For example, returns 40 for i36 and 80 for x86_fp80.
   TypeSize getTypeStoreSizeInBits(Type *Ty) const {
-    return 8 * getTypeStoreSize(Ty);
+    TypeSize BaseSize = getTypeSizeInBits(Ty);
+    uint64_t AlignedSizeInBits =
+        alignToPowerOf2(BaseSize.getKnownMinValue(), 8);
+    return {AlignedSizeInBits, BaseSize.isScalable()};
   }
 
   /// Returns true if no extra padding bits are needed when storing the

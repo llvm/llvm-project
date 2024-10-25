@@ -154,5 +154,35 @@
     "headers": [
       "variant"
     ]
+  },
+  {
+    "name": "__cpp_lib_missing_FTM_in_older_standard",
+    "values": {
+      "c++17": {
+        "2017": [
+          {
+            "title": "Some FTM missing a paper in an older Standard mode, which should result in the FTM never being defined.",
+            "implemented": false
+          }
+        ]
+      },
+      "c++20": {
+        "2020": [
+          {
+            "title": "",
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "2026": [
+          {
+            "title": "",
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": []
   }
 ]

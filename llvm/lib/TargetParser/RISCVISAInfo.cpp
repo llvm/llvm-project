@@ -508,7 +508,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
 
     size_t Idx = Arch.find('_');
     StringRef Ext = Arch.slice(0, Idx);
-    Arch = Arch.slice(Idx, StringRef::npos);
+    Arch = Arch.substr(Idx);
 
     StringRef Prefix, MinorVersionStr;
     std::tie(Prefix, MinorVersionStr) = Ext.rsplit('p');
@@ -533,7 +533,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
       return getError("missing extension name");
 
     StringRef ExtName = Prefix.slice(0, VersionStart);
-    StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
+    StringRef MajorVersionStr = Prefix.substr(VersionStart);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return getError("failed to parse major version number");
 
@@ -662,7 +662,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     size_t Idx = Arch.find('_');
     StringRef Ext = Arch.slice(0, Idx);
-    Arch = Arch.slice(Idx, StringRef::npos);
+    Arch = Arch.substr(Idx);
 
     do {
       StringRef Name, Vers, Desc;
@@ -1049,7 +1049,7 @@ constexpr static RISCVExtBit RISCVBitPositions[] = {
     {"zvksed", 0, 57},    {"zvksh", 0, 58},
     {"zvkt", 0, 59},      {"zve32x", 0, 60},
     {"zve32f", 0, 61},    {"zve64x", 0, 62},
-    {"zve64x", 0, 63},    {"zve64d", 1, 0},
+    {"zve64f", 0, 63},    {"zve64d", 1, 0},
     {"zimop", 1, 1},      {"zca", 1, 2},
     {"zcb", 1, 3},        {"zcd", 1, 4},
     {"zcf", 1, 5},        {"zcmop", 1, 6},
