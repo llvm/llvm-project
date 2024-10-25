@@ -306,23 +306,25 @@ RocmInstallationDetector::getInstallationPathCandidates() {
       LatestVer = Ver;
     }
   }
-  if (!LatestROCm.empty())
-    ROCmSearchDirs.emplace_back(D.SysRoot + "/opt/" + LatestROCm,
-                                /*StrictChecking=*/true);
+  if (!isHostWindows()) {
+    if (!LatestROCm.empty())
+      ROCmSearchDirs.emplace_back(D.SysRoot + "/opt/" + LatestROCm,
+                                  /*StrictChecking=*/true);
 
-  ROCmSearchDirs.emplace_back(D.SysRoot + "/usr/local",
-                              /*StrictChecking=*/true);
-  ROCmSearchDirs.emplace_back(D.SysRoot + "/usr",
-                              /*StrictChecking=*/true);
+    ROCmSearchDirs.emplace_back(D.SysRoot + "/usr/local",
+                                /*StrictChecking=*/true);
+    ROCmSearchDirs.emplace_back(D.SysRoot + "/usr",
+                                /*StrictChecking=*/true);
+  }
 
   DoPrintROCmSearchDirs();
   return ROCmSearchDirs;
 }
 
 RocmInstallationDetector::RocmInstallationDetector(
-    const Driver &D, const llvm::Triple &HostTriple,
+    const Driver &D, const llvm::Triple &TargetTriple,
     const llvm::opt::ArgList &Args, bool DetectHIPRuntime, bool DetectDeviceLib)
-    : D(D) {
+    : D(D), TargetTriple(TargetTriple) {
   Verbose = Args.hasArg(options::OPT_v);
   RocmPathArg = Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ);
   PrintROCmSearchDirs =
@@ -835,8 +837,10 @@ bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
 
 /// ROCM Toolchain
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
-                             const ArgList &Args)
+                             const ArgList &Args, bool isHostTCMSVC)
     : AMDGPUToolChain(D, Triple, Args) {
+  RocmInstallation->setHostWindows(isHostTCMSVC);
+
   RocmInstallation->detectDeviceLibrary();
 }
 
