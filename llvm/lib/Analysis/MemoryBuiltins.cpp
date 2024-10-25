@@ -984,17 +984,48 @@ ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetAPInt LHS,
   if (!LHS.bothKnown() || !RHS.bothKnown())
     return ObjectSizeOffsetVisitor::unknown();
 
+  // When combining SizeOffset of the same size, instead of a draw, we pick the
+  // one with the largest offset, in case of further indexing with negative
+  // offset.
   switch (Options.EvalMode) {
-  case ObjectSizeOpts::Mode::Min:
-    return (getSizeWithOverflow(LHS).slt(getSizeWithOverflow(RHS))) ? LHS : RHS;
-  case ObjectSizeOpts::Mode::Max:
-    return (getSizeWithOverflow(LHS).sgt(getSizeWithOverflow(RHS))) ? LHS : RHS;
+  case ObjectSizeOpts::Mode::Min: {
+    APInt LHSSize = getSizeWithOverflow(LHS),
+          RHSSize = getSizeWithOverflow(RHS);
+    if (LHSSize.slt(RHSSize)) {
+      return LHS;
+    } else if (LHSSize.sgt(RHSSize)) {
+      return RHS;
+    } else if (LHS.Offset.ult(RHS.Offset)) {
+      return LHS;
+    } else {
+      return RHS;
+    }
+  }
+  case ObjectSizeOpts::Mode::Max: {
+    APInt LHSSize = getSizeWithOverflow(LHS),
+          RHSSize = getSizeWithOverflow(RHS);
+    if (LHSSize.sgt(RHSSize)) {
+      return LHS;
+    } else if (LHSSize.slt(RHSSize)) {
+      return RHS;
+    } else if (LHS.Offset.ugt(RHS.Offset)) {
+      return LHS;
+    } else {
+      return RHS;
+    }
+  }
   case ObjectSizeOpts::Mode::ExactSizeFromOffset:
-    return (getSizeWithOverflow(LHS).eq(getSizeWithOverflow(RHS)))
-               ? LHS
-               : ObjectSizeOffsetVisitor::unknown();
+    if (getSizeWithOverflow(LHS).eq(getSizeWithOverflow(RHS))) {
+      return LHS.Offset.ugt(RHS.Offset) ? LHS : RHS;
+    } else {
+      return ObjectSizeOffsetVisitor::unknown();
+    }
   case ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset:
-    return LHS == RHS ? LHS : ObjectSizeOffsetVisitor::unknown();
+    if (LHS == RHS) {
+      return LHS.Offset.ugt(RHS.Offset) ? LHS : RHS;
+    } else {
+      return ObjectSizeOffsetVisitor::unknown();
+    }
   }
   llvm_unreachable("missing an eval mode");
 }
