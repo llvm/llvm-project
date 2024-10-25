@@ -54,22 +54,14 @@ void EmitOffloadImplFuncDecls(RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     FunctionRec F{R};
-    // The error details function does not set error details itself, so don't
-    // use the impl result type
-    if (F.getName() == "offloadGetErrorDetails") {
-        OS << formatv("{0}_result_t {1}_impl(", PrefixLower, F.getName());
-    } else {
-      OS << formatv("{0}_impl_result_t {1}_impl(", PrefixLower, F.getName());
-    }
+    OS << formatv("{0}_impl_result_t {1}_impl(", PrefixLower, F.getName());
     auto Params = F.getParams();
     for (auto &Param : Params) {
       OS << Param.getType() << " " << Param.getName();
       if (Param != Params.back()) {
         OS << ", ";
-      } else {
-        OS << ");";
       }
     }
-    OS << "\n\n";
+    OS << ");\n\n";
   }
 }

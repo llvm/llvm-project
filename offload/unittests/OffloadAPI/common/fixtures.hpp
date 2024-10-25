@@ -15,7 +15,7 @@
 #pragma once
 
 #ifndef ASSERT_SUCCESS
-#define ASSERT_SUCCESS(ACTUAL) ASSERT_EQ(OFFLOAD_SUCCESS, ACTUAL)
+#define ASSERT_SUCCESS(ACTUAL) ASSERT_EQ(OFFLOAD_RESULT_SUCCESS, ACTUAL)
 #endif
 
 // TODO: rework this so the EXPECTED/ACTUAL results are readable
@@ -34,9 +34,13 @@
   }                                                                            \
   (void)0
 
-struct offloadPlatformTest : ::testing::Test {
+struct offloadTest : ::testing::Test {
+  // No special behavior now, but just in case we need to override it in future
+};
+
+struct offloadPlatformTest : offloadTest {
   void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(::testing::Test::SetUp());
+    RETURN_ON_FATAL_FAILURE(offloadTest::SetUp());
 
     Platform = TestEnvironment::getPlatform();
     ASSERT_NE(Platform, nullptr);
@@ -50,13 +54,11 @@ struct offloadDeviceTest : offloadPlatformTest {
     RETURN_ON_FATAL_FAILURE(offloadPlatformTest::SetUp());
 
     uint32_t NumDevices;
-    ASSERT_SUCCESS(offloadDeviceGet(Platform, OFFLOAD_DEVICE_TYPE_ALL, 0,
-                                    nullptr, &NumDevices));
+    ASSERT_SUCCESS(offloadDeviceGetCount(Platform, &NumDevices));
     if (NumDevices == 0) {
       GTEST_SKIP() << "No available devices on this platform.";
     }
-    ASSERT_SUCCESS(offloadDeviceGet(Platform, OFFLOAD_DEVICE_TYPE_ALL, 1,
-                                    &Device, nullptr));
+    ASSERT_SUCCESS(offloadDeviceGet(Platform, 1, &Device));
   }
 
   offload_device_handle_t Device;

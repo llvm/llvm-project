@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../common/fixtures.hpp"
 #include <gtest/gtest.h>
 #include <offload_api.h>
-#include "../common/fixtures.hpp"
 
-using offloadPlatformGetTest = ::testing::Test;
+using offloadPlatformGetTest = offloadTest;
 
 TEST_F(offloadPlatformGetTest, Success) {
   uint32_t PlatformCount;
-  ASSERT_SUCCESS(offloadPlatformGet(0, nullptr, &PlatformCount));
+  ASSERT_SUCCESS(offloadPlatformGetCount(&PlatformCount));
   std::vector<offload_platform_handle_t> Platforms(PlatformCount);
-  ASSERT_SUCCESS(offloadPlatformGet(PlatformCount, Platforms.data(), nullptr));
+  ASSERT_SUCCESS(offloadPlatformGet(PlatformCount, Platforms.data()));
 }
 
 TEST_F(offloadPlatformGetTest, InvalidNumEntries) {
   uint32_t PlatformCount;
-  ASSERT_SUCCESS(offloadPlatformGet(0, nullptr, &PlatformCount));
+  ASSERT_SUCCESS(offloadPlatformGetCount(&PlatformCount));
   std::vector<offload_platform_handle_t> Platforms(PlatformCount);
   ASSERT_ERROR(
       OFFLOAD_ERRC_INVALID_SIZE,
-      offloadPlatformGet(PlatformCount + 1, Platforms.data(), nullptr));
+      offloadPlatformGet(PlatformCount + 1, Platforms.data()));
 }

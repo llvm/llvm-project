@@ -10,9 +10,15 @@
 #error Please define the macro OFFLOAD_FUNC(Function)
 #endif
 
+OFFLOAD_FUNC(offloadInit)
+OFFLOAD_FUNC(offloadShutDown)
 OFFLOAD_FUNC(offloadPlatformGet)
+OFFLOAD_FUNC(offloadPlatformGetCount)
 OFFLOAD_FUNC(offloadPlatformGetInfo)
+OFFLOAD_FUNC(offloadPlatformGetInfoSize)
+OFFLOAD_FUNC(offloadDeviceGetCount)
 OFFLOAD_FUNC(offloadDeviceGet)
 OFFLOAD_FUNC(offloadDeviceGetInfo)
+OFFLOAD_FUNC(offloadDeviceGetInfoSize)
 
 #undef OFFLOAD_FUNC

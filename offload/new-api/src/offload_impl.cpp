@@ -67,40 +67,44 @@ void initPlugins() {
   }
 }
 
-offload_impl_result_t
-offloadPlatformGet_impl(uint32_t NumEntries,
-                        offload_platform_handle_t *phPlatforms,
-                        uint32_t *pNumPlatforms) {
-  // It is expected that offloadPlatformGet is the first function to be called.
-  // In future it may make sense to have a specific entry point for Offload
-  // initialization, or expose explicit initialization of plugins.
+// TODO: We can properly reference count here and manage the resources in a more
+// clever way
+offload_impl_result_t offloadInit_impl() {
   static std::once_flag InitFlag;
   std::call_once(InitFlag, initPlugins);
 
+  return OFFLOAD_RESULT_SUCCESS;
+}
+offload_impl_result_t offloadShutDown_impl() { return OFFLOAD_RESULT_SUCCESS; }
+
+offload_impl_result_t offloadPlatformGetCount_impl(uint32_t *pNumPlatforms) {
+  // It is expected that offloadPlatformGet is the first function to be called.
+  // In future it may make sense to have a specific entry point for Offload
+  // initialization, or expose explicit initialization of plugins.
+  *pNumPlatforms = Platforms().size();
+  return OFFLOAD_RESULT_SUCCESS;
+}
+
+offload_impl_result_t
+offloadPlatformGet_impl(uint32_t NumEntries,
+                        offload_platform_handle_t *phPlatforms) {
   if (NumEntries > Platforms().size()) {
     return {OFFLOAD_ERRC_INVALID_SIZE,
             std::string{formatv("{0} platform(s) available but {1} requested.",
                                 Platforms().size(), NumEntries)}};
   }
 
-  if (phPlatforms) {
-    for (uint32_t PlatformIndex = 0; PlatformIndex < NumEntries;
-         PlatformIndex++) {
-      phPlatforms[PlatformIndex] = &(Platforms())[PlatformIndex];
-    }
+  for (uint32_t PlatformIndex = 0; PlatformIndex < NumEntries;
+       PlatformIndex++) {
+    phPlatforms[PlatformIndex] = &(Platforms())[PlatformIndex];
   }
 
-  if (pNumPlatforms) {
-    *pNumPlatforms = Platforms().size();
-  }
-
-  return OFFLOAD_SUCCESS;
+  return OFFLOAD_RESULT_SUCCESS;
 }
 
-offload_impl_result_t
-offloadPlatformGetInfo_impl(offload_platform_handle_t hPlatform,
-                            offload_platform_info_t propName, size_t propSize,
-                            void *pPropValue, size_t *pPropSizeRet) {
+offload_impl_result_t offloadPlatformGetInfoImplDetail(
+    offload_platform_handle_t hPlatform, offload_platform_info_t propName,
+    size_t propSize, void *pPropValue, size_t *pPropSizeRet) {
   ReturnHelper ReturnValue(propSize, pPropValue, pPropSizeRet);
 
   switch (propName) {
@@ -127,33 +131,51 @@ offloadPlatformGetInfo_impl(offload_platform_handle_t hPlatform,
     return OFFLOAD_ERRC_INVALID_ENUMERATION;
   }
 
-  return OFFLOAD_SUCCESS;
+  return OFFLOAD_RESULT_SUCCESS;
 }
 
-offload_impl_result_t offloadDeviceGet_impl(offload_platform_handle_t hPlatform,
-                                            offload_device_type_t,
-                                            uint32_t NumEntries,
-                                            offload_device_handle_t *phDevices,
-                                            uint32_t *pNumDevices) {
-
-  if (phDevices) {
-    for (uint32_t DeviceIndex = 0; DeviceIndex < NumEntries; DeviceIndex++) {
-      phDevices[DeviceIndex] = &(hPlatform->Devices[DeviceIndex]);
-    }
-  }
-
-  if (pNumDevices) {
-    *pNumDevices = static_cast<uint32_t>(hPlatform->Devices.size());
-  }
-
-  return OFFLOAD_SUCCESS;
+offload_impl_result_t
+offloadPlatformGetInfo_impl(offload_platform_handle_t hPlatform,
+                            offload_platform_info_t propName, size_t propSize,
+                            void *pPropValue) {
+  return offloadPlatformGetInfoImplDetail(hPlatform, propName, propSize,
+                                          pPropValue, nullptr);
 }
 
-offload_impl_result_t offloadDeviceGetInfo_impl(offload_device_handle_t hDevice,
-                                                offload_device_info_t propName,
-                                                size_t propSize,
-                                                void *pPropValue,
-                                                size_t *pPropSizeRet) {
+offload_impl_result_t
+offloadPlatformGetInfoSize_impl(offload_platform_handle_t hPlatform,
+                                offload_platform_info_t propName,
+                                size_t *pPropSizeRet) {
+  return offloadPlatformGetInfoImplDetail(hPlatform, propName, 0, nullptr,
+                                          pPropSizeRet);
+}
+
+offload_impl_result_t
+offloadDeviceGetCount_impl(offload_platform_handle_t hPlatform,
+                           uint32_t *pNumDevices) {
+  *pNumDevices = static_cast<uint32_t>(hPlatform->Devices.size());
+
+  return OFFLOAD_RESULT_SUCCESS;
+}
+
+offload_impl_result_t
+offloadDeviceGet_impl(offload_platform_handle_t hPlatform, uint32_t NumEntries,
+                      offload_device_handle_t *phDevices) {
+  if (NumEntries > hPlatform->Devices.size()) {
+    return OFFLOAD_ERRC_INVALID_SIZE;
+  }
+
+  for (uint32_t DeviceIndex = 0; DeviceIndex < NumEntries; DeviceIndex++) {
+    phDevices[DeviceIndex] = &(hPlatform->Devices[DeviceIndex]);
+  }
+
+  return OFFLOAD_RESULT_SUCCESS;
+}
+
+offload_impl_result_t
+offloadDeviceGetInfoImplDetail(offload_device_handle_t hDevice,
+                               offload_device_info_t propName, size_t propSize,
+                               void *pPropValue, size_t *pPropSizeRet) {
 
   ReturnHelper ReturnValue(propSize, pPropValue, pPropSizeRet);
 
@@ -194,5 +216,21 @@ offload_impl_result_t offloadDeviceGetInfo_impl(offload_device_handle_t hDevice,
     return OFFLOAD_ERRC_INVALID_ENUMERATION;
   }
 
-  return OFFLOAD_SUCCESS;
+  return OFFLOAD_RESULT_SUCCESS;
+}
+
+offload_impl_result_t offloadDeviceGetInfo_impl(offload_device_handle_t hDevice,
+                                                offload_device_info_t propName,
+                                                size_t propSize,
+                                                void *pPropValue) {
+  return offloadDeviceGetInfoImplDetail(hDevice, propName, propSize, pPropValue,
+                                        nullptr);
+}
+
+offload_impl_result_t
+offloadDeviceGetInfoSize_impl(offload_device_handle_t hDevice,
+                              offload_device_info_t propName,
+                              size_t *pPropSizeRet) {
+  return offloadDeviceGetInfoImplDetail(hDevice, propName, 0, nullptr,
+                                        pPropSizeRet);
 }
