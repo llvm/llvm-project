@@ -7022,6 +7022,60 @@ AArch64InstrInfo::getCombinerObjective(unsigned Pattern) const {
   }
 }
 
+
+/// Find instructions that can be turned into adc or adcs.
+/// CINC  I=A,CS
+/// ADD|S R,I,B or ADD|S R,B,I
+/// ==> ADC|S R,A,B
+/// CINC I=A,CS is alias of CSINC I=A,A,LO which is instruction pattern that
+/// need to be acctually identified.
+static bool getAdcPatterns(MachineInstr &Root,
+                           SmallVectorImpl<unsigned> &Patterns,
+                           const TargetRegisterInfo *TRI) {
+  unsigned Opc = Root.getOpcode();
+  MachineBasicBlock &MBB = *Root.getParent();
+  bool Found = false;
+
+  auto setFound = [&](int Opcode, int Operand, unsigned Pattern) {
+    MachineOperand &MO = Root.getOperand(Operand);
+    if (canCombine(MBB, MO, Opcode)) {
+      MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+      MachineInstr *MI = nullptr;
+      if (MO.isReg() && Register::isVirtualRegister(MO.getReg()))
+        MI = MRI.getUniqueVRegDef(MO.getReg());
+      if (MI && (findCondCodeUsedByInstr(*MI) == AArch64CC::LO) &&
+          MI->getOperand(1).isIdenticalTo(MI->getOperand(2))) {
+        // Convert only when the condition code is not modified between CINC and
+        // ADD(S). The CC may be used by other instructions in between.
+        if (!areCFlagsAccessedBetweenInstrs(MI, Root, TRI, AK_Write)) {
+          Patterns.push_back(Pattern);
+          Found = true;
+        }
+      }
+    }
+  };
+
+  switch (Opc) {
+  case AArch64::ADDWrr:
+  case AArch64::ADDSWrr:
+    setFound(AArch64::CSINCWr, 1, AArch64MachineCombinerPattern::CINCADD_OP1);
+    if (!Found)
+      setFound(AArch64::CSINCWr, 2, AArch64MachineCombinerPattern::CINCADD_OP2);
+    break;
+  case AArch64::ADDXrr:
+  case AArch64::ADDSXrr:
+    setFound(AArch64::CSINCXr, 1, AArch64MachineCombinerPattern::CINCADD_OP1);
+    if (!Found)
+      setFound(AArch64::CSINCXr, 2, AArch64MachineCombinerPattern::CINCADD_OP2);
+    break;
+  default:
+    break;
+  }
+
+  return Found;
+}
+
+
 /// Return true when there is potentially a faster code sequence for an
 /// instruction chain ending in \p Root. All potential patterns are listed in
 /// the \p Pattern vector. Pattern should be sorted in priority order since the
@@ -7032,6 +7086,8 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
     bool DoRegPressureReduce) const {
   // Integer patterns
   if (getMaddPatterns(Root, Patterns))
+    return true;
+  if (getAdcPatterns(Root, Patterns, &getRegisterInfo()))
     return true;
   // Floating point patterns
   if (getFMULPatterns(Root, Patterns))
@@ -7390,6 +7446,47 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
   DelInstrs.push_back(&Root);
 }
 
+/// Do the following transformation
+/// CINC  I=A,CS
+/// ADD|S R,I,B
+/// ==> ADC|S R,A,B
+static void genAdc(MachineFunction &MF, MachineRegisterInfo &MRI,
+                   const TargetInstrInfo *TII, MachineInstr &Root,
+                   SmallVectorImpl<MachineInstr *> &InsInstrs,
+                   SmallVectorImpl<MachineInstr *> &DelInstrs,
+                   unsigned CombineOpdIdx) {
+  assert(CombineOpdIdx == 1 || CombineOpdIdx == 2);
+
+  unsigned AnotherOpdIdx = CombineOpdIdx == 1 ? 2 : 1;
+  MachineInstr *CincMI =
+      MRI.getUniqueVRegDef(Root.getOperand(CombineOpdIdx).getReg());
+
+  Register ResultReg = Root.getOperand(0).getReg();
+  Register RegA = CincMI->getOperand(1).getReg();
+  unsigned RegAState = getRegState(CincMI->getOperand(1));
+  Register RegB = Root.getOperand(AnotherOpdIdx).getReg();
+  unsigned RegBState = getRegState(Root.getOperand(AnotherOpdIdx));
+
+  unsigned Opcode = Root.getOpcode();
+  unsigned OptOpcode = AArch64::ADCWr;
+  if (Opcode == AArch64::ADDXrr)
+    OptOpcode = AArch64::ADCXr;
+  else if (Opcode == AArch64::ADDSWrr)
+    OptOpcode = AArch64::ADCSWr;
+  else if (Opcode == AArch64::ADDSXrr)
+    OptOpcode = AArch64::ADCSXr;
+  else
+    assert(Opcode == AArch64::ADDWrr && "Unexpected instruction opcode.");
+
+  MachineInstrBuilder MIB =
+      BuildMI(MF, Root.getDebugLoc(), TII->get(OptOpcode), ResultReg)
+          .addReg(RegA, RegAState)
+          .addReg(RegB, RegBState);
+
+  InsInstrs.push_back(MIB);
+  DelInstrs.push_back(CincMI);
+}
+
 /// When getMachineCombinerPatterns() finds potential patterns,
 /// this function generates the instructions that could replace the
 /// original code sequence
@@ -7514,6 +7611,22 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
     MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
+    break;
+  }
+  case AArch64MachineCombinerPattern::CINCADD_OP1: {
+    // CINC  I=A,CS
+    // ADD|S R,I,B
+    // ==> ADC|S R,A,B
+    // --- Create ADC|S
+    genAdc(MF, MRI, TII, Root, InsInstrs, DelInstrs, 1);
+    break;
+  }
+  case AArch64MachineCombinerPattern::CINCADD_OP2: {
+    // CINC  I=A,CS
+    // ADD|S R,B,I
+    // ==> ADC|S R,A,B
+    // --- Create ADC|S
+    genAdc(MF, MRI, TII, Root, InsInstrs, DelInstrs, 2);
     break;
   }
   case AArch64MachineCombinerPattern::MULSUBW_OP1:
