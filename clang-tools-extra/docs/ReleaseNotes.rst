@@ -119,6 +119,12 @@ New checks
   Warns about code that tries to cast between pointers by means of
   ``std::bit_cast`` or ``memcpy``.
 
+- New :doc:`bugprone-nondeterministic-pointer-iteration-order
+  <clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order>`
+  check.
+
+  Finds nondeterministic usages of pointers in unordered containers.
+
 - New :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
 
