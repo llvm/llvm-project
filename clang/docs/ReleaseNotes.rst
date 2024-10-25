@@ -133,6 +133,15 @@ C++ Specific Potentially Breaking Changes
     // Fixed version:
     unsigned operator""_udl_name(unsigned long long);
 
+- Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
+  applied on a parameter of a function that returns void. This was previously 
+  ignored and had no effect. (#GH107556)
+
+  .. code-block:: c++
+
+    // Now diagnoses with an error.
+    void f(int& i [[clang::lifetimebound]]);
+
 ABI Changes in This Version
 ---------------------------
 
