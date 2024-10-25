@@ -1045,7 +1045,7 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
           .addReg(0);
 
   bool HasFP =  Subtarget.getFrameLowering()->hasFP(*MF);
-  if (HasFP || MBB->isLiveIn(SystemZ::R11D)) {
+  if (HasFP) {
      BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
           .addReg(SystemZ::R11D)
           .addReg(BufReg)
