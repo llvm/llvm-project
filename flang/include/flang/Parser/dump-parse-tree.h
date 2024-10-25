@@ -555,6 +555,8 @@ public:
   NODE_ENUM(OmpGrainsizeClause, Prescriptiveness)
   NODE(parser, OmpNumTasksClause)
   NODE_ENUM(OmpNumTasksClause, Prescriptiveness)
+  NODE(parser, OmpBindClause)
+  NODE_ENUM(OmpBindClause, Type)
   NODE(parser, OmpProcBindClause)
   NODE_ENUM(OmpProcBindClause, Type)
   NODE_ENUM(OmpReductionClause, ReductionModifier)
