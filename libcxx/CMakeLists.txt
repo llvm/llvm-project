@@ -154,12 +154,13 @@ message(STATUS "Using libc++ testing configuration: ${LIBCXX_TEST_CONFIG}")
 set(LIBCXX_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
-# Benchmark options -----------------------------------------------------------
-option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ON)
-
-set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
-set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
-    "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
+# TODO: On Windows and MinGW, disable the benchmarks since we don't know how to build GoogleBenchmark yet
+if (WIN32 OR MINGW)
+  set(_include_benchmarks OFF)
+else()
+  set(_include_benchmarks ON)
+endif()
+option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ${_include_benchmarks})
 
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING

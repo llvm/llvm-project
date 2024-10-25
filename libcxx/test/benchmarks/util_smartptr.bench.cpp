@@ -13,14 +13,16 @@
 static void BM_SharedPtrCreateDestroy(benchmark::State& st) {
   while (st.KeepRunning()) {
     auto sp = std::make_shared<int>(42);
-    benchmark::DoNotOptimize(sp.get());
+    int* ptr = sp.get();
+    benchmark::DoNotOptimize(ptr);
   }
 }
 BENCHMARK(BM_SharedPtrCreateDestroy);
 
 static void BM_SharedPtrIncDecRef(benchmark::State& st) {
   auto sp = std::make_shared<int>(42);
-  benchmark::DoNotOptimize(sp.get());
+  int* ptr = sp.get();
+  benchmark::DoNotOptimize(ptr);
   while (st.KeepRunning()) {
     std::shared_ptr<int> sp2(sp);
     benchmark::ClobberMemory();
@@ -30,7 +32,8 @@ BENCHMARK(BM_SharedPtrIncDecRef);
 
 static void BM_WeakPtrIncDecRef(benchmark::State& st) {
   auto sp = std::make_shared<int>(42);
-  benchmark::DoNotOptimize(sp.get());
+  int* ptr = sp.get();
+  benchmark::DoNotOptimize(ptr);
   while (st.KeepRunning()) {
     std::weak_ptr<int> wp(sp);
     benchmark::ClobberMemory();

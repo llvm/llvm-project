@@ -79,6 +79,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -123,6 +124,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -155,9 +157,7 @@ jobs:
           'generic-no-rtti',
           'generic-optimized-speed',
           'generic-static',
-          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
-          # or don't provide much value since the benchmark run results are too noise on the bots.
-          'benchmarks',
+          # TODO Find a better place for the bootstrapping build to live, since it's very expensive.
           'bootstrapping-build'
         ]
         machine: [ 'libcxx-runners-8-set' ]
@@ -188,6 +188,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -230,6 +231,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*

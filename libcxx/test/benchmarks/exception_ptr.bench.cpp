@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 #include <benchmark/benchmark.h>
 #include <exception>
 
 void bm_make_exception_ptr(benchmark::State& state) {
   for (auto _ : state) {
-    benchmark::DoNotOptimize(std::make_exception_ptr(42));
+    std::exception_ptr eptr = std::make_exception_ptr(42);
+    benchmark::DoNotOptimize(eptr);
   }
 }
 BENCHMARK(bm_make_exception_ptr)->ThreadRange(1, 8);

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <vector>
@@ -19,7 +21,8 @@ static void bm_lexicographical_compare(benchmark::State& state) {
   for (auto _ : state) {
     benchmark::DoNotOptimize(vec1);
     benchmark::DoNotOptimize(vec2);
-    benchmark::DoNotOptimize(std::lexicographical_compare(vec1.begin(), vec1.end(), vec2.begin(), vec2.end()));
+    bool result = std::lexicographical_compare(vec1.begin(), vec1.end(), vec2.begin(), vec2.end());
+    benchmark::DoNotOptimize(result);
   }
 }
 BENCHMARK(bm_lexicographical_compare<unsigned char>)->DenseRange(1, 8)->Range(16, 1 << 20);
@@ -34,7 +37,8 @@ static void bm_ranges_lexicographical_compare(benchmark::State& state) {
   for (auto _ : state) {
     benchmark::DoNotOptimize(vec1);
     benchmark::DoNotOptimize(vec2);
-    benchmark::DoNotOptimize(std::ranges::lexicographical_compare(vec1.begin(), vec1.end(), vec2.begin(), vec2.end()));
+    bool result = std::ranges::lexicographical_compare(vec1.begin(), vec1.end(), vec2.begin(), vec2.end());
+    benchmark::DoNotOptimize(result);
   }
 }
 BENCHMARK(bm_ranges_lexicographical_compare<unsigned char>)->DenseRange(1, 8)->Range(16, 1 << 20);

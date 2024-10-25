@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <deque>
